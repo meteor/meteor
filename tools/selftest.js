@@ -924,7 +924,7 @@ var define = function (name, tagsList, f) {
 
 var tagDescriptions = {
   checkout: 'can only run from checkouts',
-  net: 'requires an internet connection',
+  net: 'require an internet connection',
   slow: 'take quite a long time'
 };
 
