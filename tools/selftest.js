@@ -416,9 +416,22 @@ _.extend(Sandbox.prototype, {
   //   s.run('create', 'myapp').expectExit(0);
   //   s.cd('myapp');
   //   s.run('add', 'somepackage') ...
-  cd: function (relativePath) {
+  // If you provide a callback, it will invoke the callback and then
+  // change the cwd back to the previous value.  eg:
+  //   s.cd('app1', function () {
+  //     s.run('add', 'somepackage');
+  //   });
+  //   s.cd('app2', function () {
+  //     s.run('add', 'somepackage');
+  //   });
+  cd: function (relativePath, callback) {
     var self = this;
+    var previous = self.cwd;
     self.cwd = path.resolve(self.cwd, relativePath);
+    if (callback) {
+      callback();
+      self.cwd = previous;
+    }
   },
 
   // Set an environment variable for subsequent runs.

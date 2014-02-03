@@ -206,9 +206,10 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   s.createApp('myapp', 'empty');
-  s.cd('myapp');
-  run = s.run("list", "--using");
-  run.expectExit(0);
+  s.cd('myapp', function () {
+    run = s.run("list", "--using");
+    run.expectExit(0);
+  });
 });
 
 
