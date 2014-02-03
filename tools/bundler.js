@@ -690,11 +690,13 @@ _.extend(Target.prototype, {
   // Preprocess CSS in this target
   preprocessCss: function () {
     // Don't do anything by default
+    // The real implementation is in the subclass (ClientTarget)
   },
 
   // Minify the CSS in this target
   minifyCss: function (minifiers) {
     // Don't do anything by default
+    // The real implementation is in the subclass (ClientTarget)
   },
 
   // Minify the JS in this target
@@ -779,14 +781,6 @@ _.extend(ClientTarget.prototype, {
     }).minifiers;
     var CssTools = minifiers.CssTools;
 
-    // The straight-forward concatenation of CSS files would break @import rules
-    // located in the beginning of a file. Before concatenation, pull them to
-    // the beginning of a new syntax tree so they always precede other rules.
-    var newAst = {
-      type: 'stylesheet',
-      stylesheet: { rules: [] }
-    };
-
     // Filenames passed to AST manipulator mapped to their original files
     var originals = {};
 
@@ -796,63 +790,26 @@ _.extend(ClientTarget.prototype, {
       try {
         var parseOptions = { source: filename, position: true };
         var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
+        ast.filename = filename;
       } catch (e) {
         buildmessage.error(e.message, { file: filename });
-        return { type: "stylesheet", stylesheet: { rules: [] } };
-      }
-
-      var rulePredicate = function (rule) {
-        return function (node) {
-          return node.type === rule;
-        }
-      }
-
-      // Get rid of comments
-      ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
-                                      rulePredicate("comment"));
-
-      // Pick only the imports from the beginning of file ignoring @charset
-      // rules as Meteor assumes every file is in utf-8.
-      if (_.any(ast.stylesheet.rules, rulePredicate("charset"))) {
-        var filename = file.url.replace(/^\//, '');
-        // XXX make this a buildmessage.warning call rather than a random log
-        console.log("%s: warn: @charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.", filename);
-      }
-
-      ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
-                                      rulePredicate("charset"));
-      var importCount = 0;
-      for (var i = 0; i < ast.stylesheet.rules.length; i++)
-        if (!rulePredicate("import")(ast.stylesheet.rules[i])) {
-          importCount = i;
-          break;
-        }
-
-      var imports = ast.stylesheet.rules.splice(0, importCount);
-      newAst.stylesheet.rules = newAst.stylesheet.rules.concat(imports);
-
-      // if there are imports left in the middle of file, warn user as it might
-      // be a potential bug (imports are valid only in the beginning of file).
-      if (_.any(ast.stylesheet.rules, rulePredicate("import"))) {
-        var filename = file.url.replace(/^\//, '');
-        // XXX make this a buildmessage.warning call rather than a random log
-        console.log("%s: warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.", filename);
+        return { type: "stylesheet", stylesheet: { rules: [] },
+                 filename: filename };
       }
 
       return ast;
     });
 
-    // Now we can put the rest of CSS rules into new AST
-    _.each(cssAsts, function (ast) {
-      newAst.stylesheet.rules =
-        newAst.stylesheet.rules.concat(ast.stylesheet.rules);
-    });
+    var warnCb = function (filename, msg) {
+      // XXX make this a buildmessage.warning call rather than a random log
+      console.log("%s: warn: %s", filename, msg);
+    };
 
     // Other build phases might need this AST later
-    self._cssAst = newAst;
+    self._cssAst = CssTools.concatenateCssAsts(cssAsts, warnCb);
 
     // Overwrite the CSS files list to the new concatenated file
-    var stringifiedCss = CssTools.stringifyCss(newAst, {sourcemap: true});
+    var stringifiedCss = CssTools.stringifyCss(self._cssAst, {sourcemap: true});
     self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8')})];
 
     // Set the contents of sourcemapped files
