@@ -325,9 +325,9 @@ main.registerCommand({
 
   var couldNotContactServer = false;
 
-  // Unless --release was passed (meaning that either the user asked
-  // for a particular release, or that we _just did_ this and
-  // springboarded), go get the latest release and switch to it.
+  // Unless --release was passed (meaning that either the user asked for a
+  // particular release, or that we _just did_ this and springboarded at
+  // #UpdateSpringboard), go get the latest release and switch to it.
   if (! release.forced) {
     try {
       warehouse.fetchLatestRelease();
@@ -345,11 +345,9 @@ main.registerCommand({
 
   if (! release.current ||
       release.current.name !== release.latestDownloaded()) {
-    // The user asked for the latest release (well, they "asked for
-    // it" by not passing --release). We just downloaded a new
-    // release, so springboard to it. (Or, we were run in app with no
-    // release, so springboard to the latest release we know about,
-    // whether we just download it or not.)  #UpdateSpringboard
+    // The user asked for the latest release (well, they "asked for it" by not
+    // passing --release). We're not currently running the latest release (we
+    // may have even just downloaded it).  #UpdateSpringboard
     //
     // (We used to springboard only if the tools version actually
     // changed between the old and new releases. Now we do it
