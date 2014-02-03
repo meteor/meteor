@@ -10,143 +10,59 @@ CssTools = {
     return CssTools.minifyCssAst(cssParse(cssText));
   },
   minifyCssAst: function (cssAst) {
-    return compile(cssAst);
-  }
-};
+    return MinifyAst(cssAst);
+  },
+  concatenateCssAsts: function (cssAsts, warnCb) {
+    var rulesPredicate = function (rules) {
+      if (! _.isArray(rules))
+        rules = [rules];
+      return function (node) {
+        return _.contains(rules, node.type);
+      }
+    };
 
-// Stringifier based on css-stringify
-var emit = function (str) {
-  return str.toString();
-};
+    // The straight-forward concatenation of CSS files would break @import rules
+    // located in the beginning of a file. Before concatenation, pull them to
+    // the beginning of a new syntax tree so they always precede other rules.
+    var newAst = {
+      type: 'stylesheet',
+      stylesheet: { rules: [] }
+    };
 
-var visit = function (node, last) {
-  return traverse[node.type](node, last);
-};
+    _.each(cssAsts, function (ast) {
+      // Pick only the imports from the beginning of file ignoring @charset
+      // rules as Meteor assumes every file is in utf-8.
+      if (_.any(ast.stylesheet.rules, rulesPredicate("charset"))) {
+        warnCb(ast.filename, "@charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.");
+      }
 
-var mapVisit = function (nodes) {
-  var buf = "";
+      ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
+                                      rulesPredicate("charset"));
+      var importCount = 0;
+      for (var i = 0; i < ast.stylesheet.rules.length; i++)
+        if (!rulesPredicate(["import", "comment"])(ast.stylesheet.rules[i])) {
+          importCount = i;
+          break;
+        }
 
-  for (var i = 0, length = nodes.length; i < length; i++) {
-    buf += visit(nodes[i], i === length - 1);
-  }
+      var imports = ast.stylesheet.rules.splice(0, importCount);
+      newAst.stylesheet.rules = newAst.stylesheet.rules.concat(imports);
 
-  return buf;
-};
+      // if there are imports left in the middle of file, warn user as it might
+      // be a potential bug (imports are valid only in the beginning of file).
+      if (_.any(ast.stylesheet.rules, rulesPredicate("import"))) {
+        warnCb(ast.filename, "warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.");
+      }
 
-var compile = function(node){
-  return node.stylesheet
-    .rules.map(function (rule) { return visit(rule); })
-    .join('');
-};
-
-var traverse = {};
-
-traverse.comment = function(node) {
-  return emit('', node.position);
-};
-
-traverse.import = function(node) {
-  return emit('@import ' + node.import + ';', node.position);
-};
-
-traverse.media = function(node) {
-  return emit('@media ' + node.media, node.position, true)
-    + emit('{')
-    + mapVisit(node.rules)
-    + emit('}');
-};
-
-traverse.document = function(node) {
-  var doc = '@' + (node.vendor || '') + 'document ' + node.document;
-
-  return emit(doc, node.position, true)
-    + emit('{')
-    + mapVisit(node.rules)
-    + emit('}');
-};
-
-traverse.charset = function(node) {
-  return emit('@charset ' + node.charset + ';', node.position);
-};
-
-traverse.namespace = function(node) {
-  return emit('@namespace ' + node.namespace + ';', node.position);
-};
-
-traverse.supports = function(node){
-  return emit('@supports ' + node.supports, node.position, true)
-    + emit('{')
-    + mapVisit(node.rules)
-    + emit('}');
-};
-
-traverse.keyframes = function(node) {
-  return emit('@'
-    + (node.vendor || '')
-    + 'keyframes '
-    + node.name, node.position, true)
-    + emit('{')
-    + mapVisit(node.keyframes)
-    + emit('}');
-};
-
-traverse.keyframe = function(node) {
-  var decls = node.declarations;
-
-  return emit(node.values.join(','), node.position, true)
-    + emit('{')
-    + mapVisit(decls)
-    + emit('}');
-};
-
-traverse.page = function(node) {
-  var sel = node.selectors.length
-    ? node.selectors.join(', ')
-    : '';
-
-  return emit('@page ' + sel, node.position, true)
-    + emit('{')
-    + mapVisit(node.declarations)
-    + emit('}');
-};
-
-traverse.rule = function(node) {
-  var decls = node.declarations;
-  if (!decls.length) return '';
-
-  var selectors = node.selectors.map(function (selector) {
-    // removes universal selectors like *.class => .class
-    // removes optional whitespace around '>' and '+'
-    return selector.replace(/\*\./, '.')
-                   .replace(/\s*>\s*/g, '>')
-                   .replace(/\s*\+\s*/g, '+');
-  });
-  return emit(selectors.join(','), node.position, true)
-    + emit('{')
-    + mapVisit(decls)
-    + emit('}');
-};
-
-traverse.declaration = function(node, last) {
-  var value = node.value;
-
-  // remove optional quotes around font name
-  if (node.property === 'font') {
-    value = value.replace(/\'[^\']+\'/g, function (m) {
-      if (m.indexOf(' ') !== -1)
-        return m;
-      return m.replace(/\'/g, '');
     });
-    value = value.replace(/\"[^\"]+\"/g, function (m) {
-      if (m.indexOf(' ') !== -1)
-        return m;
-      return m.replace(/\"/g, '');
-    });
-  }
-  // remove url quotes if possible
-  // in case it is the last declaration, we can omit the semicolon
-  return emit(node.property + ':' + value, node.position)
-         + (last ? '' : emit(';'));
-};
 
+    // Now we can put the rest of CSS rules into new AST
+    _.each(cssAsts, function (ast) {
+      newAst.stylesheet.rules =
+        newAst.stylesheet.rules.concat(ast.stylesheet.rules);
+    });
+
+    return newAst;
+  }
+};
 
