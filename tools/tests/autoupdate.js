@@ -90,9 +90,30 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.match("Meteor v3 is available");
     run.match("meteor update");
     run.stop();
+
+    run = s.run("update");
+    run.read("myapp: updated to Meteor v3.\n");
+    run.expectEnd();
+    run.expectExit(0);
+
+    run = s.run("--version");
+    run.read("Release v3\n");
+    run.expectEnd();
+    run.expectExit(0);
+
+    // Update the app back to an older version.
+    run = s.run("update", "--release", "v2");
+    run.read("myapp: updated to Meteor v2.\n");
+    run.expectEnd();
+    run.expectExit(0);
+
+    run = s.run("--version");
+    run.read("Release v2\n");
+    run.expectEnd();
+    run.expectExit(0);
   });
 
-  // And now, our latest version has been updated.
+  // The latest version has been updated globally too.
   run = s.run("--version");
   run.read("Release v3\n");
   run.expectEnd();

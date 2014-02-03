@@ -341,19 +341,19 @@ main.registerCommand({
       console.log("Can't contact the update server. Are you online?");
       couldNotContactServer = true;
     }
-  }
 
-  if (! release.current ||
-      release.current.name !== release.latestDownloaded()) {
-    // The user asked for the latest release (well, they "asked for it" by not
-    // passing --release). We're not currently running the latest release (we
-    // may have even just downloaded it).  #UpdateSpringboard
-    //
-    // (We used to springboard only if the tools version actually
-    // changed between the old and new releases. Now we do it
-    // unconditionally, because it's not a big deal to do it and it
-    // eliminates the complexity of the current release changing.)
-    throw new main.SpringboardToLatestRelease;
+    if (! release.current ||
+        release.current.name !== release.latestDownloaded()) {
+      // The user asked for the latest release (well, they "asked for it" by not
+      // passing --release). We're not currently running the latest release (we
+      // may have even just downloaded it).  #UpdateSpringboard
+      //
+      // (We used to springboard only if the tools version actually
+      // changed between the old and new releases. Now we do it
+      // unconditionally, because it's not a big deal to do it and it
+      // eliminates the complexity of the current release changing.)
+      throw new main.SpringboardToLatestRelease;
+    }
   }
 
   // At this point we should have a release. (If we didn't to start
