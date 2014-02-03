@@ -453,7 +453,7 @@ main.registerCommand({
           // skip the updaters, but I can't figure out how to explain
           // what's happening to the user, so let's just do this.
           process.stderr.write(
-"This project says that it uses version " + name + " of Meteor, but you\n" +
+"This project says that it uses version " + appRelease + " of Meteor, but you\n" +
 "don't have that version of Meteor installed and the Meteor update servers\n" +
 "don't have it either. Please edit the .meteor/release file in the project\n" +
 "project and change it to a valid Meteor release.\n");
