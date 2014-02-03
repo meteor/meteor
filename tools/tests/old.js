@@ -30,7 +30,7 @@ selftest.define("bundler-options", function () {
   runOldTest('test-bundler-options.js');
 });
 
-selftest.define("bundler-npm", ["slow"], function () {
+selftest.define("bundler-npm", ["slow", "net"], function () {
   runOldTest('test-bundler-npm.js');
 });
 
@@ -41,7 +41,7 @@ selftest.define("bundler-npm", ["slow"], function () {
 // in release mode. If we're not running from a checkout, just run it
 // against the installed copy.
 
-selftest.define("old cli tests", ["slow"], function () {
+selftest.define("old cli tests", ["slow", "net"], function () {
   var s = new Sandbox;
   var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
     env: {
@@ -53,7 +53,7 @@ selftest.define("old cli tests", ["slow"], function () {
   run.expectExit(0);
 });
 
-selftest.define("old cli tests (warehouse)", ["slow", "checkout"], function () {
+selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { tools: 'tools1', latest: true }
