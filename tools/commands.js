@@ -403,14 +403,18 @@ main.registerCommand({
   // Otherwise, we have to upgrade the app too, if the release changed.
   var appRelease = project.getMeteorReleaseVersion(options.appDir);
   if (appRelease !== null && appRelease === release.current.name) {
-    if (couldNotContactServer) {
-      console.log(
-"This project is already at Meteor %s, the latest release\n" +
-"installed on this computer.", appRelease);
-    } else {
-      console.log(
-"This project is already at Meteor %s, the latest release.", appRelease);
-    }
+    // Note that in this case, release.forced is true iff --release was actually
+    // passed on the command-line: #UpdateSpringboard can't have occured.  Why?
+    // Well, if the user didn't specify --release but we're in an app, then
+    // release.current.name must have been taken from the app, and
+    // #UpdateSpringboard only happens if needs to try to change the app
+    // release, and this is the message for not needing to change the release.
+    var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
+    var maybeOnThisComputer =
+          couldNotContactServer ? "\ninstalled on this computer" : "";
+    console.log(
+"This project is already at Meteor %s%s%s.",
+      appRelease, maybeTheLatestRelease, maybeOnThisComputer);
     return;
   }
 

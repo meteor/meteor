@@ -101,6 +101,10 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.expectEnd();
     run.expectExit(0);
 
+    run = s.run("update");
+    run.match("already at Meteor v3, the latest release");
+    run.expectExit(0);
+
     // Update the app back to an older version.
     run = s.run("update", "--release", "v2");
     run.read("myapp: updated to Meteor v2.\n");
@@ -110,6 +114,11 @@ selftest.define("autoupdate", ['checkout'], function () {
     run = s.run("--version");
     run.read("Release v2\n");
     run.expectEnd();
+    run.expectExit(0);
+
+    run = s.run("update", "--release", "v2");
+    run.match("already at Meteor v2");
+    run.forbidAll("the latest release");
     run.expectExit(0);
   });
 
