@@ -16,7 +16,7 @@ var config = require('./config.js');
 // Compose a User-Agent header. 'meteorReleaseContext' is optional. If
 // provided, it is used to give more precise information about the
 // Meteor version we're running.
-var getUserAgent = function (meteorReleaseContext) {
+getUserAgent = function (meteorReleaseContext) {
   var appVersion;
   try {
     appVersion = files.getToolsVersion();
