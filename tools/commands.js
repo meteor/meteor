@@ -1225,16 +1225,28 @@ main.registerCommand({
   name: 'self-test',
   options: {
     changed: { type: Boolean },
-    offline: { type: Boolean },
+    'force-online': { type: Boolean },
     slow: { type: Boolean },
     history: { type: Number }
   },
   hidden: true
 }, function (options) {
   var selftest = require('./selftest.js');
+
+  // Auto-detect whether to skip 'net' tests, unless --force-online is passed.
+  var offline = false;
+  if (!options['force-online']) {
+    try {
+      require('./http-helpers.js').getUrl("http://www.google.com/");
+    } catch (e) {
+      if (e instanceof files.OfflineError)
+        offline = true;
+    }
+  }
+
   return selftest.runTests({
     onlyChanged: options.changed,
-    offline: options.offline,
+    offline: offline,
     includeSlowTests: options.slow,
     historyLines: options.history
   });

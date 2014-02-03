@@ -305,7 +305,7 @@ Meteor account.
 
 >>> self-test
 Run tests of the 'meteor' tool.
-Usage: meteor self-test [--changed] [--offline] [--slow] [--history n]
+Usage: meteor self-test [--changed] [--slow] [--force-online] [--history n]
 
 Runs internal tests. Exits with status 0 on success.
 
@@ -314,11 +314,12 @@ passed. This uses a really rough heuristic: A test has changed iff
 there has been any change to the file in the 'selftests' subdirectory
 that defines it. State for this is tracked in ~/.meteortest.
 
-Pass --offline to skip tests that are flagged as requiring an internet
-connection.
-
 Some tests are really slow. Test flagged as slow won't be run unless
 you pass --slow. Remember to do this from time to time!
+
+Normally, this command detects whether you are offline and skips tests that
+require network access automatically. If you want to try to run them anyway,
+pass --force-online.
 
 Use --history to change the number of lines of program output that are
 shown on test failure. The default is 10.

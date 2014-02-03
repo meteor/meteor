@@ -1106,8 +1106,8 @@ var runTests = function (options) {
 //   - 'checkout': should only be run when we're running from a
 //     checkout as opposed to a released copy.
 //   - 'net': test requires an internet connection. Not going to work
-//     if you're on a plane and should be skipped by 'self-test
-//     --offline'.
+//     if you're on a plane; will be skipped if we appear to be
+//     offline unless run with 'self-test --force-online'.
 //   - 'slow': test is slow enough that you don't want to run it
 //     except on purpose. Won't run unless you say 'self-test --slow'.
 //
