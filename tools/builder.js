@@ -345,7 +345,8 @@ _.extend(Builder.prototype, {
         var thisAbsFrom = path.resolve(absFrom, item);
         var thisRelTo = path.join(relTo, item);
 
-        var isDir = fs.statSync(thisAbsFrom).isDirectory();
+        var fileStatus = fs.statSync(thisAbsFrom);
+        var isDir = fileStatus.isDirectory();
         var itemForMatch = item;
         if (isDir)
           itemForMatch += '/';
@@ -362,7 +363,8 @@ _.extend(Builder.prototype, {
         // XXX avoid reading whole file into memory
         var data = fs.readFileSync(thisAbsFrom);
 
-        fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data);
+        fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data,
+                         { mode: fileStatus.mode });
         self.usedAsFile[thisRelTo] = true;
       });
     };
