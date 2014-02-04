@@ -1,6 +1,10 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.29
+# danger will robinson!  mother:config/download-dev-bundles.sh only goes up to
+# 0.3.30!
+
+# Before you increment this again, fix the script listed above.
+BUNDLE_VERSION=0.3.30
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
