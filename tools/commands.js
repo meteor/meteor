@@ -682,7 +682,7 @@ main.registerCommand({
   if (options.args.length === 0) {
     // localhost mode
     var findMongoPort =
-      require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
+      require('./run-mongo.js').findMongoPort;
     var mongoPort = findMongoPort(options.appDir);
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
