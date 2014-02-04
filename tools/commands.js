@@ -529,9 +529,9 @@ main.registerCommand({
   });
 
   _.each(options.args, function (name) {
-    if (! (name in all)) {
+    if (! _.has(all, name)) {
       process.stderr.write(name + ": no such package\n");
-    } else if (name in using) {
+    } else if (_.has(using, name)) {
       process.stderr.write(name + ": already using\n");
     } else {
       project.addPackage(options.appDir, name);
@@ -557,7 +557,7 @@ main.registerCommand({
   });
 
   _.each(options.args, function (name) {
-    if (! (name in using)) {
+    if (! _.has(using, name)) {
       process.stderr.write(name + ": not in project\n");
     } else {
       project.removePackage(options.appDir, name);
