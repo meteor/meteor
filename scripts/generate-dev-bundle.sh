@@ -110,6 +110,7 @@ npm install source-map@0.1.31
 npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
 npm install http-proxy@1.0.2
+npm install heapdump@0.2.5
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
