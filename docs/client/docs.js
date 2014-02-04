@@ -422,11 +422,6 @@ Handlebars.registerHelper('lt', function () {
   return '<';
 });
 
-Handlebars.registerHelper('api_section', function(id, nameFn) {
-  return Template.api_section.withData(
-    {name: nameFn(this), id:id});
-});
-
 Template.api_box.bare = function() {
   return ((this.descr && this.descr.length) ||
           (this.args && this.args.length) ||
