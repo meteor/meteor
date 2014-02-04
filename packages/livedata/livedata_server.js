@@ -2,15 +2,6 @@ DDPServer = {};
 
 var Fiber = Npm.require('fibers');
 
-// For the reported client address for a connection to be correct, the
-// developer must set the HTTP_FORWARDED_COUNT environment variable to
-// an integer representing the number of hops they expect in the
-// `x-forwarded-for` header. E.g., set to "1" if the server is behind
-// one proxy.
-
-var httpForwardedCount = parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0;
-
-
 // This file contains classes:
 // * Session - The server's connection to a single DDP client
 // * Subscription - A single subscription for a single client
@@ -740,6 +731,15 @@ _.extend(Session.prototype, {
   // proxies the server is behind.
   _clientAddress: function () {
     var self = this;
+
+    // For the reported client address for a connection to be correct,
+    // the developer must set the HTTP_FORWARDED_COUNT environment
+    // variable to an integer representing the number of hops they
+    // expect in the `x-forwarded-for` header. E.g., set to "1" if the
+    // server is behind one proxy.
+    //
+    // This could be computed once at startup instead of every time.
+    var httpForwardedCount = parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0;
 
     if (httpForwardedCount === 0)
       return self.socket.remoteAddress;
