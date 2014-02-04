@@ -2,6 +2,15 @@ DDPServer = {};
 
 var Fiber = Npm.require('fibers');
 
+// For the reported client address for a connection to be correct, the
+// developer must set the HTTP_FORWARDED_COUNT environment variable to
+// an integer representing the number of hops they expect in the
+// `x-forwarded-for` header. E.g., set to "1" if the server is behind
+// one proxy.
+
+var httpForwardedCount = parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0;
+
+
 // This file contains classes:
 // * Session - The server's connection to a single DDP client
 // * Subscription - A single subscription for a single client
@@ -253,8 +262,9 @@ var Session = function (server, version, socket) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
-  // The `ConnectionHandle` for this session, passed to
-  // `Meteor.server.onConnection` callbacks.
+  // This object is the public interface to the session. In the public
+  // API, it is called the `connection` object.  Internally we call it
+  // a `connectionHandle` to avoid ambiguity.
   self.connectionHandle = {
     id: self.id,
     close: function () {
@@ -268,7 +278,9 @@ var Session = function (server, version, socket) {
         // if we're already closed, call the callback.
         Meteor.defer(cb);
       }
-    }
+    },
+    clientAddress: self._clientAddress(),
+    httpHeaders: self.socket.headers
   };
 
   socket.send(stringifyDDP({msg: 'connected',
@@ -283,7 +295,6 @@ var Session = function (server, version, socket) {
 };
 
 _.extend(Session.prototype, {
-
 
   sendReady: function (subscriptionIds) {
     var self = this;
@@ -722,8 +733,36 @@ _.extend(Session.prototype, {
       sub._deactivate();
     });
     self._universalSubs = [];
-  }
+  },
 
+  // Determine the remote client's IP address, based on the
+  // HTTP_FORWARDED_COUNT environment variable representing how many
+  // proxies the server is behind.
+  _clientAddress: function () {
+    var self = this;
+
+    if (httpForwardedCount === 0)
+      return self.socket.remoteAddress;
+
+    var forwardedFor = self.socket.headers["x-forwarded-for"];
+    if (! _.isString(forwardedFor))
+      return null;
+    forwardedFor = forwardedFor.trim().split(/\s*,\s*/);
+
+    // Typically the first value in the `x-forwarded-for` header is
+    // the original IP address of the client connecting to the first
+    // proxy.  However, the end user can easily spoof the header, in
+    // which case the first value(s) will be the fake IP address from
+    // the user pretending to be a proxy reporting the original IP
+    // address value.  By counting HTTP_FORWARDED_COUNT back from the
+    // end of the list, we ensure that we get the IP address being
+    // reported by *our* first proxy.
+
+    if (httpForwardedCount < 0 || httpForwardedCount > forwardedFor.length)
+      return null;
+
+    return forwardedFor[forwardedFor.length - httpForwardedCount];
+  }
 });
 
 /******************************************************************************/
