@@ -42,9 +42,13 @@ var safeEquals = function (a, b) {
 UI.With = function (argFunc, contentBlock) {
   checkBlockHelperArguments('With', argFunc, contentBlock);
 
-  var block = UI.block(function () {
-    return contentBlock;
-  });
+  var block = contentBlock;
+  if ('data' in block) {
+    // XXX TODO: get religion about where `data` property goes
+    block = UI.block(function () {
+      return contentBlock;
+    });
+  }
   block.data = UI.emboxValue(argFunc, safeEquals);
 
   return block;

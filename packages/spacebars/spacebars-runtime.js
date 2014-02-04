@@ -201,3 +201,9 @@ Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
   var w = UI.With(argFunc, contentBlock);
   return UI.If(w.data, w, elseContentBlock);
 };
+
+Spacebars.TemplateWith = function (argFunc, contentBlock) {
+  var w = UI.With(argFunc, contentBlock);
+  w.__isTemplateWith = true;
+  return w;
+};

@@ -222,16 +222,20 @@ var codeGenTemplateTag = function (tag) {
             includeArgs.push(elseContent);
         }
 
-        var includeCode = HTML.EmitCode(
-          'Spacebars.include(' + includeArgs.join(', ') + ')');
+        var includeCode =
+              'Spacebars.include(' + includeArgs.join(', ') + ')';
 
         if (dataFunc) {
-          includeCode = HTML.EmitCode(
-            'UI.With(' + dataFunc + ', UI.block(' +
-              Spacebars.codeGen(includeCode) + '))');
+          includeCode =
+            'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
+            Spacebars.codeGen(HTML.EmitCode(includeCode)) + '))';
         }
 
-        return includeCode;
+        if (path[0] === 'content' || path[0] === 'elseContent') {
+          includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
+        }
+
+        return HTML.EmitCode(includeCode);
       }
     } else {
       // Can't get here; TemplateTag validation should catch any

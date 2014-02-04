@@ -469,3 +469,15 @@ Hi there!
 <template name="spacebars_template_test_inclusion_lookup_subtmpl3">
   This is a template passed in the data context.
 </template>
+
+<template name="spacebars_template_test_content_context">
+  {{#with foo}}
+    {{#with bar}}
+      {{#spacebars_template_test_iftemplate condition=cond}}
+        {{firstLetter}}{{../secondLetter}}
+      {{else}}
+        {{../firstLetter}}{{secondLetter}}
+      {{/spacebars_template_test_iftemplate}}
+    {{/with}}
+  {{/with}}
+</template>

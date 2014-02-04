@@ -269,6 +269,27 @@ var contentEquals = function (a, b) {
   }
 };
 
+UI.InTemplateScope = function (tmplInstance, content) {
+  if (! (this instanceof UI.InTemplateScope))
+    // called without `new`
+    return new UI.InTemplateScope(tmplInstance, content);
+
+  var parentPtr = tmplInstance.parent;
+  if (parentPtr.__isTemplateWith)
+    parentPtr = parentPtr.parent;
+
+  this.parentPtr = parentPtr;
+  this.content = content;
+};
+
+UI.InTemplateScope.prototype.toHTML = function (parentComponent) {
+  return HTML.toHTML(this.content, this.parentPtr);
+};
+
+UI.InTemplateScope.prototype.toText = function (textMode, parentComponent) {
+  return HTML.toText(this.content, textMode, this.parentPtr);
+};
+
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before, parentComponent) {
@@ -372,8 +393,10 @@ var materialize = function (node, parent, before, parentComponent) {
     var htmlNodes = UI.DomBackend.parseHTML(node.value);
     for (var i = 0; i < htmlNodes.length; i++)
       insert(htmlNodes[i], parent, before);
-  } else if (node instanceof HTML.Special) {
+  } else if (HTML.Special && (node instanceof HTML.Special)) {
     throw new Error("Can't materialize Special tag, it's just an intermediate rep");
+  } else if (node instanceof UI.InTemplateScope) {
+    materialize(node.content, parent, before, node.parentPtr);
   } else {
     // can't get here
     throw new Error("Unexpected node in htmljs: " + node);
