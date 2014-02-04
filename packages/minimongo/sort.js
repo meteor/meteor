@@ -48,19 +48,11 @@ Sorter = function (spec) {
   // min/max.)
   //
   // XXX This is actually wrong! In fact, the whole attempt to compile sort
-  //     functions independently of selectors is wrong. In MongoDB, if you have
-  //     documents {_id: 'x', a: [1, 10]} and {_id: 'y', a: [5, 15]}, then
-  //     C.find({}, {sort: {a: 1}}) puts x before y (1 comes before 5).  But
-  //     C.find({a: {$gt: 3}}, {sort: {a: 1}}) puts y before x (1 does not match
-  //     the selector, and 5 comes before 10).
-  //
-  //     The way this works is pretty subtle!  For example, if the documents are
-  //     instead {_id: 'x', a: [{x: 1}, {x: 10}]}) and
-  //             {_id: 'y', a: [{x: 5}, {x: 15}]}),
-  //     then C.find({'a.x': {$gt: 3}}, {sort: {'a.x': 1}}) and
-  //          C.find({a: {$elemMatch: {x: {$gt: 3}}}}, {sort: {'a.x': 1}})
-  //     both follow this rule (y before x).  ie, you do have to apply this
-  //     through $elemMatch.
+  // functions independently of selectors is wrong. In MongoDB, if you have
+  // documents {_id: 'x', a: [1, 10]} and {_id: 'y', a: [5, 15]},
+  // then C.find({}, {sort: {a: 1}}) puts x before y (1 comes before 5).
+  // But C.find({a: {$gt: 3}}, {sort: {a: 1}}) puts y before x (1 does not match
+  // the selector, and 5 comes before 10).
   var reduceValue = function (branchValues, findMin) {
     // Expand any leaf arrays that we find, and ignore those arrays themselves.
     branchValues = expandArraysInBranches(branchValues, true);

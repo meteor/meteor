@@ -7,34 +7,13 @@
 
 // ObserveHandle: the return value of a live query.
 
-LocalCollection = function (options) {
+LocalCollection = function (name) {
   var self = this;
-  options = options || {};
-
-  self.name = options.name;
+  self.name = name;
   // _id -> document (also containing id)
   self._docs = new LocalCollection._IdMap;
 
-  // When writing to this collection, we batch all observeChanges callbacks
-  // until the end of the write, and run them at this point. On the server, we
-  // use a single SynchronousQueue to do so, so that we never deliver callbacks
-  // out of order even if other writes occur during a yield. On the client, or
-  // on the server if we promise that our callbacks will never yield via an
-  // undocumented option, we use the simpler UnyieldingQueue.
-  //
-  // (What is the _observeCallbacksWillNeverYield option for? In some cases, it
-  // can be nice (on the server) to be able to write to a LocalCollection
-  // without yielding (eg, in a _noYieldsAllowed block). It's necessary to
-  // provide non-yielding allow callbacks in that case, but just doing that
-  // wouldn't be good enough if we always used SynchronousQueue on the server,
-  // since it tends to yield in order to run even non-yielding callbacks.)
-  var queueClass;
-  if (Meteor._SynchronousQueue && !options._observeCallbacksWillNeverYield) {
-    queueClass = Meteor._SynchronousQueue;
-  } else {
-    queueClass = Meteor._UnyieldingQueue;
-  }
-  self._observeQueue = new queueClass();
+  self._observeQueue = new Meteor._SynchronousQueue();
 
   self.next_qid = 1; // live query id generator
 
@@ -47,8 +26,8 @@ LocalCollection = function (options) {
   //  selector, sorter, (callbacks): functions
   self.queries = {};
 
-  // null if not saving originals; an IdMap from id to original document value
-  // if saving originals. See comments before saveOriginals().
+  // null if not saving originals; an IdMap from id to original document value if
+  // saving originals. See comments before saveOriginals().
   self._savedOriginals = null;
 
   // True when observers are paused and we should not send callbacks.
