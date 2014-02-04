@@ -58,8 +58,12 @@ exports.parse = function (err) {
       });
     } else if (m = frame.match(/^\s*-\s*-\s*-\s*-\s*-\s*$/)) {
       // "    - - - - -"
-      // This shows up sometimes, with what appears to be a different
-      // fiber's stack underneath it?
+      // This is something added when you throw an Error through a future. The
+      // stack above the dashes is the stack of the 'wait' call; the stack below
+      // is the stack inside the fiber where the Error is originally
+      // constructed. Taking just the former seems good for now, but in the
+      // future we may want to sew them together (possibly in the opposite
+      // order?)
       stop = true;
     } else if (_.isEmpty(ret)) {
       // We haven't found any stack frames, so probably we have newlines in the
