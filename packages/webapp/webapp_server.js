@@ -112,8 +112,8 @@ var camelCase = function (name) {
   return parts.join('');
 };
 
-var identifyBrowser = function (req) {
-  var userAgent = useragent.lookup(req.headers['user-agent']);
+var identifyBrowser = function (userAgentString) {
+  var userAgent = useragent.lookup(userAgentString);
   return {
     name: camelCase(userAgent.family),
     major: +userAgent.major,
@@ -122,9 +122,12 @@ var identifyBrowser = function (req) {
   };
 };
 
+// XXX Refactor as part of implementing real routing.
+WebAppInternals.identifyBrowser = identifyBrowser;
+
 WebApp.categorizeRequest = function (req) {
   return {
-    browser: identifyBrowser(req),
+    browser: identifyBrowser(req.headers['user-agent']),
     url: url.parse(req.url, true)
   };
 };
