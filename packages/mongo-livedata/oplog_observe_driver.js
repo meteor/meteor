@@ -19,8 +19,21 @@ OplogObserveDriver = function (options) {
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
   self._multiplexer = options.multiplexer;
-  if (options.ordered)
-    throw Error("OplogObserveDriver only supports unordered observeChanges");
+
+  if (options.ordered) {
+    // XXX replace with doubly-heaps and shit once we get these working
+    var comparator = self._cursorDescription.sorter.getComparator();
+    self._limit = self._cursorDescription.limit;
+    self._comparator = comparator;
+    self._unpublishedBuffer = new DummyStructure(comparator);
+    // We need something that can find Max value in addition to IdMap interface
+    self._published = new DummyStructure(comparator);
+  } else {
+    self._limit = 0;
+    self._comparator = null;
+    self._unpublishedBuffer = null;
+    self._published = new LocalCollection._IdMap;
+  }
 
   self._stopped = false;
   self._stopHandles = [];
@@ -30,7 +43,6 @@ OplogObserveDriver = function (options) {
 
   self._registerPhaseChange(PHASE.QUERYING);
 
-  self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
   self._matcher = options.matcher;
   var projection = self._cursorDescription.options.fields || {};
@@ -107,22 +119,111 @@ OplogObserveDriver = function (options) {
 };
 
 _.extend(OplogObserveDriver.prototype, {
-  _add: function (doc) {
+  _addPublished: function (id, doc) {
+    var self = this;
+    self._published.set(id, self._sharedProjectionFn(doc));
+    self._multiplexer.added(id, self._projectionFn(doc));
+
+    // After adding this document, the published set might be overflowed
+    // (exceeding capacity specified by limit). If so, push the maximum element
+    // to the buffer, we might want to save it in memory to reduce the amount of
+    // Mongo lookups in the future.
+    if (self._limit && self._published.size() > self._limit) {
+      // XXX in theory the size of published is no more than limit+1
+      if (self._published.size() !== self._limit + 1) {
+        // xcxc better error message
+        throw new Error("After adding to published, " +
+                        (self._limit - self._published.size()) +
+                        " documents are overflowing the set");
+      }
+
+      var overflowingDocId = self._published.getMaximumId();
+      var overflowingDoc = self._published.get(overflowingDocId);
+      self._published.remove(overflowingDocId);
+      self._multiplexer.removed(overflowingDocId);
+      self._addBuffered(overflowingDocId, overflowingDoc);
+    }
+  },
+  _removePublished: function (id) {
+    var self = this;
+    self._published.remove(id);
+    self._multiplexer.removed(id);
+    if (!self._unpublishedBuffer)
+      return;
+    // xcxc size on heaps should be cached to O(1)
+    if (self._published.size() < self._cursorDescription.limit) {
+      // The unpublished buffer is empty iff published contains the whole
+      // matching set, i.e. number of matching documents is less or equal to the
+      // queries limit.
+      if (!self._unpublishedBuffer.size())
+        return;
+
+      var newDocId = self._unpublishedBuffer.minElementId();
+      var newDoc = self._unpublishedBuffer.get(newDocId);
+      self._removeBuffered(newDocId);
+      self._addPublished(newDocId, newDoc);
+    }
+  },
+  _changePublished: function (id, oldDoc, newDoc) {
+    var self = this;
+    self._published.set(id, self._sharedProjectionFn(newDoc));
+    var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
+    changed = self._projectionFn(changed);
+    if (!_.isEmpty(changed))
+      self._multiplexer.changed(id, changed);
+  },
+  _addBuffered: function (id, doc) {
+    var self = this;
+    self._unpublishedBuffer.add(id, self._sharedProjectionFn(fields));
+    if (self._unpublishedBuffer.size() > self._limit)
+      self._unpublishedBuffer.remove(self._unpublishedBuffer.getMaximumId());
+  },
+  _removeBuffered: function (id) {
+    var self = this;
+    self._unpublishedBuffer.remove(id);
+    if (! self._unpublishedBuffer.size())
+      self._needToPollQuery();
+  },
+  // Called when a document has joined the "Matching" results set.
+  // Takes responsibility of keeping _unpublishedBuffer in sync with _published
+  // and the effect of limit enforced.
+  _addMatching: function (doc) {
     var self = this;
     var id = doc._id;
     var fields = _.clone(doc);
     delete fields._id;
     if (self._published.has(id))
       throw Error("tried to add something already published " + id);
-    self._published.set(id, self._sharedProjectionFn(fields));
-    self._multiplexer.added(id, self._projectionFn(fields));
+    if (self._unpublishedBuffer && self._unpublishedBuffer.has(id))
+      throw Error("tried to add something already existed in buffer " + id); // xcxc error msg
+
+    var limit = self._limit;
+    var comparator = self._comparator;
+    var maxPublished = (limit && self._published.size() > 0) ? self._published.get(self._published.getMaximumId()) : null;
+    var maxBuffered = (limit && self._unpublishedBuffer.size() > 0) ? self._unpublishedBuffer.get(self._unpublishedBuffer.getMaximumId()) : null;
+    // The query is unlimited or didn't publish enough documents yet or the new
+    // document would fit into published set pushing the maximum element out,
+    // then we need to publish the doc.
+    // Otherwise we might need to buffer it (only in case of limited query).
+    if (!limit || self._published.size() < limit || comparator(maxPublished, fields) === 1) {
+      self._addPublished(id, fields);
+    } else if (self._unpublishedBuffer.size() < limit || comparator(maxBuffered, fields) === 1) {
+      self._addBuffered(id, fields);
+    }
   },
-  _remove: function (id) {
+  // Called when a document leaves the "Matching" results set.
+  // Takes responsibility of keeping _unpublishedBuffer in sync with _published
+  // and the effect of limit enforced.
+  _removeMatching: function (id) {
     var self = this;
-    if (!self._published.has(id))
-      throw Error("tried to remove something unpublished " + id);
-    self._published.remove(id);
-    self._multiplexer.removed(id);
+    if (!self._published.has(id) && !self._unpublishedBuffer)
+      throw Error("tried to remove something unpublished " + id); // xcxc fix this error msg
+
+    if (self._published.has(id)) {
+      self._removePublished(id);
+    } else if (self._unpublishedBuffer.has(id)) {
+      self._removeBuffered(id);
+    }
   },
   _handleDoc: function (id, newDoc, mustMatchNow) {
     var self = this;
@@ -134,22 +235,40 @@ _.extend(OplogObserveDriver.prototype, {
                   + EJSON.stringify(self._cursorDescription));
     }
 
-    var matchedBefore = self._published.has(id);
+    var publishedBefore = self._published.has(id);
+    var bufferedBefore = self._unpublishedBuffer && self._unpublishedBuffer.has(id);
+    var cachedBefore = publishedBefore || bufferedBefore;
 
-    if (matchesNow && !matchedBefore) {
-      self._add(newDoc);
-    } else if (matchedBefore && !matchesNow) {
-      self._remove(id);
+    if (matchesNow && !cachedBefore) {
+      self._addMatching(newDoc);
+    } else if (cachedBefore && !matchesNow) {
+      self._removeMatching(id);
     } else if (matchesNow) {
-      var oldDoc = self._published.get(id);
-      if (!oldDoc)
-        throw Error("thought that " + id + " was there!");
       delete newDoc._id;
-      self._published.set(id, self._sharedProjectionFn(newDoc));
-      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-      changed = self._projectionFn(changed);
-      if (!_.isEmpty(changed))
-        self._multiplexer.changed(id, changed);
+      var oldDoc = self._published.get(id);
+      var comparator = self._comparator;
+      var minBuffered = self._unpublishedBuffer && self._unpublishedBuffer.size() &&
+        self._unpublishedBuffer.get(self._unpublishedBuffer.minElementId());
+
+      if (publishedBefore) {
+        // Unordered case where the document stays in published once it matches
+        // or the case when we don't have enough matching docs to publish or the
+        // changed but matching doc will stay in published anyways.
+        if (!self._limit || self._unpublishedBuffer.size() === 0 || comparator(newDoc, minBuffered) < 1) {
+          self._changePublished(id, oldDoc, newDoc);
+        } else {
+          // after the change doc doesn't stay in the published, remove it
+          self._removePublished(id);
+        }
+      } else if (bufferedBefore) {
+        // after the change we can't know if doc is still in the buffer limit
+        // w/o querying mongo, so just remove it from buffer
+        self._removeBuffered(id);
+        // but it can move into published now, check it
+        var maxPublished = self._published.get(self._published.getMaximumId());
+        if (comparator(newDoc, maxPublished) === -1)
+          self._addPublished(id, newDoc);
+      }
     }
   },
   _fetchModifiedDocuments: function () {
@@ -233,16 +352,17 @@ _.extend(OplogObserveDriver.prototype, {
     }
 
     if (op.op === 'd') {
-      if (self._published.has(id))
-        self._remove(id);
+      if (self._published.has(id) || (self._limit && self._unpublishedBuffer.has(id)))
+        self._removeMatching(id);
     } else if (op.op === 'i') {
+      // xcxc what if buffer has it?
       if (self._published.has(id))
         throw new Error("insert found for already-existing ID");
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
       if (self._matcher.documentMatches(op.o).result)
-        self._add(op.o);
+        self._addMatching(op.o);
     } else if (op.op === 'u') {
       // Is this a modifier ($set/$unset, which may require us to poll the
       // database to figure out if the whole document matches the selector) or a
@@ -258,10 +378,13 @@ _.extend(OplogObserveDriver.prototype, {
 
       if (isReplace) {
         self._handleDoc(id, _.extend({_id: id}, op.o));
-      } else if (self._published.has(id) && canDirectlyModifyDoc) {
+      } else if ((self._published.has(id) || self._unpublishedBuffer.has(id)) && canDirectlyModifyDoc) {
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
-        var newDoc = EJSON.clone(self._published.get(id));
+        if (self._published.has(id))
+          var newDoc = EJSON.clone(self._published.get(id));
+        else
+          var newDoc = EJSON.clone(self._unpublishedBuffer.get(id));
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
@@ -280,9 +403,16 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._stopped)
       throw new Error("oplog stopped surprisingly early");
 
-    var initialCursor = self._cursorForQuery();
+    // Query 2x documents as the half excluded from the original query will go
+    // into unpublished buffer to reduce additional Mongo lookups in cases when
+    // documents are removed from the published set and need a replacement.
+    // XXX needs more thought on non-zero skip
+    // XXX "2" here is a "magic number"
+    var initialCursor = self._cursorForQuery({ limit: self._limit * 2 });
     initialCursor.forEach(function (initialDoc) {
-      self._add(initialDoc);
+      // self._addMatching knows how to correctly separate documents into the
+      // published set and the buffer.
+      self._addMatching(initialDoc);
     });
     if (self._stopped)
       throw new Error("oplog stopped quite early");
@@ -324,12 +454,18 @@ _.extend(OplogObserveDriver.prototype, {
       // subtle note: _published does not contain _id fields, but newResults
       // does
       var newResults = new LocalCollection._IdMap;
-      var cursor = self._cursorForQuery();
-      cursor.forEach(function (doc) {
-        newResults.set(doc._id, doc);
+      var newBuffer = new LocalCollection._IdMap;
+      // XXX 2 is a "magic number" meaning there is an extra chunk of docs for
+      // buffer if such is needed.
+      var cursor = self._cursorForQuery({ limit: self._limit * 2 });
+      cursor.forEach(function (doc, i) {
+        if (!self._limit || i < self._limit)
+          newResults.set(doc._id, doc);
+        else
+          newBuffer.set(doc._id, doc);
       });
 
-      self._publishNewResults(newResults);
+      self._publishNewResults(newResults, newBuffer);
 
       self._doneQuerying();
     });
@@ -379,7 +515,7 @@ _.extend(OplogObserveDriver.prototype, {
     }
   },
 
-  _cursorForQuery: function () {
+  _cursorForQuery: function (optionsOverwrite) {
     var self = this;
 
     // The query we run is almost the same as the cursor we are observing, with
@@ -388,6 +524,11 @@ _.extend(OplogObserveDriver.prototype, {
     // "shared" projection). And we don't want to apply any transform in the
     // cursor, because observeChanges shouldn't use the transform.
     var options = _.clone(self._cursorDescription.options);
+
+    // Allow the caller to modify the options. Useful to specify different skip
+    // and limit values.
+    _.extend(options, optionsOverwrite);
+
     options.fields = self._sharedProjection;
     delete options.transform;
     // We are NOT deep cloning fields or selector here, which should be OK.
@@ -401,12 +542,18 @@ _.extend(OplogObserveDriver.prototype, {
 
   // Replace self._published with newResults (both are IdMaps), invoking observe
   // callbacks on the multiplexer.
+  // Replace self._unpublishedBuffer with newBuffer.
   //
   // XXX This is very similar to LocalCollection._diffQueryUnorderedChanges. We
   // should really: (a) Unify IdMap and OrderedDict into Unordered/OrderedDict (b)
   // Rewrite diff.js to use these classes instead of arrays and objects.
-  _publishNewResults: function (newResults) {
+  _publishNewResults: function (newResults, newBuffer) {
     var self = this;
+
+    // If there is a buffer, shut down so it doesn't stay in a way
+    if (self._unpublishedBuffer) {
+      self._unpublishedBuffer.clear();
+    }
 
     // First remove anything that's gone. Be careful not to modify
     // self._published while iterating over it.
@@ -416,7 +563,7 @@ _.extend(OplogObserveDriver.prototype, {
         idsToRemove.push(id);
     });
     _.each(idsToRemove, function (id) {
-      self._remove(id);
+      self._removePublished(id);
     });
 
     // Now do adds and changes.
@@ -424,6 +571,11 @@ _.extend(OplogObserveDriver.prototype, {
       // "true" here means to throw if we think this doc doesn't match the
       // selector.
       self._handleDoc(id, doc, true);
+    });
+
+    // Finally, replace the buffer
+    newBuffer.forEach(function (doc, id) {
+      self._addBuffered(id, doc);
     });
   },
 
@@ -451,6 +603,7 @@ _.extend(OplogObserveDriver.prototype, {
 
     // Proactively drop references to potentially big things.
     self._published = null;
+    self._unpublishedBuffer = null;
     self._needToFetch = null;
     self._currentlyFetching = null;
     self._oplogEntryHandle = null;
@@ -489,7 +642,7 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   // This option (which are mostly used for sorted cursors) require us to figure
   // out where a given document fits in an order to know if it's included or
   // not, and we don't track that information when doing oplog tailing.
-  if (options.limit || options.skip) return false;
+  if (options.limit && (options.skip || !options.sorter)) return false;
 
   // If a fields projection option is given check if it is supported by
   // minimongo (some operators are not supported).

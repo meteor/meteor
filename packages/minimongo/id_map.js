@@ -68,7 +68,7 @@ _.extend(LocalCollection._IdMap.prototype, {
     var clone = new LocalCollection._IdMap;
     self.forEach(function (value, id) {
       clone.set(id, EJSON.clone(value));
-      });
+    });
     return clone;
   }
 });
