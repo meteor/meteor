@@ -659,10 +659,11 @@ exports.registerOrLogIn = function () {
       return false;
     }
 
-    process.stderr.write("\nGreat! Nice to meet you, " + result.username +
+    process.stderr.write("\nGreat! Nice to meet you, " +
+                         waitForRegistrationResult.username +
                          "! Now log in with your new password.\n");
     return doInteractivePasswordLogin({
-      username: result.username,
+      username: waitForRegistrationResult.username,
       retry: true
     });
   } else if (result.alreadyExisted && result.username) {
