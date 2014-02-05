@@ -546,7 +546,7 @@ Template.api.find = {
     {name: "selector",
      type: "Mongo selector, or String",
      type_link: "selectors",
-     descr: "The query"}
+     descr: "The query, if a selector. If a String is passed, it will be compared against the `_id` field."}
   ],
   options: [
     {name: "sort",
@@ -581,7 +581,7 @@ Template.api.findone = {
     {name: "selector",
      type: "Mongo selector, or String",
      type_link: "selectors",
-     descr: "The query"}
+     descr: "The query, if a selector. If a String is passed, it will be compared against the `_id` field."}
   ],
   options: [
     {name: "sort",
