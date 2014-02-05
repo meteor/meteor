@@ -926,12 +926,13 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time',
-  // "changed" is not really a tag, it's just used for tests skipped by
-  // '--changed'
-  changed: 'unchanged since last pass'
+  // these last two are not actually test tags; they reflect the use of
+  // --changed and --tests
+  unchanged: 'unchanged since last pass',
+  misnamed: "don't match --test argument"
 };
 
-// options: onlyChanged, offline, includeSlowTests, historyLines
+// options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
 var runTests = function (options) {
   var failureCount = 0;
 
@@ -961,13 +962,22 @@ var runTests = function (options) {
   if (! options.includeSlowTests)
     skipCounts['slow'] = 0;
 
+  if (options.testRegexp) {
+    var lengthBeforeTestRegexp = tests.length;
+    // Filter out tests whose name doesn't match.
+    tests = _.filter(tests, function (test) {
+      return options.testRegexp.test(test.name);
+    });
+    skipCounts.misnamed = lengthBeforeTestRegexp - tests.length;
+  }
+
   if (options.onlyChanged) {
-    var originalLength = tests.length;
+    var lengthBeforeOnlyChanged = tests.length;
     // Filter out tests that haven't changed since they last passed.
     tests = _.filter(tests, function (test) {
       return test.fileHash !== testState.lastPassedHashes[test.file];
     });
-    skipCounts.changed = originalLength - tests.length;
+    skipCounts.unchanged = lengthBeforeOnlyChanged - tests.length;
   }
 
   var failuresInFile = {};
@@ -1068,7 +1078,7 @@ var runTests = function (options) {
   _.each(skipCounts, function (count, tag) {
     totalSkipCount += count;
     if (count) {
-      process.stderr.write("Skipped " + count + " '" + tag + "' test" +
+      process.stderr.write("Skipped " + count + " " + tag + " test" +
                            (count > 1 ? "s" : "") + " (" +
                            tagDescriptions[tag] + ")\n");
     }

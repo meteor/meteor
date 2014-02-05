@@ -1157,7 +1157,8 @@ main.registerCommand({
     changed: { type: Boolean },
     'force-online': { type: Boolean },
     slow: { type: Boolean },
-    history: { type: Number }
+    history: { type: Number },
+    tests: { type: String }
   },
   hidden: true
 }, function (options) {
@@ -1174,11 +1175,24 @@ main.registerCommand({
     }
   }
 
+  var testRegexp = undefined;
+  if (options.tests) {
+    try {
+      testRegexp = new RegExp(options.tests);
+    } catch (e) {
+      if (!(e instanceof SyntaxError))
+        throw e;
+      process.stderr.write("Bad regular expression: " + options.tests + "\n");
+      return 1;
+    }
+  }
+
   return selftest.runTests({
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
-    historyLines: options.history
+    historyLines: options.history,
+    testRegexp: testRegexp
   });
 });
 
