@@ -60,6 +60,16 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
+  run = s.run("dummy", "--email", "x", "-");
+  run.read('"x" 3000 none ["-"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "-");
+  run.read('"-" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
   run = s.run("dummy", "--email", "x", "--port", "1234", "--changed");
   run.read('"x" 1234 true []\n');
   run.expectEnd();

@@ -421,6 +421,12 @@ Fiber(function () {
       break;
     }
 
+    // -: just an argument named '-'
+    if (term === "-") {
+      rawArgs.push(term);
+      continue;
+    }
+
     // A single option, like --foo or -f
     if (term.match(/^--/) || term.match(/^-.$/)) {
       if (! _.has(rawOptions, term))
