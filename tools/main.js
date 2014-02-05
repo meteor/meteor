@@ -456,26 +456,19 @@ Fiber(function () {
         replacements.push(subterm);
         if (isBoolean[subterm] === false) {
           // If we recognize this short option, and we're sure that it
-          // takes a value, and there are remaining charaters in the
-          // short option, then either those remaining characters are
-          // the value, or the value was omitted.
+          // takes a value, and there are remaining characters in the
+          // short option, then those remaining characters are the value.
+          // (If we have no idea what this short option is, we assume
+          // it's boolean for now, and will print an error later.)
           var remainder = term.substr(j + 1);
           if (remainder.length) {
-            if (remainder.match(/^[0-9]+$/)) {
-              // If it's a number, we decide that it's the value.
-              replacements.push(remainder);
-              break;
-            } else {
-              // Otherwise, we decide that the value is missing, and
-              // continue interpreting the characters as short options.
-              replacements.push(null);
-            }
+            replacements.push(remainder);
+            break;
           }
         }
       }
 
-      argv.splice(i, 1, replacements);
-      argv = _.flatten(argv);
+      _.partial(argv.splice, i, 1).apply(argv, replacements);
       i --;
       continue;
     }

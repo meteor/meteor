@@ -1207,7 +1207,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'dummy',
   options: {
-    email: { type: String, required: true },
+    email: { type: String, short: "e", required: true },
     port: { type: Number, short: "p", default: 3000 },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },

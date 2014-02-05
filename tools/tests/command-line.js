@@ -75,6 +75,21 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
+  run = s.run("dummy", "-e", "x");
+  run.read('"x" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "-e", "");
+  run.read('"" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "-exxx");
+  run.read('"xxx" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
   run = s.run("dummy", "--email", "-");
   run.read('"-" 3000 none []\n');
   run.expectEnd();
@@ -134,6 +149,10 @@ selftest.define("argument parsing", function () {
 
   run = s.run("dummy", "--email");
   run.matchErr("--email option needs a value");
+  run.expectExit(1);
+
+  run = s.run("dummy", "-e");
+  run.matchErr("--email (-e) option needs a value");
   run.expectExit(1);
 
   run = s.run("dummy", "--email", "x", "--changed", "-p");
@@ -212,7 +231,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   run = s.run("dummy", "--email", "x", "-UDp4000k", "--changed");
-  run.matchErr("--port (-p) option needs a value");
+  run.matchErr("--port (-p) must be a number");
   run.expectExit(1);
 
   run = s.run("dummy", "--email", "x", "-UD4000k", "--changed");

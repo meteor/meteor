@@ -332,9 +332,9 @@ Usage: meteor dummy [options]
 Dummy command used for automated testing.
 
 Options:
-  --email     A required string option.
-  --port, -p  A numeric option with a short alias.
-  --changed   A boolean option.
+  --email, -e  A required string option.
+  --port, -p   A numeric option with a short alias.
+  --changed    A boolean option.
 
 
 >>> admin grant
