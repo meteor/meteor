@@ -47,11 +47,15 @@ var Command = function (options) {
   _.extend(this, options);
 
   _.each(this.options, function (value, key) {
+    if (key === "args" || key === "appDir")
+      throw new Error(options.name + ": bad option name " + key);
     if (! _.has(value, 'type'))
       value.type = String;
     if (_.has(value, 'default') && _.has(value, 'required'))
       throw new Error(options.name + ": " + key + " can't be both optional " +
                       "and required");
+    if (_.has(value, 'short') && value.short.length !== 1)
+      throw new Error(options.name + ": " + key + " has a bad short option");
   });
 };
 
