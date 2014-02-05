@@ -161,4 +161,6 @@ HTTP.call = function(method, url, options, callback) {
     callback(err);
   }
 
+  // Return handle if user wants to abort
+  return xhr;
 };
