@@ -111,6 +111,10 @@ main.registerCommand({
   if (files.inCheckout()) {
     process.stderr.write("checkout\n");
     return 1;
+  } else if (release.current === null) {
+    // .meteor/release says "none" but not in a checkout.
+    process.stderr.write("none\n");
+    return 1;
   } else {
     process.stdout.write(release.current.name + "\n");
     process.stdout.write(files.getToolsVersion() + "\n");
