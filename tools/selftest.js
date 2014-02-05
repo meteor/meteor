@@ -925,7 +925,10 @@ var define = function (name, tagsList, f) {
 var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
-  slow: 'take quite a long time'
+  slow: 'take quite a long time',
+  // "changed" is not really a tag, it's just used for tests skipped by
+  // '--changed'
+  changed: 'unchanged since last pass'
 };
 
 // options: onlyChanged, offline, includeSlowTests, historyLines
@@ -947,18 +950,6 @@ var runTests = function (options) {
     testState = { version: 1, lastPassedHashes: {} };
   var currentHashes = {};
 
-  if (options.onlyChanged) {
-    // Filter out tests that haven't changed since they last passed.
-    tests = _.filter(tests, function (test) {
-      return test.fileHash !== testState.lastPassedHashes[test.file];
-    });
-  }
-
-  if (! tests.length) {
-    process.stderr.write("No tests changed.\n");
-    return 0;
-  }
-
   // _.keys(skipCounts) is the set of tags to skip
   var skipCounts = {};
   if (! files.inCheckout)
@@ -969,6 +960,15 @@ var runTests = function (options) {
 
   if (! options.includeSlowTests)
     skipCounts['slow'] = 0;
+
+  if (options.onlyChanged) {
+    var originalLength = tests.length;
+    // Filter out tests that haven't changed since they last passed.
+    tests = _.filter(tests, function (test) {
+      return test.fileHash !== testState.lastPassedHashes[test.file];
+    });
+    skipCounts.changed = originalLength - tests.length;
+  }
 
   var failuresInFile = {};
   var skipsInFile = {};
@@ -1058,7 +1058,8 @@ var runTests = function (options) {
       testState.lastPassedHashes[f] = currentHashes[f];
   });
 
-  fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
+  if (tests.length)
+    fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
 
   if (totalRun > 0)
     process.stderr.write("\n");
@@ -1073,12 +1074,13 @@ var runTests = function (options) {
     }
   });
 
-  if (failureCount === 0) {
+  if (tests.length === 0) {
+    process.stderr.write("No tests run.\n");
+    return 0;
+  } else if (failureCount === 0) {
     var disclaimers = '';
     if (totalSkipCount > 0)
       disclaimers += " other";
-    if (options.onlyChanged)
-      disclaimers += " changed";
     process.stderr.write("All" + disclaimers + " tests passed.\n");
     return 0;
   } else {
