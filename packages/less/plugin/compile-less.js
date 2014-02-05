@@ -23,14 +23,14 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     paths: [path.dirname(compileStep._fullInputPath)] // for @import
   };
 
-  var parser = new(less.Parser)(options);
+  var parser = new less.Parser(options);
   var astFuture = new Future;
-  var ast, css;
+  var ast;
   try {
     parser.parse(source, astFuture.resolver());
     ast = astFuture.wait();
   } catch (e) {
-    // less.render() is supposed to report any errors via its
+    // less.Parser.parse is supposed to report any errors via its
     // callback. But sometimes, it throws them instead. This is
     // probably a bug in less. Be prepared for either behavior.
     compileStep.error({
@@ -43,14 +43,14 @@ Plugin.registerSourceHandler("less", function (compileStep) {
   }
 
   var cssFuture = new Future;
-  css = ast.toCSS({
+  var css = ast.toCSS({
     sourceMap: Boolean(true),
     writeSourceMap: function (sourceMap) {
       cssFuture.return(sourceMap);
     }
   });
 
-  sourceMap = JSON.parse(cssFuture.wait());
+  var sourceMap = JSON.parse(cssFuture.wait());
 
   sourceMap.sources = [compileStep.inputPath];
   sourceMap.sourcesContent = [source];

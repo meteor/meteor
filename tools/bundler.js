@@ -448,8 +448,10 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
-    // Run the preprocessing and concatenation of CSS files.
-    self.preprocessCss();
+    // Preprocess and concatenate CSS files for client targets.
+    if (self instanceof ClientTarget) {
+      self.mergeCss();
+    }
 
     // Minify, if requested
     if (options.minify) {
@@ -458,7 +460,11 @@ _.extend(Target.prototype, {
         packages: ['minifiers']
       }).minifiers;
       self.minifyJs(minifiers);
-      self.minifyCss(minifiers);
+
+      // CSS is minified only for client targets.
+      if (self instanceof ClientTarget) {
+        self.minifyCss(minifiers);
+      }
     }
 
     if (options.addCacheBusters) {
@@ -658,7 +664,7 @@ _.extend(Target.prototype, {
             }
           }
 
-          // Both CSS and JS files can have sourcemaps
+          // Both CSS and JS files can have source maps
           if (resource.sourceMap) {
             f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
@@ -685,18 +691,6 @@ _.extend(Target.prototype, {
       _.extend(self.pluginProviderPackageDirs,
                slice.pkg.pluginProviderPackageDirs)
     });
-  },
-
-  // Preprocess CSS in this target
-  preprocessCss: function () {
-    // Don't do anything by default
-    // The real implementation is in the subclass (ClientTarget)
-  },
-
-  // Minify the CSS in this target
-  minifyCss: function (minifiers) {
-    // Don't do anything by default
-    // The real implementation is in the subclass (ClientTarget)
   },
 
   // Minify the JS in this target
@@ -755,11 +749,11 @@ var ClientTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
-  // CSS files. List of File. They will be preprocessed, concatenated into
-  // single file and loaded at page load.
+  // CSS files. List of File. They will be loaded in the order given.
   self.css = [];
-  // Intermediate representation of preprocessed CSS tree.
-  self._cssAst = null;
+  // Cached CSS AST. If non-null, self.css has one item in it, processed CSS
+  // from merged input files, and this is its parse tree.
+  self._cssAstCache = null;
 
   // List of segments of additional HTML for <head>/<body>.
   self.head = [];
@@ -772,8 +766,10 @@ var ClientTarget = function (options) {
 inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
-  // Preprocess the CSS in the target
-  preprocessCss: function () {
+  // Lints CSS files and merges them into one file, fixing up source maps and
+  // pulling any @import directives up to the top since the CSS spec does not
+  // allow them to appear in the middle of a file.
+  mergeCss: function () {
     var self = this;
     var minifiers = unipackage.load({
       library: self.library,
@@ -806,20 +802,21 @@ _.extend(ClientTarget.prototype, {
     };
 
     // Other build phases might need this AST later
-    self._cssAst = CssTools.concatenateCssAsts(cssAsts, warnCb);
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
 
-    // Overwrite the CSS files list to the new concatenated file
-    var stringifiedCss = CssTools.stringifyCss(self._cssAst, {sourcemap: true});
-    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8')})];
+    // Overwrite the CSS files list with the new concatenated file
+    var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
+                                               { sourcemap: true });
+    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
 
-    // Set the contents of sourcemapped files
+    // Add the contents of the input files to the source map of the new file
     stringifiedCss.map.sourcesContent =
       _.map(stringifiedCss.map.sources, function (filename) {
         return originals[filename].contents('utf8');
       });
 
-    // Apply all previous sourcemaps if those existed
-    // Ex.: less -> css sourcemap sould be applied to css -> css sourcemap
+    // If any input files had source maps, apply them.
+    // Ex.: less -> css source map should be composed with css -> css source map
     var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
       new sourcemap.SourceMapConsumer(stringifiedCss.map));
 
@@ -840,8 +837,8 @@ _.extend(ClientTarget.prototype, {
 
     // If there is an AST already calculated, don't waste time on parsing it
     // again.
-    if (self._cssAst) {
-      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAst);
+    if (self._cssAstCache) {
+      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAstCache);
     } else if (self.css) {
       var allCss = _.map(self.css, function (file) {
         return file.contents('utf8');

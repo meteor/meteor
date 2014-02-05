@@ -4,7 +4,7 @@ Tinytest.add("minifiers - simple css minification", function (test) {
   }
 
   t('a \t\n{ color: red } \n', 'a{color:red}', 'whitespace check');
-  t('a \t\n{ color: red; margin: 1; } \n', 'a{color:red;margin:1}', 'only last one looses semicolon');
+  t('a \t\n{ color: red; margin: 1; } \n', 'a{color:red;margin:1}', 'only last one loses semicolon');
   t('a \t\n{ color: red;;; margin: 1;;; } \n', 'a{color:red;margin:1}', 'more semicolons than needed');
   t('a , p \t\n{ color: red; } \n', 'a,p{color:red}', 'multiple selectors');
   t('body {}', '', 'removing empty rules');

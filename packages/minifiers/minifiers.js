@@ -12,7 +12,7 @@ CssTools = {
   minifyCssAst: function (cssAst) {
     return MinifyAst(cssAst);
   },
-  concatenateCssAsts: function (cssAsts, warnCb) {
+  mergeCssAsts: function (cssAsts, warnCb) {
     var rulesPredicate = function (rules) {
       if (! _.isArray(rules))
         rules = [rules];
@@ -21,7 +21,7 @@ CssTools = {
       }
     };
 
-    // The straight-forward concatenation of CSS files would break @import rules
+    // Simple concatenation of CSS files would break @import rules
     // located in the beginning of a file. Before concatenation, pull them to
     // the beginning of a new syntax tree so they always precede other rules.
     var newAst = {
@@ -31,7 +31,7 @@ CssTools = {
 
     _.each(cssAsts, function (ast) {
       // Pick only the imports from the beginning of file ignoring @charset
-      // rules as Meteor assumes every file is in utf-8.
+      // rules as every file is assumed to be in UTF-8.
       if (_.any(ast.stylesheet.rules, rulesPredicate("charset"))) {
         warnCb(ast.filename, "@charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.");
       }
@@ -40,7 +40,7 @@ CssTools = {
                                       rulesPredicate("charset"));
       var importCount = 0;
       for (var i = 0; i < ast.stylesheet.rules.length; i++)
-        if (!rulesPredicate(["import", "comment"])(ast.stylesheet.rules[i])) {
+        if (! rulesPredicate(["import", "comment"])(ast.stylesheet.rules[i])) {
           importCount = i;
           break;
         }
@@ -51,7 +51,8 @@ CssTools = {
       // if there are imports left in the middle of file, warn user as it might
       // be a potential bug (imports are valid only in the beginning of file).
       if (_.any(ast.stylesheet.rules, rulesPredicate("import"))) {
-        warnCb(ast.filename, "warn: there are some @import rules those are not taking effect as they are required to be in the beginning of the file.");
+        // XXX make this an error?
+        warnCb(ast.filename, "there are some @import rules those are not taking effect as they are required to be in the beginning of the file");
       }
 
     });
