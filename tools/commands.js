@@ -6,7 +6,6 @@ var files = require('./files.js');
 var deploy = require('./deploy.js');
 var library = require('./library.js');
 var buildmessage = require('./buildmessage.js');
-var unipackage = require('./unipackage.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
@@ -1099,72 +1098,6 @@ main.registerCommand({
   }
 });
 
-
-///////////////////////////////////////////////////////////////////////////////
-// run-command
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'run-command',
-  hidden: true,
-  raw: true
-}, function (options) {
-  // This is marked as raw, so we have to do all of our argument
-  // parsing ourselves. This lets us make sure that the arguments to
-  // the command being run don't get accidentally intrepreted.
-
-  var library = release.current.library;
-  var argv = process.argv.slice(3);
-  if (! argv.length || argv[0] === "--help")
-    throw new main.ShowUsage;
-
-  if (! fs.existsSync(argv[0]) ||
-      ! fs.statSync(argv[0]).isDirectory()) {
-    process.stderr.write(argv[0] + ": not a directory\n");
-    return 1;
-  }
-
-  // Build and load the package
-  var world, packageName;
-  var messages = buildmessage.capture(
-    { title: "building the program" }, function () {
-      // Make the directory visible as a package. Derive the last
-      // package name from the last component of the directory, and
-      // bail out if that creates a conflict.
-      var packageDir = path.resolve(argv[0]);
-      packageName = path.basename(packageDir) + "-tool";
-      if (library.get(packageName, false)) {
-        buildmessage.error("'" + packageName +
-                           "' conflicts with the name " +
-                           "of a package in the library");
-      }
-      library.override(packageName, packageDir);
-
-      world = unipackage.load({
-        library: library,
-        packages: [ packageName ],
-        release: release.current.name
-      });
-    });
-  if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
-  if (! ('main' in world[packageName])) {
-    process.stderr.write("Package does not define a main() function.\n");
-    return 1;
-  }
-
-  var ret = world[packageName].main(argv.slice(1));
-  // let exceptions propagate and get printed by node
-  if (ret === undefined)
-    ret = 0;
-  if (typeof ret !== "number")
-    ret = 1;
-  ret = +ret; // cast to integer
-  return ret;
-});
 
 ///////////////////////////////////////////////////////////////////////////////
 // login
