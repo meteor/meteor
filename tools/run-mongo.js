@@ -133,7 +133,7 @@ var find_mongo_and_kill_it_dead = function (port) {
         return;
       }
 
-      utils.sleep(100);
+      utils.sleepMs(100);
     }
 
     // give up after 4 seconds.

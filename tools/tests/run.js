@@ -54,7 +54,7 @@ selftest.define("run --once", function () {
   run.match("once test\n");
   s.write('empty.js', 'null');
   s.write('.meteor/release', 'v1');
-  utils.sleep(2); // sorry, hard to avoid
+  utils.sleepMs(2000); // sorry, hard to avoid
   run.stop();
   run.forbidAll("updated");
   s.unlink('empty.js');

@@ -811,7 +811,7 @@ _.extend(Run.prototype, {
       for (var attempts = 0; ! self.fakeMongoConnection && attempts < 20;
            attempts ++) {
         // Throttle attempts to one every 100ms
-        utils.sleep((lastStartTime + 100) - (+ new Date));
+        utils.sleepMs((lastStartTime + 100) - (+ new Date));
         lastStartTime = +(new Date);
 
         // Use an anonymous function so that each iteration of the

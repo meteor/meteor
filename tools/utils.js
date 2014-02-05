@@ -117,7 +117,7 @@ exports.getAgentInfo = function () {
 // Wait for 'ms' milliseconds, and then return. Yields. (Must be
 // called within a fiber, and blocks only the calling fiber, not the
 // whole program.)
-exports.sleep = function (ms) {
+exports.sleepMs = function (ms) {
   if (ms <= 0)
     return;
 
