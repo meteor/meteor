@@ -10,6 +10,7 @@ Package.on_use(function (api) {
   api.use('random', ['client', 'server']);
   api.use('service-configuration', ['client', 'server']);
   api.use('ejson', 'server');
+  api.use('callback-hook', 'server');
 
   // needed for getting the currently logged-in user
   api.use('livedata', ['client', 'server']);

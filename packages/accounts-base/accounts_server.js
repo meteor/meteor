@@ -27,42 +27,290 @@ Meteor.user = function () {
   return Meteor.users.findOne(userId);
 };
 
+
+///
+/// LOGIN HOOKS
+///
+
+var validateLoginHook = new Hook();
+var onLoginHook = new Hook("onLogin callback");
+var onLoginFailureHook = new Hook("onLoginFailure callback");
+
+Accounts.validateLoginAttempt = function (func) {
+  return validateLoginHook.register(func);
+};
+
+Accounts.onLogin = function (func) {
+  return onLoginHook.register(func);
+};
+
+Accounts.onLoginFailure = function (func) {
+  return onLoginFailureHook.register(func);
+};
+
+
+var validateLogin = function (attempt) {
+  validateLoginHook.each(function (callback) {
+    var ret;
+    try {
+      ret = callback(attempt);
+    }
+    catch (e) {
+      attempt.allowed = false;
+      attempt.error = e
+      return true;
+    }
+    if (! ret) {
+      attempt.allowed = false;
+      attempt.error = new Meteor.Error(403, "Login Disallowed");
+    }
+    return true;
+  });
+};
+
+
+var successfulLogin = function (attempt) {
+  onLoginHook.each(function (callback) {
+    callback(attempt);
+    return true;
+  });
+};
+
+var failedLogin = function (attempt) {
+  onLoginFailureHook.each(function (callback) {
+    callback(attempt);
+    return true;
+  });
+};
+
+
+///
+/// LOGIN METHODS
+///
+
+// Login methods return to the client an object containing these
+// fields when the user was logged in successfully:
+//
+//   id: userId
+//   token: *
+//   tokenExpires: *
+//
+// tokenExpires is optional and intends to provide a hint to the
+// client as to when the token will expire. If not provided, the
+// client will call Accounts._tokenExpiration, passing it the date
+// that it received the token.
+//
+// The login method will throw an error back to the client if the user
+// failed to log in.
+//
+//
+// Login handlers and service specific login methods such as
+// `createUser` internally return a `result` object containing these
+// fields:
+//
+//   type:
+//     optional string; the service name, overrides the handler
+//     default if present.
+//
+//   error:
+//     exception; if the user is not allowed to login, the reason why.
+//
+//   userId:
+//     string; the user id of the user attempting to login (if
+//     known), required for an allowed login.
+//
+//   options:
+//     optional object merged into the result returned by the login
+//     method.
+//
+//   stampedLoginToken:
+//     optional object with `token` and `when` indicating the login
+//     token is already present in the database, returned by the
+//     "resume" login handler.
+//
+// For convenience, login methods can also throw an exception, which
+// is converted into an {error} result.
+//
+// This internal `result` object is automatically converted into the
+// public {id, token, tokenExpires} object returned to the client.
+
+
+// Try a login method, converting thrown exceptions into an {error}
+// result.
+//
+// Login methods may call `knownUserId` at the point that they
+// discover which user is attempting to login, if known.  The user id
+// is saved so that if the login method later throws an exception, the
+// user id can be included in the result object.
+//
+var tryLoginMethod = function (type, fn) {
+  var userId;
+  var knownUserId = function (id) {
+    userId = id;
+  };
+
+  var result;
+  try {
+    result = fn(knownUserId);
+  }
+  catch (e) {
+    result = {error: e};
+  }
+
+  if (result && !result.type && type)
+    result.type = type;
+  if (result && !result.userId && userId)
+    result.userId = userId;
+
+  return result;
+};
+
+
+// Login a user on a connection.
+//
+// We use the method invocation to set the user id on the connection
+// to avoid bypassing the method check that `setUserId` shouldn't be
+// called after an `unblock`.
+//
+// The `stampedLoginToken` parameter is optional.  When present, it
+// indicates that the login token has already been inserted into the
+// database and doesn't need to be inserted again.  (It's used by the
+// "resume" login handler).
+var loginUser = function (methodInvocation, userId, stampedLoginToken) {
+  if (! stampedLoginToken) {
+    stampedLoginToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedLoginToken);
+  }
+
+  methodInvocation.setUserId(userId);
+
+  Accounts._setLoginToken(
+    userId,
+    methodInvocation.connection,
+    Accounts._hashLoginToken(stampedLoginToken.token)
+  );
+
+  return {
+    id: userId,
+    token: stampedLoginToken.token,
+    tokenExpires: Accounts._tokenExpiration(stampedLoginToken.when)
+  };
+};
+
+
+// After a login method has completed, call the login hooks.  Note
+// that `attemptLogin` is called for *all* login attempts, even ones
+// which aren't successful (such as an invalid password, etc).
+//
+// If the login is allowed and isn't aborted by a validate login hook
+// callback, login the user.
+//
+var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
+  if (!result)
+    throw new Error("result is required");
+
+  if (!result.userId && !result.error)
+    throw new Error("A login method must specify a userId or an error");
+
+  var user;
+  if (result.userId)
+    user = Meteor.users.findOne(result.userId);
+
+  var attempt = {
+    type: result.type || "unknown",
+    allowed: !! (result.userId && !result.error),
+    connection: methodInvocation.connection,
+    methodName: methodName,
+    methodArguments: _.toArray(methodArgs)
+  };
+  if (result.error)
+    attempt.error = result.error;
+  if (user)
+    attempt.user = user;
+
+  validateLogin(attempt);
+
+  if (attempt.allowed) {
+    var ret = _.extend(
+      loginUser(methodInvocation, result.userId, result.stampedLoginToken),
+      result.options || {}
+    );
+    successfulLogin(attempt);
+    return ret;
+  }
+  else {
+    failedLogin(attempt);
+    throw attempt.error;
+  }
+};
+
+
+// All service specific login methods should go through this function.
+// Ensure that thrown exceptions are caught and that login hook
+// callbacks are still called.
+//
+Accounts._loginMethod = function (methodInvocation, methodName, methodArgs, type, fn) {
+  return attemptLogin(
+    methodInvocation,
+    methodName,
+    methodArgs,
+    tryLoginMethod(type, fn)
+  );
+};
+
+
 ///
 /// LOGIN HANDLERS
 ///
 
 // The main entry point for auth packages to hook in to login.
 //
+// A login handler is a login method which can return `undefined` to
+// indicate that the login request is not handled by this handler.
+//
+// @param name {String} Optional.  The service name, used by default
+// if a specific service name isn't returned in the result.
+//
 // @param handler {Function} A function that receives an options object
 // (as passed as an argument to the `login` method) and returns one of:
 // - `undefined`, meaning don't handle;
-// - {id: userId, token: *, tokenExpires: *}, if the user logged in
-//   successfully. tokenExpires is optional and intends to provide a hint to the
-//   client as to when the token will expire. If not provided, the client will
-//   call Accounts._tokenExpiration, passing it the date that it received the
-//   token.
-// - throw an error, if the user failed to log in.
-//
-Accounts.registerLoginHandler = function(handler) {
-  loginHandlers.push(handler);
+// - a login method result object
+
+Accounts.registerLoginHandler = function(name, handler) {
+  if (! handler) {
+    handler = name;
+    name = null;
+  }
+  loginHandlers.push({name: name, handler: handler});
 };
+
 
 // list of all registered handlers.
 loginHandlers = [];
 
 
-// Try all of the registered login handlers until one of them doesn'
+// Try all of the registered login handlers until one of them doesn't
 // return `undefined`, meaning it handled this call to `login`. Return
-// that return value, which ought to be a {id/token} pair.
+// that return value.
 var tryAllLoginHandlers = function (options) {
   for (var i = 0; i < loginHandlers.length; ++i) {
     var handler = loginHandlers[i];
-    var result = handler(options);
-    if (result !== undefined)
+
+    var result = tryLoginMethod(
+      handler.name,
+      function (knownUserId) {
+        return handler.handler(options, knownUserId);
+      }
+    );
+
+    if (result)
       return result;
   }
 
-  throw new Meteor.Error(400, "Unrecognized options for login request");
+  return {
+    type: null,
+    error: new Meteor.Error(400, "Unrecognized options for login request")
+  };
 };
 
 
@@ -72,21 +320,15 @@ Meteor.methods({
   // @returns {Object|null}
   //   If successful, returns {token: reconnectToken, id: userId}
   //   If unsuccessful (for example, if the user closed the oauth login popup),
-  //     returns null
+  //     throws an error describing the reason
   login: function(options) {
     // Login handlers should really also check whatever field they look at in
     // options, but we don't enforce it.
     check(options, Object);
+
     var result = tryAllLoginHandlers(options);
-    if (result !== null) {
-      this.setUserId(result.id);
-      Accounts._setLoginToken(
-        result.id,
-        this.connection,
-        Accounts._hashLoginToken(result.token)
-      );
-    }
-    return result;
+
+    return attemptLogin(this, "login", arguments, result);
   },
 
   logout: function() {
@@ -201,6 +443,39 @@ Accounts._hashStampedToken = function (stampedToken) {
 };
 
 
+// Using $addToSet avoids getting an index error if another client
+// logging in simultaneously has already inserted the new hashed
+// token.
+Accounts._insertHashedLoginToken = function (userId, hashedToken, query) {
+  query = query ? _.clone(query) : {};
+  query._id = userId;
+  Meteor.users.update(
+    query,
+    {$addToSet: {
+      "services.resume.loginTokens": hashedToken
+    }}
+  );
+};
+
+
+// Used by tests.
+Accounts._insertLoginToken = function (userId, stampedToken, query) {
+  Accounts._insertHashedLoginToken(
+    userId,
+    Accounts._hashStampedToken(stampedToken),
+    query
+  );
+};
+
+
+Accounts._clearAllLoginTokens = function (userId) {
+  Meteor.users.update(
+    userId,
+    {$set: {'services.resume.loginTokens': []}}
+  );
+};
+
+
 // hashed token -> list of connection ids
 var connectionsByLoginToken = {};
 
@@ -286,7 +561,7 @@ var closeConnectionsForTokens = function (tokens) {
 
 
 // Login handler for resume tokens.
-Accounts.registerLoginHandler(function(options) {
+Accounts.registerLoginHandler("resume", function(options, knownUserId) {
   if (!options.resume)
     return undefined;
 
@@ -314,10 +589,10 @@ Accounts.registerLoginHandler(function(options) {
     });
   }
 
-  if (! user) {
-    throw new Meteor.Error(403, "You've been logged out by the server. " +
-    "Please login again.");
-  }
+  if (! user)
+    throw new Meteor.Error(403, "You've been logged out by the server. Please login again.");
+
+  knownUserId(user._id);
 
   // Find the token, which will either be an object with fields
   // {hashedToken, when} for a hashed token or {token, when} for an
@@ -370,14 +645,15 @@ Accounts.registerLoginHandler(function(options) {
   }
 
   return {
-    token: options.resume,
-    tokenExpires: tokenExpires,
-    id: user._id
+    userId: user._id,
+    stampedLoginToken: {
+      token: options.resume,
+      when: token.when
+    }
   };
 });
 
-// Semi-public. Used by other login methods to generate tokens.
-//
+// Used by tests.
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
 };
@@ -498,19 +774,6 @@ Accounts.insertUserDoc = function (options, user) {
   // collections)
   user = _.extend({createdAt: new Date(), _id: Random.id()}, user);
 
-  var result = {};
-  if (options.generateLoginToken) {
-    var stampedToken = Accounts._generateStampedLoginToken();
-    result.token = stampedToken.token;
-    result.tokenExpires = Accounts._tokenExpiration(stampedToken.when);
-    var token = Accounts._hashStampedToken(stampedToken);
-    Meteor._ensure(user, 'services', 'resume');
-    if (_.has(user.services.resume, 'loginTokens'))
-      user.services.resume.loginTokens.push(token);
-    else
-      user.services.resume.loginTokens = [token];
-  }
-
   var fullUser;
   if (onCreateUserHook) {
     fullUser = onCreateUserHook(options, user);
@@ -529,8 +792,9 @@ Accounts.insertUserDoc = function (options, user) {
       throw new Meteor.Error(403, "User validation failed");
   });
 
+  var userId;
   try {
-    result.id = Meteor.users.insert(fullUser);
+    userId = Meteor.users.insert(fullUser);
   } catch (e) {
     // XXX string parsing sucks, maybe
     // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
@@ -544,8 +808,7 @@ Accounts.insertUserDoc = function (options, user) {
     // XXX better error reporting for services.facebook.id duplicate, etc
     throw e;
   }
-
-  return result;
+  return userId;
 };
 
 var validateNewUserHooks = [];
@@ -651,7 +914,6 @@ Accounts.updateOrCreateUserFromExternalService = function(
     // don't cache old email addresses in serviceData.email).
     // XXX provide an onUpdateUser hook which would let apps update
     //     the profile too
-    var stampedToken = Accounts._generateStampedLoginToken();
     var setAttrs = {};
     _.each(serviceData, function(value, key) {
       setAttrs["services." + serviceName + "." + key] = value;
@@ -659,22 +921,20 @@ Accounts.updateOrCreateUserFromExternalService = function(
 
     // XXX Maybe we should re-use the selector above and notice if the update
     //     touches nothing?
-    Meteor.users.update(
-      user._id,
-      {$set: setAttrs,
-       $push: {'services.resume.loginTokens': Accounts._hashStampedToken(stampedToken)}});
+    Meteor.users.update(user._id, {$set: setAttrs});
     return {
-      token: stampedToken.token,
-      id: user._id,
-      tokenExpires: Accounts._tokenExpiration(stampedToken.when)
+      type: serviceName,
+      userId: user._id
     };
   } else {
     // Create a new user with the service data. Pass other options through to
     // insertUserDoc.
     user = {services: {}};
     user.services[serviceName] = serviceData;
-    options.generateLoginToken = true;
-    return Accounts.insertUserDoc(options, user);
+    return {
+      type: serviceName,
+      userId: Accounts.insertUserDoc(options, user)
+    };
   }
 };
 

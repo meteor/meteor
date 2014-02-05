@@ -1038,8 +1038,7 @@ Server = function () {
   // server and completes DDP version negotiation. Use an object instead
   // of an array so we can safely remove one from the list while
   // iterating over it.
-  self.connectionCallbacks = {};
-  self.nextConnectionCallbackId = 0;
+  self.onConnectionHook = new Hook("onConnection callback");
 
   self.publish_handlers = {};
   self.universal_publish_handlers = [];
@@ -1112,17 +1111,7 @@ _.extend(Server.prototype, {
 
   onConnection: function (fn) {
     var self = this;
-
-    fn = Meteor.bindEnvironment(fn, "onConnection callback");
-
-    var id = self.nextConnectionCallbackId++;
-    self.connectionCallbacks[id] = fn;
-
-    return {
-      stop: function () {
-        delete self.connectionCallbacks[id];
-      }
-    };
+    return self.onConnectionHook.register(fn);
   },
 
   _handleConnect: function (socket, msg) {
@@ -1135,11 +1124,10 @@ _.extend(Server.prototype, {
       // Creating a new session
       socket._meteorSession = new Session(self, version, socket);
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
-      _.each(_.keys(self.connectionCallbacks), function (id) {
-        if (_.has(self.connectionCallbacks, id) && socket._meteorSession) {
-          var callback = self.connectionCallbacks[id];
+      self.onConnectionHook.each(function (callback) {
+        if (socket._meteorSession)
           callback(socket._meteorSession.connectionHandle);
-        }
+        return true;
       });
     } else if (!msg.version) {
       // connect message without a version. This means an old (pre-pre1)
