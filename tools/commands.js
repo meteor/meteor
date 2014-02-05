@@ -94,15 +94,6 @@ main.registerCommand({
   console.log("Release " + release.current.name);
 });
 
-// Internal use only.
-main.registerCommand({
-  name: '--built-by',
-  requiresRelease: false
-}, function (options) {
-  var packages = require('./packages.js');
-  console.log(packages.BUILT_BY);
-});
-
 // Internal use only. For automated testing.
 main.registerCommand({
   name: '--long-version',
