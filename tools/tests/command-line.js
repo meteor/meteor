@@ -70,6 +70,16 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
+  run = s.run("dummy", "--email=");
+  run.read('"" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "-e=");
+  run.read('"" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
   run = s.run("dummy", "--email", "x", "-");
   run.read('"x" 3000 none ["-"]\n');
   run.expectEnd();
@@ -112,6 +122,11 @@ selftest.define("argument parsing", function () {
 
   run = s.run("dummy", "--email", "--port", "1234", "--changed");
   run.read('"--port" 3000 true ["1234"]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email=x=y=z", "-Up=3000");
+  run.read('"x=y=z" 3000 none []\nurl\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -166,6 +181,31 @@ selftest.define("argument parsing", function () {
 
   run = s.run("dummy", "--email", "x", "-p", "1234k");
   run.matchErr("--port (-p) must be a number");
+  run.expectExit(1);
+
+  // bad use of =
+  run = s.run("dummy", "--=");
+  run.readErr("Option names cannot begin with '='.\n");
+  run.expectExit(1);
+
+  run = s.run("dummy", "--=asdf");
+  run.readErr("Option names cannot begin with '='.\n");
+  run.expectExit(1);
+
+  run = s.run("dummy", "-=");
+  run.readErr("Option names cannot begin with '='.\n");
+  run.expectExit(1);
+
+  run = s.run("dummy", "-ex", "--changed=foo");
+  run.matchErr("the --changed option does not need a value.\n");
+  run.expectExit(1);
+
+  run = s.run("dummy", "-ex", "-D=foo");
+  run.matchErr("the --delete (-D) option does not need a value.\n");
+  run.expectExit(1);
+
+  run = s.run("dummy", "-ex", "-UD=foo");
+  run.matchErr("the --delete (-D) option does not need a value.\n");
   run.expectExit(1);
 
   // incorrect number of arguments

@@ -427,8 +427,22 @@ Fiber(function () {
       continue;
     }
 
+    if (term.match(/^--?=/)) {
+      process.stderr.write("Option names cannot begin with '='.\n");
+      process.exit(1);
+    }
+
     // A single option, like --foo or -f
     if (term.match(/^--/) || term.match(/^-.$/)) {
+      var value = undefined;
+
+      // Split the term (once only!) on an equal sign.
+      var equals = term.indexOf('=');
+      if (equals !== -1) {
+        value = term.substr(equals + 1);
+        term = term.substr(0, equals);
+      }
+
       if (! _.has(rawOptions, term))
         rawOptions[term] = [];
 
@@ -436,7 +450,12 @@ Fiber(function () {
       // null if value is missing, else a string. Don't try to
       // validate or interpret it yet.
       if (isBoolean[term]) {
-        rawOptions[term].push(true);
+        // If we got an '=' for a boolean, this is an error, which will be
+        // printed prettily later if we push false here.
+        rawOptions[term].push(value === undefined);
+      } else if (value !== undefined) {
+        // Handle '--foo=bar' and '--foo=' (which means "set to empty string").
+        rawOptions[term].push(value);
       } else if (i === argv.length - 1) {
         rawOptions[term].push(null);
       } else {
@@ -450,21 +469,40 @@ Fiber(function () {
     // in place into '-a -b -c', '-p 45', '-a -b -c -p 45'. Not that
     // anyone really talks this way anymore.
     if (term.match(/^-/)) {
+      if (term.match(/^-[-=]?$/))
+        throw Error("these cases should be handled above?");
+
       var replacements = [];
       for (var j = 1; j < term.length; j++) {
         var subterm = "-" + term.charAt(j);
-        replacements.push(subterm);
         if (isBoolean[subterm] === false) {
           // If we recognize this short option, and we're sure that it
           // takes a value, and there are remaining characters in the
           // short option, then those remaining characters are the value.
-          // (If we have no idea what this short option is, we assume
-          // it's boolean for now, and will print an error later.)
+          replacements.push(subterm);
           var remainder = term.substr(j + 1);
           if (remainder.length) {
+            // If there's an '=' here, don't include it in the option value. A
+            // trailing '=' *should* cause us to set the option value to ''.
+            if (remainder.charAt(0) === '=')
+              remainder = remainder.substr(1);
             replacements.push(remainder);
             break;
           }
+        } else if (isBoolean[subterm] &&
+                   j + 1 < term.length && term.charAt(j + 1) === '=') {
+          // We know it's a boolean, but we've been given an '='. This will
+          // cause a pretty error later.
+          if (! _.has(rawOptions, subterm))
+            rawOptions[subterm] = [];
+          rawOptions[subterm].push(false);
+          // Don't process the '=' on the next pass.
+          j ++;
+        } else {
+          // It's a boolean without an '=', or it's something we've never heard
+          // of.  (In the latter case, assume it's boolean for now, and we'll
+          // print an error later.)
+          replacements.push(subterm);
         }
       }
 
@@ -776,6 +814,12 @@ commandName + ": " + helpfulOptionName + " must be a number.\n" +
         }
         value = parseInt(value);
       } else if (optionInfo.type === Boolean) {
+        if (!value) {
+          process.stderr.write(
+commandName + ": the " + helpfulOptionName + " option does not need a value.\n" +
+"Try 'meteor help " + commandName + "' for help.\n");
+          process.exit(1);
+        }
         value = true;
       } else if (optionInfo.type === String) {
         // nothing to do, 'value' needs no parsing or validation
