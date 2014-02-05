@@ -32,8 +32,15 @@ CssTools = {
     _.each(cssAsts, function (ast) {
       // Pick only the imports from the beginning of file ignoring @charset
       // rules as every file is assumed to be in UTF-8.
-      if (_.any(ast.stylesheet.rules, rulesPredicate("charset"))) {
-        warnCb(ast.filename, "@charset rules in this file will be ignored as Meteor supports only utf-8 at the moment.");
+      var charsetRules = _.filter(ast.stylesheet.rules,
+                                  rulesPredicate("charset"));
+
+      if (_.any(charsetRules, function (rule) {
+        // According to MDN, only 'UTF-8' and "UTF-8" are the correct encoding
+        // directives representing UTF-8.
+        return ! /^(['"])UTF-8\1$/.test(rule.charset);
+      })) {
+        warnCb(ast.filename, "@charset rules in this file will be ignored as UTF-8 is the only encoding supported");
       }
 
       ast.stylesheet.rules = _.reject(ast.stylesheet.rules,
