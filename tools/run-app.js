@@ -243,14 +243,11 @@ _.extend(AppProcess.prototype, {
 //
 // Options include:
 //
-// - onRunEnd(result): If provided, called after each run of the
-//   program (or attempted run, if, say, bundling fails). Blocks
-//   restarting until it returns. See below for the format of
-//   'result'. Return true to continue and false to give up (and if
-//   you return undefined, the default is continue). Passing false
-//   will suppress any status messages that would have been logged so
-//   that you can print your own. Do not call stop() from onRunEnd as
-//   that would necessarily deadlock.
+// - onRunEnd(result): If provided, called after each run of the program (or
+//   attempted run, if, say, bundling fails). Blocks restarting until it
+//   returns. See below for the format of 'result'. Return truthy to continue;
+//   return falsey to give up (without logging any more status messages). Do not
+//   call stop() from onRunEnd as that would necessarily deadlock.
 //
 // - watchForChanges: If true, the default, then (a) the program will
 //   be killed and restarted if its source files change; (b) if
@@ -524,13 +521,13 @@ _.extend(AppRunner.prototype, {
       if (runResult.outcome !== "terminated")
         crashCount = 0;
 
-      var wantExit = self.onRunEnd ? self.onRunEnd(runResult) === false : false;
+      var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
       if (wantExit || self.exitFuture || runResult.outcome === "stopped")
         break;
 
       if (runResult.outcome === "wrong-release") {
-        // Typically you'll pass an onRunEnd callback that overrides
-        // this with something friendlier.
+        // Note that this code is currently dead, since the only onRunEnd
+        // implementation always stops on wrong-release.
         self.runLog.log("=> Incompatible Meteor release.");
         if (self.watchForChanges)
           self.runLog.log("=> Waiting for file change.");

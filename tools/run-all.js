@@ -222,8 +222,9 @@ exports.run = function (appDir, options) {
            result.signal === undefined && result.code === undefined)) {
         runner.stop();
         fut['return'](result);
-        return false;
+        return false;  // stop restarting
       }
+      return true;  // restart it
     },
     watchForChanges: ! once,
     quiet: once
