@@ -60,6 +60,16 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
+  run = s.run("dummy", "--email", "");
+  run.read('"" 3000 none []\n');
+  run.expectEnd();
+  run.expectExit(0);
+
+  run = s.run("dummy", "--email", "x", "", "");
+  run.read('"x" 3000 none ["",""]\n');
+  run.expectEnd();
+  run.expectExit(0);
+
   run = s.run("dummy", "--email", "x", "-");
   run.read('"x" 3000 none ["-"]\n');
   run.expectEnd();
@@ -120,6 +130,10 @@ selftest.define("argument parsing", function () {
   // missing option value
   run = s.run("dummy", "--email", "x", "--port");
   run.matchErr("the --port option needs a value");
+  run.expectExit(1);
+
+  run = s.run("dummy", "--email");
+  run.matchErr("--email option needs a value");
   run.expectExit(1);
 
   run = s.run("dummy", "--email", "x", "--changed", "-p");
