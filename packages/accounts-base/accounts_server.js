@@ -51,23 +51,23 @@ Accounts.registerLoginHandler = function(handler) {
 loginHandlers = [];
 
 
-// Checks a user's credentials against all the registered login handlers, and
-// returns a newly created login token if the credentials are valid. It is like
-// the login method, except that it doesn't set the logged-in user on the
-// connection. Throws a Meteor.Error if logging in fails, including the case
-// where none of the login handlers handled the login request. Otherwise, returns
-// {id: userId, token: *, tokenExpires: *}.
+// Checks a user's credentials against all the registered login
+// handlers, and returns a login token if the credentials are valid. It
+// is like the login method, except that it doesn't set the logged-in
+// user on the connection. Throws a Meteor.Error if logging in fails,
+// including the case where none of the login handlers handled the login
+// request. Otherwise, returns {id: userId, token: *, tokenExpires: *}.
 //
 // For example, if you want to login with a plaintext password, `options` could be
 //   { user: { username: <username> }, password: <password> }, or
 //   { user: { email: <email> }, password: <password> }.
-Accounts.createToken = function (options) {
+Accounts._runLoginHandlers = function (options) {
   // Try all of the registered login handlers until one of them doesn't return
   // `undefined`, meaning it handled this call to `login`. Return that return
   // value, which ought to be a {id/token} pair.
   for (var i = 0; i < loginHandlers.length; ++i) {
     var handler = loginHandlers[i];
-    var result = handler(options);
+    var result = handler.apply(this, [options]);
     if (result !== undefined)
       return result;
   }
@@ -108,7 +108,7 @@ Meteor.methods({
     // Login handlers should really also check whatever field they look at in
     // options, but we don't enforce it.
     check(options, Object);
-    var result = Accounts.createToken(options);
+    var result = Accounts._runLoginHandlers.apply(this, [options]);
     if (result !== null) {
       // This order (and the avoidance of yields) is important to make
       // sure that when publish functions are rerun, they see a

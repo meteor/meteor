@@ -4,7 +4,7 @@ Template.configureLoginServiceDialogForMeteorDeveloper.siteUrl = function () {
 
 Template.configureLoginServiceDialogForMeteorDeveloper.fields = function () {
   return [
-    {property: 'clientId', label: 'Client ID'},
-    {property: 'secret', label: 'Client secret'}
+    {property: 'clientId', label: 'App ID'},
+    {property: 'secret', label: 'App secret'}
   ];
 };

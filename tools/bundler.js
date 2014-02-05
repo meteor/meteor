@@ -233,6 +233,7 @@ var NodeModulesDirectory = function (options) {
 // Allowed options:
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
+// - hash: optional, sha1 hash of the file contents, if known
 // - sourceMap: if 'data' is given, can be given instead of sourcePath. a string
 // - cacheable
 var File = function (options) {
@@ -278,7 +279,7 @@ var File = function (options) {
   self.assets = null;
 
   self._contents = options.data || null; // contents, if known, as a Buffer
-  self._hash = null; // hash, if known, as a hex string
+  self._hash = options.hash || null; // hash, if known, as a hex string
 };
 
 _.extend(File.prototype, {
@@ -601,7 +602,11 @@ _.extend(Target.prototype, {
         if (resource.type !== "asset")
           return;
 
-        var f = new File({data: resource.data, cacheable: false});
+        var f = new File({
+          data: resource.data,
+          cacheable: false,
+          hash: resource.hash
+        });
 
         var relPath = isOs
               ? path.join("assets", resource.servePath)

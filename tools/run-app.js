@@ -174,6 +174,10 @@ _.extend(AppProcess.prototype, {
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
+    // We run the server behind our own proxy, so we need to increment
+    // the HTTP forwarded count.
+    env.HTTP_FORWARDED_COUNT =
+      "" + ((parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0) + 1);
 
     return env;
   },

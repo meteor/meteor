@@ -12,21 +12,6 @@ Ctl.Commands.push({
   }
 });
 
-var mergeObjects = function (obj1, obj2) {
-  var result = _.clone(obj1);
-  _.each(obj2, function (v, k) {
-    // If both objects have an object at this key, then merge those objects.
-    // Otherwise, choose obj2's value.
-    if ((v instanceof Object) && (obj1[k] instanceof Object))
-      result[k] = mergeObjects(v, obj1[k]);
-    else
-      result[k] = v;
-  });
-  return result;
-};
-
-
-
 var startFun = function (argv) {
   if (argv.help || argv._.length !== 0) {
     process.stderr.write(
@@ -171,6 +156,7 @@ Ctl.Commands.push({
       target = 1;
       break;
     default:
+      var c = oldServers.length;
       target =  Math.min(c - 1, Math.ceil(c*.8));
       break;
     }

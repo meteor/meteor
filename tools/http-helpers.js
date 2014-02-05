@@ -14,7 +14,7 @@ var config = require('./config.js');
 var release = require('./release.js');
 
 // Compose a User-Agent header.
-var getUserAgent = function () {
+getUserAgent = function () {
   var version;
 
   if (release.current)
