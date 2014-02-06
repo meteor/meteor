@@ -418,8 +418,7 @@ _.extend(Sandbox.prototype, {
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (!self.warehouse && release.current.isProperRelease()) {
-      self.write(path.join(self.cwd, to, '.meteor/release'),
-                 release.current.name);
+      self.write(path.join(to, '.meteor/release'), release.current.name);
     }
   },
 
