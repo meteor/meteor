@@ -128,7 +128,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{> foo bar}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return Spacebars.call(self.lookup("bar"));
         }, UI.block(function() {
           var self = this;
@@ -139,7 +139,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{> foo x=bar}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return {
             x: Spacebars.call(self.lookup("bar"))
           };
@@ -152,7 +152,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{> foo bar.baz}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
         }, UI.block(function() {
           var self = this;
@@ -163,7 +163,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{> foo x=bar.baz}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return {
             x: Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"))
           };
@@ -176,7 +176,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{> foo bar baz}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
         }, UI.block(function() {
           var self = this;
@@ -187,7 +187,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{#foo bar baz}}aaa{{/foo}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
         }, UI.block(function() {
           var self = this;
@@ -201,7 +201,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("{{#foo p.q r.s}}aaa{{/foo}}",
       function() {
         var self = this;
-        return UI.With(function() {
+        return Spacebars.TemplateWith(function() {
           return Spacebars.dataMustache(Spacebars.dot(self.lookup("p"), "q"), Spacebars.dot(self.lookup("r"), "s"));
         }, UI.block(function() {
           var self = this;
