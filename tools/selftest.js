@@ -386,6 +386,11 @@ _.extend(Sandbox.prototype, {
     env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
     if (self.warehouse)
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
+    // By default (ie, with no mock warehouse and no --release arg) we should be
+    // testing the actual release this is built in, so we pretend that it is the
+    // latest release.
+    if (!self.warehouse && release.current.isProperRelease())
+      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
 
     return new Run(self.execPath, {
       sandbox: self,
@@ -410,6 +415,12 @@ _.extend(Sandbox.prototype, {
     var self = this;
     files.cp_r(path.join(__dirname, 'tests', 'apps', template),
                path.join(self.cwd, to));
+    // If the test isn't explicitly managing a mock warehouse, ensure that apps
+    // run with our release by default.
+    if (!self.warehouse && release.current.isProperRelease()) {
+      self.write(path.join(self.cwd, to, '.meteor/release'),
+                 release.current.name);
+    }
   },
 
   // Change the cwd to be used for subsequent runs. For example:

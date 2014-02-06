@@ -115,6 +115,9 @@ release.usingRightReleaseForApp = function (appDir) {
 release.latestDownloaded = function () {
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
+  // For self-test only.
+  if (process.env.METEOR_TEST_LATEST_RELEASE)
+    return process.env.METEOR_TEST_LATEST_RELEASE;
   var ret = warehouse.latestRelease();
   if (! ret)
     throw new Error("no releases available?");
