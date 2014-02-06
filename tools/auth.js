@@ -476,7 +476,6 @@ var doInteractivePasswordLogin = function (options) {
       }
     }
   }
-  conn.close();
 
   if (result.session) {
     auth.setSessionId(config.getAccountsDomain(), result.session);
@@ -511,8 +510,10 @@ exports.loginCommand = function (options) {
       loginOptions.username = utils.readLine({ prompt: "Username: " });
     }
 
-    if (! doInteractivePasswordLogin(loginOptions))
+    if (! doInteractivePasswordLogin(loginOptions)) {
+      authConn().close();
       return 1;
+    }
   }
 
   // XXX Make the galaxy login not do a login if there is an existing token, just like MA
@@ -629,6 +630,8 @@ exports.registerOrLogIn = function () {
     return false;
   }
 
+  var loginResult;
+
   if (! result.alreadyExisted) {
     var data = readSessionData();
     logOutAllSessions(data);
@@ -665,17 +668,20 @@ exports.registerOrLogIn = function () {
     process.stderr.write("\nGreat! Nice to meet you, " +
                          waitForRegistrationResult.username +
                          "! Now log in with your new password.\n");
-    return doInteractivePasswordLogin({
+    loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true
     });
+    authConn().close();
+    return loginResult;
   } else if (result.alreadyExisted && result.username) {
     process.stderr.write("\nLogging in as " + result.username + ".\n");
 
-    return doInteractivePasswordLogin({
+    loginResult = doInteractivePasswordLogin({
       username: result.username,
       retry: true
     });
+    authConn.close();
   } else {
     // Hmm, got an email we don't understand.
     process.stderr.write(
