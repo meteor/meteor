@@ -153,13 +153,18 @@ var authedRpc = function (options) {
   if (infoResult.statusCode === 403 && rpcOptions.promptIfAuthFails) {
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
-    var loginResult = auth.loginCommand(_.extend({}, rpcOptions, {
-      overwriteExistingToken: true
-    }));
-    if (loginResult === 0) {
-      // If the login prompt succeeded, then resend the RPC with the
-      // original options.
+    var username = utils.readLine({ prompt: "Username: " });
+    var loginOptions = {
+      username: username,
+      suppressErrorMessage: true
+    };
+    if (auth.doInteractivePasswordLogin(loginOptions)) {
       return authedRpc(options);
+    } else {
+      return {
+        statusCode: 403,
+        errorMessage: "login failed."
+      };
     }
   }
 

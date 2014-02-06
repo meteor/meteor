@@ -434,6 +434,8 @@ var logInToGalaxy = function (galaxyName) {
 // include:
 // - retry: if true, then if the user gets the password wrong,
 //   reprompt.
+// - suppressErrorMessage: true if the function should not print an
+//   error message to stderr if the login fails
 var doInteractivePasswordLogin = function (options) {
   var loginData = {};
 
@@ -445,7 +447,9 @@ var doInteractivePasswordLogin = function (options) {
     throw new Error("Need username or email");
 
   var loginFailed = function () {
-    process.stderr.write("Login failed.\n");
+    if (! options.suppressErrorMessage) {
+      process.stderr.write("Login failed.\n");
+    }
   };
 
   var conn = authConn();
@@ -492,6 +496,8 @@ var doInteractivePasswordLogin = function (options) {
   writeSessionData(data);
   return true;
 };
+
+exports.doInteractivePasswordLogin = doInteractivePasswordLogin;
 
 exports.loginCommand = function (options) {
   config.printUniverseBanner();
