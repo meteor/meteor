@@ -939,7 +939,7 @@ var tagDescriptions = {
   // these last two are not actually test tags; they reflect the use of
   // --changed and --tests
   unchanged: 'unchanged since last pass',
-  misnamed: "don't match --test argument"
+  misnamed: "don't match --tests argument"
 };
 
 // options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
