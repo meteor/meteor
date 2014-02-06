@@ -256,7 +256,7 @@ The argument is typically a Meteor cursor (the result of `collection.find()`, fo
 An "else" section may be provided, which is used (with no new data
 context) if there are zero items in the sequence at any time.
 
-### Reactivity Model
+### Reactivity Model for Each
 
 When the argument to `#each` changes, the DOM is always updated to reflect the new sequence, but it's sometimes significant exactly how that is achieved.  When the argument is a Meteor live cursor, the `#each` has access to fine-grained updates to the sequence -- add, remove, move, and change callbacks -- and the items are all documents identified by unique ids.  As long as the cursor itself remains constant (i.e. the query doesn't change), it is very easy to reason about how the DOM will be updated as the contents of the cursor change.  The rendered content for each document persists as long as the document is in the cursor, and when documents are re-ordered, the DOM is re-ordered.
 
