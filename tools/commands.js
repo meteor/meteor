@@ -1151,6 +1151,10 @@ main.registerCommand({
 // self-test
 ///////////////////////////////////////////////////////////////////////////////
 
+// XXX we should find a way to make self-test fully self-contained, so that it
+// ignores "packageDirs" (ie, it shouldn't fail just because you happen to be
+// sitting in an app with packages that don't build)
+
 main.registerCommand({
   name: 'self-test',
   options: {
