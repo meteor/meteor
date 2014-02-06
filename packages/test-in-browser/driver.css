@@ -132,3 +132,18 @@ body {
     top: 10px;
     z-index: 2;
 }
+
+.string_equal {
+  line-height: 1.2;
+  margin-left: 30px;
+}
+.string_equal ins {
+  text-decoration: none;
+}
+.string_equal_expected ins {
+  background: #fe0;
+}
+.string_equal_actual ins {
+  color: #d00;
+  background: #fcc;
+}

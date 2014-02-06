@@ -1,13 +1,5 @@
 {
   "dependencies": {
-    "clean-css": {
-      "version": "2.0.2",
-      "dependencies": {
-        "commander": {
-          "version": "2.0.0"
-        }
-      }
-    },
     "uglify-js": {
       "version": "2.4.7",
       "dependencies": {
@@ -32,6 +24,22 @@
         },
         "uglify-to-browserify": {
           "version": "1.0.1"
+        }
+      }
+    },
+    "css-parse": {
+      "version": "1.7.0"
+    },
+    "css-stringify": {
+      "version": "1.4.1",
+      "dependencies": {
+        "source-map": {
+          "version": "0.1.31",
+          "dependencies": {
+            "amdefine": {
+              "version": "0.1.0"
+            }
+          }
         }
       }
     }

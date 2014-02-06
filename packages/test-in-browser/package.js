@@ -16,6 +16,8 @@ Package.on_use(function (api) {
 
   api.use(['spark', 'livedata', 'templating', 'deps'], 'client');
 
+  api.add_files('diff_match_patch_uncompressed.js', 'client');
+
   api.add_files([
     'driver.css',
     'driver.html',

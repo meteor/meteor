@@ -1,5 +1,14 @@
 ## v.NEXT
 
+* XXX upgraded `less` from 1.3.3 to 1.6.1
+* XXX upgraded `stylus` from 0.37.0 to 0.42.2 and `nib` from `1.0.0` to `1.0.2`
+* XXX sourcemaps support for stylesheets, including less sourcemaps
+* XXX css linting (breaks on errors)
+* XXX css preprocessing to concatenate files correctly (pulls @imports to the
+  beginning)
+* XXX supports `.import.less` and `.import.styl` to prevent Meteor processing
+  stylesheets. `.lessimport` is deprecated
+
 * Hash login tokens before storing them in the database.
 
 * Add `clientAddress` and `httpHeaders` to `this.connection` in method
