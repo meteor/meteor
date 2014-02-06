@@ -84,7 +84,6 @@ var _assertCorrectPackageNpmDir = function (deps) {
   var expected = JSON.stringify({
     dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n';
 
-  console.log("actual", actual, "expected", expected)
   assert.equal(actual, expected);
 
   assert.equal(
@@ -357,7 +356,7 @@ var runTest = function () {
           env.PACKAGE_DIRS = tmpPackageDirContainer;
 
           var result = meteorNpm._execFileSync(
-            path.join(files.getCurrentToolsDir(), "meteor"),
+            process.env.METEOR_TOOL_PATH,
             ["bundle", path.join(tmpDirToPutBundleTarball, "bundle.tar.gz")],
             {cwd: tmpAppDir, env: env});
           files.rm_recursive(tmpDirToPutBundleTarball);
