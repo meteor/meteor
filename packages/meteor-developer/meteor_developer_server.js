@@ -80,7 +80,10 @@ var getIdentity = function (accessToken) {
   try {
     return HTTP.get(
       METEOR_DEVELOPER_URL + "/api/v1/identity",
-      {params: {access_token: accessToken}}).data;
+      {
+        headers: { Authorization: "Bearer " + accessToken }
+      }
+    ).data;
   } catch (err) {
     throw _.extend(
       new Error("Failed to fetch identity from Meteor Developer Accounts. " +
