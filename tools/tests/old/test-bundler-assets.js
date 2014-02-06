@@ -104,7 +104,7 @@ var runTest = function () {
 
     // Run the app to check that Assets.getText/Binary do the right things.
     var cp = require('child_process');
-    var meteor = path.join(__dirname, "..", "..", "..", "meteor"); // XXX is this allowed?
+    var meteor = process.env.METEOR_TOOL_PATH;
     var fut = new Future();
     // use a non-default port so we don't fail if someone is running an app now
     var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
