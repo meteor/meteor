@@ -80,10 +80,12 @@ var _assertCorrectPackageNpmDir = function (deps) {
     return [name, val];
   }));
 
-  assert.equal(
-    fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8'),
-    JSON.stringify({
-      dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n');
+  var actual = fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8');
+  var expected = JSON.stringify({
+    dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n';
+
+  console.log("actual", actual, "expected", expected)
+  assert.equal(actual, expected);
 
   assert.equal(
     fs.readFileSync(path.join(testPackageDir, ".npm", "package", ".gitignore"), 'utf8'),
