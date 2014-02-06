@@ -141,10 +141,22 @@ Spacebars.call = function (value/*, args*/) {
 // is `instanceof Spacebars.kw`.
 Spacebars.kw = function (hash) {
   if (! (this instanceof Spacebars.kw))
+    // called without new; call with new
     return new Spacebars.kw(hash);
 
   this.hash = hash || {};
 };
+
+// Call this as `Spacebars.SafeString("some HTML")`.  The return value
+// is `instanceof Spacebars.SafeString` (and `instanceof Handlebars.SafeString).
+Spacebars.SafeString = function (html) {
+  if (! (this instanceof Spacebars.SafeString))
+    // called without new; call with new
+    return new Spacebars.SafeString(html);
+
+  return new Handlebars.SafeString(html);
+};
+Spacebars.SafeString.prototype = Handlebars.SafeString.prototype;
 
 // `Spacebars.dot(foo, "bar", "baz")` performs a special kind
 // of `foo.bar.baz` that allows safe indexing of `null` and
