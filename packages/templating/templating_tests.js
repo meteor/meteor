@@ -236,6 +236,7 @@ Tinytest.add("templating - helpers and dots", function(test) {
   };
 
   var listFour = function(a, b, c, d, options) {
+    test.isTrue(options instanceof Spacebars.kw);
     var keywordArgs = _.map(_.keys(options.hash), function(k) {
       var val = options.hash[k];
       return k+':'+val;

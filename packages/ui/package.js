@@ -28,7 +28,7 @@ Package.on_use(function (api) {
                  'fields.js'
                 ]);
 
-  api.add_files(['handlebars_backcompat.js'], 'client');
+  api.add_files(['handlebars_backcompat.js']);
 });
 
 Package.on_test(function (api) {
