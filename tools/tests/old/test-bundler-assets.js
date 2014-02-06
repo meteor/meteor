@@ -133,7 +133,7 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release.setCurrent(release.load(null));
+  release._setCurrentForOldTest();
 
   try {
     runTest();

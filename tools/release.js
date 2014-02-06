@@ -191,7 +191,7 @@ release.setCurrent = function (releaseObject, forced) {
   release.forced = !! forced;
 };
 
-// XXX XXX HACK: Change the packageDirs attribet on
+// XXX XXX HACK: Change the packageDirs attribute on
 // release.current. This is terrible form, but we have a legacy test
 // (the bundler test) that needs it. The right way to fix this is to
 // #HandlePackageDirsDifferently
@@ -203,4 +203,14 @@ release._resetPackageDirs = function (packageDirs) {
     packageDirs: packageDirs,
     manifest: release.current._manifest
   });
+};
+
+// XXX hack
+release._setCurrentForOldTest = function () {
+  if (process.env.METEOR_SPRINGBOARD_RELEASE) {
+    release.setCurrent(release.load(process.env.METEOR_SPRINGBOARD_RELEASE),
+                       true);
+  } else {
+    release.setCurrent(release.load(null));
+  }
 };

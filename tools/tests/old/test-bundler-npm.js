@@ -381,7 +381,7 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release.setCurrent(release.load(null));
+  release._setCurrentForOldTest();
   meteorNpm._printNpmCalls = true;
 
   try {
