@@ -953,7 +953,7 @@ var runTests = function (options) {
 
   // _.keys(skipCounts) is the set of tags to skip
   var skipCounts = {};
-  if (! files.inCheckout)
+  if (! files.inCheckout())
     skipCounts['checkout'] = 0;
 
   if (options.offline)
