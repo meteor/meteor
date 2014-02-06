@@ -53,12 +53,13 @@ selftest.define("run --once", function () {
   run.waitSecs(5);
   run.match("once test\n");
   s.write('empty.js', 'null');
+  var originalRelease = s.read('.meteor/release');
   s.write('.meteor/release', 'v1');
   utils.sleepMs(2000); // sorry, hard to avoid
   run.stop();
   run.forbidAll("updated");
   s.unlink('empty.js');
-  s.write('.meteor/release', 'none');
+  s.write('.meteor/release', originalRelease);
 
   // running a different program
   run = s.run("--once", "--program", "other");

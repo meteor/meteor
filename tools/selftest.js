@@ -464,6 +464,15 @@ _.extend(Sandbox.prototype, {
     fs.writeFileSync(path.join(self.cwd, filename), contents, 'utf8');
   },
 
+  // Reads a file in the sandbox as a utf8 string. 'filename' is a path
+  // intepreted relative to the Sandbox's cwd.  throws if the file does not
+  // exist.
+  // XXX maybe it should return null if the file does not exist?
+  read: function (filename) {
+    var self = this;
+    return fs.readFileSync(path.join(self.cwd, filename), 'utf8');
+  },
+
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink: function (filename) {
     var self = this;
