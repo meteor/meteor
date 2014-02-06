@@ -27,7 +27,8 @@ if [ -z "$NODE" ]; then
     NODE="$(pwd)/scripts/node.sh"
 fi
 
-# Ensure that $NODE is set properly.
+# Ensure that $NODE is set properly. Note that $NODE may not have access to
+# modules from the dev bundle.
 $NODE --version
 
 TEST_TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
