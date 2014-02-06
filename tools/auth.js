@@ -500,7 +500,9 @@ exports.loginCommand = function (options) {
   var data = readSessionData();
   var galaxy = options.galaxy;
 
-  if (! galaxy && ! getSession(data, config.getAccountsDomain()).token) {
+  if (! galaxy &&
+      (! getSession(data, config.getAccountsDomain()).token ||
+       options.overwriteExistingToken)) {
     var loginOptions = {};
 
     if (options.email) {
@@ -513,6 +515,7 @@ exports.loginCommand = function (options) {
       return 1;
   }
 
+  // XXX Make the galaxy login not do a login if there is an existing token, just like MA
   if (galaxy) {
     var galaxyLoginResult = logInToGalaxy(galaxy);
     if (galaxyLoginResult.error) {

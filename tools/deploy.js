@@ -134,23 +134,38 @@ var deployRpc = function (options) {
 //   'preflight' option and a 'preflightPassword' was returned, you
 //   can pass 'preflightPassword' back in on a subsequent call to skip
 //   the password prompt.
+// - promptIfAuthFails: if the authentication fails, prompt the user to
+//   log in with a username and password and then resend the RPC.
 var authedRpc = function (options) {
-  options = _.clone(options);
-  var preflight = options.preflight;
-  var preflightPassword = options.preflightPassword;
-  delete options.preflight;
-  delete options.preflightPassword;
+  var rpcOptions = _.clone(options);
+  var preflight = rpcOptions.preflight;
+  var preflightPassword = rpcOptions.preflightPassword;
+  delete rpcOptions.preflight;
+  delete rpcOptions.preflightPassword;
 
   // Fetch auth info
   var infoResult = deployRpc({
     operation: 'info',
-    site: options.site,
+    site: rpcOptions.site,
     expectPayload: []
   });
 
+  if (infoResult.statusCode === 403 && rpcOptions.promptIfAuthFails) {
+    // Our authentication didn't validate, so prompt the user to log in
+    // again, and resend the RPC if the login succeeds.
+    var loginResult = auth.loginCommand(_.extend({}, rpcOptions, {
+      overwriteExistingToken: true
+    }));
+    if (loginResult === 0) {
+      // If the login prompt succeeded, then resend the RPC with the
+      // original options.
+      return authedRpc(options);
+    }
+  }
+
   if (infoResult.statusCode === 404) {
     // Doesn't exist, therefore not protected.
-    return preflight ? { } : deployRpc(options);
+    return preflight ? { } : deployRpc(rpcOptions);
   }
 
   if (infoResult.errorMessage)
@@ -161,7 +176,7 @@ var authedRpc = function (options) {
     // Not protected.
     //
     // XXX should prompt the user to claim the app (only if deploying?)
-    return preflight ? { } : deployRpc(options);
+    return preflight ? { } : deployRpc(rpcOptions);
   }
 
   if (info.protection === "password") {
@@ -169,7 +184,7 @@ var authedRpc = function (options) {
     // hashed password as a query parameter when doing the RPC.
     var password = preflightPassword;
     if (! password) {
-      var password = utils.readLine({
+      password = utils.readLine({
         echo: false,
         prompt: "Password: ",
         stream: process.stderr
@@ -186,11 +201,11 @@ var authedRpc = function (options) {
       password = hash.digest('hex');
     }
 
-    options = _.clone(options);
-    options.qs = _.clone(options.qs || {});
-    options.qs.password = password;
+    rpcOptions = _.clone(rpcOptions);
+    rpcOptions.qs = _.clone(rpcOptions.qs || {});
+    rpcOptions.qs.password = password;
 
-    return preflight ? { preflightPassword: password } : deployRpc(options);
+    return preflight ? { preflightPassword: password } : deployRpc(rpcOptions);
   }
 
   if (info.protection === "account") {
@@ -208,7 +223,7 @@ var authedRpc = function (options) {
     }
 
     // Sweet, we're an authorized user.
-    return preflight ? { } : deployRpc(options);
+    return preflight ? { } : deployRpc(rpcOptions);
   }
 
   return {
@@ -261,7 +276,12 @@ var bundleAndDeploy = function (options) {
 
   // Check auth up front, rather than after the (potentially lengthy)
   // bundling process.
-  var preflight = authedRpc({ site: site, preflight: true });
+  var preflight = authedRpc({
+    site: site,
+    preflight: true,
+    promptIfAuthFails: true
+  });
+
   if (preflight.errorMessage) {
     process.stderr.write("\nError deploying application: " +
                          preflight.errorMessage + "\n");
@@ -354,6 +374,7 @@ var deleteApp = function (site) {
     method: 'DELETE',
     operation: 'deploy',
     site: site,
+    promptIfAuthFails: true
   });
 
   if (result.errorMessage) {
@@ -378,7 +399,8 @@ var temporaryMongoUrl = function (site) {
   var result = authedRpc({
     operation: 'mongo',
     site: site,
-    expectMessage: true
+    expectMessage: true,
+    promptIfAuthFails: true
   });
 
   if (result.errorMessage) {
@@ -398,7 +420,8 @@ var logs = function (site) {
   var result = authedRpc({
     operation: 'logs',
     site: site,
-    expectMessage: true
+    expectMessage: true,
+    promptIfAuthFails: true
   });
 
   if (result.errorMessage) {
@@ -467,7 +490,8 @@ var changeAuthorized = function (site, action, username) {
     method: 'POST',
     operation: 'authorized',
     site: site,
-    qs: action === "add" ? { add: username } : { remove: username }
+    qs: action === "add" ? { add: username } : { remove: username },
+    promptIfAuthFails: true
   });
 
   if (result.errorMessage) {
@@ -520,7 +544,8 @@ var claim = function (site) {
   var result = authedRpc({
     method: 'POST',
     operation: 'claim',
-    site: site
+    site: site,
+    promptIfAuthFails: true
   });
 
   if (result.errorMessage) {
