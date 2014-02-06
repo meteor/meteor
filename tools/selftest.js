@@ -838,7 +838,8 @@ _.extend(Run.prototype, {
         (function () {
           var fut = new Future;
           var conn = net.connect(self.fakeMongoPort, function () {
-            fut['return'](true);
+            if (fut)
+              fut['return'](true);
           });
           conn.setNoDelay();
           conn.on('error', function () {
