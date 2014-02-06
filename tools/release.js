@@ -106,7 +106,7 @@ release.usingRightReleaseForApp = function (appDir) {
   var appRelease = project.getMeteorReleaseVersion(appDir);
   if (appRelease === null)
     // Really old app that has no release specified.
-    appRelease = warehouse.latestRelease();
+    appRelease = release.latestDownloaded();
   return release.current.name === appRelease;
 };
 

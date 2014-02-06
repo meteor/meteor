@@ -3,6 +3,14 @@ var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
 var path = require('path');
 var files = require('../files.js');
+var release = require('../release.js');
+
+// old tests don't get to test --release, and always run this release
+var maybeFixRelease = function (env) {
+  if (release.current && release.current.isProperRelease())
+    env.METEOR_SPRINGBOARD_RELEASE = release.current.name;
+  return env;
+};
 
 // This runs an old-style unit test. These are just .js files that
 // require() whatever bits of the tool they want to test and have at
@@ -11,8 +19,10 @@ var files = require('../files.js');
 //
 // filename is interpreted relative to tools/selftests/old.
 var runOldTest = function (filename) {
+  var env;
   var run = new Run(process.execPath, {
-    args: [path.resolve(__dirname, 'old', filename)]
+    args: [path.resolve(__dirname, 'old', filename)],
+    env: maybeFixRelease({})
   });
   run.waitSecs(1000);
   run.expectExit(0);
@@ -44,9 +54,9 @@ selftest.define("bundler-npm", ["slow", "net"], function () {
 selftest.define("old cli tests", ["slow", "net"], function () {
   var s = new Sandbox;
   var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
-    env: {
+    env: maybeFixRelease({
       METEOR_TOOL_PATH: s.execPath
-    }
+    })
   });
   run.waitSecs(1000);
   run.match("PASSED\n");
