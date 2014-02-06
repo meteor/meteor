@@ -27,6 +27,9 @@ if [ -z "$NODE" ]; then
     NODE="$(pwd)/scripts/node.sh"
 fi
 
+# Ensure that $NODE is set properly.
+$NODE --version
+
 TEST_TMPDIR=`mktemp -d -t meteor-cli-test-XXXXXXXX`
 OUTPUT="$TEST_TMPDIR/output"
 trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rf "$TEST_TMPDIR" >/dev/null 2>&1' EXIT

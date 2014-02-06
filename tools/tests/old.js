@@ -57,7 +57,8 @@ selftest.define("old cli tests", ["slow", "net"], function () {
   var s = new Sandbox;
   var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
     env: maybeFixRelease({
-      METEOR_TOOL_PATH: s.execPath
+      METEOR_TOOL_PATH: s.execPath,
+      NODE: process.execPath
     })
   });
   run.waitSecs(1000);
@@ -75,7 +76,8 @@ selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], functi
   var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
     env: {
       METEOR_TOOL_PATH: s.execPath,
-      METEOR_WAREHOUSE_DIR: s.warehouse
+      METEOR_WAREHOUSE_DIR: s.warehouse,
+      NODE: process.execPath
     }
   });
   run.waitSecs(1000);
