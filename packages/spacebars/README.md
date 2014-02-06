@@ -331,3 +331,28 @@ appear in the compiled template code or the generated HTML.
 ```
 
 Comment tags can be used wherever other template tags are allowed.
+
+## HTML Dialect
+
+Spacebars templates are written in [standard
+HTML](http://developers.whatwg.org/syntax.html) extended with
+additional syntax (i.e. template tags).
+
+Spacebars validates your HTML as it goes and will throw a compile-time
+error if you violate basic HTML syntax in a way that prevents it from
+determining the structure of your code.
+
+Spacebars is not lenient about malformed markup the way a web browser
+is.  While the latest HTML spec standardizes how browsers should
+recover from parse errors, these cases are still not valid HTML.  For
+example, a browser may recover from a bare `<` that does not begin a
+well-formed HTML tag, while Spacebars will not.  However, gone are the
+restrictions of the XHTML days; attribute values do not have to
+quoted, and tags are not case-sensitive, for example.
+
+You must close all HTML tags except the ones specified to have no end
+tag, like BR, HR, IMG and INPUT.  You can write these tags as `<br>`
+or equivalently `<br/>`.
+
+The HTML spec allows omitting some additional end tags, such as P and
+LI, but Spacebars doesn't currently support this.
