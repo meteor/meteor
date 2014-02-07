@@ -181,7 +181,7 @@ main.registerCommand({
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
-      minify: options.minify
+      minify: options.production
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
