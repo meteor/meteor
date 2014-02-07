@@ -305,15 +305,17 @@ var completeNpmDirectory = function (packageName, newPackageNpmDir,
 };
 
 var createReadme = function (newPackageNpmDir) {
+  // This file gets checked in to version control by users, so resist the
+  // temptation to make unnecessary tweaks to it.
   fs.writeFileSync(
     path.join(newPackageNpmDir, 'README'),
-"This directory and the files immediately inside it are automatically\n" +
-"generated when you change this package's NPM dependencies. Commit the files\n"+
-"in this directory (npm-shrinkwrap.json, .gitignore, and this README) to\n" +
-"source control so that others run the same versions of sub-dependencies.\n" +
+"This directory and the files immediately inside it are automatically generated\n" +
+"when you change this package's NPM dependencies. Commit the files in this\n" +
+"directory (npm-shrinkwrap.json, .gitignore, and this README) to source control\n" +
+"so that others run the same versions of sub-dependencies.\n" +
 "\n" +
-"You should NOT check in the node_modules directory that Meteor\n" +
-"automatically creates; if you are using git, the .gitignore file tells git\n" +"to ignore it.\n"
+"You should NOT check in the node_modules directory that Meteor automatically\n" +
+"creates; if you are using git, the .gitignore file tells git to ignore it.\n"
   );
 };
 
