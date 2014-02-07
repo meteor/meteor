@@ -159,9 +159,9 @@
 // wait until later.
 
 var path = require('path');
+var util = require('util');
 var files = require(path.join(__dirname, 'files.js'));
 var packages = require(path.join(__dirname, 'packages.js'));
-var linker = require(path.join(__dirname, 'linker.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var buildmessage = require('./buildmessage.js');
@@ -457,6 +457,11 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
+    // Preprocess and concatenate CSS files for client targets.
+    if (self instanceof ClientTarget) {
+      self.mergeCss();
+    }
+
     // Minify, if requested
     if (options.minify) {
       var minifiers = unipackage.load({
@@ -464,8 +469,11 @@ _.extend(Target.prototype, {
         packages: ['minifiers']
       }).minifiers;
       self.minifyJs(minifiers);
-      if (self.minifyCss) // XXX a bit of a hack
+
+      // CSS is minified only for client targets.
+      if (self instanceof ClientTarget) {
         self.minifyCss(minifiers);
+      }
     }
 
     if (options.addCacheBusters) {
@@ -669,7 +677,8 @@ _.extend(Target.prototype, {
             }
           }
 
-          if (resource.type === "js" && resource.sourceMap) {
+          // Both CSS and JS files can have source maps
+          if (resource.sourceMap) {
             f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
 
@@ -753,9 +762,11 @@ var ClientTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
-  // CSS files. List of File. They will be loaded at page load in the
-  // order given.
+  // CSS files. List of File. They will be loaded in the order given.
   self.css = [];
+  // Cached CSS AST. If non-null, self.css has one item in it, processed CSS
+  // from merged input files, and this is its parse tree.
+  self._cssAstCache = null;
 
   // List of segments of additional HTML for <head>/<body>.
   self.head = [];
@@ -768,17 +779,88 @@ var ClientTarget = function (options) {
 inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
+  // Lints CSS files and merges them into one file, fixing up source maps and
+  // pulling any @import directives up to the top since the CSS spec does not
+  // allow them to appear in the middle of a file.
+  mergeCss: function () {
+    var self = this;
+    var minifiers = unipackage.load({
+      library: self.library,
+      packages: ['minifiers']
+    }).minifiers;
+    var CssTools = minifiers.CssTools;
+
+    // Filenames passed to AST manipulator mapped to their original files
+    var originals = {};
+
+    var cssAsts = _.map(self.css, function (file) {
+      var filename = file.url.replace(/^\//, '');
+      originals[filename] = file;
+      try {
+        var parseOptions = { source: filename, position: true };
+        var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
+        ast.filename = filename;
+      } catch (e) {
+        buildmessage.error(e.message, { file: filename });
+        return { type: "stylesheet", stylesheet: { rules: [] },
+                 filename: filename };
+      }
+
+      return ast;
+    });
+
+    var warnCb = function (filename, msg) {
+      // XXX make this a buildmessage.warning call rather than a random log
+      console.log("%s: warn: %s", filename, msg);
+    };
+
+    // Other build phases might need this AST later
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
+
+    // Overwrite the CSS files list with the new concatenated file
+    var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
+                                               { sourcemap: true });
+    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
+
+    // Add the contents of the input files to the source map of the new file
+    stringifiedCss.map.sourcesContent =
+      _.map(stringifiedCss.map.sources, function (filename) {
+        return originals[filename].contents('utf8');
+      });
+
+    // If any input files had source maps, apply them.
+    // Ex.: less -> css source map should be composed with css -> css source map
+    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
+      new sourcemap.SourceMapConsumer(stringifiedCss.map));
+
+    _.each(originals, function (file, name) {
+      if (! file.sourceMap)
+        return;
+      newMap.applySourceMap(
+        new sourcemap.SourceMapConsumer(file.sourceMap), name);
+    });
+
+    self.css[0].setSourceMap(JSON.stringify(newMap));
+    self.css[0].setUrlToHash(".css");
+  },
   // Minify the CSS in this target
   minifyCss: function (minifiers) {
     var self = this;
+    var minifiedCss = '';
 
-    var allCss = _.map(self.css, function (file) {
-      return file.contents('utf8');
-    }).join('\n');
+    // If there is an AST already calculated, don't waste time on parsing it
+    // again.
+    if (self._cssAstCache) {
+      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAstCache);
+    } else if (self.css) {
+      var allCss = _.map(self.css, function (file) {
+        return file.contents('utf8');
+      }).join('\n');
 
-    allCss = minifiers.CleanCSSProcess(allCss);
+      minifiedCss = minifiers.CssTools.minifyCss(allCss);
+    }
 
-    self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
+    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
     self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
   },
 
