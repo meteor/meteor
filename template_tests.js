@@ -223,7 +223,7 @@ Tinytest.add("spacebars - templates - inclusion dotted args", function (test) {
     return { baz: this.symbol + R.get() };
   };
 
-  var div = renderToDiv(tmpl.withData({symbol:'%'}));
+  var div = renderToDiv(tmpl.extend({data: {symbol:'%'}}));
   test.equal(initCount, 1);
   test.equal(stripComments(div.innerHTML), '[%david]');
 
@@ -249,7 +249,7 @@ Tinytest.add("spacebars - templates - inclusion slashed args", function (test) {
     return { baz: this.symbol + R.get() };
   };
 
-  var div = renderToDiv(tmpl.withData({symbol:'%'}));
+  var div = renderToDiv(tmpl.extend({data: {symbol:'%'}}));
   test.equal(initCount, 1);
   test.equal(stripComments(div.innerHTML), '[%david]');
 });
@@ -1253,10 +1253,8 @@ Tinytest.add('spacebars - templates - nully attributes', function (test) {
   };
 
   var run = function (whichTemplate, data, expectTrue) {
-    //var withData = UI.With(function () { return data; },
-    //tmpls[whichTemplate]);
-    var templateWithData = tmpls[whichTemplate].withData(function () {
-      return data; });
+    var templateWithData = tmpls[whichTemplate].extend({data: function () {
+      return data; }});
     var div = renderToDiv(templateWithData);
     var input = div.querySelector('input');
     var descr = JSON.stringify([whichTemplate, data, expectTrue]);
