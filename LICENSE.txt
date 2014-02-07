@@ -639,6 +639,13 @@ nlogger: https://github.com/igo/nlogger
 Copyright (c) 2010 by Igor Urmincek
 
 
+----------
+Diff Match and Patch: http://code.google.com/p/google-diff-match-patch/
+----------
+
+Copyright 2006 Google Inc.
+
+
 
 ============
 BSD Licenses
