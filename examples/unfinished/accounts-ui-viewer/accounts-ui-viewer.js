@@ -91,14 +91,6 @@ if (Meteor.isClient) {
     return '';
   };
 
-  Template.page.radio1 = function (opts) {
-    return Template.radio.withData(opts.hash);
-  };
-
-  Template.page.button1 = function (opts) {
-    return Template.button.withData(opts.hash);
-  };
-
   Template.page.match = function (kv) {
     kv = keyValueFromId(kv);
     if (! kv)

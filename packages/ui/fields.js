@@ -102,7 +102,7 @@ _extend(UI.Component, {
       };
     }
 
-    if (typeof result === 'function' &&! result._isEmboxedConstant) {
+    if (typeof result === 'function' && ! result._isEmboxedConstant) {
       // Wrap the function `result`, binding `this` to `getComponentData(self)`.
       // This creates a dependency when the result function is called.
       // Don't do this if the function is really just an emboxed constant.
@@ -113,6 +113,9 @@ _extend(UI.Component, {
     } else {
       return result;
     };
+  },
+  lookupTemplate: function (id) {
+    return this.lookup(id, {template: true});
   },
   get: function (id) {
     // support `this.get()` to get the data context.

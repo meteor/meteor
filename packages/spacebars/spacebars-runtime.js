@@ -1,82 +1,39 @@
 Spacebars = {};
 
-// Returns true if `a` and `b` are `===`, unless they are of a mutable type.
-// (Because then, they may be equal references to an object that was mutated,
-// and we'll never know.  We save only a reference to the old object; we don't
-// do any deep-copying or diffing.)
-var safeEquals = function (a, b) {
-  if (a !== b)
-    return false;
-  else
-    return ((!a) || (typeof a === 'number') || (typeof a === 'boolean') ||
-            (typeof a === 'string'));
-};
+// * `templateOrFunction` - template (component) or function returning a template
+// or null
+Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock) {
+  if (contentBlock && ! UI.isComponent(contentBlock))
+    throw new Error('Second argument to Spacebars.include must be a template or UI.block if present');
+  if (elseContentBlock && ! UI.isComponent(elseContentBlock))
+    throw new Error('Third argument to Spacebars.include must be a template or UI.block if present');
 
-Spacebars.include = function (kindOrFunc, args) {
-  args = args || {};
-  if (typeof kindOrFunc === 'function') {
-    // function block helper
-    var func = kindOrFunc;
-
-    var hash = {};
-    // Call arguments if they are functions.  This may cause
-    // reactive dependencies!
-    for (var k in args) {
-      if (k !== 'data') {
-        var v = args[k];
-        hash[k] = (typeof v === 'function' ? v() : v);
-      }
-    }
-
-    var result = Deps.isolateValue(function () {
-      if ('data' in args) {
-        var data = args.data;
-        data = (typeof data === 'function' ? data() : data);
-        return func(data, { hash: hash });
-      } else {
-        return func({ hash: hash });
-      }
-    });
-
-    if (result !== null && !UI.isComponent(result))
-      throw new Error("Expected null or template in return value from helper, found: " + result);
-
-    // In `{{#foo}}...{{/foo}}`, if `foo` is a function that
-    // returns a component, attach __content and __elseContent
-    // to it.
-    if (UI.isComponent(result) &&
-        (('__content' in args) || ('__elseContent' in args))) {
-      var extra = {};
-      if ('__content' in args)
-        extra.__content = args.__content;
-      if ('__elseContent' in args)
-        extra.__elseContent = args.__elseContent;
-      result = result.extend(extra);
-    }
-    return result;
-  } else {
-    // Component
-    var kind = kindOrFunc;
-    if (! UI.isComponent(kind))
-      throw new Error("Expected template, found: " + kind);
-
-    // Note that there are no reactive dependencies established here.
-    if (args) {
-      var emboxedArgs = {};
-      for (var k in args) {
-        if (k === '__content' || k === '__elseContent')
-          emboxedArgs[k] = args[k];
-        else
-          emboxedArgs[k] = UI.emboxValue(args[k], safeEquals);
-      }
-
-      return kind.extend(emboxedArgs);
-    } else {
-      return kind;
-    }
+  var props = null;
+  if (contentBlock) {
+    props = (props || {});
+    props.__content = contentBlock;
   }
-};
+  if (elseContentBlock) {
+    props = (props || {});
+    props.__elseContent = elseContentBlock;
+  }
 
+  if (UI.isComponent(templateOrFunction))
+    return templateOrFunction.extend(props);
+
+  var func = templateOrFunction;
+
+  return function () {
+    var tmpl = Deps.isolateValue(func);
+
+    if (tmpl === null)
+      return null;
+    if (! UI.isComponent(tmpl))
+      throw new Error("Expected null or template in return value from inclusion function, found: " + tmpl);
+
+    return tmpl.extend(props);
+  };
+};
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
 // If `bar` and `baz` are functions, they are called before
@@ -108,15 +65,7 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
     }
   }
 
-  return Deps.isolateValue(function () {
-    return Spacebars.call.apply(null, args);
-  }, /* equals= */ function (x, y) {
-    if (x instanceof Handlebars.SafeString) {
-      return (y instanceof Handlebars.SafeString) && (x.string === y.string);
-    } else {
-      return safeEquals(x, y);
-    }
-  });
+  return Spacebars.call.apply(null, args);
 };
 
 Spacebars.mustache = function (value/*, args*/) {
@@ -145,6 +94,12 @@ Spacebars.attrMustache = function (value/*, args*/) {
   } else {
     throw new Error("Expected valid attribute name, '', null, or object");
   }
+};
+
+Spacebars.dataMustache = function (value/*, args*/) {
+  var result = Spacebars.mustacheImpl.apply(null, arguments);
+
+  return result;
 };
 
 // Idempotently wrap in `HTML.Raw`.
@@ -186,10 +141,22 @@ Spacebars.call = function (value/*, args*/) {
 // is `instanceof Spacebars.kw`.
 Spacebars.kw = function (hash) {
   if (! (this instanceof Spacebars.kw))
+    // called without new; call with new
     return new Spacebars.kw(hash);
 
   this.hash = hash || {};
 };
+
+// Call this as `Spacebars.SafeString("some HTML")`.  The return value
+// is `instanceof Spacebars.SafeString` (and `instanceof Handlebars.SafeString).
+Spacebars.SafeString = function (html) {
+  if (! (this instanceof Spacebars.SafeString))
+    // called without new; call with new
+    return new Spacebars.SafeString(html);
+
+  return new Handlebars.SafeString(html);
+};
+Spacebars.SafeString.prototype = Handlebars.SafeString.prototype;
 
 // `Spacebars.dot(foo, "bar", "baz")` performs a special kind
 // of `foo.bar.baz` that allows safe indexing of `null` and
@@ -236,4 +203,19 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
   return function (/*arguments*/) {
     return result.apply(value, arguments);
   };
+};
+
+// Implement Spacebars's #with, which renders its else case (or nothing)
+// if the argument is falsy.
+Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
+  // UI.With emboxes argFunc, and then we want to be sure to only call
+  // argFunc that way so we don't call it any extra times.
+  var w = UI.With(argFunc, contentBlock);
+  return UI.If(w.data, w, elseContentBlock);
+};
+
+Spacebars.TemplateWith = function (argFunc, contentBlock) {
+  var w = UI.With(argFunc, contentBlock);
+  w.__isTemplateWith = true;
+  return w;
 };

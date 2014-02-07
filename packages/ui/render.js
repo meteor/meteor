@@ -257,6 +257,39 @@ UI.render = function (kind, parentComponent) {
   return inst;
 };
 
+var contentEquals = function (a, b) {
+  if (a instanceof HTML.Raw) {
+    return (b instanceof HTML.Raw) && (a.value === b.value);
+  } else if (a == null) {
+    return (b == null);
+  } else {
+    return (a === b) &&
+      ((typeof a === 'number') || (typeof a === 'boolean') ||
+       (typeof a === 'string'));
+  }
+};
+
+UI.InTemplateScope = function (tmplInstance, content) {
+  if (! (this instanceof UI.InTemplateScope))
+    // called without `new`
+    return new UI.InTemplateScope(tmplInstance, content);
+
+  var parentPtr = tmplInstance.parent;
+  if (parentPtr.__isTemplateWith)
+    parentPtr = parentPtr.parent;
+
+  this.parentPtr = parentPtr;
+  this.content = content;
+};
+
+UI.InTemplateScope.prototype.toHTML = function (parentComponent) {
+  return HTML.toHTML(this.content, this.parentPtr);
+};
+
+UI.InTemplateScope.prototype.toText = function (textMode, parentComponent) {
+  return HTML.toText(this.content, textMode, this.parentPtr);
+};
+
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before, parentComponent) {
@@ -276,15 +309,26 @@ var materialize = function (node, parent, before, parentComponent) {
   } else if (typeof node === 'function') {
 
     var range = new UI.DomRange;
+    var lastContent = null;
     var rangeUpdater = Deps.autorun(function (c) {
-      if (! c.firstRun)
-        range.removeAll();
-
       var content = node();
+      // normalize content a little, for easier comparison
+      if (HTML.isNully(content))
+        content = null;
+      else if ((content instanceof Array) && content.length === 1)
+        content = content[0];
 
-      Deps.nonreactive(function () {
-        materialize(content, range, null, parentComponent);
-      });
+      // update if content is different from last time
+      if (! contentEquals(content, lastContent)) {
+        lastContent = content;
+
+        if (! c.firstRun)
+          range.removeAll();
+
+        Deps.nonreactive(function () {
+          materialize(content, range, null, parentComponent);
+        });
+      }
     });
     range.removed = function () {
       rangeUpdater.stop();
@@ -349,8 +393,10 @@ var materialize = function (node, parent, before, parentComponent) {
     var htmlNodes = UI.DomBackend.parseHTML(node.value);
     for (var i = 0; i < htmlNodes.length; i++)
       insert(htmlNodes[i], parent, before);
-  } else if (node instanceof HTML.Special) {
+  } else if (HTML.Special && (node instanceof HTML.Special)) {
     throw new Error("Can't materialize Special tag, it's just an intermediate rep");
+  } else if (node instanceof UI.InTemplateScope) {
+    materialize(node.content, parent, before, node.parentPtr);
   } else {
     // can't get here
     throw new Error("Unexpected node in htmljs: " + node);

@@ -31,7 +31,7 @@ Tinytest.add("templating - html scanner", function (test) {
 
   // arguments are quoted strings like '"hello"'
   var simpleTemplate = function (templateName, content) {
-    return '\nTemplate.__define__(' + templateName + ', (function() {\n  var self = this;\n  var __content = self.__content, __elseContent = self.__elseContent;\n  return ' + content + ';\n}));\n';
+    return '\nTemplate.__define__(' + templateName + ', (function() {\n  var self = this;\n  var template = this;\n  return ' + content + ';\n}));\n';
   };
 
   var checkResults = function(results, expectJs, expectHead) {

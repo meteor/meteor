@@ -143,47 +143,100 @@ var optimize = function (tree) {
 // ============================================================
 // Code-generation of template tags
 
-var builtInComponents = {
-  'content': '__content',
-  'elseContent': '__elseContent',
+var builtInBlockHelpers = {
   'if': 'UI.If',
   'unless': 'UI.Unless',
-  'with': 'UI.With',
+  'with': 'Spacebars.With',
   'each': 'UI.Each'
 };
 
+var builtInLexicals = {
+  'content': 'template.__content',
+  'elseContent': 'template.__elseContent'
+};
+
 Spacebars.isReservedName = function (name) {
-  return builtInComponents.hasOwnProperty(name);
+  return builtInBlockHelpers.hasOwnProperty(name) ||
+    builtInLexicals.hasOwnProperty(name);
 };
 
 var codeGenTemplateTag = function (tag) {
   if (tag.position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
     // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
     return HTML.EmitCode('function () { return ' +
-                         codeGenMustache(tag, 'attrMustache') + '; }');
+                         codeGenMustache(tag.path, tag.args, 'attrMustache')
+                         + '; }');
   } else {
     if (tag.type === 'DOUBLE') {
       return HTML.EmitCode('function () { return ' +
-                           codeGenMustache(tag) + '; }');
+                           codeGenMustache(tag.path, tag.args) + '; }');
     } else if (tag.type === 'TRIPLE') {
       return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
-                           codeGenMustache(tag) + '); }');
+                           codeGenMustache(tag.path, tag.args) + '); }');
     } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
       var path = tag.path;
-      var compCode;
 
-      if (path.length === 1 && builtInComponents.hasOwnProperty(path[0])) {
-        compCode = builtInComponents[path[0]];
+      if (tag.type === 'BLOCKOPEN' &&
+          builtInBlockHelpers.hasOwnProperty(path[0])) {
+        // if, unless, with, each.
+        //
+        // If someone tries to do `{{> if}}`, we don't
+        // get here, but an error is thrown when we try to codegen the path.
+
+        // Note: If we caught these errors earlier, while scanning, we'd be able to
+        // provide nice line numbers.
+        if (path.length > 1)
+          throw new Error("Unexpected dotted path beginning with " + path[0]);
+        if (! tag.args.length)
+          throw new Error("#" + path[0] + " requires an argument");
+
+        var codeParts = codeGenInclusionParts(tag);
+        var dataFunc = codeParts.dataFunc; // must exist (tag.args.length > 0)
+        var contentBlock = codeParts.content; // must exist
+        var elseContentBlock = codeParts.elseContent; // may not exist
+
+        var callArgs = [dataFunc, contentBlock];
+        if (elseContentBlock)
+          callArgs.push(elseContentBlock);
+
+        return HTML.EmitCode(
+          builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
+
       } else {
-        compCode = codeGenPath(path, {lookupTemplate: true});
+        var compCode = codeGenPath(path, {lookupTemplate: true});
+
+        if (path.length !== 1) {
+          // path code may be reactive; wrap it
+          compCode = 'function () { return ' + compCode + '; }';
+        }
+
+        var codeParts = codeGenInclusionParts(tag);
+        var dataFunc = codeParts.dataFunc;
+        var content = codeParts.content;
+        var elseContent = codeParts.elseContent;
+
+        var includeArgs = [compCode];
+        if (content) {
+          includeArgs.push(content);
+          if (elseContent)
+            includeArgs.push(elseContent);
+        }
+
+        var includeCode =
+              'Spacebars.include(' + includeArgs.join(', ') + ')';
+
+        if (dataFunc) {
+          includeCode =
+            'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
+            Spacebars.codeGen(HTML.EmitCode(includeCode)) + '))';
+        }
+
+        if (path[0] === 'content' || path[0] === 'elseContent') {
+          includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
+        }
+
+        return HTML.EmitCode(includeCode);
       }
-
-      var includeArgs = codeGenInclusionArgs(tag);
-
-      return HTML.EmitCode(
-        'function () { return Spacebars.include(' + compCode +
-          (includeArgs.length ? ', ' + includeArgs.join(', ') : '') +
-          '); }');
     } else {
       // Can't get here; TemplateTag validation should catch any
       // inappropriate tag types that might come out of the parser.
@@ -197,97 +250,6 @@ var makeObjectLiteral = function (obj) {
   for (var k in obj)
     parts.push(toObjectLiteralKey(k) + ': ' + obj[k]);
   return '{' + parts.join(', ') + '}';
-};
-
-
-var codeGenInclusionArgs = function (tag) {
-  var args = null;
-  var posArgs = [];
-
-  if ('content' in tag) {
-    args = (args || {});
-    args.__content = (
-      'UI.block(' + Spacebars.codeGen(tag.content) + ')');
-  }
-  if ('elseContent' in tag) {
-    args = (args || {});
-    args.__elseContent = (
-      'UI.block(' + Spacebars.codeGen(tag.elseContent) + ')');
-  }
-
-  // precalculate the number of positional args
-  var numPosArgs = 0;
-  _.each(tag.args, function (arg) {
-    if (arg.length === 2)
-      numPosArgs++;
-  });
-
-  _.each(tag.args, function (arg) {
-    var argType = arg[0];
-    var argValue = arg[1];
-
-    var isKeyword = (arg.length > 2);
-
-    var argCode;
-    switch (argType) {
-    case 'STRING':
-    case 'NUMBER':
-    case 'BOOLEAN':
-    case 'NULL':
-      argCode = toJSLiteral(argValue);
-      break;
-    case 'PATH':
-      var path = argValue;
-      argCode = codeGenPath(path);
-      // a single-segment path will compile to something like
-      // `self.lookup("foo")` which never establishes any dependencies,
-      // while `Spacebars.dot(self.lookup("foo"), "bar")` may establish
-      // dependencies.
-      //
-      // In the multi-positional-arg construct, don't wrap pos args here.
-      if (! ((path.length === 1) || (numPosArgs > 1)))
-        argCode = 'function () { return Spacebars.call(' + argCode + '); }';
-      break;
-    default:
-      // can't get here
-      throw new Error("Unexpected arg type: " + argType);
-    }
-
-    if (isKeyword) {
-      // keyword argument (represented as [type, value, name])
-      var name = arg[2];
-      args = (args || {});
-      args[name] = argCode;
-    } else {
-      // positional argument
-      posArgs.push(argCode);
-    }
-  });
-
-  if (posArgs.length === 1) {
-    args = (args || {});
-    args.data = posArgs[0];
-  } else if (posArgs.length > 1) {
-    // only allowed for block helper (which has already been
-    // checked at parse time); call first
-    // argument as a function on the others
-    args = (args || {});
-    args.data = 'function () { return Spacebars.call(' + posArgs.join(', ') + '); }';
-  }
-
-  if (args)
-    return [makeObjectLiteral(args)];
-
-  return [];
-};
-
-var codeGenMustache = function (tag, mustacheType) {
-  var nameCode = codeGenPath(tag.path);
-  var argCode = codeGenArgs(tag.args);
-  var mustache = (mustacheType || 'mustache');
-
-  return 'Spacebars.' + mustache + '(' + nameCode +
-    (argCode ? ', ' + argCode.join(', ') : '') + ')';
 };
 
 // `path` is an array of at least one string.
@@ -304,18 +266,22 @@ var codeGenMustache = function (tag, mustacheType) {
 //   Used when generating code for `{{> foo}}` or `{{#foo}}`. Only
 //   used for non-dotted paths.
 var codeGenPath = function (path, opts) {
-  // Let {{#if content}} check whether this template was invoked via
-  // inclusion or as a block helper.
-  if (builtInComponents.hasOwnProperty(path[0])) {
+  if (builtInBlockHelpers.hasOwnProperty(path[0]))
+    throw new Error("Can't use the built-in '" + path[0] + "' here");
+  // Let `{{#if content}}` check whether this template was invoked via
+  // inclusion or as a block helper, in addition to supporting
+  // `{{> content}}`.
+  if (builtInLexicals.hasOwnProperty(path[0])) {
     if (path.length > 1)
       throw new Error("Unexpected dotted path beginning with " + path[0]);
-    return builtInComponents[path[0]];
+    return builtInLexicals[path[0]];
   }
 
   var args = [toJSLiteral(path[0])];
+  var lookupMethod = 'lookup';
   if (opts && opts.lookupTemplate && path.length === 1)
-    args.push('{template: true}');
-  var code = 'self.lookup(' + args.join(', ') + ')';
+    lookupMethod = 'lookupTemplate';
+  var code = 'self.' + lookupMethod + '(' + args.join(', ') + ')';
 
   if (path.length > 1) {
     code = 'Spacebars.dot(' + code + ', ' +
@@ -325,31 +291,55 @@ var codeGenPath = function (path, opts) {
   return code;
 };
 
+// Generates code for an `[argType, argValue]` argument spec,
+// ignoring the third element (keyword argument name) if present.
+//
+// The resulting code may be reactive (in the case of a PATH of
+// more than one element) and is not wrapped in a closure.
+var codeGenArgValue = function (arg) {
+  var argType = arg[0];
+  var argValue = arg[1];
+
+  var argCode;
+  switch (argType) {
+  case 'STRING':
+  case 'NUMBER':
+  case 'BOOLEAN':
+  case 'NULL':
+    argCode = toJSLiteral(argValue);
+    break;
+  case 'PATH':
+    argCode = codeGenPath(argValue);
+    break;
+  default:
+    // can't get here
+    throw new Error("Unexpected arg type: " + argType);
+  }
+
+  return argCode;
+};
+
+// Generates a call to `Spacebars.fooMustache` on evaluated arguments.
+// The resulting code has no function literals and must be wrapped in
+// one for fine-grained reactivity.
+var codeGenMustache = function (path, args, mustacheType) {
+  var nameCode = codeGenPath(path);
+  var argCode = codeGenMustacheArgs(args);
+  var mustache = (mustacheType || 'mustache');
+
+  return 'Spacebars.' + mustache + '(' + nameCode +
+    (argCode ? ', ' + argCode.join(', ') : '') + ')';
+};
+
 // returns: array of source strings, or null if no
 // args at all.
-var codeGenArgs = function (tagArgs) {
+var codeGenMustacheArgs = function (tagArgs) {
   var kwArgs = null; // source -> source
   var args = null; // [source]
 
+  // tagArgs may be null
   _.each(tagArgs, function (arg) {
-    var argType = arg[0];
-    var argValue = arg[1];
-
-    var argCode;
-    switch (argType) {
-    case 'STRING':
-    case 'NUMBER':
-    case 'BOOLEAN':
-    case 'NULL':
-      argCode = toJSLiteral(argValue);
-      break;
-    case 'PATH':
-      argCode = codeGenPath(argValue);
-      break;
-    default:
-      // can't get here
-      throw new Error("Unexpected arg type: " + argType);
-    }
+    var argCode = codeGenArgValue(arg);
 
     if (arg.length > 2) {
       // keyword argument (represented as [type, value, name])
@@ -370,6 +360,60 @@ var codeGenArgs = function (tagArgs) {
 
   return args;
 };
+
+// Takes an inclusion tag and returns an object containing these properties,
+// all optional, whose values are JS source code:
+//
+// - `dataFunc` - source code of a data function literal
+// - `content` - source code of a content block
+// - `elseContent` - source code of an elseContent block
+//
+// Implements the calling convention for inclusions.
+var codeGenInclusionParts = function (tag) {
+  var ret = {};
+
+  if ('content' in tag) {
+    ret.content = (
+      'UI.block(' + Spacebars.codeGen(tag.content) + ')');
+  }
+  if ('elseContent' in tag) {
+    ret.elseContent = (
+      'UI.block(' + Spacebars.codeGen(tag.elseContent) + ')');
+  }
+
+  var dataFuncCode = null;
+
+  var args = tag.args;
+  if (! args.length) {
+    // e.g. `{{#foo}}`
+    return ret;
+  } else if (args[0].length === 3) {
+    // keyword arguments only, e.g. `{{> point x=1 y=2}}`
+    var dataProps = {};
+    _.each(args, function (arg) {
+      var argKey = arg[2];
+      dataProps[argKey] = 'Spacebars.call(' + codeGenArgValue(arg) + ')';
+    });
+    dataFuncCode = makeObjectLiteral(dataProps);
+  } else if (args[0][0] !== 'PATH') {
+    // literal first argument, e.g. `{{> foo "blah"}}`
+    //
+    // tag validation has confirmed, in this case, that there is only
+    // one argument (`args.length === 1`)
+    dataFuncCode = codeGenArgValue(args[0]);
+  } else if (args.length === 1) {
+    // one argument, must be a PATH
+    dataFuncCode = 'Spacebars.call(' + codeGenPath(args[0][1]) + ')';
+  } else {
+    dataFuncCode = codeGenMustache(args[0][1], args.slice(1),
+                                   'dataMustache');
+  }
+
+  ret.dataFunc = 'function () { return ' + dataFuncCode + '; }';
+
+  return ret;
+};
+
 
 // ============================================================
 // Main compiler
@@ -435,8 +479,7 @@ Spacebars.codeGen = function (parseTree, options) {
     // support `{{> content}}` and `{{> elseContent}}` with
     // lexical scope by creating a local variable in the
     // template's render function.
-    code += 'var __content = self.__content, ' +
-      '__elseContent = self.__elseContent; ';
+    code += 'var template = this; ';
   }
   code += 'return ';
   code += HTML.toJS(tree);
