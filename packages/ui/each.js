@@ -23,9 +23,9 @@ UI.EachImpl = Component.extend({
       var parts = _.map(
         ObserveSequence.fetch(self.__sequence()),
         function (item) {
-          return content.withData(function () {
+          return content.extend({data: function () {
             return item;
-          });
+          }});
         });
 
       if (parts.length) {
@@ -93,7 +93,7 @@ UI.EachImpl = Component.extend({
           if (beforeId)
             beforeId = LocalCollection._idStringify(beforeId);
 
-          var renderedItem = UI.render(content.withData(dataFunc), self);
+          var renderedItem = UI.render(content.extend({data: dataFunc}), self);
           range.add(id, renderedItem.dom, beforeId);
         },
         removed: function (id, item) {
