@@ -6,11 +6,3 @@
 standard-app-packages
 autopublish
 insecure
-preserve-inputs
-ui
-html5-tokenizer
-spacebars
-ordered-dict
-ejson
-random
-animation
