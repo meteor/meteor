@@ -25,7 +25,7 @@ var RunLog = function (options) {
   self.maxLength = 100;
 
   // If non-null, the last thing logged was "server restarted"
-  // message, and teh value will be the number of consecutive such
+  // message, and the value will be the number of consecutive such
   // messages that have been logged with no other intervening messages
   self.consecutiveRestartMessages = null;
 
@@ -62,9 +62,6 @@ _.extend(RunLog.prototype, {
 
   logAppOutput: function (line, isStderr) {
     var self = this;
-
-    if (line.trim().length === 0)
-      return;
 
     var Log = getLoggingPackage();
 
@@ -113,7 +110,8 @@ _.extend(RunLog.prototype, {
     var self = this;
 
     if (self.consecutiveRestartMessages) {
-      // replace old message in place
+      // replace old message in place. this assumes that the new restart message
+      // is not shorter than the old one.
       process.stdout.write("\r");
       self.messages.pop();
       self.consecutiveRestartMessages ++;
