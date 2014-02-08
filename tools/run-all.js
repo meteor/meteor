@@ -81,9 +81,8 @@ var Runner = function (appDir, options) {
 
 _.extend(Runner.prototype, {
   // XXX leave a pidfile and check if we are already running
-  start: function (onFailure) {
+  start: function () {
     var self = this;
-    self.onFailure = onFailure;
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
