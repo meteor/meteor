@@ -97,7 +97,6 @@ which npm
 # you update version numbers.
 
 cd "$DIR/lib/node_modules"
-npm install optimist@0.6.0
 npm install semver@2.2.1
 npm install request@2.33.0
 npm install keypress@0.2.1

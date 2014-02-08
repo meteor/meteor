@@ -8,7 +8,6 @@ var url = Npm.require("url");
 var crypto = Npm.require("crypto");
 
 var connect = Npm.require('connect');
-var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
@@ -551,7 +550,10 @@ var runWebAppServer = function () {
     // main happens post startup hooks, so we don't need a Meteor.startup() to
     // ensure this happens after the galaxy package is loaded.
     var AppConfig = Package["application-configuration"].AppConfig;
-    argv = optimist(argv).boolean('keepalive').argv;
+    // We used to use the optimist npm package to parse argv here, but it's
+    // overkill (and no longer in the dev bundle). Just assume any instance of
+    // '--keepalive' is a use of the option.
+    var expectKeepalives = _.contains(argv, '--keepalive');
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
     boilerplateHtml = fs.readFileSync(boilerplateHtmlPath, 'utf8');
@@ -590,8 +592,8 @@ var runWebAppServer = function () {
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
-      if (argv.keepalive || true)
-        console.log("LISTENING"); // must match run.js
+      if (expectKeepalives)
+        console.log("LISTENING"); // must match run-app.js
       var proxyBinding;
 
       AppConfig.configurePackage('webapp', function (configuration) {
@@ -645,7 +647,7 @@ var runWebAppServer = function () {
       console.error(e && e.stack);
     }));
 
-    if (argv.keepalive)
+    if (expectKeepalives)
       initKeepalive();
     return 'DAEMON';
   };
