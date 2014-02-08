@@ -23,7 +23,8 @@ var Runner = function (appDir, options) {
 
   var listenPort = options.port;
   var mongoPort = listenPort + 1;
-  var appPort = options.appPort || 20000 + Math.floor(Math.random() * 10000);
+  self.specifiedAppPort = options.appPort;
+  self.regenerateAppPort();
 
   self.stopped = false;
   self.quiet = options.quiet;
@@ -36,7 +37,7 @@ var Runner = function (appDir, options) {
 
   self.proxy = new Proxy({
     listenPort: listenPort,
-    proxyToPort: appPort,
+    proxyToPort: self.appPort,
     runLog: self.runLog,
     onFailure: options.onFailure
   });
@@ -63,7 +64,7 @@ var Runner = function (appDir, options) {
 
   self.appRunner = new AppRunner(appDir, {
     appDirForVersionCheck: options.appDirForVersionCheck,
-    port: appPort,
+    port: self.appPort,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
     buildOptions: options.buildOptions,
@@ -157,6 +158,24 @@ _.extend(Runner.prototype, {
     self.mongoRunner && self.mongoRunner.stop();
     self.appRunner.stop();
     self.runLog.finish();
+  },
+
+  // Call this whenever you want to regenerate the app's port (if it is not
+  // explicitly specified by the user).
+  //
+  // Rationale: if we randomly chose a port that's in use and the app failed to
+  // listen on it, we should try a different port when we restart the app!
+  regenerateAppPort: function () {
+    var self = this;
+    if (self.specifiedAppPort) {
+      self.appPort = self.specifiedAppPort;
+    } else {
+      self.appPort = 20000 + Math.floor(Math.random() * 10000);
+    }
+    if (self.proxy)
+      self.proxy.proxyToPort = self.appPort;
+    if (self.appRunner)
+      self.appRunner.port = self.appPort;
   }
 });
 
@@ -224,6 +243,7 @@ exports.run = function (appDir, options) {
         fut['return'](result);
         return false;  // stop restarting
       }
+      runner.regenerateAppPort();
       return true;  // restart it
     },
     watchForChanges: ! once,

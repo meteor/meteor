@@ -6,6 +6,7 @@ var Proxy = function (options) {
   var self = this;
 
   self.listenPort = options.listenPort;
+  // note: run-all.js updates proxyToPort directly
   self.proxyToPort = options.proxyToPort;
   self.onFailure = options.onFailure || function () {};
   self.runLog = options.runLog;

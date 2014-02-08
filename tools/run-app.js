@@ -304,6 +304,7 @@ var AppRunner = function (appDir, options) {
 
   self.appDir = appDir;
   self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
+  // note: run-all.js updates port directly
   self.port = options.port;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
