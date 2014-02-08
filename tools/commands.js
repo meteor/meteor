@@ -152,6 +152,7 @@ main.registerCommand({
   requiresApp: true,
   options: {
     port: { type: Number, short: "p", default: 3000 },
+    'app-port': { type: Number },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -177,6 +178,7 @@ main.registerCommand({
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
     port: options.port,
+    appPort: options['app-port'],
     rawLogs: options['raw-logs'],
     settingsFile: options.settings,
     program: options.program || undefined,
