@@ -456,7 +456,8 @@ var doInteractivePasswordLogin = function (options) {
   while (true) {
     loginData.password = utils.readLine({
       echo: false,
-      prompt: "Password: "
+      prompt: "Password: ",
+      stream: process.stderr
     });
 
     try {
@@ -511,9 +512,15 @@ exports.loginCommand = function (options) {
     var loginOptions = {};
 
     if (options.email) {
-      loginOptions.email = utils.readLine({ prompt: "Email: " });
+      loginOptions.email = utils.readLine({
+        prompt: "Email: ",
+        stream: process.stderr
+      });
     } else {
-      loginOptions.username = utils.readLine({ prompt: "Username: " });
+      loginOptions.username = utils.readLine({
+        prompt: "Username: ",
+        stream: process.stderr
+      });
     }
 
     if (! doInteractivePasswordLogin(loginOptions)) {
@@ -527,17 +534,17 @@ exports.loginCommand = function (options) {
     var galaxyLoginResult = logInToGalaxy(galaxy);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages
-      process.stdout.write('\nLogin to ' + galaxy + ' failed. ');
+      process.stderr.write('\nLogin to ' + galaxy + ' failed. ');
 
       if (galaxyLoginResult.error === 'unauthorized') {
-        process.stdout.write('You are not authorized for this galaxy.\n');
+        process.stderr.write('You are not authorized for this galaxy.\n');
       } else if (galaxyLoginResult.error === 'no_oauth_server') {
-        process.stdout.write('The galaxy could not ' +
+        process.stderr.write('The galaxy could not ' +
                              'contact Meteor Accounts.\n');
       } else if (galaxyLoginResult.error === 'no_identity') {
-        process.stdout.write('Your login information could not be found.\n');
+        process.stderr.write('Your login information could not be found.\n');
       } else {
-        process.stdout.write('Error: ' + galaxyLoginResult.error + '\n');
+        process.stderr.write('Error: ' + galaxyLoginResult.error + '\n');
       }
 
       return 1;
@@ -553,7 +560,7 @@ exports.loginCommand = function (options) {
   tryRevokeOldTokens({ firstTry: true });
 
   data = readSessionData();
-  process.stdout.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
+  process.stderr.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
                        (currentUsername(data) ?
                         " as " + currentUsername(data) : "") + ".\n" +
                        "Thanks for being a Meteor developer!\n");
