@@ -35,6 +35,28 @@ var authConn = _.once(function () {
   });
 });
 
+// Open a DDP connection to the accounts server, log in using the
+// provided token, and ensure that the connection stays logged in across
+// reconnects.
+var loggedInAccountsConnection = function (token) {
+  var connection = getLoadedPackages().livedata.DDP.connect(
+    config.getAuthDDPUrl()
+  );
+  var onReconnect = function () {
+    connection.apply(
+      'login',
+      [{ resume: token }],
+      { wait: true },
+      function (err, result) {
+        if (err)
+          throw err;
+      }
+    );
+  };
+  onReconnect();
+  return connection;
+};
+
 // The accounts server has some wrapped methods that take and return
 // session identifiers. To call these methods, we add our current
 // session identifier (or null, if we don't have one) as the last
@@ -140,7 +162,14 @@ var ensureSessionType = function (session, type) {
     });
     session.type = type;
   }
-}
+};
+
+var writeMeteorAccountsUsername = function (username) {
+  var data = readSessionData();
+  var session = getSession(data, config.getAccountsDomain());
+  session.username = username;
+  writeSessionData(data);
+};
 
 // Given an object 'data' in the format returned by readSessionData,
 // modify it to make the user logged out.
@@ -177,7 +206,38 @@ var loggedIn = function (data) {
 // return the currently logged in user, or null if not logged in or if
 // the logged in user doesn't have a username.
 var currentUsername = function (data) {
-  return getSession(data, config.getAccountsDomain()).username || null;
+  var sessionData = getSession(data, config.getAccountsDomain());
+  if (sessionData.username) {
+    return sessionData.username;
+  } else if (loggedIn(data) && sessionData.token) {
+    // If it looks like we are logged in but we don't yet have a
+    // username, then ask the server if we have one.
+    var username = null;
+    var fut = new Future();
+    var connection = loggedInAccountsConnection(sessionData.token);
+    connection.call('getUsername', function (err, result) {
+      if (err) {
+        // If anything went wrong, return null just as we would have if
+        // we hadn't bothered to ask the server.
+        fut['return'](null);
+        return;
+      }
+      fut['return'](result);
+    });
+
+    setTimeout(inFiber(function () {
+      fut['return'](null);
+    }), 5000);
+
+    username = fut.wait();
+    connection.close();
+    if (username) {
+      writeMeteorAccountsUsername(username);
+    }
+    return username;
+  } else {
+    return null;
+  }
 };
 
 var removePendingRevoke = function (domain, tokenIds) {
