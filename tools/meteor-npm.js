@@ -31,8 +31,10 @@ cleanup.onExit(function () {
 // something goes wrong
 var NpmFailure = function () {};
 
-var isGitHubTarball = function (x) {
-  return /^https:\/\/github.com\/.*\/tarball\/[0-9a-f]{40}/.test(x);
+var isUrlWithSha = function (x) {
+  // For now, just support http/https, which is at least less restrictive than
+  // the old "github only" rule.
+  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 };
 
 // If there is a version that isn't exact, throws an Error with a
@@ -42,9 +44,9 @@ meteorNpm.ensureOnlyExactVersions = function (npmDependencies) {
   _.each(npmDependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
-    // don't want anything too vague. For now, we support semvers and github
-    // tarballs pointing at an exact commit.
-    if (!semver.valid(version) && ! isGitHubTarball(version))
+    // don't want anything too vague. For now, we support semvers and urls that
+    // name a specific commit by SHA.
+    if (!semver.valid(version) && ! isUrlWithSha(version))
       throw new Error(
         "Must declare exact version of npm package dependency: " +
           name + '@' + version);
@@ -410,7 +412,7 @@ var getShrinkwrappedDependenciesTree = function (dir) {
 //
 // If more logic is added here, it should probably go in minimizeModule too.
 var canonicalVersion = function (depObj) {
-  if (isGitHubTarball(depObj.from))
+  if (isUrlWithSha(depObj.from))
     return depObj.from;
   else
     return depObj.version;
@@ -439,7 +441,7 @@ var getShrinkwrappedDependencies = function (dir) {
 var installNpmModule = function (name, version, dir) {
   ensureConnected();
 
-  var installArg = isGitHubTarball(version)
+  var installArg = isUrlWithSha(version)
     ? version : (name + "@" + version);
 
   // We don't use npm.commands.install since we couldn't figure out
@@ -552,7 +554,7 @@ var minimizeShrinkwrap = function (dir) {
     if (module.resolved &&
         !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
       version = module.resolved;
-    } else if (isGitHubTarball(module.from)) {
+    } else if (isUrlWithSha(module.from)) {
       version = module.from;
     } else {
       version = module.version;
