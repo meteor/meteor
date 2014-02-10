@@ -950,8 +950,12 @@ main.registerCommand({
   var site = qualifySitename(options.args[0]);
 
   if (! auth.isLoggedIn()) {
+    // XXX meteor.com/create-account or something should have a nice
+    // registration form
     process.stderr.write(
-      "You must be logged in to claim sites. Try 'meteor login'.\n");
+"\nYou must be logged in to claim sites. Use 'meteor login' to log in.\n" +
+"If you don't have a Meteor Developer Account yet, you can quickly\n" +
+"create one at www.meteor.com.\n\n");
     return 1;
   }
 

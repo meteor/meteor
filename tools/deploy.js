@@ -125,23 +125,20 @@ var deployRpc = function (options) {
 // Additional options (beyond deployRpc):
 //
 // - preflight: if true, do everything but the actual RPC. The only
-//   other necessary option is 'site' and possibly 'acceptNew'. On
-//   failure, returns an object with errorMessage (just like
-//   deployRpc). On success, returns an object without an errorMessage
-//   key and possibly with a 'preflightPassword' key (if password was
-//   collected).
-// - preflightPassword: if previously called for this app with the
-//   'preflight' option and a 'preflightPassword' was returned, you
-//   can pass 'preflightPassword' back in on a subsequent call to skip
-//   the password prompt.
-// - promptIfAuthFails: if the authentication fails, prompt the user to
-//   log in with a username and password and then resend the RPC.
+//   other necessary option is 'site'. On failure, returns an object
+//   with errorMessage (just like deployRpc). On success, returns an
+//   object without an errorMessage key and with possible keys
+//   'protection' (value either 'password' or 'account') and
+//   'authorized' (true if the current user is an authorized user on
+//   this app).
+// - promptIfAuthFails: if true, then we think we are logged in with the
+//   accounts server but our authentication actually fails, then prompt
+//   the user to log in with a username and password and then resend the
+//   RPC.
 var authedRpc = function (options) {
   var rpcOptions = _.clone(options);
   var preflight = rpcOptions.preflight;
-  var preflightPassword = rpcOptions.preflightPassword;
   delete rpcOptions.preflight;
-  delete rpcOptions.preflightPassword;
 
   // Fetch auth info
   var infoResult = deployRpc({
@@ -185,56 +182,68 @@ var authedRpc = function (options) {
   }
 
   if (info.protection === "password") {
+    if (preflight) {
+      return { protection: info.protection };
+    }
     // Password protected. Read a password, hash it, and include the
     // hashed password as a query parameter when doing the RPC.
-    var password = preflightPassword;
-    if (! password) {
-      password = utils.readLine({
-        echo: false,
-        prompt: "Password: ",
-        stream: process.stderr
-      });
+    var password;
+    password = utils.readLine({
+      echo: false,
+      prompt: "Password: ",
+      stream: process.stderr
+    });
 
-      // Hash the password so we never send plaintext over the
-      // wire. Doesn't actually make us more secure, but it means we
-      // won't leak a user's password, which they might use on other
-      // sites too.
-      var crypto = require('crypto');
-      var hash = crypto.createHash('sha1');
-      hash.update('S3krit Salt!');
-      hash.update(password);
-      password = hash.digest('hex');
-    }
+    // Hash the password so we never send plaintext over the
+    // wire. Doesn't actually make us more secure, but it means we
+    // won't leak a user's password, which they might use on other
+    // sites too.
+    var crypto = require('crypto');
+    var hash = crypto.createHash('sha1');
+    hash.update('S3krit Salt!');
+    hash.update(password);
+    password = hash.digest('hex');
 
     rpcOptions = _.clone(rpcOptions);
     rpcOptions.qs = _.clone(rpcOptions.qs || {});
     rpcOptions.qs.password = password;
 
-    return preflight ? { preflightPassword: password } : deployRpc(rpcOptions);
+    return deployRpc(rpcOptions);
   }
 
   if (info.protection === "account") {
     if (! _.has(info, 'authorized')) {
       // Absence of this implies that we are not an authorized user on
       // this app
-      return {
-        statusCode: null,
-        errorMessage: auth.isLoggedIn() ?
-          // XXX better error message (probably need to break out of
-          // the 'errorMessage printed with brief prefix' pattern)
-          "Not an authorized user on this site" :
-          "Not logged in"
+      if (preflight) {
+        return { protection: info.protection };
+      } else {
+        return {
+          statusCode: null,
+          errorMessage: auth.isLoggedIn() ?
+            // XXX better error message (probably need to break out of
+            // the 'errorMessage printed with brief prefix' pattern)
+            "Not an authorized user on this site" :
+            "Not logged in"
+        };
       }
     }
 
     // Sweet, we're an authorized user.
-    return preflight ? { } : deployRpc(rpcOptions);
+    if (preflight) {
+      return {
+        protection: info.protection,
+        authorized: info.authorized
+      };
+    } else {
+      return deployRpc(rpcOptions);
+    }
   }
 
   return {
     statusCode: null,
     errorMessage: "You need a newer version of Meteor to work with this site"
-  }
+  };
 };
 
 // Take a proposed sitename for deploying to. If it looks
@@ -290,6 +299,30 @@ var bundleAndDeploy = function (options) {
   if (preflight.errorMessage) {
     process.stderr.write("\nError deploying application: " +
                          preflight.errorMessage + "\n");
+    return 1;
+  }
+
+  if (preflight.protection === "password") {
+
+    process.stderr.write(
+"\nThis site was deployed with an old version of Meteor that used\n" +
+"site passwords instead of user accounts. Now we have a much better\n" +
+"system, Meteor Developer Accounts.\n\n" +
+"If this is your site, please claim it into your account with\n" +
+"'meteor claim " + options.site + "'.\n" +
+"If it's not your site, please try a different name!\n\n");
+    return 1;
+
+  } else if (preflight.protection === "account" &&
+             ! preflight.authorized) {
+
+    var username = auth.currentUsername();
+    process.stderr.write(
+"\nSorry, that site belongs to a different user.\n" +
+(username ? "You are currently logged in as " + username  + ".\n" : "") +
+"\nEither have the site owner use 'meteor authorized --add' to add you\n" +
+"as an authorized developer for the site, or switch to an authorized\n" +
+"account with 'meteor login'.\n\n");
     return 1;
   }
 
@@ -554,8 +587,16 @@ var claim = function (site) {
   });
 
   if (result.errorMessage) {
-    process.stderr.write("Couldn't claim site: " +
-                         result.errorMessage + "\n");
+    if (! auth.currentUsername() &&
+        auth.registrationUrl()) {
+      process.stderr.write(
+"\nBefore you can claim existing sites, you need to set a password on\n" +
+"your Meteor Developer Account. You can do that here in under a minute:\n\n" +
+auth.registrationUrl() + "\n\n");
+    } else {
+      process.stderr.write("Couldn't claim site: " +
+                           result.errorMessage + "\n");
+    }
     return 1;
   }
 

@@ -645,6 +645,17 @@ exports.logoutCommand = function (options) {
     process.stderr.write("Not logged in.\n");
 };
 
+exports.currentUsername = function () {
+  var data = readSessionData();
+  return currentUsername(data);
+};
+
+exports.registrationUrl = function () {
+  var data = readSessionData();
+  var url = getSession(data, config.getAccountsDomain()).registrationUrl;
+  return url;
+};
+
 exports.whoAmICommand = function (options) {
   config.printUniverseBanner();
 
@@ -754,7 +765,8 @@ exports.registerOrLogIn = function () {
       username: result.username,
       retry: true
     });
-    authConn.close();
+    authConn().close();
+    return loginResult;
   } else {
     // Hmm, got an email we don't understand.
     process.stderr.write(
