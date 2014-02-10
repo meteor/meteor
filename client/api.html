@@ -739,7 +739,7 @@ results of the cursor, or while fetching results from the cursor,
 those changes may or may not appear in the result set.
 {{/warning}}
 
-Cursors are a reactive data source.  The first time you retrieve a
+Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
 [`autorun`](#deps_autorun)), Meteor will register a
@@ -747,6 +747,12 @@ dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
 `find`.
+
+Note that when `fields` are specified, only changes to the included
+fields will trigger callbacks in `observe`, `observeChanges` and
+invalidations in reactive computations using this cursor. Careful use
+of `fields` allows for more fine-grained reactivity for computations
+that don't depend on an entire document.
 
 {{> api_box findone}}
 
