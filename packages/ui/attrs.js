@@ -110,7 +110,10 @@ var BooleanHandler = AttributeHandler.extend({
 
 var ValueHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    element.value = value;
+    var focused = (element === document.activeElement);
+
+    if (!focused)
+      element.value = value;
   }
 });
 
