@@ -64,7 +64,11 @@ Handlebars.to_json_ast = function (code) {
 
     throw e;
   }
+  return Handlebars.ast_to_json_ast(ast);
+}
 
+// Converts a handlebars AST to Meteor's
+Handlebars.ast_to_json_ast = function (ast) {
   // Recreate Handlebars.Exception to properly report error messages
   // and stack traces. (https://github.com/wycats/handlebars.js/issues/226)
   makeHandlebarsExceptionsVisible();
@@ -128,6 +132,12 @@ Handlebars.to_json_ast = function (code) {
     return ret;
   };
 
+  var partialName = function (node) {
+    if (node.type !== "PARTIAL_NAME")
+      throw new Error("got ast node " + node.type + " for partial name");
+    return node.name;
+  };
+
   var template = function (nodes) {
     var ret = [];
 
@@ -139,12 +149,8 @@ Handlebars.to_json_ast = function (code) {
         ret.push([node.escaped ? '{' : '!', invocation(node)]);
       },
       partial: function (node) {
-        var id = identifier(node.id);
-        if (id.length !== 2 || id[0] !== 0)
-          // XXX actually should just get the literal string the
-          // entered, and avoid identifier parsing
-          throw new Error("Template names shouldn't contain '.' or '/'");
-        var x = ['>', id[1]];
+        var name = partialName(node.partialName);
+        var x = ['>', name];
         if (node.context)
           x = ['#', [[0, 'with'], identifier(node.context)], [x]];
         ret.push(x);
