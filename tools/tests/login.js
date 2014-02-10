@@ -20,7 +20,6 @@ selftest.define("login", ['net'], function () {
   run.matchErr("Logged in as test.");
   run.expectExit(0);
 
-  // XXX test login failure
   // XXX test login by email
 
   run = s.run("whoami");
@@ -39,5 +38,15 @@ selftest.define("login", ['net'], function () {
 
   run = s.run("whoami");
   run.matchErr("Not logged in");
+  run.expectExit(1);
+
+  // Test login failure
+  run = s.run("login");
+  run.matchErr("Username:");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("badpassword\n");
+  run.waitSecs(5);
+  run.matchErr("Login failed");
   run.expectExit(1);
 });
