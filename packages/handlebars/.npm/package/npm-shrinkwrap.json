@@ -1,13 +1,29 @@
 {
   "dependencies": {
     "handlebars": {
-      "version": "https://github.com/meteor/handlebars.js/tarball/543ec6689cf663cfda2d8f26c3c27de40aad7bd5",
+      "version": "1.3.0",
       "dependencies": {
         "optimist": {
           "version": "0.3.7",
           "dependencies": {
             "wordwrap": {
               "version": "0.0.2"
+            }
+          }
+        },
+        "uglify-js": {
+          "version": "2.3.6",
+          "dependencies": {
+            "async": {
+              "version": "0.2.10"
+            },
+            "source-map": {
+              "version": "0.1.31",
+              "dependencies": {
+                "amdefine": {
+                  "version": "0.1.0"
+                }
+              }
             }
           }
         }
