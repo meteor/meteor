@@ -14,7 +14,7 @@ var config = require('./config.js');
 var release = require('./release.js');
 
 // Compose a User-Agent header.
-getUserAgent = function () {
+var getUserAgent = function () {
   var version;
 
   if (release.current)
@@ -34,6 +34,8 @@ getUserAgent = function () {
 
 var httpHelpers = exports;
 _.extend(exports, {
+  getUserAgent: getUserAgent,
+
   // A wrapper around request with the following improvements:
   //
   // - It will respect proxy environment variables if present

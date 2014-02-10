@@ -14,9 +14,6 @@ var Future = require('fibers/future');
 
 var auth = exports;
 
-// XXX Wrap functions in useAuthConn(). Opens a connection, runs the
-// function, closes the connection.
-
 var getLoadedPackages = _.once(function () {
   var unipackage = require('./unipackage.js');
   return unipackage.load({
@@ -28,12 +25,30 @@ var getLoadedPackages = _.once(function () {
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
-var authConn = _.once(function () {
+var openAccountsConnection = function () {
   var DDP = getLoadedPackages().livedata.DDP;
   return DDP.connect(config.getAuthDDPUrl(), {
-    headers: { 'User-Agent': getUserAgent() }
+    headers: { 'User-Agent': httpHelpers.getUserAgent() }
   });
-});
+};
+
+// Returns a function that runs `f`, appending an additional argument
+// that is a connection to the accounts server, which gets closed when
+// `f` returns or throws.
+var withAccountsConnection = function (f) {
+  return function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+    var conn = openAccountsConnection();
+    args.push(conn);
+    try {
+      var result = f.apply(self, args);
+    } finally {
+      conn.close();
+    }
+    return result;
+  };
+};
 
 // Open a DDP connection to the accounts server, log in using the
 // provided token, and ensure that the connection stays logged in across
@@ -67,6 +82,8 @@ var loggedInAccountsConnection = function (token) {
 // options can include:
 //  - timeout: a timeout after which an exception will be thrown if the
 //    method hasn't returned yet
+//  - connection: an open connection to the accounts server. If not
+//    provided, one will be opened and then closed before returning.
 var sessionMethodCaller = function (methodName, options) {
   options = options || {};
   return function (/* arguments */) {
@@ -75,7 +92,8 @@ var sessionMethodCaller = function (methodName, options) {
       session: auth.getSessionId(config.getAccountsDomain()) || null
     });
     var fut = new Future();
-    authConn().apply(methodName, args, fut.resolver());
+    var conn = options.connection || openAccountsConnection();
+    conn.apply(methodName, args, fut.resolver());
     if (options.timeout !== undefined) {
       var timer = setTimeout(inFiber(function () {
         fut.throw(new Error('Method call timed out'));
@@ -88,6 +106,8 @@ var sessionMethodCaller = function (methodName, options) {
     if (result && result.session) {
       auth.setSessionId(config.getAccountsDomain(), result.session);
     }
+    if (! options.connection)
+      conn.close();
     return result && result.result;
   };
 };
@@ -306,6 +326,8 @@ var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
 //  - timeout: request timeout in milliseconds
 //  - firstTry: cosmetic. set to true if we recently logged out a
 //    session. just changes the error message.
+//  - connection: an open connection to the accounts server. If not
+//    provided, this function will open one itself.
 var tryRevokeOldTokens = function (options) {
   options = _.extend({
     timeout: 5000
@@ -344,7 +366,8 @@ var tryRevokeOldTokens = function (options) {
     if (session.type === "meteor-account") {
       try {
         sessionMethodCaller('revoke', {
-          timeout: options.timeout
+          timeout: options.timeout,
+          connection: options.connection
         })(tokenIds);
         removePendingRevoke(domain, tokenIds);
       } catch (err) {
@@ -361,7 +384,6 @@ var tryRevokeOldTokens = function (options) {
       return;
     }
   });
-  authConn().close();
 };
 
 // Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
@@ -496,6 +518,8 @@ var logInToGalaxy = function (galaxyName) {
 //   reprompt.
 // - suppressErrorMessage: true if the function should not print an
 //   error message to stderr if the login fails
+// - connection: an open connection to the accounts server. If not
+//   provided, this function will open its own connection.
 var doInteractivePasswordLogin = function (options) {
   var loginData = {};
 
@@ -512,7 +536,13 @@ var doInteractivePasswordLogin = function (options) {
     }
   };
 
-  var conn = authConn();
+  var conn = options.connection || openAccountsConnection();
+
+  var maybeCloseConnection = function () {
+    if (! options.connection)
+      conn.close();
+  };
+
   while (true) {
     loginData.password = utils.readLine({
       echo: false,
@@ -536,7 +566,7 @@ var doInteractivePasswordLogin = function (options) {
         process.stderr.write("\n");
         continue;
       } else {
-        conn.close();
+        maybeCloseConnection();
         return false;
       }
     }
@@ -555,12 +585,14 @@ var doInteractivePasswordLogin = function (options) {
   session.token = result.token;
   session.tokenId = result.tokenId;
   writeSessionData(data);
+  maybeCloseConnection();
   return true;
 };
 
 exports.doInteractivePasswordLogin = doInteractivePasswordLogin;
 
-exports.loginCommand = function (options) {
+exports.loginCommand = withAccountsConnection(function (options,
+                                                        connection) {
   config.printUniverseBanner();
 
   var data = readSessionData();
@@ -583,8 +615,9 @@ exports.loginCommand = function (options) {
       });
     }
 
+    loginOptions.connection = connection;
+
     if (! doInteractivePasswordLogin(loginOptions)) {
-      authConn().close();
       return 1;
     }
   }
@@ -617,7 +650,7 @@ exports.loginCommand = function (options) {
     writeSessionData(data);
   }
 
-  tryRevokeOldTokens({ firstTry: true });
+  tryRevokeOldTokens({ firstTry: true, connection: connection });
 
   data = readSessionData();
   process.stderr.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
@@ -625,7 +658,7 @@ exports.loginCommand = function (options) {
                         " as " + currentUsername(data) : "") + ".\n" +
                        "Thanks for being a Meteor developer!\n");
   return 0;
-};
+});
 
 exports.logoutCommand = function (options) {
   config.printUniverseBanner();
@@ -690,7 +723,7 @@ url + "\n");
 // try to log the user into it. Returns true on success (user is now
 // logged in) or false on failure (user gave up, can't talk to
 // network..)
-exports.registerOrLogIn = function () {
+exports.registerOrLogIn = withAccountsConnection(function (connection) {
   // Get their email
   while (true) {
     var email = utils.readLine({ prompt: "Email: " });
@@ -701,16 +734,15 @@ exports.registerOrLogIn = function () {
   }
 
   // Try to register
-  var conn = authConn();
   try {
-    var result = sessionMethodCaller('tryRegister')(
-      email,
-      utils.getAgentInfo()
+    var methodCaller = sessionMethodCaller(
+      'tryRegister',
+      { connection: connection }
     );
+    var result = methodCaller(email, utils.getAgentInfo());
   } catch (err) {
     process.stderr.write("\nCouldn't connect to server. " +
                          "Check your internet connection.\n");
-    conn.close();
     return false;
   }
 
@@ -726,7 +758,6 @@ exports.registerOrLogIn = function () {
     session.userId = result.userId;
     session.registrationUrl = result.registrationUrl;
     writeSessionData(data);
-    conn.close();
     return true;
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
     process.stderr.write(
@@ -738,14 +769,16 @@ exports.registerOrLogIn = function () {
 "and then come back here to deploy your app.\n");
 
     try {
-      var waitForRegistrationResult = conn.call('waitForRegistration', email);
+      var waitForRegistrationResult = connection.call(
+        'waitForRegistration',
+        email
+      );
     } catch (e) {
       if (! (e instanceof getLoadedPackages().meteor.Meteor.Error))
         throw e;
       process.stderr.write(
         "\nWhen you've picked your password, run 'meteor login' and then you'll\n" +
           "be good to go.\n");
-      conn.close();
       return false;
     }
 
@@ -754,27 +787,26 @@ exports.registerOrLogIn = function () {
                          "! Now log in with your new password.\n");
     loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
-      retry: true
+      retry: true,
+      connection: connection
     });
-    authConn().close();
     return loginResult;
   } else if (result.alreadyExisted && result.username) {
     process.stderr.write("\nLogging in as " + result.username + ".\n");
 
     loginResult = doInteractivePasswordLogin({
       username: result.username,
-      retry: true
+      retry: true,
+      connection: connection
     });
-    authConn().close();
     return loginResult;
   } else {
     // Hmm, got an email we don't understand.
     process.stderr.write(
       "\nThere was a problem. Please log in with 'meteor login'.\n");
-    conn.close();
     return false;
   }
-};
+});
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 
