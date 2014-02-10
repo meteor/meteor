@@ -746,7 +746,13 @@ reactive computation (eg, a template or
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
-`find`.
+`find`. 
+
+Note that when `fields` are specified, only changes to the included
+fields will trigger callbacks in `observe`, `observeChanges` and
+invalidations in reactive computations using this cursor. Careful use
+of `fields` allows for more fine-grained reactivity for computations
+that don't depend on an entire document.
 
 Note that when `fields` are specified, only changes to the included
 fields will trigger callbacks in `observe`, `observeChanges` and
