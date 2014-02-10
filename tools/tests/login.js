@@ -8,13 +8,16 @@ selftest.define("login", ['net'], function () {
   run.matchErr("Not logged in");
   run.expectExit(1);
 
+  // Username and password prompts happen on stderr so that scripts can
+  // run commands that do login interactively and still save the command
+  // output with the login prompts appearing in it.
   run = s.run("login");
-  run.match("Username:");
+  run.matchErr("Username:");
   run.write("test\n");
-  run.match("Password:");
+  run.matchErr("Password:");
   run.write("testtest\n");
   run.waitSecs(5);
-  run.match("Logged in as test.");
+  run.matchErr("Logged in as test.");
   run.expectExit(0);
 
   // XXX test login failure
