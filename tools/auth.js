@@ -726,7 +726,10 @@ url + "\n");
 exports.registerOrLogIn = withAccountsConnection(function (connection) {
   // Get their email
   while (true) {
-    var email = utils.readLine({ prompt: "Email: " });
+    var email = utils.readLine({
+      prompt: "Email: ",
+      stream: process.stderr
+    });
     if (utils.validEmail(email))
       break;
     if (email.trim().length)
