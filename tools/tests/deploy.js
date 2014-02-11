@@ -10,7 +10,6 @@ var randomString = function (charsCount) {
   return str;
 };
 
-// XXX should probably be slow
 // XXX need to make sure that mother doesn't clean up:
 // 'legacy-password-app-for-selftest'
 // 'legacy-no-password-app-for-selftest'
