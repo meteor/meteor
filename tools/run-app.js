@@ -80,9 +80,7 @@ _.extend(AppProcess.prototype, {
     if (self.proc === null) {
       self.runLog.log("Program '" + self.program + "' not found.");
 
-      if (! self.madeExitCallback)
-        self.onExit && self.onExit();
-      self.madeExitCallback = true;
+      self._maybeCallOnExit();
       return;
     }
 
@@ -105,9 +103,7 @@ _.extend(AppProcess.prototype, {
     // Watch for exit
     var thisPid = self.proc.pid;
     self.proc.on('exit', function (code, signal) {
-      if (! self.madeExitCallback)
-        self.onExit && self.onExit(code, signal);
-      self.madeExitCallback = true;
+      self._maybeCallOnExit(code, signal);
     });
 
     self.proc.on('error', function (err) {
@@ -116,9 +112,7 @@ _.extend(AppProcess.prototype, {
       // node docs say that it might make both an 'error' and a
       // 'close' callback, so we use a guard to make sure we only call
       // onExit once.
-      if (! self.madeExitCallback)
-        self.onExit && self.onExit();
-      self.madeExitCallback = true;
+      self._maybeCallOnExit();
     });
 
     // This happens sometimes when we write a keepalive after the app
@@ -137,6 +131,14 @@ _.extend(AppProcess.prototype, {
         // do nothing. this fails when the process dies.
       }
     }, 2000);
+  },
+
+  _maybeCallOnExit: function (code, signal) {
+    var self = this;
+    if (self.madeExitCallback)
+      return;
+    self.madeExitCallback = true;
+    self.onExit && self.onExit(code, signal);
   },
 
   // Idempotent. Once stop() returns it is guaranteed that you will
