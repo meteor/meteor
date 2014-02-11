@@ -255,7 +255,7 @@ var printLegacyPasswordMessage = function (site) {
 "site passwords instead of user accounts. Now we have a much better\n" +
 "system, Meteor developer accounts.\n\n" +
 "If this is your site, please claim it into your account with\n" +
-"\tmeteor claim " + site + "\n");
+"  meteor claim " + site + "\n");
 };
 
 // When the user is trying to do something with an app that they are not
@@ -437,6 +437,60 @@ var deleteApp = function (site) {
   return 0;
 };
 
+// Helper that does a preflight request to check auth, and prints the
+// appropriate error message if auth fails or if this is a legacy
+// password-protected app. If auth succeeds, then it runs the actual
+// RPC. 'site' and 'operation' are the site and operation for the
+// RPC. 'what' is a string describing the operation, for use in error
+// messages.  Returns the result of the RPC if successful, or null
+// otherwise (including if auth failed).
+var checkAuthThenSendRpc = function (site, operation, what) {
+  var preflight = authedRpc({
+    operation: operation,
+    site: site,
+    preflight: true,
+    promptIfAuthFails: true
+  });
+
+  if (preflight.errorMessage) {
+    process.stderr.write("Couldn't " + what + ": " +
+                         preflight.errorMessage + "\n");
+    return null;
+  }
+
+  if (preflight.protection === "password") {
+    printLegacyPasswordMessage(site);
+    return null;
+  } else if (preflight.protection === "account" &&
+             ! preflight.authorized) {
+    if (! auth.isLoggedIn()) {
+      process.stderr.write(
+"\nYou must be logged in to " + what + " for this app. Use 'meteor login'\n" +
+"to log in.\n\n" +
+"If you don't have a Meteor developer account yet, you can quickly\n" +
+"create one at www.meteor.com.\n");
+    } else {
+      printUnauthorizedMessage();
+    }
+    return null;
+  }
+
+  var result = authedRpc({
+    operation: operation,
+    site: site,
+    expectMessage: true,
+    promptIfAuthFails: true
+  });
+
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't " + what + ": " +
+                         result.errorMessage + "\n");
+    return null;
+  }
+
+  return result;
+};
+
 // On failure, prints a message to stderr and returns null. Otherwise,
 // returns a temporary authenticated Mongo URL allowing access to this
 // site's database.
@@ -446,20 +500,13 @@ var temporaryMongoUrl = function (site) {
     // canonicalizeSite printed an error
     return null;
 
-  var result = authedRpc({
-    operation: 'mongo',
-    site: site,
-    expectMessage: true,
-    promptIfAuthFails: true
-  });
+  var result = checkAuthThenSendRpc(site, 'mongo', 'open a mongo connection');
 
-  if (result.errorMessage) {
-    process.stderr.write("Couldn't open Mongo connection: " +
-                         result.errorMessage + "\n");
+  if (result !== null) {
+    return result.message;
+  } else {
     return null;
   }
-
-  return result.message;
 };
 
 var logs = function (site) {
@@ -467,53 +514,14 @@ var logs = function (site) {
   if (! site)
     return 1;
 
-  // Check auth in a preflight request, so that we can print a useful
-  // error message.
-  var preflight = authedRpc({
-    operation: 'logs',
-    site: site,
-    preflight: true,
-    promptIfAuthFails: true
-  });
+  var result = checkAuthThenSendRpc(site, 'logs', 'view logs');
 
-  if (preflight.errorMessage) {
-    process.stderr.write("Couldn't get logs: " +
-                         result.errorMessage + "\n");
+  if (result === null) {
     return 1;
+  } else {
+    process.stdout.write(result.message);
+    return 0;
   }
-
-  if (preflight.protection === "password") {
-    printLegacyPasswordMessage(site);
-    return 1;
-  } else if (preflight.protection === "account" &&
-             ! preflight.authorized) {
-    if (! auth.isLoggedIn()) {
-      process.stderr.write(
-"\nYou must be logged in to view logs for this app. Use 'meteor login'\n" +
-"to log in.\n\n" +
-"If you don't have a Meteor developer account yet, you can quickly\n" +
-"create one at www.meteor.com.\n");
-    } else {
-      printUnauthorizedMessage();
-    }
-    return 1;
-  }
-
-  var result = authedRpc({
-    operation: 'logs',
-    site: site,
-    expectMessage: true,
-    promptIfAuthFails: true
-  });
-
-  if (result.errorMessage) {
-    process.stderr.write("Couldn't get logs: " +
-                         result.errorMessage + "\n");
-    return 1;
-  }
-
-  process.stdout.write(result.message);
-  return 0;
 };
 
 var listAuthorized = function (site) {
