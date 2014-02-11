@@ -206,7 +206,7 @@ var launchMongo = function (options) {
       createReplSet = false;
 
     // If this is the first time we're using this DB, or we changed
-    // port since the last time, then we want to destroying any
+    // port since the last time, then we want to destroy any
     // existing replSet configuration and create a new one. First we
     // delete the "local" database if it exists. (It's a pain and slow
     // to change the port in an existing replSet configuration. It's
@@ -233,7 +233,7 @@ var launchMongo = function (options) {
       var mongoNpmModule = unipackage.load({
         library: release.current.library,
         packages: [ 'mongo-livedata' ],
-        release: release.current.name,
+        release: release.current.name
       })['mongo-livedata'].MongoInternals.NpmModule;
     }
 
@@ -243,7 +243,7 @@ var launchMongo = function (options) {
     var replSetName = 'meteor';
     if (cancelStartup)
       return;
-    var proc = child_process.spawn(mongod_path, [
+    proc = child_process.spawn(mongod_path, [
       // nb: cli-test.sh and findMongoPids make strong assumptions about the
       // order of the arguments! Check them before changing any arguments.
       '--bind_ip', '127.0.0.1',
