@@ -42,7 +42,7 @@ _.extend(Proxy.prototype, {
       xfwd: true
     });
 
-    self.server = http.createServer(function (req, res) {
+    var server = self.server = http.createServer(function (req, res) {
       // Normal HTTP request
       self.httpQueue.push({ req: req, res: res });
       self._tryHandleConnections();
@@ -92,7 +92,14 @@ _.extend(Proxy.prototype, {
 
     var fut = new Future;
     self.server.listen(self.listenPort, function () {
-      self.started = true;
+      if (self.server) {
+        self.started = true;
+      } else {
+        // stop() got called while we were invoking listen! Close the server (we
+        // still have the var server). The rest of the cleanup shouldn't be
+        // necessary.
+        server.close();
+      }
       fut.isResolved() || fut['return']();
     });
 
@@ -103,8 +110,17 @@ _.extend(Proxy.prototype, {
   stop: function () {
     var self = this;
 
-    if (! self.server || ! self.started)
+    if (! self.server)
       return;
+
+    if (! self.started) {
+      // This probably means that we failed to listen. However, there could be a
+      // race condition and we could be in the middle of starting to listen! In
+      // that case, the listen callback will notice that we nulled out server
+      // here.
+      self.server = null;
+      return;
+    }
 
     // This stops listening but allows existing connections to
     // complete gracefully.
