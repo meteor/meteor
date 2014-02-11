@@ -69,6 +69,12 @@ If you wanted to undo all of your migrations, you could migrate back down to ver
 Migrations.migrateTo(0);
 ```
 
+Sometimes (usually when somethings gone awry), you may need to re-run a migration. You can do this with the rerun subcommand, like:
+
+``` javascript
+Migrations.migrateTo('3,rerun');
+```
+
 **NOTE**: You cannot create your own migration at version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
 
 ### Command line use

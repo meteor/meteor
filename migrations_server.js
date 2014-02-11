@@ -64,21 +64,26 @@ Migrations.add = function(migration) {
 
 // Attempts to run the migrations using command in the form of:
 // e.g 'latest', 'latest,exit', 2
+// use 'XX,rerun' to re-run the migration at that version
 Migrations.migrateTo = function(command) {
   if (! command || command == '' || this._list.length === 0)
     return;
 
-  var version = command.split(',')[0];
-  var exit = command.split(',')[1];
+  if (typeof command === 'number') {
+    var version = command;
+  } else {
+    var version = command.split(',')[0];
+    var subcommand = command.split(',')[1];
+  }
 
   if (version === 'latest') {
     this._migrateTo(_.last(this._list).version);
   } else {
-    this._migrateTo(parseInt(version));
+    this._migrateTo(parseInt(version), (subcommand === 'rerun'));
   }
 
   // remember to run meteor with --once otherwise it will restart
-  if (exit === 'exit')
+  if (subcommand === 'exit')
     process.exit(0); 
 }
 
@@ -88,10 +93,19 @@ Migrations.getVersion = function() {
 }
 
 // migrates to the specific version passed in
-Migrations._migrateTo = function(version) {
+Migrations._migrateTo = function(version, rerun) {
   var self = this;
   var control = this._getControl();
   var currentVersion = control.version;
+
+  if (rerun) {
+    console.log('Rerunning version ' + version);
+    setLocked(true);
+    migrate('up', version);
+    setLocked(true);
+    console.log('Finished migrating.');
+    return;
+  }
 
   if (currentVersion === version) {
     console.log('Not migrating, already at version ' + version);
@@ -148,6 +162,7 @@ Migrations._migrateTo = function(version) {
     }
   }
   setLocked(false);
+  console.log('Finished migrating.');
 }
 
 // gets the current control record, optionally creating it if non-existant

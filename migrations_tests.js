@@ -117,3 +117,27 @@ Tinytest.add('Does nothing for no migrations.', function(test) {
   Migrations.migrateTo('latest');
   test.equal(Migrations.getVersion(), 0);
 });
+
+Tinytest.add('Checks that rerun works correctly', function(test) {
+  var run = []; //keeps track of migrations in here
+  Migrations._reset();
+
+  // add the migrations
+  Migrations.add({version: 1, up: function () {
+    run.push('u1');
+  }});
+
+  Migrations.migrateTo('latest');
+  test.equal(run, ['u1']);
+  test.equal(Migrations.getVersion(), 1);
+
+  // shouldn't migrate
+  Migrations.migrateTo(1);
+  test.equal(run, ['u1']);
+  test.equal(Migrations.getVersion(), 1);
+
+  // should migrate again
+  Migrations.migrateTo('1,rerun');
+  test.equal(run, ['u1', 'u1']);
+  test.equal(Migrations.getVersion(), 1);
+});
