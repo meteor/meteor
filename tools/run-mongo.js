@@ -147,6 +147,8 @@ var findMongoAndKillItDead = function (port) {
   });
 };
 
+// Starts a single instance of mongod, and configures it properly. Does not
+// yield.
 var launchMongo = function (options) {
   var onListen = options.onListen || function () {};
   var onExit = options.onExit || function () {};
@@ -473,12 +475,15 @@ _.extend(MongoRunner.prototype, {
   stop: function () {
     var self = this;
 
-    if (! self.handle)
+    if (self.shuttingDown)
       return;
 
     self.shuttingDown = true;
-    self.handle.stop();
-    self.handle = null;
+
+    if (self.handle) {
+      self.handle.stop();
+      self.handle = null;
+    }
   }
 });
 
