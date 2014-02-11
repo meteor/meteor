@@ -409,7 +409,7 @@ _.extend(Sandbox.prototype, {
   // seems more intuitive to me -- if you disagree, my apologies.
   //
   // For example:
-  //   s.copyApp('myapp', 'empty');
+  //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
   createApp: function (to, template) {
     var self = this;
