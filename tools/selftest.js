@@ -581,7 +581,7 @@ var Run = function (execPath, options) {
   self.fakeMongoPort = null;
   self.fakeMongoConnection = null;
   if (options.fakeMongo) {
-    self.fakeMongoPort = 20000 + Math.floor(Math.random() * 10000);
+    self.fakeMongoPort = require('./utils.js').randomPort();
     self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
   }
 };

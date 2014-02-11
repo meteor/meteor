@@ -132,6 +132,11 @@ exports.randomToken = function () {
   return (Math.random() * 0x100000000 + 1).toString(36);
 };
 
+// Returns a random non-privileged port number.
+exports.randomPort = function () {
+  return 20000 + Math.floor(Math.random() * 10000);
+};
+
 // True if this looks like a valid email address. We deliberately
 // don't support
 // - quoted usernames (eg, "foo"@bar.com, " "@bar.com, "@"@bar.com)

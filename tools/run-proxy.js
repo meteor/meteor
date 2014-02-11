@@ -29,6 +29,8 @@ _.extend(Proxy.prototype, {
     if (self.server)
       throw new Error("already running?");
 
+    self.started = false;
+
     var http = require('http');
     var net = require('net');
     var httpProxy = require('http-proxy');
@@ -65,6 +67,8 @@ _.extend(Proxy.prototype, {
         self.runLog.log('' + err);
       }
       self.onFailure();
+      // Allow start() to return.
+      fut.isResolved() || fut['return']();
     });
 
     // Don't crash if the app doesn't respond. instead return an error
@@ -88,7 +92,8 @@ _.extend(Proxy.prototype, {
 
     var fut = new Future;
     self.server.listen(self.listenPort, function () {
-      fut['return']();
+      self.started = true;
+      fut.isResolved() || fut['return']();
     });
 
     fut.wait();
@@ -98,7 +103,7 @@ _.extend(Proxy.prototype, {
   stop: function () {
     var self = this;
 
-    if (! self.server)
+    if (! self.server || ! self.started)
       return;
 
     // This stops listening but allows existing connections to

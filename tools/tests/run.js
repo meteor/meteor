@@ -1,6 +1,9 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var utils = require('../utils.js');
+var net = require('net');
+var Future = require('fibers/future');
+var _ = require('underscore');
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
@@ -85,6 +88,51 @@ selftest.define("run --once", function () {
   run.expectExit(86);
 });
 
+selftest.define("run errors", function () {
+  var s = new Sandbox;
+  s.createApp("myapp", "empty");
+  s.cd("myapp");
+
+  // Prevent mongod from starting up.  (Note that "127.0.0.1" matches the
+  // interface that mongo uses.)
+  var proxyPort = utils.randomPort();
+  var mongoPort = proxyPort + 1;
+  var f = new Future;
+  var server = net.createServer().listen(mongoPort, "127.0.0.1", f.resolver());
+  f.wait();
+
+  var run = s.run("-p", proxyPort);
+  _.times(3, function () {
+    run.waitSecs(3);
+    run.match("Unexpected mongo exit code 48. Restarting.");
+  });
+  run.waitSecs(3);
+  run.match("Can't start Mongo server");
+  run.match("MongoDB exited because its port was closed");
+  run.match("running in the same project.\n");
+  run.expectEnd();
+  run.forbid("Started MongoDB");
+  run.expectExit(254);
+
+  f = new Future;
+  server.close(f.resolver());
+  f.wait();
+
+  // This time, prevent the proxy from starting. (This time, leaving out the
+  // interface name matches.)
+  f = new Future;
+  server = net.createServer().listen(proxyPort, f.resolver());
+  f.wait();
+
+  run = s.run("-p", proxyPort);
+  run.waitSecs(3);
+  run.match(/Can't listen on port.*another Meteor/);
+  run.expectExit(254);
+
+  f = new Future;
+  server.close(f.resolver());
+  f.wait();
+});
 
 selftest.define("update during run", ["checkout"], function () {
   var s = new Sandbox({
