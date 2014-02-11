@@ -54,6 +54,7 @@ _.extend(Proxy.prototype, {
       self._tryHandleConnections();
     });
 
+    var fut = new Future;
     self.server.on('error', function (err) {
       if (err.code == 'EADDRINUSE') {
         var port = self.listenPort;
@@ -90,7 +91,6 @@ _.extend(Proxy.prototype, {
       }
     });
 
-    var fut = new Future;
     self.server.listen(self.listenPort, function () {
       if (self.server) {
         self.started = true;
