@@ -16,6 +16,9 @@ var Future = require('fibers/future');
 // on that database.
 var runMongoShell = function (url) {
   var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  // XXX mongo URLs are not real URLs (notably, the comma-separation for
+  // multiple hosts). We've had a little better luck using the mongodb-uri npm
+  // package.
   var mongoUrl = require('url').parse(url);
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
