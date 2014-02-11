@@ -322,7 +322,7 @@ var bundleAndDeploy = function (options) {
 (username ? "You are currently logged in as " + username  + ".\n" : "") +
 "\nEither have the site owner use 'meteor authorized --add' to add you\n" +
 "as an authorized developer for the site, or switch to an authorized\n" +
-"account with 'meteor login'.\n\n");
+"account with 'meteor login'.\n");
     return 1;
   }
 

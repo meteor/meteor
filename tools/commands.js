@@ -791,10 +791,11 @@ main.registerCommand({
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
   var useGalaxy = hostedWithGalaxy(site);
+  var deployGalaxy;
 
   if (options.delete) {
     if (useGalaxy) {
-      var deployGalaxy = require('./deploy-galaxy.js');
+      deployGalaxy = require('./deploy-galaxy.js');
       return deployGalaxy.deleteApp(site);
     } else {
       return deploy.deleteApp(site);
@@ -822,7 +823,8 @@ main.registerCommand({
     return 1;
   }
 
-  if (! auth.isLoggedIn()) {
+  var loggedIn = auth.isLoggedIn();
+  if (! loggedIn) {
     process.stderr.write(
 "To instantly deploy your app on a free testing server, just enter your\n" +
 "email address!\n" +
@@ -836,9 +838,10 @@ main.registerCommand({
     minify: ! options.debug
   };
 
+  var deployResult;
   if (useGalaxy) {
-    var deployGalaxy = require('./deploy-galaxy.js');
-    return deployGalaxy.deploy({
+    deployGalaxy = require('./deploy-galaxy.js');
+    deployResult = deployGalaxy.deploy({
       app: site,
       appDir: options.appDir,
       settingsFile: options.settings,
@@ -847,13 +850,35 @@ main.registerCommand({
       admin: options.admin
     });
   } else {
-    return deploy.bundleAndDeploy({
+    deployResult = deploy.bundleAndDeploy({
       appDir: options.appDir,
       site: site,
       settingsFile: options.settings,
       buildOptions: buildOptions
     });
   }
+
+  var registrationUrl = auth.registrationUrl();
+  if (registrationUrl &&
+      deployResult === 0 &&
+      ! auth.currentUsername()) {
+    process.stderr.write("\n");
+    if (loggedIn) {
+      // If the user was already logged in at the beginning of the
+      // deploy, then they've already been prompted to set a password
+      // and this is more of a friendly reminder to set their password,
+      // so we word it slightly differently than the first time they're
+      // being shown a registration url.
+      process.stderr.write(
+"You should set a password on your Meteor developer account. It takes\n" +
+"about a minute at: " + registrationUrl + "\n\n");
+    } else {
+      process.stderr.write(
+"You can set a password on your account or change your email address at:\n" +
+registrationUrl + "\n\n");
+    }
+  }
+  return deployResult;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
