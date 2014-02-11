@@ -356,10 +356,12 @@ _.extend(AppRunner.prototype, {
     if (self.exitFuture)
       throw new Error("another fiber already stopping?");
 
+    // The existence of this future makes the fiber break out of its loop.
+    self.exitFuture = new Future;
+
     if (self.runFuture)
       self.runFuture['return']({ outcome: 'stopped' });
 
-    self.exitFuture = new Future;
     self.exitFuture.wait();
     self.exitFuture = null;
   },
@@ -487,7 +489,7 @@ _.extend(AppRunner.prototype, {
       });
     }
 
-    // Wait for either the process to exit, or (if exitOnChange) a
+    // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
     var ret = self.runFuture.wait();
     self.runFuture = null;
@@ -508,7 +510,7 @@ _.extend(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
-      var crashTimer = setTimeout(function () {
+      crashTimer = setTimeout(function () {
         crashCount = 0;
       }, 2000);
 
