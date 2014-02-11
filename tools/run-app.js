@@ -101,8 +101,7 @@ _.extend(AppProcess.prototype, {
     });
 
     // Watch for exit
-    var thisPid = self.proc.pid;
-    self.proc.on('exit', function (code, signal) {
+    self.proc.on('close', function (code, signal) {
       self._maybeCallOnExit(code, signal);
     });
 
@@ -148,6 +147,7 @@ _.extend(AppProcess.prototype, {
 
     if (self.proc && self.proc.pid) {
       self.proc.removeAllListeners('close');
+      self.proc.removeAllListeners('error');
       self.proc.kill();
     }
     self.proc = null;
