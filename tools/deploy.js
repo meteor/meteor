@@ -246,6 +246,31 @@ var authedRpc = function (options) {
   };
 };
 
+// When the user is trying to do something with a legacy
+// password-protected app, instruct them to claim it with 'meteor
+// claim'.
+var printLegacyPasswordMessage = function (site) {
+    process.stderr.write(
+"\nThis site was deployed with an old version of Meteor that used\n" +
+"site passwords instead of user accounts. Now we have a much better\n" +
+"system, Meteor developer accounts.\n\n" +
+"If this is your site, please claim it into your account with\n" +
+"\tmeteor claim " + site + "\n");
+};
+
+// When the user is trying to do something with an app that they are not
+// authorized for, instruct them to get added via 'meteor authorized
+// --add' or switch accounts.
+var printUnauthorizedMessage = function () {
+  var username = auth.currentUsername();
+  process.stderr.write(
+"\nSorry, that site belongs to a different user.\n" +
+(username ? "You are currently logged in as " + username  + ".\n" : "") +
+"\nEither have the site owner use 'meteor authorized --add' to add you\n" +
+"as an authorized developer for the site, or switch to an authorized\n" +
+"account with 'meteor login'.\n");
+};
+
 // Take a proposed sitename for deploying to. If it looks
 // syntactically good, canonicalize it (this essentially means
 // stripping 'http://' or a trailing '/' if present) and return it. If
@@ -303,26 +328,13 @@ var bundleAndDeploy = function (options) {
   }
 
   if (preflight.protection === "password") {
-
-    process.stderr.write(
-"\nThis site was deployed with an old version of Meteor that used\n" +
-"site passwords instead of user accounts. Now we have a much better\n" +
-"system, Meteor developer accounts.\n\n" +
-"If this is your site, please claim it into your account with\n" +
-"'meteor claim " + options.site + "'.\n" +
-"If it's not your site, please try a different name!\n\n");
+    printLegacyPasswordMessage(site);
+    process.stderr.write("If it's not your site, please try a different name!\n");
     return 1;
 
   } else if (preflight.protection === "account" &&
              ! preflight.authorized) {
-
-    var username = auth.currentUsername();
-    process.stderr.write(
-"\nSorry, that site belongs to a different user.\n" +
-(username ? "You are currently logged in as " + username  + ".\n" : "") +
-"\nEither have the site owner use 'meteor authorized --add' to add you\n" +
-"as an authorized developer for the site, or switch to an authorized\n" +
-"account with 'meteor login'.\n");
+    printUnauthorizedMessage();
     return 1;
   }
 
@@ -454,6 +466,38 @@ var logs = function (site) {
   site = canonicalizeSite(site);
   if (! site)
     return 1;
+
+  // Check auth in a preflight request, so that we can print a useful
+  // error message.
+  var preflight = authedRpc({
+    operation: 'logs',
+    site: site,
+    preflight: true,
+    promptIfAuthFails: true
+  });
+
+  if (preflight.errorMessage) {
+    process.stderr.write("Couldn't get logs: " +
+                         result.errorMessage + "\n");
+    return 1;
+  }
+
+  if (preflight.protection === "password") {
+    printLegacyPasswordMessage(site);
+    return 1;
+  } else if (preflight.protection === "account" &&
+             ! preflight.authorized) {
+    if (! auth.isLoggedIn()) {
+      process.stderr.write(
+"\nYou must be logged in to view logs for this app. Use 'meteor login'\n" +
+"to log in.\n\n" +
+"If you don't have a Meteor developer account yet, you can quickly\n" +
+"create one at www.meteor.com.\n");
+    } else {
+      printUnauthorizedMessage();
+    }
+    return 1;
+  }
 
   var result = authedRpc({
     operation: 'logs',
