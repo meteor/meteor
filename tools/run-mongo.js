@@ -40,7 +40,7 @@ var runMongoShell = function (url) {
 // (even by other simultaneous runs of this program). If passed,
 // appDir and port act as filters on the list of running mongos.
 //
-// Yields. Returns an object with keys pid, port, appDir.
+// Yields. Returns an array of objects with keys pid, port, appDir.
 var findMongoPids = function (appDir, port) {
   var fut = new Future;
 
@@ -175,6 +175,7 @@ var launchMongo = function (options) {
 
   var proc = null;
   var cancelStartup = false;
+  var callOnExit;
 
   var handle = {
     stop: function () {
@@ -262,7 +263,7 @@ var launchMongo = function (options) {
       stderrOutput += data;
     });
 
-    var callOnExit = function (code, signal) {
+    callOnExit = function (code, signal) {
       onExit(code, signal, stderrOutput);
     };
     proc.on('exit', callOnExit);
