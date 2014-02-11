@@ -75,7 +75,7 @@ selftest.define("run --once", function () {
   run = s.run("--once", "--program", "xyzzy");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
-  run.match("xyzzy");
+  run.match("'xyzzy' not found");
   run.expectExit(254);
 
   // Try it with a real Mongo. Make sure that it actually starts one.

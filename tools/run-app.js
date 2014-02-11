@@ -219,7 +219,6 @@ _.extend(AppProcess.prototype, {
       if (! programPath)
         return null;
 
-      console.log(programPath);
       return child_process.spawn(programPath, [], {
         env: _.extend(self._computeEnvironment(), {
           DATA_DIR: files.mkdtemp()
