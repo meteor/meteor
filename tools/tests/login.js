@@ -33,6 +33,7 @@ selftest.define("login", ['net'], function () {
   run.expectExit(0);
 
   run = s.run("logout");
+  run.waitSecs(1);
   run.matchErr("Not logged in");
   run.expectExit(0);
 
@@ -46,6 +47,33 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("badpassword\n");
+  run.waitSecs(5);
+  run.matchErr("Login failed");
+  run.expectExit(1);
+
+  // Logging in with a capitalized username should work (usernames are
+  // case-insensitive).
+  run = s.run("login");
+  run.matchErr("Username:");
+  run.write("TeSt\n");
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(5);
+  run.matchErr("Logged in as test.");
+  run.expectExit(0);
+
+  run = s.run("logout");
+  run.waitSecs(1);
+  run.matchErr("Logged out");
+  run.expectExit(0);
+
+  // Logging in with a capitalized password should NOT work (can't be
+  // too safe...)
+  run = s.run("login");
+  run.matchErr("Username:");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("TesTTesT\n");
   run.waitSecs(5);
   run.matchErr("Login failed");
   run.expectExit(1);
