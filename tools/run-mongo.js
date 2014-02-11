@@ -364,6 +364,7 @@ var MongoRunner = function (options) {
 
   self.errorCount = 0;
   self.errorTimer = null;
+  self.restartTimer = null;
 };
 
 _.extend(MongoRunner.prototype, {
@@ -409,6 +410,7 @@ _.extend(MongoRunner.prototype, {
   _exited: function (code, signal, stderr) {
     var self = this;
     self.handle = null;
+    self.restartTimer = null;
 
     // If Mongo exited because (or rather, anytime after) we told it
     // to exit, great, nothing to do. Otherwise, we'll print an error
@@ -434,7 +436,7 @@ _.extend(MongoRunner.prototype, {
 
     if (self.errorCount < 3) {
       // Wait a second, then restart.
-      setTimeout(inFiber(function () {
+      self.restartTimer = setTimeout(inFiber(function () {
         self._startOrRestart();
       }), 1000);
       return;
@@ -479,6 +481,9 @@ _.extend(MongoRunner.prototype, {
       return;
 
     self.shuttingDown = true;
+
+    self.errorTimer && clearTimeout(self.errorTimer);
+    self.restartTimer && clearTimeout(self.restartTimer);
 
     if (self.handle) {
       self.handle.stop();
