@@ -72,7 +72,7 @@ var logInBrowser = function (obj) {
 };
 
 // @returns {Object: { line: Number, file: String }}
-Log._getCallerDetails = function () {
+Log._getCallerDetails = function (ignoreRegex) {
   var getStack = function () {
     // We do NOT use Error.prepareStackTrace here (a V8 extension that gets us a
     // pre-parsed stack) since it's impossible to compose it with the use of
@@ -96,10 +96,18 @@ Log._getCallerDetails = function () {
     if (line.match(/^\s*at eval \(eval/)) {
       return {file: "eval"};
     }
+    else if (line.match(/^\s*at <anonymous>/)) {
+      return {file: "anonymous"};
+    }
 
     // XXX probably wants to be / or .js in case no source maps
-    if (!line.match(/packages\/logging(?:\/|(?::tests)?\.js)/))
-      break;
+    if (line.match(/packages\/logging(?:\/|(?::tests)?\.js)/))
+      continue;
+
+    if (ignoreRegex && line.match(ignoreRegex))
+      continue;
+
+    break;
   }
 
   var details = {};
@@ -113,10 +121,21 @@ Log._getCallerDetails = function () {
   // in case the matched block here is line:column
   details.line = match[2].split(':')[0];
 
+  var getPath = function (href) {
+    if (Meteor.isClient) {
+      var location = document.createElement('a');
+      location.href = href;
+      return location.pathname;
+    }
+    else {
+      // on the server is already a relative file path
+      return href;
+    }
+  };
+
   // Possible format: https://foo.bar.com/scripts/file.js?random=foobar
-  // XXX: if you can write the following in better way, please do it
   // XXX: what about evals?
-  details.file = match[1].split('/').slice(-1)[0].split('?')[0];
+  details.file = getPath(match[1]);
 
   return details;
 };
