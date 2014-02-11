@@ -100,7 +100,8 @@ _.extend(AppProcess.prototype, {
       self.runLog.logAppOutput(line, true);
     });
 
-    // Watch for exit
+    // Watch for exit and for stdio to be fully closed (so that we don't miss
+    // log lines).
     self.proc.on('close', function (code, signal) {
       self._maybeCallOnExit(code, signal);
     });
