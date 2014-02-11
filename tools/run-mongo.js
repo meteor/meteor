@@ -105,7 +105,7 @@ var findMongoPort = function (appDir) {
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
-var find_mongo_and_kill_it_dead = function (port) {
+var findMongoAndKillItDead = function (port) {
   var pids = findMongoPids(null, port);
 
   if (! pids.length)
@@ -185,7 +185,7 @@ var launchMongo = function (options) {
   };
 
   Fiber(function () {
-    find_mongo_and_kill_it_dead(options.port);
+    findMongoAndKillItDead(options.port);
 
     var portFile = path.join(dbPath, 'METEOR-PORT');
     var portFileExists = false;
