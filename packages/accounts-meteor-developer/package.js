@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Login service for Meteor Developer Accounts",
+  summary: "Login service for Meteor developer accounts",
   internal: true // XXX for now
 });
 

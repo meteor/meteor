@@ -979,7 +979,7 @@ main.registerCommand({
     // registration form
     process.stderr.write(
 "\nYou must be logged in to claim sites. Use 'meteor login' to log in.\n" +
-"If you don't have a Meteor Developer Account yet, you can quickly\n" +
+"If you don't have a Meteor developer account yet, you can quickly\n" +
 "create one at www.meteor.com.\n\n");
     return 1;
   }

@@ -307,7 +307,7 @@ var bundleAndDeploy = function (options) {
     process.stderr.write(
 "\nThis site was deployed with an old version of Meteor that used\n" +
 "site passwords instead of user accounts. Now we have a much better\n" +
-"system, Meteor Developer Accounts.\n\n" +
+"system, Meteor developer accounts.\n\n" +
 "If this is your site, please claim it into your account with\n" +
 "'meteor claim " + options.site + "'.\n" +
 "If it's not your site, please try a different name!\n\n");
@@ -591,7 +591,7 @@ var claim = function (site) {
         auth.registrationUrl()) {
       process.stderr.write(
 "\nBefore you can claim existing sites, you need to set a password on\n" +
-"your Meteor Developer Account. You can do that here in under a minute:\n\n" +
+"your Meteor developer account. You can do that here in under a minute:\n\n" +
 auth.registrationUrl() + "\n\n");
     } else {
       process.stderr.write("Couldn't claim site: " +

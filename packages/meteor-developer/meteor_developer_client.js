@@ -1,6 +1,6 @@
 MeteorDeveloperAccounts = {};
 
-// Request Meteor Developer Accounts credentials for the user
+// Request Meteor developer account credentials for the user
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on
 //   error.

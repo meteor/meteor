@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Meteor Developer Accounts OAuth flow"
+  summary: "Meteor developer accounts OAuth flow"
 });
 
 Package.on_use(function (api) {

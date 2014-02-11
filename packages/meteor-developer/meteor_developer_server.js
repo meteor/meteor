@@ -53,7 +53,7 @@ var getTokens = function (query) {
   } catch (err) {
     throw _.extend(
       new Error(
-        "Failed to complete OAuth handshake with Meteor Developer Accounts. "
+        "Failed to complete OAuth handshake with Meteor developer accounts. "
           + err.message
       ),
       {response: err.response}
@@ -63,7 +63,7 @@ var getTokens = function (query) {
   if (! response.data || response.data.error) {
     // if the http response was a json object with an error attribute
     throw new Error(
-      "Failed to complete OAuth handshake with Meteor Developer Accounts. " +
+      "Failed to complete OAuth handshake with Meteor developer accounts. " +
         (response.data ? response.data.error :
          "No response data")
     );
@@ -86,7 +86,7 @@ var getIdentity = function (accessToken) {
     ).data;
   } catch (err) {
     throw _.extend(
-      new Error("Failed to fetch identity from Meteor Developer Accounts. " +
+      new Error("Failed to fetch identity from Meteor developer accounts. " +
                 err.message),
       {response: err.response}
     );
