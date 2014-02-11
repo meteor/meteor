@@ -129,4 +129,16 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.expectExit(1);
 
   logout();
+
+  // Deploying a new app using a user that exists but has no password
+  // set should prompt us to set a password.
+  run = s.run('deploy', appName);
+  run.waitSecs(5);
+  run.matchErr('Email:');
+  run.write('user.forselftest.without.password@meteor.com\n');
+  run.waitSecs(5);
+  run.matchErr('already in use');
+  run.matchErr('pick a password');
+  run.stop();
+
 });
