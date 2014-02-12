@@ -2943,7 +2943,21 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
 Instances of your type should implement the following interface:
 
+{{> api_box ejsonTypeName}}
+{{> api_box ejsonTypeToJSONValue}}
+
+For example, the `toJSONValue` method for
+[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
+
+    function () {
+      return this.toHexString();
+    };
+
+`EJSON.clone` will use `toJSONValue` by default, but you may instead implement the following interface:
+
 {{> api_box ejsonTypeClone}}
+
+By default, `EJSON.equals` will use `toJSONValue` to compare instances of your types, but you may implement the following interface instead:
 
 {{> api_box ejsonTypeEquals}}
 
@@ -2954,16 +2968,6 @@ the following properties:
  - *Reflexivity* - for any instance `a`: `a.equals(a)` must be true.
  - *Symmetry* - for any two instances `a` and `b`: `a.equals(b)` if and only if `b.equals(a)`.
  - *Transitivity* - for any three instances `a`, `b`, and `c`: `a.equals(b)` and `b.equals(c)` implies `a.equals(c)`.
-
-{{> api_box ejsonTypeName}}
-{{> api_box ejsonTypeToJSONValue}}
-
-For example, the `toJSONValue` method for
-[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
-
-    function () {
-      return this.toHexString();
-    };
 
 <h2 id="http"><span>HTTP</span></h2>
 
