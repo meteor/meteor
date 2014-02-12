@@ -30,7 +30,7 @@ OplogObserveDriver = function (options) {
     // XXX replace with doubly-heaps and shit once we get these working
     var sorter = new Minimongo.Sorter(options.cursorDescription.options.sort);
     var comparator = sorter.getComparator();
-    self._limit = self._cursorDescription.limit;
+    self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
     self._unpublishedBuffer = new DummyStructure(comparator);
     // We need something that can find Max value in addition to IdMap interface
@@ -144,7 +144,7 @@ _.extend(OplogObserveDriver.prototype, {
                         " documents are overflowing the set");
       }
 
-      var overflowingDocId = self._published.getMaximumId();
+      var overflowingDocId = self._published.maxElementId();
       var overflowingDoc = self._published.get(overflowingDocId);
       self._published.remove(overflowingDocId);
       self._multiplexer.removed(overflowingDocId);
@@ -181,9 +181,9 @@ _.extend(OplogObserveDriver.prototype, {
   },
   _addBuffered: function (id, doc) {
     var self = this;
-    self._unpublishedBuffer.add(id, self._sharedProjectionFn(fields));
+    self._unpublishedBuffer.set(id, self._sharedProjectionFn(doc));
     if (self._unpublishedBuffer.size() > self._limit)
-      self._unpublishedBuffer.remove(self._unpublishedBuffer.getMaximumId());
+      self._unpublishedBuffer.remove(self._unpublishedBuffer.maxElementId());
   },
   _removeBuffered: function (id) {
     var self = this;
@@ -206,8 +206,8 @@ _.extend(OplogObserveDriver.prototype, {
 
     var limit = self._limit;
     var comparator = self._comparator;
-    var maxPublished = (limit && self._published.size() > 0) ? self._published.get(self._published.getMaximumId()) : null;
-    var maxBuffered = (limit && self._unpublishedBuffer.size() > 0) ? self._unpublishedBuffer.get(self._unpublishedBuffer.getMaximumId()) : null;
+    var maxPublished = (limit && self._published.size() > 0) ? self._published.get(self._published.maxElementId()) : null;
+    var maxBuffered = (limit && self._unpublishedBuffer.size() > 0) ? self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId()) : null;
     // The query is unlimited or didn't publish enough documents yet or the new
     // document would fit into published set pushing the maximum element out,
     // then we need to publish the doc.
@@ -272,7 +272,7 @@ _.extend(OplogObserveDriver.prototype, {
         // w/o querying mongo, so just remove it from buffer
         self._removeBuffered(id);
         // but it can move into published now, check it
-        var maxPublished = self._published.get(self._published.getMaximumId());
+        var maxPublished = self._published.get(self._published.maxElementId());
         if (comparator(newDoc, maxPublished) === -1)
           self._addPublished(id, newDoc);
       }
