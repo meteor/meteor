@@ -745,6 +745,83 @@ if (Meteor.isServer) {
     });
     x++;
   });
+
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+
+    var observer = function () {
+      var output = [];
+      var callbacks = {
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+        },
+        added: function (newDoc) {
+          output.push({added: newDoc._id});
+        },
+        removed: function (oldDoc) {
+          output.push({removed: oldDoc._id});
+        }
+      };
+      var handle = coll.find({foo: 22},
+                             {sort: {bar: 1}, limit: 3}).observe(callbacks);
+
+      return {output: output, handle: handle};
+    };
+
+    var ins = function (doc) {
+      var id;
+      runInFence(function () {
+        id = coll.insert(doc); });
+      return id;
+    };
+
+    var rem = function (sel) { runInFence(function () { coll.remove(sel); }); };
+
+    // Insert a doc and start observing.
+    var docId1 = ins({foo: 22, bar: 5});
+    var o = observer();
+    // Initial add.
+    test.length(o.output, 1);
+    test.equal(o.output.shift(), {added: docId1});
+
+    // Insert another doc (blocking until observes have fired).
+    var docId2 = ins({foo: 22, bar: 6});
+    // Observed add.
+    test.length(o.output, 1);
+    test.equal(o.output.shift(), {added: docId2});
+
+    var docId3 = ins({ foo: 22, bar: 3 });
+    test.length(o.output, 1);
+    test.equal(o.output.shift(), {added: docId3});
+
+    // Add a non-matching document
+    ins({ foo: 13 });
+    // It shouldn't be added
+    test.length(o.output, 0);
+
+    // Add something that matches but is too big to fit in
+    var docId4 = ins({ foo: 22, bar: 7 });
+    // It shouldn't be added
+    test.length(o.output, 0);
+
+    // Let's add something small enough to fit in
+    var docId5 = ins({ foo: 22, bar: -1 });
+    // We should get an added and a removed events
+    test.length(o.output, 2);
+    test.equal(o.output.shift(), {added: docId5});
+    // doc 2 was removed from the published set as it is too big to be in
+    test.equal(o.output.shift(), {removed: docId2});
+
+    // Now remove something and that doc 2 should be right back
+    rem(docId5);
+    test.length(o.output, 2);
+    test.equal(o.output.shift(), {removed: docId5});
+    test.equal(o.output.shift(), {added: docId2});
+
+    o.handle.stop();
+    onComplete();
+  });
 }
 
 
