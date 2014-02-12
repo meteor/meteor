@@ -724,7 +724,7 @@ exports.whoAmICommand = function (options) {
 url + "\n");
   } else {
     // Won't happen in normal operation
-    process.stderr.write("You haven't chosen your username yet.\n")
+    process.stderr.write("You haven't chosen your username yet.\n");
   }
 
   return 1;
@@ -736,29 +736,32 @@ url + "\n");
 // logged in) or false on failure (user gave up, can't talk to
 // network..)
 exports.registerOrLogIn = withAccountsConnection(function (connection) {
+  var result;
   // Get their email
   while (true) {
     var email = utils.readLine({
       prompt: "Email: ",
       stream: process.stderr
     });
-    if (utils.validEmail(email))
-      break;
-    if (email.trim().length)
-      process.stderr.write("Please double-check that address.\n\n");
-  }
 
-  // Try to register
-  try {
-    var methodCaller = sessionMethodCaller(
-      'tryRegister',
-      { connection: connection }
-    );
-    var result = methodCaller(email, utils.getAgentInfo());
-  } catch (err) {
-    process.stderr.write("\nCouldn't connect to server. " +
-                         "Check your internet connection.\n");
-    return false;
+    // Try to register
+    try {
+      var methodCaller = sessionMethodCaller(
+        'tryRegister',
+        { connection: connection }
+      );
+      result = methodCaller(email, utils.getAgentInfo());
+      break;
+    } catch (err) {
+      if (err.error === 400 && ! utils.validEmail(email)) {
+        if (email.trim().length)
+          process.stderr.write("Please double-check that address.\n\n");
+      } else {
+        process.stderr.write("\nCouldn't connect to server. " +
+                             "Check your internet connection.\n");
+        return false;
+      }
+    }
   }
 
   var loginResult;
