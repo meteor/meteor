@@ -261,6 +261,10 @@ _.extend(OplogObserveDriver.prototype, {
         // Unordered case where the document stays in published once it matches
         // or the case when we don't have enough matching docs to publish or the
         // changed but matching doc will stay in published anyways.
+        // XXX: We rely on the emptiness of buffer. Be sure to maintain the fact
+        // that buffer can't be empty if there are matching documents not
+        // published. Notably, we don't want to schedule repoll and continue
+        // relying on this property.
         if (!self._limit || self._unpublishedBuffer.size() === 0 || comparator(newDoc, minBuffered) < 1) {
           self._changePublished(id, oldDoc, newDoc);
         } else {
