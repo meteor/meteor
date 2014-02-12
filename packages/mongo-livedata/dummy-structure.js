@@ -2,13 +2,13 @@
 DummyStructure = function (comparator) {
   var self = this;
   self.comparator = comparator;
-  self.idMap = new LocalCollection.IdMap;
+  self.idMap = new LocalCollection._IdMap;
 };
 
 _.each(['get', 'set', 'remove', 'has', 'empty', 'clear', 'forEach', 'size', 'setDefault'], function (method) {
   DummyStructure.prototype[method] = function (/* arguments */) {
     var self = this;
-    return self.idMap[method].apply(self, arguments);
+    return self.idMap[method].apply(self.idMap, arguments);
   };
 });
 
