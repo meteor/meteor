@@ -20,7 +20,7 @@ OplogObserveDriver = function (options) {
   self._mongoHandle = options.mongoHandle;
   self._multiplexer = options.multiplexer;
 
-  if (options.ordered) {
+  if (options.cursorDescription.options.limit) {
     // There are several properties ordered driver implements:
     // - _limit is a positive number
     // - _comparator is a function-comparator by which the query is ordered
@@ -28,7 +28,8 @@ OplogObserveDriver = function (options) {
     // - _published implements maxElementId method in addition to IdMap methods
 
     // XXX replace with doubly-heaps and shit once we get these working
-    var comparator = self._cursorDescription.sorter.getComparator();
+    var sorter = new Minimongo.Sorter(options.cursorDescription.options.sort);
+    var comparator = sorter.getComparator();
     self._limit = self._cursorDescription.limit;
     self._comparator = comparator;
     self._unpublishedBuffer = new DummyStructure(comparator);
@@ -649,7 +650,7 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   // This option (which are mostly used for sorted cursors) require us to figure
   // out where a given document fits in an order to know if it's included or
   // not, and we don't track that information when doing oplog tailing.
-  if (options.limit && (options.skip || !options.sorter)) return false;
+  if (options.limit && (options.skip || !options.sort)) return false;
 
   // If a fields projection option is given check if it is supported by
   // minimongo (some operators are not supported).
