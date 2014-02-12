@@ -41,6 +41,8 @@
 
 * `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
 
+* Types added with `EJSON.addType` now have default `clone` and `equals`
+  implementations.  #1745
 
 ## v0.7.0.1
 
