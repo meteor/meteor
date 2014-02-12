@@ -589,6 +589,18 @@ var doInteractivePasswordLogin = function (options) {
   return true;
 };
 
+// options are the same as for doInteractivePasswordLogin, exept without
+// username and email.
+exports.doUsernamePasswordLogin = function (options) {
+  var username = utils.readLine({
+    prompt: "Username: ",
+    stream: process.stderr
+  });
+  return doInteractivePasswordLogin(_.extend({}, options, {
+    username: username
+  }));
+};
+
 exports.doInteractivePasswordLogin = doInteractivePasswordLogin;
 
 exports.loginCommand = withAccountsConnection(function (options,

@@ -443,7 +443,8 @@ var deleteApp = function (site) {
 // RPC. 'site' and 'operation' are the site and operation for the
 // RPC. 'what' is a string describing the operation, for use in error
 // messages.  Returns the result of the RPC if successful, or null
-// otherwise (including if auth failed).
+// otherwise (including if auth failed or if the user is not authorized
+// for this site).
 var checkAuthThenSendRpc = function (site, operation, what) {
   var preflight = authedRpc({
     operation: operation,
@@ -464,16 +465,34 @@ var checkAuthThenSendRpc = function (site, operation, what) {
   } else if (preflight.protection === "account" &&
              ! preflight.authorized) {
     if (! auth.isLoggedIn()) {
-      process.stderr.write(
+      // Maybe the user is authorized for this app but not logged in
+      // yet, so give them a login prompt.
+      var loginResult = auth.doUsernamePasswordLogin({ retry: true });
+      if (loginResult) {
+        // Once we've logged in, retry the whole operation. We need to
+        // do the preflight request again instead of immediately moving
+        // on to the real RPC because we don't yet know if the newly
+        // logged-in user is authorized for this app, and if they
+        // aren't, then we want to print the nice unauthorized error
+        // message.
+        return checkAuthThenSendRpc(site, operation, what);
+      } else {
+        // Shouldn't ever get here because we set the retry flag on the
+        // login, but just in case.
+        process.stderr.write(
 "\nYou must be logged in to " + what + " for this app. Use 'meteor login'\n" +
 "to log in.\n\n" +
 "If you don't have a Meteor developer account yet, you can quickly\n" +
 "create one at www.meteor.com.\n");
-    } else {
+        return null;
+      }
+    } else { // User is logged in but not authorized for this app
       printUnauthorizedMessage();
+      return null;
     }
-    return null;
   }
+
+  // User is authorized for the app; go ahead and do the actual RPC.
 
   var result = authedRpc({
     operation: operation,

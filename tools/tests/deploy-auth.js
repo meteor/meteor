@@ -15,7 +15,7 @@ var randomString = function (charsCount) {
 // 'legacy-no-password-app-for-selftest'
 // 'app-for-selftest-not-test-owned'
 
-selftest.define('deploy, logs - logged in', ['net', 'slow'], function () {
+selftest.define('deploy - logged in', ['net', 'slow'], function () {
   var s = new Sandbox;
 
   s.createApp('deployapp', 'empty');
@@ -39,12 +39,6 @@ selftest.define('deploy, logs - logged in', ['net', 'slow'], function () {
   run.match('Now serving at ' + appName + '.meteor.com');
   run.expectExit(0);
 
-  // Get logs for it
-  run = s.run('logs', appName);
-  run.waitSecs(10);
-  run.match('Starting application');
-  run.expectExit(0);
-
   // Delete our deployed app.
   run = s.run('deploy', '-D', appName);
   run.waitSecs(20);
@@ -57,32 +51,17 @@ selftest.define('deploy, logs - logged in', ['net', 'slow'], function () {
   run.waitSecs(5);
   run.matchErr('meteor claim');
   run.expectExit(1);
-  // Same for logs for legacy-password-app-for-selftest.
-  run = s.run('logs', 'legacy-password-app-for-selftest');
-  run.waitSecs(5);
-  run.matchErr('meteor claim');
-  run.expectExit(1);
 
   // Deploying to legacy-no-password-app-for-selftest should just work.
   run = s.run('deploy', 'legacy-no-password-app-for-selftest');
   run.waitSecs(60);
   run.match('Now serving at legacy-no-password-app-for-selftest.meteor.com');
   run.expectExit(0);
-  // Same for logs
-  run = s.run('logs', 'legacy-no-password-app-for-selftest');
-  run.waitSecs(10);
-  run.match('Starting application');
-  run.expectExit(0);
 
   // When we try to deploy to an app that is owned by an account that
   // isn't ours, we should get a message telling us that we are not
   // authorized.
   run = s.run('deploy', 'app-for-selftest-not-test-owned');
-  run.waitSecs(5);
-  run.matchErr('belongs to a different user');
-  run.expectExit(1);
-  // Same for logs
-  run = s.run('logs', 'app-for-selftest-not-test-owned');
   run.waitSecs(5);
   run.matchErr('belongs to a different user');
   run.expectExit(1);
@@ -161,5 +140,4 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('already in use');
   run.matchErr('pick a password');
   run.stop();
-
 });
