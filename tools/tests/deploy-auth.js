@@ -52,11 +52,9 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.matchErr('meteor claim');
   run.expectExit(1);
 
-  // Deploying to legacy-no-password-app-for-selftest should just work.
-  run = s.run('deploy', 'legacy-no-password-app-for-selftest');
-  run.waitSecs(90);
-  run.match('Now serving at legacy-no-password-app-for-selftest.meteor.com');
-  run.expectExit(0);
+  // XXX Deploying to legacy-no-password-app-for-selftest should just
+  // work. Add a test here that deploys a legacy no password app and
+  // then claims it by deploying over it.
 
   // When we try to deploy to an app that is owned by an account that
   // isn't ours, we should get a message telling us that we are not
@@ -114,14 +112,14 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   // XXX Deploy a test legacy app with --release, and then deploy to that one.
   run.stop();
 
-  logout();
-
   // Deploying to legacy-password-app-for-selftest should prompt us to
   // login, and then tell us about 'meteor claim'.
   run = s.run('deploy', 'legacy-password-app-for-selftest');
   run.waitSecs(5);
   run.matchErr('Email:');
-  run.write('test@test.com\n');
+  // Log in with a username here to test that the email prompt also
+  // accepts emails. (We put an email in the email prompt above.)
+  run.write('test\n');
   run.matchErr('Password:');
   run.write('testtest\n');
   run.waitSecs(5);
