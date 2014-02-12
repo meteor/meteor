@@ -35,7 +35,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
   // Deploy an app.
   run = s.run('deploy', appName);
-  run.waitSecs(60);
+  run.waitSecs(90);
   run.match('Now serving at ' + appName + '.meteor.com');
   run.expectExit(0);
 
@@ -54,7 +54,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
   // Deploying to legacy-no-password-app-for-selftest should just work.
   run = s.run('deploy', 'legacy-no-password-app-for-selftest');
-  run.waitSecs(60);
+  run.waitSecs(90);
   run.match('Now serving at legacy-no-password-app-for-selftest.meteor.com');
   run.expectExit(0);
 
@@ -89,9 +89,10 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Email:');
   // XXX We should be able to log in with username here too?
   run.write('test@test.com\n');
+  run.waitSecs(5);
   run.matchErr('Password:');
   run.write('testtest\n');
-  run.waitSecs(60);
+  run.waitSecs(90);
   run.match('Now serving at ' + appName + '.meteor.com');
   run.expectExit(0);
   // Clean up our deployed app
@@ -109,10 +110,9 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Email:');
   run.write('test@test.com\n');
   run.matchErr('Password:');
-  run.write('testtest\n');
-  run.waitSecs(60);
-  run.match('Now serving at legacy-no-password-app-for-selftest.meteor.com');
-  run.expectExit(0);
+  // Don't actually log in and deploy, because that will claim the app for us.
+  // XXX Deploy a test legacy app with --release, and then deploy to that one.
+  run.stop();
 
   logout();
 
