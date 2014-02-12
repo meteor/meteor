@@ -10,9 +10,18 @@ servers that don't have enough entropy to seed the cryptographically strong
 generator).
 
 <dl class="callbacks">
-{{#dtdd "Random.id()"}}
-Returns a unique identifier, such as `"Jjwjg6gouWLXhMGKW"`, that is likely to
-be unique in the whole world.
+{{#dtdd "Random.id([n])"}}
+Returns a unique identifier, such as `"Jjwjg6gouWLXhMGKW"`, that is
+likely to be unique in the whole world. The optional argument `n`
+specifies the length of the identifier in characters and defaults to 17.
+{{/dtdd}}
+
+{{#dtdd "Random.secret([n])"}}
+Returns a random string of printable characters with 6 bits of
+entropy per character. The optional argument `n` specifies the length of
+the secret string and defaults to 43 characters, or 256 bits of
+entropy. Use `Random.secret` for security-critical secrets that are
+intended for machine, rather than human, consumption.
 {{/dtdd}}
 
 {{#dtdd "Random.fraction()"}}
