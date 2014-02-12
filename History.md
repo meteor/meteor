@@ -41,6 +41,9 @@
 
 * `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
 
+* Upgraded dependencies:
+  - source-map from 0.3.30 to 0.3.32  #1782
+
 
 ## v0.7.0.1
 

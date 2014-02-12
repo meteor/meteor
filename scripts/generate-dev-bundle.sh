@@ -105,7 +105,7 @@ npm install fstream@0.1.25
 npm install tar@0.1.19
 npm install kexec@0.2.0
 npm install eachline@2.4.0
-npm install source-map@0.1.31
+npm install source-map@0.1.32
 npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
 npm install http-proxy@1.0.2
