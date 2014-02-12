@@ -77,6 +77,11 @@ Tinytest.add("ejson - NaN and Inf", function (test) {
   ));
 });
 
+Tinytest.add("ejson - undefined", function (test) {
+  test.equal(EJSON.parse("{\"$Undefined\": true}"), undefined);
+  test.equal(undefined, EJSON.parse("{\"$Undefined\": true}"));
+});
+
 Tinytest.add("ejson - clone", function (test) {
   var cloneTest = function (x, identical) {
     var y = EJSON.clone(x);
@@ -182,5 +187,80 @@ Tinytest.add("ejson - parse", function (test) {
   test.throws(
     function () { EJSON.parse(null) },
     /argument should be a string/
+  );
+});
+
+Tinytest.add("ejson - custom types", function (test) {
+  var testSameConstructors = function (obj, compareWith) {
+    test.equal(obj.constructor, compareWith.constructor);
+    if (typeof obj === 'object') {
+      _.each(obj, function(value, key) {
+        testSameConstructors(value, compareWith[key]);
+      });
+    }
+  }
+  var testReallyEqual = function (obj, compareWith) {
+    test.equal(obj, compareWith);
+    testSameConstructors(obj, compareWith);
+  }
+  var testRoundTrip = function (obj) {
+    var str = EJSON.stringify(obj);
+    var roundTrip = EJSON.parse(str);
+    testReallyEqual(obj, roundTrip);
+  }
+  var testCustomObject = function (obj) {
+    testRoundTrip(obj);
+    testReallyEqual(obj, EJSON.clone(obj));
+  }
+
+  var a = new EJSONTest.Address('Montreal', 'Quebec');
+  testCustomObject( {address: a} );
+  var nakedA = {city: 'Montreal', state: 'Quebec'};
+  test.notEqual(nakedA, a);
+  test.notEqual(a, nakedA);
+
+  var d = new Date;
+  var obj = new EJSONTest.Person("John Doe", d, a);
+  var clone = EJSON.clone(obj);
+  clone.address.city = 'Sherbrooke';
+  test.notEqual( obj, clone );
+});
+
+Tinytest.add("ejson - defineType", function (test) {
+  var code = function(fn) {
+    return fn.toString().replace(/\s+/g, ' ').replace('/**/', '');
+  }
+  var testDefineType = function(creator, name, argList, from, to) {
+    EJSON.defineType(creator, name, argList);
+    test.equal(creator.typeName, name);
+    console.log(code(from));
+    test.equal(code(creator.fromEJSONValue), code(from), 'fromEJSONValue for ' + name);
+    test.equal(code(creator.prototype.toEJSONValue), code(to), 'toEJSONValue for ' + name);
+  }
+  testDefineType(
+    function(){}, 'trivial', [],
+    'function anonymous(obj ) { \n\nreturn new this() }',
+    'function anonymous()     { return {} }'
+  );
+  testDefineType(
+    function(x){ this.x = x }, 'single', ['x'],
+    'function anonymous(arg ) { return new this(arg) }',
+    'function anonymous()     { return this.x }'
+  );
+  testDefineType(
+    function(obj){ this.x = obj.x; this.y = obj.y }, 'many', ['x', 'y'],
+    'function anonymous(obj ) { return new this({x: obj.x, y: obj.y}) }',
+    'function anonymous()     { return {x: this.x, y: this.y} }'
+  );
+  testDefineType(
+    function(x, y){ this.x = x; this.y = y }, 'manyInline', ['x', 'y'],
+    'function anonymous(obj ) { return new this(obj.x, obj.y) }',
+    'function anonymous()     { return {x: this.x, y: this.y} }'
+  );
+  testDefineType(
+    function(x, y, rest){ this.x = x; this.y = y, this.a = rest.a, this.b = rest.b },
+    'mixed', ['x', 'y', 'a', 'b'],
+    'function anonymous(obj ) { return new this(obj.x, obj.y, {a: obj.a, b: obj.b}) }',
+    'function anonymous()     { return {x: this.x, y: this.y, a: this.a, b: this.b} }'
   );
 });

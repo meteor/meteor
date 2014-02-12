@@ -76,14 +76,14 @@ parseDDP = function (stringMessage) {
 
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(msg, field))
-      msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
+      msg[field] = EJSON.fromJSONValue(msg[field], true);
   });
 
   return msg;
 };
 
 stringifyDDP = function (msg) {
-  var copy = EJSON.clone(msg);
+  var copy = _.clone(msg);
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
   if (_.has(msg, 'fields')) {
@@ -102,7 +102,7 @@ stringifyDDP = function (msg) {
   // adjust types to basic
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(copy, field))
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
+      copy[field] = EJSON.toJSONValue(copy[field]);
   });
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");

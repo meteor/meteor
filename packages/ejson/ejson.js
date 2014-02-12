@@ -8,14 +8,54 @@ var customTypes = {};
 // The type you add must have:
 // - A clone() method, so that Meteor can deep-copy it when necessary.
 // - A equals() method, so that Meteor can compare it
-// - A toJSONValue() method, so that Meteor can serialize it
+// - A toJSONValue() or toEJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
 // It is okay if these methods are monkey-patched on.
 //
 EJSON.addType = function (name, factory) {
+  if (name.typeName && !factory) {
+    factory = name;
+    name = factory.typeName;
+  }
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
   customTypes[name] = factory;
+};
+
+// objectConstructor('this', ['a', 'b']) => '{a: this.a, b: this.b}'
+var objectConstructor = function(context, attributeNames) {
+  return '{' + _.map(attributeNames,
+      function (attr) { return attr + ': ' + context + '.' + attr }
+    ).join(', ') + '}';
+}
+
+EJSON.defineType = function (creator, typeName, attributeNames) {
+  if (!_.isArray(attributeNames))
+    throw new Error('Attribute names required (got ' + attributeNames + ')');
+  creator.typeName = typeName;
+
+  // Define prototype.toEJSONValue (if required)
+  var proto = creator.prototype;
+  if (!proto.toEJSONValue && !proto.toJSONValue)
+    if (attributeNames.length === 1)
+      proto.toEJSONValue = Function('return this.' + attributeNames[0]);
+    else
+      proto.toEJSONValue = Function('return ' + objectConstructor('this', attributeNames));
+
+  // Define fromEJSONValue (if required)
+  if (!creator.fromEJSONValue)
+    if (attributeNames.length === 1)
+      creator.fromEJSONValue = Function('arg', 'return new this(arg)');
+    else {
+      var nbUngrouped = creator.length >= attributeNames.length ? attributeNames.length : creator.length - 1;
+      var args = _.map(attributeNames.slice(0, nbUngrouped),
+          function(attr){ return 'obj.' + attr });
+      if (nbUngrouped < attributeNames.length)
+        args.push( objectConstructor('obj', attributeNames.slice(nbUngrouped)) );
+      creator.fromEJSONValue = Function('obj', 'return new this(' + args.join(', ') + ')');
+    }
+
+  EJSON.addType(creator);
 };
 
 var isInfOrNan = function (obj) {
@@ -37,8 +77,22 @@ var builtinConverters = [
       return new Date(obj.$date);
     }
   },
-  { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
-    // which we match.)
+  { // undefined
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$Undefined') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return obj === undefined;
+    },
+    toJSONValue: function (obj) {
+      return {$Undefined: true};
+    },
+    fromJSONValue: function (obj) {
+      return undefined;
+    }
+  },
+  { // NaN, Inf, -Inf. (These, along with undefined, are the only objects
+    // with typeof !== 'object' which we match.)
     matchJSONValue: function (obj) {
       return _.has(obj, '$InfNaN') && _.size(obj) === 1;
     },
@@ -107,57 +161,70 @@ var builtinConverters = [
       return EJSON._isCustomType(obj);
     },
     toJSONValue: function (obj) {
-      return {$type: obj.typeName(), $value: obj.toJSONValue()};
+      var type = obj.constructor.typeName || obj.typeName();
+      if (obj.toEJSONValue) {
+        return {$type: type, $value: EJSON.toJSONValue(obj.toEJSONValue())};
+      }
+      return {$type: type, $value: obj.toJSONValue()};
     },
-    fromJSONValue: function (obj) {
+    fromJSONValue: function(obj) {
       var typeName = obj.$type;
       var converter = customTypes[typeName];
-      return converter(obj.$value);
+      var values = obj.$value;
+      if (converter.fromEJSONValue) {
+        for (var key in values) {
+          var value = values[key];
+          if (typeof value === 'object') {
+            values[key] = EJSON.fromJSONValue(value);
+          }
+        }
+        return converter.fromEJSONValue(values);
+      }
+      if (converter.fromJSONValue) {
+        return converter.fromJSONValue(values);
+      }
+      return converter(values);
     }
   }
 ];
 
 EJSON._isCustomType = function (obj) {
-  return obj &&
-    typeof obj.toJSONValue === 'function' &&
-    typeof obj.typeName === 'function' &&
+  if (!obj ||
+      (typeof obj.toEJSONValue !== 'function' &&
+       typeof obj.toJSONValue !== 'function'))
+    return false;
+  if (obj.constructor.typeName !== undefined)
+    return _.has(customTypes, obj.constructor.typeName);
+  return typeof obj.typeName === 'function' &&
     _.has(customTypes, obj.typeName());
 };
 
 
-// for both arrays and objects, in-place modification.
-var adjustTypesToJSONValue =
-EJSON._adjustTypesToJSONValue = function (obj) {
-  // Is it an atom that we need to adjust?
-  if (obj === null)
-    return null;
+// for both arrays and objects.
+// returns null if obj doesn't need adjusting
+var adjustTypesToJSONValue = function (obj) {
+  // Is it an object with a converter?
   var maybeChanged = toJSONValueHelper(obj);
-  if (maybeChanged !== undefined)
+  if (maybeChanged !== null)
     return maybeChanged;
 
   // Other atoms are unchanged.
   if (typeof obj !== 'object')
-    return obj;
+    return null;
 
   // Iterate over array or object structure.
   _.each(obj, function (value, key) {
-    if (typeof value !== 'object' && value !== undefined &&
-        !isInfOrNan(value))
-      return; // continue
-
-    var changed = toJSONValueHelper(value);
-    if (changed) {
-      obj[key] = changed;
-      return; // on to the next key
+    var changed = adjustTypesToJSONValue(value);
+    if (changed !== null) {
+      if (maybeChanged === null)
+        maybeChanged = _.clone(obj);
+      maybeChanged[key] = changed;
     }
-    // if we get here, value is an object but not adjustable
-    // at this level.  recurse.
-    adjustTypesToJSONValue(value);
   });
-  return obj;
+  return maybeChanged;
 };
 
-// Either return the JSON-compatible version of the argument, or undefined (if
+// Either return the JSON-compatible version of the argument, or null (if
 // the item isn't itself replaceable, but maybe some fields in it are)
 var toJSONValueHelper = function (item) {
   for (var i = 0; i < builtinConverters.length; i++) {
@@ -166,53 +233,38 @@ var toJSONValueHelper = function (item) {
       return converter.toJSONValue(item);
     }
   }
-  return undefined;
+  return null;
 };
 
 EJSON.toJSONValue = function (item) {
-  var changed = toJSONValueHelper(item);
-  if (changed !== undefined)
-    return changed;
-  if (typeof item === 'object') {
-    item = EJSON.clone(item);
-    adjustTypesToJSONValue(item);
-  }
-  return item;
+  return adjustTypesToJSONValue(item) || item;
 };
 
-// for both arrays and objects. Tries its best to just
-// use the object you hand it, but may return something
-// different if the object you hand it itself needs changing.
+// for both arrays and objects.
+// returns null if obj doesn't need adjusting.
 //
-var adjustTypesFromJSONValue =
-EJSON._adjustTypesFromJSONValue = function (obj) {
-  if (obj === null)
-    return null;
+var adjustTypesFromJSONValue = function (obj, allowMutation) {
   var maybeChanged = fromJSONValueHelper(obj);
-  if (maybeChanged !== obj)
+  if (maybeChanged !== null)
     return maybeChanged;
 
   // Other atoms are unchanged.
   if (typeof obj !== 'object')
-    return obj;
+    return null;
 
   _.each(obj, function (value, key) {
-    if (typeof value === 'object') {
-      var changed = fromJSONValueHelper(value);
-      if (value !== changed) {
-        obj[key] = changed;
-        return;
-      }
-      // if we get here, value is an object but not adjustable
-      // at this level.  recurse.
-      adjustTypesFromJSONValue(value);
+    var changed = adjustTypesFromJSONValue(value, allowMutation);
+    if (changed !== null) {
+      if (maybeChanged === null)
+        maybeChanged = allowMutation ? obj : _.clone(obj);
+      maybeChanged[key] = changed;
     }
   });
-  return obj;
+  return maybeChanged;
 };
 
 // Either return the argument changed to have the non-json
-// rep of itself (the Object version) or the argument itself.
+// rep of itself (the Object version) or null.
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
@@ -230,18 +282,12 @@ var fromJSONValueHelper = function (value) {
       }
     }
   }
-  return value;
+  return null;
 };
 
-EJSON.fromJSONValue = function (item) {
-  var changed = fromJSONValueHelper(item);
-  if (changed === item && typeof item === 'object') {
-    item = EJSON.clone(item);
-    adjustTypesFromJSONValue(item);
-    return item;
-  } else {
-    return changed;
-  }
+EJSON.fromJSONValue = function (item, allowMutation) {
+  var adjusted = adjustTypesFromJSONValue(item, allowMutation);
+  return adjusted !== null ? adjusted : item;
 };
 
 EJSON.stringify = function (item, options) {
@@ -256,7 +302,7 @@ EJSON.stringify = function (item, options) {
 EJSON.parse = function (item) {
   if (typeof item !== 'string')
     throw new Error("EJSON.parse argument should be a string");
-  return EJSON.fromJSONValue(JSON.parse(item));
+  return EJSON.fromJSONValue(JSON.parse(item), true);
 };
 
 EJSON.isBinary = function (obj) {
@@ -289,6 +335,8 @@ EJSON.equals = function (a, b, options) {
   }
   if (typeof (a.equals) === 'function')
     return a.equals(b, options);
+  if (typeof (b.equals) === 'function')
+    return b.equals(a, options);
   if (a instanceof Array) {
     if (!(b instanceof Array))
       return false;
@@ -299,6 +347,10 @@ EJSON.equals = function (a, b, options) {
         return false;
     }
     return true;
+  }
+  switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
+    case 1: return false;
+    case 2: return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
   }
   // fall back to structural equality of objects
   var ret;
@@ -365,6 +417,10 @@ EJSON.clone = function (v) {
   // handle general user-defined typed Objects if they have a clone method
   if (typeof v.clone === 'function') {
     return v.clone();
+  }
+  // handle other custom types
+  if (EJSON._isCustomType(v)) {
+    return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
   }
   // handle other objects
   ret = {};
