@@ -158,7 +158,7 @@ _.extend(OplogObserveDriver.prototype, {
     if (! self._limit)
       return;
     // xcxc size on heaps should be cached to O(1)
-    if (self._published.size() < self._cursorDescription.limit) {
+    if (self._published.size() < self._limit) {
       // The unpublished buffer is empty iff published contains the whole
       // matching set, i.e. number of matching documents is less or equal to the
       // queries limit.
@@ -212,9 +212,9 @@ _.extend(OplogObserveDriver.prototype, {
     // document would fit into published set pushing the maximum element out,
     // then we need to publish the doc.
     // Otherwise we might need to buffer it (only in case of limited query).
-    if (!limit || self._published.size() < limit || comparator(maxPublished, fields) === 1) {
+    if (!limit || self._published.size() < limit || comparator(maxPublished, fields) > 0) {
       self._addPublished(id, fields);
-    } else if (self._unpublishedBuffer.size() < limit || comparator(maxBuffered, fields) === 1) {
+    } else if (self._unpublishedBuffer.size() < limit || comparator(maxBuffered, fields) > 0) {
       self._addBuffered(id, fields);
     }
   },
@@ -273,7 +273,7 @@ _.extend(OplogObserveDriver.prototype, {
         self._removeBuffered(id);
         // but it can move into published now, check it
         var maxPublished = self._published.get(self._published.maxElementId());
-        if (comparator(newDoc, maxPublished) === -1)
+        if (comparator(newDoc, maxPublished) < 0)
           self._addPublished(id, newDoc);
       }
     }
