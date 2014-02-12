@@ -110,6 +110,7 @@ Sorter.prototype.getComparator = function (options) {
   }]);
 };
 
+Minimongo.Sorter = Sorter;
 MinimongoTest.Sorter = Sorter;
 
 // Given an array of comparators
