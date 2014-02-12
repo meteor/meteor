@@ -21,6 +21,12 @@ OplogObserveDriver = function (options) {
   self._multiplexer = options.multiplexer;
 
   if (options.ordered) {
+    // There are several properties ordered driver implements:
+    // - _limit is a positive number
+    // - _comparator is a function-comparator by which the query is ordered
+    // - _unpublishedBuffer is non-null collection
+    // - _published implements maxElementId method in addition to IdMap methods
+
     // XXX replace with doubly-heaps and shit once we get these working
     var comparator = self._cursorDescription.sorter.getComparator();
     self._limit = self._cursorDescription.limit;
@@ -148,14 +154,14 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     self._published.remove(id);
     self._multiplexer.removed(id);
-    if (!self._unpublishedBuffer)
+    if (! self._limit)
       return;
     // xcxc size on heaps should be cached to O(1)
     if (self._published.size() < self._cursorDescription.limit) {
       // The unpublished buffer is empty iff published contains the whole
       // matching set, i.e. number of matching documents is less or equal to the
       // queries limit.
-      if (!self._unpublishedBuffer.size())
+      if (! self._unpublishedBuffer.size())
         return;
 
       var newDocId = self._unpublishedBuffer.minElementId();
@@ -194,7 +200,7 @@ _.extend(OplogObserveDriver.prototype, {
     delete fields._id;
     if (self._published.has(id))
       throw Error("tried to add something already published " + id);
-    if (self._unpublishedBuffer && self._unpublishedBuffer.has(id))
+    if (self._limit && self._unpublishedBuffer.has(id))
       throw Error("tried to add something already existed in buffer " + id); // xcxc error msg
 
     var limit = self._limit;
@@ -216,7 +222,7 @@ _.extend(OplogObserveDriver.prototype, {
   // and the effect of limit enforced.
   _removeMatching: function (id) {
     var self = this;
-    if (!self._published.has(id) && !self._unpublishedBuffer)
+    if (!self._published.has(id) && !self._limit)
       throw Error("tried to remove something unpublished " + id); // xcxc fix this error msg
 
     if (self._published.has(id)) {
@@ -236,7 +242,7 @@ _.extend(OplogObserveDriver.prototype, {
     }
 
     var publishedBefore = self._published.has(id);
-    var bufferedBefore = self._unpublishedBuffer && self._unpublishedBuffer.has(id);
+    var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
     var cachedBefore = publishedBefore || bufferedBefore;
 
     if (matchesNow && !cachedBefore) {
@@ -247,7 +253,7 @@ _.extend(OplogObserveDriver.prototype, {
       delete newDoc._id;
       var oldDoc = self._published.get(id);
       var comparator = self._comparator;
-      var minBuffered = self._unpublishedBuffer && self._unpublishedBuffer.size() &&
+      var minBuffered = self._limit && self._unpublishedBuffer.size() &&
         self._unpublishedBuffer.get(self._unpublishedBuffer.minElementId());
 
       if (publishedBefore) {
@@ -550,8 +556,9 @@ _.extend(OplogObserveDriver.prototype, {
   _publishNewResults: function (newResults, newBuffer) {
     var self = this;
 
-    // If there is a buffer, shut down so it doesn't stay in a way
-    if (self._unpublishedBuffer) {
+    // If the query is ordered and there is a buffer, shut down so it doesn't
+    // stay in a way.
+    if (self._limit) {
       self._unpublishedBuffer.clear();
     }
 
