@@ -568,7 +568,7 @@ Template.api.find = {
      descr: "(Client only) Default `true`; pass `false` to disable reactivity"},
     {name: "transform",
      type: "Function",
-     descr: "Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."}
+     descr: "Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation. Note that on the server, the transform function won't be run if the `find()` is called from a publish functions."}
   ]
 };
 
@@ -600,7 +600,7 @@ Template.api.findone = {
      descr: "(Client only) Default true; pass false to disable reactivity"},
     {name: "transform",
      type: "Function",
-     descr:  "Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation."
+     descr:  "Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation. Note that on the server, the transform function won't be run if the `find()` is called from a publish functions."
     }
   ]
 };
