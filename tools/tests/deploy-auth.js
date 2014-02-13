@@ -1,76 +1,7 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
+var utils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
-
-var randomString = function (charsCount) {
-  var chars = 'abcdefghijklmnopqrstuvwxyz';
-  var str = '';
-  for (var i = 0; i < charsCount; i++) {
-    str = str + chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return str;
-};
-
-var randomAppName = function () {
-  return 'selftest-app-' + randomString(10);
-};
-
-// Deploys an app with an old release from the current
-// directory. Returns the name of the deployed app.
-var createLegacyApp = function (sandbox, password) {
-  var name = randomAppName();
-  var runArgs = ['deploy', '--release', '0.7.0.1', name];
-  if (password)
-    runArgs.push('-P');
-
-  var run = sandbox.run.apply(sandbox, runArgs);
-
-  if (password) {
-    // Give it time to download and install a new release, if necessary.
-    run.waitSecs(30);
-    run.match('New Password:');
-    run.write(password + '\n');
-    run.match('New Password (again):');
-    run.write(password + '\n');
-  }
-
-  run.waitSecs(90);
-  run.match('Now serving at ' + name + '.meteor.com');
-  run.waitSecs(10);
-  run.expectExit(0);
-  return name;
-};
-
-var cleanUpLegacyApp = function (sandbox, name, password) {
-  var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
-  if (password) {
-    run.waitSecs(10);
-    run.match('Password:');
-    run.write(password + '\n');
-  }
-  run.waitSecs(20);
-  run.match('Deleted');
-  run.expectExit(0);
-};
-
-var login = function (s, username, password) {
-  var run = s.run('login');
-  run.waitSecs(2);
-  run.matchErr('Username:');
-  run.write(username + '\n');
-  run.matchErr('Password:');
-  run.write(password + '\n');
-  run.waitSecs(5);
-  run.matchErr('Logged in as test.');
-  run.expectExit(0);
-};
-
-var logout = function (s) {
-  var run = s.run('logout');
-  run.waitSecs(5);
-  run.matchErr('Logged out');
-  run.expectExit(0);
-};
 
 // XXX need to make sure that mother doesn't clean up:
 // 'legacy-password-app-for-selftest'
@@ -93,7 +24,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
   var sandbox = new Sandbox;
 
-  _.each([sandbox, sandboxWithWarehouse], function (s) {
+  _.each([sandbox], function (s) {
     s.createApp('deployapp', 'empty');
     s.cd('deployapp');
   });
@@ -101,7 +32,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // LEGACY APPS
 
   // Deploy a legacy app with no password
-  var noPasswordLegacyApp = createLegacyApp(sandboxWithWarehouse);
+  var noPasswordLegacyApp = createAndDeployLegacyApp(sandboxWithWarehouse);
 
   login(sandbox, 'test', 'testtest');
 
@@ -123,7 +54,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(0);
 
   // Deploy a legacy password-protected app
-  var passwordLegacyApp = createLegacyApp(sandboxWithWarehouse, 'test');
+  var passwordLegacyApp = createAndDeployLegacyApp(sandboxWithWarehouse, 'test');
   // We shouldn't be able to deploy to this app without claiming it
   run = sandbox.run('deploy', passwordLegacyApp);
   run.waitSecs(5);
