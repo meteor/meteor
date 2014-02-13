@@ -120,7 +120,7 @@ Example:
           count--;
           self.changed("counts", roomId, {count: count});
         }
-        // don't care about moved or changed
+        // don't care about changed
       });
 
       // Observe only returns after the initial added callbacks have
@@ -739,7 +739,7 @@ results of the cursor, or while fetching results from the cursor,
 those changes may or may not appear in the result set.
 {{/warning}}
 
-Cursors are a reactive data source.  The first time you retrieve a
+Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
 [`autorun`](#deps_autorun)), Meteor will register a
@@ -747,6 +747,12 @@ dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
 `find`.
+
+Note that when `fields` are specified, only changes to the included
+fields will trigger callbacks in `observe`, `observeChanges` and
+invalidations in reactive computations using this cursor. Careful use
+of `fields` allows for more fine-grained reactivity for computations
+that don't depend on an entire document.
 
 {{> api_box findone}}
 
@@ -1274,8 +1280,12 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
 
 {{#api_box_inline selectors}}
 
-In its simplest form, a selector is just a set of keys that must
-match in a document:
+The simplest selectors are just a string or
+[`Meteor.Collection.ObjectID`](#collection_object_id). These selectors match the
+document with that value in its `_id` field.
+
+A slightly more complex form of selector is an object containing a set of keys
+that must match in a document:
 
     // Matches all documents where deleted is false
     {deleted: false}
@@ -1298,7 +1308,7 @@ But they can also contain more complicated tests:
     {fruit: {$in: ["peach", "plum", "pear"]}}
 
 See the [complete
-documentation](http://www.mongodb.org/display/DOCS/Advanced+Queries).
+documentation](http://docs.mongodb.org/manual/reference/operator/).
 
 {{/api_box_inline}}
 
@@ -2657,7 +2667,7 @@ exactly the same work as `Deps.flush`.  The flushing process consists
 of rerunning any invalidated computations.  If additional
 invalidations happen while flushing, they are processed as part of the
 same flush until there is no more work to be done.  Callbacks
-registered with [`Meteor.afterFlush`](#deps_afterflush) are called
+registered with [`Deps.afterFlush`](#deps_afterflush) are called
 after processing outstanding invalidations.
 
 Any auto-updating DOM elements that are found to not be in the
@@ -2935,9 +2945,25 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
 {{/note}}
 
-Instances of your type should implement the following interface:
+Instances of your type must implement [`typeName`](#ejson_type_typeName) and
+[`toJSONValue`](#ejson_type_toJSONValue) methods, and may implement
+[`clone`](#ejson_type_clone) and [`equals`](#ejson_type_equals) methods if the
+default implementations are not sufficient.
+
+{{> api_box ejsonTypeName}}
+{{> api_box ejsonTypeToJSONValue}}
+
+For example, the `toJSONValue` method for
+[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
+
+    function () {
+      return this.toHexString();
+    };
 
 {{> api_box ejsonTypeClone}}
+
+If your type does not have a `clone` method, `EJSON.clone` will use
+[`toJSONValue`](#ejson_type_toJSONValue) and the factory instead.
 
 {{> api_box ejsonTypeEquals}}
 
@@ -2949,15 +2975,9 @@ the following properties:
  - *Symmetry* - for any two instances `a` and `b`: `a.equals(b)` if and only if `b.equals(a)`.
  - *Transitivity* - for any three instances `a`, `b`, and `c`: `a.equals(b)` and `b.equals(c)` implies `a.equals(c)`.
 
-{{> api_box ejsonTypeName}}
-{{> api_box ejsonTypeToJSONValue}}
+If your type does not have an `equals` method, `EJSON.equals` will compare the
+result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
 
-For example, the `toJSONValue` method for
-[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
-
-    function () {
-      return this.toHexString();
-    };
 
 <h2 id="http"><span>HTTP</span></h2>
 
