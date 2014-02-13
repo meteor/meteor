@@ -17,14 +17,21 @@ OAuth1Binding = function(config, urls) {
   this._urls = urls;
 };
 
-OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
+OAuth1Binding.prototype.prepareRequestToken = function(options, callbackUrl) {
   var self = this;
 
-  var headers = self._buildHeader({
-    oauth_callback: callbackUrl
-  });
+  // support both (options, callback) and (callback).
+  if (!callbackUrl && typeof options === 'function') {
+    callbackUrl = options;
+    options = {};
+  }
 
-  var response = self._call('POST', self._urls.requestToken, headers);
+  var headers = self._buildHeader({ oauth_callback: callbackUrl });
+
+  // Options are passed as params, without any further processing
+  var params = options;
+
+  var response = self._call('POST', self._urls.requestToken, headers, params);
   var tokens = querystring.parse(response.content);
 
   if (!tokens.oauth_callback_confirmed)

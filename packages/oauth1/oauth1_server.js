@@ -17,12 +17,20 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
 
+    requestTokenOptions = {};
+    if(query.requestTokenOptions) {
+      var requestTokenParamNames = query.requestTokenOptions.split(',');
+      _.each(requestTokenParamNames, function(paramName) {
+        requestTokenOptions[paramName] = query[paramName];
+      });
+    }
+
     // Get a request token to start auth process
-    oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
+    oauthBinding.prepareRequestToken(requestTokenOptions, query.requestTokenAndRedirect);
 
     // Keep track of request token so we can verify it on the next step
     requestTokens[query.state] = {
-      requestToken: oauthBinding.requestToken, 
+      requestToken: oauthBinding.requestToken,
       requestTokenSecret: oauthBinding.requestTokenSecret
     };
 
@@ -32,6 +40,14 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
       redirectUrl = urls.authenticate(oauthBinding);
     } else {
       redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
+    }
+
+    // Add any authenticationOption parameters to the URL
+    if (query.authenticationOptions) {
+      var authenticationOptionParamNames = query.authenticationOptions.split(',');
+      _.each(authenticationOptionParamNames, function(paramName) {
+        redirectUrl += '&' + paramName + '=' + query[paramName];
+      });
     }
 
     // redirect to provider login, which will redirect back to "step 2" below
