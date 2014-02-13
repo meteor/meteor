@@ -578,6 +578,7 @@ _.extend(OplogObserveDriver.prototype, {
       self._removePublished(id);
     });
 
+    // xcxc this should be sorted?
     // Now do adds and changes.
     newResults.forEach(function (doc, id) {
       // "true" here means to throw if we think this doc doesn't match the
@@ -587,6 +588,7 @@ _.extend(OplogObserveDriver.prototype, {
 
     // Finally, replace the buffer
     newBuffer.forEach(function (doc, id) {
+      delete doc._id;
       self._addBuffered(id, doc);
     });
   },

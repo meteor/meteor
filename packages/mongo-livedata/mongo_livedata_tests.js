@@ -869,15 +869,15 @@ if (Meteor.isServer) {
     // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
     // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
     // schedule a repoll.
-    debugger
     rem({ bar: { $lt: 10 } });
     var expectedRemoves = [{removed: docId3}, {removed: docId1},
                            {removed: docId2}, {removed: docId4}];
-    var expectedAdds = [{added: docId6}, {added: docId7}, {added: docId8}];
+    var expectedAdds = [{added: docId4}, {added: docId8},
+                        {added: docId7}, {added: docId6}];
 
-    test.length(o.output, 7);
-    test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]]));
-    test.equal(o.output, expectedRemoves);
+    test.length(o.output, 8);
+    test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]], expectedRemoves));
+    test.equal([o.output[1], o.output[3], o.output[5], o.output[7]], expectedAdds);
 
     o.handle.stop();
     onComplete();
