@@ -9,6 +9,7 @@ if (Meteor.isServer) {
 // Options:
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
 //   onDDPNegotiationVersionFailure: callback when version negotiation fails.
+//   _sockjsOptions: Specifies options to pass through to the sockjs client
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
@@ -32,7 +33,8 @@ var Connection = function (url, options) {
     self._stream = url;
   } else {
     self._stream = new LivedataTest.ClientStream(url, {
-      retry: options.retry
+      retry: options.retry,
+      _sockjsOptions: options._sockjsOptions
     });
   }
 
