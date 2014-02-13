@@ -21,7 +21,10 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
     runArgs.push('--url');
     matchString = 'mongodb://';
   } else if (command === 'logs') {
-    matchString = 'Starting application';
+    // I suppose it's possible that we don't have any INFO messages in
+    // the logs, but it seems unlikely. Every time we run a command we
+    // hit /_GALAXY_ on the site.
+    matchString = 'INFO';
   } else {
     throw new Error('Command must be "logs" or "mongo"');
   }

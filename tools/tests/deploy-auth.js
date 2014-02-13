@@ -76,6 +76,7 @@ var logout = function (s) {
 // 'legacy-password-app-for-selftest'
 // 'legacy-no-password-app-for-selftest'
 // 'app-for-selftest-not-test-owned'
+// 'app-for-selftest-test-owned'
 
 selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // Create two sandboxes: one with a warehouse so that we can run
