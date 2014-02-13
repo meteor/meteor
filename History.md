@@ -46,6 +46,9 @@
 * Types added with `EJSON.addType` now have default `clone` and `equals`
   implementations.  #1745
 
+* Allow cursors on named local collections to be returned from arrays in publish
+  functions.  #1820
+
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
