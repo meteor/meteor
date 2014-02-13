@@ -39,10 +39,21 @@
   XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
   XXX consider taking 1.11 instead, which was released this week
 
+* Upgrade CoffeeScript from 1.6.3 to 1.7.1.
+
 * `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
 
 * Upgraded dependencies:
   - source-map from 0.3.30 to 0.3.32  #1782
+
+* Types added with `EJSON.addType` now have default `clone` and `equals`
+  implementations.  #1745
+
+* Allow cursors on named local collections to be returned from arrays in publish
+  functions.  #1820
+
+* Meteor accounts logins (or anything else using the `localstorage` package) no
+  longer persist in IE7.
 
 
 ## v0.7.0.1

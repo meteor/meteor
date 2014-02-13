@@ -6,11 +6,14 @@ var customTypes = {};
 // from a basic JSON-able representation.  The factory argument
 // is a function of JSON-able --> your object
 // The type you add must have:
-// - A clone() method, so that Meteor can deep-copy it when necessary.
-// - A equals() method, so that Meteor can compare it
 // - A toJSONValue() method, so that Meteor can serialize it
 // - a typeName() method, to show how to look it up in our type table.
 // It is okay if these methods are monkey-patched on.
+// EJSON.clone will use toJSONValue and the given factory to produce
+// a clone, but you may specify a method clone() that will be
+// used instead.
+// Similarly, EJSON.equals will use toJSONValue to make comparisons,
+// but you may provide a method equals() instead.
 //
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))
@@ -289,6 +292,8 @@ EJSON.equals = function (a, b, options) {
   }
   if (typeof (a.equals) === 'function')
     return a.equals(b, options);
+  if (typeof (b.equals) === 'function')
+    return b.equals(a, options);
   if (a instanceof Array) {
     if (!(b instanceof Array))
       return false;
@@ -299,6 +304,11 @@ EJSON.equals = function (a, b, options) {
         return false;
     }
     return true;
+  }
+  // fallback for custom types that don't implement their own equals
+  switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
+    case 1: return false;
+    case 2: return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
   }
   // fall back to structural equality of objects
   var ret;
@@ -365,6 +375,10 @@ EJSON.clone = function (v) {
   // handle general user-defined typed Objects if they have a clone method
   if (typeof v.clone === 'function') {
     return v.clone();
+  }
+  // handle other custom types
+  if (EJSON._isCustomType(v)) {
+    return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
   }
   // handle other objects
   ret = {};

@@ -235,6 +235,11 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   return Meteor.Collection._publishCursor(self, sub, collection);
 };
 
+LocalCollection.Cursor.prototype._getCollectionName = function () {
+  var self = this;
+  return self.collection.name;
+};
+
 LocalCollection._observeChangesCallbacksAreOrdered = function (callbacks) {
   if (callbacks.added && callbacks.addedBefore)
     throw new Error("Please specify only one of added() and addedBefore()");
