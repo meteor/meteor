@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## Creates a self-contained spark.js and writes it stdout.
 

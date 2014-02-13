@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # stop on any non-zero return value from test_bundler.js, and print "FAILED"
 set -e

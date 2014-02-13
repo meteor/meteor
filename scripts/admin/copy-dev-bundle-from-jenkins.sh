@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Requires s3cmd to be installed and an appropriate ~/.s3cfg.
 # Usage:

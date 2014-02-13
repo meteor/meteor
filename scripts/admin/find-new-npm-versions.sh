@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 BASEDIR=`dirname $0`
 cat $BASEDIR/generate-dev-bundle.sh | grep "npm install" | sed "s/npm install //" | sed "s/@.*//" | while read PACKAGE
 do
