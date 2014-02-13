@@ -24,7 +24,7 @@ Fiber(function () {
 
   var Future = require('fibers/future');
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.22';
+  var MIN_NODE_VERSION = 'v0.10.25';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -1365,16 +1365,13 @@ Fiber(function () {
     // Strip off the "node" and "meteor.js" from argv and replace it with the
     // appropriate tools's meteor shell script.
     var newArgv = process.argv.slice(2);
-    newArgv.unshift(
-      path.join(warehouse.getToolsDir(context.releaseManifest.tools),
-                'bin', 'meteor'));
+    var cmd = path.join(warehouse.getToolsDir(context.releaseManifest.tools),
+                        'bin', 'meteor');
     if (extraArgs)
       newArgv.push.apply(newArgv, extraArgs);
 
-    // Now shell quote this (because kexec wants to use /bin/sh -c) and execvp.
-    // XXX fork kexec and make it take an array instead of using shell
-    var quotedArgv = require('shell-quote').quote(newArgv);
-    require('kexec')(quotedArgv);
+    // Now exec; we're not coming back.
+    require('kexec')(cmd, newArgv);
   };
 
   // Implements --version. Note that we only print to stdout and exit 0 if

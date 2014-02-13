@@ -1,3 +1,64 @@
+## v.NEXT
+
+* XXX upgraded `less` from 1.3.3 to 1.6.1
+* XXX upgraded `stylus` from 0.37.0 to 0.42.2 and `nib` from `1.0.0` to `1.0.2`
+* XXX sourcemaps support for stylesheets, including less sourcemaps
+* XXX css linting (breaks on errors)
+* XXX css preprocessing to concatenate files correctly (pulls @imports to the
+  beginning)
+* XXX supports `.import.less` and `.import.styl` to prevent Meteor processing
+  stylesheets. `.lessimport` is deprecated
+
+* Hash login tokens before storing them in the database.
+
+* Add `clientAddress` and `httpHeaders` to `this.connection` in method
+  calls and publish functions.
+
+* Cursors with a field specifier containing `{_id: 0}` can no longer be used
+  with `observeChanges` or `observe`. This includes the implicit calls to these
+  functions that are done when returning a cursor from a publish function or
+  using `{{#each}}`.
+
+* Patch Underscore to not treat plain objects (`x.constructor === Object`)
+  with numeric `length` fields as arrays.  Among other things, this allows you
+  to use documents with numeric `length` fields with Mongo.  #594 #1737
+
+* Fix races when calling login and/or logoutOtherClients from multiple
+  tabs. #1616
+
+* Upgrade `jquery-waypoints` package from 1.1.7 to 2.0.3. (Contains
+  backward-incompatible changes).
+
+* Add `frame-src` to `browser-policy-content` and account for
+  cross-browser CSP disparities.
+
+* Transform functions must return objects and may not change the `_id` field
+  (though they may leave it out)
+
+* Upgrade jQuery from 1.8.2 to 1.10.2.
+  XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
+  XXX consider taking 1.11 instead, which was released this week
+
+* Upgrade CoffeeScript from 1.6.3 to 1.7.1.
+
+* `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
+
+* Types added with `EJSON.addType` now have default `clone` and `equals`
+  implementations.  #1745
+
+* Allow cursors on named local collections to be returned from arrays in publish
+  functions.  #1820
+
+## v0.7.0.1
+
+* Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
+  message "Initializing mongo database... this may take a moment.".  #1696
+
+* Apply the Node patch to 0.10.24 as well (see the 0.7.0 section for details).
+
+* Fix gratuitous IE7 incompatibility.  #1690
+
+
 ## v0.7.0
 
 This version of Meteor contains a patch for a bug in Node 0.10 which
@@ -91,6 +152,8 @@ apply the patch and will instead disable websockets.
 
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
+
+* New 'facts' package publishes internal statistics about Meteor.
 
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8, including new faye-websocket module.

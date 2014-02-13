@@ -1,24 +1,23 @@
 // Retry logic with an exponential backoff.
+//
+// options:
+//  baseTimeout: time for initial reconnect attempt (ms).
+//  exponent: exponential factor to increase timeout each attempt.
+//  maxTimeout: maximum time between retries (ms).
+//  minCount: how many times to reconnect "instantly".
+//  minTimeout: time to wait for the first `minCount` retries (ms).
+//  fuzz: factor to randomize retry times by (to avoid retry storms).
 
 Retry = function (options) {
   var self = this;
   _.extend(self, _.defaults(_.clone(options || {}), {
-    // time for initial reconnect attempt.
-    baseTimeout: 1000,
-    // exponential factor to increase timeout each attempt.
+    baseTimeout: 1000, // 1 second
     exponent: 2.2,
-    // maximum time between reconnects. keep this intentionally
-    // high-ish to ensure a server can recover from a failure caused
-    // by load
+    // The default is high-ish to ensure a server can recover from a
+    // failure caused by load.
     maxTimeout: 5 * 60000, // 5 minutes
-    // time to wait for the first 2 retries.  this helps page reload
-    // speed during dev mode restarts, but doesn't hurt prod too
-    // much (due to CONNECT_TIMEOUT)
     minTimeout: 10,
-    // how many times to try to reconnect 'instantly'
     minCount: 2,
-    // fuzz factor to randomize reconnect times by. avoid reconnect
-    // storms.
     fuzz: 0.5 // +- 25%
   }));
   self.retryTimer = null;

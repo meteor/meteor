@@ -1,5 +1,19 @@
 #!/bin/sh
 
+# This is the Meteor install script!
+# Are you looking at this in your web browser, and would like to install Meteor?
+# Just open up your terminal and type:
+#
+#    curl https://install.meteor.com/ | sh
+#
+# Meteor currently supports:
+#   - Mac: OS X 10.6 and above
+#   - Linux: x86 and x86_64 systems
+
+
+
+# Now, on to the actual installer!
+
 ## NOTE sh NOT bash. This script should be POSIX sh only, since we don't
 ## know what shell the user has. Debian uses 'dash' for 'sh', for
 ## example.

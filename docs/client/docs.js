@@ -47,10 +47,17 @@ Meteor.startup(function () {
   }
 
   var ignore_waypoints = false;
-  $('body').delegate('h1, h2, h3', 'waypoint.reached', function (evt, dir) {
+  var lastTimeout = null;
+  $('h1, h2, h3').waypoint(function (evt, dir) {
     if (!ignore_waypoints) {
       var active = (dir === "up") ? this.prev : this;
-      Session.set("section", active.id);
+      if (active.id) {
+        if (lastTimeout)
+          Meteor.clearTimeout(lastTimeout);
+        lastTimeout = Meteor.setTimeout(function () {
+          Session.set("section", active.id);
+        }, 200);
+      }
     }
   });
 
@@ -306,10 +313,10 @@ var toc = [
       {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
-        {instance: "instance", id: "ejson_type_clone", name: "clone"},
-        {instance: "instance", id: "ejson_type_equals", name: "equals"},
         {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
-        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"}
+        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"},
+        {instance: "instance", id: "ejson_type_clone", name: "clone"},
+        {instance: "instance", id: "ejson_type_equals", name: "equals"}
       ]
     ],
 

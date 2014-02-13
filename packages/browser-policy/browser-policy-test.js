@@ -112,6 +112,30 @@ Tinytest.add("browser-policy - csp", function (test) {
   BrowserPolicy.content.disallowObject();
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'self'; object-src 'none';"));
+
+  // Allow foo.com; it should allow both http://foo.com and
+  // https://foo.com.
+  BrowserPolicy.content.allowImageOrigin("foo.com");
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'self'; object-src 'none'; " +
+                        "img-src 'self' http://foo.com https://foo.com;"));
+  // "Disallow all <object>" followed by "allow foo.com for all" results
+  // in <object> srcs from foo.com.
+  BrowserPolicy.content.allowOriginForAll("foo.com");
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'self' http://foo.com https://foo.com; " +
+                        "object-src http://foo.com https://foo.com; " +
+                        "img-src 'self' http://foo.com https://foo.com;"));
+
+  // Check that trailing slashes are trimmed from origins.
+  BrowserPolicy.content.disallowAll();
+  BrowserPolicy.content.allowFrameOrigin("https://foo.com/");
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; frame-src https://foo.com;"));
+  BrowserPolicy.content.allowObjectOrigin("foo.com//");
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; frame-src https://foo.com; " +
+                        "object-src http://foo.com https://foo.com;"));
 });
 
 Tinytest.add("browser-policy - x-frame-options", function (test) {

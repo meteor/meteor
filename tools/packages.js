@@ -219,7 +219,7 @@ _.extend(Slice.prototype, {
       self[field] = scrubbed;
     });
 
-    var addAsset = function (contents, relPath) {
+    var addAsset = function (contents, relPath, hash) {
       // XXX hack
       if (!self.pkg.name)
         relPath = relPath.replace(/^(private|public)\//, '');
@@ -228,7 +228,8 @@ _.extend(Slice.prototype, {
         type: "asset",
         data: contents,
         path: relPath,
-        servePath: path.join(self.pkg.serveRoot, relPath)
+        servePath: path.join(self.pkg.serveRoot, relPath),
+        hash: hash
       });
     };
 
@@ -238,7 +239,8 @@ _.extend(Slice.prototype, {
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var filename = path.basename(relPath);
       var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
-      var contents = watch.readAndWatchFile(self.watchSet, absPath);
+      var file = watch.readAndWatchFileWithHash(self.watchSet, absPath);
+      var contents = file.contents;
 
       if (contents === null) {
         buildmessage.error("File not found: " + source.relPath);
@@ -252,7 +254,7 @@ _.extend(Slice.prototype, {
         //
         // XXX This is pretty confusing, especially if you've
         // accidentally forgotten a plugin -- revisit?
-        addAsset(contents, relPath);
+        addAsset(contents, relPath, file.hash);
         return;
       }
 
@@ -951,7 +953,7 @@ _.extend(Package.prototype, {
       return;
 
     var Plugin = {
-      // 'extension' is a file extension without the separation dot 
+      // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
       // 'handler' is a function that takes a single argument, a
@@ -1366,6 +1368,9 @@ _.extend(Package.prototype, {
           // used. Can also take literal package objects, if you have
           // anonymous packages you want to use (eg, app packages)
           //
+          // @param where 'client', 'server', or an array of those.
+          // The default is ['client', 'server'].
+          //
           // options can include:
           //
           // - role: defaults to "use", but you could pass something
@@ -1471,7 +1476,8 @@ _.extend(Package.prototype, {
           // Export symbols from this package.
           //
           // @param symbols String (eg "Foo") or array of String
-          // @param where 'client', 'server', or an array of those
+          // @param where 'client', 'server', or an array of those.
+          // The default is ['client', 'server'].
           // @param options 'testOnly', boolean.
           export: function (symbols, where, options) {
             if (role === "test") {

@@ -159,9 +159,9 @@
 // wait until later.
 
 var path = require('path');
+var util = require('util');
 var files = require(path.join(__dirname, 'files.js'));
 var packages = require(path.join(__dirname, 'packages.js'));
-var linker = require(path.join(__dirname, 'linker.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var buildmessage = require('./buildmessage.js');
@@ -228,6 +228,7 @@ var NodeModulesDirectory = function (options) {
 // Allowed options:
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
+// - hash: optional, sha1 hash of the file contents, if known
 // - sourceMap: if 'data' is given, can be given instead of sourcePath. a string
 // - cacheable
 var File = function (options) {
@@ -273,7 +274,7 @@ var File = function (options) {
   self.assets = null;
 
   self._contents = options.data || null; // contents, if known, as a Buffer
-  self._hash = null; // hash, if known, as a hex string
+  self._hash = options.hash || null; // hash, if known, as a hex string
 };
 
 _.extend(File.prototype, {
@@ -448,6 +449,11 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
+    // Preprocess and concatenate CSS files for client targets.
+    if (self instanceof ClientTarget) {
+      self.mergeCss();
+    }
+
     // Minify, if requested
     if (options.minify) {
       var minifiers = unipackage.load({
@@ -455,8 +461,11 @@ _.extend(Target.prototype, {
         packages: ['minifiers']
       }).minifiers;
       self.minifyJs(minifiers);
-      if (self.minifyCss) // XXX a bit of a hack
+
+      // CSS is minified only for client targets.
+      if (self instanceof ClientTarget) {
         self.minifyCss(minifiers);
+      }
     }
 
     if (options.addCacheBusters) {
@@ -593,7 +602,11 @@ _.extend(Target.prototype, {
         if (resource.type !== "asset")
           return;
 
-        var f = new File({data: resource.data, cacheable: false});
+        var f = new File({
+          data: resource.data,
+          cacheable: false,
+          hash: resource.hash
+        });
 
         var relPath = isOs
               ? path.join("assets", resource.servePath)
@@ -656,7 +669,8 @@ _.extend(Target.prototype, {
             }
           }
 
-          if (resource.type === "js" && resource.sourceMap) {
+          // Both CSS and JS files can have source maps
+          if (resource.sourceMap) {
             f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
 
@@ -740,9 +754,11 @@ var ClientTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
-  // CSS files. List of File. They will be loaded at page load in the
-  // order given.
+  // CSS files. List of File. They will be loaded in the order given.
   self.css = [];
+  // Cached CSS AST. If non-null, self.css has one item in it, processed CSS
+  // from merged input files, and this is its parse tree.
+  self._cssAstCache = null;
 
   // List of segments of additional HTML for <head>/<body>.
   self.head = [];
@@ -755,17 +771,88 @@ var ClientTarget = function (options) {
 inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
+  // Lints CSS files and merges them into one file, fixing up source maps and
+  // pulling any @import directives up to the top since the CSS spec does not
+  // allow them to appear in the middle of a file.
+  mergeCss: function () {
+    var self = this;
+    var minifiers = unipackage.load({
+      library: self.library,
+      packages: ['minifiers']
+    }).minifiers;
+    var CssTools = minifiers.CssTools;
+
+    // Filenames passed to AST manipulator mapped to their original files
+    var originals = {};
+
+    var cssAsts = _.map(self.css, function (file) {
+      var filename = file.url.replace(/^\//, '');
+      originals[filename] = file;
+      try {
+        var parseOptions = { source: filename, position: true };
+        var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
+        ast.filename = filename;
+      } catch (e) {
+        buildmessage.error(e.message, { file: filename });
+        return { type: "stylesheet", stylesheet: { rules: [] },
+                 filename: filename };
+      }
+
+      return ast;
+    });
+
+    var warnCb = function (filename, msg) {
+      // XXX make this a buildmessage.warning call rather than a random log
+      console.log("%s: warn: %s", filename, msg);
+    };
+
+    // Other build phases might need this AST later
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
+
+    // Overwrite the CSS files list with the new concatenated file
+    var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
+                                               { sourcemap: true });
+    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
+
+    // Add the contents of the input files to the source map of the new file
+    stringifiedCss.map.sourcesContent =
+      _.map(stringifiedCss.map.sources, function (filename) {
+        return originals[filename].contents('utf8');
+      });
+
+    // If any input files had source maps, apply them.
+    // Ex.: less -> css source map should be composed with css -> css source map
+    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
+      new sourcemap.SourceMapConsumer(stringifiedCss.map));
+
+    _.each(originals, function (file, name) {
+      if (! file.sourceMap)
+        return;
+      newMap.applySourceMap(
+        new sourcemap.SourceMapConsumer(file.sourceMap), name);
+    });
+
+    self.css[0].setSourceMap(JSON.stringify(newMap));
+    self.css[0].setUrlToHash(".css");
+  },
   // Minify the CSS in this target
   minifyCss: function (minifiers) {
     var self = this;
+    var minifiedCss = '';
 
-    var allCss = _.map(self.css, function (file) {
-      return file.contents('utf8');
-    }).join('\n');
+    // If there is an AST already calculated, don't waste time on parsing it
+    // again.
+    if (self._cssAstCache) {
+      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAstCache);
+    } else if (self.css) {
+      var allCss = _.map(self.css, function (file) {
+        return file.contents('utf8');
+      }).join('\n');
 
-    allCss = minifiers.CleanCSSProcess(allCss);
+      minifiedCss = minifiers.CssTools.minifyCss(allCss);
+    }
 
-    self.css = [new File({ data: new Buffer(allCss, 'utf8') })];
+    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
     self.css[0].setUrlToHash(".css");
   },
 
@@ -1473,8 +1560,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency:\n" +
-"Node.js 0.10 (with the 'fibers' package). The current release of Meteor\n" +
-"has been tested with Node 0.10.21. To run the application:\n" +
+"Node.js 0.10.25 or newer, plus the 'fibers' module. To run the application:\n" +
 "\n" +
 "  $ rm -r programs/server/node_modules/fibers\n" +
 "  $ npm install fibers@1.0.1\n" +

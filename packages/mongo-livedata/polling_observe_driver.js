@@ -34,7 +34,7 @@ PollingObserveDriver = function (options) {
   self._taskQueue = new Meteor._SynchronousQueue();
 
   var listenersHandle = listenAll(
-    self._cursorDescription, function (notification, complete) {
+    self._cursorDescription, function (notification) {
       // When someone does a transaction that might affect us, schedule a poll
       // of the database. If that transaction happens inside of a write fence,
       // block the fence until we've polled and notified observers.
@@ -46,7 +46,6 @@ PollingObserveDriver = function (options) {
       // lead to us calling it unnecessarily in 50ms).
       if (self._pollsScheduledButNotStarted === 0)
         self._ensurePollIsScheduled();
-      complete();
     }
   );
   self._stopCallbacks.push(function () { listenersHandle.stop(); });
@@ -129,8 +128,8 @@ _.extend(PollingObserveDriver.prototype, {
     var first = false;
     if (!self._results) {
       first = true;
-      // XXX maybe use _IdMap/OrderedDict instead?
-      self._results = self._ordered ? [] : {};
+      // XXX maybe use OrderedDict instead?
+      self._results = self._ordered ? [] : new LocalCollection._IdMap;
     }
 
     self._testOnlyPollCallback && self._testOnlyPollCallback();
