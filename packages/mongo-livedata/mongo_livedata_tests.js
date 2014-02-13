@@ -852,7 +852,7 @@ if (Meteor.isServer) {
     // But since our buffer becomes empty, it will be refilled partially with
     // updated documents.
     test.length(o.output, 6);
-    expected = [{removed: docId6}, {added: docId4},
+    expected = [{removed: docId6}, {added: docId3},
                 {removed: docId7}, {added: docId1},
                 {removed: docId8}, {added: docId2}];
 
@@ -863,8 +863,21 @@ if (Meteor.isServer) {
                           [expected[0], expected[2], expected[4]]));
     test.equal([o.output[1], o.output[3], o.output[5]],
                [expected[1], expected[3], expected[5]]);
-    // The new arrangment is [3 5 6] 7 17 18] 19
+    o.output.splice(0, 6);
 
+    // The new arrangment is [3 5 6] 7 17 18] 19
+    // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
+    // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
+    // schedule a repoll.
+    debugger
+    rem({ bar: { $lt: 10 } });
+    var expectedRemoves = [{removed: docId3}, {removed: docId1},
+                           {removed: docId2}, {removed: docId4}];
+    var expectedAdds = [{added: docId6}, {added: docId7}, {added: docId8}];
+
+    test.length(o.output, 7);
+    test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]]));
+    test.equal(o.output, expectedRemoves);
 
     o.handle.stop();
     onComplete();
