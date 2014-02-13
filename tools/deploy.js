@@ -644,7 +644,8 @@ var claim = function (site) {
     return 1;
   }
 
-  if (infoResult && infoResult.payload.protection === "password") {
+  if (infoResult.payload &&
+      infoResult.payload.protection === "password") {
     process.stdout.write(
 "To claim this site and transfer it to your account, enter the\n" +
 "site password one last time.\n\n");
