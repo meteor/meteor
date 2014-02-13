@@ -253,6 +253,11 @@ var Session = function (server, version, socket) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
+
+  // XXX HACK: If a sockjs connection, save off the URL. This is
+  // temporary and will go away in the near future.
+  self._socketUrl = socket.url;
+
   // This object is the public interface to the session. In the public
   // API, it is called the `connection` object.  Internally we call it
   // a `connectionHandle` to avoid ambiguity.
@@ -1334,6 +1339,15 @@ _.extend(Server.prototype, {
     if (exception)
       throw exception;
     return result;
+  },
+
+  _urlForSession: function (sessionId) {
+    var self = this;
+    var session = self.sessions[sessionId];
+    if (session)
+      return session._socketUrl;
+    else
+      return null;
   }
 });
 

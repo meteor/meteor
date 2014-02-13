@@ -43,6 +43,9 @@
 
 * `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
 
+* Upgraded dependencies:
+  - source-map from 0.3.30 to 0.3.32  #1782
+
 * Types added with `EJSON.addType` now have default `clone` and `equals`
   implementations.  #1745
 
@@ -51,6 +54,7 @@
 
 * Meteor accounts logins (or anything else using the `localstorage` package) no
   longer persist in IE7.
+
 
 ## v0.7.0.1
 
@@ -88,6 +92,10 @@ apply the patch and will instead disable websockets.
   invocations and publish functions. These can be used to store data
   associated with individual clients between subscriptions and method
   calls. See http://docs.meteor.com/#meteor_onconnection for details. #1611
+
+* Bundler failures cause non-zero exit code in `meteor run`.  #1515
+
+* Fix error when publish function callbacks are called during session shutdown.
 
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
@@ -127,7 +135,7 @@ apply the patch and will instead disable websockets.
 * Use stderr instead of stdout (for easier automation in shell scripts) when
   prompting for passwords and when downloading the dev bundle. #1600
 
-* Bundler failures cause non-zero exit code in `meteor run`.  #1515
+* Ensure more downtime during file watching.  #1506
 
 * Fix `meteor run` with settings files containing non-ASCII characters.  #1497
 

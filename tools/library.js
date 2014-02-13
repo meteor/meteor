@@ -38,7 +38,7 @@ var Library = function (options) {
 
 _.extend(Library.prototype, {
   // Temporarily add a package to the library (or override a package
-  // that actually exists in the library.) `packageName` is the name
+  // that actually exists in the library). `packageName` is the name
   // to use for the package and `packageDir` is the directory that
   // contains its source. For now, it is an error to try to install
   // two overrides for the same packageName.
@@ -259,7 +259,7 @@ _.extend(Library.prototype, {
               pkg.canBeSavedAsUnipackage()) {
             // Save it, for a fast load next time
             try {
-              files.add_to_gitignore(packageDir, '.build*');
+              files.addToGitignore(packageDir, '.build*');
               pkg.saveAsUnipackage(buildDir, { buildOfPath: packageDir });
             } catch (e) {
               // If we can't write to this directory, we don't get to cache our
@@ -322,18 +322,25 @@ _.extend(Library.prototype, {
     });
   },
 
-  // Get all packages available. Returns a map from the package name
-  // to a Package object.
+  // Get all packages available and their metadata. This can fail
+  // since it currently involves building packages.
   //
-  // XXX Hack: If errors occur while generating the list (which could
-  // easily happen, since it currently involves building packages)
-  // print them to the console and exit(1)! Certainly not ideal but is
-  // expedient since, eg, test-packages calls list() before it does
-  // anything else.
+  // On success, returns an object with keys:
+  // - packages: map from the package name to a Package object for all
+  //   available packages
+  //
+  // On failure, returns an object with keys:
+  // - messages: a buildmessage.MessageSet with the errors
+  //
+  // XXX various callers currently rely on the fact that calling
+  // list() forces all of the packages in the library to be built!
+  // They shouldn't do that; they should instead call build()
+  // themselves if they want the packages
+  // built. #ListingPackagesImpliesBuildingThem
   list: function () {
     var self = this;
     var names = [];
-    var ret = {};
+    var packages = {};
 
     var messages = buildmessage.capture(function () {
       names = _.keys(self.overrides);
@@ -349,17 +356,14 @@ _.extend(Library.prototype, {
       _.each(names, function (name) {
         var pkg = self.get(name, false);
         if (pkg)
-          ret[name] = pkg;
+          packages[name] = pkg;
       });
     });
 
-    if (messages.hasMessages()) {
-      process.stdout.write("=> Errors while scanning packages:\n\n");
-      process.stdout.write(messages.formatMessages());
-      process.exit(1);
-    }
-
-    return ret;
+    if (messages.hasMessages())
+      return { messages: messages };
+    else
+      return { packages: packages };
   },
 
   // Rebuild all source packages in our search paths -- even including
@@ -373,7 +377,7 @@ _.extend(Library.prototype, {
   // shadowed. However, for now, it's undefined whether shadowed
   // packages are rebuilt (eg, if you have two packages named 'foo' in
   // your search path, both of them will have their builds deleted but
-  // only the visible one might get rebuilt immediately.)
+  // only the visible one might get rebuilt immediately).
   //
   // Returns a count of packages rebuilt.
   rebuildAll: function () {
@@ -441,7 +445,7 @@ _.extend(exports, {
 
   // returns a pretty list suitable for showing to the user. input is
   // a list of package objects, each of which must have a name (not be
-  // an application package.)
+  // an application package).
   formatList: function (pkgs) {
     var longest = '';
     _.each(pkgs, function (pkg) {
@@ -452,7 +456,7 @@ _.extend(exports, {
     var pad = longest.replace(/./g, ' ');
     // it'd be nice to read the actual terminal width, but I tried
     // several methods and none of them work (COLUMNS isn't set in
-    // node's environment; `tput cols` returns a constant 80.) maybe
+    // node's environment; `tput cols` returns a constant 80). maybe
     // node is doing something weird with ptys.
     var width = 80;
 
