@@ -1280,8 +1280,12 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
 
 {{#api_box_inline selectors}}
 
-In its simplest form, a selector is just a set of keys that must
-match in a document:
+The simplest selectors are just a string or
+[`Meteor.Collection.ObjectID`](#collection_object_id). These selectors match the
+document with that value in its `_id` field.
+
+A slightly more complex form of selector is an object containing a set of keys
+that must match in a document:
 
     // Matches all documents where deleted is false
     {deleted: false}

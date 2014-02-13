@@ -544,7 +544,7 @@ Template.api.find = {
   descr: ["Find the documents in a collection that match the selector."],
   args: [
     {name: "selector",
-     type: "Mongo selector, or String",
+     type: "Mongo selector (Object or String)",
      type_link: "selectors",
      descr: "The query"}
   ],
@@ -579,7 +579,7 @@ Template.api.findone = {
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
     {name: "selector",
-     type: "Mongo selector, or String",
+     type: "Mongo selector (Object or String)",
      type_link: "selectors",
      descr: "The query"}
   ],
