@@ -58,7 +58,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   );
   // We shouldn't be able to deploy to this app without claiming it
   run = sandbox.run('deploy', passwordLegacyApp);
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr('meteor claim');
   run.expectExit(1);
   // If we claim it, we should be able to deploy to it.
