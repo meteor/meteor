@@ -31,7 +31,7 @@ var ddpConnect = function (url) {
 //  - subject: the subject line of the matching email
 //  - bodyPage: HTML (an entire rendered page) containing the body of
 //    the email
-// Throws an exception if not matching email is found before the timeout
+// Throws an exception if no matching email is found before the timeout
 // elapses.
 var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
                              bodyRegExp, timeoutSecs) {
