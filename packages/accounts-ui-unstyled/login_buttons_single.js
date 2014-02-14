@@ -21,7 +21,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
     // `Meteor.loginWithX` method name.
     var loginWithService = Meteor["loginWith" +
                                   (serviceName === 'meteor-developer' ?
-                                   'MeteorDeveloperAccounts' :
+                                   'MeteorDeveloperAccount' :
                                    capitalize(serviceName))];
 
     var options = {}; // use default scope unless specified

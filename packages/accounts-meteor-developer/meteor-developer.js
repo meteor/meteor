@@ -1,7 +1,7 @@
 Accounts.oauth.registerService("meteor-developer");
 
 if (Meteor.isClient) {
-  Meteor.loginWithMeteorDeveloperAccounts = function (options, callback) {
+  Meteor.loginWithMeteorDeveloperAccount = function (options, callback) {
     var credentialRequestCompleteCallback =
           Accounts.oauth.credentialRequestCompleteHandler(callback);
     MeteorDeveloperAccounts.requestCredential(credentialRequestCompleteCallback);
