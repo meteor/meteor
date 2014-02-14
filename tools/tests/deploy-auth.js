@@ -24,11 +24,8 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   });
 
   var sandbox = new Sandbox;
-
-  _.each([sandbox], function (s) {
-    s.createApp('deployapp', 'empty');
-    s.cd('deployapp');
-  });
+  sandbox.createApp('deployapp', 'empty');
+  sandbox.cd('deployapp');
 
   // LEGACY APPS
 
@@ -55,7 +52,10 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(0);
 
   // Deploy a legacy password-protected app
-  var passwordLegacyApp = utils.createAndDeployLegacyApp(sandboxWithWarehouse, 'test');
+  var passwordLegacyApp = utils.createAndDeployLegacyApp(
+    sandboxWithWarehouse,
+    'test'
+  );
   // We shouldn't be able to deploy to this app without claiming it
   run = sandbox.run('deploy', passwordLegacyApp);
   run.waitSecs(5);
@@ -79,11 +79,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // NON-LEGACY APPS
 
   // Deploy an app.
-  var appName = utils.randomAppName();
-  run = sandbox.run('deploy', appName);
-  run.waitSecs(90);
-  run.match('Now serving at ' + appName + '.meteor.com');
-  run.expectExit(0);
+  var appName = utils.createAndDeployApp(sandbox);
 
   // Try to deploy to it from a different account -- should fail.
   utils.logout(sandbox);
