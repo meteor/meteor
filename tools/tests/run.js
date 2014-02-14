@@ -22,6 +22,7 @@ selftest.define("run", function () {
   // Starting a run
   s.createApp("myapp", "empty");
   s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run();
   run.match("myapp");
   run.match("proxy");
@@ -70,7 +71,6 @@ selftest.define("run", function () {
   run.match("restarted");
 
   // Crash just once, then restart successfully
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.write("crash.js",
 "var fs = Npm.require('fs')\n" +
 "var path = Npm.require('path')\n" +
@@ -89,6 +89,8 @@ selftest.define("run", function () {
   s.unlink("crash.js");
   s.write("junk.js", "]");
   run = s.run();
+  run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(5);
   run.match("prevented startup");
   run.match("Unexpected token");
   run.match("file change");
