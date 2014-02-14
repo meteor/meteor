@@ -359,8 +359,7 @@ _.extend(AppRunner.prototype, {
     // The existence of this future makes the fiber break out of its loop.
     self.exitFuture = new Future;
 
-    if (self.runFuture)
-      self.runFuture['return']({ outcome: 'stopped' });
+    self._runFutureReturn({ outcome: 'stopped' });
 
     self.exitFuture.wait();
     self.exitFuture = null;
@@ -438,7 +437,7 @@ _.extend(AppRunner.prototype, {
       return { outcome: 'stopped', bundleResult: bundleResult };
     if (self.runFuture)
       throw new Error("already have future?");
-    self.runFuture = new Future;
+    var runFuture = self.runFuture = new Future;
 
     // Run the program
     var appProcess = new AppProcess({
@@ -448,14 +447,12 @@ _.extend(AppRunner.prototype, {
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,
       onExit: function (code, signal) {
-        if (self.runFuture) {
-          self.runFuture['return']({
-            outcome: 'terminated',
-            code: code,
-            signal: signal,
-            bundleResult: bundleResult
-          });
-        }
+        self._runFutureReturn({
+          outcome: 'terminated',
+          code: code,
+          signal: signal,
+          bundleResult: bundleResult
+        });
       },
       program: self.program,
       onListen: function () {
@@ -478,19 +475,17 @@ _.extend(AppRunner.prototype, {
       watcher = new watch.Watcher({
         watchSet: watchSet,
         onChange: function () {
-          if (self.runFuture) {
-            self.runFuture['return']({
-              outcome: 'changed',
-              bundleResult: bundleResult
-            });
-          }
+          self._runFutureReturn({
+            outcome: 'changed',
+            bundleResult: bundleResult
+          });
         }
       });
     }
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var ret = self.runFuture.wait();
+    var ret = runFuture.wait();
     self.runFuture = null;
 
     self.proxy.setMode("hold");
@@ -499,6 +494,15 @@ _.extend(AppRunner.prototype, {
       watcher.stop();
 
     return ret;
+  },
+
+  _runFutureReturn: function (value) {
+    var self = this;
+    if (!self.runFuture)
+      return;
+    var runFuture = self.runFuture;
+    self.runFuture = null;
+    runFuture['return'](value);
   },
 
   _fiber: function () {
