@@ -112,11 +112,6 @@ var sessionMethodCaller = function (methodName, options) {
   };
 };
 
-var getSessionFilePath = function () {
-  return process.env.SESSION_FILE_PATH ||
-    path.join(process.env.HOME, '.meteorsession');
-};
-
 var readSessionData = function () {
   var sessionPath = config.getSessionFilePath();
   if (! fs.existsSync(sessionPath))
