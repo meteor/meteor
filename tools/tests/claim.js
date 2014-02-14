@@ -1,5 +1,5 @@
 var selftest = require('../selftest.js');
-var utils = require('../test-utils.js');
+var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 var AUTHTIMEOUT = 15;
 
@@ -20,7 +20,7 @@ selftest.define("claim", ['net', 'slow'], function () {
 
   // Can't claim sites while logged out.
   // Nonexistent site.
-  var run = s.run('claim', utils.randomAppName(20));
+  var run = s.run('claim', testUtils.randomAppName(20));
   loggedInError(run);
 
   // Existing site.
@@ -29,29 +29,29 @@ selftest.define("claim", ['net', 'slow'], function () {
 
   // Claim will not work on non-legacy sites.
   // belongs to me.
-  utils.login(s, "test", "testtest");
-  var appName = utils.createAndDeployApp(s);
+  testUtils.login(s, "test", "testtest");
+  var appName = testUtils.createAndDeployApp(s);
   run = s.run('claim', appName);
   waitAndError(run, "That site already belongs to you.");
 
   // belongs to not me.
-  utils.logout(s);
-  utils.login(s, "testtest", "testtest");
+  testUtils.logout(s);
+  testUtils.login(s, "testtest", "testtest");
   run = s.run('claim', appName);
   waitAndError(run, "Sorry, that site belongs to someone else.");
 
   // belongs to not me, but I am authorized.
-  utils.logout(s);
-  utils.login(s, "test", "testtest");
+  testUtils.logout(s);
+  testUtils.login(s, "test", "testtest");
   run = s.run('authorized', appName, '--add', 'testtest');
   run.waitSecs(5);
   run.expectExit(0);
-  utils.logout(s);
-  utils.login(s, "testtest", "testtest");
+  testUtils.logout(s);
+  testUtils.login(s, "testtest", "testtest");
   run = s.run('claim', appName);
   waitAndError(run, "That site already belongs to you.");
 
-  utils.cleanUpApp(s, appName);
+  testUtils.cleanUpApp(s, appName);
 
   // Legacy sites.
   var sLegacy = new Sandbox({
@@ -63,8 +63,8 @@ selftest.define("claim", ['net', 'slow'], function () {
   });
 
   // legacy w/pwd.
-  var pwd = utils.randomString(10);
-  var legacyApp = utils.createAndDeployLegacyApp(sLegacy, pwd);
+  var pwd = testUtils.randomString(10);
+  var legacyApp = testUtils.createAndDeployLegacyApp(sLegacy, pwd);
 
   run = s.run('claim', legacyApp);
   run.waitSecs(15);
@@ -82,10 +82,10 @@ selftest.define("claim", ['net', 'slow'], function () {
   run.match("successfully transferred to your account");
   run.expectExit(0);
 
-  utils.cleanUpApp(s, legacyApp);
+  testUtils.cleanUpApp(s, legacyApp);
 
   // legacy w/o pwd.
-  legacyApp = utils.createAndDeployLegacyApp(sLegacy);
+  legacyApp = testUtils.createAndDeployLegacyApp(sLegacy);
 
   run = s.run('claim', legacyApp);
   run.waitSecs(15);
@@ -93,8 +93,8 @@ selftest.define("claim", ['net', 'slow'], function () {
   run.expectExit(0);
 
   // No site deployed.
-  run = s.run('claim', utils.randomAppName(20));
+  run = s.run('claim', testUtils.randomAppName(20));
   waitAndError(run, "There isn't a site deployed at that address.");
 
-  utils.cleanUpApp(s, legacyApp);
+  testUtils.cleanUpApp(s, legacyApp);
 });

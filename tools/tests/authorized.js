@@ -1,5 +1,5 @@
 var selftest = require('../selftest.js');
-var utils = require('../test-utils.js');
+var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 
 var AUTHTIMEOUT = 5;
@@ -14,9 +14,9 @@ selftest.define("authorized", ['net', 'slow'], function () {
   var s = new Sandbox;
 
   // Deploy an app authorized to test.
-  utils.login(s, "test", "testtest");
-  var appName = utils.createAndDeployApp(s);
-  utils.logout(s);
+  testUtils.login(s, "test", "testtest");
+  var appName = testUtils.createAndDeployApp(s);
+  testUtils.logout(s);
 
   // You are not authorized if you are not logged in.
   var run = s.run("authorized", appName);
@@ -40,7 +40,7 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.expectExit(1);
 
   // Now let us log in, but as the wrong user.
-  utils.login(s, "testtest", "testtest");
+  testUtils.login(s, "testtest", "testtest");
 
   run = s.run("authorized", appName, "--remove", "bob");
   run.waitSecs(AUTHTIMEOUT);
@@ -58,8 +58,8 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.expectExit(1);
 
   // Yay, now let's log in as the right user.
-  utils.logout(s);
-  utils.login(s, "test", "testtest");
+  testUtils.logout(s);
+  testUtils.login(s, "test", "testtest");
 
   run = s.run("authorized", appName, "--list");
   run.waitSecs(AUTHTIMEOUT);
@@ -72,7 +72,7 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.expectExit(1);
 
   // Adding a user
-  var newUser = utils.randomString(10);
+  var newUser = testUtils.randomString(10);
   run = s.run("authorized", appName, "--add", newUser);
   run.waitSecs(AUTHTIMEOUT);
   run.matchErr("Couldn't change authorized users: Unknown user");
@@ -114,5 +114,5 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.matchErr("Couldn't change authorized users: testtest: not an authorized user");
   run.expectExit(1);
 
-  utils.cleanUpApp(s, appName);
+  testUtils.cleanUpApp(s, appName);
 });
