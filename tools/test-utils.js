@@ -16,7 +16,7 @@ var randomAppName = function () {
 exports.randomAppName = randomAppName;
 
 exports.randomUserEmail = function () {
-  return 'selftest-user-' + randomString(15) + '@mailinator.com';
+  return 'selftest-user-' + randomString(15) + '@guerrillamail.com';
 };
 
 // Creates an app and deploys it with an old release. 'password' is
