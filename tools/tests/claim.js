@@ -15,7 +15,7 @@ var waitAndError = selftest.markStack(function(run, errmsg) {
   run.expectExit(1);
 });
 
-selftest.define("claim", ['net'], function () {
+selftest.define("claim", ['net', 'slow'], function () {
   var s = new Sandbox;
 
   // Can't claim sites while logged out.
