@@ -55,6 +55,8 @@
 * Meteor accounts logins (or anything else using the `localstorage` package) no
   longer persist in IE7.
 
+* Don't lose permissions (eg, executable bit) on npm files.  #1808
+
 
 ## v0.7.0.1
 
