@@ -129,7 +129,8 @@ selftest.define('deferred registration', ['net'], function () {
   token = token[1];
 
   // XXX It might make more sense to hard-code the DDP url to
-  // https://www.meteor.com.
+  // https://www.meteor.com, since that's who the sandboxes are talking
+  // to.
   var accountsConn = ddpConnect(config.getAuthDDPUrl());
   var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
                                                 token);
