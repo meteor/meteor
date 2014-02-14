@@ -116,6 +116,11 @@ _.extend(RunLog.prototype, {
   // Write a message to the terminal that will get overwritten by the
   // next message logged. (Don't put it in the log that getLog
   // returns.)
+  // XXX Maybe this should return an object that you have to pass to the
+  //     subsequent log call, and only such a log call will overwrite it (and an
+  //     intervening log call will cause this to stay on the screen)?
+  //     eg, a log call from the updater can interweave with the logTemporary
+  //     calls in run-all.js
   logTemporary: function (msg) {
     var self = this;
 

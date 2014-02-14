@@ -4,6 +4,7 @@ var warehouse = require('./warehouse.js');
 var httpHelpers = require('./http-helpers.js');
 var config = require('./config.js');
 var release = require('./release.js');
+var runLog = require('./run-log.js').runLog;
 
 /**
  * Downloads the current manifest file and returns it. Throws
@@ -70,16 +71,16 @@ var check = function (showBanner) {
     if (manifest.releases.stable.banner &&
         warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
       if (showBanner) {
-        console.log();
-        console.log(manifest.releases.stable.banner);
-        console.log();
+        runLog.log();
+        runLog.log(manifest.releases.stable.banner);
+        runLog.log();
       }
       warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
     } else {
       // Already printed this banner, or maybe there is no banner.
       if (showBanner) {
-        console.log("=> Meteor %s is being downloaded in the background.",
-                    manifestLatestRelease);
+        runLog.log("=> Meteor " + manifestLatestRelease +
+                   " is being downloaded in the background.");
       }
     }
     warehouse.fetchLatestRelease();
@@ -88,9 +89,9 @@ var check = function (showBanner) {
     // before we tried to fetch it, print that out.
     var newLatestRelease = warehouse.latestRelease();
     if (showBanner && newLatestRelease !== localLatestRelease) {
-      console.log(
-        "=> Meteor %s is available. Update this project with 'meteor update'.",
-        newLatestRelease);
+      runLog.log(
+        "=> Meteor " + newLatestRelease +
+        " is available. Update this project with 'meteor update'.");
     }
     return;
   }
@@ -102,8 +103,8 @@ var check = function (showBanner) {
   if (showBanner &&
       localLatestRelease !== release.current.name &&
       ! release.forced) {
-    console.log(
-      "=> Meteor %s is available. Update this project with 'meteor update'.",
-      localLatestRelease);
+    runLog.log(
+      "=> Meteor " + localLatestRelease +
+      " %s is available. Update this project with 'meteor update'.");
   }
 };
