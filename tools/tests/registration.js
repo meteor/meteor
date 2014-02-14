@@ -123,7 +123,7 @@ selftest.define('deferred registration', ['net'], function () {
   // registration.
   var token = /\/setPassword\?([a-zA-Z0-9\+\/]+)/.
         exec(registrationEmail.bodyPage);
-  if (! token && ! token[1]) {
+  if (! token || ! token[1]) {
     throw new Error("No registration token in email");
   }
   token = token[1];
