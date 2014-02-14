@@ -13,6 +13,8 @@ var randomAppName = function () {
   return 'selftest-app-' + randomString(10);
 };
 
+exports.randomAppName = randomAppName;
+
 // Deploys an app with an old release from the current
 // directory. Returns the name of the deployed app.
 exports.createAndDeployLegacyApp = function (sandbox, password) {
