@@ -13,6 +13,7 @@ var files = require(path.join(__dirname, 'files.js'));
 var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var utils = require('./utils.js');
+var runLog = require('./run-log.js').runLog;
 var _ = require('underscore');
 
 var meteorNpm = exports;
@@ -344,7 +345,7 @@ meteorNpm._execFileSync = function (file, args, opts) {
   var child_process = require('child_process');
   child_process.execFile(file, args, opts, function (err, stdout, stderr) {
     if (meteorNpm._printNpmCalls)
-      console.log(err ? 'failed' : 'done');
+      process.stdout.write(err ? 'failed\n' : 'done\n');
 
     future.return({
       success: ! err,
@@ -394,7 +395,8 @@ var getInstalledDependenciesTree = function (dir) {
   if (result.success)
     return JSON.parse(result.stdout);
 
-  console.log(result.stderr);
+  // XXX include this in the buildmessage.error instead
+  runLog.log(result.stderr);
   buildmessage.error("couldn't read npm version lock information");
   // Recover by returning false from updateDependencies
   throw new NpmFailure;
@@ -470,7 +472,8 @@ var installNpmModule = function (name, version, dir) {
       buildmessage.error(name + " version " + version + " " +
                          "is not available in the npm registry");
     } else {
-      console.log(result.stderr);
+      // XXX include this in the buildmessage.error instead
+      runLog.log(result.stderr);
       buildmessage.error("couldn't install npm package");
     }
 
@@ -493,7 +496,8 @@ var installFromShrinkwrap = function (dir) {
                             ["install", "--force"], {cwd: dir});
 
   if (! result.success) {
-    console.log(result.stderr);
+    // XXX include this in the buildmessage.error instead
+    runLog.log(result.stderr);
     buildmessage.error("couldn't install npm packages from npm-shrinkwrap");
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
@@ -525,7 +529,8 @@ var shrinkwrap = function (dir) {
                             ["shrinkwrap"], {cwd: dir});
 
   if (! result.success) {
-    console.log(result.stderr);
+    // XXX include this in the buildmessage.error instead
+    runLog.log(result.stderr);
     buildmessage.error("couldn't run `npm shrinkwrap`");
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
@@ -583,6 +588,6 @@ var minimizeShrinkwrap = function (dir) {
 };
 
 var logUpdateDependencies = function (packageName, npmDependencies) {
-  console.log('%s: updating npm dependencies -- %s...',
-              packageName, _.keys(npmDependencies).join(', '));
+  runLog.log(packageName + ': updating npm dependencies -- ' +
+             _.keys(npmDependencies).join(', ') + '...');
 };
