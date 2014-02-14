@@ -584,6 +584,10 @@ var Run = function (execPath, options) {
     self.fakeMongoPort = require('./utils.js').randomPort();
     self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
   }
+
+  runningTest.onCleanup(function () {
+    self._stopWithoutWaiting();
+  });
 };
 
 _.extend(Run.prototype, {
@@ -797,6 +801,14 @@ _.extend(Run.prototype, {
     }
   }),
 
+  // Like stop, but doesn't wait for it to exit.
+  _stopWithoutWaiting: function () {
+    var self = this;
+    if (self.exitStatus === undefined) {
+      self.proc.kill();
+    }
+  },
+
   // If the fakeMongo option was set, sent a command to the stub
   // mongod. Available commands currently are:
   //
@@ -879,11 +891,26 @@ var Test = function (options) {
   self.fileHash = options.fileHash;
   self.tags = options.tags || {};
   self.f = options.func;
+  self.cleanupHandlers = [];
 };
+
+_.extend(Test.prototype, {
+  onCleanup: function (cleanupHandler) {
+    this.cleanupHandlers.push(cleanupHandler);
+  },
+  cleanup: function () {
+    var self = this;
+    _.each(self.cleanupHandlers, function (cleanupHandler) {
+      cleanupHandler();
+    });
+    self.cleanupHandlers = [];
+  }
+});
 
 var allTests = null;
 var fileBeingLoaded = null;
 var fileBeingLoadedHash = null;
+var runningTest = null;
 var getAllTests = function () {
   if (allTests)
     return allTests;
@@ -1023,6 +1050,7 @@ var runTests = function (options) {
 
     var failure = null;
     try {
+      runningTest = test;
       test.f();
     } catch (e) {
       if (e instanceof TestFailure) {
@@ -1031,6 +1059,9 @@ var runTests = function (options) {
         process.stderr.write("exception\n\n");
         throw e;
       }
+    } finally {
+      runningTest = null;
+      test.cleanup();
     }
 
     if (failure) {
