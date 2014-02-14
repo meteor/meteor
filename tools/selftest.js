@@ -644,7 +644,7 @@ _.extend(Run.prototype, {
       env: env
     });
 
-    self.proc.on('exit', function (code, signal) {
+    self.proc.on('close', function (code, signal) {
       if (self.exitStatus === undefined)
         self._exited({ code: code, signal: signal });
     });
