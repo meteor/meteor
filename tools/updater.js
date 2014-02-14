@@ -82,7 +82,7 @@ var check = function (showBanner) {
                     manifestLatestRelease);
       }
     }
-    warehouse.fetchLatestRelease({showInstalling: showBanner});
+    warehouse.fetchLatestRelease();
     // We should now have fetched the latest release, which *probably* is
     // manifestLatestRelease. As long as it's changed from the one it was
     // before we tried to fetch it, print that out.
