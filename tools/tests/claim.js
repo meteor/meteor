@@ -7,14 +7,13 @@ var loggedInError = function(run) {
   run.waitSecs(AUTHTIMEOUT);
   run.matchErr("You must be logged in to claim sites.");
   run.expectExit(1);
-}
+};
 
 var waitAndError = function(run, errmsg) {
   run.waitSecs(AUTHTIMEOUT);
-  console.log(errmsg);
   run.matchErr(errmsg);
   run.expectExit(1);
-}
+};
 
 selftest.define("claim", ['net'], function () {
   var s = new Sandbox;
@@ -50,7 +49,7 @@ selftest.define("claim", ['net'], function () {
   utils.logout(s);
   utils.login(s, "testtest", "testtest");
   run = s.run('claim', appName);
-  waitAndError(run, "That site already belongs to you");
+  waitAndError(run, "That site already belongs to you.");
 
   utils.cleanUpApp(s, appName);
 
