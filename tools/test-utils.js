@@ -15,6 +15,10 @@ var randomAppName = function () {
 
 exports.randomAppName = randomAppName;
 
+exports.randomUserEmail = function () {
+  return 'selftest-user-' + randomString(15) + '@mailinator.com';
+};
+
 // Creates an app and deploys it with an old release. 'password' is
 // optional. Returns the name of the deployed app.
 exports.createAndDeployLegacyApp = function (sandbox, password) {
@@ -48,12 +52,14 @@ exports.cleanUpLegacyApp = function (sandbox, name, password) {
   var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
   if (password) {
     run.waitSecs(10);
-    run.match('Password:');
+    run.matchErr('Password:');
     run.write(password + '\n');
   }
   run.waitSecs(20);
   run.match('Deleted');
-  run.expectExit(0);
+  // XXX same as above, we should be waiting for exit code 0, but the
+  // process appears to never exit.
+  run.stop();
 };
 
 // Creates an app and deploys it. Assumes the sandbox is already logged

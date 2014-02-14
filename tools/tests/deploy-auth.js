@@ -3,18 +3,11 @@ var selftest = require('../selftest.js');
 var utils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 
-// XXX need to make sure that mother doesn't clean up:
-// 'legacy-password-app-for-selftest'
-// 'legacy-no-password-app-for-selftest'
-// 'app-for-selftest-not-test-owned'
-// 'app-for-selftest-test-owned'
-
 selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // Create two sandboxes: one with a warehouse so that we can run
   // --release, and one without a warehouse so that we run from the
   // checkout or release that we started from.
   // XXX Is having two sandboxes the only way to do this?
-
   var sandboxWithWarehouse = new Sandbox({
     // Include a warehouse arugment so that we can deploy apps with
     // --release arguments.
@@ -46,10 +39,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.matchErr('already belongs to you');
   run.expectExit(1);
   // Clean up
-  run = sandbox.run('deploy', '-D', noPasswordLegacyApp);
-  run.waitSecs(5);
-  run.match('Deleted');
-  run.expectExit(0);
+  utils.cleanUpApp(sandbox, noPasswordLegacyApp);
 
   // Deploy a legacy password-protected app
   var passwordLegacyApp = utils.createAndDeployLegacyApp(
@@ -63,7 +53,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(1);
   // If we claim it, we should be able to deploy to it.
   run = sandbox.run('claim', passwordLegacyApp);
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr('Password:');
   run.write('test\n');
   run.waitSecs(10);
@@ -74,7 +64,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.match('Now serving at ' + passwordLegacyApp + '.meteor.com');
   run.expectExit(0);
   // Clean up
-  run = sandbox.run('deploy', '-D', passwordLegacyApp);
+  utils.cleanUpApp(sandbox, passwordLegacyApp);
 
   // NON-LEGACY APPS
 
@@ -93,26 +83,25 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   utils.login(sandbox, 'test', 'testtest');
 
   // Delete our deployed app.
-  run = sandbox.run('deploy', '-D', appName);
-  run.waitSecs(20);
-  run.match('Deleted');
-  run.expectExit(0);
+  utils.cleanUpApp(sandbox, appName);
 });
 
 
 selftest.define('deploy - logged out', ['net', 'slow'], function () {
   var s = new Sandbox;
+  var sandboxWithWarehouse = new Sandbox({
+    warehouse: { v1: { tools: 'tool1', latest: true } }
+  });
 
-  s.createApp('deployapp', 'empty');
-  s.cd('deployapp');
+  utils.login(s, 'test', 'testtest');
+  var appName = utils.createAndDeployApp(s);
+  utils.logout(s);
 
   // Deploy when logged out. We should be prompted to log in and then
   // the deploy should succeed.
-  var appName = utils.randomString(10);
   var run = s.run('deploy', appName);
   run.waitSecs(5);
   run.matchErr('Email:');
-  // XXX We should be able to log in with username here too?
   run.write('test@test.com\n');
   run.waitSecs(5);
   run.matchErr('Password:');
@@ -120,47 +109,72 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.waitSecs(90);
   run.match('Now serving at ' + appName + '.meteor.com');
   run.expectExit(0);
-  // Clean up our deployed app
-  run = s.run('deploy', '-D', appName);
-  run.waitSecs(20);
-  run.match('Deleted');
-  run.expectExit(0);
+  utils.cleanUpApp(s, appName);
 
   utils.logout(s);
 
-  // Deploying to legacy-no-password-app-for-selftest should prompt us
-  // to login, and then just work.
-  run = s.run('deploy', 'legacy-no-password-app-for-selftest');
-  run.waitSecs(5);
+  // Any deploy command for a legacy app that isn't password-protected
+  // should prompt us to log in, and then should work.
+  var legacyNoPassword = utils.createAndDeployLegacyApp(
+    sandboxWithWarehouse
+  );
+  run = s.run('deploy', legacyNoPassword);
+  run.waitSecs(15);
   run.matchErr('Email:');
   run.write('test@test.com\n');
-  run.matchErr('Password:');
-  // Don't actually log in and deploy, because that will claim the app for us.
-  // XXX Deploy a test legacy app with --release, and then deploy to that one.
-  run.stop();
+  run.waitSecs(15);
+  run.matchErr('Password: ');
+  run.write('testtest\n');
+  run.waitSecs(90);
+  run.match('Now serving');
+  run.expectExit(0);
 
-  // Deploying to legacy-password-app-for-selftest should prompt us to
-  // login, and then tell us about 'meteor claim'.
-  run = s.run('deploy', 'legacy-password-app-for-selftest');
+  // Deploying to a legacy app that is password-protected should prompt
+  // us to log in, and then tell us about 'meteor claim'.
+  utils.logout(s);
+  var legacyPassword = utils.createAndDeployLegacyApp(
+    sandboxWithWarehouse,
+    'test'
+  );
+  run = s.run('deploy', legacyPassword);
   run.waitSecs(5);
   run.matchErr('Email:');
   // Log in with a username here to test that the email prompt also
   // accepts emails. (We put an email in the email prompt above.)
   run.write('test\n');
+  run.waitSecs(5);
   run.matchErr('Password:');
   run.write('testtest\n');
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr('meteor claim');
   run.expectExit(1);
 
+  utils.cleanUpLegacyApp(sandboxWithWarehouse, legacyPassword, 'test');
   utils.logout(s);
 
-  // Deploying a new app using a user that exists but has no password
+  // Deploying to a new app using a user that exists but has no password
   // set should prompt us to set a password.
+  // First, create a user without a password.
+  appName = utils.randomAppName();
+  var email = utils.randomUserEmail();
   run = s.run('deploy', appName);
   run.waitSecs(5);
   run.matchErr('Email:');
-  run.write('user.forselftest.without.password@meteor.com\n');
+  run.write(email + '\n');
+  run.waitSecs(90);
+  run.match('Now serving');
+  run.waitSecs(5);
+  run.expectExit(0);
+  // Now that we've created an account with this email address, we
+  // should be logged in as it and should be able to delete it.
+  utils.cleanUpApp(s, appName);
+  utils.logout(s);
+  // Now that we've created a user, try to deploy a new app.
+  appName = utils.randomAppName();
+  run = s.run('deploy', appName);
+  run.waitSecs(5);
+  run.matchErr('Email:');
+  run.write(email + '\n');
   run.waitSecs(5);
   run.matchErr('already in use');
   run.matchErr('pick a password');

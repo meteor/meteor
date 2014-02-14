@@ -2,6 +2,13 @@ var _ = require('underscore');
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 
+// XXX need to make sure that mother doesn't clean up:
+// 'legacy-password-app-for-selftest'
+// 'legacy-no-password-app-for-selftest'
+// 'app-for-selftest-not-test-owned'
+// 'app-for-selftest-test-owned'
+
+
 // Run 'meteor logs' or 'meteor mongo' against an app. Options:
 //  - legacy: boolean
 //  - passwordProtected: if legacy is true, then true if the app has a
