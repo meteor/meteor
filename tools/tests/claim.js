@@ -1,7 +1,7 @@
 var selftest = require('../selftest.js');
 var utils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
-var AUTHTIMEOUT = 5;
+var AUTHTIMEOUT = 15;
 
 var loggedInError = selftest.markStack(function(run) {
   run.waitSecs(AUTHTIMEOUT);
@@ -67,17 +67,18 @@ selftest.define("claim", ['net'], function () {
   var legacyApp = utils.createAndDeployLegacyApp(sLegacy, pwd);
 
   run = s.run('claim', legacyApp);
-  run.waitSecs(5);
-  run.matchErr('Password:');
+  run.waitSecs(15);
+  run.matchErr('Password: ');
   run.write('badpass\n');
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr("Couldn't claim site:");
   run.expectExit(1);
 
   run = s.run('claim', legacyApp);
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr('Password:');
   run.write(pwd+"\n");
+  run.waitSecs(15);
   run.match("successfully transferred to your account");
   run.expectExit(0);
 
@@ -87,7 +88,7 @@ selftest.define("claim", ['net'], function () {
   legacyApp = utils.createAndDeployLegacyApp(sLegacy);
 
   run = s.run('claim', legacyApp);
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.match("successfully transferred to your account");
   run.expectExit(0);
 
