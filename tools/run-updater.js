@@ -13,20 +13,30 @@ var Updater = function () {
 _.extend(Updater.prototype, {
   start: function () {
     var self = this;
-    var updater = require('./updater.js');
 
     if (self.timer)
       throw new Error("already running?");
 
     // Check twice a day.
     self.timer = setInterval(inFiber(function () {
-      updater.tryToDownloadUpdate(/* silent */ false);
+      self._check();
     }), 12*60*60*1000);
 
     // Also start a check now, but don't block on it.
     new Fiber(function () {
-      updater.tryToDownloadUpdate(/* silent */ false);
+      self._check();
     }).run();
+  },
+
+  _check: function () {
+    var self = this;
+    var updater = require('./updater.js');
+    try {
+      updater.tryToDownloadUpdate({showBanner: true});
+    } catch (e) {
+      // oh well, this was the background. no need to show any errors.
+      return;
+    }
   },
 
   // Returns immediately. However if an update check is currently

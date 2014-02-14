@@ -126,7 +126,7 @@ main.registerCommand({
 }, function (options) {
   if (files.usesWarehouse()) {
     var updater = require('./updater.js');
-    updater.tryToDownloadUpdate(true /* silent */);
+    updater.tryToDownloadUpdate();
   } else {
     // dev bundle is downloaded by the wrapper script. We just need
     // to install NPM dependencies.
@@ -326,7 +326,7 @@ main.registerCommand({
   // #UpdateSpringboard), go get the latest release and switch to it.
   if (! release.forced) {
     try {
-      warehouse.fetchLatestRelease();
+      warehouse.fetchLatestRelease({showInstalling: true});
     } catch (e) {
       if (! (e instanceof files.OfflineError)) {
         console.error("Failed to update Meteor.");
