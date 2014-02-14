@@ -201,6 +201,7 @@ var toc = [
       "Meteor.logout",
       "Meteor.logoutOtherClients",
       "Meteor.loginWithPassword",
+      {name: "Meteor.loginWithMeteorDeveloperAccount", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
       {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
