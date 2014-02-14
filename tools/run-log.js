@@ -2,6 +2,21 @@ var _ = require('underscore');
 var unipackage = require('./unipackage.js');
 var release = require('./release.js');
 
+// runLog is primarily used by the parts of the tool which run apps locally. It
+// writes to standard output (and standard error, if rawLogs is set), and allows
+// special output forms like "write this line, but let the next line overwrite
+// it". It also makes its output available to the proxy, to be displayed to web
+// browsers if the app fails to run.
+//
+// It's not the only mechanism used for gathering messages! buildmessage is a
+// more structured way of gathering messages, but unlike log, it does not print
+// messages immediately.
+//
+// Some other parts of the code (eg commands and warehouse) write directly to
+// process.std{out,err} or to console.log; we should be careful to not do that
+// anywhere that may overlap with use of runLog.
+
+
 var getLoggingPackage = _.once(function () {
   var Log = unipackage.load({
     library: release.current.library,
