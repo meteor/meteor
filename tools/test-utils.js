@@ -15,8 +15,8 @@ var randomAppName = function () {
 
 exports.randomAppName = randomAppName;
 
-// Deploys an app with an old release from the current
-// directory. Returns the name of the deployed app.
+// Creates an app and deploys it with an old release. 'password' is
+// optional. Returns the name of the deployed app.
 exports.createAndDeployLegacyApp = function (sandbox, password) {
   var name = randomAppName();
   sandbox.createApp(name, 'empty');
@@ -56,6 +56,8 @@ exports.cleanUpLegacyApp = function (sandbox, name, password) {
   run.expectExit(0);
 };
 
+// Creates an app and deploys it. Assumes the sandbox is already logged
+// in.
 exports.createAndDeployApp = function (sandbox) {
   var name = randomAppName();
   sandbox.createApp(name, 'empty');
