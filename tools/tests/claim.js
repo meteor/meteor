@@ -3,17 +3,17 @@ var utils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 var AUTHTIMEOUT = 5;
 
-var loggedInError = function(run) {
+var loggedInError = selftest.markStack(function(run) {
   run.waitSecs(AUTHTIMEOUT);
   run.matchErr("You must be logged in to claim sites.");
   run.expectExit(1);
-};
+});
 
-var waitAndError = function(run, errmsg) {
+var waitAndError = selftest.markStack(function(run, errmsg) {
   run.waitSecs(AUTHTIMEOUT);
   run.matchErr(errmsg);
   run.expectExit(1);
-};
+});
 
 selftest.define("claim", ['net'], function () {
   var s = new Sandbox;
