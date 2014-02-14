@@ -1,7 +1,8 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
+var runLog = require('./run-log.js').runLog;
 
-// options: listenPort, proxyToPort, onFailure, runLog
+// options: listenPort, proxyToPort, onFailure
 var Proxy = function (options) {
   var self = this;
 
@@ -9,7 +10,6 @@ var Proxy = function (options) {
   // note: run-all.js updates proxyToPort directly
   self.proxyToPort = options.proxyToPort;
   self.onFailure = options.onFailure || function () {};
-  self.runLog = options.runLog;
 
   self.mode = "hold";
   self.httpQueue = []; // keys: req, res
@@ -58,14 +58,14 @@ _.extend(Proxy.prototype, {
     self.server.on('error', function (err) {
       if (err.code == 'EADDRINUSE') {
         var port = self.listenPort;
-        self.runLog.log(
+        runLog.log(
 "Can't listen on port " + port + ". Perhaps another Meteor is running?\n" +
 "\n" +
 "Running two copies of Meteor in the same application directory\n" +
 "will not work. If something else is using port " + port + ", you can\n" +
 "specify an alternative port with --port <port>.");
       } else {
-        self.runLog.log('' + err);
+        runLog.log('' + err);
       }
       self.onFailure();
       // Allow start() to return.
@@ -160,7 +160,7 @@ _.extend(Proxy.prototype, {
         c.res.writeHead(200, {'Content-Type': 'text/plain'});
         c.res.write("Your app is crashing. Here's the latest log.\n\n");
 
-        _.each(self.runLog.getLog(), function (item) {
+        _.each(runLog.getLog(), function (item) {
           c.res.write(item.message + "\n");
         });
 

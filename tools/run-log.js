@@ -15,11 +15,10 @@ var getLoggingPackage = _.once(function () {
   return Log;
 });
 
-// options: rawLogs
-var RunLog = function (options) {
+var RunLog = function () {
   var self = this;
 
-  self.rawLogs = options.rawLogs;
+  self.rawLogs = false;
 
   self.messages = []; // list of log objects
   self.maxLength = 100;
@@ -58,6 +57,10 @@ _.extend(RunLog.prototype, {
       process.stdout.write(spaces + '\r');
       self.temporaryMessageLength = null;
     }
+  },
+
+  setRawLogs: function (rawLogs) {
+    this.rawLogs = !!rawLogs;
   },
 
   logAppOutput: function (line, isStderr) {
@@ -150,4 +153,5 @@ _.extend(RunLog.prototype, {
   }
 });
 
-exports.RunLog = RunLog;
+// Export a singleton instance of RunLog.
+exports.runLog = new RunLog;

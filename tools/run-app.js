@@ -10,6 +10,7 @@ var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var runLog = require('./run-log.js').runLog;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -42,7 +43,7 @@ var getNodeOptionsFromEnvironment = function () {
 // process if it is running. You will get an onExit callback if this
 // resulted in the process dying. stop() is idempotent.
 //
-// Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl, runLog
+// Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl
 // Optional options: onExit, onListen, program, nodeOptions, settings
 
 var AppProcess = function (options) {
@@ -53,7 +54,6 @@ var AppProcess = function (options) {
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
-  self.runLog = options.runLog;
 
   self.onExit = options.onExit;
   self.onListen = options.onListen;
@@ -78,7 +78,7 @@ _.extend(AppProcess.prototype, {
     self.proc = self._spawn();
 
     if (self.proc === null) {
-      self.runLog.log("Program '" + self.program + "' not found.");
+      runLog.log("Program '" + self.program + "' not found.");
 
       self._maybeCallOnExit();
       return;
@@ -92,12 +92,12 @@ _.extend(AppProcess.prototype, {
         // receive connections.
         self.onListen && self.onListen();
       } else {
-        self.runLog.logAppOutput(line);
+        runLog.logAppOutput(line);
       }
     });
 
     eachline(self.proc.stderr, 'utf8', function (line) {
-      self.runLog.logAppOutput(line, true);
+      runLog.logAppOutput(line, true);
     });
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
@@ -107,7 +107,7 @@ _.extend(AppProcess.prototype, {
     });
 
     self.proc.on('error', function (err) {
-      self.runLog.log("=> Couldn't spawn process: " + err.message);
+      runLog.log("=> Couldn't spawn process: " + err.message);
 
       // node docs say that it might make both an 'error' and a
       // 'close' callback, so we use a guard to make sure we only call
@@ -264,7 +264,7 @@ _.extend(AppProcess.prototype, {
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
-//   proxy, runLog
+//   proxy
 //
 // To use, construct an instance of AppRunner, and then call start()
 // to start it running. Call stop() at any time to shut it down and
@@ -315,7 +315,6 @@ var AppRunner = function (appDir, options) {
   self.settingsFile = options.settingsFile;
   self.program = options.program;
   self.proxy = options.proxy;
-  self.runLog = options.runLog;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
@@ -372,7 +371,7 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (onListen) {
     var self = this;
 
-    self.runLog.clearLog();
+    runLog.clearLog();
     self.proxy.setMode("hold");
 
     // Check to make sure we're running the right version of Meteor.
@@ -448,7 +447,6 @@ _.extend(AppRunner.prototype, {
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,
-      runLog: self.runLog,
       onExit: function (code, signal) {
         if (self.runFuture) {
           self.runFuture['return']({
@@ -518,7 +516,7 @@ _.extend(AppRunner.prototype, {
       var runResult = self._runOnce(function () {
         /* onListen */
         if (! self.noRestartBanner && ! firstRun)
-          self.runLog.logRestart();
+          runLog.logRestart();
       });
       firstRun = false;
 
@@ -533,17 +531,17 @@ _.extend(AppRunner.prototype, {
       if (runResult.outcome === "wrong-release") {
         // Note that this code is currently dead, since the only onRunEnd
         // implementation always stops on wrong-release.
-        self.runLog.log("=> Incompatible Meteor release.");
+        runLog.log("=> Incompatible Meteor release.");
         if (self.watchForChanges)
-          self.runLog.log("=> Waiting for file change.");
+          runLog.log("=> Waiting for file change.");
       }
 
       else if (runResult.outcome === "bundle-fail") {
-        self.runLog.log("=> Errors prevented startup:\n\n" +
+        runLog.log("=> Errors prevented startup:\n\n" +
                         runResult.bundleResult.errors.formatMessages());
         if (self.watchForChanges)
-          self.runLog.log("=> Your application has errors. " +
-                          "Waiting for file change.");
+          runLog.log("=> Your application has errors. " +
+                     "Waiting for file change.");
       }
 
       else if (runResult.outcome === "changed")
@@ -551,9 +549,9 @@ _.extend(AppRunner.prototype, {
 
       else if (runResult.outcome === "terminated") {
         if (runResult.signal) {
-          self.runLog.log('=> Exited from signal: ' + runResult.signal);
+          runLog.log('=> Exited from signal: ' + runResult.signal);
         } else if (runResult.code !== undefined) {
-          self.runLog.log('=> Exited with code: ' + runResult.code);
+          runLog.log('=> Exited with code: ' + runResult.code);
         } else {
           // explanation should already have been logged
         }
@@ -563,8 +561,8 @@ _.extend(AppRunner.prototype, {
           continue;
 
         if (self.watchForChanges)
-          self.runLog.log("=> Your application is crashing. " +
-                          "Waiting for file change.");
+          runLog.log("=> Your application is crashing. " +
+                     "Waiting for file change.");
       }
 
       else {
@@ -579,7 +577,7 @@ _.extend(AppRunner.prototype, {
         });
         self.proxy.setMode("errorpage");
         fut.wait();
-        self.runLog.log("=> Modified -- restarting.");
+        runLog.log("=> Modified -- restarting.");
         continue;
       }
 
