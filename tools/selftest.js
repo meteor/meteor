@@ -1153,6 +1153,7 @@ var runTests = function (options) {
 
 _.extend(exports, {
   runTests: runTests,
+  markStack: markStack,
   define: define,
   Sandbox: Sandbox,
   Run: Run
