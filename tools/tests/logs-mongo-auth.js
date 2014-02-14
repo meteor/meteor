@@ -32,15 +32,15 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
   var run = sandbox.run.apply(sandbox, runArgs);
   run.waitSecs(10);
 
-  var expectSuccess = function () {
+  var expectSuccess = selftest.markStack(function () {
     run.match(matchString);
     run.expectExit(0);
-  };
+  });
 
-  var expectUnauthorized = function () {
+  var expectUnauthorized = selftest.markStack(function () {
     run.matchErr('belongs to a different user');
     run.expectExit(1);
-  };
+  });
 
   if (options.legacy) {
     if (options.passwordProtected) {

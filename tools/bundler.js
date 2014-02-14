@@ -175,6 +175,8 @@ var release = require('./release.js');
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
+var runLog = require('./run-log.js').runLog;
+
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -810,8 +812,10 @@ _.extend(ClientTarget.prototype, {
     });
 
     var warnCb = function (filename, msg) {
-      // XXX make this a buildmessage.warning call rather than a random log
-      console.log("%s: warn: %s", filename, msg);
+      // XXX make this a buildmessage.warning call rather than a random log.
+      //     this API would be like buildmessage.error, but wouldn't cause
+      //     the build to fail.
+      runLog.log(filename + ': warn: ' + msg);
     };
 
     // Other build phases might need this AST later

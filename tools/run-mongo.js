@@ -6,6 +6,7 @@ var utils = require('./utils.js');
 var release = require('./release.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
+var runLog = require('./run-log.js').runLog;
 
 var _ = require('underscore');
 var unipackage = require('./unipackage.js');
@@ -350,12 +351,11 @@ var launchMongo = function (options) {
 // restarts too often, we give up on restarting it, diagnostics are
 // logged, and onFailure is called.
 //
-// options: appDir, port, runLog, onFailure
+// options: appDir, port, onFailure
 var MongoRunner = function (options) {
   var self = this;
   self.appDir = options.appDir;
   self.port = options.port;
-  self.runLog = options.runLog;
   self.onFailure = options.onFailure;
 
   self.handle = null;
@@ -419,7 +419,7 @@ _.extend(MongoRunner.prototype, {
       return;
 
     // Print the last 20 lines of stderr.
-    self.runLog.log(
+    runLog.log(
       stderr.split('\n').slice(-20).join('\n') +
       "Unexpected mongo exit code " + code + ". Restarting.");
 
@@ -463,7 +463,7 @@ _.extend(MongoRunner.prototype, {
 "distribution to the latest version.";
     }
 
-    self.runLog.log(message);
+    runLog.log(message);
     self.onFailure && self.onFailure();
 
     if (self.startupFuture) {

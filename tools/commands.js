@@ -12,6 +12,7 @@ var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
+var runLog = require('./run-log.js').runLog;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -126,7 +127,7 @@ main.registerCommand({
 }, function (options) {
   if (files.usesWarehouse()) {
     var updater = require('./updater.js');
-    updater.tryToDownloadUpdate(true /* silent */);
+    updater.tryToDownloadUpdate();
   } else {
     // dev bundle is downloaded by the wrapper script. We just need
     // to install NPM dependencies.
@@ -175,11 +176,13 @@ main.registerCommand({
 
   auth.tryRevokeOldTokens({timeout: 1000});
 
+  if (options['raw-logs'])
+    runLog.setRawLogs(true);
+
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
     port: options.port,
     appPort: options['app-port'],
-    rawLogs: options['raw-logs'],
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
@@ -326,7 +329,7 @@ main.registerCommand({
   // #UpdateSpringboard), go get the latest release and switch to it.
   if (! release.forced) {
     try {
-      warehouse.fetchLatestRelease();
+      warehouse.fetchLatestRelease({showInstalling: true});
     } catch (e) {
       if (! (e instanceof files.OfflineError)) {
         console.error("Failed to update Meteor.");

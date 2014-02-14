@@ -5,7 +5,7 @@ var files = require('./files.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var release = require('./release.js');
 
-var RunLog = require('./run-log.js').RunLog;
+var runLog = require('./run-log.js').runLog;
 var Proxy = require('./run-proxy.js').Proxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
@@ -13,7 +13,7 @@ var Updater = require('./run-updater.js').Updater;
 
 // options: port, buildOptions, settingsFile, banner, program,
 // onRunEnd, onFailure, watchForChanges, quiet, rootUrl, mongoUrl,
-// oplogUrl, disableOplog, rawLogs, appDirForVersionCheck
+// oplogUrl, disableOplog, appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
@@ -31,14 +31,9 @@ var Runner = function (appDir, options) {
   self.banner = options.banner || files.prettyPath(self.appDir);
   self.rootUrl = options.rootUrl || ('http://localhost:' + listenPort + '/');
 
-  self.runLog = new RunLog({
-    rawLogs: options.rawLogs
-  });
-
   self.proxy = new Proxy({
     listenPort: listenPort,
     proxyToPort: self.appPort,
-    runLog: self.runLog,
     onFailure: options.onFailure
   });
 
@@ -51,7 +46,6 @@ var Runner = function (appDir, options) {
     self.mongoRunner = new MongoRunner({
       appDir: self.appDir,
       port: mongoPort,
-      runLog: self.runLog,
       onFailure: options.onFailure
     });
 
@@ -72,7 +66,6 @@ var Runner = function (appDir, options) {
     settingsFile: options.settingsFile,
     program: options.program,
     proxy: self.proxy,
-    runLog: self.runLog,
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
     noRestartBanner: self.quiet
@@ -87,8 +80,8 @@ _.extend(Runner.prototype, {
 
     // print the banner only once we've successfully bound the port
     if (! self.quiet & ! self.stopped) {
-      self.runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
-      self.runLog.log("=> Started proxy.");
+      runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
+      runLog.log("=> Started proxy.");
     }
 
     if (! self.stopped) {
@@ -115,8 +108,8 @@ _.extend(Runner.prototype, {
       if (! self.quiet) {
         var animationFrame = 0;
         var printUpdate = function () {
-          self.runLog.logTemporary("=> Starting MongoDB... " +
-                                   spinner[animationFrame]);
+          runLog.logTemporary("=> Starting MongoDB... " +
+                              spinner[animationFrame]);
           animationFrame = (animationFrame + 1) % spinner.length;
         };
         printUpdate();
@@ -128,20 +121,20 @@ _.extend(Runner.prototype, {
       if (! self.quiet) {
         clearInterval(mongoProgressTimer);
         if (! self.stopped)
-          self.runLog.log("=> Started MongoDB.");
+          runLog.log("=> Started MongoDB.");
       }
     }
 
     if (! self.stopped) {
       if (! self.quiet)
-        self.runLog.logTemporary("=> Starting your app...");
+        runLog.logTemporary("=> Starting your app...");
       self.appRunner.start();
       if (! self.quiet && ! self.stopped)
-        self.runLog.log("=> Started your app.");
+        runLog.log("=> Started your app.");
     }
 
     if (! self.stopped && ! self.quiet)
-      self.runLog.log("\n=> App running at: " + self.rootUrl);
+      runLog.log("\n=> App running at: " + self.rootUrl);
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
     // now we overwrite the "starting foo..." message with the
@@ -160,7 +153,9 @@ _.extend(Runner.prototype, {
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
     self.appRunner.stop();
-    self.runLog.finish();
+    // XXX does calling this 'finish' still make sense now that runLog is a
+    // singleton?
+    runLog.finish();
   },
 
   // Call this whenever you want to regenerate the app's port (if it is not
@@ -212,7 +207,6 @@ _.extend(Runner.prototype, {
 // - once: see above
 // - banner: replace the application path that is normally printed on
 //   startup with an arbitrary string (eg, 'Tests')
-// - rawLogs: don't colorize/beautify log messages that are printed
 // - rootUrl: tell the app that traffic at this URL will be routed to
 //   it at '/' (used by the app to construct absolute URLs)
 // - disableOplog: don't use oplog tailing

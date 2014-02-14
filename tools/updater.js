@@ -4,6 +4,7 @@ var warehouse = require('./warehouse.js');
 var httpHelpers = require('./http-helpers.js');
 var config = require('./config.js');
 var release = require('./release.js');
+var runLog = require('./run-log.js').runLog;
 
 /**
  * Downloads the current manifest file and returns it. Throws
@@ -30,21 +31,22 @@ exports.getManifest = function () {
  * Check to see if an update is available. If so, download and install
  * it before returning.
  *
- * If 'silent' is true, suppress chatter.
+ * options: showBanner
  */
 var checkInProgress = false;
-exports.tryToDownloadUpdate = function (silent) {
+exports.tryToDownloadUpdate = function (options) {
+  options = options || {};
   // Don't run more than one check simultaneously. It should be
   // harmless but having two downloads happening simultaneously (and
   // two sets of messages being printed) would be confusing.
   if (checkInProgress)
     return;
   checkInProgress = true;
-  check(silent);
+  check(!!options.showBanner);
   checkInProgress = false;
 };
 
-var check = function (silent) {
+var check = function (showBanner) {
   var manifest = null;
   try {
     manifest = exports.getManifest();
@@ -68,33 +70,28 @@ var check = function (silent) {
     // the last release which has had a banner printed.)
     if (manifest.releases.stable.banner &&
         warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
-      if (! silent) {
-        console.log();
-        console.log(manifest.releases.stable.banner);
-        console.log();
+      if (showBanner) {
+        runLog.log();
+        runLog.log(manifest.releases.stable.banner);
+        runLog.log();
       }
       warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
     } else {
       // Already printed this banner, or maybe there is no banner.
-      if (! silent) {
-        console.log("=> Meteor %s is being downloaded in the background.",
-                    manifestLatestRelease);
+      if (showBanner) {
+        runLog.log("=> Meteor " + manifestLatestRelease +
+                   " is being downloaded in the background.");
       }
     }
-    try {
-      warehouse.fetchLatestRelease(true /* background */);
-    } catch (e) {
-      // oh well, this was the background. no need to show any errors.
-      return;
-    }
+    warehouse.fetchLatestRelease();
     // We should now have fetched the latest release, which *probably* is
     // manifestLatestRelease. As long as it's changed from the one it was
     // before we tried to fetch it, print that out.
     var newLatestRelease = warehouse.latestRelease();
-    if (newLatestRelease !== localLatestRelease && ! silent) {
-      console.log(
-        "=> Meteor %s is available. Update this project with 'meteor update'.",
-        newLatestRelease);
+    if (showBanner && newLatestRelease !== localLatestRelease) {
+      runLog.log(
+        "=> Meteor " + newLatestRelease +
+        " is available. Update this project with 'meteor update'.");
     }
     return;
   }
@@ -103,11 +100,11 @@ var check = function (silent) {
   // update this app? Specifically: is our local latest release something
   // other than this app's release, and the user didn't specify a specific
   // release at the command line with --release?
-  if (localLatestRelease !== release.current.name &&
-      ! release.forced &&
-      ! silent) {
-    console.log(
-      "=> Meteor %s is available. Update this project with 'meteor update'.",
-      localLatestRelease);
+  if (showBanner &&
+      localLatestRelease !== release.current.name &&
+      ! release.forced) {
+    runLog.log(
+      "=> Meteor " + localLatestRelease +
+      " %s is available. Update this project with 'meteor update'.");
   }
 };

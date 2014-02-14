@@ -91,7 +91,7 @@ _.extend(warehouse, {
     var manifestPath = path.join(
       warehouse.getWarehouseDir(), 'releases', release + '.release.json');
 
-    return warehouse._populateWarehouseForRelease(release, quiet);
+    return warehouse._populateWarehouseForRelease(release, !quiet);
   },
 
   _latestReleaseSymlinkPath: function () {
@@ -127,7 +127,8 @@ _.extend(warehouse, {
 
   // returns true if we updated the latest symlink
   // XXX make errors prettier
-  fetchLatestRelease: function (background) {
+  fetchLatestRelease: function (options) {
+    options = options || {};
     var manifest = updater.getManifest();
 
     // XXX in the future support release channels other than stable
@@ -136,8 +137,8 @@ _.extend(warehouse, {
     if (! releaseName)
       throw new Error("no stable release found?");
 
-    var latestReleaseManifest =
-          warehouse._populateWarehouseForRelease(releaseName, background);
+    var latestReleaseManifest = warehouse._populateWarehouseForRelease(
+      releaseName, !!options.showInstalling);
 
     // First, make sure the latest tools symlink reflects the latest installed
     // release.
@@ -221,7 +222,7 @@ _.extend(warehouse, {
   // fetches the manifest file for the given release version. also fetches
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
-  _populateWarehouseForRelease: function (releaseVersion, background) {
+  _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
     var future = new Future;
     var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0755);
@@ -271,7 +272,7 @@ _.extend(warehouse, {
     if (releaseAlreadyExists && !newPieces)
       return releaseManifest;
 
-    if (newPieces && !background) {
+    if (newPieces && showInstalling) {
       console.log("Installing Meteor %s:", releaseVersion);
       if (newPieces.tools) {
         console.log(" * 'meteor' build tool (version %s)",
@@ -292,7 +293,7 @@ _.extend(warehouse, {
             warehouse._platform(),
             warehouse.getWarehouseDir());
         } catch (e) {
-          if (!background)
+          if (showInstalling)
             console.error("Failed to load tools for release " + releaseVersion);
           throw e;
         }
@@ -309,7 +310,7 @@ _.extend(warehouse, {
                                                 warehouse._platform(),
                                                 warehouse.getWarehouseDir());
         } catch (e) {
-          if (!background)
+          if (showInstalling)
             console.error("Failed to load packages for release " +
                           releaseVersion);
           throw e;
@@ -337,9 +338,9 @@ _.extend(warehouse, {
     }
 
     // Finally, clear the "fresh" files for all the things we just printed
-    // (whether or not we just downloaded them), unless we were in the
-    // background and printed nothing.
-    if (newPieces && !background) {
+    // (whether or not we just downloaded them). (Don't do this if we didn't
+    // print the installing message!)
+    if (newPieces && showInstalling) {
       if (newPieces.tools) {
         fs.unlinkSync(warehouse.getToolsFreshFile(newPieces.tools.version));
       }

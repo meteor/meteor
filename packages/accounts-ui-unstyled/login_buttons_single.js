@@ -21,7 +21,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
     // `Meteor.loginWithX` method name.
     var loginWithService = Meteor["loginWith" +
                                   (serviceName === 'meteor-developer' ?
-                                   'MeteorDeveloperAccounts' :
+                                   'MeteorDeveloperAccount' :
                                    capitalize(serviceName))];
 
     var options = {}; // use default scope unless specified
@@ -43,7 +43,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {
     // XXX we should allow service packages to set their capitalized name
     return 'GitHub';
   else if (this.name === 'meteor-developer')
-    return 'Meteor developer accounts';
+    return 'a Meteor developer account';
   else
     return capitalize(this.name);
 };

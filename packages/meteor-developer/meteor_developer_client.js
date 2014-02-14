@@ -29,8 +29,8 @@ var requestCredential = function (credentialRequestCompleteCallback) {
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken),
     {
-      width: 430,
-      height: 406
+      width: 470,
+      height: 420
     }
   );
 };
