@@ -33,9 +33,9 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // LEGACY APPS
 
   // Deploy a legacy app with no password
-  var noPasswordLegacyApp = createAndDeployLegacyApp(sandboxWithWarehouse);
+  var noPasswordLegacyApp = utils.createAndDeployLegacyApp(sandboxWithWarehouse);
 
-  login(sandbox, 'test', 'testtest');
+  utils.login(sandbox, 'test', 'testtest');
 
   // Now, with our logged in current release, we should be able to
   // deploy to the legacy app.
@@ -55,7 +55,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(0);
 
   // Deploy a legacy password-protected app
-  var passwordLegacyApp = createAndDeployLegacyApp(sandboxWithWarehouse, 'test');
+  var passwordLegacyApp = utils.createAndDeployLegacyApp(sandboxWithWarehouse, 'test');
   // We shouldn't be able to deploy to this app without claiming it
   run = sandbox.run('deploy', passwordLegacyApp);
   run.waitSecs(5);
@@ -79,22 +79,22 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // NON-LEGACY APPS
 
   // Deploy an app.
-  var appName = randomAppName();
+  var appName = utils.randomAppName();
   run = sandbox.run('deploy', appName);
   run.waitSecs(90);
   run.match('Now serving at ' + appName + '.meteor.com');
   run.expectExit(0);
 
   // Try to deploy to it from a different account -- should fail.
-  logout(sandbox);
-  login(sandbox, 'testtest', 'testtest');
+  utils.logout(sandbox);
+  utils.login(sandbox, 'testtest', 'testtest');
   run = sandbox.run('deploy', appName);
   run.waitSecs(5);
   run.matchErr('belongs to a different user');
   run.expectExit(1);
 
-  logout(sandbox);
-  login(sandbox, 'test', 'testtest');
+  utils.logout(sandbox);
+  utils.login(sandbox, 'test', 'testtest');
 
   // Delete our deployed app.
   run = sandbox.run('deploy', '-D', appName);
@@ -112,7 +112,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
 
   // Deploy when logged out. We should be prompted to log in and then
   // the deploy should succeed.
-  var appName = randomString(10);
+  var appName = utils.randomString(10);
   var run = s.run('deploy', appName);
   run.waitSecs(5);
   run.matchErr('Email:');
@@ -130,7 +130,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.match('Deleted');
   run.expectExit(0);
 
-  logout(s);
+  utils.logout(s);
 
   // Deploying to legacy-no-password-app-for-selftest should prompt us
   // to login, and then just work.
@@ -157,7 +157,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('meteor claim');
   run.expectExit(1);
 
-  logout(s);
+  utils.logout(s);
 
   // Deploying a new app using a user that exists but has no password
   // set should prompt us to set a password.

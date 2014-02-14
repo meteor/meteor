@@ -1,4 +1,4 @@
-randomString = function (charsCount) {
+var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
   var str = '';
   for (var i = 0; i < charsCount; i++) {
@@ -7,13 +7,15 @@ randomString = function (charsCount) {
   return str;
 };
 
-randomAppName = function () {
+exports.randomString = randomString;
+
+var randomAppName = function () {
   return 'selftest-app-' + randomString(10);
 };
 
 // Deploys an app with an old release from the current
 // directory. Returns the name of the deployed app.
-createAndDeployLegacyApp = function (sandbox, password) {
+exports.createAndDeployLegacyApp = function (sandbox, password) {
   var name = randomAppName();
   sandbox.createApp(name, 'empty');
   sandbox.cd(name);
@@ -40,7 +42,7 @@ createAndDeployLegacyApp = function (sandbox, password) {
   return name;
 };
 
-cleanUpLegacyApp = function (sandbox, name, password) {
+exports.cleanUpLegacyApp = function (sandbox, name, password) {
   var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
   if (password) {
     run.waitSecs(10);
@@ -52,7 +54,7 @@ cleanUpLegacyApp = function (sandbox, name, password) {
   run.expectExit(0);
 };
 
-createAndDeployApp = function (sandbox) {
+exports.createAndDeployApp = function (sandbox) {
   var name = randomAppName();
   sandbox.createApp(name, 'empty');
   sandbox.cd(name);
@@ -64,7 +66,7 @@ createAndDeployApp = function (sandbox) {
   return name;
 };
 
-cleanUpApp = function (sandbox, name) {
+exports.cleanUpApp = function (sandbox, name) {
   var run = sandbox.run('deploy', '-D', name);
   run.waitSecs(90);
   run.match('Deleted');
@@ -72,7 +74,7 @@ cleanUpApp = function (sandbox, name) {
   return name;
 };
 
-login = function (s, username, password) {
+exports.login = function (s, username, password) {
   var run = s.run('login');
   run.waitSecs(2);
   run.matchErr('Username:');
@@ -84,7 +86,7 @@ login = function (s, username, password) {
   run.expectExit(0);
 };
 
-logout = function (s) {
+exports.logout = function (s) {
   var run = s.run('logout');
   run.waitSecs(5);
   run.matchErr('Logged out');
