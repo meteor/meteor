@@ -26,11 +26,12 @@ exports.parse = function (err) {
       return;
     var m;
     if (m =
-        frame.match(/^\s*at\s*((new )?[^\s]+)\s*(\[as\s*([^\]]*)\]\s*)?\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
+        frame.match(/^\s*at\s*((new )?.+?)\s*(\[as\s*([^\]]*)\]\s*)?\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
       // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
       // "    at My.Function (/path/to/myfile.js:532:39)"
       // "    at Array.forEach (native)"
       // "    at new My.Class (file.js:1:2)"
+      // "    at [object Object].main.registerCommand.name [as func] (meteor/tools/commands.js:1225:19)"
       // "    at __top_mark__ [as matchErr] (meteor/tools/parse-stack.js:82:14)"
       //
       // In that last example, it is not at all clear to me what the
