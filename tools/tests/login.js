@@ -63,7 +63,7 @@ selftest.define("login", ['net'], function () {
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(1);
+  run.waitSecs(2);
   run.matchErr("Logged out");
   run.expectExit(0);
 
