@@ -4,6 +4,7 @@ var utils = require('../utils.js');
 var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
+var files = require('../files.js');
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
@@ -13,6 +14,90 @@ var SIMPLE_WAREHOUSE = {
   v2: { tools: 'tools1', latest: true },
   v3: { tools: 'tools1' },
 };
+
+selftest.define("run", function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "empty");
+  s.cd("myapp");
+  run = s.run();
+  run.match("myapp");
+  run.match("proxy");
+  run.tellMongo(MONGO_LISTENING);
+  run.match("MongoDB");
+  run.match("your app");
+  run.waitSecs(5);
+  run.match("running at");
+  run.match("localhost");
+
+  // File change
+  s.write("empty.js", "");
+  run.waitSecs(1);
+  run.match("restarted");
+  s.write("empty.js", " ");
+  run.waitSecs(1);
+  run.match("restarted (x2)");
+  // XXX want app to generate output so that we can see restart counter reset
+
+  // Crashes
+  s.write("crash.js", "process.exit(42);");
+  run.match("with code: 42");
+  run.waitSecs(5);
+  run.match("is crashing");
+  s.unlink("crash.js");
+  run.match("Modified");
+  run.match("restarted");
+  s.write("empty.js", "");
+  run.waitSecs(5);
+  run.match("restarted (x2)"); // see that restart counter reset
+  s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
+  run.match("from signal: SIGKILL");
+  run.waitSecs(5);
+  run.match("is crashing");
+
+  // Bundle failure
+  s.unlink("crash.js");
+  s.write("junk.js", "]");
+  run.match("Modified");
+  run.match("prevented startup");
+  run.match("Unexpected token");
+  run.match("file change");
+
+  // Back to working
+  s.unlink("junk.js");
+  run.match("restarted");
+
+  // Crash just once, then restart successfully
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.write("crash.js",
+"var fs = Npm.require('fs')\n" +
+"var path = Npm.require('path')\n" +
+"var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');\n" +
+"try {\n" +
+"  fs.readFileSync(crashmark);\n" +
+"} catch (e) {\n" +
+"  fs.writeFileSync(crashmark);\n" +
+"  process.exit(137);\n" +
+"}\n");
+  run.match("with code: 137");
+  run.match("restarted");
+  run.stop();
+
+  // How about a bundle failure right at startup
+  s.unlink("crash.js");
+  s.write("junk.js", "]");
+  run = s.run();
+  run.match("prevented startup");
+  run.match("Unexpected token");
+  run.match("file change");
+  s.unlink("junk.js");
+  run.match("restarted");
+  run.stop();
+
+// XXX --port, --production, --raw-logs, --settings, --program
+});
 
 selftest.define("run --once", function () {
   var s = new Sandbox({ fakeMongo: true });
