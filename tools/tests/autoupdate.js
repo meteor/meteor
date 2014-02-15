@@ -31,7 +31,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
   // If we are at the latest version of Meteor, we don't get any
   // messages about updating.
-  s.createApp('myapp', 'empty');
+  s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     setManifest(s, "v2", "=> New hotness v2 being downloaded.\n");
     s.write('.meteor/release', 'v2');

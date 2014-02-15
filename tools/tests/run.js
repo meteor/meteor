@@ -20,7 +20,7 @@ selftest.define("run", function () {
   var run;
 
   // Starting a run
-  s.createApp("myapp", "empty");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run();
@@ -177,7 +177,7 @@ selftest.define("run --once", function () {
 
 selftest.define("run errors", function () {
   var s = new Sandbox;
-  s.createApp("myapp", "empty");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   // Prevent mongod from starting up.  (Note that "127.0.0.1" matches the
@@ -228,7 +228,7 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "empty");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   // If the app version changes, we exit with an error message.
@@ -269,7 +269,7 @@ selftest.define("update during run", ["checkout"], function () {
 
   // Nor do we do it if you're running from a checkout
   s = new Sandbox({ fakeMongo: true });
-  s.createApp("myapp", "empty");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   s.write('.meteor/release', 'v1');
@@ -284,4 +284,3 @@ selftest.define("update during run", ["checkout"], function () {
   run.stop();
   run.forbidAll("updated");
 });
-

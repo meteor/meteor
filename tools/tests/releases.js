@@ -107,7 +107,7 @@ selftest.define("checkout", ['checkout'], function () {
 
   // You get a warning banner when the checkout overrides the release
   // that an app is pinned to
-  s.createApp('myapp', 'empty');
+  s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     s.write(".meteor/release", "something");
     run = s.run("list", "--using");
