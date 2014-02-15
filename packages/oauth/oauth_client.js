@@ -62,7 +62,7 @@ var openCenteredPopup = function(url, width, height) {
   return newwindow;
 };
 
-// XXX COMPAT WITH 0.6.6.3
+// XXX COMPAT WITH 0.7.0.1
 // Private interface but probably used by many oauth clients in atmosphere.
 Oauth.initiateLogin = function (credentialToken, url, callback, dimensions) {
   Oauth.showPopup(
