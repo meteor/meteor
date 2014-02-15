@@ -106,7 +106,7 @@ selftest.define('deferred registration', ['net'], function () {
   var username = testUtils.randomString(10);
   var appName = testUtils.randomAppName();
   var run = s.run('deploy', appName);
-  run.waitSecs(5);
+  run.waitSecs(testUtils.accountsCommandTimeoutSecs);
   run.matchErr('Email:');
   run.write(email + '\n');
   run.waitSecs(90);

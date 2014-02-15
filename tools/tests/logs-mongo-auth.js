@@ -1,12 +1,15 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
+var testUtils = require('../test-utils.js');
 
 // XXX need to make sure that mother doesn't clean up:
 // 'legacy-password-app-for-selftest'
 // 'legacy-no-password-app-for-selftest'
 // 'app-for-selftest-not-test-owned'
 // 'app-for-selftest-test-owned'
+
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 
 // Run 'meteor logs' or 'meteor mongo' against an app. Options:
@@ -37,7 +40,7 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
   }
 
   var run = sandbox.run.apply(sandbox, runArgs);
-  run.waitSecs(10);
+  run.waitSecs(commandTimeoutSecs);
 
   var expectSuccess = selftest.markStack(function () {
     run.match(matchString);
@@ -72,7 +75,7 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
       run.write((options.username || 'test') + '\n');
       run.matchErr('Password: ');
       run.write((options.password || 'testtest') + '\n');
-      run.waitSecs(15);
+      run.waitSecs(commandTimeoutSecs);
       if (options.authorized) {
         expectSuccess();
       } else {
@@ -92,12 +95,12 @@ _.each([false, true], function (loggedIn) {
         var s = new Sandbox;
         if (loggedIn) {
           var run = s.run('login');
-          run.waitSecs(2);
+          run.waitSecs(commandTimeoutSecs);
           run.matchErr('Username:');
           run.write('test\n');
           run.matchErr('Password:');
           run.write('testtest\n');
-          run.waitSecs(15);
+          run.waitSecs(commandTimeoutSecs);
           run.matchErr('Logged in as test.');
           run.expectExit(0);
         }
@@ -126,7 +129,7 @@ _.each([false, true], function (loggedIn) {
           // We logged in as a result of running the previous command,
           // so log out again.
           run = s.run('logout');
-          run.waitSecs(15);
+          run.waitSecs(commandTimeoutSecs);
           run.matchErr('Logged out');
           run.expectExit(0);
         }

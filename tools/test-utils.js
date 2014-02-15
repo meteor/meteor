@@ -102,3 +102,5 @@ exports.logout = function (s) {
   run.matchErr('Logged out');
   run.expectExit(0);
 };
+
+exports.accountsCommandTimeoutSecs = 15;

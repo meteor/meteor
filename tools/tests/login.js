@@ -1,5 +1,8 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
+var testUtils = require('../test-utils.js');
+
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 selftest.define("login", ['net'], function () {
   var s = new Sandbox;
@@ -16,7 +19,7 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("testtest\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged in as test.");
   run.expectExit(0);
 
@@ -28,12 +31,12 @@ selftest.define("login", ['net'], function () {
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged out");
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(1);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Not logged in");
   run.expectExit(0);
 
@@ -47,7 +50,7 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("badpassword\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Login failed");
   run.expectExit(1);
 
@@ -58,12 +61,12 @@ selftest.define("login", ['net'], function () {
   run.write("TeSt\n");
   run.matchErr("Password:");
   run.write("testtest\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged in as test.");
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(2);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged out");
   run.expectExit(0);
 
@@ -74,7 +77,7 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("TesTTesT\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Login failed");
   run.expectExit(1);
 });

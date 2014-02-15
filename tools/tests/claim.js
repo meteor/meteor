@@ -1,8 +1,9 @@
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
+var files = require('../files.js');
 
-var commandTimeoutSecs = 15;
+var commandTimeoutSecs = testUtils.commandTimeoutSecs;
 
 var loggedInError = selftest.markStack(function(run) {
   run.waitSecs(commandTimeoutSecs);
@@ -46,6 +47,7 @@ selftest.define("claim", ['net', 'slow'], function () {
   testUtils.login(s, "test", "testtest");
   run = s.run('authorized', appName, '--add', 'testtest');
   run.waitSecs(commandTimeoutSecs);
+  run.match('added');
   run.expectExit(0);
   testUtils.logout(s);
   testUtils.login(s, "testtest", "testtest");
@@ -55,13 +57,18 @@ selftest.define("claim", ['net', 'slow'], function () {
   testUtils.cleanUpApp(s, appName);
 
   // Legacy sites.
-  var sLegacy = new Sandbox({
-    // Include a warehouse argument so that we can deploy apps with
-    // --release arguments.
-    warehouse: {
-      v1: { tools: 'tool1', latest: true }
-    }
-  });
+  var sLegacy;
+  if (files.inCheckout()) {
+    sLegacy = new Sandbox({
+      // Include a warehouse argument so that we can deploy apps with
+      // --release arguments.
+      warehouse: {
+        v1: { tools: 'tool1', latest: true }
+      }
+    });
+  } else {
+    sLegacy = new Sandbox;
+  }
 
   // legacy w/pwd.
   var pwd = testUtils.randomString(10);
