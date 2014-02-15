@@ -18,6 +18,17 @@ if you do use underscore in your application, you should still add the
 package as we will remove the default underscore in the future.
 {{/warning}}
 
+{{#warning}}
+We have slightly modified the way Underscore differentiates between
+objects and arrays in [collection functions](http://underscorejs.org/#each).
+The original Underscore logic is to treat any object with a numeric `length`
+property as an array (which helps it work properly on
+[`NodeList`s](https://developer.mozilla.org/en-US/docs/Web/API/NodeList)).
+In Meteor's version of Underscore, objects with a numeric `length` property
+are treated as objects if they have no prototype (specifically, if
+`x.constructor === Object`.
+{{/warning}}
+
 
 {{/better_markdown}}
 </template>

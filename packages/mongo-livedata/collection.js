@@ -38,10 +38,7 @@ Meteor.Collection = function (name, options) {
     break;
   }
 
-  if (options.transform)
-    self._transform = Deps._makeNonreactive(options.transform);
-  else
-    self._transform = null;
+  self._transform = LocalCollection.wrapTransform(options.transform);
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -278,8 +275,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
       ret[key] = _.map(value, function (v) {
         return Meteor.Collection._rewriteSelector(v);
       });
-    }
-    else {
+    } else {
       ret[key] = value;
     }
   });
@@ -489,6 +485,12 @@ Meteor.Collection.prototype._dropIndex = function (index) {
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
 };
+Meteor.Collection.prototype._dropCollection = function () {
+  var self = this;
+  if (!self._collection.dropCollection)
+    throw new Error("Can only call _dropCollection on server collections");
+  self._collection.dropCollection();
+};
 Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
   var self = this;
   if (!self._collection._createCappedCollection)
@@ -549,10 +551,17 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
-        if (self._transform)
-          options[name].transform = self._transform;
-        if (options.transform)
-          options[name].transform = Deps._makeNonreactive(options.transform);
+
+        // If the transform is specified at all (including as 'null') in this
+        // call, then take that; otherwise, take the transform from the
+        // collection.
+        if (options.transform === undefined) {
+          options[name].transform = self._transform;  // already wrapped
+        } else {
+          options[name].transform = LocalCollection.wrapTransform(
+            options.transform);
+        }
+
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });
@@ -775,7 +784,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
 
   var doc = self._collection.findOne(selector, findOptions);
   if (!doc)  // none satisfied!
-    return;
+    return 0;
 
   var factoriedDoc;
 
@@ -808,7 +817,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
   // avoid races, but since selector is guaranteed to already just be an ID, we
   // don't have to any more.
 
-  self._collection.update.call(
+  return self._collection.update.call(
     self._collection, selector, mutator, options);
 };
 
@@ -838,7 +847,7 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 
   var doc = self._collection.findOne(selector, findOptions);
   if (!doc)
-    return;
+    return 0;
 
   // call user validators.
   // Any deny returns true means denied.
@@ -859,5 +868,5 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   // Mongo to avoid races, but since selector is guaranteed to already just be
   // an ID, we don't have to any more.
 
-  self._collection.remove.call(self._collection, selector);
+  return self._collection.remove.call(self._collection, selector);
 };

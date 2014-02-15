@@ -43,19 +43,48 @@ Autoupdate.newClientAvailable = function () {
 };
 
 
-Meteor.subscribe("meteor_autoupdate_clientVersions", {
-  onError: function (error) {
-    Meteor._debug("autoupdate subscription failed:", error);
-  },
-  onReady: function () {
-    if (Package.reload) {
-      Deps.autorun(function (computation) {
-        if (ClientVersions.findOne({current: true}) &&
-            (! ClientVersions.findOne({_id: autoupdateVersion}))) {
-          computation.stop();
-          Package.reload.Reload._reload();
-        }
-      });
-    }
-  }
+
+var retry = new Retry({
+  // Unlike the stream reconnect use of Retry, which we want to be instant
+  // in normal operation, this is a wacky failure. We don't want to retry
+  // right away, we can start slowly.
+  //
+  // A better way than timeconstants here might be to use the knowledge
+  // of when we reconnect to help trigger these retries. Typically, the
+  // server fixing code will result in a restart and reconnect, but
+  // potentially the subscription could have a transient error.
+  minCount: 0, // don't do any immediate retries
+  baseTimeout: 30*1000 // start with 30s
 });
+var failures = 0;
+
+Autoupdate._retrySubscription = function () {
+  Meteor.subscribe("meteor_autoupdate_clientVersions", {
+    onError: function (error) {
+      Meteor._debug("autoupdate subscription failed:", error);
+      failures++;
+      retry.retryLater(failures, function () {
+        // Just retry making the subscription, don't reload the whole
+        // page. While reloading would catch more cases (for example,
+        // the server went back a version and is now doing old-style hot
+        // code push), it would also be more prone to reload loops,
+        // which look really bad to the user. Just retrying the
+        // subscription over DDP means it is at least possible to fix by
+        // updating the server.
+        Autoupdate._retrySubscription();
+      });
+    },
+    onReady: function () {
+      if (Package.reload) {
+        Deps.autorun(function (computation) {
+          if (ClientVersions.findOne({current: true}) &&
+              (! ClientVersions.findOne({_id: autoupdateVersion}))) {
+            computation.stop();
+            Package.reload.Reload._reload();
+          }
+        });
+      }
+  }
+  });
+};
+Autoupdate._retrySubscription();

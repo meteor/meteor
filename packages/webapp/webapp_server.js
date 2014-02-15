@@ -8,17 +8,29 @@ var url = Npm.require("url");
 var crypto = Npm.require("crypto");
 
 var connect = Npm.require('connect');
-var optimist = Npm.require('optimist');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
+
+var SHORT_SOCKET_TIMEOUT = 5*1000;
+var LONG_SOCKET_TIMEOUT = 120*1000;
 
 WebApp = {};
 WebAppInternals = {};
 
+var bundledJsCssPrefix;
 
-var makeAppNamePathPrefix = function (appName) {
-  return encodeURIComponent(appName).replace(/\./g, '_');
-};
+// The reload safetybelt is some js that will be loaded after everything else in
+// the HTML.  In some multi-server deployments, when you update, you have a
+// chance of hitting an old server for the HTML and the new server for the JS or
+// CSS.  This prevents you from displaying the page in that case, and instead
+// reloads it, presumably all on the new version now.
+var RELOAD_SAFETYBELT = "\n" +
+      "if (typeof Package === 'undefined' || \n" +
+      "    ! Package.webapp || \n" +
+      "    ! Package.webapp.WebApp || \n" +
+      "    ! Package.webapp.WebApp._isCssLoaded()) \n" +
+      "  document.location.reload(); \n";
+
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -95,8 +107,8 @@ var camelCase = function (name) {
   return parts.join('');
 };
 
-var identifyBrowser = function (req) {
-  var userAgent = useragent.lookup(req.headers['user-agent']);
+var identifyBrowser = function (userAgentString) {
+  var userAgent = useragent.lookup(userAgentString);
   return {
     name: camelCase(userAgent.family),
     major: +userAgent.major,
@@ -105,9 +117,12 @@ var identifyBrowser = function (req) {
   };
 };
 
+// XXX Refactor as part of implementing real routing.
+WebAppInternals.identifyBrowser = identifyBrowser;
+
 WebApp.categorizeRequest = function (req) {
   return {
-    browser: identifyBrowser(req),
+    browser: identifyBrowser(req.headers['user-agent']),
     url: url.parse(req.url, true)
   };
 };
@@ -196,6 +211,27 @@ Meteor.startup(function () {
 });
 
 
+
+// When we have a request pending, we want the socket timeout to be long, to
+// give ourselves a while to serve it, and to allow sockjs long polls to
+// complete.  On the other hand, we want to close idle sockets relatively
+// quickly, so that we can shut down relatively promptly but cleanly, without
+// cutting off anyone's response.
+WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
+  // this is really just req.socket.setTimeout(LONG_SOCKET_TIMEOUT);
+  req.setTimeout(LONG_SOCKET_TIMEOUT);
+  // Insert our new finish listener to run BEFORE the existing one which removes
+  // the response from the socket.
+  var finishListeners = res.listeners('finish');
+  // XXX Apparently in Node 0.12 this event is now called 'prefinish'.
+  // https://github.com/joyent/node/commit/7c9b6070
+  res.removeAllListeners('finish');
+  res.on('finish', function () {
+    res.setTimeout(SHORT_SOCKET_TIMEOUT);
+  });
+  _.each(finishListeners, function (l) { res.on('finish', l); });
+};
+
 var runWebAppServer = function () {
   var shuttingDown = false;
   // read the control for the client we'll be serving up
@@ -210,6 +246,20 @@ var runWebAppServer = function () {
 
   // webserver
   var app = connect();
+
+  // Parse the query string into res.query. Used by oauth_server, but it's
+  // generally pretty handy..
+  app.use(connect.query());
+
+  // Auto-compress any json, javascript, or text.
+  app.use(connect.compress());
+
+  // Packages and apps can add handlers to this via
+  // WebApp.connectHandlers.  They are inserted before our default
+  // handler. If a path prefix is in use, they see the actual
+  // requested URL before the path prefix has been stripped off.
+  var packageAndAppHandlers = connect();
+  app.use(packageAndAppHandlers);
 
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
@@ -233,12 +283,6 @@ var runWebAppServer = function () {
       next();
     }
   });
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  app.use(connect.query());
-
-  // Auto-compress any json, javascript, or text.
-  app.use(connect.compress());
 
   var getItemPathname = function (itemUrl) {
     return decodeURIComponent(url.parse(itemUrl).pathname);
@@ -265,6 +309,7 @@ var runWebAppServer = function () {
     }
   });
 
+
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
@@ -281,12 +326,20 @@ var runWebAppServer = function () {
       return;
     }
 
+    var serveStaticJs = function (s) {
+      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.write(s);
+      res.end();
+    };
+
     if (pathname === "/meteor_runtime_config.js" &&
         ! WebAppInternals.inlineScriptsAllowed()) {
-      res.writeHead(200, { 'Content-type': 'application/javascript' });
-      res.write("__meteor_runtime_config__ = " +
-                JSON.stringify(__meteor_runtime_config__) + ";");
-      res.end();
+      serveStaticJs("__meteor_runtime_config__ = " +
+                    JSON.stringify(__meteor_runtime_config__) + ";");
+      return;
+    } else if (pathname === "/meteor_reload_safetybelt.js" &&
+               ! WebAppInternals.inlineScriptsAllowed()) {
+      serveStaticJs(RELOAD_SAFETYBELT);
       return;
     }
 
@@ -346,7 +399,6 @@ var runWebAppServer = function () {
     // in `about:config` (it is on by default in FF 24).
     if (info.sourceMapUrl)
       res.setHeader('X-SourceMap', info.sourceMapUrl);
-
     send(req, path.join(clientDir, info.path))
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
@@ -362,11 +414,6 @@ var runWebAppServer = function () {
       })
       .pipe(res);
   });
-
-  // Packages and apps can add handlers to this via WebApp.connectHandlers.
-  // They are inserted before our default handler.
-  var packageAndAppHandlers = connect();
-  app.use(packageAndAppHandlers);
 
   var suppressConnectErrors = false;
   // connect knows it is an error handler because it has 4 arguments instead of
@@ -399,8 +446,17 @@ var runWebAppServer = function () {
 
     var request = WebApp.categorizeRequest(req);
 
+    if (request.url.query && request.url.query['meteor_css_resource']) {
+      // In this case, we're requesting a CSS resource in the meteor-specific
+      // way, but we don't have it.  Serve a static css file that indicates that
+      // we didn't have it, so we can detect that and refresh.
+      headers['Content-Type'] = 'text/css; charset=utf-8';
+      res.writeHead(200, headers);
+      res.write(".meteor-css-not-found-error { width: 0px;}");
+      res.end();
+      return undefined;
+    }
     res.writeHead(200, headers);
-
     var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
     res.write(requestSpecificHtml);
     res.end();
@@ -417,52 +473,45 @@ var runWebAppServer = function () {
   var httpServer = http.createServer(app);
   var onListeningCallbacks = [];
 
-  var longPollingSockets = {};
+  // After 5 seconds w/o data on a socket, kill it.  On the other hand, if
+  // there's an outstanding request, give it a higher timeout instead (to avoid
+  // killing long-polling requests)
+  httpServer.setTimeout(SHORT_SOCKET_TIMEOUT);
 
-  // After 5 seconds of a socket being open, assume it is a long-polling
-  // connection that we have to keep track of to shut down when we're shutting
-  // down the server overall.
-  httpServer.setTimeout(5000, Meteor.bindEnvironment(function (socket) {
-    if (shuttingDown) {
-      socket.end();
-    } else {
-      socket._meteorLongPollingId = Random.id();
-      longPollingSockets[socket._meteorLongPollingId] = socket;
-      // give the socket another minute to live.
-      var destroy = Meteor.setTimeout(function () {
-        delete longPollingSockets[socket._meteorLongPollingId];
-        socket.removeListener('close', onClose);
-        socket.destroy();
-      }, 60*1000);
-
-      var onClose =  function () {
-        delete longPollingSockets[socket._meteorLongPollingId];
-        Meteor.clearTimeout(destroy);
-      };
-      socket.on('close', onClose);
-    }
-  }, function (err) {
-    console.log(err);
-  }));
+  // Do this here, and then also in livedata/stream_server.js, because
+  // stream_server.js kills all the current request handlers when installing its
+  // own.
+  httpServer.on('request', WebApp._timeoutAdjustmentRequestCallback);
 
 
   // For now, handle SIGHUP here.  Later, this should be in some centralized
   // Meteor shutdown code.
   process.on('SIGHUP', Meteor.bindEnvironment(function () {
     shuttingDown = true;
-    _.each(longPollingSockets, function (socket, id) {
-      socket.end();
-    });
     // tell others with websockets open that we plan to close this.
-    httpServer.emit('closing');
-    httpServer.close( function () {
+    // XXX: Eventually, this should be done with a standard meteor shut-down
+    // logic path.
+    httpServer.emit('meteor-closing');
+
+    httpServer.close(Meteor.bindEnvironment(function () {
+      if (proxy) {
+        try {
+          proxy.call('removeBindingsForJob', process.env.GALAXY_JOB);
+        } catch (e) {
+          Log.error("Error removing bindings: " + e.message);
+          process.exit(1);
+        }
+      }
       process.exit(0);
-    });
+
+    }, "On http server close failed"));
+
     // Ideally we will close before this hits.
     Meteor.setTimeout(function () {
       Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
       process.exit(1);
     }, 5000);
+
   }, function (err) {
     console.log(err);
     process.exit(1);
@@ -501,7 +550,10 @@ var runWebAppServer = function () {
     // main happens post startup hooks, so we don't need a Meteor.startup() to
     // ensure this happens after the galaxy package is loaded.
     var AppConfig = Package["application-configuration"].AppConfig;
-    argv = optimist(argv).boolean('keepalive').argv;
+    // We used to use the optimist npm package to parse argv here, but it's
+    // overkill (and no longer in the dev bundle). Just assume any instance of
+    // '--keepalive' is a use of the option.
+    var expectKeepalives = _.contains(argv, '--keepalive');
 
     var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
     boilerplateHtml = fs.readFileSync(boilerplateHtmlPath, 'utf8');
@@ -513,54 +565,76 @@ var runWebAppServer = function () {
           /##RUNTIME_CONFIG##/,
         "<script type='text/javascript'>__meteor_runtime_config__ = " +
           JSON.stringify(__meteor_runtime_config__) + ";</script>");
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript'>"+RELOAD_SAFETYBELT+"</script>");
     } else {
       boilerplateHtml = boilerplateHtml.replace(
         /##RUNTIME_CONFIG##/,
         "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
       );
+      boilerplateHtml = boilerplateHtml.replace(
+          /##RELOAD_SAFETYBELT##/,
+        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_reload_safetybelt.js'></script>");
+
     }
     boilerplateHtml = boilerplateHtml.replace(
         /##ROOT_URL_PATH_PREFIX##/g,
       __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
+
+    boilerplateHtml = boilerplateHtml.replace(
+        /##BUNDLED_JS_CSS_PREFIX##/g,
+      bundledJsCssPrefix ||
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
-      if (argv.keepalive || true)
-        console.log("LISTENING"); // must match run.js
+      if (expectKeepalives)
+        console.log("LISTENING"); // must match run-app.js
       var proxyBinding;
 
       AppConfig.configurePackage('webapp', function (configuration) {
         if (proxyBinding)
           proxyBinding.stop();
         if (configuration && configuration.proxy) {
-          var proxyServiceName = process.env.ADMIN_APP ? "adminProxy" : "proxy";
-
           // TODO: We got rid of the place where this checks the app's
           // configuration, because this wants to be configured for some things
           // on a per-job basis.  Discuss w/ teammates.
-          proxyBinding = AppConfig.configureService(proxyServiceName, function (proxyService) {
-            if (proxyService.providers.proxy) {
-              var proxyConf;
-              if (process.env.ADMIN_APP) {
-                proxyConf = {
-                  securePort: 44333,
-                  insecurePort: 9414,
-                  bindHost: "localhost",
-                  bindPathPrefix: "/" + makeAppNamePathPrefix(process.env.GALAXY_APP)
-                };
-              } else {
-                proxyConf = configuration.proxy;
+          proxyBinding = AppConfig.configureService(
+            "proxy",
+            "pre0",
+            function (proxyService) {
+              if (proxyService && ! _.isEmpty(proxyService)) {
+                var proxyConf;
+                // XXX Figure out a per-job way to specify bind location
+                // (besides hardcoding the location for ADMIN_APP jobs).
+                if (process.env.ADMIN_APP) {
+                  var bindPathPrefix = "";
+                  if (process.env.GALAXY_APP !== "panel") {
+                    bindPathPrefix = "/" + bindPathPrefix +
+                      encodeURIComponent(
+                        process.env.GALAXY_APP
+                      ).replace(/\./g, '_');
+                  }
+                  proxyConf = {
+                    bindHost: process.env.GALAXY_NAME,
+                    bindPathPrefix: bindPathPrefix,
+                    requiresAuth: true
+                  };
+                } else {
+                  proxyConf = configuration.proxy;
+                }
+                Log("Attempting to bind to proxy at " +
+                    proxyService);
+                WebAppInternals.bindToProxy(_.extend({
+                  proxyEndpoint: proxyService
+                }, proxyConf));
               }
-              Log("Attempting to bind to proxy at " + proxyService.providers.proxy);
-              console.log(proxyConf);
-              WebAppInternals.bindToProxy(_.extend({
-                proxyEndpoint: proxyService.providers.proxy
-              }, proxyConf), proxyServiceName);
             }
-          });
+          );
         }
       });
 
@@ -570,10 +644,10 @@ var runWebAppServer = function () {
 
     }, function (e) {
       console.error("Error listening:", e);
-      console.error(e.stack);
+      console.error(e && e.stack);
     }));
 
-    if (argv.keepalive)
+    if (expectKeepalives)
       initKeepalive();
     return 'DAEMON';
   };
@@ -581,7 +655,7 @@ var runWebAppServer = function () {
 
 
 var proxy;
-WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
+WebAppInternals.bindToProxy = function (proxyConfig) {
   var securePort = proxyConfig.securePort || 4433;
   var insecurePort = proxyConfig.insecurePort || 8080;
   var bindPathPrefix = proxyConfig.bindPathPrefix || "";
@@ -598,6 +672,7 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
     throw new Error("missing $LAST_START");
 
   // XXX rename pid argument to bindTo.
+  // XXX factor out into a 'getPid' function in a 'galaxy' package?
   var pid = {
     job: process.env.GALAXY_JOB,
     lastStarted: +(process.env.LAST_START),
@@ -605,90 +680,262 @@ WebAppInternals.bindToProxy = function (proxyConfig, proxyServiceName) {
   };
   var myHost = os.hostname();
 
-  var ddpBindTo = {
-    ddpUrl: 'ddp://' + proxyConfig.bindHost + ':' + securePort + bindPathPrefix + '/',
-    insecurePort: insecurePort
-  };
+  WebAppInternals.usingDdpProxy = true;
 
   // This is run after packages are loaded (in main) so we can use
   // Follower.connect.
   if (proxy) {
+    // XXX the concept here is that our configuration has changed and
+    // we have connected to an entirely new follower set, which does
+    // not have the state that we set up on the follower set that we
+    // were previously connected to, and so we need to recreate all of
+    // our bindings -- analogous to getting a SIGHUP and rereading
+    // your configuration file. so probably this should actually tear
+    // down the connection and make a whole new one, rather than
+    // hot-reconnecting to a different URL.
     proxy.reconnect({
       url: proxyConfig.proxyEndpoint
     });
   } else {
     proxy = Package["follower-livedata"].Follower.connect(
       proxyConfig.proxyEndpoint, {
-        group: proxyServiceName
+        group: "proxy"
       }
     );
   }
 
   var route = process.env.ROUTE;
-  var host = route.split(":")[0];
-  var port = +route.split(":")[1];
+  var ourHost = route.split(":")[0];
+  var ourPort = +route.split(":")[1];
 
-  var completedBindings = {
-    ddp: false,
-    http: false,
-    https: proxyConfig.securePort !== null ? false : undefined
+  var outstanding = 0;
+  var startedAll = false;
+  var checkComplete = function () {
+    if (startedAll && ! outstanding)
+      Log("Bound to proxy.");
   };
-
-  var bindingDoneCallback = function (binding) {
-    return function (err, resp) {
+  var makeCallback = function () {
+    outstanding++;
+    return function (err) {
       if (err)
         throw err;
-
-      completedBindings[binding] = true;
-      var completedAll = _.every(_.keys(completedBindings), function (binding) {
-        return (completedBindings[binding] ||
-          completedBindings[binding] === undefined);
-      });
-      if (completedAll)
-        Log("Bound to proxy.");
-      return completedAll;
+      outstanding--;
+      checkComplete();
     };
   };
 
-  proxy.call('bindDdp', {
-    pid: pid,
-    bindTo: ddpBindTo,
-    proxyTo: {
-      host: host,
-      port: port,
-      pathPrefix: bindPathPrefix + '/websocket'
-    }
-  }, bindingDoneCallback("ddp"));
-  proxy.call('bindHttp', {
-    pid: pid,
-    bindTo: {
-      host: proxyConfig.bindHost,
-      port: insecurePort,
-      pathPrefix: bindPathPrefix
-    },
-    proxyTo: {
-      host: host,
-      port: port,
-      pathPrefix: bindPathPrefix
-    }
-  }, bindingDoneCallback("http"));
-  if (proxyConfig.securePort !== null) {
-    proxy.call('bindHttp', {
-      pid: pid,
-      bindTo: {
-        host: proxyConfig.bindHost,
-        port: securePort,
-        pathPrefix: bindPathPrefix,
-        ssl: true
-      },
-      proxyTo: {
-        host: host,
-        port: port,
-        pathPrefix: bindPathPrefix
+  // for now, have our (temporary) requiresAuth flag apply to all
+  // routes created by this process.
+  var requiresDdpAuth = !! proxyConfig.requiresAuth;
+  var requiresHttpAuth = (!! proxyConfig.requiresAuth) &&
+        (pid.app !== "panel" && pid.app !== "auth");
+
+  // XXX a current limitation is that we treat securePort and
+  // insecurePort as a global configuration parameter -- we assume
+  // that if the proxy wants us to ask for 8080 to get port 80 traffic
+  // on our default hostname, that's the same port that we would use
+  // to get traffic on some other hostname that our proxy listens
+  // for. Likewise, we assume that if the proxy can receive secure
+  // traffic for our domain, it can assume secure traffic for any
+  // domain! Hopefully this will get cleaned up before too long by
+  // pushing that logic into the proxy service, so we can just ask for
+  // port 80.
+
+  // XXX BUG: if our configuration changes, and bindPathPrefix
+  // changes, it appears that we will not remove the routes derived
+  // from the old bindPathPrefix from the proxy (until the process
+  // exits). It is not actually normal for bindPathPrefix to change,
+  // certainly not without a process restart for other reasons, but
+  // it'd be nice to fix.
+
+  _.each(routes, function (route) {
+    var parsedUrl = url.parse(route.url, /* parseQueryString */ false,
+                              /* slashesDenoteHost aka workRight */ true);
+    if (parsedUrl.protocol || parsedUrl.port || parsedUrl.search)
+      throw new Error("Bad url");
+    parsedUrl.host = null;
+    parsedUrl.path = null;
+    if (! parsedUrl.hostname) {
+      parsedUrl.hostname = proxyConfig.bindHost;
+      if (! parsedUrl.pathname)
+        parsedUrl.pathname = "";
+      if (! parsedUrl.pathname.indexOf("/") !== 0) {
+        // Relative path
+        parsedUrl.pathname = bindPathPrefix + parsedUrl.pathname;
       }
-    }, bindingDoneCallback("https"));
-  }
+    }
+    var version = "";
+
+    var AppConfig = Package["application-configuration"].AppConfig;
+    version = AppConfig.getStarForThisJob() || "";
+
+
+    var parsedDdpUrl = _.clone(parsedUrl);
+    parsedDdpUrl.protocol = "ddp";
+    // Node has a hardcoded list of protocols that get '://' instead
+    // of ':'. ddp needs to be added to that whitelist. Until then, we
+    // can set the undocumented attribute 'slashes' to get the right
+    // behavior. It's not clear whether than is by design or accident.
+    parsedDdpUrl.slashes = true;
+    parsedDdpUrl.port = '' + securePort;
+    var ddpUrl = url.format(parsedDdpUrl);
+
+    var proxyToHost, proxyToPort, proxyToPathPrefix;
+    if (! _.has(route, 'forwardTo')) {
+      proxyToHost = ourHost;
+      proxyToPort = ourPort;
+      proxyToPathPrefix = parsedUrl.pathname;
+    } else {
+      var parsedFwdUrl = url.parse(route.forwardTo, false, true);
+      if (! parsedFwdUrl.hostname || parsedFwdUrl.protocol)
+        throw new Error("Bad forward url");
+      proxyToHost = parsedFwdUrl.hostname;
+      proxyToPort = parseInt(parsedFwdUrl.port || "80");
+      proxyToPathPrefix = parsedFwdUrl.pathname || "";
+    }
+
+    if (route.ddp) {
+      proxy.call('bindDdp', {
+        pid: pid,
+        bindTo: {
+          ddpUrl: ddpUrl,
+          insecurePort: insecurePort
+        },
+        proxyTo: {
+          tags: [version],
+          host: proxyToHost,
+          port: proxyToPort,
+          pathPrefix: proxyToPathPrefix + '/websocket'
+        },
+        requiresAuth: requiresDdpAuth
+      }, makeCallback());
+    }
+
+    if (route.http) {
+      proxy.call('bindHttp', {
+        pid: pid,
+        bindTo: {
+          host: parsedUrl.hostname,
+          port: insecurePort,
+          pathPrefix: parsedUrl.pathname
+        },
+        proxyTo: {
+          tags: [version],
+          host: proxyToHost,
+          port: proxyToPort,
+          pathPrefix: proxyToPathPrefix
+        },
+        requiresAuth: requiresHttpAuth
+      }, makeCallback());
+
+      // Only make the secure binding if we've been told that the
+      // proxy knows how terminate secure connections for us (has an
+      // appropriate cert, can bind the necessary port..)
+      if (proxyConfig.securePort !== null) {
+        proxy.call('bindHttp', {
+          pid: pid,
+          bindTo: {
+            host: parsedUrl.hostname,
+            port: securePort,
+            pathPrefix: parsedUrl.pathname,
+            ssl: true
+          },
+          proxyTo: {
+            tags: [version],
+            host: proxyToHost,
+            port: proxyToPort,
+            pathPrefix: proxyToPathPrefix
+          },
+          requiresAuth: requiresHttpAuth
+        }, makeCallback());
+      }
+    }
+  });
+
+  startedAll = true;
+  checkComplete();
 };
+
+// (Internal, unsupported interface -- subject to change)
+//
+// Listen for HTTP and/or DDP traffic and route it somewhere. Only
+// takes effect when using a proxy service.
+//
+// 'url' is the traffic that we want to route, interpreted relative to
+// the default URL where this app has been told to serve itself. It
+// may not have a scheme or port, but it may have a host and a path,
+// and if no host is provided the path need not be absolute. The
+// following cases are possible:
+//
+//   //somehost.com
+//     All incoming traffic for 'somehost.com'
+//   //somehost.com/foo/bar
+//     All incoming traffic for 'somehost.com', but only when
+//     the first two path components are 'foo' and 'bar'.
+//   /foo/bar
+//     Incoming traffic on our default host, but only when the
+//     first two path components are 'foo' and 'bar'.
+//   foo/bar
+//     Incoming traffic on our default host, but only when the path
+//     starts with our default path prefix, followed by 'foo' and
+//     'bar'.
+//
+// (Yes, these scheme-less URLs that start with '//' are legal URLs.)
+//
+// You can select either DDP traffic, HTTP traffic, or both. Both
+// secure and insecure traffic will be gathered (assuming the proxy
+// service is capable, eg, has appropriate certs and port mappings).
+//
+// With no 'forwardTo' option, the traffic is received by this process
+// for service by the hooks in this 'webapp' package. The original URL
+// is preserved (that is, if you bind "/a", and a user visits "/a/b",
+// the app receives a request with a path of "/a/b", not a path of
+// "/b").
+//
+// With 'forwardTo', the process is instead sent to some other remote
+// host. The URL is adjusted by stripping the path components in 'url'
+// and putting the path components in the 'forwardTo' URL in their
+// place. For example, if you forward "//somehost/a" to
+// "//otherhost/x", and the user types "//somehost/a/b" into their
+// browser, then otherhost will receive a request with a Host header
+// of "somehost" and a path of "/x/b".
+//
+// The routing continues until this process exits. For now, all of the
+// routes must be set up ahead of time, before the initial
+// registration with the proxy. Calling addRoute from the top level of
+// your JS should do the trick.
+//
+// When multiple routes are present that match a given request, the
+// most specific route wins. When routes with equal specificity are
+// present, the proxy service will distribute the traffic between
+// them.
+//
+// options may be:
+// - ddp: if true, the default, include DDP traffic. This includes
+//   both secure and insecure traffic, and both websocket and sockjs
+//   transports.
+// - http: if true, the default, include HTTP/HTTPS traffic.
+// - forwardTo: if provided, should be a URL with a host, optional
+//   path and port, and no scheme (the scheme will be derived from the
+//   traffic type; for now it will always be a http or ws connection,
+//   never https or wss, but we could add a forwardSecure flag to
+//   re-encrypt).
+var routes = [];
+WebAppInternals.addRoute = function (url, options) {
+  options = _.extend({
+    ddp: true,
+    http: true
+  }, options || {});
+
+  if (proxy)
+    // In the future, lift this restriction
+    throw new Error("Too late to add routes");
+
+  routes.push(_.extend({ url: url }, options));
+};
+
+// Receive traffic on our default URL.
+WebAppInternals.addRoute("");
 
 runWebAppServer();
 
@@ -701,4 +948,8 @@ WebAppInternals.inlineScriptsAllowed = function () {
 
 WebAppInternals.setInlineScriptsAllowed = function (value) {
   inlineScriptsAllowed = value;
+};
+
+WebAppInternals.setBundledJsCssPrefix = function (prefix) {
+  bundledJsCssPrefix = prefix;
 };

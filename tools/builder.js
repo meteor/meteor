@@ -13,11 +13,11 @@ var sha1 = function (contents) {
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
-// packages.) It can create a temporary directory in which to build
+// packages). It can create a temporary directory in which to build
 // the bundle, moving the bundle atomically into place when and if the
 // build successfully completes; sanitize and generate unique
 // filenames; and track dependencies (files that should be watched for
-// changes when developing interactively.)
+// changes when developing interactively).
 //
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the
@@ -212,7 +212,7 @@ _.extend(Builder.prototype, {
   // bundle. This will cause write, when in sanitize mode, to never
   // pick this filename (and will prevent files that from being
   // written that would conflict with paths that we are expecting to
-  // be directories.) Calling this twice on the same relPath will
+  // be directories). Calling this twice on the same relPath will
   // given an exception.
   //
   // options:
@@ -345,7 +345,8 @@ _.extend(Builder.prototype, {
         var thisAbsFrom = path.resolve(absFrom, item);
         var thisRelTo = path.join(relTo, item);
 
-        var isDir = fs.statSync(thisAbsFrom).isDirectory();
+        var fileStatus = fs.statSync(thisAbsFrom);
+        var isDir = fileStatus.isDirectory();
         var itemForMatch = item;
         if (isDir)
           itemForMatch += '/';
@@ -362,7 +363,8 @@ _.extend(Builder.prototype, {
         // XXX avoid reading whole file into memory
         var data = fs.readFileSync(thisAbsFrom);
 
-        fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data);
+        fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data,
+                         { mode: fileStatus.mode });
         self.usedAsFile[thisRelTo] = true;
       });
     };
@@ -454,4 +456,3 @@ _.extend(Builder.prototype, {
 Builder.sha1 = sha1;
 
 module.exports = Builder;
-

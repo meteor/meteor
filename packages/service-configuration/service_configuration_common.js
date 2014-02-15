@@ -6,7 +6,10 @@ if (typeof ServiceConfiguration === 'undefined') {
 // Table containing documents with configuration options for each
 // login service
 ServiceConfiguration.configurations = new Meteor.Collection(
-  "meteor_accounts_loginServiceConfiguration", {_preventAutopublish: true});
+  "meteor_accounts_loginServiceConfiguration", {
+    _preventAutopublish: true,
+    connection: Meteor.isClient ? Accounts.connection : Meteor.connection
+  });
 // Leave this collection open in insecure mode. In theory, someone could
 // hijack your oauth connect requests to a different endpoint or appId,
 // but you did ask for 'insecure'. The advantage is that it is much

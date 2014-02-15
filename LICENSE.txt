@@ -2,7 +2,7 @@
 Meteor is licensed under the MIT License
 ========================================
 
-Copyright (C) 2011--2012 Meteor Development Group
+Copyright (C) 2011--2014 Meteor Development Group
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -72,13 +72,6 @@ Copyright (C) 2011 by Yehuda Katz
 
 
 ----------
-clean-css: https://github.com/GoalSmashers/clean-css
-----------
-
-Copyright (c) 2011 GoalSmashers.com
-
-
-----------
 progress: https://github.com/visionmedia/node-progress
 qs: https://github.com/visionmedia/node-querystring
 debug: https://github.com/visionmedia/debug
@@ -91,11 +84,14 @@ pause: https://github.com/visionmedia/node-pause
 range-parser: https://github.com/visionmedia/node-range-parser
 send: https://github.com/visionmedia/send
 methods: https://github.com/visionmedia/node-methods
+css-parse: https://github.com/reworkcss/css-parse
+css-stringify: https://github.com/reworkcss/css-stringify
 ----------
 
 Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
 Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2013 TJ Holowaychuk <tj@vision-media.ca>
 
 
 ----------
@@ -217,6 +213,7 @@ Copyright (c) 2011 Esa-Matti Suuronen esa-matti@suuronen.org
 ----------
 node-gyp: https://github.com/TooTallNate/node-gyp
 keypress: https://github.com/TooTallNate/keypress
+bindings: https://github.com/TooTallNate/node-bindings
 ----------
 
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
@@ -284,10 +281,10 @@ optimist: https://github.com/substack/node-optimist
 mkdirp: https://github.com/substack/node-mkdirp
 wordwrap: https://github.com/substack/node-wordwrap
 archy: https://github.com/substack/node-archy
-shell-quote: https://github.com/substack/node-shell-quote
 deep-equal: https://github.com/substack/node-deep-equal
 editor: https://github.com/substack/node-editor
-minimist: https://github.com/substack/node-minimist
+minimist: https://github.com/substack/minimist
+quotemeta: https://github.com/substack/quotemeta
 ----------
 
 Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
@@ -541,6 +538,14 @@ geojson-utils: https://github.com/maxogden/geojson-js-utils
 
 Copyright (c) 2010 Max Ogden
 
+
+----------
+bcrypt: https://github.com/ncb000gt/node.bcrypt.js
+----------
+
+Copyright (c) 2010 Nicholas Campbell
+
+
 ==============
 Apache License
 ==============
@@ -634,17 +639,23 @@ nlogger: https://github.com/igo/nlogger
 Copyright (c) 2010 by Igor Urmincek
 
 
+----------
+Diff Match and Patch: http://code.google.com/p/google-diff-match-patch/
+----------
+
+Copyright 2006 Google Inc.
+
+
 
 ============
 BSD Licenses
 ============
 
 ----------
-uglify-js: https://github.com/mishoo/UglifyJS
+uglify-js: https://github.com/mishoo/UglifyJS2
 ----------
 
-Copyright 2010 (c) Mihai Bazon <mihai.bazon@gmail.com>
-Based on parse-js (http://marijn.haverbeke.nl/parse-js/).
+Copyright 2012-2013 (c) Mihai Bazon <mihai.bazon@gmail.com>
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -1262,6 +1273,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------
 npm-user-validate: https://github.com/robertkowalski/npm-user-validate
+github-url-from-username-repo: https://github.com/robertkowalski/github-url-from-username-repo
 ----------
 
 Copyright (c) Robert Kowalski
@@ -1737,7 +1749,9 @@ The externally maintained libraries used by libuv are:
 
 ----------
 nodejs: http://nodejs.org/
-readable-stream: https://github.com/isaacs/readable-stream/
+readable-stream: https://github.com/isaacs/readable-stream
+npm: https://github.com/isaacs/npm
+init-package-json: https://github.com/isaacs/init-package-json
 ----------
 
 

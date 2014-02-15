@@ -365,6 +365,10 @@ if (Meteor.isClient) {
         messages.length = 0; // clear messages without creating a new object
       };
 
+      // make sure we're not already logged in. can happen if accounts
+      // tests fail oddly.
+      Meteor.apply("setUserId", [null], {wait: true}, expect(function () {}));
+
       Meteor.subscribe("objectsWithUsers", expect(function() {
         expectMessages(1, 0, ["owned by none"]);
         Meteor.apply("setUserId", ["1"], {wait: true}, afterFirstSetUserId);
@@ -406,6 +410,8 @@ if (Meteor.isClient) {
         test.isFalse(err);
         test.equal(result, "100");
       }));
+      // clean up
+      Meteor.apply("setUserId", [null], {wait: true}, expect(function () {}));
     }
   ]);
 }

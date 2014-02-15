@@ -51,7 +51,7 @@ var META_COLOR = 'blue';
 
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
-                        'program', 'originApp', 'stderr'];
+                        'program', 'originApp', 'satellite', 'stderr'];
 
 var FORMATTED_KEYS = RESTRICTED_KEYS.concat(['app', 'message']);
 
@@ -145,8 +145,8 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
 
     if (_.has(obj, 'message') && !_.isString(obj.message))
       throw new Error("The 'message' field in log objects must be a string");
-
-    obj = _.extend(Log._getCallerDetails(), obj);
+    if (!obj.omitCallerDetails)
+      obj = _.extend(Log._getCallerDetails(), obj);
     obj.time = new Date();
     obj.level = level;
 
@@ -202,6 +202,7 @@ Log.format = function (obj, options) {
   var originApp = obj.originApp;
   var message = obj.message || '';
   var program = obj.program || '';
+  var satellite = obj.satellite;
   var stderr = obj.stderr || '';
 
   _.each(FORMATTED_KEYS, function(key) {
@@ -238,6 +239,9 @@ Log.format = function (obj, options) {
   var sourceInfo = (file && lineNumber) ?
       ['(', (program ? program + ':' : ''), file, ':', lineNumber, ') '].join('')
       : '';
+
+  if (satellite)
+    sourceInfo += ['[', satellite, ']'].join('');
 
   var stderrIndicator = stderr ? '(STDERR) ' : '';
 

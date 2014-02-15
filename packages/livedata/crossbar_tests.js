@@ -6,15 +6,44 @@
 // deep meaning to the matching function, and it could be changed later
 // as long as it preserves that property.
 Tinytest.add('livedata - crossbar', function (test) {
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C"}, {collection: "C"}));
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C", id: "X"}, {collection: "C"}));
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C"}, {collection: "C", id: "X"}));
-  test.isTrue(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C", id: "X"}, {collection: "C"}));
+  var crossbar = new DDPServer._Crossbar;
+  test.isTrue(crossbar._matches({collection: "C"},
+                                {collection: "C"}));
+  test.isTrue(crossbar._matches({collection: "C", id: "X"},
+                                {collection: "C"}));
+  test.isTrue(crossbar._matches({collection: "C"},
+                                {collection: "C", id: "X"}));
+  test.isTrue(crossbar._matches({collection: "C", id: "X"},
+                                {collection: "C"}));
 
-  test.isFalse(DDPServer._InvalidationCrossbar._matches(
-    {collection: "C", id: "X"}, {collection: "C", id: "Y"}));
+  test.isFalse(crossbar._matches({collection: "C", id: "X"},
+                                 {collection: "C", id: "Y"}));
+
+  // Test that stopped listens definitely don't fire.
+  var calledFirst = false;
+  var calledSecond = false;
+  var trigger = {collection: "C"};
+  var secondHandle;
+  crossbar.listen(trigger, function (notification) {
+    // This test assumes that listeners will be called in the order
+    // registered. It's not wrong for the crossbar to do something different,
+    // but the test won't be valid in that case, so make it fail so we notice.
+    calledFirst = true;
+    if (calledSecond) {
+      test.fail({
+        type: "test_assumption_failed",
+        message: "test assumed that listeners would be called in the order registered"
+      });
+    } else {
+      secondHandle.stop();
+    }
+  });
+  secondHandle = crossbar.listen(trigger, function (notification) {
+    // This should not get invoked, because it should be stopped by the other
+    // listener!
+    calledSecond = true;
+  });
+  crossbar.fire(trigger);
+  test.isTrue(calledFirst);
+  test.isFalse(calledSecond);
 });

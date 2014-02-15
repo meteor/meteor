@@ -1,27 +1,46 @@
 {
   "dependencies": {
     "stylus": {
-      "version": "0.37.0",
+      "version": "0.42.2",
       "dependencies": {
-        "cssom": {
-          "version": "0.2.5"
+        "css-parse": {
+          "version": "1.7.0"
         },
         "mkdirp": {
           "version": "0.3.5"
         },
         "debug": {
-          "version": "0.7.2"
+          "version": "0.7.4"
         },
         "sax": {
-          "version": "0.5.4"
+          "version": "0.5.8"
+        },
+        "glob": {
+          "version": "3.2.8",
+          "dependencies": {
+            "minimatch": {
+              "version": "0.2.14",
+              "dependencies": {
+                "lru-cache": {
+                  "version": "2.5.0"
+                },
+                "sigmund": {
+                  "version": "1.0.0"
+                }
+              }
+            },
+            "inherits": {
+              "version": "2.0.1"
+            }
+          }
         }
       }
     },
     "nib": {
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "stylus": {
-          "version": "0.34.1",
+          "version": "0.37.0",
           "dependencies": {
             "cssom": {
               "version": "0.2.5"
@@ -30,7 +49,10 @@
               "version": "0.3.5"
             },
             "debug": {
-              "version": "0.7.2"
+              "version": "0.7.4"
+            },
+            "sax": {
+              "version": "0.5.8"
             }
           }
         }

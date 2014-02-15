@@ -42,7 +42,7 @@ Meteor.methods({
     }
   },
   setUserId: function(userId) {
-    check(userId, String);
+    check(userId, Match.OneOf(String, null));
     this.setUserId(userId);
   }
 });

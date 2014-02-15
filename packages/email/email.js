@@ -33,19 +33,26 @@ var makePool = function (mailUrlString) {
 
 // We construct smtpPool at the first call to Email.send, so that
 // Meteor.startup code can set $MAIL_URL.
-var smtpPool = null;
-var maybeMakePool = function () {
-  // We check MAIL_URL in case someone else set it in Meteor.startup code.
-  var poolFuture = new Future();
-  AppConfig.configurePackage('email', function (config) {
-    // TODO: allow reconfiguration.
-    if (!smtpPool && (config.url || process.env.MAIL_URL)) {
-      smtpPool = makePool(config.url || process.env.MAIL_URL);
-    }
-    poolFuture.return();
-  });
+var smtpPoolFuture = new Future;;
+var configured = false;
 
-  poolFuture.wait();
+var getPool = function () {
+  // We check MAIL_URL in case someone else set it in Meteor.startup code.
+  if (!configured) {
+    configured = true;
+    AppConfig.configurePackage('email', function (config) {
+      // XXX allow reconfiguration when the app config changes
+      if (smtpPoolFuture.isResolved())
+        return;
+      var url = config.url || process.env.MAIL_URL;
+      var pool = null;
+      if (url)
+        pool = makePool(url);
+      smtpPoolFuture.return(pool);
+    });
+  }
+
+  return smtpPoolFuture.wait();
 };
 
 var next_devmode_mail_id = 0;
@@ -71,6 +78,8 @@ var devModeSend = function (mc) {
 
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
+  stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
+               "environment variable.)\n");
   mc.streamMessage();
   mc.pipe(stream, {end: false});
   var future = new Future;
@@ -81,8 +90,8 @@ var devModeSend = function (mc) {
   future.wait();
 };
 
-var smtpSend = function (mc) {
-  smtpPool._future_wrapped_sendMail(mc).wait();
+var smtpSend = function (pool, mc) {
+  pool._future_wrapped_sendMail(mc).wait();
 };
 
 /**
@@ -141,10 +150,9 @@ Email.send = function (options) {
     mc.addHeader(name, value);
   });
 
-  maybeMakePool();
-
-  if (smtpPool) {
-    smtpSend(mc);
+  var pool = getPool();
+  if (pool) {
+    smtpSend(pool, mc);
   } else {
     devModeSend(mc);
   }

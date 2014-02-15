@@ -98,7 +98,9 @@ _.extend(Deps.Computation.prototype, {
 
     var g = function () {
       Deps.nonreactive(function () {
-        f(self);
+        return Meteor._noYieldsAllowed(function () {
+          f(self);
+        });
       });
     };
 
@@ -284,7 +286,9 @@ _.extend(Deps, {
       throw new Error('Deps.autorun requires a function argument');
 
     constructingComputation = true;
-    var c = new Deps.Computation(f, Deps.currentComputation);
+    var c = new Deps.Computation(function (c) {
+      Meteor._noYieldsAllowed(_.bind(f, this, c));
+    }, Deps.currentComputation);
 
     if (Deps.active)
       Deps.onInvalidate(function () {

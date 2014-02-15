@@ -29,6 +29,10 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
         '&state=' + credentialToken;
 
-  Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback,
-                                {width: 900, height: 450});
+
+  Oauth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken),
+    {width: 900, height: 450}
+  );
 };

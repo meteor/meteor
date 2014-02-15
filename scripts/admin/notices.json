@@ -73,6 +73,12 @@
     "release": "0.6.6.3"
   },
   {
+    "release": "0.7.0"
+  },
+  {
+    "release": "0.7.0.1"
+  },
+  {
     "release": "NEXT"
   }
 ]

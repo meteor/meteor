@@ -318,6 +318,14 @@ Template.api.subscription_userId = {
 };
 
 
+Template.api.subscription_connection = {
+  id: "publish_connection",
+  name: "<i>this</i>.connection",
+  locus: "Server",
+  descr: ["Access inside the publish function. The incoming [connection](#meteor_onconnection) for this subscription."]
+};
+
+
 Template.api.subscribe = {
   id: "meteor_subscribe",
   name: "Meteor.subscribe(name [, arg1, arg2, ... ] [, callbacks])",
@@ -379,6 +387,13 @@ Template.api.method_invocation_isSimulation = {
   name: "<i>this</i>.isSimulation",
   locus: "Anywhere",
   descr: ["Access inside a method invocation.  Boolean value, true if this invocation is a stub."]
+};
+
+Template.api.method_invocation_connection = {
+  id: "method_connection",
+  name: "<i>this</i>.connection",
+  locus: "Server",
+  descr: ["Access inside a method invocation. The [connection](#meteor_onconnection) this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call."]
 };
 
 Template.api.error = {
@@ -479,6 +494,18 @@ Template.api.connect = {
   ]
 };
 
+Template.api.onConnection = {
+  id: "meteor_onconnection",
+  name: "Meteor.onConnection(callback)",
+  locus: "Server",
+  descr: ["Register a callback to be called when a new DDP connection is made to the server."],
+  args: [
+    {name: "callback",
+     type: "function",
+     descr: "The function to call when a new DDP connection is established."}
+  ]
+};
+
 // onAutopublish
 
 Template.api.meteor_collection = {
@@ -505,7 +532,7 @@ Template.api.meteor_collection = {
     },
     {name: "transform",
      type: "Function",
-     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
+     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions."
     }
   ]
 };
@@ -517,7 +544,7 @@ Template.api.find = {
   descr: ["Find the documents in a collection that match the selector."],
   args: [
     {name: "selector",
-     type: "Mongo selector, or String",
+     type: "Mongo selector (Object or String)",
      type_link: "selectors",
      descr: "The query"}
   ],
@@ -552,7 +579,7 @@ Template.api.findone = {
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
     {name: "selector",
-     type: "Mongo selector, or String",
+     type: "Mongo selector (Object or String)",
      type_link: "selectors",
      descr: "The query"}
   ],

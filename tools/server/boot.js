@@ -5,8 +5,8 @@ var Future = require(path.join("fibers", "future"));
 var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
-// This code is duplicated in tools/server/server.js.
-var MIN_NODE_VERSION = 'v0.10.21';
+// This code is duplicated in tools/meteor.js.
+var MIN_NODE_VERSION = 'v0.10.25';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -33,7 +33,7 @@ __meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
 // eg, if $NODE_ENV is not production, they send stack traces on error. connect
 // considers 'development' to be the default mode, but that's less safe than
 // assuming 'production' to be the default. If you really want development mode,
-// set it in your wrapper script (eg, run.js).
+// set it in your wrapper script (eg, run-app.js).
 if (!process.env.NODE_ENV)
   process.env.NODE_ENV = 'production';
 

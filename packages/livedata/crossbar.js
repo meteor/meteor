@@ -1,38 +1,42 @@
-DDPServer._InvalidationCrossbar = function () {
-  var self = this;
+// A "crossbar" is a class that provides structured notification registration.
 
-  self.next_id = 1;
+DDPServer._Crossbar = function (options) {
+  var self = this;
+  options = options || {};
+
+  self.nextId = 1;
   // map from listener id to object. each object has keys 'trigger',
   // 'callback'.
   self.listeners = {};
+  self.factPackage = options.factPackage || "livedata";
+  self.factName = options.factName || null;
 };
 
-_.extend(DDPServer._InvalidationCrossbar.prototype, {
+_.extend(DDPServer._Crossbar.prototype, {
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
-  // subset. When a notification matches, call 'callback', passing two
-  // arguments, the actual notification and an acknowledgement
-  // function. The callback should call the acknowledgement function
-  // when it is finished processing the notification.
+  // subset. When a notification matches, call 'callback', passing
+  // the actual notification.
   //
   // Returns a listen handle, which is an object with a method
   // stop(). Call stop() to stop listening.
   //
   // XXX It should be legal to call fire() from inside a listen()
   // callback?
-  //
-  // Note: the LiveResultsSet constructor assumes that a call to listen() never
-  // yields.
   listen: function (trigger, callback) {
     var self = this;
-    var id = self.next_id++;
+    var id = self.nextId++;
     self.listeners[id] = {trigger: EJSON.clone(trigger), callback: callback};
-    Package.facts && Package.facts.Facts.incrementServerFact(
-      "livedata", "crossbar-listeners", 1);
+    if (self.factName && Package.facts) {
+      Package.facts.Facts.incrementServerFact(
+        self.factPackage, self.factName, 1);
+    }
     return {
       stop: function () {
-        Package.facts && Package.facts.Facts.incrementServerFact(
-          "livedata", "crossbar-listeners", -1);
+        if (self.factName && Package.facts) {
+          Package.facts.Facts.incrementServerFact(
+            self.factPackage, self.factName, -1);
+        }
         delete self.listeners[id];
       }
     };
@@ -40,38 +44,29 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
 
   // Fire the provided 'notification' (an object whose attribute
   // values are all JSON-compatibile) -- inform all matching listeners
-  // (registered with listen()), and once they have all acknowledged
-  // the notification, call onComplete with no arguments.
+  // (registered with listen()).
   //
   // If fire() is called inside a write fence, then each of the
   // listener callbacks will be called inside the write fence as well.
   //
   // The listeners may be invoked in parallel, rather than serially.
-  fire: function (notification, onComplete) {
+  fire: function (notification) {
     var self = this;
-    var callbacks = [];
-    _.each(self.listeners, function (l) {
+    // Listener callbacks can yield, so we need to first find all the ones that
+    // match in a single iteration over self.listeners (which can't be mutated
+    // during this iteration), and then invoke the matching callbacks, checking
+    // before each call to ensure they are still in self.listeners.
+    var matchingCallbacks = {};
+    // XXX consider refactoring to "index" on "collection"
+    _.each(self.listeners, function (l, id) {
       if (self._matches(notification, l.trigger))
-        callbacks.push(l.callback);
+        matchingCallbacks[id] = l.callback;
     });
 
-    if (onComplete)
-      onComplete = Meteor.bindEnvironment(onComplete, function (e) {
-        Meteor._debug("Exception in InvalidationCrossbar fire complete " +
-                      "callback", e.stack);
-      });
-
-    var outstanding = callbacks.length;
-    if (!outstanding)
-      onComplete && onComplete();
-    else {
-      _.each(callbacks, function (c) {
-        c(notification, function () {
-          if (--outstanding === 0)
-            onComplete && onComplete();
-        });
-      });
-    }
+    _.each(matchingCallbacks, function (c, id) {
+      if (_.has(self.listeners, id))
+        c(notification);
+    });
   },
 
   // A notification matches a trigger if all keys that exist in both are equal.
@@ -99,5 +94,11 @@ _.extend(DDPServer._InvalidationCrossbar.prototype, {
   }
 });
 
-// singleton
-DDPServer._InvalidationCrossbar = new DDPServer._InvalidationCrossbar;
+// The "invalidation crossbar" is a specific instance used by the DDP server to
+// implement write fence notifications. Listener callbacks on this crossbar
+// should call beginWrite on the current write fence before they return, if they
+// want to delay the write fence from firing (ie, the DDP method-data-updated
+// message from being sent).
+DDPServer._InvalidationCrossbar = new DDPServer._Crossbar({
+  factName: "invalidation-crossbar-listeners"
+});

@@ -107,6 +107,13 @@ _.extend(TestCaseResults.prototype, {
 
   // XXX eliminate 'message' and 'not' arguments
   equal: function (actual, expected, message, not) {
+
+    if ((! not) && (typeof actual === 'string') &&
+        (typeof expected === 'string')) {
+      this._stringEqual(actual, expected, message);
+      return;
+    }
+
     /* If expected is a DOM node, do a literal '===' comparison with
      * actual. Otherwise do a deep comparison, as implemented by _.isEqual.
      */
@@ -132,7 +139,7 @@ _.extend(TestCaseResults.prototype, {
         this.equal(actual[i], expected[i]);
       }
     } else {
-      matched = _.isEqual(expected, actual);
+      matched = EJSON.equals(expected, actual);
     }
 
     if (matched === !!not) {
@@ -162,7 +169,7 @@ _.extend(TestCaseResults.prototype, {
   },
 
   // XXX nodejs assert.throws can take an expected error, as a class,
-  // regular expression, or predicate function.  However, with its 
+  // regular expression, or predicate function.  However, with its
   // implementation if a constructor (class) is passed in and `actual`
   // fails the instanceof test, the constructor is then treated as
   // a predicate and called with `actual` (!)
@@ -269,7 +276,22 @@ _.extend(TestCaseResults.prototype, {
     else
       this.fail({type: "length", expected: expected_length,
                  actual: obj.length});
+  },
+
+  // EXPERIMENTAL way to compare two strings that results in
+  // a nicer display in the test runner, e.g. for multiline
+  // strings
+  _stringEqual: function (actual, expected, message) {
+    if (actual !== expected) {
+      this.fail({type: "string_equal",
+                 message: message,
+                 expected: expected,
+                 actual: actual});
+    } else {
+      this.ok();
+    }
   }
+
 
 });
 
@@ -309,7 +331,16 @@ _.extend(TestCase.prototype, {
       return true;
     };
 
-    var results = new TestCaseResults(self, onEvent,
+    var wrappedOnEvent = function (e) {
+      // If this trace prints, it means you ran some test.* function after the
+      // test finished! Another symptom will be that the test will display as
+      // "waiting" even when it counts as passed or failed.
+      if (completed)
+        console.trace("event after complete!");
+      return onEvent(e);
+    };
+
+    var results = new TestCaseResults(self, wrappedOnEvent,
                                       function (e) {
                                         if (markComplete())
                                           onException(e);

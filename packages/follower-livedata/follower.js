@@ -30,7 +30,6 @@ Follower = {
     }, options);
     // start each elector as untried/assumed connectable.
 
-    // for options.priority, low-priority things are tried first.
     var makeElectorTries = function (urlSet) {
 
       electorTries = {};
@@ -101,11 +100,11 @@ Follower = {
       }
 
       if (conn) {
-        prevReconnect.apply(conn, {
+        prevReconnect.apply(conn, [{
           url: url
-        });
+        }]);
       } else {
-        conn = DDP.connect(url);
+        conn = DDP.connect(url, options);
         prevReconnect = conn.reconnect;
         prevDisconnect = conn.disconnect;
         prevApply = conn.apply;
@@ -197,7 +196,7 @@ Follower = {
       if (!intervalHandle)
         intervalHandle = monitorConnection();
       if (arguments[0] && arguments[0].url) {
-        makeElectorTries(arguments[0].url, {reset: true});
+        makeElectorTries(arguments[0].url);
         tryElector();
       } else {
         prevReconnect.apply(conn, arguments);

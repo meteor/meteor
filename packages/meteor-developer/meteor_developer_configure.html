@@ -1,0 +1,18 @@
+<template name="configureLoginServiceDialogForMeteorDeveloper">
+  <p>
+    First, you'll need to get a Meteor developer account Client ID.
+    Follow these steps:
+  </p>
+  <ol>
+    <li> Visit <a href="https://www.meteor.com/account-settings" target="_blank">https://www.meteor.com/account-settings</a> and sign in.
+    </li>
+    <li> Click "New app" in the "Meteor developer account apps" section
+      and give your app a name.</li>
+    <li> Add
+      <span class="url">
+        {{siteUrl}}_oauth/meteor-developer?close
+      </span>
+      as an Allowed Redirect URL.
+    </li>
+  </ol>
+</template>
