@@ -105,6 +105,6 @@ var check = function (showBanner) {
       ! release.forced) {
     runLog.log(
       "=> Meteor " + localLatestRelease +
-      " %s is available. Update this project with 'meteor update'.");
+      " is available. Update this project with 'meteor update'.");
   }
 };
