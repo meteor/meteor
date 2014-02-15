@@ -276,6 +276,12 @@ _.extend(OplogObserveDriver.prototype, {
         } else {
           // after the change doc doesn't stay in the published, remove it
           self._removePublished(id);
+          // but it can move into buffered now, check it
+          var maxBuffered = self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId());
+          if (self._justUpdatedBuffer || (maxBuffered && comparator(newDoc, maxBuffered) < 0))
+            self._addPublished(id, newDoc);
+          else
+            self._justUpdatedBuffer = false;
         }
       } else if (bufferedBefore) {
         // after the change we can't know if doc is still in the buffer limit
