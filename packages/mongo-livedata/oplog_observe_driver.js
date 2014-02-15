@@ -41,6 +41,7 @@ OplogObserveDriver = function (options) {
     self._unpublishedBuffer = null;
     self._published = new LocalCollection._IdMap;
   }
+  self._justUpdatedBuffer = false;
 
   self._stopped = false;
   self._stopHandles = [];
@@ -182,8 +183,10 @@ _.extend(OplogObserveDriver.prototype, {
   _addBuffered: function (id, doc) {
     var self = this;
     self._unpublishedBuffer.set(id, self._sharedProjectionFn(doc));
-    if (self._unpublishedBuffer.size() > self._limit)
+    if (self._unpublishedBuffer.size() > self._limit) {
       self._unpublishedBuffer.remove(self._unpublishedBuffer.maxElementId());
+      self._justUpdatedBuffer = false;
+    }
   },
   _removeBuffered: function (id) {
     var self = this;
@@ -212,9 +215,12 @@ _.extend(OplogObserveDriver.prototype, {
     // document would fit into published set pushing the maximum element out,
     // then we need to publish the doc.
     // Otherwise we might need to buffer it (only in case of limited query).
+    // Buffering a new document is allowed only if it is inserted in the middle
+    // or the beginning of it as we cannot determine if there are documents
+    // outside of the buffer easily.
     if (!limit || self._published.size() < limit || comparator(maxPublished, fields) > 0) {
       self._addPublished(id, fields);
-    } else if (self._unpublishedBuffer.size() < limit || comparator(maxBuffered, fields) > 0) {
+    } else if (self._justUpdatedBuffer || (maxBuffered && comparator(maxBuffered, fields) > 0)) {
       self._addBuffered(id, fields);
     }
   },
@@ -420,11 +426,15 @@ _.extend(OplogObserveDriver.prototype, {
     // XXX needs more thought on non-zero skip
     // XXX "2" here is a "magic number"
     var initialCursor = self._cursorForQuery({ limit: self._limit * 2 });
-    initialCursor.forEach(function (initialDoc) {
-      // self._addMatching knows how to correctly separate documents into the
-      // published set and the buffer.
-      self._addMatching(initialDoc);
+    initialCursor.forEach(function (initialDoc, i) {
+      var id = initialDoc._id;
+      delete initialDoc._id;
+      if (!self._limit || i < self._limit)
+        self._addPublished(id, initialDoc);
+      else
+        self._addBuffered(id, initialDoc);
     });
+    self._justUpdatedBuffer = true;
     if (self._stopped)
       throw new Error("oplog stopped quite early");
     // Allow observeChanges calls to return. (After this, it's possible for
@@ -477,7 +487,6 @@ _.extend(OplogObserveDriver.prototype, {
       });
 
       self._publishNewResults(newResults, newBuffer);
-
       self._doneQuerying();
     });
   },
@@ -578,8 +587,9 @@ _.extend(OplogObserveDriver.prototype, {
       self._removePublished(id);
     });
 
-    // xcxc this should be sorted?
     // Now do adds and changes.
+    // If self has a buffer and limit, the new fetched result will be
+    // ordered correctly as the query has sort specifier.
     newResults.forEach(function (doc, id) {
       // "true" here means to throw if we think this doc doesn't match the
       // selector.
@@ -591,6 +601,7 @@ _.extend(OplogObserveDriver.prototype, {
       delete doc._id;
       self._addBuffered(id, doc);
     });
+    self._justUpdatedBuffer = true;
   },
 
   // This stop function is invoked from the onStop of the ObserveMultiplexer, so

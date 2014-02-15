@@ -746,6 +746,8 @@ if (Meteor.isServer) {
     x++;
   });
 
+  // This test mainly checks the correctness of oplog code dealing with limited
+  // queries. Compitablity with poll-diff is added as well.
   Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
     var run = test.runId();
     var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
@@ -770,6 +772,7 @@ if (Meteor.isServer) {
     };
 
     var ins = function (doc) {
+      if (doc.bar) doc._id = doc.bar.toString();
       var id; runInFence(function () { id = coll.insert(doc); });
       return id;
     };
@@ -824,8 +827,8 @@ if (Meteor.isServer) {
     // Now remove something and that doc 2 should be right back
     rem(docId5);
     test.length(o.output, 2);
-    test.equal(o.output.shift(), {removed: docId5});
-    test.equal(o.output.shift(), {added: docId2});
+    test.isTrue(setsEqual(o.output, [{removed: docId5}, {added: docId2}]));
+    o.output.slice(0, 2);
 
     // Current state is [3 5 6] 7]
     // Add some negative numbers overflowing the buffer.
@@ -865,7 +868,7 @@ if (Meteor.isServer) {
                [expected[1], expected[3], expected[5]]);
     o.output.splice(0, 6);
 
-    // The new arrangment is [3 5 6] 7 17 18] 19
+    // The new arrangement is [3 5 6] 7 17 18] 19
     // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
     // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
     // schedule a repoll.
@@ -878,6 +881,34 @@ if (Meteor.isServer) {
     test.length(o.output, 8);
     test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]], expectedRemoves));
     test.equal([o.output[1], o.output[3], o.output[5], o.output[7]], expectedAdds);
+    o.output.splice(0, 8);
+
+    // The new arrangement is [17 18 19] or [docId6 docId7 docId8]
+    var docId9 = ins({ foo: 22, bar: 21 });
+    var docId10 = ins({ foo: 22, bar: 31 });
+    var docId11 = ins({ foo: 22, bar: 41 });
+    var docId12 = ins({ foo: 22, bar: 51 });
+
+    console.log("----------------------d");
+    console.log(o.handle._multiplexer._observeDriver._published.idMap._map);
+    console.log(o.handle._multiplexer._observeDriver._unpublishedBuffer.idMap._map);
+    debugger;
+    upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
+    // Becomes [21 22 23] 24 31 41] 51
+    test.length(o.output, 4);
+    test.equal(o.output.shift(), { removed: docId6 });
+    test.equal(o.output.shift(), { added: docId9 });
+    test.equal(o.output.shift(), { changed: docId7 });
+    test.equal(o.output.shift(), { changed: docId8 });
+    console.log(o.handle._multiplexer._observeDriver._published.idMap._map);
+    console.log(o.handle._multiplexer._observeDriver._unpublishedBuffer.idMap._map);
+    console.log("----------------------p");
+
+    rem(docId9);
+    // Becomes [22 23 24] 31 41] 51
+    test.length(o.output, 2);
+    test.equal(o.output.shift(), { removed: docId9 });
+    test.equal(o.output.shift(), { added: docId6 });
 
     o.handle.stop();
     onComplete();
