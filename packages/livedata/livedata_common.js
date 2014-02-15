@@ -83,31 +83,49 @@ parseDDP = function (stringMessage) {
 };
 
 stringifyDDP = function (msg) {
-  var copy = EJSON.clone(msg);
+  var cleared = [], baseObj = {};
+  var hasFields = _.has(msg, 'fields');
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
-  if (_.has(msg, 'fields')) {
-    var cleared = [];
+  if (hasFields) {
     _.each(msg.fields, function (value, key) {
       if (value === undefined) {
         cleared.push(key);
-        delete copy.fields[key];
       }
     });
     if (!_.isEmpty(cleared))
-      copy.cleared = cleared;
-    if (_.isEmpty(copy.fields))
-      delete copy.fields;
+      baseObj.cleared = cleared;
   }
-  // adjust types to basic
-  _.each(['fields', 'params', 'result'], function (field) {
-    if (_.has(copy, field))
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
-  });
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");
   }
-  return JSON.stringify(copy);
+  
+  var doneRemovingFields = false;
+  function customStringifyDDPReplacer(key, value) {
+    // Stringify non-objects like normal
+    if (typeof value !== 'object') {
+      return value;
+    }
+
+    // Special handling for `fields` property
+    if (hasFields && !doneRemovingFields && key === 'fields') {
+      var fieldObj = {};
+      _.each(value, function(v, k) {
+        if (v !== undefined) {
+          fieldObj[k] = v;
+        }
+      });
+      doneRemovingFields = true; //in case there's another key named `fields`
+      return _.isEmpty(fieldObj) ? undefined : fieldObj;
+    }
+
+    // For objects, converts them to basic JSON values.
+    // If return value is undefined, the key won't be included.
+    var basicValue = EJSON._toJSONValueHelper(value);
+    return (basicValue === undefined) ? value : basicValue;
+  }
+          
+  return JSON.stringify(_.extend(baseObj, msg), customStringifyDDPReplacer);
 };
 
 // This is private but it's used in a few places. accounts-base uses
@@ -115,3 +133,8 @@ stringifyDDP = function (msg) {
 // state in the DDP session. Meteor.setTimeout and friends clear
 // it. We can probably find a better way to factor this.
 DDP._CurrentInvocation = new Meteor.EnvironmentVariable;
+
+
+// This is private and a hack. It is used by autoupdate_client. We
+// should refactor. Maybe a separate 'exponential-backoff' package?
+DDP._Retry = Retry;
