@@ -91,14 +91,14 @@ exports.login = function (s, username, password) {
   run.write(username + '\n');
   run.matchErr('Password:');
   run.write(password + '\n');
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr('Logged in as ' + username + ".");
   run.expectExit(0);
 };
 
 exports.logout = function (s) {
   var run = s.run('logout');
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.matchErr('Logged out');
   run.expectExit(0);
 };

@@ -1,16 +1,17 @@
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
-var AUTHTIMEOUT = 15;
+
+var commandTimeoutSecs = 15;
 
 var loggedInError = selftest.markStack(function(run) {
-  run.waitSecs(AUTHTIMEOUT);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in to claim sites.");
   run.expectExit(1);
 });
 
 var waitAndError = selftest.markStack(function(run, errmsg) {
-  run.waitSecs(AUTHTIMEOUT);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr(errmsg);
   run.expectExit(1);
 });
@@ -44,7 +45,7 @@ selftest.define("claim", ['net', 'slow'], function () {
   testUtils.logout(s);
   testUtils.login(s, "test", "testtest");
   run = s.run('authorized', appName, '--add', 'testtest');
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.expectExit(0);
   testUtils.logout(s);
   testUtils.login(s, "testtest", "testtest");
@@ -67,18 +68,18 @@ selftest.define("claim", ['net', 'slow'], function () {
   var legacyApp = testUtils.createAndDeployLegacyApp(sLegacy, pwd);
 
   run = s.run('claim', legacyApp);
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Password: ');
   run.write('badpass\n');
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Couldn't claim site:");
   run.expectExit(1);
 
   run = s.run('claim', legacyApp);
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Password:');
   run.write(pwd+"\n");
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.match("successfully transferred to your account");
   run.expectExit(0);
 
@@ -88,7 +89,7 @@ selftest.define("claim", ['net', 'slow'], function () {
   legacyApp = testUtils.createAndDeployLegacyApp(sLegacy);
 
   run = s.run('claim', legacyApp);
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.match("successfully transferred to your account");
   run.expectExit(0);
 

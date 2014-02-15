@@ -72,7 +72,7 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
       run.write((options.username || 'test') + '\n');
       run.matchErr('Password: ');
       run.write((options.password || 'testtest') + '\n');
-      run.waitSecs(5);
+      run.waitSecs(15);
       if (options.authorized) {
         expectSuccess();
       } else {
@@ -97,7 +97,7 @@ _.each([false, true], function (loggedIn) {
           run.write('test\n');
           run.matchErr('Password:');
           run.write('testtest\n');
-          run.waitSecs(5);
+          run.waitSecs(15);
           run.matchErr('Logged in as test.');
           run.expectExit(0);
         }
@@ -126,7 +126,7 @@ _.each([false, true], function (loggedIn) {
           // We logged in as a result of running the previous command,
           // so log out again.
           run = s.run('logout');
-          run.waitSecs(5);
+          run.waitSecs(15);
           run.matchErr('Logged out');
           run.expectExit(0);
         }
