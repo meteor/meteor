@@ -312,8 +312,29 @@ utils.flatUrl = function(url) {
     return url.indexOf('?') === -1 && url.indexOf('#') === -1;
 };
 
-utils.amendUrl = function(url) {
-    var dl = _document.location;
+// `relativeTo` is an optional absolute URL. If provided, `url` will be
+// interpreted relative to `relativeTo`. Defaults to `document.location`.
+// <METEOR>
+utils.amendUrl = function(url, relativeTo) {
+    var baseUrl;
+    if (relativeTo === undefined) {
+      baseUrl = _document.location;
+    } else {
+      var protocolMatch = /^([a-z0-9.+-]+:)/i.exec(relativeTo);
+      if (protocolMatch) {
+        var protocol = protocolMatch[0].toLowerCase();
+        var rest = relativeTo.substring(protocol.length);
+        var hostMatch = /[a-z0-9\.-]+(:[0-9]+)?/.exec(rest);
+        if (hostMatch)
+          var host = hostMatch[0];
+      }
+      if (! protocol || ! host)
+        throw new Error("relativeTo must be an absolute url");
+      baseUrl = {
+        protocol: protocol,
+        host: host
+      };
+    }
     if (!url) {
         throw new Error('Wrong url for SockJS');
     }
@@ -323,12 +344,13 @@ utils.amendUrl = function(url) {
 
     //  '//abc' --> 'http://abc'
     if (url.indexOf('//') === 0) {
-        url = dl.protocol + url;
+        url = baseUrl.protocol + url;
     }
     // '/abc' --> 'http://localhost:1234/abc'
     if (url.indexOf('/') === 0) {
-        url = dl.protocol + '//' + dl.host + url;
+        url = baseUrl.protocol + '//' + baseUrl.host + url;
     }
+    // </METEOR>
     // strip trailing slashes
     url = url.replace(/[/]+$/,'');
 
@@ -963,7 +985,7 @@ var SockJS = function(url, dep_protocols_whitelist, options) {
         // makes `new` optional
         return new SockJS(url, dep_protocols_whitelist, options);
     }
-    
+
     var that = this, protocols_whitelist;
     that._options = {devel: false, debug: false, protocols_whitelist: [],
                      info: undefined, rtt: undefined};
@@ -1211,7 +1233,9 @@ SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
     // Servers can override base_url, eg to provide a randomized domain name and
     // avoid browser per-domain connection limits.
     if (info.base_url)
-      that._base_url = utils.amendUrl(info.base_url);
+      // <METEOR>
+      that._base_url = utils.amendUrl(info.base_url, that._base_url);
+      // </METEOR>
     var probed = utils.probeProtocols();
     that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
 // <METEOR>
@@ -2432,4 +2456,3 @@ if (typeof define === 'function' && define.amd) {
 //     [*] End of lib/index.js
 
 // [*] End of lib/all.js
-

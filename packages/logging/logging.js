@@ -145,8 +145,8 @@ _.each(['debug', 'info', 'warn', 'error'], function (level) {
 
     if (_.has(obj, 'message') && !_.isString(obj.message))
       throw new Error("The 'message' field in log objects must be a string");
-
-    obj = _.extend(Log._getCallerDetails(), obj);
+    if (!obj.omitCallerDetails)
+      obj = _.extend(Log._getCallerDetails(), obj);
     obj.time = new Date();
     obj.level = level;
 

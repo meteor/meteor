@@ -254,7 +254,7 @@ if (Meteor.isClient) (function () {
     function(test, expect) {
       var self = this;
       var clientUser = Meteor.user();
-      Meteor.call('testMeteorUser', expect(function (err, result) {
+      Accounts.connection.call('testMeteorUser', expect(function (err, result) {
         test.equal(result._id, clientUser._id);
         test.equal(result.username, clientUser.username);
         test.equal(result.username, self.username);
@@ -264,7 +264,7 @@ if (Meteor.isClient) (function () {
     },
     function(test, expect) {
       // Test that even with no published fields, we still have a document.
-      Meteor.call('clearUsernameAndProfile', expect(function() {
+      Accounts.connection.call('clearUsernameAndProfile', expect(function() {
         test.isTrue(Meteor.userId());
         var user = Meteor.user();
         test.equal(user, {_id: Meteor.userId()});
@@ -275,7 +275,7 @@ if (Meteor.isClient) (function () {
       var clientUser = Meteor.user();
       test.equal(clientUser, null);
       test.equal(Meteor.userId(), null);
-      Meteor.call('testMeteorUser', expect(function (err, result) {
+      Accounts.connection.call('testMeteorUser', expect(function (err, result) {
         test.equal(err, undefined);
         test.equal(result, null);
       }));
@@ -402,7 +402,7 @@ if (Meteor.isClient) (function () {
         self.token = Accounts._storedLoginToken();
         test.isTrue(self.token);
         expectNoError(error);
-        Meteor.call("expireTokens");
+        Accounts.connection.call("expireTokens");
       });
     },
     waitForLoggedOutStep,
@@ -431,7 +431,7 @@ if (Meteor.isClient) (function () {
       // instead?
 
       // Test that Meteor.logoutOtherClients logs out a second authenticated
-      // connection while leaving Meteor.connection logged in.
+      // connection while leaving Accounts.connection logged in.
       var token;
       var userId;
       self.secondConn = DDP.connect(self.ddpUrl);
@@ -453,7 +453,7 @@ if (Meteor.isClient) (function () {
         self.secondConn.onReconnect = function () {
           self.secondConn.call("login", { resume: token }, expectLoginError);
         };
-        Meteor.call("logoutOtherClients", expectValidToken);
+        Accounts.connection.call("logoutOtherClients", expectValidToken);
       });
 
       Meteor.loginWithPassword(this.username, this.password, expect(function (err) {
@@ -466,7 +466,7 @@ if (Meteor.isClient) (function () {
                              expectSecondConnLoggedIn);
       }));
     },
-    // Test that logoutOtherClients logged out Meteor.connection and that the
+    // Test that logoutOtherClients logged out Accounts.connection and that the
     // previous token is no longer valid.
     waitForLoggedOutStep,
     function (test, expect) {
@@ -535,7 +535,7 @@ if (Meteor.isClient) (function () {
       // Test that deleting a user logs out that user's connections.
       Meteor.loginWithPassword(this.username, this.password, expect(function (err) {
         test.isFalse(err);
-        Meteor.call("removeUser", self.username);
+        Accounts.connection.call("removeUser", self.username);
       }));
     },
     waitForLoggedOutStep

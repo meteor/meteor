@@ -1,14 +1,55 @@
 ## v.NEXT
 
-* Hash login tokens before storing them in the database.
+* Meteor developer accounts
+  - `accounts-meteor-developer` package for OAuth support
+  - managing deployed apps with developer accounts instead of site
+    passwords.
+  - New commands: 'meteor authorized', 'meteor claim', 'meteor logout',
+    'meteor whoami'
+
+* oplog improvements
+  - support all operators except $where and $near. still not used for
+    limit and skip
+  - more optimizations to avoid needless data fetches from MongoDB
+  - fix "Cannot call method 'has' of null" error #1767
+
+* Minimongo improvements
+  - support $comment
+  - support 'obj' name in $where
+  - $regexp matches actual regexps properly
+  - better support for $nin, $ne, $not
+  - support using { $in: [/foo/, /bar/] }. #1707
+  - support {$exists: false}
+  - better type-checking for selectors
+  - support {x: {$elemMatch: {$gt: 5}}}
+  - match mongo's behavior better when there are arrays in the document
+  - support $near with sort
+  - implement updates with { $set: { 'a.$.b': 5 } }
+  - {$type: 4} queries
+  - optimize `remove({})` when observers are paused
+  - make update-by-id constant time
 
 * Add `clientAddress` and `httpHeaders` to `this.connection` in method
   calls and publish functions.
+
+* Hash login tokens before storing them in the database. Legacy unhashed
+  tokens are upgraded to hashed tokens in the database as they are used
+  in logins.
 
 * Cursors with a field specifier containing `{_id: 0}` can no longer be used
   with `observeChanges` or `observe`. This includes the implicit calls to these
   functions that are done when returning a cursor from a publish function or
   using `{{#each}}`.
+
+* Transform functions must return objects and may not change the `_id` field
+  (though they may leave it out)
+
+* XXX sourcemaps support for stylesheets, including less sourcemaps
+* XXX css linting (breaks on errors)
+* XXX css preprocessing to concatenate files correctly (pulls @imports to the
+  beginning)
+* XXX supports `.import.less` and `.import.styl` to prevent Meteor processing
+  stylesheets. `.lessimport` is deprecated
 
 * Patch Underscore to not treat plain objects (`x.constructor === Object`)
   with numeric `length` fields as arrays.  Among other things, this allows you
@@ -23,14 +64,94 @@
 * Add `frame-src` to `browser-policy-content` and account for
   cross-browser CSP disparities.
 
-* Transform functions must return objects and may not change the `_id` field
-  (though they may leave it out)
+* Upgrade CoffeeScript from 1.6.3 to 1.7.1.
 
-* Upgrade jQuery from 1.8.2 to 1.10.2.
-  XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
-  XXX consider taking 1.11 instead, which was released this week
+* Make sure that `api.add_files('foo.coffee', {bare: true})` works when
+  adding CoffeeScript files. #1668
 
-* `force-ssl`: don't require SSL during `meteor run` in IPv6 environments.
+* `force-ssl`: don't require SSL during `meteor run` in IPv6
+  environments. #1751
+
+* Upgraded dependencies:
+  - node from 0.10.22 to 0.10.25 (removed workaround from 0.7.0 -- now
+    support 0.10.25+)
+  - Upgrade jQuery from 1.8.2 to 1.10.2.
+    XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
+    XXX consider taking 1.11 instead, which was released this week
+  - source-map from 0.3.30 to 0.3.32  #1782
+  - websocket-driver from 0.3.1 to 0.3.2
+  - http-proxy: 1.0.2 (from a pre-release fork of 1.0)
+  - semver: 2.2.1 (from 2.1.0)
+  - request: 2.33.0 (from 2.27.0)
+  - fstream: 0.1.25 (from 0.1.24)
+  - tar: 0.1.19 (from 0.1.18)
+  - eachline: a fork of 2.4.0 (from 2.3.3)
+  - source-map: 0.1.31 (from 0.1.30)
+  - source-map-support: 0.2.5 (from 0.2.3)
+  - mongo: 2.4.9 (from 2.4.8)
+  - openssl in mongo: 1.0.1f (from 1.0.1e)
+  - kexec from 0.1.1 to 0.2.0
+  - drop shell-quote from dev bundle
+  -  XXX upgraded `less` from 1.3.3 to 1.6.1
+  - XXX upgraded `stylus` from 0.37.0 to 0.42.2 and `nib` from `1.0.0` to `1.0.2`
+
+* Types added with `EJSON.addType` now have default `clone` and `equals`
+  implementations.  #1745
+
+* Allow cursors on named local collections to be returned from arrays in publish
+  functions.  #1820
+
+* Don't lose permissions (eg, executable bit) on npm files.  #1808
+
+* Detect if CSS failed to load and refresh.
+
+* Don't crash with an empty programs/foo directory or one without a
+  package.js.
+
+* Do a better job of handling shrinkwrap files when a npm module depends
+  on something that isn't a semver. #1684
+
+* In email package, print a message in dev mode when email is not sent. #1196
+
+* Meteor accounts logins (or anything else using the `localstorage` package) no
+  longer persist in IE7.
+
+* Fix `accounts-password` login with private-browsing Safari (and
+  generally, the use of the `localstorage` package). #1291
+
+* New `retry` package.
+
+* Pass through `update` and `remove` return values for validated
+  operations. #1759
+
+* Change default accounts-ui styling and add more CSS classes.
+
+* Don't leak sockets on error in dev-mode proxy.
+
+* XXX Make springboard actually exec
+
+* Speed up build by re-using file hashes.
+
+* Include oauth_verifier as a header rather than a parameter in
+  `oauth1` package. #1825
+
+* Refactor command-line tool. Add test harness and better tests.
+
+* Add `Accounts.connection` for using Meteor accounts packages with a
+  non-default DDP connection.
+
+* Fix order of setting login token and setting user id on a connection.
+
+* If you're using Deps on the server, computations and invalidation
+  functions are not allowed to yield.
+
+* SockJS tweak to support relative base URLs.
+
+* Oauth.initiateLogin is deprecated in favor of Oauth.showPopup.
+
+* User-supplied connect handlers now see the URL's full path, even if
+  ROOT_URL contains a non-empty path.
+
 
 
 ## v0.7.0.1
@@ -70,6 +191,10 @@ apply the patch and will instead disable websockets.
   associated with individual clients between subscriptions and method
   calls. See http://docs.meteor.com/#meteor_onconnection for details. #1611
 
+* Bundler failures cause non-zero exit code in `meteor run`.  #1515
+
+* Fix error when publish function callbacks are called during session shutdown.
+
 * Rework hot code push. The new `autoupdate` package drives automatic
   reloads on update using standard DDP messages instead of a hardcoded
   message at DDP startup. Now the hot code push only triggers when
@@ -108,7 +233,7 @@ apply the patch and will instead disable websockets.
 * Use stderr instead of stdout (for easier automation in shell scripts) when
   prompting for passwords and when downloading the dev bundle. #1600
 
-* Bundler failures cause non-zero exit code in `meteor run`.  #1515
+* Ensure more downtime during file watching.  #1506
 
 * Fix `meteor run` with settings files containing non-ASCII characters.  #1497
 

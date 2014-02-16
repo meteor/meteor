@@ -26,17 +26,18 @@ testAsyncMulti("accounts emails - reset password flow", [
     }));
   },
   function (test, expect) {
-    Meteor.call("getInterceptedEmails", email1, expect(function (error, result) {
-      test.equal(error, undefined);
-      test.notEqual(result, undefined);
-      test.equal(result.length, 2); // the first is the email verification
-      var content = result[1];
+    Accounts.connection.call(
+      "getInterceptedEmails", email1, expect(function (error, result) {
+        test.equal(error, undefined);
+        test.notEqual(result, undefined);
+        test.equal(result.length, 2); // the first is the email verification
+        var content = result[1];
 
-      var match = content.match(
-        new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)"));
-      test.isTrue(match);
-      resetPasswordToken = match[1];
-    }));
+        var match = content.match(
+          new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)"));
+        test.isTrue(match);
+        resetPasswordToken = match[1];
+      }));
   },
   function (test, expect) {
     Accounts.resetPassword(resetPasswordToken, "newPassword", expect(function(error) {
@@ -65,17 +66,18 @@ testAsyncMulti("accounts emails - reset password flow", [
 ]);
 
 var getVerifyEmailToken = function (email, test, expect) {
-  Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
-    test.equal(error, undefined);
-    test.notEqual(result, undefined);
-    test.equal(result.length, 1);
-    var content = result[0];
+  Accounts.connection.call(
+    "getInterceptedEmails", email, expect(function (error, result) {
+      test.equal(error, undefined);
+      test.notEqual(result, undefined);
+      test.equal(result.length, 1);
+      var content = result[0];
 
-    var match = content.match(
-      new RegExp(Meteor.absoluteUrl() + "#/verify-email/(\\S*)"));
-    test.isTrue(match);
-    verifyEmailToken = match[1];
-  }));
+      var match = content.match(
+        new RegExp(Meteor.absoluteUrl() + "#/verify-email/(\\S*)"));
+      test.isTrue(match);
+      verifyEmailToken = match[1];
+    }));
 };
 
 var loggedIn = function (test, expect) {
@@ -120,7 +122,7 @@ testAsyncMulti("accounts emails - verify email flow", [
     test.isTrue(Meteor.user().emails[0].verified);
   },
   function (test, expect) {
-    Meteor.call(
+    Accounts.connection.call(
       "addEmailForTestAndVerify", email3,
       expect(function (error, result) {
         test.isFalse(error);
@@ -157,23 +159,24 @@ testAsyncMulti("accounts emails - verify email flow", [
 ]);
 
 var getEnrollAccountToken = function (email, test, expect) {
-  Meteor.call("getInterceptedEmails", email, expect(function (error, result) {
-    test.equal(error, undefined);
-    test.notEqual(result, undefined);
-    test.equal(result.length, 1);
-    var content = result[0];
+  Accounts.connection.call(
+    "getInterceptedEmails", email, expect(function (error, result) {
+      test.equal(error, undefined);
+      test.notEqual(result, undefined);
+      test.equal(result.length, 1);
+      var content = result[0];
 
-    var match = content.match(
-      new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)"));
-    test.isTrue(match);
-    enrollAccountToken = match[1];
-  }));
+      var match = content.match(
+        new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)"));
+      test.isTrue(match);
+      enrollAccountToken = match[1];
+    }));
 };
 
 testAsyncMulti("accounts emails - enroll account flow", [
   function (test, expect) {
     email4 = Random.id() + "-intercept@example.com";
-    Meteor.call("createUserOnServer", email4,
+    Accounts.connection.call("createUserOnServer", email4,
       expect(function (error, result) {
         test.isFalse(error);
         var user = result;

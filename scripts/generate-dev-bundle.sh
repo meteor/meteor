@@ -97,7 +97,6 @@ which npm
 # you update version numbers.
 
 cd "$DIR/lib/node_modules"
-npm install optimist@0.6.0
 npm install semver@2.2.1
 npm install request@2.33.0
 npm install keypress@0.2.1
@@ -105,8 +104,7 @@ npm install underscore@1.5.2
 npm install fstream@0.1.25
 npm install tar@0.1.19
 npm install kexec@0.2.0
-npm install eachline@2.4.0
-npm install source-map@0.1.31
+npm install source-map@0.1.32
 npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
 npm install http-proxy@1.0.2
@@ -115,6 +113,10 @@ npm install heapdump@0.2.5
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.
 npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
+
+# 2.4.0 (more or less, the package.json change isn't committed) plus our PR
+# https://github.com/williamwicks/node-eachline/pull/4
+npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
 # If you update the version of fibers in the dev bundle, also update the "npm
 # install" command in docs/client/concepts.html and in the README in
