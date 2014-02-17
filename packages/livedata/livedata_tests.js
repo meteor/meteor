@@ -691,6 +691,31 @@ if (Meteor.isServer) {
   ]);
 })();
 
+if (Meteor.isServer) {
+  Meteor.publish("publisherCloning", function () {
+    var self = this;
+    var fields = {x: {y: 42}};
+    self.added("publisherCloning", "a", fields);
+    fields.x.y = 43;
+    self.changed("publisherCloning", "a", fields);
+    self.ready();
+  });
+} else {
+  var PublisherCloningCollection = new Meteor.Collection("publisherCloning");
+  testAsyncMulti("livedata - publish callbacks clone", [
+    function (test, expect) {
+      Meteor.subscribe("publisherCloning", {normal: 1}, {
+        onReady: expect(function () {
+          test.equal(PublisherCloningCollection.findOne(), {
+            _id: "a",
+            x: {y: 43}});
+        }),
+        onError: failure()
+      });
+    }
+  ]);
+}
+
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

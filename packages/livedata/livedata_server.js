@@ -68,6 +68,10 @@ _.extend(SessionDocumentView.prototype, {
     // Publish API ignores _id if present in fields
     if (key === "_id")
       return;
+
+    // Don't share state with the data passed in by the user.
+    value = EJSON.clone(value);
+
     if (!_.has(self.dataByKey, key)) {
       self.dataByKey[key] = [{subscriptionHandle: subscriptionHandle,
                               value: value}];
