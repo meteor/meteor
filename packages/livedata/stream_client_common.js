@@ -137,6 +137,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self._changeUrl(options.url);
     }
 
+    if (options._sockjsOptions) {
+      self.options._sockjsOptions = options._sockjsOptions;
+    }
+
     if (self.currentStatus.connected) {
       if (options._force || options.url) {
         // force reconnect.
