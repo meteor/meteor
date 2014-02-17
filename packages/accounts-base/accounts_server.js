@@ -78,7 +78,7 @@ var validateLogin = function (connection, attempt) {
     }
     if (! ret) {
       attempt.allowed = false;
-      attempt.error = new Meteor.Error(403, "Login Disallowed");
+      attempt.error = new Meteor.Error(403, "Login Forbidden");
     }
     return true;
   });
@@ -174,7 +174,7 @@ var tryLoginMethod = function (type, fn) {
 };
 
 
-// Login a user on a connection.
+// Log in a user on a connection.
 //
 // We use the method invocation to set the user id on the connection,
 // not the connection object directly. setUserId is tied to methods to
@@ -221,7 +221,7 @@ var loginUser = function (methodInvocation, userId, stampedLoginToken) {
 // which aren't successful (such as an invalid password, etc).
 //
 // If the login is allowed and isn't aborted by a validate login hook
-// callback, login the user.
+// callback, log in the user.
 //
 var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   if (!result)
@@ -505,14 +505,14 @@ Accounts._insertHashedLoginToken = function (userId, hashedToken, query) {
   query._id = userId;
   Meteor.users.update(
     query,
-    {$addToSet: {
-      "services.resume.loginTokens": hashedToken
-    }}
+    { $addToSet: {
+        "services.resume.loginTokens": hashedToken
+    } }
   );
 };
 
 
-// Used by tests.
+// Exported for tests.
 Accounts._insertLoginToken = function (userId, stampedToken, query) {
   Accounts._insertHashedLoginToken(
     userId,
@@ -645,7 +645,7 @@ Accounts.registerLoginHandler("resume", function(options) {
 
   if (! user)
     return {
-      error: new Meteor.Error(403, "You've been logged out by the server. Please login again.")
+      error: new Meteor.Error(403, "You've been logged out by the server. Please log in again.")
     };
 
   // Find the token, which will either be an object with fields
@@ -668,7 +668,7 @@ Accounts.registerLoginHandler("resume", function(options) {
   if (new Date() >= tokenExpires)
     return {
       userId: user._id,
-      error: new Meteor.Error(403, "Your session has expired. Please login again.")
+      error: new Meteor.Error(403, "Your session has expired. Please log in again.")
     };
 
   // Update to a hashed token when an unhashed token is encountered.

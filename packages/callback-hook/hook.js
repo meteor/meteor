@@ -1,3 +1,6 @@
+// XXX This pattern is under development. Do not add more callsites
+// using this package for now.
+//
 // Encapsulates the pattern of registering callbacks on a hook.
 //
 // The `each` method of the hook calls its iterator function argument

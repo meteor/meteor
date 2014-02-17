@@ -558,7 +558,7 @@ if (Meteor.isClient) (function () {
         this.password,
         expect(function (error) {
           test.isTrue(error);
-          test.equal(error.reason, "Login Disallowed");
+          test.equal(error.reason, "Login Forbidden");
         })
       );
     },
