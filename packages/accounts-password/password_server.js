@@ -74,7 +74,7 @@ Meteor.methods({beginPasswordExchange: function (request) {
 
 // Handler to login with password via SRP. Checks the `M` value set by
 // beginPasswordExchange.
-Accounts.registerLoginHandler("password", function (options, knownUserId) {
+Accounts.registerLoginHandler("password", function (options) {
   if (!options.srp)
     return undefined; // don't handle
   check(options.srp, {M: String});
@@ -83,10 +83,11 @@ Accounts.registerLoginHandler("password", function (options, knownUserId) {
   // be safe.
   var currentInvocation = DDP._CurrentInvocation.get();
   var serialized = Accounts._getAccountData(currentInvocation.connection.id, 'srpChallenge');
-  if (serialized && serialized.userId)
-    knownUserId(serialized.userId);
   if (!serialized || serialized.M !== options.srp.M)
-      throw new Meteor.Error(403, "Incorrect password");
+    return {
+      userId: serialized && serialized.userId,
+      error: new Meteor.Error(403, "Incorrect password")
+    };
   // Only can use challenges once.
   Accounts._setAccountData(currentInvocation.connection.id, 'srpChallenge', undefined);
 
@@ -94,7 +95,10 @@ Accounts.registerLoginHandler("password", function (options, knownUserId) {
   var user = Meteor.users.findOne(userId);
   // Was the user deleted since the start of this challenge?
   if (!user)
-    throw new Meteor.Error(403, "User not found");
+    return {
+      userId: userId,
+      error: new Meteor.Error(403, "User not found")
+    };
 
   return {
     userId: userId,
@@ -110,7 +114,7 @@ Accounts.registerLoginHandler("password", function (options, knownUserId) {
 //
 // Also, it might be nice if servers could turn this off. Or maybe it
 // should be opt-in, not opt-out? Accounts.config option?
-Accounts.registerLoginHandler("password", function (options, knownUserId) {
+Accounts.registerLoginHandler("password", function (options) {
   if (!options.password || !options.user)
     return undefined; // don't handle
 
@@ -121,11 +125,12 @@ Accounts.registerLoginHandler("password", function (options, knownUserId) {
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  knownUserId(user._id);
-
   if (!user.services || !user.services.password ||
       !user.services.password.srp)
-      throw new Meteor.Error(403, "User has no password set");
+    return {
+      userId: user._id,
+      error: new Meteor.Error(403, "User has no password set")
+    };
 
   // Just check the verifier output when the same identity and salt
   // are passed. Don't bother with a full exchange.
@@ -134,7 +139,10 @@ Accounts.registerLoginHandler("password", function (options, knownUserId) {
     identity: verifier.identity, salt: verifier.salt});
 
   if (verifier.verifier !== newVerifier.verifier)
-    throw new Meteor.Error(403, "Incorrect password");
+    return {
+      userId: user._id,
+      error: new Meteor.Error(403, "Incorrect password")
+    };
 
   return {userId: user._id};
 });
@@ -299,7 +307,7 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
     "resetPassword",
     arguments,
     "password",
-    function (knownUserId) {
+    function () {
       check(token, String);
       check(newVerifier, SRP.matchVerifier);
 
@@ -307,10 +315,12 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
         "services.password.reset.token": ""+token});
       if (!user)
         throw new Meteor.Error(403, "Token expired");
-      knownUserId(user._id);
       var email = user.services.password.reset.email;
       if (!_.include(_.pluck(user.emails || [], 'address'), email))
-        throw new Meteor.Error(403, "Token has invalid email address");
+        return {
+          userId: user._id,
+          error: new Meteor.Error(403, "Token has invalid email address")
+        };
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -333,7 +343,10 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
                   'emails.$.verified': true},
            $unset: {'services.password.reset': 1}});
         if (affectedRecords !== 1)
-          throw new Meteor.Error(403, "Invalid email");
+          return {
+            userId: user._id,
+            error: new Meteor.Error(403, "Invalid email")
+          };
       } catch (err) {
         resetToOldToken();
         throw err;
@@ -402,7 +415,7 @@ Meteor.methods({verifyEmail: function (token) {
     "verifyEmail",
     arguments,
     "password",
-    function (knownUserId) {
+    function () {
       check(token, String);
 
       var user = Meteor.users.findOne(
@@ -410,20 +423,24 @@ Meteor.methods({verifyEmail: function (token) {
       if (!user)
         throw new Meteor.Error(403, "Verify email link expired");
 
-      knownUserId(user._id);
-
       var tokenRecord = _.find(user.services.email.verificationTokens,
                                function (t) {
                                  return t.token == token;
                                });
       if (!tokenRecord)
-        throw new Meteor.Error(403, "Verify email link expired");
+        return {
+          userId: user._id,
+          error: new Meteor.Error(403, "Verify email link expired")
+        };
 
       var emailsRecord = _.find(user.emails, function (e) {
         return e.address == tokenRecord.address;
       });
       if (!emailsRecord)
-        throw new Meteor.Error(403, "Verify email link is for unknown address");
+        return {
+          userId: user._id,
+          error: new Meteor.Error(403, "Verify email link is for unknown address")
+        };
 
       // By including the address in the query, we can use 'emails.$' in the
       // modifier to get a reference to the specific object in the emails
@@ -495,11 +512,13 @@ Meteor.methods({createUser: function (options) {
     "createUser",
     arguments,
     "password",
-    function (knownUserId) {
+    function () {
       // createUser() above does more checking.
       check(options, Object);
       if (Accounts._options.forbidClientAccountCreation)
-        throw new Meteor.Error(403, "Signups forbidden");
+        return {
+          error: new Meteor.Error(403, "Signups forbidden")
+        };
 
       // Create user. result contains id and token.
       var userId = createUser(options);
@@ -507,8 +526,6 @@ Meteor.methods({createUser: function (options) {
       // instead of sending a verification email with empty userid.
       if (! userId)
         throw new Error("createUser failed to insert new user");
-
-      knownUserId(userId);
 
       // If `Accounts._options.sendVerificationEmail` is set, register
       // a token to verify the user's primary email, and send it to

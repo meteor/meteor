@@ -145,29 +145,23 @@ var failedLogin = function (connection, attempt) {
 //     "resume" login handler.
 //
 // For convenience, login methods can also throw an exception, which
-// is converted into an {error} result.
+// is converted into an {error} result.  However, if the id of the
+// user attempting the login is known, a {userId, error} result should
+// be returned instead since the user id is not captured when an
+// exception is thrown.
 //
 // This internal `result` object is automatically converted into the
 // public {id, token, tokenExpires} object returned to the client.
 
 
 // Try a login method, converting thrown exceptions into an {error}
-// result.
-//
-// Login methods may call `knownUserId` at the point that they
-// discover which user is attempting to login, if known.  The user id
-// is saved so that if the login method later throws an exception, the
-// user id can be included in the result object.
+// result.  The `type` argument is a default, inserted into the result
+// object if not explicitly returned.
 //
 var tryLoginMethod = function (type, fn) {
-  var userId;
-  var knownUserId = function (id) {
-    userId = id;
-  };
-
   var result;
   try {
-    result = fn(knownUserId);
+    result = fn();
   }
   catch (e) {
     result = {error: e};
@@ -175,8 +169,6 @@ var tryLoginMethod = function (type, fn) {
 
   if (result && !result.type && type)
     result.type = type;
-  if (result && !result.userId && userId)
-    result.userId = userId;
 
   return result;
 };
@@ -334,8 +326,8 @@ var runLoginHandlers = function (methodInvocation, options) {
 
     var result = tryLoginMethod(
       handler.name,
-      function (knownUserId) {
-        return handler.handler.call(methodInvocation, options, knownUserId);
+      function () {
+        return handler.handler.call(methodInvocation, options);
       }
     );
 
@@ -623,7 +615,7 @@ var closeConnectionsForTokens = function (tokens) {
 
 
 // Login handler for resume tokens.
-Accounts.registerLoginHandler("resume", function(options, knownUserId) {
+Accounts.registerLoginHandler("resume", function(options) {
   if (!options.resume)
     return undefined;
 
@@ -652,9 +644,9 @@ Accounts.registerLoginHandler("resume", function(options, knownUserId) {
   }
 
   if (! user)
-    throw new Meteor.Error(403, "You've been logged out by the server. Please login again.");
-
-  knownUserId(user._id);
+    return {
+      error: new Meteor.Error(403, "You've been logged out by the server. Please login again.")
+    };
 
   // Find the token, which will either be an object with fields
   // {hashedToken, when} for a hashed token or {token, when} for an
@@ -674,7 +666,10 @@ Accounts.registerLoginHandler("resume", function(options, knownUserId) {
 
   var tokenExpires = Accounts._tokenExpiration(token.when);
   if (new Date() >= tokenExpires)
-    throw new Meteor.Error(403, "Your session has expired. Please login again.");
+    return {
+      userId: user._id,
+      error: new Meteor.Error(403, "Your session has expired. Please login again.")
+    };
 
   // Update to a hashed token when an unhashed token is encountered.
   if (oldUnhashedStyleToken) {
