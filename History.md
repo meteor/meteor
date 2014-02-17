@@ -113,6 +113,9 @@
 * Do a better job of handling shrinkwrap files when a npm module depends
   on something that isn't a semver. #1684
 
+* Fix failures updating npm dependencies when a node_modules directory exists
+  above the project directory.  #1761
+
 * In email package, print a message in dev mode when email is not sent. #1196
 
 * Meteor accounts logins (or anything else using the `localstorage` package) no
