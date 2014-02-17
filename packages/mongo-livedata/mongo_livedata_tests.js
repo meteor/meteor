@@ -856,17 +856,19 @@ if (Meteor.isServer) {
     // But since our buffer becomes empty, it will be refilled partially with
     // updated documents.
     test.length(o.output, 6);
-    expected = [{removed: docId6}, {added: docId3},
-                {removed: docId7}, {added: docId1},
-                {removed: docId8}, {added: docId2}];
+    var expectedRemoves = [{removed: docId6},
+                           {removed: docId7},
+                           {removed: docId8}];
+    var expectedAdds = [{added: docId3},
+                        {added: docId1},
+                        {added: docId2}];
 
     // Note: since we are updating multiple things, the order of updates may
     // differ from launch to launch. That's why we compare even positions
     // (removes) w/o looking at ordering.
-    test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]],
-                          [expected[0], expected[2], expected[4]]));
-    test.equal([o.output[1], o.output[3], o.output[5]],
-               [expected[1], expected[3], expected[5]]);
+    test.isTrue(setsEqual(_.filter(o.output, function (e) {return e.removed;}),
+                          expectedRemoves));
+    test.equal(_.filter(o.output, function (e){return e.added;}), expectedAdds);
     clearOutput(o);
 
     // The new arrangement is [3 5 6] 7 17 18] 19
@@ -874,14 +876,28 @@ if (Meteor.isServer) {
     // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
     // schedule a repoll.
     rem({ bar: { $lt: 10 } });
-    var expectedRemoves = [{removed: docId3}, {removed: docId1},
-                           {removed: docId2}, {removed: docId4}];
-    var expectedAdds = [{added: docId4}, {added: docId8},
-                        {added: docId7}, {added: docId6}];
 
-    test.length(o.output, 8);
-    test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]], expectedRemoves));
-    test.equal([o.output[1], o.output[3], o.output[5], o.output[7]], expectedAdds);
+    // XXX the oplog code analyzes the events one by one: one remove after
+    // another. Poll-n-diff code, on the other side, analyzes the batch action
+    // of multiple remove. Because of that difference, expected outputs differ.
+    if (o.handle._multiplexer._observeDriver._usesOplog) {
+      var expectedRemoves = [{removed: docId3}, {removed: docId1},
+                             {removed: docId2}, {removed: docId4}];
+      var expectedAdds = [{added: docId4}, {added: docId8},
+                          {added: docId7}, {added: docId6}];
+
+      test.length(o.output, 8);
+    } else {
+      var expectedRemoves = [{removed: docId3}, {removed: docId1},
+                             {removed: docId2}];
+      var expectedAdds = [{added: docId8}, {added: docId7}, {added: docId6}];
+
+      test.length(o.output, 6);
+    }
+
+    test.isTrue(setsEqual(_.filter(o.output, function (e) {return e.removed;}),
+                          expectedRemoves));
+    test.equal(_.filter(o.output, function (e) {return e.added;}), expectedAdds);
     clearOutput(o);
 
     // The new arrangement is [17 18 19] or [docId6 docId7 docId8]
@@ -894,17 +910,16 @@ if (Meteor.isServer) {
     upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
     // Becomes [21 22 23] 24 31 41] 51
     test.length(o.output, 4);
-    test.equal(o.output.shift(), { removed: docId6 });
-    test.equal(o.output.shift(), { added: docId9 });
-    test.equal(o.output.shift(), { changed: docId7 });
-    test.equal(o.output.shift(), { changed: docId8 });
+    test.isTrue(setsEqual(o.output, [{removed: docId6},
+                                     {added: docId9},
+                                     {changed: docId7},
+                                     {changed: docId8}]));
     clearOutput(o);
 
     rem(docId9);
     // Becomes [22 23 24] 31 41] 51
     test.length(o.output, 2);
-    test.equal(o.output.shift(), { removed: docId9 });
-    test.equal(o.output.shift(), { added: docId6 });
+    test.isTrue(setsEqual(o.output, [{removed: docId9}, {added: docId6}]));
     clearOutput(o);
 
     o.handle.stop();
