@@ -152,6 +152,8 @@
 * User-supplied connect handlers now see the URL's full path, even if
   ROOT_URL contains a non-empty path.
 
+* Don't cache direct references to the fields arguments to the subscription
+  `added` and `changed` methods.  #1750
 
 
 ## v0.7.0.1
