@@ -195,7 +195,8 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   // We need to rebuild all node modules when the Node version
   // changes, in case there are some binary ones. Technically this is
   // racey, but it shouldn't fail very often.
-  if (fs.existsSync(path.join(packageNpmDir, 'node_modules'))) {
+  var nodeModulesDir = path.join(packageNpmDir, 'node_modules');
+  if (fs.existsSync(nodeModulesDir)) {
     var oldNodeVersion;
     try {
       oldNodeVersion = fs.readFileSync(
@@ -209,8 +210,16 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     }
 
     if (oldNodeVersion !== process.version)
-      files.rm_recursive(path.join(packageNpmDir, 'node_modules'));
+      files.rm_recursive(nodeModulesDir);
   }
+
+  // Make sure node_modules is present (fix for #1761). Prevents npm install
+  // from installing to an existing node_modules dir higher up in the
+  // filesystem.  node_modules may be absent due to a change in Node version or
+  // when `meteor add`ing a cloned package for the first time (node_modules is
+  // excluded by .gitignore)
+  if (! fs.existsSync(nodeModulesDir))
+    fs.mkdirSync(nodeModulesDir);
 
   var installedDependencies = getInstalledDependencies(packageNpmDir);
 
