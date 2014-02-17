@@ -1,8 +1,8 @@
 var OplogCollection = new Meteor.Collection("oplog-" + Random.id());
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
-  var supported = function (expected, selector) {
-    var cursor = OplogCollection.find(selector);
+  var supported = function (expected, selector, options) {
+    var cursor = OplogCollection.find(selector, options);
     var handle = cursor.observeChanges({added: function () {}});
     test.equal(!!handle._multiplexer._observeDriver._usesOplog, expected);
     handle.stop();
@@ -38,4 +38,9 @@ Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   // Nothing Minimongo doesn't understand.  (Minimongo happens to fail to
   // implement $elemMatch inside $all which MongoDB supports.)
   supported(false, {x: {$all: [{$elemMatch: {y: 2}}]}});
+
+  supported(true, {}, { sort: {x:1} });
+  supported(true, {}, { sort: {x:1}, limit: 5 });
+  supported(false, {}, { limit: 5 });
+  supported(false, {}, { skip: 2, limit: 5 });
 });
