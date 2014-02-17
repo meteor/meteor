@@ -45,6 +45,43 @@ var registerWithToken = function (token, username, password, email) {
   accountsConn.close();
 };
 
+var expectInvalidToken = function (token) {
+  // Same XXX as above: should be hardcoded to https://www.meteor.com?
+  var accountsConn = ddpConnect(config.getAuthDDPUrl());
+  var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
+                                                token);
+  // We should not be able to get a registration code for an invalid
+  // token.
+  if (registrationTokenInfo.valid || registrationTokenInfo.code) {
+    throw new Error('Expected invalid token is valid!');
+  }
+  accountsConn.close();
+};
+
+// In the sandbox `s`, create and deploy a new app with an unregistered
+// email address. Returns the registration token from the printed URL in
+// the deploy message.
+var deployWithNewEmail = function (s, email, appName) {
+  s.createApp('deployapp', 'empty');
+  s.cd('deployapp');
+  var run = s.run('deploy', appName);
+  run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+  run.matchErr('Email:');
+  run.write(email + '\n');
+  run.waitSecs(90);
+  // Check that we got a prompt to set a password on meteor.com.
+  run.matchErr('set a password');
+  var urlMatch = run.matchErr(registrationUrlRegexp);
+  if (! urlMatch || ! urlMatch.length || ! urlMatch[1]) {
+    throw new Error("Missing registration token");
+  }
+  var token = urlMatch[1];
+
+  run.expectExit(0);
+
+  return token;
+};
+
 // Polls a guerrillamail.com inbox every 3 seconds looking for an email
 // that matches the given subject and body regexes. This could fail if
 // there is someone else polling this same inbox, so use a random email
@@ -122,25 +159,11 @@ var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
 
 selftest.define('deferred registration - email registration token', ['net', 'slow'], function () {
   var s = new Sandbox;
-  s.createApp('deployapp', 'empty');
-  s.cd('deployapp');
-
-  // Deploy an app with a new email address.
   var email = testUtils.randomUserEmail();
   var username = testUtils.randomString(10);
   var appName = testUtils.randomAppName();
-  var run = s.run('deploy', appName);
-  run.waitSecs(testUtils.accountsCommandTimeoutSecs);
-  run.matchErr('Email:');
-  run.write(email + '\n');
-  run.waitSecs(90);
-  // Check that we got a prompt to set a password on meteor.com.
-  run.matchErr('set a password');
-  var urlMatch = run.matchErr(registrationUrlRegexp);
-  if (! urlMatch || ! urlMatch[1]) {
-    throw new Error("Missing registration URL");
-  }
-  run.expectExit(0);
+
+  var apiToken = deployWithNewEmail(s, email, appName);
 
   // Check that we got a registration email in our inbox.
   var registrationEmail = waitForEmail(email, /Set a password/,
@@ -165,9 +188,10 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   // authorization to delete our app.
   testUtils.cleanUpApp(s, appName);
 
-  // XXX Test that registration can only be done once (after using email
-  // url, api url fails and vice versa, and after using each of them
-  // using it again fails)
+  // All the tokens we got should now be invalid.
+  expectInvalidToken(token);
+  expectInvalidToken(apiToken);
+
   // XXX Test that registration URLs get printed when they should
   // XXX Test registration while the tool is waiting on a DDP method to
   // return (e.g. deploy and login with an existing username that
@@ -179,29 +203,27 @@ selftest.define(
   ['net', 'slow'],
   function () {
     var s = new Sandbox;
-    s.createApp('deployapp', 'empty');
-    s.cd('deployapp');
 
-    // Deploy an app with a new email address.
     var email = testUtils.randomUserEmail();
     var username = testUtils.randomString(10);
     var appName = testUtils.randomAppName();
-    var run = s.run('deploy', appName);
-    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
-    run.matchErr('Email:');
-    run.write(email + '\n');
-    run.waitSecs(90);
-    // Check that we got a prompt to set a password on meteor.com.
-    run.matchErr('set a password');
-    var urlMatch = run.matchErr(registrationUrlRegexp);
-    if (! urlMatch || ! urlMatch.length || ! urlMatch[1]) {
-      throw new Error("Missing registration token");
-    }
-    var token = urlMatch[1];
+    var token = deployWithNewEmail(s, email, appName);
     registerWithToken(token, username, 'testtest', email);
 
     testUtils.logout(s);
     testUtils.login(s, username, 'testtest');
     testUtils.cleanUpApp(s, appName);
+
+    // All tokens we received should not be invalid.
+    expectInvalidToken(token);
+    var registrationEmail = waitForEmail(email, /Set a password/,
+                                         /set a password/, 60);
+    var emailToken = registrationUrlRegexp.exec(
+      registrationEmail.bodyPage
+    );
+    if (! emailToken || ! emailToken[1]) {
+      throw new Error('No registration token in email');
+    }
+    expectInvalidToken(emailToken[1]);
   }
 );
