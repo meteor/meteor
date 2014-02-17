@@ -1,4 +1,4 @@
-## v.NEXT
+## v.0.7.1
 
 * Meteor developer accounts
   - `accounts-meteor-developer` package for OAuth support
