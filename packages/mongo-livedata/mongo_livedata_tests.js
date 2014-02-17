@@ -770,6 +770,7 @@ if (Meteor.isServer) {
 
       return {output: output, handle: handle};
     };
+    var clearOutput = function (o) { o.output.splice(0, o.output.length); };
 
     var ins = function (doc) {
       if (doc.bar) doc._id = doc.bar.toString();
@@ -828,7 +829,7 @@ if (Meteor.isServer) {
     rem(docId5);
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId5}, {added: docId2}]));
-    o.output.slice(0, 2);
+    clearOutput(o);
 
     // Current state is [3 5 6] 7]
     // Add some negative numbers overflowing the buffer.
@@ -843,7 +844,7 @@ if (Meteor.isServer) {
                     {added: docId8}, {removed: docId3}];
 
     test.equal(o.output, expected);
-    o.output.splice(0, 6);
+    clearOutput(o);
 
     // Now the state is [-3 -2 -1] 3 5 6] 7
     // If we update first 3 docs (increment them by 20), it would be
@@ -866,7 +867,7 @@ if (Meteor.isServer) {
                           [expected[0], expected[2], expected[4]]));
     test.equal([o.output[1], o.output[3], o.output[5]],
                [expected[1], expected[3], expected[5]]);
-    o.output.splice(0, 6);
+    clearOutput(o);
 
     // The new arrangement is [3 5 6] 7 17 18] 19
     // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
@@ -881,7 +882,7 @@ if (Meteor.isServer) {
     test.length(o.output, 8);
     test.isTrue(setsEqual([o.output[0], o.output[2], o.output[4]], expectedRemoves));
     test.equal([o.output[1], o.output[3], o.output[5], o.output[7]], expectedAdds);
-    o.output.splice(0, 8);
+    clearOutput(o);
 
     // The new arrangement is [17 18 19] or [docId6 docId7 docId8]
     var docId9 = ins({ foo: 22, bar: 21 });
@@ -889,10 +890,7 @@ if (Meteor.isServer) {
     var docId11 = ins({ foo: 22, bar: 41 });
     var docId12 = ins({ foo: 22, bar: 51 });
 
-    console.log("----------------------d");
-    console.log(o.handle._multiplexer._observeDriver._published.idMap._map);
-    console.log(o.handle._multiplexer._observeDriver._unpublishedBuffer.idMap._map);
-    debugger;
+    test.length(o.output, 0);
     upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
     // Becomes [21 22 23] 24 31 41] 51
     test.length(o.output, 4);
@@ -900,15 +898,14 @@ if (Meteor.isServer) {
     test.equal(o.output.shift(), { added: docId9 });
     test.equal(o.output.shift(), { changed: docId7 });
     test.equal(o.output.shift(), { changed: docId8 });
-    console.log(o.handle._multiplexer._observeDriver._published.idMap._map);
-    console.log(o.handle._multiplexer._observeDriver._unpublishedBuffer.idMap._map);
-    console.log("----------------------p");
+    clearOutput(o);
 
     rem(docId9);
     // Becomes [22 23 24] 31 41] 51
     test.length(o.output, 2);
     test.equal(o.output.shift(), { removed: docId9 });
     test.equal(o.output.shift(), { added: docId6 });
+    clearOutput(o);
 
     o.handle.stop();
     onComplete();
