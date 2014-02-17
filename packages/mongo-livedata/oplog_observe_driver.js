@@ -279,7 +279,7 @@ _.extend(OplogObserveDriver.prototype, {
           // but it can move into buffered now, check it
           var maxBuffered = self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId());
           if (self._justUpdatedBuffer || (maxBuffered && comparator(newDoc, maxBuffered) < 0))
-            self._addPublished(id, newDoc);
+            self._addBuffered(id, newDoc);
           else
             self._justUpdatedBuffer = false;
         }
@@ -432,13 +432,8 @@ _.extend(OplogObserveDriver.prototype, {
     // XXX needs more thought on non-zero skip
     // XXX "2" here is a "magic number"
     var initialCursor = self._cursorForQuery({ limit: self._limit * 2 });
-    initialCursor.forEach(function (initialDoc, i) {
-      var id = initialDoc._id;
-      delete initialDoc._id;
-      if (!self._limit || i < self._limit)
-        self._addPublished(id, initialDoc);
-      else
-        self._addBuffered(id, initialDoc);
+    initialCursor.forEach(function (initialDoc) {
+      self._addMatching(initialDoc);
     });
     self._justUpdatedBuffer = true;
     if (self._stopped)
