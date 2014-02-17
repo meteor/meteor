@@ -27,11 +27,11 @@ selftest.define("npm", ["net"], function () {
       run.waitSecs(2);
       // use match instead of read because on a built release we can
       // also get an update message here.
-      run.match(
+      run.read(
         "npm-test: updating npm dependencies -- meteor-test-executable...\n");
     }
     run.waitSecs(15);
-    run.read("null; From shell script\n");
+    run.match("null; From shell script\n");
     run.expectEnd();
     run.expectExit(0);
   });
