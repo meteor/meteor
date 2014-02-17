@@ -227,3 +227,58 @@ selftest.define(
     expectInvalidToken(emailToken[1]);
   }
 );
+
+selftest.define(
+  'deferred registration - register after logging out',
+  ['net', 'slow'],
+  function () {
+    var s = new Sandbox;
+    var email = testUtils.randomUserEmail();
+    var username = testUtils.randomString(10);
+    var appName = testUtils.randomAppName();
+    var token = deployWithNewEmail(s, email, appName);
+    testUtils.logout(s);
+
+    // If we deploy again with the same email address after logging out,
+    // we should get a message telling us to check our email and
+    // register, and the tool should obediently wait for us to do that
+    // before doing the deploy.
+    s.createApp('deployapp2', 'empty');
+    s.cd('deployapp2');
+    var run = s.run('deploy', appName);
+    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+    run.matchErr('Email:');
+    run.write(email + '\n');
+    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+    run.matchErr('already in use');
+    run.matchErr('come back here to deploy your app');
+
+    var registrationEmail = waitForEmail(
+      email,
+      /Set a password/,
+      /You previously created a Meteor developer account/,
+      60
+    );
+    token = registrationUrlRegexp.exec(
+      registrationEmail.bodyPage
+    );
+    if (! token || ! token[1]) {
+      throw new Error('No registration token in email');
+    }
+
+    registerWithToken(token[1], username, 'testtest', email);
+    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+    run.matchErr('log in with your new password');
+    run.matchErr('Password:');
+    run.write('testtest\n');
+    run.waitSecs(90);
+    run.match('Now serving at');
+    run.expectExit(0);
+
+    run = s.run('whoami');
+    run.read(username);
+    run.expectExit(0);
+
+    testUtils.cleanUpApp(s, appName);
+  }
+);
