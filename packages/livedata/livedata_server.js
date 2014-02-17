@@ -1043,7 +1043,9 @@ Server = function () {
   // server and completes DDP version negotiation. Use an object instead
   // of an array so we can safely remove one from the list while
   // iterating over it.
-  self.onConnectionHook = new Hook("onConnection callback");
+  self.onConnectionHook = new Hook({
+    debugPrintExceptions: "onConnection callback"
+  });
 
   self.publish_handlers = {};
   self.universal_publish_handlers = [];
