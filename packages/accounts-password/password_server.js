@@ -338,7 +338,11 @@ Meteor.methods({resetPassword: function (token, newVerifier) {
         // - Forgetting about the reset token that was just used
         // - Verifying their email, since they got the password reset via email.
         var affectedRecords = Meteor.users.update(
-          {_id: user._id, 'emails.address': email},
+          {
+            _id: user._id,
+            'emails.address': email,
+            'services.password.reset.token': token
+          },
           {$set: {'services.password.srp': newVerifier,
                   'emails.$.verified': true},
            $unset: {'services.password.reset': 1}});
