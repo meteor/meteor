@@ -32,9 +32,16 @@ Meteor.user = function () {
 /// LOGIN HOOKS
 ///
 
+// Exceptions inside the hook callback are passed up to us.
 var validateLoginHook = new Hook();
-var onLoginHook = new Hook("onLogin callback");
-var onLoginFailureHook = new Hook("onLoginFailure callback");
+
+// Callback exceptions are printed with Meteor._debug and ignored.
+var onLoginHook = new Hook({
+  debugPrintExceptions: "onLogin callback"
+});
+var onLoginFailureHook = new Hook({
+  debugPrintExceptions: "onLoginFailure callback"
+});
 
 Accounts.validateLoginAttempt = function (func) {
   return validateLoginHook.register(func);
@@ -49,11 +56,20 @@ Accounts.onLoginFailure = function (func) {
 };
 
 
-var validateLogin = function (attempt) {
+// Give each login hook callback a fresh cloned copy of the attempt
+// object, but don't clone the connection.
+//
+var cloneAttemptWithConnection = function (connection, attempt) {
+  var clonedAttempt = EJSON.clone(attempt);
+  clonedAttempt.connection = connection;
+  return clonedAttempt;
+};
+
+var validateLogin = function (connection, attempt) {
   validateLoginHook.each(function (callback) {
     var ret;
     try {
-      ret = callback(attempt);
+      ret = callback(cloneAttemptWithConnection(connection, attempt));
     }
     catch (e) {
       attempt.allowed = false;
@@ -69,16 +85,16 @@ var validateLogin = function (attempt) {
 };
 
 
-var successfulLogin = function (attempt) {
+var successfulLogin = function (connection, attempt) {
   onLoginHook.each(function (callback) {
-    callback(attempt);
+    callback(cloneAttemptWithConnection(connection, attempt));
     return true;
   });
 };
 
-var failedLogin = function (attempt) {
+var failedLogin = function (connection, attempt) {
   onLoginFailureHook.each(function (callback) {
-    callback(attempt);
+    callback(cloneAttemptWithConnection(connection, attempt));
     return true;
   });
 };
@@ -121,7 +137,7 @@ var failedLogin = function (attempt) {
 //
 //   options:
 //     optional object merged into the result returned by the login
-//     method.
+//     method; used by HAMK from SRP.
 //
 //   stampedLoginToken:
 //     optional object with `token` and `when` indicating the login
@@ -168,9 +184,11 @@ var tryLoginMethod = function (type, fn) {
 
 // Login a user on a connection.
 //
-// We use the method invocation to set the user id on the connection
-// to avoid bypassing the method check that `setUserId` shouldn't be
-// called after an `unblock`.
+// We use the method invocation to set the user id on the connection,
+// not the connection object directly. setUserId is tied to methods to
+// enforce clear ordering of method application (using wait methods on
+// the client, and a no setUserId after unblock restriction on the
+// server)
 //
 // The `stampedLoginToken` parameter is optional.  When present, it
 // indicates that the login token has already been inserted into the
@@ -227,7 +245,6 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   var attempt = {
     type: result.type || "unknown",
     allowed: !! (result.userId && !result.error),
-    connection: methodInvocation.connection,
     methodName: methodName,
     methodArguments: _.toArray(methodArgs)
   };
@@ -236,18 +253,18 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   if (user)
     attempt.user = user;
 
-  validateLogin(attempt);
+  validateLogin(methodInvocation.connection, attempt);
 
   if (attempt.allowed) {
     var ret = _.extend(
       loginUser(methodInvocation, result.userId, result.stampedLoginToken),
       result.options || {}
     );
-    successfulLogin(attempt);
+    successfulLogin(methodInvocation.connection, attempt);
     return ret;
   }
   else {
-    failedLogin(attempt);
+    failedLogin(methodInvocation.connection, attempt);
     throw attempt.error;
   }
 };
