@@ -229,8 +229,13 @@ var currentUsername = function (data) {
     // username, then ask the server if we have one.
     var username = null;
     var fut = new Future();
+    var resolved = false;
     var connection = loggedInAccountsConnection(sessionData.token);
     connection.call('getUsername', function (err, result) {
+      if (resolved)
+        return;
+      resolved = true;
+
       if (err) {
         // If anything went wrong, return null just as we would have if
         // we hadn't bothered to ask the server.
@@ -240,12 +245,16 @@ var currentUsername = function (data) {
       fut['return'](result);
     });
 
-    setTimeout(inFiber(function () {
-      fut['return'](null);
+    var timer = setTimeout(inFiber(function () {
+      if (! resolved) {
+        fut['return'](null);
+        resolved = true;
+      }
     }), 5000);
 
     username = fut.wait();
     connection.close();
+    clearTimeout(timer);
     if (username) {
       writeMeteorAccountsUsername(username);
     }
