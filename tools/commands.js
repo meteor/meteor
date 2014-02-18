@@ -678,6 +678,7 @@ main.registerCommand({
   }
 }, function (options) {
   var mongoUrl;
+  var usedMeteorAccount = false;
 
   if (options.args.length === 0) {
     // localhost mode
@@ -708,6 +709,7 @@ main.registerCommand({
       mongoUrl = deployGalaxy.temporaryMongoUrl(site);
     } else {
       mongoUrl = deploy.temporaryMongoUrl(site);
+      usedMeteorAccount = true;
     }
 
     if (! mongoUrl)
@@ -717,6 +719,8 @@ main.registerCommand({
   if (options.url) {
     console.log(mongoUrl);
   } else {
+    if (usedMeteorAccount)
+      auth.maybePrintRegistrationLink();
     process.stdin.pause();
     var runMongo = require('./run-mongo.js');
     runMongo.runMongoShell(mongoUrl);
@@ -862,26 +866,16 @@ main.registerCommand({
     });
   }
 
-  var registrationUrl = auth.registrationUrl();
-  if (registrationUrl &&
-      deployResult === 0 &&
-      ! auth.currentUsername()) {
-    process.stderr.write("\n");
-    if (loggedIn) {
+  if (deployResult === 0) {
+    auth.maybePrintRegistrationLink({
+      leadingNewline: true,
       // If the user was already logged in at the beginning of the
       // deploy, then they've already been prompted to set a password
-      // and this is more of a friendly reminder to set their password,
-      // so we word it slightly differently than the first time they're
-      // being shown a registration url.
-      process.stderr.write(
-"You should set a password on your Meteor developer account. It takes\n" +
-"about a minute at: " + registrationUrl + "\n\n");
-    } else {
-      process.stderr.write(
-"You can set a password on your account or change your email address at:\n" +
-registrationUrl + "\n\n");
-    }
+      // at least once before, so we use a slightly different message.
+      firstTime: ! loggedIn
+    });
   }
+
   return deployResult;
 });
 
@@ -979,12 +973,10 @@ main.registerCommand({
   var site = qualifySitename(options.args[0]);
 
   if (! auth.isLoggedIn()) {
-    // XXX meteor.com/create-account or something should have a nice
-    // registration form
     process.stderr.write(
-"\nYou must be logged in to claim sites. Use 'meteor login' to log in.\n" +
-"If you don't have a Meteor developer account yet, you can quickly\n" +
-"create one at www.meteor.com.\n\n");
+"You must be logged in to claim sites. Use 'meteor login' to log in.\n" +
+"If you don't have a Meteor developer account yet, create one by clicking\n" +
+"'Sign in' and then 'Create account' at www.meteor.com.\n\n");
     return 1;
   }
 

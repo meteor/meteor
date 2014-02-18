@@ -835,6 +835,30 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
   }
 });
 
+// options: firstTime, leadingNewline
+exports.maybePrintRegistrationLink = function (options) {
+  options = options || {};
+
+  var registrationUrl = auth.registrationUrl();
+  if (registrationUrl && ! auth.currentUsername()) {
+    if (options.leadingNewline)
+      process.stderr.write("\n");
+    if (! options.firstTime) {
+      // If they've already been prompted to set a password then this
+      // is more of a friendly reminder, so we word it slightly
+      // differently than the first time they're being shown a
+      // registration url.
+      process.stderr.write(
+"You should set a password on your Meteor developer account. It takes\n" +
+"about a minute at: " + registrationUrl + "\n\n");
+    } else {
+      process.stderr.write(
+"You can set a password on your account or change your email address at:\n" +
+registrationUrl + "\n\n");
+    }
+  }
+};
+
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 
 exports.getSessionId = function (domain) {

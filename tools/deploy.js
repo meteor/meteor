@@ -539,6 +539,7 @@ var logs = function (site) {
     return 1;
   } else {
     process.stdout.write(result.message);
+    auth.maybePrintRegistrationLink({ leadingNewline: true });
     return 0;
   }
 };
@@ -662,8 +663,8 @@ var claim = function (site) {
     if (! auth.currentUsername() &&
         auth.registrationUrl()) {
       process.stderr.write(
-"\nBefore you can claim existing sites, you need to set a password on\n" +
-"your Meteor developer account. You can do that here in under a minute:\n\n" +
+"You need to set a password on your Meteor developer account before\n" +
+"you can claim sites. You can do that here in under a minute:\n\n" +
 auth.registrationUrl() + "\n\n");
     } else {
       process.stderr.write("Couldn't claim site: " +
