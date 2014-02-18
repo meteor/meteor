@@ -147,14 +147,18 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._limit && self._published.size() > self._limit) {
       // XXX in theory the size of published is no more than limit+1
       if (self._published.size() !== self._limit + 1) {
-        // xcxc better error message
         throw new Error("After adding to published, " +
-                        (self._limit - self._published.size()) +
+                        (self._published.size() - self._limit) +
                         " documents are overflowing the set");
       }
 
       var overflowingDocId = self._published.maxElementId();
       var overflowingDoc = self._published.get(overflowingDocId);
+
+      if (_.isEqual(overflowingDocId, id)) {
+        throw new Error("The document just added is overflowing the published set");
+      }
+
       self._published.remove(overflowingDocId);
       self._multiplexer.removed(overflowingDocId);
       self._addBuffered(overflowingDocId, overflowingDoc);
@@ -192,7 +196,13 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     self._unpublishedBuffer.set(id, self._sharedProjectionFn(doc));
     if (self._unpublishedBuffer.size() > self._limit) {
-      self._unpublishedBuffer.remove(self._unpublishedBuffer.maxElementId());
+      var maxBufferedId = self._unpublishedBuffer.maxElementId();
+
+      if (_.isEqual(maxBufferedId, id)) {
+        throw new Error("The document just added to buffer is overflowing the buffer");
+      }
+
+      self._unpublishedBuffer.remove(maxBufferedId);
       self._justUpdatedBuffer = false;
     }
   },
