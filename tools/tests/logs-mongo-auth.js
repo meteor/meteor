@@ -68,8 +68,23 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
     } else {
       // If we are not logged in and this is not a legacy app, then we
       // expect a login prompt.
+      //
+      // (If testReprompt is true, try getting reprompted as a result
+      // of entering no username or a bad password.)
+      if (options.testReprompt) {
+        run.matchErr('Username: ');
+        run.write("\n");
+        run.matchErr("Username:");
+        run.write("   \n");
+      }
       run.matchErr('Username: ');
       run.write((options.username || 'test') + '\n');
+      if (options.testReprompt) {
+        run.matchErr("Password:");
+        run.write("wrongpassword\n");
+        run.waitSecs(15);
+        run.matchErr("failed");
+      }
       run.matchErr('Password: ');
       run.write((options.password || 'testtest') + '\n');
       run.waitSecs(15);
@@ -119,7 +134,8 @@ _.each([false, true], function (loggedIn) {
         logsOrMongoForApp(s, command,
                           'app-for-selftest-not-test-owned', {
                             loggedIn: loggedIn,
-                            authorized: false
+                            authorized: false,
+                            testReprompt: true
                           });
 
         if (! loggedIn) {

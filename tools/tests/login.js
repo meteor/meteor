@@ -25,14 +25,25 @@ selftest.define("login", ['net'], function () {
     run.expectExit(0);
   }
 
+  // Leaving username blank, or getting the password wrong, doesn't
+  // reprompt. It also doesn't log you out.
+  run = s.run("login");
+  run.matchErr("Username:");
+  run.write("\n");
+  run.matchErr("Password:");
+  run.write("whatever\n");
+  run.waitSecs(5);
+  run.matchErr("failed");
+  run.expectExit(1);
+
   run = s.run("login");
   run.matchErr("Username:");
   run.write("test\n");
   run.matchErr("Password:");
-  run.write("testtest\n");
+  run.write("whatever\n");
   run.waitSecs(5);
-  run.matchErr("Logged in as test.");
-  run.expectExit(0);
+  run.matchErr("failed");
+  run.expectExit(1);
 
   // XXX test login by email
 
