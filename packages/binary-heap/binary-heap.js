@@ -174,6 +174,7 @@ _.extend(BinaryHeap.prototype, {
     var clone = new BinaryHeap(self._comparator);
     clone._heap = EJSON.clone(self._heap);
     clone._heapIdx = EJSON.clone(self._heapIdx);
+    return clone;
   },
 
   maxElementId: function () {

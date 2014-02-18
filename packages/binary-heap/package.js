@@ -5,9 +5,10 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('BinaryHeap');
+  api.export('MaxMinHeap');
   api.use(['underscore']);
   api.use(['minimongo'], { weak: true });
-  api.add_files('binary-heap.js');
+  api.add_files(['binary-heap.js', 'max-min-heap.js']);
 });
 
 Package.on_test(function (api) {
