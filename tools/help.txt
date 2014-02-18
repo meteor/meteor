@@ -264,6 +264,19 @@ You should never need to use this command. It is intended for use while
 debugging the Meteor packaging tools themselves.
 
 
+>>> run-command
+Build and run a command-line tool
+Usage: meteor run-command <package directory> [arguments..]
+
+Builds the provided directory as a package, then loads the package and
+calls the main() function inside the package. The function will receive
+any remaining arguments. The exit status will be the return value of
+main() (which is called inside a fiber).
+
+This command is for temporary, internal use, until we have a more mature
+system for building standalone command-line programs with Meteor.
+
+
 >>> login
 Log in to your Meteor account
 Usage: meteor login [--email] [--galaxy <galaxy.example.com>]

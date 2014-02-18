@@ -32,6 +32,7 @@ var Command = function (options) {
     options: {},
     requiresApp: false,
     requiresRelease: true,
+    raw: false,
     hidden: false
   }, options);
 
@@ -134,6 +135,10 @@ main.SpringboardToLatestRelease = function () {};
 //   just like we always do; it's just that in that one case, instead
 //   of bailing out with an error we will run your command with
 //   release.current === null.
+// - raw: if true, option parsing is completely skipped (including
+//   --release and --help). To be activated the command will need to be
+//   literally the first argument, and it will need to do its own option
+//   parsing from process.argv.
 // - hidden: do not show in command list in help
 //
 // An error will be printed if an unrecognized option is passed on the
@@ -179,6 +184,9 @@ main.registerCommand = function (options, func) {
     nameParts[0] = nameParts[0].substr(2);
     nameParts.unshift('--');
   }
+
+  if (nameParts.length !== 1 && options.raw)
+    throw new Error("raw mode can't be used with subcommands or --commands");
 
   var target = commands;
   while (nameParts.length > 1) {
@@ -296,10 +304,11 @@ var springboard = function (toolsVersion, releaseOverride) {
   var cmd = path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
 
   if (releaseOverride !== undefined)
-    // We used to just append --release=<releaseOverride> to the arguments, and
-    // though that's probably safe in practice, it makes us worry about things
-    // like other --release options.  So now we use an environment
-    // variable. #SpringboardEnvironmentVar
+    // We used to just append --release=<releaseOverride> to the
+    // arguments, and though that's probably safe in practice, there's
+    // a lot to worry about: conflicts with other --release options,
+    // or 'raw' commands that do their own argument parsing. So now we
+    // use environment variable. #SpringboardEnvironmentVar
     process.env['METEOR_SPRINGBOARD_RELEASE'] = releaseOverride;
 
   // Now exec; we're not coming back.
@@ -335,6 +344,21 @@ Fiber(function () {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
     process.exit(1);
+  }
+
+  var commandName = '';
+  var command = null;
+  var isRawCommand = false;
+  var showHelp = false;
+
+  // Check to see if it is a "raw" command that handles its own
+  // argument parsing.
+  if (process.argv.length > 2 &&
+      _.has(commands, process.argv[2]) &&
+      commands[process.argv[2]].raw) {
+    command = commands[process.argv[2]];
+    commandName = command.name;
+    isRawCommand = true;
   }
 
   // Parse the arguments.
@@ -657,22 +681,18 @@ Fiber(function () {
   }
 
   // Check for the '--help' option.
-  var showHelp = false;
   if (_.has(rawOptions, '--help')) {
     showHelp = true;
     delete rawOptions['--help'];
   }
 
-  var commandName = '';
-  var command = null;
-
   // Check for a command like '--arch' or '--version'. Make sure
   // it stands alone. (And this is ignored if you've passed --help.)
-  if (! showHelp) {
+  if (! command) {
     _.each(commands['--'] || {}, function (value, key) {
       var fullName = "--" + key;
 
-      if (rawOptions[fullName]) {
+      if (rawOptions[fullName] && ! showHelp) {
         if (rawOptions[fullName].length > 1) {
           process.stderr.write("It doesn't make sense to pass " +
                                fullName + " more than once.\n");
