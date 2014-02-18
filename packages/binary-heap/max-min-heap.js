@@ -1,13 +1,13 @@
 MaxMinHeap = function (comparator, initialData) {
   var self = this;
 
-  self.prototype.constructor.call(self, comparator, initialData);
+  BinaryHeap.call(self, comparator, initialData);
   self._minHeap = new BinaryHeap(function (a, b) {
     return -comparator(a, b);
   }, initialData);
 };
 
-MaxMinHeap.prototype = Object.create(BinaryHeap);
+MaxMinHeap.prototype = Object.create(BinaryHeap.prototype);
 
 _.extend(MaxMinHeap.prototype, {
   set: function (id, value) {
