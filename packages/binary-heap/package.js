@@ -12,6 +12,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('tinytest');
+  api.use('binary-heap');
   api.add_files('binary-heap-tests.js');
 });
 
