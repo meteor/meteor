@@ -37,10 +37,10 @@ _.extend(BinaryHeap.prototype, {
     });
 
     for (var i = parentIdx(data.length); i >= 0; i--)
-      self._heapify(i);
+      self._downHeap(i);
   },
 
-  _heapify: function (idx) {
+  _downHeap: function (idx) {
     var self = this;
 
     while (leftChildIdx(idx) < self.size()) {
@@ -131,7 +131,7 @@ _.extend(BinaryHeap.prototype, {
       if (idx !== last) {
         self._swap(idx, last);
         self._heap.pop();
-        self._heapify(idx);
+        self._downHeap(idx);
       } else {
         self._heap.pop();
       }
