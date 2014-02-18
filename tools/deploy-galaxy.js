@@ -32,14 +32,14 @@ var handleError = function (error, galaxyName, messages) {
   var Package = getPackage();
   messages = messages || {};
 
-  if (e instanceof Package.meteor.Meteor.Error) {
+  if (error instanceof Package.meteor.Meteor.Error) {
     var msg = messages[error.error];
     if (msg)
       process.stderr.write(msg + "\n");
     else if (error.message)
       process.stderr.write("Denied: " + error.message + "\n");
     return 1;
-  } else if (e instanceof ConnectionTimeoutError) {
+  } else if (error instanceof ConnectionTimeoutError) {
     // If we have an http/https URL for a galaxyName instead of a
     // proper galaxyName (which is what the code in this file
     // currently passes), strip off the scheme and trailing slash.
