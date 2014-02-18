@@ -102,6 +102,8 @@ _.extend(BinaryHeap.prototype, {
 
   get: function (id) {
     var self = this;
+    if (! self.has(id))
+      return null;
     return self._get(self._heapIdx[idStringify(id)]);
   },
   set: function (id, value) {
@@ -122,12 +124,18 @@ _.extend(BinaryHeap.prototype, {
     var self = this;
     var strId = idStringify(id);
 
-    if (! self.has(id)) {
+    if (self.has(id)) {
       var last = self._heap.length - 1;
       var idx = self._heapIdx[strId];
-      self._swap(idx, last);
-      self._heap.pop();
-      self._heapify(idx);
+
+      if (idx !== last) {
+        self._swap(idx, last);
+        self._heap.pop();
+        self._heapify(idx);
+      } else {
+        self._heap.pop();
+      }
+
       delete self._heapIdx[strId];
     }
   },
