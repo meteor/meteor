@@ -111,7 +111,6 @@ Sorter.prototype.getComparator = function (options) {
 };
 
 Minimongo.Sorter = Sorter;
-MinimongoTest.Sorter = Sorter;
 
 // Given an array of comparators
 // (functions (a,b)->(negative or positive or zero)), returns a single
