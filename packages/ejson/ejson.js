@@ -172,13 +172,27 @@ var toJSONValueHelper = function (item) {
   return undefined;
 };
 
+// Converts an EJSON object to a JSON object. Tries to avoid cloning pieces if
+// possible.
 EJSON.toJSONValue = function (item) {
   var changed = toJSONValueHelper(item);
   if (changed !== undefined)
     return changed;
   if (typeof item === 'object') {
-    item = EJSON.clone(item);
-    adjustTypesToJSONValue(item);
+    var replacement;
+    // Iterate over array or object.
+    _.each(item, function (value, key) {
+      var newValue = EJSON.toJSONValue(value);
+      // If any sub-thing has to change, we need to bubble-up and return
+      // something new.  Do a shallow clone.
+      if (!replacement && value !== newValue) {
+        replacement = _.clone(item);
+      }
+      if (replacement)
+        replacement[key] = newValue;
+    });
+    if (replacement)
+      return replacement;
   }
   return item;
 };
