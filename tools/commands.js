@@ -1141,20 +1141,14 @@ main.registerCommand({
 main.registerCommand({
   name: 'run-command',
   hidden: true,
-  raw: true
+  minArgs: 1,
+  maxArgs: Infinity
 }, function (options) {
-  // This is marked as raw, so we have to do all of our argument
-  // parsing ourselves. This lets us make sure that the arguments to
-  // the command being run don't get accidentally intrepreted.
-
   var library = release.current.library;
-  var argv = process.argv.slice(3);
-  if (! argv.length || argv[0] === "--help")
-    throw new main.ShowUsage;
 
-  if (! fs.existsSync(argv[0]) ||
-      ! fs.statSync(argv[0]).isDirectory()) {
-    process.stderr.write(argv[0] + ": not a directory\n");
+  if (! fs.existsSync(options.args[0]) ||
+      ! fs.statSync(options.args[0]).isDirectory()) {
+    process.stderr.write(options.args[0] + ": not a directory\n");
     return 1;
   }
 
@@ -1165,7 +1159,7 @@ main.registerCommand({
       // Make the directory visible as a package. Derive the last
       // package name from the last component of the directory, and
       // bail out if that creates a conflict.
-      var packageDir = path.resolve(argv[0]);
+      var packageDir = path.resolve(options.args[0]);
       packageName = path.basename(packageDir) + "-tool";
       if (library.get(packageName, false)) {
         buildmessage.error("'" + packageName +
@@ -1190,7 +1184,7 @@ main.registerCommand({
     return 1;
   }
 
-  var ret = world[packageName].main(argv.slice(1));
+  var ret = world[packageName].main(options.args.slice(1));
   // let exceptions propagate and get printed by node
   if (ret === undefined)
     ret = 0;
