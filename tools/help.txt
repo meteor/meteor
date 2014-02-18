@@ -218,6 +218,32 @@ site into your account. If you had set a password on the site you will
 be prompted for it one last time.
 
 
+>>> login
+Log in to your Meteor developer account
+Usage: meteor login [--email]
+
+Prompts for your username and password and logs you in to your Meteor
+developer account. Pass --email to log in by email address rather than
+by username.
+
+
+>>> logout
+Log out of your Meteor developer account
+Usage: meteor logout
+
+Log out of your Meteor developer account.
+
+
+>>> whoami
+Prints the username of your Meteor developer account
+Usage: meteor whoami
+
+Prints the username of the currently logged-in Meteor developer.
+
+See 'meteor login' to log into or 'meteor logout' to log out of your
+Meteor developer account.
+
+
 >>> test-packages
 Test one or more packages
 Usage: meteor test-packages [--release <release>] [options] [package...]
@@ -281,32 +307,6 @@ the arguments).
 
 This command is for temporary, internal use, until we have a more mature
 system for building standalone command-line programs with Meteor.
-
-
->>> login
-Log in to your Meteor account
-Usage: meteor login [--email] [--galaxy <galaxy.example.com>]
-
-Prompts for your username and password and logs you in to your
-Meteor account. Pass --email to log in by email address instead of
-username. Pass --galaxy to specify a galaxy to log in to.
-
-
->>> logout
-Log out of your Meteor account
-Usage: meteor logout
-
-Log out of your Meteor account.
-
-
->>> whoami
-Prints the username of your Meteor developer account
-Usage: meteor whoami
-
-Prints the username of the currently logged-in Meteor developer.
-
-See 'meteor login' to log into or 'meteor logout' to log out of of your
-Meteor account.
 
 
 >>> self-test
