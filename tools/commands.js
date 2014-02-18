@@ -1202,10 +1202,14 @@ main.registerCommand({
   name: 'login',
   options: {
     email: { type: String },
+    // Undocumented: get credentials on a specific Galaxy. Do we still
+    // need this?
     galaxy: { type: String }
   }
 }, function (options) {
-  return auth.loginCommand(options);
+  return auth.loginCommand(_.extend({
+    overwriteExistingToken: true
+  }, options));
 });
 
 

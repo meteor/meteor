@@ -11,6 +11,20 @@ selftest.define("login", ['net'], function () {
   // Username and password prompts happen on stderr so that scripts can
   // run commands that do login interactively and still save the command
   // output with the login prompts appearing in it.
+  //
+  // Do this twice to confirm that the login command prints a prompt
+  // even if you are already logged in.
+  for (var i = 0; i < 2; i++) {
+    run = s.run("login");
+    run.matchErr("Username:");
+    run.write("test\n");
+    run.matchErr("Password:");
+    run.write("testtest\n");
+    run.waitSecs(5);
+    run.matchErr("Logged in as test.");
+    run.expectExit(0);
+  }
+
   run = s.run("login");
   run.matchErr("Username:");
   run.write("test\n");
