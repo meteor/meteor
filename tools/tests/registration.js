@@ -193,9 +193,6 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   expectInvalidToken(apiToken);
 
   // XXX Test that registration URLs get printed when they should
-  // XXX Test registration while the tool is waiting on a DDP method to
-  // return (e.g. deploy and login with an existing username that
-  // doesn't have a password set yet)
 });
 
 selftest.define(
