@@ -83,10 +83,11 @@ parseDDP = function (stringMessage) {
 };
 
 stringifyDDP = LivedataTest.stringifyDDP = function (msg) {
-  var copy = EJSON.clone(msg);
+  // Shallow clone.
+  var copy = _.clone(msg);
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
-  if (_.has(msg, 'fields')) {
+  if (_.has(copy, 'fields')) {
     var cleared = [];
     _.each(msg.fields, function (value, key) {
       if (value === undefined) {
@@ -102,10 +103,19 @@ stringifyDDP = LivedataTest.stringifyDDP = function (msg) {
   // adjust types to basic
   _.each(['fields', 'params', 'result'], function (field) {
     if (_.has(copy, field))
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
+      copy[field] = EJSON.toJSONValue(copy[field]);
   });
   if (msg.id && typeof msg.id !== 'string') {
     throw new Error("Message id is not a string");
+  }
+  if (msg.error) {
+    if (typeof msg.error !== 'object')
+      throw new Error("Message error is not an object");
+    // Pull out the desired fields from the error (which may be non-enumerable,
+    // eg if it's a Meteor.Error thrown through a Future). See #1482.
+    copy.error = {error: msg.error.error,
+                  reason: msg.error.reason,
+                  details: msg.error.details};
   }
   return JSON.stringify(copy);
 };
