@@ -1179,7 +1179,7 @@ main.registerCommand({
     return 1;
   }
 
-  if (! ('main' in world[packageName])) {
+  if (typeof world[packageName].main !== "function") {
     process.stderr.write("Package does not define a main() function.\n");
     return 1;
   }
