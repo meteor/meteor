@@ -30,6 +30,7 @@
   - {$type: 4} queries
   - optimize `remove({})` when observers are paused
   - make update-by-id constant time
+  - allow {$set: {'x._id': 1}}  #1794
 
 * Add `clientAddress` and `httpHeaders` to `this.connection` in method
   calls and publish functions.
