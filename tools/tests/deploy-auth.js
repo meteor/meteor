@@ -6,6 +6,20 @@ var Sandbox = selftest.Sandbox;
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
+selftest.define('deploy - bad arguments', [], function () {
+  var s = new Sandbox;
+
+  // Deploy with no app name should fail
+  var run = s.run('deploy');
+  run.matchErr('not enough arguments');
+  run.expectExit(1);
+
+  // Deploy outside of an app directory
+  run = s.run('deploy', testUtils.randomAppName());
+  run.matchErr('not in a Meteor project directory');
+  run.expectExit(1);
+});
+
 selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // Create two sandboxes: one with a warehouse so that we can run
   // --release, and one without a warehouse so that we run from the
@@ -36,7 +50,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
   // Now, with our logged in current release, we should be able to
   // deploy to the legacy app.
-  var run = sandbox.run('deploy', noPasswordLegacyApp);
+  run = sandbox.run('deploy', noPasswordLegacyApp);
   run.waitSecs(90);
   run.match('Now serving at ' + noPasswordLegacyApp + '.meteor.com');
   run.expectExit(0);

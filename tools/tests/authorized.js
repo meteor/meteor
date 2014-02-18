@@ -24,6 +24,9 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.matchErr("You must be logged in for that.");
   run.expectExit(1);
 
+  run = s.run("authorized");
+  run.matchErr("not enough arguments");
+
   run = s.run("authorized", appName, "--remove", "bob");
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in for that.");

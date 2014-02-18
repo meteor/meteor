@@ -93,8 +93,9 @@ _.each([false, true], function (loggedIn) {
       ['net'],
       function () {
         var s = new Sandbox;
+        var run;
         if (loggedIn) {
-          var run = s.run('login');
+          run = s.run('login');
           run.waitSecs(commandTimeoutSecs);
           run.matchErr('Username:');
           run.write('test\n');
@@ -103,6 +104,20 @@ _.each([false, true], function (loggedIn) {
           run.waitSecs(commandTimeoutSecs);
           run.matchErr('Logged in as test.');
           run.expectExit(0);
+        }
+
+        // Running 'meteor logs' without an app name should fail.
+        if (command === 'logs') {
+          run = s.run(command);
+          run.matchErr('not enough arguments');
+          run.expectExit(1);
+        }
+        // Running 'meteor mongo' without an app name and not in an app
+        // dir should fail.
+        if (command === 'mongo') {
+          run = s.run('mongo');
+          run.matchErr('not in a Meteor project directory');
+          run.expectExit(1);
         }
 
         logsOrMongoForApp(s, command,

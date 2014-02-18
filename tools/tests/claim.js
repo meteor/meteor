@@ -25,6 +25,11 @@ selftest.define("claim", ['net', 'slow'], function () {
   var run = s.run('claim', testUtils.randomAppName(20));
   loggedInError(run);
 
+  // Can't claim sites without specifying a site
+  run = s.run('claim');
+  run.matchErr('not enough arguments');
+  run.expectExit(1);
+
   // Existing site.
   run = s.run('claim', 'mother-test');
   loggedInError(run);
