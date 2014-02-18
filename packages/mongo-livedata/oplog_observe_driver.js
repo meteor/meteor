@@ -241,7 +241,7 @@ _.extend(OplogObserveDriver.prototype, {
     // outside of the buffer easily.
     if (!limit || self._published.size() < limit || comparator(maxPublished, fields) > 0) {
       self._addPublished(id, fields);
-    } else if (self._justUpdatedBuffer || (maxBuffered && comparator(maxBuffered, fields) > 0)) {
+    } else if ((self._justUpdatedBuffer && self._unpublishedBuffer.size() < limit) || (maxBuffered && comparator(maxBuffered, fields) > 0)) {
       self._addBuffered(id, fields);
     }
   },
