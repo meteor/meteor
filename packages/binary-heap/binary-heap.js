@@ -68,18 +68,16 @@ _.extend(BinaryHeap.prototype, {
   _upHeap: function (idx) {
     var self = this;
     var value = self._get(idx);
-    var ancestor = idx;
 
-    while (ancestor > 0) {
-      var parent = parentIdx(ancestor);
-      if (self._comparator(self._get(parent), value) < 0)
-        ancestor = parent;
-      else
+    while (idx > 0) {
+      var parent = parentIdx(idx);
+      if (self._comparator(self._get(parent), value) < 0) {
+        self._swap(parent, idx)
+        idx = parent;
+      } else {
         break;
+      }
     }
-
-    if (ancestor !== idx)
-      self._swap(ancestor, idx);
   },
 
   // Internal: gets raw data object placed on idxth place in heap

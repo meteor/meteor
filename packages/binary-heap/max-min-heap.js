@@ -12,23 +12,23 @@ MaxMinHeap.prototype = Object.create(BinaryHeap.prototype);
 _.extend(MaxMinHeap.prototype, {
   set: function (id, value) {
     var self = this;
-    self._minHeap.set(id, value);
     BinaryHeap.prototype.set.apply(self, arguments);
+    self._minHeap.set(id, value);
   },
   remove: function (id) {
     var self = this;
-    self._minHeap.remove(id);
     BinaryHeap.prototype.remove.apply(self, arguments);
+    self._minHeap.remove(id);
   },
   clear: function () {
     var self = this;
-    self._minHeap.clear(id);
     BinaryHeap.prototype.clear.apply(self, arguments);
+    self._minHeap.clear();
   },
   setDefault: function (id, def) {
     var self = this;
-    self._minHeap.setDefault(id, def);
-    return BinaryHeap.prototype.setDefault.apply(self, arguments);
+    BinaryHeap.prototype.setDefault.apply(self, arguments);
+    return self._minHeap.setDefault(id, def);
   },
   clone: function () {
     var self = this;
