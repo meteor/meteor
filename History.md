@@ -160,8 +160,6 @@
 * Don't cache direct references to the fields arguments to the subscription
   `added` and `changed` methods.  #1750
 
-* Remove undocumented run-command command.
-
 ## v0.7.0.1
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
