@@ -47,6 +47,9 @@ LocalCollection._modify = function (doc, mod, options) {
           throw MinimongoError(
             "Invalid mod field name, may not end in a period");
 
+        if (keypath === '_id')
+          throw MinimongoError("Mod on _id not allowed");
+
         var keyparts = keypath.split('.');
         var noCreate = _.has(NO_CREATE_MODIFIERS, op);
         var forbidArray = (op === "$rename");
@@ -194,9 +197,6 @@ var MODIFIERS = {
       e.setPropertyError = true;
       throw e;
     }
-    if (field === '_id' && !EJSON.equals(arg, target._id))
-      throw MinimongoError("Cannot change the _id of a document");
-
     target[field] = EJSON.clone(arg);
   },
   $setOnInsert: function (target, field, arg) {
