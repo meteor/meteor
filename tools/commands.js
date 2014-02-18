@@ -1256,12 +1256,13 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'self-test',
+  minArgs: 0,
+  maxArgs: 1,
   options: {
     changed: { type: Boolean },
     'force-online': { type: Boolean },
     slow: { type: Boolean },
     history: { type: Number },
-    tests: { type: String }
   },
   hidden: true
 }, function (options) {
@@ -1279,13 +1280,13 @@ main.registerCommand({
   }
 
   var testRegexp = undefined;
-  if (options.tests) {
+  if (options.args.length) {
     try {
-      testRegexp = new RegExp(options.tests);
+      testRegexp = new RegExp(options.args[0]);
     } catch (e) {
       if (!(e instanceof SyntaxError))
         throw e;
-      process.stderr.write("Bad regular expression: " + options.tests + "\n");
+      process.stderr.write("Bad regular expression: " + options.args[0] + "\n");
       return 1;
     }
   }
