@@ -716,6 +716,25 @@ if (Meteor.isServer) {
   ]);
 }
 
+Tinytest.add("livedata - stringifyDDP", function (test) {
+  var t = function (data, json) {
+    test.equal(LivedataTest.stringifyDDP(data), JSON.stringify(json));
+  };
+  t({fields: {x: 42, y: undefined}},
+    {fields: {x: 42}, cleared: ['y']});
+  t({fields: {y: undefined, z: undefined}},
+    {cleared: ['y', 'z']});
+  // We should drop undefineds anywhere other than the special "cleared" place.
+  t({fields: {x: Infinity, y: {fields: {x: undefined}}}},
+    {fields: {x: {$InfNaN: 1}, y: {fields: {}}}});
+  t({params: [{$InfNaN: 1}]},
+    {params: [{$escape: {$InfNaN: 1}}]});
+  t({fields: {x: Infinity, y: {fields: {x: undefined}}}},
+    {fields: {x: {$InfNaN: 1}, y: {fields: {}}}});
+  var d = new Date;
+  t({result: d},
+    {result: {$date: d.getTime()}});
+});
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

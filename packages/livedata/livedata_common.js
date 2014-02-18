@@ -82,7 +82,7 @@ parseDDP = function (stringMessage) {
   return msg;
 };
 
-stringifyDDP = function (msg) {
+stringifyDDP = LivedataTest.stringifyDDP = function (msg) {
   var copy = EJSON.clone(msg);
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
