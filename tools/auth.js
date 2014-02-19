@@ -701,7 +701,6 @@ exports.pollForRegistrationCompletion = function () {
   // if a username was chosen since we last checked.
   var username = null;
   var fut = new Future();
-  var resolved = false;
   var connection = loggedInAccountsConnection(session.token);
 
   if (! connection) {
@@ -715,9 +714,8 @@ exports.pollForRegistrationCompletion = function () {
   }
 
   connection.call('getUsername', function (err, result) {
-    if (resolved)
+    if (fut.isResolved())
       return;
-    resolved = true;
 
     if (err) {
       // If anything went wrong, return null just as we would have if
@@ -729,9 +727,8 @@ exports.pollForRegistrationCompletion = function () {
   });
 
   var timer = setTimeout(inFiber(function () {
-    if (! resolved) {
+    if (! fut.isResolved()) {
       fut['return'](null);
-      resolved = true;
     }
   }), 5000);
 
