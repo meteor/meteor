@@ -23,6 +23,12 @@ var divRendersTo = function (test, div, html) {
   test.equal(actual, html);
 };
 
+var nodesToArray = function (array) {
+  // Starting in underscore 1.4, _.toArray does not work right on a node
+  // list in IE8. This is a workaround to support IE8.
+  return _.map(array, _.identity);
+};
+
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
   var R = ReactiveVar(1);
@@ -99,14 +105,14 @@ Tinytest.add("spacebars - templates - dynamic attrs", function (test) {
   var div = renderToDiv(tmpl);
   var span = $(div).find('span')[0];
   test.equal(span.innerHTML, 'hi');
-  test.isTrue(span.selected);
+  test.isTrue(span.hasAttribute('selected'));
   test.equal(span.getAttribute('x'), 'X');
 
   R2.set({y: "Y", z: "Z"});
   R3.set('');
   Deps.flush();
   test.equal(stripComments(span.innerHTML), 'hi');
-  test.isFalse(span.selected);
+  test.isFalse(span.hasAttribute('selected'));
   test.isFalse(span.hasAttribute('x'));
   test.equal(span.getAttribute('y'), 'Y');
   test.equal(span.getAttribute('z'), 'Z');
@@ -520,7 +526,7 @@ Tinytest.add("spacebars - templates - select tags", function (test) {
 
   tmpl.optgroups = function () { return optgroups.find(); };
   tmpl.options = function () { return options.find({optgroup: this._id}); };
-  tmpl.selectedAttr = function () { return this.selected ? "selected" : ""; };
+  tmpl.selectedAttr = function () { return this.selected ? {selected: true} : {}; };
 
   var div = renderToDiv(tmpl);
   var selectEl = $(div).find('select')[0];
@@ -1366,3 +1372,236 @@ Tinytest.add("spacebars - templates - content context", function (test) {
   Deps.flush();
   test.equal(trim(stripComments(div.innerHTML)), 'FA');
 });
+
+_.each(['textarea', 'text', 'password', 'submit', 'button',
+        'reset', 'select', 'hidden'], function (type) {
+  Tinytest.add("spacebars - controls - " + type, function(test) {
+    var R = ReactiveVar({x:"test"});
+    var R2 = ReactiveVar("");
+    var tmpl;
+
+    if (type === 'select') {
+      tmpl = Template.spacebars_test_control_select;
+      tmpl.options = ['This is a test', 'This is a fridge',
+                      'This is a frog', 'This is a new frog', 'foobar',
+                      'This is a photograph', 'This is a monkey',
+                      'This is a donkey'];
+      tmpl.selected = function () {
+        R2.get();  // Re-render when R2 is changed, even though it
+                   // doesn't affect HTML.
+        return ('This is a ' + R.get().x) === this.toString();
+      };
+    } else if (type === 'textarea') {
+      tmpl = Template.spacebars_test_control_textarea;
+      tmpl.value = function () {
+        R2.get();  // Re-render when R2 is changed, even though it
+                   // doesn't affect HTML.
+        return 'This is a ' + R.get().x;
+      };
+    } else {
+      tmpl = Template.spacebars_test_control_input;
+      tmpl.value = function () {
+        R2.get();  // Re-render when R2 is changed, even though it
+                   // doesn't affect HTML.
+        return 'This is a ' + R.get().x;
+      };
+      tmpl.type = type;
+    };
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    var canFocus = (type !== 'hidden');
+
+    // find first element child, ignoring any marker nodes
+    var input = div.firstChild;
+    while (input.nodeType !== 1)
+      input = input.nextSibling;
+
+    if (type === 'textarea' || type === 'select') {
+      test.equal(input.nodeName, type.toUpperCase());
+    } else {
+      test.equal(input.nodeName, 'INPUT');
+      test.equal(input.type, type);
+    }
+    test.equal(DomUtils.getElementValue(input), "This is a test");
+
+    // value updates reactively
+    R.set({x:"fridge"});
+    Deps.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a fridge");
+
+    if (canFocus) {
+      // ...unless focused
+      focusElement(input);
+      R.set({x:"frog"});
+
+      Deps.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+
+      // blurring and re-setting works
+      blurElement(input);
+      Deps.flush();
+      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+    }
+    R.set({x:"new frog"});
+    Deps.flush();
+
+    test.equal(DomUtils.getElementValue(input), "This is a new frog");
+
+    // Setting a value (similar to user typing) should prevent value from being
+    // reverted if the div is re-rendered but the rendered value (ie, R) does
+    // not change.
+    DomUtils.setElementValue(input, "foobar");
+    R2.set("change");
+    Deps.flush();
+    test.equal(DomUtils.getElementValue(input), "foobar");
+
+    // ... but if the actual rendered value changes, that should take effect.
+    R.set({x:"photograph"});
+    Deps.flush();
+    test.equal(DomUtils.getElementValue(input), "This is a photograph");
+
+    document.body.removeChild(div);
+  });
+});
+
+Tinytest.add("spark - controls - radio", function(test) {
+  var R = ReactiveVar("");
+  var R2 = ReactiveVar("");
+  var change_buf = [];
+  var tmpl = Template.spacebars_test_control_radio;
+  tmpl.bands = ["AM", "FM", "XM"];
+  tmpl.isChecked = function () {
+    return R.get() === this.toString();
+  };
+  tmpl.band = function () {
+    return R.get();
+  };
+  tmpl.events({
+    'change input': function () {
+      // IE 7 is known to fire change events on all
+      // the radio buttons with checked=false, as if
+      // each button were deselected before selecting
+      // the new one.  (Meteor doesn't normalize this
+      // behavior.)
+      // However, browsers are consistent if we are
+      // getting a checked=true notification.
+      var btn = event.target;
+      if (btn.checked) {
+        var band = btn.value;
+        change_buf.push(band);
+        R.set(band);
+      }
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  document.body.appendChild(div);
+
+  // get the three buttons; they should be considered 'labeled'
+  // by the patcher and not change identities!
+  var btns = nodesToArray(div.getElementsByTagName("INPUT"));
+  var text = function () {
+    var text = div.innerText || div.textContent;
+    return text.replace(/ +/g, " ");
+  };
+
+  test.equal(_.pluck(btns, 'checked'), [false, false, false]);
+  test.equal(text(), "Band: ");
+
+  clickElement(btns[0]);
+  test.equal(change_buf, ['AM']);
+  change_buf.length = 0;
+  Deps.flush();
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(text(), "Band: AM");
+
+  R2.set("change");
+  Deps.flush();
+  test.length(change_buf, 0);
+  test.equal(_.pluck(btns, 'checked'), [true, false, false]);
+  test.equal(text(), "Band: AM");
+
+  clickElement(btns[1]);
+  test.equal(change_buf, ['FM']);
+  change_buf.length = 0;
+  Deps.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, true, false]);
+  test.equal(text(), "Band: FM");
+
+  clickElement(btns[2]);
+  test.equal(change_buf, ['XM']);
+  change_buf.length = 0;
+  Deps.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, false, true]);
+  test.equal(text(), "Band: XM");
+
+  clickElement(btns[1]);
+  test.equal(change_buf, ['FM']);
+  change_buf.length = 0;
+  Deps.flush();
+  test.equal(_.pluck(btns, 'checked'), [false, true, false]);
+  test.equal(text(), "Band: FM");
+
+  document.body.removeChild(div);
+});
+
+Tinytest.add("spark - controls - checkbox", function(test) {
+  var tmpl = Template.spacebars_test_control_checkbox;
+  tmpl.labels = ["Foo", "Bar", "Baz"];
+  var Rs = {};
+  _.each(tmpl.labels, function (label) {
+    Rs[label] = ReactiveVar(false);
+  });
+  tmpl.isChecked = function () {
+    return Rs[this.toString()].get();
+  };
+  var changeBuf = [];
+
+  var div = renderToDiv(tmpl);
+
+  var boxes = nodesToArray(div.getElementsByTagName("INPUT"));
+
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // Re-render with first one checked.
+  Rs.Foo.set(true);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
+
+  // Re-render with first one unchecked again.
+  Rs.Foo.set(false);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // User clicks the second one.
+  clickElement(boxes[1]);
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
+
+  // Re-render with third one checked. Second one should stay checked because
+  // it's a user update!
+  Rs.Baz.set(true);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, true, true]);
+
+  // User turns second and third off.
+  clickElement(boxes[1]);
+  clickElement(boxes[2]);
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  // Re-render with first one checked. Third should stay off because it's a user
+  // update!
+  Rs.Foo.set(true);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
+
+  // Re-render with first one unchecked. Third should still stay off.
+  Rs.Foo.set(false);
+  Deps.flush();
+  test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+});
+

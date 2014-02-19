@@ -11,6 +11,7 @@ Package.on_test(function (api) {
   api.use('jquery');
   api.use('test-helpers');
   api.use('showdown');
+  api.use('domutils');
 
   api.use('templating', 'client');
   api.add_files([
