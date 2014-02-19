@@ -752,17 +752,21 @@ if (Meteor.isServer) {
     var run = test.runId();
     var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
 
+    var currentState = {};
     var observer = function () {
       var output = [];
       var callbacks = {
         changed: function (newDoc) {
           output.push({changed: newDoc._id});
+          currentState[newDoc._id] = newDoc;
         },
         added: function (newDoc) {
           output.push({added: newDoc._id});
+          currentState[newDoc._id] = newDoc;
         },
         removed: function (oldDoc) {
           output.push({removed: oldDoc._id});
+          delete currentState[oldDoc._id];
         }
       };
       var handle = coll.find({foo: 22},
@@ -773,7 +777,6 @@ if (Meteor.isServer) {
     var clearOutput = function (o) { o.output.splice(0, o.output.length); };
 
     var ins = function (doc) {
-      if (doc.bar) doc._id = doc.bar.toString();
       var id; runInFence(function () { id = coll.insert(doc); });
       return id;
     };
@@ -920,6 +923,27 @@ if (Meteor.isServer) {
     // Becomes [22 23 24] 31 41] 51
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId9}, {added: docId6}]));
+    clearOutput(o);
+
+    upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
+    // Becomes [22 23 23.5] 24 33.5] 43.5
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId6}, {added: docId10}]));
+    clearOutput(o);
+
+    // Force buffer objects to be moved into published set so we can check them
+    rem(docId7);
+    rem(docId8);
+    rem(docId10);
+    // Becomes [24 33.5 43.5]
+    test.length(o.output, 6);
+    test.isTrue(setsEqual(o.output, [{removed: docId7}, {removed: docId8},
+                                     {removed: docId10}, {added: docId6},
+                                     {added: docId11}, {added: docId12}]));
+
+    test.equal(currentState[docId6], { _id: docId6, foo: 22, bar: 24 });
+    test.equal(currentState[docId11], { _id: docId11, foo: 22, bar: 33.5 });
+    test.equal(currentState[docId12], { _id: docId12, foo: 22, bar: 43.5 });
     clearOutput(o);
 
     o.handle.stop();
