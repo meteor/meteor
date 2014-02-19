@@ -1,3 +1,8 @@
+var _ = require('underscore');
+var release = require('./release.js');
+var unipackage = require('./unipackage.js');
+var config = require('./config.js');
+
 var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
   var str = '';
@@ -6,6 +11,8 @@ var randomString = function (charsCount) {
   }
   return str;
 };
+
+exports.accountsCommandTimeoutSecs = 15;
 
 exports.randomString = randomString;
 
@@ -86,7 +93,7 @@ exports.cleanUpApp = function (sandbox, name) {
 
 exports.login = function (s, username, password) {
   var run = s.run('login');
-  run.waitSecs(2);
+  run.waitSecs(15);
   run.matchErr('Username:');
   run.write(username + '\n');
   run.matchErr('Password:');
@@ -103,4 +110,66 @@ exports.logout = function (s) {
   run.expectExit(0);
 };
 
-exports.accountsCommandTimeoutSecs = 15;
+var registrationUrlRegexp =
+      /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
+exports.registrationUrlRegexp = registrationUrlRegexp;
+
+// In the sandbox `s`, create and deploy a new app with an unregistered
+// email address. Returns the registration token from the printed URL in
+// the deploy message.
+exports.deployWithNewEmail = function (s, email, appName) {
+  s.createApp('deployapp', 'empty');
+  s.cd('deployapp');
+  var run = s.run('deploy', appName);
+  run.waitSecs(exports.accountsCommandTimeoutSecs);
+  run.matchErr('Email:');
+  run.write(email + '\n');
+  run.waitSecs(90);
+  // Check that we got a prompt to set a password on meteor.com.
+  run.matchErr('set a password');
+  var urlMatch = run.matchErr(registrationUrlRegexp);
+  if (! urlMatch || ! urlMatch.length || ! urlMatch[1]) {
+    throw new Error("Missing registration token");
+  }
+  var token = urlMatch[1];
+
+  run.expectExit(0);
+
+  return token;
+};
+
+var getLoadedPackages = _.once(function () {
+  return unipackage.load({
+    library: release.current.library,
+    packages: ['meteor', 'livedata'],
+    release: release.current.name
+  });
+});
+
+var ddpConnect = function (url) {
+  var DDP = getLoadedPackages().livedata.DDP;
+  return DDP.connect(url);
+};
+
+exports.ddpConnect = ddpConnect;
+
+// Given a registration token created by doing a deferred registration
+// with `email`, makes a DDP connection to the accounts server and
+// finishes the registration process.
+exports.registerWithToken = function (token, username, password, email) {
+  // XXX It might make more sense to hard-code the DDP url to
+  // https://www.meteor.com, since that's who the sandboxes are talking
+  // to.
+  var accountsConn = ddpConnect(config.getAuthDDPUrl());
+  var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
+                                                token);
+  var registrationCode = registrationTokenInfo.code;
+  accountsConn.call('register', {
+    username: username,
+    password: password,
+    emails: [email],
+    token: token,
+    code: registrationCode
+  });
+  accountsConn.close();
+};

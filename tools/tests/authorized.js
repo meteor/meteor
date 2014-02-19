@@ -119,3 +119,26 @@ selftest.define("authorized", ['net', 'slow'], function () {
 
   testUtils.cleanUpApp(s, appName);
 });
+
+selftest.define('authorized - no username', ['net', 'slow'], function () {
+  var s = new Sandbox;
+
+  // We shouldn't be able to add authorized users before we set a
+  // username.
+  var email = testUtils.randomUserEmail();
+  var username = testUtils.randomString(10);
+  var appName = testUtils.randomAppName();
+  var token = testUtils.deployWithNewEmail(s, email, appName);
+  var run = s.run('authorized', appName, '--add', 'test');
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('You must set a password on your account before ' +
+               'you can authorize other users');
+  run.expectExit(1);
+  // After we set a username, we should be able to authorize others.
+  testUtils.registerWithToken(token, username, 'testtest', email);
+  run = s.run('authorized', appName, '--add', 'test');
+  run.waitSecs(commandTimeoutSecs);
+  run.match(': added test');
+  run.expectExit(0);
+  testUtils.cleanUpApp(s, appName);
+});

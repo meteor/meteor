@@ -111,3 +111,48 @@ selftest.define("claim", ['net', 'slow'], function () {
 
   testUtils.cleanUpApp(s, legacyApp);
 });
+
+selftest.define('claim - no username', ['net', 'slow'], function () {
+  var s = new Sandbox;
+  var sandboxWithWarehouse;
+  if (files.inCheckout()) {
+    sandboxWithWarehouse = new Sandbox({
+      // Include a warehouse argument so that we can deploy apps with
+      // --release arguments.
+      warehouse: {
+        v1: { tools: 'tool1', latest: true }
+      }
+    });
+  } else {
+    sandboxWithWarehouse = new Sandbox;
+  }
+
+  // We shouldn't be able to claim sites before we set a username.
+  var email = testUtils.randomUserEmail();
+  var username = testUtils.randomString(10);
+  var appName = testUtils.randomAppName();
+  var token = testUtils.deployWithNewEmail(s, email, appName);
+  var legacyAppName = testUtils.createAndDeployLegacyApp(
+    sandboxWithWarehouse,
+    'test'
+  );
+  var run = s.run('claim', legacyAppName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('Password:');
+  run.write('test\n');
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('you need to set a password');
+  run.matchErr(testUtils.registrationUrlRegexp);
+  run.expectExit(1);
+  // After we set a username, we should be able to claim sites.
+  testUtils.registerWithToken(token, username, 'testtest', email);
+  run = s.run('claim', legacyAppName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('Password: ');
+  run.write('test\n');
+  run.waitSecs(commandTimeoutSecs);
+  run.match('transferred to your account');
+  run.expectExit(0);
+  testUtils.cleanUpApp(s, appName);
+  testUtils.cleanUpApp(s, legacyAppName);
+});
