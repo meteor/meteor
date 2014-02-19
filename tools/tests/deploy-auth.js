@@ -50,7 +50,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
   // Now, with our logged in current release, we should be able to
   // deploy to the legacy app.
-  run = sandbox.run('deploy', noPasswordLegacyApp);
+  var run = sandbox.run('deploy', noPasswordLegacyApp);
   run.waitSecs(90);
   run.match('Now serving at ' + noPasswordLegacyApp + '.meteor.com');
   run.expectExit(0);
