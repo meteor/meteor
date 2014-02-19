@@ -645,23 +645,31 @@ Accounts.updateOrCreateUserFromExternalService = function(
     throw new Error(
       "Service data for service " + serviceName + " must include id");
 
-  // Look for a user with the appropriate service user id.
-  var selector = {};
-  var serviceIdKey = "services." + serviceName + ".id";
+  var selector;
 
-  // XXX Temporary special case for Twitter. (Issue #629)
-  //   The serviceData.id will be a string representation of an integer.
-  //   We want it to match either a stored string or int representation.
-  //   This is to cater to earlier versions of Meteor storing twitter
-  //   user IDs in number form, and recent versions storing them as strings.
-  //   This can be removed once migration technology is in place, and twitter
-  //   users stored with integer IDs have been migrated to string IDs.
-  if (serviceName === "twitter" && !isNaN(serviceData.id)) {
-    selector["$or"] = [{},{}];
-    selector["$or"][0][serviceIdKey] = serviceData.id;
-    selector["$or"][1][serviceIdKey] = parseInt(serviceData.id, 10);
-  } else {
-    selector[serviceIdKey] = serviceData.id;
+  // If the user is logged in, add this service to their user document
+  if (Meteor.userId()) {
+    selector = {_id: Meteor.userId()};
+  }
+  else {
+    // Look for a user with the appropriate service user id.
+    selector = {};
+    var serviceIdKey = "services." + serviceName + ".id";
+  
+    // XXX Temporary special case for Twitter. (Issue #629)
+    //   The serviceData.id will be a string representation of an integer.
+    //   We want it to match either a stored string or int representation.
+    //   This is to cater to earlier versions of Meteor storing twitter
+    //   user IDs in number form, and recent versions storing them as strings.
+    //   This can be removed once migration technology is in place, and twitter
+    //   users stored with integer IDs have been migrated to string IDs.
+    if (serviceName === "twitter" && !isNaN(serviceData.id)) {
+      selector["$or"] = [{},{}];
+      selector["$or"][0][serviceIdKey] = serviceData.id;
+      selector["$or"][1][serviceIdKey] = parseInt(serviceData.id, 10);
+    } else {
+      selector[serviceIdKey] = serviceData.id;
+    }
   }
 
   var user = Meteor.users.findOne(selector);
