@@ -936,6 +936,7 @@ main.registerCommand({
   }
 
   config.printUniverseBanner();
+  auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
   if (hostedWithGalaxy(site)) {
@@ -970,6 +971,7 @@ main.registerCommand({
   maxArgs: 1
 }, function (options) {
   config.printUniverseBanner();
+  auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
   if (! auth.isLoggedIn()) {

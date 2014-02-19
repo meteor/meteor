@@ -477,6 +477,20 @@ _.extend(Sandbox.prototype, {
   unlink: function (filename) {
     var self = this;
     fs.unlinkSync(path.join(self.cwd, filename));
+  },
+
+  // Return the current contents of .meteorsession in the sandbox.
+  readSessionFile: function () {
+    var self = this;
+    return fs.readFileSync(path.join(self.root, '.meteorsession'), 'utf8');
+  },
+
+  // Overwrite .meteorsession in the sandbox with 'contents'. You
+  // could use this in conjunction with readSessionFile to save and
+  // restore authentication states.
+  writeSessionFile: function (contents) {
+    var self = this;
+    return fs.readFileSync(path.join(self.root, '.meteorsession'), 'utf8');
   }
 });
 

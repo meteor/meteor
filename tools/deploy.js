@@ -262,7 +262,7 @@ var printLegacyPasswordMessage = function (site) {
 // authorized for, instruct them to get added via 'meteor authorized
 // --add' or switch accounts.
 var printUnauthorizedMessage = function () {
-  var username = auth.currentUsername();
+  var username = auth.loggedInUsername();
   process.stderr.write(
 "\nSorry, that site belongs to a different user.\n" +
 (username ? "You are currently logged in as " + username  + ".\n" : "") +

@@ -159,3 +159,49 @@ selftest.define('deferred registration', ['net'], function () {
   // return (e.g. deploy and login with an existing username that
   // doesn't have a password set yet)
 });
+
+selftest.define('deferred registration revocation', ['net'], function () {
+  // Test that if we are logged in as a passwordless user, and our
+  // credential gets revoked, and we do something like 'meteor whoami'
+  // that polls to see if registration is complete, then we handle it
+  // gracefully.
+
+  var s = new Sandbox;
+  s.createApp('deployapp', 'empty');
+  s.cd('deployapp');
+
+  // Create a new deferred registration account. (Don't bother to wait
+  // for the deploy to go through.)
+  var email = testUtils.randomUserEmail();
+  var username = testUtils.randomString(10);
+  var appName = testUtils.randomAppName();
+  var run = s.run('deploy', appName);
+  run.waitSecs(5);
+  run.matchErr('Email:');
+  run.write(email + '\n');
+  run.waitSecs(90);
+  run.match('Deploying');
+  run.stop();
+
+  // 'whoami' says that we don't have a password
+  run = s.run('whoami');
+  run.waitSecs(15);
+  run.matchErr('/setPassword?');
+  run.expectExit(1);
+
+  // Revoke the credential without updating .meteorsession.
+  var sessionState = s.readSessionFile();
+  run = s.run('logout');
+  run.waitSecs(15);
+  run.readErr("Logged out.\n");
+  run.expectEnd();
+  run.expectExit(0);
+  s.writeSessionFile(sessionState);
+
+  // 'whoami' now says that we're not logged in. No errors are printed.
+  run = s.run('whoami');
+  run.waitSecs(15);
+  run.readErr("Not logged in. 'meteor login' to log in.\n");
+  run.expectEnd();
+  run.expectExit(1);
+});

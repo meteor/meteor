@@ -50,25 +50,39 @@ var withAccountsConnection = function (f) {
   };
 };
 
-// Open a DDP connection to the accounts server, log in using the
-// provided token, and ensure that the connection stays logged in across
-// reconnects.
+// Open a DDP connection to the accounts server and log in using the
+// provided token. Returns the connection, or null if login fails.
+//
+// XXX if we reconnect we won't reauthenticate. Fix that before using
+// this for long-lived connections.
 var loggedInAccountsConnection = function (token) {
   var connection = getLoadedPackages().livedata.DDP.connect(
     config.getAuthDDPUrl()
   );
-  var onReconnect = function () {
-    connection.apply(
-      'login',
-      [{ resume: token }],
-      { wait: true },
-      function (err, result) {
-        if (err)
-          throw err;
-      }
-    );
-  };
-  onReconnect();
+
+  var fut = new Future;
+  connection.apply(
+    'login',
+    [{ resume: token }],
+    { wait: true },
+    function (err, result) {
+      fut['return']({ err: err, result: result });
+    }
+  );
+  var outcome = fut.wait();
+
+  if (outcome.err) {
+    if (outcome.err.error === 403) {
+      // This is not an ideal value for the error code, but it means
+      // "server rejected our access token". For example, it expired
+      // or we revoked it from the web.
+      return null;
+    }
+
+    // Something else went wrong
+    throw outcome.err;
+  }
+
   return connection;
 };
 
@@ -189,26 +203,33 @@ var writeMeteorAccountsUsername = function (username) {
 // Given an object 'data' in the format returned by readSessionData,
 // modify it to make the user logged out.
 var logOutAllSessions = function (data) {
+  _.each(data.sessions, function (session, domain) {
+    logOutSession(session);
+  });
+};
+
+// As logOutAllSessions, but for a session on a particular domain
+// rather than all sessions.
+var logOutSession = function (session) {
   var crypto = require('crypto');
 
-  _.each(data.sessions, function (session, domain) {
-    delete session.username;
-    delete session.userId;
+  delete session.username;
+  delete session.userId;
+  delete session.registrationUrl;
 
-    if (_.has(session, 'token')) {
-      if (! (session.pendingRevoke instanceof Array))
-        session.pendingRevoke = [];
+  if (_.has(session, 'token')) {
+    if (! (session.pendingRevoke instanceof Array))
+      session.pendingRevoke = [];
 
-      // Delete the auth token itself, but save the tokenId, which
-      // is useless for authentication. The next time we're online,
-      // we'll send the tokenId to the server to revoke the token on
-      // the server side too.
-      if (typeof session.tokenId === "string")
-        session.pendingRevoke.push(session.tokenId);
-      delete session.token;
-      delete session.tokenId;
-    }
-  });
+    // Delete the auth token itself, but save the tokenId, which is
+    // useless for authentication. The next time we're online, we'll
+    // send the tokenId to the server to revoke the token on the
+    // server side too.
+    if (typeof session.tokenId === "string")
+      session.pendingRevoke.push(session.tokenId);
+    delete session.token;
+    delete session.tokenId;
+  }
 };
 
 // Given an object 'data' in the format returned by readSessionData,
@@ -222,46 +243,7 @@ var loggedIn = function (data) {
 // the logged in user doesn't have a username.
 var currentUsername = function (data) {
   var sessionData = getSession(data, config.getAccountsDomain());
-  if (sessionData.username) {
-    return sessionData.username;
-  } else if (loggedIn(data) && sessionData.token) {
-    // If it looks like we are logged in but we don't yet have a
-    // username, then ask the server if we have one.
-    var username = null;
-    var fut = new Future();
-    var resolved = false;
-    var connection = loggedInAccountsConnection(sessionData.token);
-    connection.call('getUsername', function (err, result) {
-      if (resolved)
-        return;
-      resolved = true;
-
-      if (err) {
-        // If anything went wrong, return null just as we would have if
-        // we hadn't bothered to ask the server.
-        fut['return'](null);
-        return;
-      }
-      fut['return'](result);
-    });
-
-    var timer = setTimeout(inFiber(function () {
-      if (! resolved) {
-        fut['return'](null);
-        resolved = true;
-      }
-    }), 5000);
-
-    username = fut.wait();
-    connection.close();
-    clearTimeout(timer);
-    if (username) {
-      writeMeteorAccountsUsername(username);
-    }
-    return username;
-  } else {
-    return null;
-  }
+  return sessionData.username || null;
 };
 
 var removePendingRevoke = function (domain, tokenIds) {
@@ -699,9 +681,66 @@ exports.logoutCommand = function (options) {
     process.stderr.write("Not logged in.\n");
 };
 
-exports.currentUsername = function () {
+// If this is fully set up account (with a username and password), or
+// if not logged in, do nothing. If it is an account without a
+// username, contact the server and see if the user finished setting
+// it up, and if so grab and save the username. But contact the server
+// only once per run of the program.
+var alreadyPolledForRegistration = false;
+exports.pollForRegistrationCompletion = function () {
+  if (alreadyPolledForRegistration)
+    return;
+  alreadyPolledForRegistration = true;
+
   var data = readSessionData();
-  return currentUsername(data);
+  var session = getSession(data, config.getAccountsDomain());
+  if (session.username || ! session.token)
+    return;
+
+  // We are logged in but we don't yet have a username. Ask the server
+  // if a username was chosen since we last checked.
+  var username = null;
+  var fut = new Future();
+  var resolved = false;
+  var connection = loggedInAccountsConnection(session.token);
+
+  if (! connection) {
+    // Server says our credential isn't any good anymore! Get rid of
+    // it. Note that, out of an abundance of caution, this also will
+    // enqueue the credential for invalidation (on a future run, we
+    // will try to explicitly revoke the credential ourselves).
+    logOutSession(session);
+    writeSessionData(data);
+    return;
+  }
+
+  connection.call('getUsername', function (err, result) {
+    if (resolved)
+      return;
+    resolved = true;
+
+    if (err) {
+      // If anything went wrong, return null just as we would have if
+      // we hadn't bothered to ask the server.
+      fut['return'](null);
+      return;
+    }
+    fut['return'](result);
+  });
+
+  var timer = setTimeout(inFiber(function () {
+    if (! resolved) {
+      fut['return'](null);
+      resolved = true;
+    }
+  }), 5000);
+
+  username = fut.wait();
+  connection.close();
+  clearTimeout(timer);
+  if (username) {
+    writeMeteorAccountsUsername(username);
+  }
 };
 
 exports.registrationUrl = function () {
@@ -712,6 +751,7 @@ exports.registrationUrl = function () {
 
 exports.whoAmICommand = function (options) {
   config.printUniverseBanner();
+  auth.pollForRegistrationCompletion();
 
   var data = readSessionData();
   if (! loggedIn(data)) {
@@ -839,8 +879,12 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
 exports.maybePrintRegistrationLink = function (options) {
   options = options || {};
 
-  var registrationUrl = auth.registrationUrl();
-  if (registrationUrl && ! auth.currentUsername()) {
+  auth.pollForRegistrationCompletion();
+
+  var data = readSessionData();
+  var session = getSession(data, config.getAccountsDomain());
+
+  if (session.userId && ! session.username && session.registrationUrl) {
     if (options.leadingNewline)
       process.stderr.write("\n");
     if (! options.firstTime) {
@@ -850,11 +894,11 @@ exports.maybePrintRegistrationLink = function (options) {
       // registration url.
       process.stderr.write(
 "You should set a password on your Meteor developer account. It takes\n" +
-"about a minute at: " + registrationUrl + "\n\n");
+"about a minute at: " + session.registrationUrl + "\n\n");
     } else {
       process.stderr.write(
 "You can set a password on your account or change your email address at:\n" +
-registrationUrl + "\n\n");
+session.registrationUrl + "\n\n");
     }
   }
 };
