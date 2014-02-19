@@ -661,7 +661,8 @@ var claim = function (site) {
   });
 
   if (result.errorMessage) {
-    if (! auth.currentUsername() &&
+    auth.pollForRegistrationCompletion();
+    if (! auth.loggedInUsername() &&
         auth.registrationUrl()) {
       process.stderr.write(
 "You need to set a password on your Meteor developer account before\n" +
