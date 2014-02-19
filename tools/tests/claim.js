@@ -141,7 +141,7 @@ selftest.define('claim - no username', ['net', 'slow'], function () {
   run.matchErr('Password:');
   run.write('test\n');
   run.waitSecs(commandTimeoutSecs);
-  run.matchErr('you need to set a password');
+  run.matchErr('You need to set a password');
   run.matchErr(testUtils.registrationUrlRegexp);
   run.expectExit(1);
   // After we set a username, we should be able to claim sites.
