@@ -305,13 +305,22 @@ _.extend(OplogObserveDriver.prototype, {
             self._justUpdatedBuffer = false;
         }
       } else if (bufferedBefore) {
-        // after the change we can't know if doc is still in the buffer limit
-        // w/o querying mongo, so just remove it from buffer
-        self._removeBuffered(id);
-        // but it can move into published now, check it
+        oldDoc = self._unpublishedBuffer.get(id);
+        // remove the old version manually so we don't trigger the querying
+        // immediately
+        self._unpublishedBuffer.remove(id);
+
         var maxPublished = self._published.get(self._published.maxElementId());
-        if (comparator(newDoc, maxPublished) < 0)
+        var maxBuffered = self._unpublishedBuffer.size() && self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId());
+        // the buffered doc was updated, it could move to published
+        if (comparator(newDoc, maxPublished) < 0) {
           self._addPublished(id, newDoc);
+        } else if (self._justUpdatedBuffer || (maxBuffered && comparator(newDoc, maxBuffered) < 0)) {
+          // stays in buffer
+          self._unpublishedBuffer.set(id, newDoc);
+        } else {
+          self._justUpdatedBuffer = false;
+        }
       } else {
         throw new Error("cachedBefore implies either of publishedBefore or bufferedBefore is true.");
       }
