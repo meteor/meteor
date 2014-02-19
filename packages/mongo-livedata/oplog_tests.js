@@ -1,9 +1,15 @@
 var OplogCollection = new Meteor.Collection("oplog-" + Random.id());
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
+  var oplogEnabled =
+        !!MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+
   var supported = function (expected, selector) {
     var cursor = OplogCollection.find(selector);
     var handle = cursor.observeChanges({added: function () {}});
+    // If there's no oplog at all, we shouldn't ever use it.
+    if (!oplogEnabled)
+      expected = false;
     test.equal(!!handle._multiplexer._observeDriver._usesOplog, expected);
     handle.stop();
   };

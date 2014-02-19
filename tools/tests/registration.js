@@ -4,21 +4,20 @@ var testUtils = require('../test-utils.js');
 var utils = require('../utils.js');
 var Sandbox = selftest.Sandbox;
 var httpHelpers = require('../http-helpers.js');
-var release = require('../release.js');
-var unipackage = require('../unipackage.js');
 var config = require('../config.js');
 
-var getLoadedPackages = _.once(function () {
-  return unipackage.load({
-    library: release.current.library,
-    packages: ['meteor', 'livedata'],
-    release: release.current.name
-  });
-});
-
-var ddpConnect = function (url) {
-  var DDP = getLoadedPackages().livedata.DDP;
-  return DDP.connect(url);
+var expectInvalidToken = function (token) {
+  // Same XXX as testUtils.registerWithToken: should be hardcoded to
+  // https://www.meteor.com?
+  var accountsConn = testUtils.ddpConnect(config.getAuthDDPUrl());
+  var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
+                                                token);
+  // We should not be able to get a registration code for an invalid
+  // token.
+  if (registrationTokenInfo.valid || registrationTokenInfo.code) {
+    throw new Error('Expected invalid token is valid!');
+  }
+  accountsConn.close();
 };
 
 // Polls a guerrillamail.com inbox every 3 seconds looking for an email
@@ -96,24 +95,13 @@ var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
   return match;
 });
 
-selftest.define('deferred registration', ['net'], function () {
+selftest.define('deferred registration - email registration token', ['net', 'slow'], function () {
   var s = new Sandbox;
-  s.createApp('deployapp', 'empty');
-  s.cd('deployapp');
-
-  // Deploy an app with a new email address.
   var email = testUtils.randomUserEmail();
   var username = testUtils.randomString(10);
   var appName = testUtils.randomAppName();
-  var run = s.run('deploy', appName);
-  run.waitSecs(5);
-  run.matchErr('Email:');
-  run.write(email + '\n');
-  run.waitSecs(90);
-  // Check that we got a prompt to set a password on meteor.com.
-  run.matchErr('set a password');
-  run.matchErr('https://www.meteor.com');
-  run.expectExit(0);
+
+  var apiToken = testUtils.deployWithNewEmail(s, email, appName);
 
   // Check that we got a registration email in our inbox.
   var registrationEmail = waitForEmail(email, /Set a password/,
@@ -121,28 +109,13 @@ selftest.define('deferred registration', ['net'], function () {
 
   // Fish out the registration token and use to it to complete
   // registration.
-  var token = /\/setPassword\?([a-zA-Z0-9\+\/]+)/.
-        exec(registrationEmail.bodyPage);
+  var token = testUtils.registrationUrlRegexp.exec(registrationEmail.bodyPage);
   if (! token || ! token[1]) {
     throw new Error("No registration token in email");
   }
   token = token[1];
 
-  // XXX It might make more sense to hard-code the DDP url to
-  // https://www.meteor.com, since that's who the sandboxes are talking
-  // to.
-  var accountsConn = ddpConnect(config.getAuthDDPUrl());
-  var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
-                                                token);
-  var registrationCode = registrationTokenInfo.code;
-  accountsConn.call('register', {
-    username: username,
-    password: 'testtest',
-    emails: [email],
-    token: token,
-    code: registrationCode
-  });
-  accountsConn.close();
+  testUtils.registerWithToken(token, username, 'testtest', email);
 
   // Success! 'meteor whoami' should now know who we are.
   run = s.run('whoami');
@@ -158,11 +131,11 @@ selftest.define('deferred registration', ['net'], function () {
   // authorization to delete our app.
   testUtils.cleanUpApp(s, appName);
 
-  // XXX Test the api registration URLs
+  // All the tokens we got should now be invalid.
+  expectInvalidToken(token);
+  expectInvalidToken(apiToken);
+
   // XXX Test that registration URLs get printed when they should
-  // XXX Test registration while the tool is waiting on a DDP method to
-  // return (e.g. deploy and login with an existing username that
-  // doesn't have a password set yet)
 });
 
 selftest.define('deferred registration revocation', ['net'], function () {
@@ -210,3 +183,88 @@ selftest.define('deferred registration revocation', ['net'], function () {
   run.expectEnd();
   run.expectExit(1);
 });
+
+selftest.define(
+  'deferred registration - api registration token',
+  ['net', 'slow'],
+  function () {
+    var s = new Sandbox;
+
+    var email = testUtils.randomUserEmail();
+    var username = testUtils.randomString(10);
+    var appName = testUtils.randomAppName();
+    var token = testUtils.deployWithNewEmail(s, email, appName);
+    testUtils.registerWithToken(token, username, 'testtest', email);
+
+    testUtils.logout(s);
+    testUtils.login(s, username, 'testtest');
+    testUtils.cleanUpApp(s, appName);
+
+    // All tokens we received should not be invalid.
+    expectInvalidToken(token);
+    var registrationEmail = waitForEmail(email, /Set a password/,
+                                         /set a password/, 60);
+    var emailToken = testUtils.registrationUrlRegexp.exec(
+      registrationEmail.bodyPage
+    );
+    if (! emailToken || ! emailToken[1]) {
+      throw new Error('No registration token in email');
+    }
+    expectInvalidToken(emailToken[1]);
+  }
+);
+
+selftest.define(
+  'deferred registration - register after logging out',
+  ['net', 'slow'],
+  function () {
+    var s = new Sandbox;
+    var email = testUtils.randomUserEmail();
+    var username = testUtils.randomString(10);
+    var appName = testUtils.randomAppName();
+    var token = testUtils.deployWithNewEmail(s, email, appName);
+    testUtils.logout(s);
+
+    // If we deploy again with the same email address after logging out,
+    // we should get a message telling us to check our email and
+    // register, and the tool should obediently wait for us to do that
+    // before doing the deploy.
+    s.createApp('deployapp2', 'empty');
+    s.cd('deployapp2');
+    var run = s.run('deploy', appName);
+    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+    run.matchErr('Email:');
+    run.write(email + '\n');
+    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+    run.matchErr('already in use');
+    run.matchErr('come back here to deploy your app');
+
+    var registrationEmail = waitForEmail(
+      email,
+      /Set a password/,
+      /You previously created a Meteor developer account/,
+      60
+    );
+    token = testUtils.registrationUrlRegexp.exec(
+      registrationEmail.bodyPage
+    );
+    if (! token || ! token[1]) {
+      throw new Error('No registration token in email');
+    }
+
+    testUtils.registerWithToken(token[1], username, 'testtest', email);
+    run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+    run.matchErr('log in with your new password');
+    run.matchErr('Password:');
+    run.write('testtest\n');
+    run.waitSecs(90);
+    run.match('Now serving at');
+    run.expectExit(0);
+
+    run = s.run('whoami');
+    run.read(username);
+    run.expectExit(0);
+
+    testUtils.cleanUpApp(s, appName);
+  }
+);

@@ -777,7 +777,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'deploy',
-  minArgs: 0,
+  minArgs: 1,
   maxArgs: 1,
   options: {
     'delete': { type: Boolean, short: 'D' },

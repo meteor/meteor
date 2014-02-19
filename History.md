@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v0.7.1
+
 * Meteor developer accounts
   - `accounts-meteor-developer` package for OAuth support
   - managing deployed apps with developer accounts instead of site
@@ -28,6 +30,7 @@
   - {$type: 4} queries
   - optimize `remove({})` when observers are paused
   - make update-by-id constant time
+  - allow {$set: {'x._id': 1}}  #1794
 
 * Add `clientAddress` and `httpHeaders` to `this.connection` in method
   calls and publish functions.
@@ -58,7 +61,7 @@
 * Fix races when calling login and/or logoutOtherClients from multiple
   tabs. #1616
 
-* Upgrade `jquery-waypoints` package from 1.1.7 to 2.0.3. (Contains
+* Upgrade `jquery-waypoints` package from 1.1.7 to 2.0.4. (Contains
   backward-incompatible changes).
 
 * Add `frame-src` to `browser-policy-content` and account for
@@ -75,9 +78,9 @@
 * Upgraded dependencies:
   - node from 0.10.22 to 0.10.25 (removed workaround from 0.7.0 -- now
     support 0.10.25+)
-  - Upgrade jQuery from 1.8.2 to 1.10.2.
-    XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities
-    XXX consider taking 1.11 instead, which was released this week
+  - Upgrade jQuery from 1.8.2 to 1.11.0
+    XXX see http://jquery.com/upgrade-guide/1.9/ for incompatibilities (maybe
+        goes in notices?)
   - source-map from 0.3.30 to 0.3.32  #1782
   - websocket-driver from 0.3.1 to 0.3.2
   - http-proxy: 1.0.2 (from a pre-release fork of 1.0)

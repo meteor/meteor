@@ -2,7 +2,7 @@ var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 
-var commandTimeoutSecs = 15;
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 var loggedInError = function(run) {
   run.waitSecs(commandTimeoutSecs);
@@ -23,6 +23,9 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in for that.");
   run.expectExit(1);
+
+  run = s.run("authorized");
+  run.matchErr("not enough arguments");
 
   run = s.run("authorized", appName, "--remove", "bob");
   run.waitSecs(commandTimeoutSecs);
@@ -114,5 +117,28 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.matchErr("Couldn't change authorized users: testtest: not an authorized user");
   run.expectExit(1);
 
+  testUtils.cleanUpApp(s, appName);
+});
+
+selftest.define('authorized - no username', ['net', 'slow'], function () {
+  var s = new Sandbox;
+
+  // We shouldn't be able to add authorized users before we set a
+  // username.
+  var email = testUtils.randomUserEmail();
+  var username = testUtils.randomString(10);
+  var appName = testUtils.randomAppName();
+  var token = testUtils.deployWithNewEmail(s, email, appName);
+  var run = s.run('authorized', appName, '--add', 'test');
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('You must set a password on your account before ' +
+               'you can authorize other users');
+  run.expectExit(1);
+  // After we set a username, we should be able to authorize others.
+  testUtils.registerWithToken(token, username, 'testtest', email);
+  run = s.run('authorized', appName, '--add', 'test');
+  run.waitSecs(commandTimeoutSecs);
+  run.match(': added test');
+  run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
 });

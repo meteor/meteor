@@ -1,22 +1,43 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
+var files = require('../files.js');
 var Sandbox = selftest.Sandbox;
+
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
+
+selftest.define('deploy - bad arguments', [], function () {
+  var s = new Sandbox;
+
+  // Deploy with no app name should fail
+  var run = s.run('deploy');
+  run.matchErr('not enough arguments');
+  run.expectExit(1);
+
+  // Deploy outside of an app directory
+  run = s.run('deploy', testUtils.randomAppName());
+  run.matchErr('not in a Meteor project directory');
+  run.expectExit(1);
+});
 
 selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // Create two sandboxes: one with a warehouse so that we can run
   // --release, and one without a warehouse so that we run from the
   // checkout or release that we started from.
   // XXX Is having two sandboxes the only way to do this?
-  var sandboxWithWarehouse = new Sandbox({
-    // Include a warehouse arugment so that we can deploy apps with
-    // --release arguments.
-    warehouse: {
-      v1: { tools: 'tool1', latest: true }
-    }
-  });
-
   var sandbox = new Sandbox;
+  var sandboxWithWarehouse;
+  if (files.inCheckout()) {
+    sandboxWithWarehouse = new Sandbox({
+      // Include a warehouse arugment so that we can deploy apps with
+      // --release arguments.
+      warehouse: {
+        v1: { tools: 'tool1', latest: true }
+      }
+    });
+  } else {
+    sandboxWithWarehouse = new Sandbox;
+  }
   sandbox.createApp('deployapp', 'empty');
   sandbox.cd('deployapp');
 
@@ -35,7 +56,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(0);
   // And we should have claimed the app by deploying to it.
   run = sandbox.run('claim', noPasswordLegacyApp);
-  run.waitSecs(20);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('already belongs to you');
   run.expectExit(1);
   // Clean up
@@ -48,15 +69,15 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   );
   // We shouldn't be able to deploy to this app without claiming it
   run = sandbox.run('deploy', passwordLegacyApp);
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('meteor claim');
   run.expectExit(1);
   // If we claim it, we should be able to deploy to it.
   run = sandbox.run('claim', passwordLegacyApp);
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Password:');
   run.write('test\n');
-  run.waitSecs(10);
+  run.waitSecs(commandTimeoutSecs);
   run.match('successfully transferred to your account');
   run.expectExit(0);
   run = sandbox.run('deploy', passwordLegacyApp);
@@ -75,7 +96,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   testUtils.logout(sandbox);
   testUtils.login(sandbox, 'testtest', 'testtest');
   run = sandbox.run('deploy', appName);
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('belongs to a different user');
   run.expectExit(1);
 
@@ -89,9 +110,14 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
 selftest.define('deploy - logged out', ['net', 'slow'], function () {
   var s = new Sandbox;
-  var sandboxWithWarehouse = new Sandbox({
-    warehouse: { v1: { tools: 'tool1', latest: true } }
-  });
+  var sandboxWithWarehouse;
+  if (files.inCheckout()) {
+    sandboxWithWarehouse = new Sandbox({
+      warehouse: { v1: { tools: 'tool1', latest: true } }
+    });
+  } else {
+    sandboxWithWarehouse = new Sandbox;
+  }
 
   testUtils.login(s, 'test', 'testtest');
   var appName = testUtils.createAndDeployApp(s);
@@ -100,10 +126,10 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   // Deploy when logged out. We should be prompted to log in and then
   // the deploy should succeed.
   var run = s.run('deploy', appName);
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Email:');
   run.write('test@test.com\n');
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Password:');
   run.write('testtest\n');
   run.waitSecs(90);
@@ -119,10 +145,10 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
     sandboxWithWarehouse
   );
   run = s.run('deploy', legacyNoPassword);
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Email:');
   run.write('test@test.com\n');
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Password: ');
   run.write('testtest\n');
   run.waitSecs(90);
@@ -137,15 +163,15 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
     'test'
   );
   run = s.run('deploy', legacyPassword);
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Email:');
   // Log in with a username here to test that the email prompt also
   // accepts emails. (We put an email in the email prompt above.)
   run.write('test\n');
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Password:');
   run.write('testtest\n');
-  run.waitSecs(15);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('meteor claim');
   run.expectExit(1);
 
@@ -158,12 +184,12 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   appName = testUtils.randomAppName();
   var email = testUtils.randomUserEmail();
   run = s.run('deploy', appName);
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Email:');
   run.write(email + '\n');
   run.waitSecs(90);
   run.match('Now serving');
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.expectExit(0);
   // Now that we've created an account with this email address, we
   // should be logged in as it and should be able to delete it.
@@ -172,10 +198,10 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   // Now that we've created a user, try to deploy a new app.
   appName = testUtils.randomAppName();
   run = s.run('deploy', appName);
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('Email:');
   run.write(email + '\n');
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr('already in use');
   run.matchErr('pick a password');
   run.stop();

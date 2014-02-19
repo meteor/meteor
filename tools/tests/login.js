@@ -1,5 +1,8 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
+var testUtils = require('../test-utils.js');
+
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 selftest.define("login", ['net'], function () {
   var s = new Sandbox;
@@ -41,9 +44,18 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("whatever\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("failed");
   run.expectExit(1);
+
+  run = s.run('login');
+  run.matchErr("Username:");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("Logged in as test.");
+  run.expectExit(0);
 
   // XXX test login by email
 
@@ -53,12 +65,12 @@ selftest.define("login", ['net'], function () {
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged out");
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(1);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Not logged in");
   run.expectExit(0);
 
@@ -72,7 +84,7 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("badpassword\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Login failed");
   run.expectExit(1);
 
@@ -83,12 +95,12 @@ selftest.define("login", ['net'], function () {
   run.write("TeSt\n");
   run.matchErr("Password:");
   run.write("testtest\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged in as test.");
   run.expectExit(0);
 
   run = s.run("logout");
-  run.waitSecs(2);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Logged out");
   run.expectExit(0);
 
@@ -99,7 +111,29 @@ selftest.define("login", ['net'], function () {
   run.write("test\n");
   run.matchErr("Password:");
   run.write("TesTTesT\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("Login failed");
   run.expectExit(1);
+});
+
+selftest.define('whoami - no username', ['net', 'slow'], function () {
+  var s = new Sandbox;
+  var email = testUtils.randomUserEmail();
+  var username = testUtils.randomString(10);
+  var appName = testUtils.randomAppName();
+  var token = testUtils.deployWithNewEmail(s, email, appName);
+
+  var run = s.run('whoami');
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('You haven\'t chosen your username yet');
+  run.matchErr(testUtils.registrationUrlRegexp);
+  run.expectExit(1);
+  testUtils.registerWithToken(token, username, 'test', email);
+
+  run = s.run('whoami');
+  run.waitSecs(commandTimeoutSecs);
+  run.read(username);
+  run.expectExit(0);
+
+  testUtils.cleanUpApp(s, appName);
 });
