@@ -72,6 +72,8 @@ var loggedInAccountsConnection = function (token) {
   var outcome = fut.wait();
 
   if (outcome.err) {
+    connection.close();
+
     if (outcome.err.error === 403) {
       // This is not an ideal value for the error code, but it means
       // "server rejected our access token". For example, it expired
@@ -826,11 +828,23 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
     process.stderr.write(
 "\n" +
-"That email address is already in use. We need to confirm that it belongs\n" +
-"to you. Luckily this will only take a moment.\n" +
-"\n" +
-"Check your mail! We've sent you a link. Click it, pick a password,\n" +
-"and then come back here to deploy your app.\n");
+"You need to pick a password for your account so that you can log in.\n" +
+"An email has been sent to you with the link.\n\n");
+
+    var animationFrame = 0;
+    var lastLinePrinted = "";
+    var timer = setInterval(function () {
+      var spinner = ['-', '\\', '|', '/'];
+      lastLinePrinted = "Waiting for you to register on the web... " +
+        spinner[animationFrame];
+      process.stderr.write(lastLinePrinted + "\r");
+      animationFrame = (animationFrame + 1) % spinner.length;
+    }, 200);
+    var stopSpinner = function () {
+      process.stderr.write(new Array(lastLinePrinted.length + 1).join(' ') +
+                           "\r");
+      clearInterval(timer);
+    };
 
     try {
       var waitForRegistrationResult = connection.call(
@@ -838,17 +852,17 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
         email
       );
     } catch (e) {
+      stopSpinner();
       if (! (e instanceof getLoadedPackages().meteor.Meteor.Error))
         throw e;
       process.stderr.write(
-        "\nWhen you've picked your password, run 'meteor login' and then you'll\n" +
-          "be good to go.\n");
+        "When you've picked your password, run 'meteor login' to log in.\n")
       return false;
     }
 
-    process.stderr.write("\nGreat! Nice to meet you, " +
-                         waitForRegistrationResult.username +
-                         "! Now log in with your new password.\n");
+    stopSpinner();
+    process.stderr.write("Username: " +
+                         waitForRegistrationResult.username + "\n");
     loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true,
