@@ -313,12 +313,25 @@ var bundleAndDeploy = function (options) {
   if (! site)
     return 1;
 
+  // We should give a username/password prompt if the user was logged in
+  // but the credentials are expired, unless the user is logged in but
+  // doesn't have a username (in which case they should hit the email
+  // prompt -- a user without a username shouldn't be given a username
+  // prompt). There's an edge case where things happen in the following
+  // order: user creates account, user sets username, credential expires
+  // or is revoked, user comes back to deploy again. In that case,
+  // they'll get an email prompt instead of a username prompt because
+  // the command-line tool didn't have time to learn about their
+  // username before the credential was expired.
+  auth.pollForRegistrationCompletion();
+  var promptIfAuthFails = (auth.loggedInUsername() !== null);
+
   // Check auth up front, rather than after the (potentially lengthy)
   // bundling process.
   var preflight = authedRpc({
     site: site,
     preflight: true,
-    promptIfAuthFails: true
+    promptIfAuthFails: promptIfAuthFails
   });
 
   if (preflight.errorMessage) {
