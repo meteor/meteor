@@ -3,7 +3,7 @@ var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 
-var commandTimeoutSecs = testUtils.commandTimeoutSecs;
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 var loggedInError = selftest.markStack(function(run) {
   run.waitSecs(commandTimeoutSecs);

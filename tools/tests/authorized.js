@@ -2,7 +2,7 @@ var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 
-var commandTimeoutSecs = 15;
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 var loggedInError = function(run) {
   run.waitSecs(commandTimeoutSecs);
