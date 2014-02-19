@@ -481,3 +481,35 @@ Hi there!
     {{/with}}
   {{/with}}
 </template>
+
+<template name="spacebars_test_control_input">
+  <input type={{type}} value={{value}}>
+</template>
+
+<template name="spacebars_test_control_textarea">
+  <textarea>{{value}}</textarea>
+</template>
+
+<template name="spacebars_test_control_select">
+  <select>
+    {{#each options}}
+      <option selected={{selected}}>{{.}}</option>
+    {{/each}}
+  </select>
+</template>
+
+<template name="spacebars_test_control_radio">
+  Band:
+
+  {{#each bands}}
+    <input name="bands" type="radio" value={{.}} checked={{isChecked}} />
+  {{/each}}
+
+  {{band}}
+</template>
+
+<template name="spacebars_test_control_checkbox">
+  {{#each labels}}
+    <input type="checkbox" value={{.}} checked={{isChecked}} />
+  {{/each}}
+</template>
