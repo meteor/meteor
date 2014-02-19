@@ -23,7 +23,7 @@ selftest.define("login", ['net'], function () {
     run.write("test\n");
     run.matchErr("Password:");
     run.write("testtest\n");
-    run.waitSecs(5);
+    run.waitSecs(commandTimeoutSecs);
     run.matchErr("Logged in as test.");
     run.expectExit(0);
   }
@@ -35,7 +35,7 @@ selftest.define("login", ['net'], function () {
   run.write("\n");
   run.matchErr("Password:");
   run.write("whatever\n");
-  run.waitSecs(5);
+  run.waitSecs(commandTimeoutSecs);
   run.matchErr("failed");
   run.expectExit(1);
 
