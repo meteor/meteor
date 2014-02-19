@@ -144,8 +144,13 @@ selftest.define('deferred registration', ['net'], function () {
   });
   accountsConn.close();
 
-  // Success! We should be able to log out and log back in with our new
-  // password.
+  // Success! 'meteor whoami' should now know who we are.
+  run = s.run('whoami');
+  run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+  run.read(username + '\n');
+  run.expectExit(0);
+
+  // We should be able to log out and log back in with our new password.
   testUtils.logout(s);
   testUtils.login(s, username, 'testtest');
 
