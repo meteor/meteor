@@ -147,7 +147,7 @@ var authedRpc = function (options) {
     expectPayload: []
   });
 
-  if (infoResult.statusCode === 403 && rpcOptions.promptIfAuthFails) {
+  if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
     var username = utils.readLine({ prompt: "Username: " });
@@ -264,7 +264,7 @@ var printLegacyPasswordMessage = function (site) {
 var printUnauthorizedMessage = function () {
   var username = auth.loggedInUsername();
   process.stderr.write(
-"\nSorry, that site belongs to a different user.\n" +
+"Sorry, that site belongs to a different user.\n" +
 (username ? "You are currently logged in as " + username  + ".\n" : "") +
 "\nEither have the site owner use 'meteor authorized --add' to add you\n" +
 "as an authorized developer for the site, or switch to an authorized\n" +
@@ -487,6 +487,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
         return null;
       }
     } else { // User is logged in but not authorized for this app
+      process.stderr.write("\n");
       printUnauthorizedMessage();
       return null;
     }
