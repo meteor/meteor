@@ -70,12 +70,22 @@ exports.cleanUpLegacyApp = function (sandbox, name, password) {
 };
 
 // Creates an app and deploys it. Assumes the sandbox is already logged
-// in.
-exports.createAndDeployApp = function (sandbox) {
-  var name = randomAppName();
-  sandbox.createApp(name, 'empty');
+// in. Returns the name of the deployed app. Options:
+//  - settingsFile: a path to a settings file to deploy with
+//  - appName: app name to use; will be generated randomly if not
+//    provided
+//  - templateApp: the name of the template app to use. defaults to 'empty'
+exports.createAndDeployApp = function (sandbox, options) {
+  options = options || {};
+  var name = options.appName || randomAppName();
+  sandbox.createApp(name, options.templateApp || 'empty');
   sandbox.cd(name);
-  var run = sandbox.run('deploy', name);
+  var runArgs = ['deploy', name];
+  if (options.settingsFile) {
+    runArgs.push('--settings');
+    runArgs.push(options.settingsFile);
+  }
+  var run = sandbox.run.apply(sandbox, runArgs);
   run.waitSecs(90);
   run.match('Now serving at ' + name + '.meteor.com');
   run.waitSecs(10);
