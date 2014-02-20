@@ -42,23 +42,29 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     return;
   }
 
-  var cssFuture = new Future;
-  var css = ast.toCSS({
-    sourceMap: Boolean(true),
-    writeSourceMap: function (sourceMap) {
-      cssFuture.return(sourceMap);
-    }
-  });
+  var sourceMapFuture = new Future;
+  var sourceMap = null;
+  var css = ast.toCSS();
 
-  var sourceMap = JSON.parse(cssFuture.wait());
+  if (css.length) {
+    css = ast.toCSS({
+      sourceMap: Boolean(true),
+      writeSourceMap: function (sourceMap) {
+        sourceMapFuture.return(sourceMap);
+      }
+    });
 
-  sourceMap.sources = [compileStep.inputPath];
-  sourceMap.sourcesContent = [source];
+    sourceMap = JSON.parse(sourceMapFuture.wait());
+
+    sourceMap.sources = [compileStep.inputPath];
+    sourceMap.sourcesContent = [source];
+    sourceMap = JSON.stringify(sourceMap);
+  }
 
   compileStep.addStylesheet({
     path: compileStep.inputPath + ".css",
     data: css,
-    sourceMap: JSON.stringify(sourceMap)
+    sourceMap: sourceMap
   });
 });;
 
