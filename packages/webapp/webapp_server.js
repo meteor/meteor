@@ -247,6 +247,9 @@ var runWebAppServer = function () {
   // webserver
   var app = connect();
 
+  // Auto-compress any json, javascript, or text.
+  app.use(connect.compress());
+
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawConnectHandlers.
   var rawConnectHandlers = connect();
@@ -274,12 +277,10 @@ var runWebAppServer = function () {
       next();
     }
   });
+
   // Parse the query string into res.query. Used by oauth_server, but it's
   // generally pretty handy..
   app.use(connect.query());
-
-  // Auto-compress any json, javascript, or text.
-  app.use(connect.compress());
 
   var getItemPathname = function (itemUrl) {
     return decodeURIComponent(url.parse(itemUrl).pathname);
