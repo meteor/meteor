@@ -490,7 +490,8 @@ _.extend(Sandbox.prototype, {
   // restore authentication states.
   writeSessionFile: function (contents) {
     var self = this;
-    return fs.readFileSync(path.join(self.root, '.meteorsession'), 'utf8');
+    return fs.writeFileSync(path.join(self.root, '.meteorsession'),
+                            contents, 'utf8');
   }
 });
 
