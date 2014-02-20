@@ -256,7 +256,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Email:');
   run.write(email + '\n');
   run.waitSecs(commandTimeoutSecs);
-  run.matchErr('already in use');
   run.matchErr('pick a password');
+  run.matchErr('An email has been sent to you with the link');
   run.stop();
 });

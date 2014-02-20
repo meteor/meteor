@@ -236,8 +236,8 @@ selftest.define(
     run.matchErr('Email:');
     run.write(email + '\n');
     run.waitSecs(testUtils.accountsCommandTimeoutSecs);
-    run.matchErr('already in use');
-    run.matchErr('come back here to deploy your app');
+    run.matchErr('pick a password');
+    run.matchErr('Waiting for you to register on the web...');
 
     var registrationEmail = waitForEmail(
       email,
@@ -254,8 +254,8 @@ selftest.define(
 
     testUtils.registerWithToken(token[1], username, 'testtest', email);
     run.waitSecs(testUtils.accountsCommandTimeoutSecs);
-    run.matchErr('log in with your new password');
-    run.matchErr('Password:');
+    run.matchErr('Username: ' + username + '\n');
+    run.matchErr('Password: ');
     run.write('testtest\n');
     run.waitSecs(90);
     run.match('Now serving at');
