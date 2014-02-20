@@ -117,8 +117,13 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
 
   testUtils.registerWithToken(token, username, 'testtest', email);
 
-  // Success! We should be able to log out and log back in with our new
-  // password.
+  // Success! 'meteor whoami' should now know who we are.
+  run = s.run('whoami');
+  run.waitSecs(testUtils.accountsCommandTimeoutSecs);
+  run.read(username + '\n');
+  run.expectExit(0);
+
+  // We should be able to log out and log back in with our new password.
   testUtils.logout(s);
   testUtils.login(s, username, 'testtest');
 
@@ -131,6 +136,52 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   expectInvalidToken(apiToken);
 
   // XXX Test that registration URLs get printed when they should
+});
+
+selftest.define('deferred registration revocation', ['net'], function () {
+  // Test that if we are logged in as a passwordless user, and our
+  // credential gets revoked, and we do something like 'meteor whoami'
+  // that polls to see if registration is complete, then we handle it
+  // gracefully.
+
+  var s = new Sandbox;
+  s.createApp('deployapp', 'empty');
+  s.cd('deployapp');
+
+  // Create a new deferred registration account. (Don't bother to wait
+  // for the deploy to go through.)
+  var email = testUtils.randomUserEmail();
+  var username = testUtils.randomString(10);
+  var appName = testUtils.randomAppName();
+  var run = s.run('deploy', appName);
+  run.waitSecs(5);
+  run.matchErr('Email:');
+  run.write(email + '\n');
+  run.waitSecs(90);
+  run.match('Deploying');
+  run.stop();
+
+  // 'whoami' says that we don't have a password
+  run = s.run('whoami');
+  run.waitSecs(15);
+  run.matchErr('/setPassword?');
+  run.expectExit(1);
+
+  // Revoke the credential without updating .meteorsession.
+  var sessionState = s.readSessionFile();
+  run = s.run('logout');
+  run.waitSecs(15);
+  run.readErr("Logged out.\n");
+  run.expectEnd();
+  run.expectExit(0);
+  s.writeSessionFile(sessionState);
+
+  // 'whoami' now says that we're not logged in. No errors are printed.
+  run = s.run('whoami');
+  run.waitSecs(15);
+  run.readErr("Not logged in. 'meteor login' to log in.\n");
+  run.expectEnd();
+  run.expectExit(1);
 });
 
 selftest.define(
@@ -185,8 +236,8 @@ selftest.define(
     run.matchErr('Email:');
     run.write(email + '\n');
     run.waitSecs(testUtils.accountsCommandTimeoutSecs);
-    run.matchErr('already in use');
-    run.matchErr('come back here to deploy your app');
+    run.matchErr('pick a password');
+    run.matchErr('Waiting for you to register on the web...');
 
     var registrationEmail = waitForEmail(
       email,
@@ -203,8 +254,8 @@ selftest.define(
 
     testUtils.registerWithToken(token[1], username, 'testtest', email);
     run.waitSecs(testUtils.accountsCommandTimeoutSecs);
-    run.matchErr('log in with your new password');
-    run.matchErr('Password:');
+    run.matchErr('Username: ' + username + '\n');
+    run.matchErr('Password: ');
     run.write('testtest\n');
     run.waitSecs(90);
     run.match('Now serving at');

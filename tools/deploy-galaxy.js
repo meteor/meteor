@@ -150,7 +150,7 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
-    self.subscribe.apply(self, args);
+    self.connection.subscribe.apply(self.connection, args);
     return fut.wait();
   },
 

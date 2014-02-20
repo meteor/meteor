@@ -3,8 +3,62 @@ var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var files = require('../files.js');
 var Sandbox = selftest.Sandbox;
+var httpHelpers = require('../http-helpers.js');
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
+
+selftest.define('deploy - expired credentials', ['net', 'slow'], function () {
+  var s = new Sandbox;
+  // Create an account and then expire the login token before setting a
+  // username. On the next deploy, we should get an email prompt
+  // followed by a registration email, not a username prompt.
+  var email = testUtils.randomUserEmail();
+  var appName = testUtils.randomAppName();
+  var token = testUtils.deployWithNewEmail(s, email, appName);
+  var sessionFile = s.readSessionFile();
+  testUtils.logout(s);
+  s.writeSessionFile(sessionFile);
+  var run = s.run('deploy', appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('Expired credential');
+  run.expectExit(1);
+
+  // Complete registration so that we can clean up our app.
+  var username = testUtils.randomString(10);
+  testUtils.registerWithToken(token, username,
+                              'testtest', email);
+  testUtils.login(s, username, 'testtest');
+  testUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
+
+  // Create an account, set a username, expire the login token, and
+  // deploy again. We should get a username/password prompt.
+  email = testUtils.randomUserEmail();
+  appName = testUtils.randomAppName();
+  username = testUtils.randomString(10);
+  token = testUtils.deployWithNewEmail(s, email, appName);
+  testUtils.registerWithToken(token, username,
+                              'testtest', email);
+  run = s.run('whoami');
+  run.waitSecs(commandTimeoutSecs);
+  run.read(username + '\n');
+  run.expectExit(0);
+
+  sessionFile = s.readSessionFile();
+  testUtils.logout(s);
+  s.writeSessionFile(sessionFile);
+
+  run = s.run('deploy', appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr('Username:');
+  run.write(username + '\n');
+  run.matchErr('Password:');
+  run.write('testtest' + '\n');
+  run.waitSecs(90);
+  run.expectExit(0);
+
+  testUtils.cleanUpApp(s, appName);
+});
 
 selftest.define('deploy - bad arguments', [], function () {
   var s = new Sandbox;
@@ -202,7 +256,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Email:');
   run.write(email + '\n');
   run.waitSecs(commandTimeoutSecs);
-  run.matchErr('already in use');
   run.matchErr('pick a password');
+  run.matchErr('An email has been sent to you with the link');
   run.stop();
 });
