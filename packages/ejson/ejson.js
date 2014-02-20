@@ -162,7 +162,8 @@ EJSON._adjustTypesToJSONValue = function (obj) {
 
 // Either return the JSON-compatible version of the argument, or undefined (if
 // the item isn't itself replaceable, but maybe some fields in it are)
-var toJSONValueHelper = function (item) {
+var toJSONValueHelper =
+EJSON._toJSONValueHelper = function (item) {
   for (var i = 0; i < builtinConverters.length; i++) {
     var converter = builtinConverters[i];
     if (converter.matchObject(item)) {
