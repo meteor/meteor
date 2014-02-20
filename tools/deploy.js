@@ -323,7 +323,9 @@ var bundleAndDeploy = function (options) {
   // they'll get an email prompt instead of a username prompt because
   // the command-line tool didn't have time to learn about their
   // username before the credential was expired.
-  auth.pollForRegistrationCompletion();
+  auth.pollForRegistrationCompletion({
+    noLogout: true
+  });
   var promptIfAuthFails = (auth.loggedInUsername() !== null);
 
   // Check auth up front, rather than after the (potentially lengthy)

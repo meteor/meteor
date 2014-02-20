@@ -685,9 +685,13 @@ exports.logoutCommand = function (options) {
 // if not logged in, do nothing. If it is an account without a
 // username, contact the server and see if the user finished setting
 // it up, and if so grab and save the username. But contact the server
-// only once per run of the program.
+// only once per run of the program. Options:
+//  - noLogout: boolean. Set to true if you don't want this function to
+//    log out the session if wehave an invalid credential (for example,
+//    if a caller wants to do its own error handling for invalid
+//    credentials). Defaults to false.
 var alreadyPolledForRegistration = false;
-exports.pollForRegistrationCompletion = function () {
+exports.pollForRegistrationCompletion = function (options) {
   if (alreadyPolledForRegistration)
     return;
   alreadyPolledForRegistration = true;
@@ -708,8 +712,10 @@ exports.pollForRegistrationCompletion = function () {
     // it. Note that, out of an abundance of caution, this also will
     // enqueue the credential for invalidation (on a future run, we
     // will try to explicitly revoke the credential ourselves).
-    logOutSession(session);
-    writeSessionData(data);
+    if (! options.noLogout) {
+      logOutSession(session);
+      writeSessionData(data);
+    }
     return;
   }
 
