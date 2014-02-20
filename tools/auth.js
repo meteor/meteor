@@ -698,6 +698,8 @@ exports.pollForRegistrationCompletion = function (options) {
     return;
   alreadyPolledForRegistration = true;
 
+  options = options || {};
+
   var data = readSessionData();
   var session = getSession(data, config.getAccountsDomain());
   if (session.username || ! session.token)
