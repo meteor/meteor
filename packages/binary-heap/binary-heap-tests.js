@@ -28,6 +28,27 @@ Tinytest.add("binary-heap - simple max-heap tests", function (test) {
   test.equal(h.maxElementId(), "a");
 });
 
+Tinytest.add("binary-heap - big test for max-heap", function (test) {
+  var positiveNumbers = _.shuffle(_.range(1, 41));
+  var negativeNumbers = _.shuffle(_.range(-1, -41, -1));
+  var allNumbers = negativeNumbers.concat(positiveNumbers);
+
+  var heap = new MaxHeap(function (a, b) { return a-b; });
+  var output = [];
+
+  _.each(allNumbers, function (n) { heap.set(n, n); });
+
+  _.times(positiveNumbers.length + negativeNumbers.length, function () {
+    var maxId = heap.maxElementId();
+    output.push(heap.get(maxId));
+    heap.remove(maxId);
+  });
+
+  allNumbers.sort(function (a, b) { return b-a; });
+
+  test.equal(output, allNumbers);
+});
+
 Tinytest.add("binary-heap - min-max heap tests", function (test) {
   var h = new MinMaxHeap(function (a, b) { return a-b; });
   h.set("a", 1);
