@@ -1,5 +1,5 @@
-Tinytest.add("binary-heap - simple heap tests", function (test) {
-  var h = new BinaryHeap(function (a, b) { return a-b; });
+Tinytest.add("binary-heap - simple max-heap tests", function (test) {
+  var h = new MaxHeap(function (a, b) { return a-b; });
   h.set("a", 1);
   h.set("b", 233);
   h.set("c", -122);
@@ -28,8 +28,8 @@ Tinytest.add("binary-heap - simple heap tests", function (test) {
   test.equal(h.maxElementId(), "a");
 });
 
-Tinytest.add("binary-heap - max-min heap tests", function (test) {
-  var h = new MaxMinHeap(function (a, b) { return a-b; });
+Tinytest.add("binary-heap - min-max heap tests", function (test) {
+  var h = new MinMaxHeap(function (a, b) { return a-b; });
   h.set("a", 1);
   h.set("b", 233);
   h.set("c", -122);

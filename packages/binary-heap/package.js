@@ -4,11 +4,11 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export('BinaryHeap');
-  api.export('MaxMinHeap');
+  api.export('MaxHeap');
+  api.export('MinMaxHeap');
   api.use(['underscore']);
   api.use(['minimongo'], { weak: true });
-  api.add_files(['binary-heap.js', 'max-min-heap.js']);
+  api.add_files(['max-heap.js', 'min-max-heap.js']);
 });
 
 Package.on_test(function (api) {

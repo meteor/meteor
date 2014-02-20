@@ -5,7 +5,7 @@
 //        - id - String - unique id of the item
 //        - value - Any - the data value
 //    the contents of initData is retained
-BinaryHeap = function (comparator, initData) {
+MaxHeap = function (comparator, initData) {
   if (! _.isFunction(comparator))
     throw new Error('Passed comparator is invalid, should be a comparison function');
   var self = this;
@@ -26,7 +26,7 @@ if (Package.minimongo) {
   idStringify = function (id) { return JSON.stringify(id); };
 }
 
-_.extend(BinaryHeap.prototype, {
+_.extend(MaxHeap.prototype, {
   _initFromData: function (data) {
     var self = this;
 
@@ -169,7 +169,7 @@ _.extend(BinaryHeap.prototype, {
   },
   clone: function () {
     var self = this;
-    var clone = new BinaryHeap(self._comparator);
+    var clone = new MaxHeap(self._comparator);
     clone._heap = EJSON.clone(self._heap);
     clone._heapIdx = EJSON.clone(self._heapIdx);
     return clone;
