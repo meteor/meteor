@@ -1465,7 +1465,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
   });
 });
 
-Tinytest.add("spark - controls - radio", function(test) {
+Tinytest.add("spacebars - controls - radio", function(test) {
   var R = ReactiveVar("");
   var R2 = ReactiveVar("");
   var change_buf = [];
@@ -1546,7 +1546,7 @@ Tinytest.add("spark - controls - radio", function(test) {
   document.body.removeChild(div);
 });
 
-Tinytest.add("spark - controls - checkbox", function(test) {
+Tinytest.add("spacebars - controls - checkbox", function(test) {
   var tmpl = Template.spacebars_test_control_checkbox;
   tmpl.labels = ["Foo", "Bar", "Baz"];
   var Rs = {};
