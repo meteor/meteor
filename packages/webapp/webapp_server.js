@@ -247,6 +247,11 @@ var runWebAppServer = function () {
   // webserver
   var app = connect();
 
+  // Packages and apps can add handlers that run before any other Meteor
+  // handlers via WebApp.rawConnectHandlers.
+  var rawConnectHandlers = connect();
+  app.use(rawConnectHandlers);
+
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
     var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
@@ -517,6 +522,7 @@ var runWebAppServer = function () {
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
+    rawConnectHandlers: rawConnectHandlers,
     httpServer: httpServer,
     // metadata about the client program that we serve
     clientProgram: {
