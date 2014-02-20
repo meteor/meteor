@@ -182,6 +182,6 @@ _.extend(MaxHeap.prototype, {
 });
 
 function leftChildIdx (i) { return i * 2 + 1; }
-function rightChildIdx (i) { return i * i + 2; }
+function rightChildIdx (i) { return i * 2 + 2; }
 function parentIdx (i) { return (i - 1) >> 1; }
 
