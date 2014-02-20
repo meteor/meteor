@@ -42,20 +42,16 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     return;
   }
 
-  var sourceMapFuture = new Future;
   var sourceMap = null;
-  var css = ast.toCSS();
+  var css = ast.toCSS({
+    sourceMap: true,
+    writeSourceMap: function (sm) {
+      sourceMap = JSON.parse(sm);
+    }
+  });
 
-  if (css.length) {
-    css = ast.toCSS({
-      sourceMap: Boolean(true),
-      writeSourceMap: function (sourceMap) {
-        sourceMapFuture.return(sourceMap);
-      }
-    });
 
-    sourceMap = JSON.parse(sourceMapFuture.wait());
-
+  if (sourceMap) {
     sourceMap.sources = [compileStep.inputPath];
     sourceMap.sourcesContent = [source];
     sourceMap = JSON.stringify(sourceMap);
