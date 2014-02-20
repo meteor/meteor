@@ -150,7 +150,10 @@ var authedRpc = function (options) {
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
-    var username = utils.readLine({ prompt: "Username: " });
+    var username = utils.readLine({
+      prompt: "Username: ",
+      stream: process.stderr
+    });
     var loginOptions = {
       username: username,
       suppressErrorMessage: true
