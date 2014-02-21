@@ -7,7 +7,9 @@ MinMaxHeap = function (comparator, initialData) {
   }, initialData);
 };
 
-MinMaxHeap.prototype = Object.create(MaxHeap.prototype);
+var F = function () {};
+F.prototype = MaxHeap.prototype;
+MinMaxHeap.prototype = new F;
 
 _.extend(MinMaxHeap.prototype, {
   set: function (id, value) {

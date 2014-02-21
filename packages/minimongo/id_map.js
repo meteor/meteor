@@ -3,5 +3,5 @@ LocalCollection._IdMap = function () {
   IdMap.call(self, LocalCollection._idStringify, LocalCollection._idParse);
 };
 
-LocalCollection._IdMap.prototype = Object.create(IdMap.prototype);
+LocalCollection._IdMap.prototype = IdMap.prototype;
 
