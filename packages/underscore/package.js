@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Collection of small helper functions: _.map, _.each, ..."
+  summary: "Collection of small helpers: _.map, _.each, ..."
 });
 
 Package.on_use(function (api) {
