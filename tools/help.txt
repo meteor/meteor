@@ -144,8 +144,7 @@ Options:
 Reset the project state. Erases the local database.
 Usage: meteor reset
 
-Reset the current project to a fresh state. Removes all local
-data.
+Reset the current project to a fresh state. Removes all local data.
 
 
 >>> deploy
