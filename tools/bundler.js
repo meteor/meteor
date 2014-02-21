@@ -840,8 +840,13 @@ _.extend(ClientTarget.prototype, {
     _.each(originals, function (file, name) {
       if (! file.sourceMap)
         return;
-      newMap.applySourceMap(
-        new sourcemap.SourceMapConsumer(file.sourceMap), name);
+      try {
+        newMap.applySourceMap(
+          new sourcemap.SourceMapConsumer(file.sourceMap), name);
+      } catch (err) {
+        console.log("warn: failed to apply the source map for " +
+                    name.slice(0, name.length - 4));
+      }
     });
 
     self.css[0].setSourceMap(JSON.stringify(newMap));
