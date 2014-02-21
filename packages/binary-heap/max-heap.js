@@ -9,24 +9,40 @@ MaxHeap = function (comparator, initData) {
   if (! _.isFunction(comparator))
     throw new Error('Passed comparator is invalid, should be a comparison function');
   var self = this;
+
+  // a C-style comparator that is given two values and returns a number,
+  // negative if the first value is less than the second, positive if the second
+  // value is greater than the first and zero if they are equal.
   self._comparator = comparator;
 
+  // _heapIdx maps an id to an index in the Heap array the corresponding value
+  // is located on.
   if (Package && Package.minimongo)
     self._heapIdx = new Package.minimongo.LocalCollection._IdMap;
   else
     self._heapIdx = new IdMap;
 
+  // The Heap data-structure implemented as a 0-based contiguous array where
+  // every item on index idx is a node in a complete binary tree. Every node can
+  // have leaves on indexes idx*2+1 and idx*2+2, except for the lists. Every
+  // node has a parent on index (idx-1)/2;
   self._heap = [];
 
+  // If the initial array is passed, we can build the heap in linear time
+  // complexity (O(N)) compared to linearithmetic time complexity (O(nlogn)) if
+  // we push elements one by one.
   if (_.isArray(initData))
     self._initFromData(initData);
 };
 
 _.extend(MaxHeap.prototype, {
+  // Builds a new heap in-place in linear time based on passed data
   _initFromData: function (data) {
     var self = this;
 
-    self._heap = _.clone(data);
+    self._heap = _.map(data, function (o) {
+      return { id: EJSON.clone(o.id), value: o.value };
+    });
 
     _.each(data, function (o, i) {
       self._heapIdx.set(o.id, i);
