@@ -54,10 +54,6 @@ Tinytest.add("geojson-utils - point distance", function (test) {
 });
 
 Tinytest.add("geojson-utils - points distance generated tests", function (test) {
-  var floatEqual = function (a, b) {
-    test.isTrue(Math.abs(a - b) < 0.000001);
-  };
-
   // Pairs of points we will be looking a distance between
   var tests = [[[-19.416501816827804,-13.442164216190577], [8.694866622798145,-8.511979941977188]],
     [[151.2841189110186,-56.14564002258703], [167.77983197313733,0.05544793023727834]],
@@ -91,8 +87,8 @@ Tinytest.add("geojson-utils - points distance generated tests", function (test) 
 
   _.each(tests, function (pair, testN) {
     var distance = GeoJSON.pointDistance.apply(this, _.map(pair, toGeoJSONPoint));
-    test.isTrue(Math.abs(distance - answers[testN]) < 0.00000001,
-      "Wrong distance between points " + JSON.stringify(pair) + ": " + distance);
+    test.isTrue(Math.abs(distance - answers[testN]) < 0.000001,
+      "Wrong distance between points " + JSON.stringify(pair) + ": " + distance + ", " + Math.abs(distance - answers[testN]) + " differenc");
   });
 
   function toGeoJSONPoint (coordinates) {
