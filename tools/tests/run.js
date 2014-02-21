@@ -171,7 +171,7 @@ selftest.define("run --once", function () {
   s.cd("onceapp");
   s.set("RUN_ONCE_OUTCOME", "mongo");
   run = s.run("--once");
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.expectExit(86);
 });
 
