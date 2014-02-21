@@ -844,8 +844,11 @@ _.extend(ClientTarget.prototype, {
         newMap.applySourceMap(
           new sourcemap.SourceMapConsumer(file.sourceMap), name);
       } catch (err) {
-        console.log("warn: failed to apply the source map for " +
-                    name.slice(0, name.length - 4));
+        // If we can't apply the source map, silently drop it.
+        //
+        // XXX This is here because there are some less files that
+        // produce source maps that throw when consumed. We should
+        // figure out exactly why and fix it, but this will do for now.
       }
     });
 
