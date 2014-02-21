@@ -48,6 +48,9 @@ _.extend(MaxHeap.prototype, {
       self._heapIdx.set(o.id, i);
     });
 
+    if (! data.length)
+      return;
+
     // start from the first non-leaf - the parent of the last leaf
     for (var i = parentIdx(data.length - 1); i >= 0; i--)
       self._downHeap(i);
