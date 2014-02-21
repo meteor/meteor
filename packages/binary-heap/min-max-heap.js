@@ -34,10 +34,7 @@ _.extend(MinMaxHeap.prototype, {
   },
   clone: function () {
     var self = this;
-    var clone = new MinMaxHeap(self._comparator);
-    clone._heap = EJSON.clone(self._heap);
-    clone._heapIdx = EJSON.clone(self._heapIdx);
-    clone._minHeap = self._minHeap.clone();
+    var clone = new MinMaxHeap(self._comparator, self._heap);
     return clone;
   },
   minElementId: function () {
