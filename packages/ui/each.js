@@ -68,7 +68,7 @@ UI.EachImpl = Component.extend({
     };
 
     this.observeHandle = ObserveSequence.observe(function () {
-      return self.get('sequence');
+      return self.__sequence();
     }, {
       addedAt: function (id, item, i, beforeId) {
         addToCount(1);
