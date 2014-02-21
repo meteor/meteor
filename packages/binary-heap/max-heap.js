@@ -108,14 +108,14 @@ _.extend(MaxHeap.prototype, {
 
   _swap: function (idxA, idxB) {
     var self = this;
-    var A = self._heap[idxA];
-    var B = self._heap[idxB];
+    var recA = self._heap[idxA];
+    var recB = self._heap[idxB];
 
-    self._heapIdx.set(A.id, idxB);
-    self._heapIdx.set(B.id, idxA);
+    self._heapIdx.set(recA.id, idxB);
+    self._heapIdx.set(recB.id, idxA);
 
-    self._heap[idxA] = B;
-    self._heap[idxB] = A;
+    self._heap[idxA] = recB;
+    self._heap[idxB] = recA;
   },
 
   get: function (id) {
