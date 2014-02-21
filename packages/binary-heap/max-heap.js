@@ -64,12 +64,10 @@ _.extend(MaxHeap.prototype, {
       var right = rightChildIdx(idx);
       var largest = idx;
 
-      if (left < self.size() &&
-          self._comparator(self._get(left), self._get(largest)) > 0) {
+      if (left < self.size() && self._maxIndex(largest, left) === left) {
         largest = left;
       }
-      if (right < self.size() &&
-          self._comparator(self._get(right), self._get(largest)) > 0) {
+      if (right < self.size() && self._maxIndex(largest, right) === right) {
         largest = right;
       }
 
@@ -83,17 +81,23 @@ _.extend(MaxHeap.prototype, {
 
   _upHeap: function (idx) {
     var self = this;
-    var value = self._get(idx);
 
     while (idx > 0) {
       var parent = parentIdx(idx);
-      if (self._comparator(self._get(parent), value) < 0) {
+      if (self._maxIndex(parent, idx) === idx) {
         self._swap(parent, idx)
         idx = parent;
       } else {
         break;
       }
     }
+  },
+
+  _maxIndex: function (idxA, idxB) {
+    var self = this;
+    var valueA = self._get(idxA);
+    var valueB = self._get(idxB);
+    return self._comparator(valueA, valueB) > 0 ? idxA : idxB;
   },
 
   // Internal: gets raw data object placed on idxth place in heap
