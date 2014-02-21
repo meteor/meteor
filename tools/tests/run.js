@@ -44,6 +44,7 @@ selftest.define("run", function () {
 
   // Crashes
   s.write("crash.js", "process.exit(42);");
+  run.waitSecs(5);
   run.match("with code: 42");
   run.waitSecs(5);
   run.match("is crashing");

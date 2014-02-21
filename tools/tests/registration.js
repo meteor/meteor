@@ -159,6 +159,7 @@ selftest.define('deferred registration revocation', ['net'], function () {
   run.write(email + '\n');
   run.waitSecs(90);
   run.match('Deploying');
+  run.waitSecs(15); // because the bundler doesn't yield
   run.stop();
 
   // 'whoami' says that we don't have a password
