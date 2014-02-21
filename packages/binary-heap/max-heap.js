@@ -10,21 +10,17 @@ MaxHeap = function (comparator, initData) {
     throw new Error('Passed comparator is invalid, should be a comparison function');
   var self = this;
   self._comparator = comparator;
-  self._heapIdx = {};
+
+  if (Package && Package.minimongo)
+    self._heapIdx = new Package.minimongo.LocalCollection._IdMap;
+  else
+    self._heapIdx = new IdMap;
+
   self._heap = [];
 
   if (_.isArray(initData))
     self._initFromData(initData);
 };
-
-var idStringify;
-if (Package.minimongo) {
-  idStringify = Package.minimongo.LocalCollection._idStringify;
-} else {
-  // XXX: These can't deal with special strings like '__proto__'
-  // XXX: or '{ looksLike: "object" }' or numbers.
-  idStringify = function (id) { return JSON.stringify(id); };
-}
 
 _.extend(MaxHeap.prototype, {
   _initFromData: function (data) {
@@ -33,7 +29,7 @@ _.extend(MaxHeap.prototype, {
     self._heap = _.clone(data);
 
     _.each(data, function (o, i) {
-      self._heapIdx[idStringify(o.id)] = i;
+      self._heapIdx.set(o.id, i);
     });
 
     for (var i = parentIdx(data.length); i >= 0; i--)
@@ -91,8 +87,8 @@ _.extend(MaxHeap.prototype, {
     var A = self._heap[idxA];
     var B = self._heap[idxB];
 
-    self._heapIdx[idStringify(A.id)] = idxB;
-    self._heapIdx[idStringify(B.id)] = idxA;
+    self._heapIdx.set(A.id, idxB);
+    self._heapIdx.set(B.id, idxA);
 
     self._heap[idxA] = B;
     self._heap[idxB] = A;
@@ -102,7 +98,7 @@ _.extend(MaxHeap.prototype, {
     var self = this;
     if (! self.has(id))
       return null;
-    return self._get(self._heapIdx[idStringify(id)]);
+    return self._get(self._heapIdx.get(id));
   },
   set: function (id, value) {
     var self = this;
@@ -114,17 +110,16 @@ _.extend(MaxHeap.prototype, {
         self.remove(id);
     }
 
-    self._heapIdx[idStringify(id)] = self._heap.length;
+    self._heapIdx.set(id, self._heap.length);
     self._heap.push({ id: id, value: value });
     self._upHeap(self._heap.length - 1);
   },
   remove: function (id) {
     var self = this;
-    var strId = idStringify(id);
 
     if (self.has(id)) {
       var last = self._heap.length - 1;
-      var idx = self._heapIdx[strId];
+      var idx = self._heapIdx.get(id);
 
       if (idx !== last) {
         self._swap(idx, last);
@@ -134,12 +129,12 @@ _.extend(MaxHeap.prototype, {
         self._heap.pop();
       }
 
-      delete self._heapIdx[strId];
+      self._heapIdx.remove(id);
     }
   },
   has: function (id) {
     var self = this;
-    return self._heapIdx[idStringify(id)] !== undefined;
+    return self._heapIdx.has(id);
   },
   empty: function (id) {
     var self = this;
@@ -148,7 +143,7 @@ _.extend(MaxHeap.prototype, {
   clear: function () {
     var self = this;
     self._heap = [];
-    self._heapIdx = {};
+    self._heapIdx.clear();
   },
   forEach: function (iterator) {
     var self = this;
@@ -171,7 +166,7 @@ _.extend(MaxHeap.prototype, {
     var self = this;
     var clone = new MaxHeap(self._comparator);
     clone._heap = EJSON.clone(self._heap);
-    clone._heapIdx = EJSON.clone(self._heapIdx);
+    clone._heapIdx = self._heapIdx.clone();
     return clone;
   },
 
