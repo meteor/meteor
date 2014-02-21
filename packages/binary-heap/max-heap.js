@@ -180,9 +180,7 @@ _.extend(MaxHeap.prototype, {
   },
   clone: function () {
     var self = this;
-    var clone = new MaxHeap(self._comparator);
-    clone._heap = EJSON.clone(self._heap);
-    clone._heapIdx = self._heapIdx.clone();
+    var clone = new MaxHeap(self._comparator, self._heap);
     return clone;
   },
 
