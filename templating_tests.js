@@ -31,10 +31,10 @@ Tinytest.add("templating - assembly", function (test) {
     return Session.get("stuff");
   };
   var onscreen = renderToDiv(Template.test_assembly_b0);
-  test.equal(onscreen.innerHTML, "xyhi");
+  test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
   Deps.flush();
-  test.equal(onscreen.innerHTML, "xhi");
+  test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
   Deps.flush();
 });
 
@@ -75,10 +75,9 @@ Tinytest.add("templating - table assembly", function(test) {
   test.equal(table.rows.length, 3, table.parentNode.innerHTML);
   var tds = onscreen.getElementsByTagName("TD");
   test.equal(tds.length, 3);
-  test.equal(tds[0].innerHTML, "a");
-  test.equal(tds[1].innerHTML, "b");
-  test.equal(tds[2].innerHTML, "c");
-
+  test.equal(canonicalizeHtml(tds[0].innerHTML), "a");
+  test.equal(canonicalizeHtml(tds[1].innerHTML), "b");
+  test.equal(canonicalizeHtml(tds[2].innerHTML), "c");
 
   Deps.flush();
 });
@@ -181,7 +180,8 @@ Tinytest.add("templating - safestring", function(test) {
 
   var obj = {fooprop: "<br>",
              barprop: new Handlebars.SafeString("<hr>")};
-  var html = renderToDiv(Template.test_safestring_a.extend({data: obj})).innerHTML;
+  var html = canonicalizeHtml(
+    renderToDiv(Template.test_safestring_a.extend({data: obj})).innerHTML);
 
   test.equal(html.replace(/\s+/g, ' '),
              "&lt;br&gt; <br> <hr> <hr> "+
@@ -258,7 +258,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
   };
 
   var html;
-  html = renderToDiv(Template.test_helpers_a.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_a.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     'platypus=bill', // helpers on Template object take first priority
     'watermelon=seeds', // global helpers take second priority
@@ -267,7 +268,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'warthog=snout' // function Template property
   ]);
 
-  html = renderToDiv(Template.test_helpers_b.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_b.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     // unknown properties silently fail
     'unknown=',
@@ -275,7 +277,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'zero=0'
   ]);
 
-  html = renderToDiv(Template.test_helpers_c.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_c.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     // property gets are supposed to silently fail
     'platypus.X=',
@@ -288,7 +291,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'getUndefined.X.Y='
   ]);
 
-  html = renderToDiv(Template.test_helpers_d.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_d.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     // helpers should get current data context in `this`
     'daisygetter=petal',
@@ -301,7 +305,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     '../fancy.currentFruit=guava'
   ]);
 
-  html = renderToDiv(Template.test_helpers_e.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_e.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     'fancy.foo=bar',
     'fancy.apple.banana=smoothie',
@@ -311,7 +316,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
     'fancy.currentCountry.unicorns=0'
   ]);
 
-  html = renderToDiv(Template.test_helpers_f.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_f.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     'fancyhelper.foo=bar',
     'fancyhelper.apple.banana=smoothie',
@@ -323,7 +329,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
 
   // test significance of 'this', which prevents helper from
   // shadowing property
-  html = renderToDiv(Template.test_helpers_g.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_g.extend({data: dataObj})).innerHTML);
   test.equal(html.match(/\S+/g), [
     'platypus=eggs',
     'this.platypus=weird'
@@ -333,7 +340,8 @@ Tinytest.add("templating - helpers and dots", function(test) {
 
   Template.test_helpers_h.helperListFour = listFour;
 
-  html = renderToDiv(Template.test_helpers_h.extend({data: dataObj})).innerHTML;
+  html = canonicalizeHtml(
+    renderToDiv(Template.test_helpers_h.extend({data: dataObj})).innerHTML);
   var trials =
         html.match(/\(.*?\)/g);
   test.equal(trials[0],
