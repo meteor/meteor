@@ -1669,14 +1669,15 @@ External login services typically require registering and configuring
 your application before use. The easiest way to do this is with the
 [`accounts-ui` package](#accountsui) which presents a step-by-step guide
 to configuring each service. However, the data can be also be entered
-manually in the `Accounts.loginServiceConfiguration` collection. For
-example:
+manually in the `ServiceConfiguration.configurations` collection, which
+is exported by the `service-configuration` package. For example, after
+running `meteor add service-configuration` in your app:
 
     // first, remove configuration entry in case service is already configured
-    Accounts.loginServiceConfiguration.remove({
+    ServiceConfiguration.configurations.remove({
       service: "weibo"
     });
-    Accounts.loginServiceConfiguration.insert({
+    ServiceConfiguration.configurations.insert({
       service: "weibo",
       clientId: "1292962797",
       secret: "75a730b58f5691de5522789070c319bc"
