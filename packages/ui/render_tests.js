@@ -135,7 +135,10 @@ Tinytest.add("ui - render - textarea", function (test) {
     var div = document.createElement("DIV");
     var node = TEXTAREA(optNode || text);
     materialize(node, div);
-    test.equal(div.querySelector('textarea').value, text);
+
+    var value = div.querySelector('textarea').value;
+    value = value.replace(/\r\n/g, "\n"); // IE8 substitutes \n with \r\n
+    test.equal(value, text);
 
     test.equal(toHTML(node), html);
     if (typeof code === 'string')
