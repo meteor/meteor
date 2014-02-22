@@ -159,9 +159,9 @@
 * Oauth.initiateLogin is deprecated in favor of Oauth.showPopup.
 
 * Add `WebApp.rawConnectHandlers` for adding connect handlers that run
-  before any other Meteor handlers; raw connect handlers see the URL's
-  full path (even if ROOT_URL contains a non-empty path) and they run
-  before static assets are served.
+  before any other Meteor handlers (except `connect.compress()`); raw
+  connect handlers see the URL's full path (even if ROOT_URL contains a
+  non-empty path) and they run before static assets are served.
 
 * Don't cache direct references to the fields arguments to the subscription
   `added` and `changed` methods.  #1750
