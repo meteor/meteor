@@ -182,6 +182,10 @@
 * Don't cache direct references to the fields arguments to the subscription
   `added` and `changed` methods.  #1750
 
+Patches contributed by GitHub users, DenisGorbachev, OyoKooN, awwx,
+dandv, icellan, jfhamlin, marcandre, michaelbishop, mitar, mizzao,
+mquandalle, paulswartz, rdickert, rzymek, timhaines, and yeputons.
+
 
 ## v0.7.0.1
 
