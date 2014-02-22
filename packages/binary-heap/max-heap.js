@@ -149,13 +149,13 @@ _.extend(MaxHeap.prototype, {
       if (idx !== last) {
         self._swap(idx, last);
         self._heap.pop();
+        self._heapIdx.remove(id);
         self._downHeap(idx);
         self._upHeap(idx);
       } else {
         self._heap.pop();
+        self._heapIdx.remove(id);
       }
-
-      self._heapIdx.remove(id);
     }
   },
   has: function (id) {
