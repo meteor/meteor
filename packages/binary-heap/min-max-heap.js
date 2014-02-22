@@ -1,3 +1,15 @@
+// This implementation of Min/Max-Heap is just a subclass of Max-Heap
+// with a Min-Heap as an encapsulated property.
+//
+// Most of the operations are just proxy methods to call the same method on both
+// heaps.
+//
+// This implementation takes 2*N memory but is fairly simple to write and
+// understand. And the constant factor of a simple Heap is usually smaller
+// compared to other two-way priority queues like Min/Max Heaps
+// (http://www.cs.otago.ac.nz/staffpriv/mike/Papers/MinMaxHeaps/MinMaxHeaps.pdf)
+// and Interval Heaps
+// (http://www.cise.ufl.edu/~sahni/dsaac/enrich/c13/double.htm)
 MinMaxHeap = function (comparator, initialData) {
   var self = this;
 
