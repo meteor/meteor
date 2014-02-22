@@ -39,8 +39,12 @@ canonicalizeHtml = function(html) {
       if (! attrList[i])
         continue;
       var a = attrList[i].split('=');
-        if (a.length < 2)
-          a.push(a[0]); // things like checked=checked, in theory
+
+      // In IE8, attributes whose value is "" appear
+      // without the '=' sign altogether.
+      if (a.length < 2)
+        a.push("");
+
       var key = a[0];
       // Drop another expando property used by Sizzle.
       if (key === 'sizset')

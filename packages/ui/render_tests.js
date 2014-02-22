@@ -83,11 +83,11 @@ Tinytest.add("ui - render - basic", function (test) {
       '<br a="">',
       'HTML.BR({a: [[""]]})');
 
-    run(BR({
-      x: function () { return function () { return []; }; },
-      a: function () { return function () { return ''; }; }}),
-        '<br a="">',
-        '<br a="">');
+  run(BR({
+    x: function () { return function () { return []; }; },
+    a: function () { return function () { return ''; }; }}),
+      '<br a="">',
+      '<br a="">');
 });
 
 // test that we correctly update the 'value' property on input fields
