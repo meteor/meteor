@@ -1478,20 +1478,11 @@ Tinytest.add("spacebars - controls - radio", function(test) {
     return R.get();
   };
   tmpl.events({
-    'change input': function () {
-      // IE 7 is known to fire change events on all
-      // the radio buttons with checked=false, as if
-      // each button were deselected before selecting
-      // the new one.  (Meteor doesn't normalize this
-      // behavior.)
-      // However, browsers are consistent if we are
-      // getting a checked=true notification.
+    'change input': function (event) {
       var btn = event.target;
-      if (btn.checked) {
-        var band = btn.value;
-        change_buf.push(band);
-        R.set(band);
-      }
+      var band = btn.value;
+      change_buf.push(band);
+      R.set(band);
     }
   });
 
