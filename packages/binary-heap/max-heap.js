@@ -97,7 +97,7 @@ _.extend(MaxHeap.prototype, {
     var self = this;
     var valueA = self._get(idxA);
     var valueB = self._get(idxB);
-    return self._comparator(valueA, valueB) > 0 ? idxA : idxB;
+    return self._comparator(valueA, valueB) >= 0 ? idxA : idxB;
   },
 
   // Internal: gets raw data object placed on idxth place in heap
@@ -130,8 +130,9 @@ _.extend(MaxHeap.prototype, {
     if (self.has(id)) {
       if (self.get(id) === value)
         return;
-      else
+      else {
         self.remove(id);
+      }
     }
 
     self._heapIdx.set(id, self._heap.length);
@@ -149,6 +150,7 @@ _.extend(MaxHeap.prototype, {
         self._swap(idx, last);
         self._heap.pop();
         self._downHeap(idx);
+        self._upHeap(idx);
       } else {
         self._heap.pop();
       }
