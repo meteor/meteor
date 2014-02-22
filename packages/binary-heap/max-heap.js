@@ -130,14 +130,16 @@ _.extend(MaxHeap.prototype, {
     if (self.has(id)) {
       if (self.get(id) === value)
         return;
-      else {
-        self.remove(id);
-      }
-    }
 
-    self._heapIdx.set(id, self._heap.length);
-    self._heap.push({ id: id, value: value });
-    self._upHeap(self._heap.length - 1);
+      var idx = self._heapIdx.get(id);
+      self._heap[idx].value = value;
+      self._upHeap(idx);
+      self._downHeap(idx);
+    } else {
+      self._heapIdx.set(id, self._heap.length);
+      self._heap.push({ id: id, value: value });
+      self._upHeap(self._heap.length - 1);
+    }
   },
   remove: function (id) {
     var self = this;
