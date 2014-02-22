@@ -117,6 +117,9 @@
 * Fix failures updating npm dependencies when a node_modules directory exists
   above the project directory.  #1761
 
+* Allow Npm.depends to specify any http or https URL containing a full
+  40-hex-digit SHA.  #1686
+
 * In email package, print a message in dev mode when email is not sent. #1196
 
 * Meteor accounts logins (or anything else using the `localstorage` package) no
