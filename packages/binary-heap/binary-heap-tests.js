@@ -81,3 +81,37 @@ Tinytest.add("binary-heap - min-max heap tests", function (test) {
   test.equal(h.minElementId(), "a");
 });
 
+Tinytest.add("binary-heap - big test for min-max-heap", function (test) {
+  var N = 500;
+  var positiveNumbers = _.shuffle(_.range(1, N + 1));
+  var negativeNumbers = _.shuffle(_.range(-1, -N - 1, -1));
+  var allNumbers = positiveNumbers.concat(negativeNumbers);
+
+  var heap = new MinMaxHeap(function (a, b) { return a-b; });
+  var output = [];
+
+  _.each(allNumbers, function (n) {
+    heap.set(n, n);
+    heap._selfCheck();
+    heap._minHeap._selfCheck();
+  });
+
+  allNumbers = _.shuffle(allNumbers);
+  _.each(allNumbers, function (n) {
+    heap.set(-n, n);
+    heap._selfCheck();
+    heap._minHeap._selfCheck();
+  });
+
+  _.times(positiveNumbers.length + negativeNumbers.length, function () {
+    var minId = heap.minElementId();
+    output.push(heap.get(minId));
+    heap.remove(minId);
+    heap._selfCheck(); heap._minHeap._selfCheck();
+  });
+
+  allNumbers.sort(function (a, b) { return a-b; });
+
+  test.equal(output, allNumbers);
+});
+

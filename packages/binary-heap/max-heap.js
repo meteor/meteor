@@ -195,6 +195,15 @@ _.extend(MaxHeap.prototype, {
   maxElementId: function () {
     var self = this;
     return self.size() ? self._heap[0].id : null;
+  },
+
+  _selfCheck: function () {
+    var self = this;
+    for (var i = 1; i < self._heap.length; i++)
+      if (self._maxIndex(parentIdx(i), i) !== parentIdx(i))
+          throw new Error("An item with id " + self._heap[i].id +
+                          " has a parent younger than him: " +
+                          self._heap[parentIdx(i)].id);
   }
 });
 
