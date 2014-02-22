@@ -752,27 +752,27 @@ if (Meteor.isServer) {
     var run = test.runId();
     var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
 
-    var currentState = {};
     var observer = function () {
+      var state = {};
       var output = [];
       var callbacks = {
         changed: function (newDoc) {
           output.push({changed: newDoc._id});
-          currentState[newDoc._id] = newDoc;
+          state[newDoc._id] = newDoc;
         },
         added: function (newDoc) {
           output.push({added: newDoc._id});
-          currentState[newDoc._id] = newDoc;
+          state[newDoc._id] = newDoc;
         },
         removed: function (oldDoc) {
           output.push({removed: oldDoc._id});
-          delete currentState[oldDoc._id];
+          delete state[oldDoc._id];
         }
       };
       var handle = coll.find({foo: 22},
                              {sort: {bar: 1}, limit: 3}).observe(callbacks);
 
-      return {output: output, handle: handle};
+      return {output: output, handle: handle, state: state};
     };
     var clearOutput = function (o) { o.output.splice(0, o.output.length); };
 
@@ -790,7 +790,7 @@ if (Meteor.isServer) {
     var setsEqual = function (a, b) {
       a = _.map(a, EJSON.stringify);
       b = _.map(b, EJSON.stringify);
-      return _.isEmpty(_.difference(a, b));
+      return _.isEmpty(_.difference(a, b)) && _.isEmpty(_.difference(b, a));
     };
 
     // Insert a doc and start observing.
@@ -941,9 +941,9 @@ if (Meteor.isServer) {
                                      {removed: docId10}, {added: docId6},
                                      {added: docId11}, {added: docId12}]));
 
-    test.equal(currentState[docId6], { _id: docId6, foo: 22, bar: 24 });
-    test.equal(currentState[docId11], { _id: docId11, foo: 22, bar: 33.5 });
-    test.equal(currentState[docId12], { _id: docId12, foo: 22, bar: 43.5 });
+    test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
+    test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
+    test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
     clearOutput(o);
 
     o.handle.stop();
