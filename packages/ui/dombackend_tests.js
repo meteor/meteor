@@ -20,8 +20,21 @@ var runDivSpanBTest = function (func) {
 
 var DomBackend =  UI.DomBackend;
 
-Tinytest.add("ui - DomBackend - element removal", function (test) {
+// Essentially test that the `node` argument has been removed from the
+// DOM. The caveat is that in IE8, calling `removeChild` leaves the
+// removed child with a document fragment parent, which itself has no
+// parent.
+var isDetachedSingleNode = function (test, node) {
+  if (!node.parentNode) {
+    test.ok();
+  } else {
+    test.equal(node.parentNode.nodeName, '#document-fragment');
+    test.equal(node.parentNode.childNodes.length, 1);
+    test.equal(node.parentNode.parentNode, null);
+  }
+};
 
+Tinytest.add("ui - DomBackend - element removal", function (test) {
   // Test that calling removeElement on a detached element calls onRemoveElement
   // on it and its descendents. For jQuery, `removeElement` runs `$(elem).remove()`,
   // so it tests detecting a jQuery removal, as well as the stronger condition
@@ -54,7 +67,7 @@ Tinytest.add("ui - DomBackend - element removal", function (test) {
     DomBackend.removeElement(span); // remove the SPAN
 
     test.equal(div.childNodes.length, 0);
-    test.isFalse(span.parentNode);
+    isDetachedSingleNode(test, span);
 
     buf.sort();
     test.equal(buf, ["B3", "SPAN2"]);
@@ -78,7 +91,7 @@ Tinytest.add("ui - DomBackend - element removal (jQuery)", function (test) {
     $(span).remove(); // remove the SPAN
 
     test.equal(div.childNodes.length, 0);
-    test.isFalse(span.parentNode);
+    isDetachedSingleNode(test, span);
 
     buf.sort();
     test.equal(buf, ["B3", "SPAN2"]);
@@ -98,7 +111,7 @@ Tinytest.add("ui - DomBackend - element removal (jQuery)", function (test) {
     $(span).detach(); // detach the SPAN
 
     test.equal(div.childNodes.length, 0);
-    test.isFalse(span.parentNode);
+    isDetachedSingleNode(test, span);
 
     test.equal(buf, []);
 
