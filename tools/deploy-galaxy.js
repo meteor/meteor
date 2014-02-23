@@ -11,6 +11,7 @@ var auth = require('./auth.js');
 var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
+var buildmessage = require('./buildmessage.js');
 
 // a bit of a hack
 var getPackage = _.once(function () {
@@ -414,7 +415,7 @@ exports.deploy = function (options) {
     return 0;
   } finally {
     // Close the connection to Galaxy (otherwise Node will continue running).
-    conn.close();
+    conn && conn.close();
   }
 };
 
