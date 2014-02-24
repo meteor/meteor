@@ -228,8 +228,8 @@ _.extend(OplogObserveDriver.prototype, {
   _addMatching: function (doc) {
     var self = this;
     var id = doc._id;
-    var fields = _.clone(doc);
-    delete fields._id;
+    var doc = _.clone(doc);
+    delete doc._id;
     if (self._published.has(id))
       throw Error("tried to add something already published " + id);
     if (self._limit && self._unpublishedBuffer.has(id))
@@ -242,14 +242,25 @@ _.extend(OplogObserveDriver.prototype, {
     // The query is unlimited or didn't publish enough documents yet or the new
     // document would fit into published set pushing the maximum element out,
     // then we need to publish the doc.
+    var toPublish = ! limit || self._published.size() < limit ||
+                    comparator(maxPublished, doc) > 0;
+
     // Otherwise we might need to buffer it (only in case of limited query).
-    // Buffering a new document is allowed only if it is inserted in the middle
-    // or the beginning of it as we cannot determine if there are documents
-    // outside of the buffer easily.
-    if (!limit || self._published.size() < limit || comparator(maxPublished, fields) > 0) {
-      self._addPublished(id, fields);
-    } else if ((self._safeAppendToBuffer && self._unpublishedBuffer.size() < limit) || (maxBuffered && comparator(maxBuffered, fields) > 0)) {
-      self._addBuffered(id, fields);
+    // Buffering is allowed if the buffer is not filled up yet and all matching
+    // docs are either in the published set or in the buffer.
+    var canAppendToBuffer = self._safeAppendToBuffer &&
+                            self._unpublishedBuffer.size() < limit;
+
+    // Or if it is small enough to be safely inserted to the middle or the
+    // beginning of the buffer.
+    var canInsertIntoBuffer = maxBuffered && comparator(maxBuffered, doc) > 0;
+
+    var toBuffer = canAppendToBuffer || canInsertIntoBuffer;
+
+    if (toPublish) {
+      self._addPublished(id, doc);
+    } else if (toBuffer) {
+      self._addBuffered(id, doc);
     }
   },
   // Called when a document leaves the "Matching" results set.
