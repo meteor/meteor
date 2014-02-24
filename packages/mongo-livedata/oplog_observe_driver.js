@@ -481,9 +481,12 @@ _.extend(OplogObserveDriver.prototype, {
       var canDirectlyModifyDoc =
             !isReplace && modifierCanBeDirectlyApplied(op.o);
 
+      var publishedBefore = self._published.has(id);
+      var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
+
       if (isReplace) {
         self._handleDoc(id, _.extend({_id: id}, op.o));
-      } else if ((self._published.has(id) || self._unpublishedBuffer.has(id)) && canDirectlyModifyDoc) {
+      } else if ((publishedBefore || bufferedBefore) && canDirectlyModifyDoc) {
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
         var newDoc = self._published.has(id) ?
