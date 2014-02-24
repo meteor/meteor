@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v0.7.1
+## v0.7.1.1
 
 * Integrate with Meteor developer accounts, a new way of managing your
   meteor.com deployed sites. When you use `meteor deploy`, you will be
