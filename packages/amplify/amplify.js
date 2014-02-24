@@ -1,19 +1,10 @@
 /*!
- * AmplifyJS 1.1.0 - Core, Store, Request
- * 
- * Copyright 2011 appendTo LLC. (http://appendto.com/team)
+ * Amplify 1.1.2
+ *
+ * Copyright 2011 - 2013 appendTo LLC. (http://appendto.com/team)
  * Dual licensed under the MIT or GPL licenses.
  * http://appendto.com/open-source-licenses
- * 
- * http://amplifyjs.com
- */
-/*!
- * Amplify Core 1.1.0
- * 
- * Copyright 2011 appendTo LLC. (http://appendto.com/team)
- * Dual licensed under the MIT or GPL licenses.
- * http://appendto.com/open-source-licenses
- * 
+ *
  * http://amplifyjs.com
  */
 (function( global, undefined ) {
@@ -23,6 +14,10 @@ var slice = [].slice,
 
 var amplify = global.amplify = {
 	publish: function( topic ) {
+		if ( typeof topic !== "string" ) {
+			throw new Error( "You must provide a valid topic to publish." );
+		}
+
 		var args = slice.call( arguments, 1 ),
 			topicSubscriptions,
 			subscription,
@@ -46,6 +41,10 @@ var amplify = global.amplify = {
 	},
 
 	subscribe: function( topic, context, callback, priority ) {
+		if ( typeof topic !== "string" ) {
+			throw new Error( "You must provide a valid topic to create a subscription." );
+		}
+
 		if ( arguments.length === 3 && typeof callback === "number" ) {
 			priority = callback;
 			callback = context;
@@ -67,14 +66,14 @@ var amplify = global.amplify = {
 			if ( !subscriptions[ topic ] ) {
 				subscriptions[ topic ] = [];
 			}
-	
+
 			var i = subscriptions[ topic ].length - 1,
 				subscriptionInfo = {
 					callback: callback,
 					context: context,
 					priority: priority
 				};
-	
+
 			for ( ; i >= 0; i-- ) {
 				if ( subscriptions[ topic ][ i ].priority <= priority ) {
 					subscriptions[ topic ].splice( i + 1, 0, subscriptionInfo );
@@ -91,7 +90,16 @@ var amplify = global.amplify = {
 		return callback;
 	},
 
-	unsubscribe: function( topic, callback ) {
+	unsubscribe: function( topic, context, callback ) {
+		if ( typeof topic !== "string" ) {
+			throw new Error( "You must provide a valid topic to remove a subscription." );
+		}
+
+		if ( arguments.length === 2 ) {
+			callback = context;
+			context = null;
+		}
+
 		if ( !subscriptions[ topic ] ) {
 			return;
 		}
@@ -101,26 +109,23 @@ var amplify = global.amplify = {
 
 		for ( ; i < length; i++ ) {
 			if ( subscriptions[ topic ][ i ].callback === callback ) {
-				subscriptions[ topic ].splice( i, 1 );
-				break;
+				if ( !context || subscriptions[ topic ][ i ].context === context ) {
+					subscriptions[ topic ].splice( i, 1 );
+					
+					// Adjust counter and length for removed item
+					i--;
+					length--;
+				}
 			}
 		}
 	}
 };
 
 }( this ) );
-/*!
- * Amplify Store - Persistent Client-Side Storage 1.1.0
- * 
- * Copyright 2011 appendTo LLC. (http://appendto.com/team)
- * Dual licensed under the MIT or GPL licenses.
- * http://appendto.com/open-source-licenses
- * 
- * http://amplifyjs.com
- */
+
 (function( amplify, undefined ) {
 
-var store = amplify.store = function( key, value, options, type ) {
+var store = amplify.store = function( key, value, options ) {
 	var type = store.type;
 	if ( options && options.type && options.type in store.types ) {
 		type = options.type;
@@ -141,9 +146,9 @@ store.addType = function( type, storage ) {
 		options.type = type;
 		return store( key, value, options );
 	};
-}
+};
 store.error = function() {
-	return "amplify.store quota exceeded"; 
+	return "amplify.store quota exceeded";
 };
 
 var rprefix = /^__amplify__/;
@@ -223,18 +228,21 @@ function createFromStorageInterface( storageType, storage ) {
 // localStorage + sessionStorage
 // IE 8+, Firefox 3.5+, Safari 4+, Chrome 4+, Opera 10.5+, iPhone 2+, Android 2+
 for ( var webStorageType in { localStorage: 1, sessionStorage: 1 } ) {
-	// try/catch for file protocol in Firefox
+	// try/catch for file protocol in Firefox and Private Browsing in Safari 5
 	try {
-		if ( window[ webStorageType ].getItem ) {
-			createFromStorageInterface( webStorageType, window[ webStorageType ] );
-		}
+		// Safari 5 in Private Browsing mode exposes localStorage
+		// but doesn't allow storing data, so we attempt to store and remove an item.
+		// This will unfortunately give us a false negative if we're at the limit.
+		window[ webStorageType ].setItem( "__amplify__", "x" );
+		window[ webStorageType ].removeItem( "__amplify__" );
+		createFromStorageInterface( webStorageType, window[ webStorageType ] );
 	} catch( e ) {}
 }
 
 // globalStorage
 // non-standard: Firefox 2+
 // https://developer.mozilla.org/en/dom/storage#globalStorage
-if ( window.globalStorage ) {
+if ( !store.types.localStorage && window.globalStorage ) {
 	// try/catch for file protocol in Firefox
 	try {
 		createFromStorageInterface( "globalStorage",
@@ -306,7 +314,9 @@ if ( window.globalStorage ) {
 		// http://www.w3.org/TR/REC-xml/#NT-Name
 		// simplified to assume the starting character is valid
 		// also removed colon as it is invalid in HTML attribute names
-		key = key.replace( /[^-._0-9A-Za-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u37f-\u1fff\u200c-\u200d\u203f\u2040\u2070-\u218f]/g, "-" );
+		key = key.replace( /[^\-._0-9A-Za-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c-\u200d\u203f\u2040\u2070-\u218f]/g, "-" );
+		// adjust invalid starting character to deal with our simplified sanitization
+		key = key.replace( /^-/, "_-" );
 
 		if ( value === undefined ) {
 			attr = div.getAttribute( key );
@@ -402,16 +412,11 @@ if ( window.globalStorage ) {
 }() );
 
 }( this.amplify = this.amplify || {} ) );
-/*!
- * Amplify Request 1.1.0
- * 
- * Copyright 2011 appendTo LLC. (http://appendto.com/team)
- * Dual licensed under the MIT or GPL licenses.
- * http://appendto.com/open-source-licenses
- * 
- * http://amplifyjs.com
- */
+
+/*global amplify*/
+
 (function( amplify, undefined ) {
+'use strict';
 
 function noop() {}
 function isFunction( obj ) {
@@ -457,12 +462,14 @@ amplify.request = function( resourceId, data, callback ) {
 		resource = amplify.request.resources[ settings.resourceId ],
 		success = settings.success || noop,
 		error = settings.error || noop;
+
 	settings.success = async( function( data, status ) {
 		status = status || "success";
 		amplify.publish( "request.success", settings, data, status );
 		amplify.publish( "request.complete", settings, data, status );
 		success( data, status );
 	});
+
 	settings.error = async( function( data, status ) {
 		status = status || "error";
 		amplify.publish( "request.error", settings, data, status );
@@ -506,13 +513,11 @@ amplify.request.define = function( resourceId, type, settings ) {
 }( amplify ) );
 
 
-
-
-
 (function( amplify, $, undefined ) {
+'use strict';
 
 var xhrProps = [ "status", "statusText", "responseText", "responseXML", "readyState" ],
-    rurlData = /\{([^\}]+)\}/g;
+		rurlData = /\{([^\}]+)\}/g;
 
 amplify.request.types.ajax = function( defnSettings ) {
 	defnSettings = $.extend({
@@ -520,7 +525,7 @@ amplify.request.types.ajax = function( defnSettings ) {
 	}, defnSettings );
 
 	return function( settings, request ) {
-		var xhr,
+		var xhr, handleResponse,
 			url = defnSettings.url,
 			abort = request.abort,
 			ajaxSettings = $.extend( true, {}, defnSettings, { data: settings.data } ),
@@ -537,7 +542,7 @@ amplify.request.types.ajax = function( defnSettings ) {
 					return xhr.getResponseHeader( key );
 				},
 				overrideMimeType: function( type ) {
-					return xhr.overrideMideType( type );
+					return xhr.overrideMimeType( type );
 				},
 				abort: function() {
 					aborted = true;
@@ -555,28 +560,7 @@ amplify.request.types.ajax = function( defnSettings ) {
 				}
 			};
 
-		amplify.publish( "request.ajax.preprocess",
-			defnSettings, settings, ajaxSettings, ampXHR );
-
-		$.extend( ajaxSettings, {
-			success: function( data, status ) {
-				handleResponse( data, status );
-			},
-			error: function( _xhr, status ) {
-				handleResponse( null, status );
-			},
-			beforeSend: function( _xhr, _ajaxSettings ) {
-				xhr = _xhr;
-				ajaxSettings = _ajaxSettings;
-				var ret = defnSettings.beforeSend ?
-					defnSettings.beforeSend.call( this, ampXHR, ajaxSettings ) : true;
-				return ret && amplify.publish( "request.before.ajax",
-					defnSettings, settings, ajaxSettings, ampXHR );
-			}
-		});
-		$.ajax( ajaxSettings );
-
-		function handleResponse( data, status ) {
+		handleResponse = function( data, status ) {
 			$.each( xhrProps, function( i, key ) {
 				try {
 					ampXHR[ key ] = xhr[ key ];
@@ -603,7 +587,61 @@ amplify.request.types.ajax = function( defnSettings ) {
 			// this can happen if a request is aborted
 			// TODO: figure out if this breaks polling or multi-part responses
 			handleResponse = $.noop;
+		};
+
+		amplify.publish( "request.ajax.preprocess",
+			defnSettings, settings, ajaxSettings, ampXHR );
+
+		$.extend( ajaxSettings, {
+			isJSONP: function () {
+				return (/jsonp/gi).test(this.dataType);
+			},
+			cacheURL: function () {
+				if (!this.isJSONP()) {
+					return this.url;
+				}
+
+				var callbackName = 'callback';
+
+				// possible for the callback function name to be overridden
+				if (this.hasOwnProperty('jsonp')) {
+					if (this.jsonp !== false) {
+						callbackName = this.jsonp;
+					} else {
+						if (this.hasOwnProperty('jsonpCallback')) {
+							callbackName = this.jsonpCallback;
+						}
+					}
+				}
+
+				// search and replace callback parameter in query string with empty string
+				var callbackRegex = new RegExp('&?' + callbackName + '=[^&]*&?', 'gi');
+				return this.url.replace(callbackRegex, '');
+			},
+			success: function( data, status ) {
+				handleResponse( data, status );
+			},
+			error: function( _xhr, status ) {
+				handleResponse( null, status );
+			},
+			beforeSend: function( _xhr, _ajaxSettings ) {
+				xhr = _xhr;
+				ajaxSettings = _ajaxSettings;
+				var ret = defnSettings.beforeSend ?
+					defnSettings.beforeSend.call( this, ampXHR, ajaxSettings ) : true;
+				return ret && amplify.publish( "request.before.ajax",
+					defnSettings, settings, ajaxSettings, ampXHR );
+			}
+		});
+
+		// cache all JSONP requests
+		if (ajaxSettings.cache && ajaxSettings.isJSONP()) {
+			$.extend(ajaxSettings, {
+				cache: true
+			});
 		}
+
+		$.ajax( ajaxSettings );
 
 		request.abort = function() {
 			ampXHR.abort();
@@ -626,8 +664,8 @@ amplify.subscribe( "request.ajax.preprocess", function( defnSettings, settings, 
 
 	ajaxSettings.url = ajaxSettings.url.replace( rurlData, function ( m, key ) {
 		if ( key in data ) {
-		    mappedKeys.push( key );
-		    return data[ key ];
+			mappedKeys.push( key );
+			return data[ key ];
 		}
 	});
 
@@ -668,19 +706,21 @@ var cache = amplify.request.cache = {
 	_key: function( resourceId, url, data ) {
 		data = url + data;
 		var length = data.length,
-			i = 0,
-			checksum = chunk();
+			i = 0;
 
-		while ( i < length ) {
-			checksum ^= chunk();
-		}
-
+		/*jshint bitwise:false*/
 		function chunk() {
 			return data.charCodeAt( i++ ) << 24 |
 				data.charCodeAt( i++ ) << 16 |
 				data.charCodeAt( i++ ) << 8 |
 				data.charCodeAt( i++ ) << 0;
 		}
+
+		var checksum = chunk();
+		while ( i < length ) {
+			checksum ^= chunk();
+		}
+		/*jshint bitwise:true*/
 
 		return "request-" + resourceId + "-" + checksum;
 	},
@@ -690,7 +730,7 @@ var cache = amplify.request.cache = {
 		return function( resource, settings, ajaxSettings, ampXHR ) {
 			// data is already converted to a string by the time we get here
 			var cacheKey = cache._key( settings.resourceId,
-					ajaxSettings.url, ajaxSettings.data ),
+					ajaxSettings.cacheURL(), ajaxSettings.data ),
 				duration = resource.cache;
 
 			if ( cacheKey in memoryStore ) {
@@ -715,7 +755,7 @@ if ( amplify.store ) {
 	$.each( amplify.store.types, function( type ) {
 		cache[ type ] = function( resource, settings, ajaxSettings, ampXHR ) {
 			var cacheKey = cache._key( settings.resourceId,
-					ajaxSettings.url, ajaxSettings.data ),
+					ajaxSettings.cacheURL(), ajaxSettings.data ),
 				cached = amplify.store[ type ]( cacheKey );
 
 			if ( cached ) {
@@ -723,7 +763,7 @@ if ( amplify.store ) {
 				return false;
 			}
 			var success = ampXHR.success;
-			ampXHR.success = function( data ) {	
+			ampXHR.success = function( data ) {
 				amplify.store[ type ]( cacheKey, data, { expires: resource.cache.expires } );
 				success.apply( this, arguments );
 			};
@@ -754,6 +794,8 @@ amplify.request.decoders = {
 		} else if ( data.status === "error" ) {
 			delete data.status;
 			error( data, "error" );
+		} else {
+			error( null, "error" );
 		}
 	}
 };
@@ -761,11 +803,11 @@ amplify.request.decoders = {
 amplify.subscribe( "request.before.ajax", function( resource, settings, ajaxSettings, ampXHR ) {
 	var _success = ampXHR.success,
 		_error = ampXHR.error,
-		decoder = $.isFunction( resource.decoder )
-			? resource.decoder
-			: resource.decoder in amplify.request.decoders
-				? amplify.request.decoders[ resource.decoder ]
-				: amplify.request.decoders._default;
+		decoder = $.isFunction( resource.decoder ) ?
+			resource.decoder :
+			resource.decoder in amplify.request.decoders ?
+				amplify.request.decoders[ resource.decoder ] :
+				amplify.request.decoders._default;
 
 	if ( !decoder ) {
 		return;

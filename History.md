@@ -7,6 +7,10 @@
 
 * minimongo: Support {a: {$regex: '', $options: 'i'}}  #1874
 
+* Upgraded dependencies
+  - amplify: 1.1.2 (from 1.1.0)
+
+
 ## v0.7.1.2
 
 * Fix bug in tool error handling that caused `meteor` to crash on Mac
