@@ -19,6 +19,9 @@ if (Meteor.isServer) {
   var factsByPackage = {};
   var activeSubscriptions = [];
 
+  // Make factsByPackage data available to the server environment
+  Facts._factsByPackage = factsByPackage;
+
   Facts.incrementServerFact = function (pkg, fact, increment) {
     if (!_.has(factsByPackage, pkg)) {
       factsByPackage[pkg] = {};
