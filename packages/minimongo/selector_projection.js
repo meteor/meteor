@@ -1,9 +1,9 @@
 // Knows how to combine a mongo selector and a fields projection to a new fields
 // projection taking into account active fields from the passed selector.
 // @returns Object - projection object (same as fields option of mongo cursor)
-LocalCollection._combineSelectorAndProjection = function (selector, projection)
-{
-  var selectorPaths = getPathsWithoutNumericKeys(selector);
+Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
+  var self = this;
+  var selectorPaths = self._getPathsElidingNumericKeys();
 
   // Special case for $where operator in the selector - projection should depend
   // on all fields of the document. getSelectorPaths returns a list of paths
@@ -38,6 +38,13 @@ LocalCollection._combineSelectorAndProjection = function (selector, projection)
 
     return mergedExclProjection;
   }
+};
+
+Minimongo.Matcher.prototype._getPathsElidingNumericKeys = function () {
+  var self = this;
+  return _.map(self._getPaths(), function (path) {
+    return _.reject(path.split('.'), isNumericKey).join('.');
+  });
 };
 
 // Returns a set of key paths similar to

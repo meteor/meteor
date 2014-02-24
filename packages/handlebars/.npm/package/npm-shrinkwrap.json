@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "handlebars": {
-      "from": "https://github.com/meteor/handlebars.js/tarball/543ec6689cf663cfda2d8f26c3c27de40aad7bd5",
+      "version": "https://github.com/meteor/handlebars.js/tarball/543ec6689cf663cfda2d8f26c3c27de40aad7bd5",
       "dependencies": {
         "optimist": {
           "version": "0.3.7",

@@ -1,4 +1,4 @@
-/// A simple interface to register function to be called when the process
+/// A simple interface to register functions to be called when the process
 /// exits.
 
 var _ = require('underscore');
@@ -9,7 +9,7 @@ _.extend(exports, {
 
   // register a function that will be called on SIGINT (e.g. Cmd-C on
   // mac)
-  onExit: function(func) {
+  onExit: function (func) {
     this._exitHandlers.push(func);
   }
 });

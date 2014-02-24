@@ -53,6 +53,8 @@ _.extend(DDPServer._WriteFence.prototype, {
   // uncommitted writes, it will activate.
   arm: function () {
     var self = this;
+    if (self === DDPServer._CurrentWriteFence.get())
+      throw Error("Can't arm the current fence");
     self.armed = true;
     self._maybeFire();
   },

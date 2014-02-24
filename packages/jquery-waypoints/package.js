@@ -1,8 +1,9 @@
 Package.describe({
-  summary: "Execute a function when the user scrolls past an element"
+  summary: "Run a function when the user scrolls past an element"
 });
 
 Package.on_use(function (api) {
   api.use('jquery');
-  api.add_files('waypoints.js', 'client');
+  api.use('coffeescript');
+  api.add_files('waypoints.coffee', 'client');
 });

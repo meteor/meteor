@@ -44,9 +44,7 @@ Autoupdate.newClientAvailable = function () {
 
 
 
-// XXX Livedata exporting this via DDP is a hack. See
-// packages/livedata/livedata_common.js
-var retry = new DDP._Retry({
+var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
   // in normal operation, this is a wacky failure. We don't want to retry
   // right away, we can start slowly.

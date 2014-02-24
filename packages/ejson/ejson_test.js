@@ -184,3 +184,49 @@ Tinytest.add("ejson - parse", function (test) {
     /argument should be a string/
   );
 });
+
+Tinytest.add("ejson - custom types", function (test) {
+  var testSameConstructors = function (obj, compareWith) {
+    test.equal(obj.constructor, compareWith.constructor);
+    if (typeof obj === 'object') {
+      _.each(obj, function(value, key) {
+        testSameConstructors(value, compareWith[key]);
+      });
+    }
+  }
+  var testReallyEqual = function (obj, compareWith) {
+    test.equal(obj, compareWith);
+    testSameConstructors(obj, compareWith);
+  }
+  var testRoundTrip = function (obj) {
+    var str = EJSON.stringify(obj);
+    var roundTrip = EJSON.parse(str);
+    testReallyEqual(obj, roundTrip);
+  }
+  var testCustomObject = function (obj) {
+    testRoundTrip(obj);
+    testReallyEqual(obj, EJSON.clone(obj));
+  }
+
+  var a = new EJSONTest.Address('Montreal', 'Quebec');
+  testCustomObject( {address: a} );
+  // Test that difference is detected even if they
+  // have similar toJSONValue results:
+  var nakedA = {city: 'Montreal', state: 'Quebec'};
+  test.notEqual(nakedA, a);
+  test.notEqual(a, nakedA);
+  var holder = new EJSONTest.Holder(nakedA);
+  test.equal(holder.toJSONValue(), a.toJSONValue()); // sanity check
+  test.notEqual(holder, a);
+  test.notEqual(a, holder);
+
+
+  var d = new Date;
+  var obj = new EJSONTest.Person("John Doe", d, a);
+  testCustomObject( obj );
+
+  // Test clone is deep:
+  var clone = EJSON.clone(obj);
+  clone.address.city = 'Sherbrooke';
+  test.notEqual( obj, clone );
+});

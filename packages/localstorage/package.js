@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('jquery', 'client'); // XXX only used for browser detection. remove.
+  api.use('random', 'client');
 
   api.add_files('localstorage.js', 'client');
 });

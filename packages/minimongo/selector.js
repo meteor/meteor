@@ -1,271 +1,632 @@
-// Like _.isArray, but doesn't regard polyfilled Uint8Arrays on old browsers as
-// arrays.
-var isArray = function (x) {
-  return _.isArray(x) && !EJSON.isBinary(x);
+// The minimongo selector compiler!
+
+// Terminology:
+//  - a "selector" is the EJSON object representing a selector
+//  - a "matcher" is its compiled form (whether a full Minimongo.Matcher
+//    object or one of the component lambdas that matches parts of it)
+//  - a "result object" is an object with a "result" field and maybe
+//    distance and arrayIndex.
+//  - a "branched value" is an object with a "value" field and maybe
+//    "dontIterate" and "arrayIndex".
+//  - a "document" is a top-level object that can be stored in a collection.
+//  - a "lookup function" is a function that takes in a document and returns
+//    an array of "branched values".
+//  - a "branched matcher" maps from an array of branched values to a result
+//    object.
+//  - an "element matcher" maps from a single value to a bool.
+
+// Main entry point.
+//   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
+//   if (matcher.documentMatches({a: 7})) ...
+Minimongo.Matcher = function (selector) {
+  var self = this;
+  // A set (object mapping string -> *) of all of the document paths looked
+  // at by the selector. Also includes the empty string if it may look at any
+  // path (eg, $where).
+  self._paths = {};
+  // Set to true if compilation finds a $near.
+  self._hasGeoQuery = false;
+  // Set to true if compilation finds a $where.
+  self._hasWhere = false;
+  // Set to false if compilation finds anything other than a simple equality or
+  // one or more of '$gt', '$gte', '$lt', '$lte', '$ne', '$in', '$nin' used with
+  // scalars as operands.
+  self._isSimple = true;
+  // Set to a dummy document which always matches this Matcher. Or set to null
+  // if such document is too hard to find.
+  self._matchingDocument = undefined;
+  // A clone of the original selector. Used by canBecomeTrueByModifier.
+  self._selector = null;
+  self._docMatcher = self._compileSelector(selector);
 };
 
-var _anyIfArray = function (x, f) {
-  if (isArray(x))
-    return _.any(x, f);
-  return f(x);
-};
+_.extend(Minimongo.Matcher.prototype, {
+  documentMatches: function (doc) {
+    return this._docMatcher(doc);
+  },
+  hasGeoQuery: function () {
+    return this._hasGeoQuery;
+  },
+  hasWhere: function () {
+    return this._hasWhere;
+  },
+  isSimple: function () {
+    return this._isSimple;
+  },
 
-var _anyIfArrayPlus = function (x, f) {
-  if (f(x))
-    return true;
-  return isArray(x) && _.any(x, f);
-};
-
-var hasOperators = function(valueSelector) {
-  var theseAreOperators = undefined;
-  for (var selKey in valueSelector) {
-    var thisIsOperator = selKey.substr(0, 1) === '$';
-    if (theseAreOperators === undefined) {
-      theseAreOperators = thisIsOperator;
-    } else if (theseAreOperators !== thisIsOperator) {
-      throw new Error("Inconsistent selector: " + valueSelector);
+  // Given a selector, return a function that takes one argument, a
+  // document. It returns a result object.
+  _compileSelector: function (selector) {
+    var self = this;
+    // you can pass a literal function instead of a selector
+    if (selector instanceof Function) {
+      self._isSimple = false;
+      self._selector = selector;
+      self._recordPathUsed('');
+      return function (doc) {
+        return {result: !!selector.call(doc)};
+      };
     }
+
+    // shorthand -- scalars match _id
+    if (LocalCollection._selectorIsId(selector)) {
+      self._selector = {_id: selector};
+      self._recordPathUsed('_id');
+      return function (doc) {
+        return {result: EJSON.equals(doc._id, selector)};
+      };
+    }
+
+    // protect against dangerous selectors.  falsey and {_id: falsey} are both
+    // likely programmer error, and not what you want, particularly for
+    // destructive operations.
+    if (!selector || (('_id' in selector) && !selector._id)) {
+      self._isSimple = false;
+      return nothingMatcher;
+    }
+
+    // Top level can't be an array or true or binary.
+    if (typeof(selector) === 'boolean' || isArray(selector) ||
+        EJSON.isBinary(selector))
+      throw new Error("Invalid selector: " + selector);
+
+    self._selector = EJSON.clone(selector);
+    return compileDocumentSelector(selector, self, {isRoot: true});
+  },
+  _recordPathUsed: function (path) {
+    this._paths[path] = true;
+  },
+  // Returns a list of key paths the given selector is looking for. It includes
+  // the empty string if there is a $where.
+  _getPaths: function () {
+    return _.keys(this._paths);
   }
-  return !!theseAreOperators;  // {} has no operators
+});
+
+
+// Takes in a selector that could match a full document (eg, the original
+// selector). Returns a function mapping document->result object.
+//
+// matcher is the Matcher object we are compiling.
+//
+// If this is the root document selector (ie, not wrapped in $and or the like),
+// then isRoot is true. (This is used by $near.)
+var compileDocumentSelector = function (docSelector, matcher, options) {
+  options = options || {};
+  var docMatchers = [];
+  _.each(docSelector, function (subSelector, key) {
+    if (key.substr(0, 1) === '$') {
+      // Outer operators are either logical operators (they recurse back into
+      // this function), or $where.
+      if (!_.has(LOGICAL_OPERATORS, key))
+        throw new Error("Unrecognized logical operator: " + key);
+      matcher._isSimple = false;
+      docMatchers.push(LOGICAL_OPERATORS[key](subSelector, matcher,
+                                              options.inElemMatch));
+    } else {
+      // Record this path, but only if we aren't in an elemMatcher, since in an
+      // elemMatch this is a path inside an object in an array, not in the doc
+      // root.
+      if (!options.inElemMatch)
+        matcher._recordPathUsed(key);
+      var lookUpByIndex = makeLookupFunction(key);
+      var valueMatcher =
+        compileValueSelector(subSelector, matcher, options.isRoot);
+      docMatchers.push(function (doc) {
+        var branchValues = lookUpByIndex(doc);
+        return valueMatcher(branchValues);
+      });
+    }
+  });
+
+  return andDocumentMatchers(docMatchers);
 };
 
-var compileValueSelector = function (valueSelector, selector, cursor) {
-  if (valueSelector == null) {  // undefined or null
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return x == null;  // undefined or null
-      });
-    };
-  }
-
-  // Selector is a non-null primitive (and not an array or RegExp either).
-  if (!_.isObject(valueSelector)) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return x === valueSelector;
-      });
-    };
-  }
-
+// Takes in a selector that could match a key-indexed value in a document; eg,
+// {$gt: 5, $lt: 9}, or a regular expression, or any non-expression object (to
+// indicate equality).  Returns a branched matcher: a function mapping
+// [branched value]->result object.
+var compileValueSelector = function (valueSelector, matcher, isRoot) {
   if (valueSelector instanceof RegExp) {
-    return function (value) {
-      if (value === undefined)
-        return false;
-      return _anyIfArray(value, function (x) {
-        return valueSelector.test(x);
-      });
-    };
+    matcher._isSimple = false;
+    return convertElementMatcherToBranchedMatcher(
+      regexpElementMatcher(valueSelector));
+  } else if (isOperatorObject(valueSelector)) {
+    return operatorBranchedMatcher(valueSelector, matcher, isRoot);
+  } else {
+    return convertElementMatcherToBranchedMatcher(
+      equalityElementMatcher(valueSelector));
   }
+};
 
-  // Arrays match either identical arrays or arrays that contain it as a value.
-  if (isArray(valueSelector)) {
-    return function (value) {
-      if (!isArray(value))
-        return false;
-      return _anyIfArrayPlus(value, function (x) {
-        return LocalCollection._f._equal(valueSelector, x);
-      });
-    };
-  }
+// Given an element matcher (which evaluates a single value), returns a branched
+// value (which evaluates the element matcher on all the branches and returns a
+// more structured return value possibly including arrayIndex).
+var convertElementMatcherToBranchedMatcher = function (
+    elementMatcher, options) {
+  options = options || {};
+  return function (branches) {
+    var expanded = branches;
+    if (!options.dontExpandLeafArrays) {
+      expanded = expandArraysInBranches(
+        branches, options.dontIncludeLeafArrays);
+    }
+    var ret = {};
+    ret.result = _.any(expanded, function (element) {
+      var matched = elementMatcher(element.value);
 
-  // It's an object, but not an array or regexp.
-  if (hasOperators(valueSelector)) {
-    var operatorFunctions = [];
-    _.each(valueSelector, function (operand, operator) {
-      if (!_.has(VALUE_OPERATORS, operator))
-        throw new Error("Unrecognized operator: " + operator);
-      // Special case for location operators
-      operatorFunctions.push(VALUE_OPERATORS[operator](
-        operand, valueSelector, cursor));
+      // Special case for $elemMatch: it means "true, and use this arrayIndex if
+      // I didn't already have one".
+      if (typeof matched === 'number') {
+        if (element.arrayIndex === undefined)
+          element.arrayIndex = matched;
+        matched = true;
+      }
+
+      // If some element matched, and it's tagged with an array index, include
+      // that index in our result object.
+      if (matched && element.arrayIndex !== undefined)
+        ret.arrayIndex = element.arrayIndex;
+
+      return matched;
     });
-    return function (value, doc) {
-      return _.all(operatorFunctions, function (f) {
-        return f(value, doc);
-      });
-    };
-  }
-
-  // It's a literal; compare value (or element of value array) directly to the
-  // selector.
-  return function (value) {
-    return _anyIfArray(value, function (x) {
-      return LocalCollection._f._equal(valueSelector, x);
-    });
+    return ret;
   };
 };
 
-// XXX can factor out common logic below
+// Takes a RegExp object and returns an element matcher.
+var regexpElementMatcher = function (regexp) {
+  return function (value) {
+    if (value instanceof RegExp) {
+      // Comparing two regexps means seeing if the regexps are identical
+      // (really!). Underscore knows how.
+      return _.isEqual(value, regexp);
+    }
+    // Regexps only work against strings.
+    if (typeof value !== 'string')
+      return false;
+    return regexp.test(value);
+  };
+};
+
+// Takes something that is not an operator object and returns an element matcher
+// for equality with that thing.
+var equalityElementMatcher = function (elementSelector) {
+  if (isOperatorObject(elementSelector))
+    throw Error("Can't create equalityValueSelector for operator object");
+
+  // Special-case: null and undefined are equal (if you got undefined in there
+  // somewhere, or if you got it due to some branch being non-existent in the
+  // weird special case), even though they aren't with EJSON.equals.
+  if (elementSelector == null) {  // undefined or null
+    return function (value) {
+      return value == null;  // undefined or null
+    };
+  }
+
+  return function (value) {
+    return LocalCollection._f._equal(elementSelector, value);
+  };
+};
+
+// Takes an operator object (an object with $ keys) and returns a branched
+// matcher for it.
+var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
+  // Each valueSelector works separately on the various branches.  So one
+  // operator can match one branch and another can match another branch.  This
+  // is OK.
+
+  var operatorMatchers = [];
+  _.each(valueSelector, function (operand, operator) {
+    // XXX we should actually implement $eq, which is new in 2.6
+    var simpleRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
+      _.isNumber(operand);
+    var simpleInequality = operator === '$ne' && !_.isObject(operand);
+    var simpleInclusion = _.contains(['$in', '$nin'], operator) &&
+      _.isArray(operand) && !_.any(operand, _.isObject);
+
+    if (! (operator === '$eq' || simpleRange ||
+           simpleInclusion || simpleInequality)) {
+      matcher._isSimple = false;
+    }
+
+    if (_.has(VALUE_OPERATORS, operator)) {
+      operatorMatchers.push(
+        VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot));
+    } else if (_.has(ELEMENT_OPERATORS, operator)) {
+      var options = ELEMENT_OPERATORS[operator];
+      if (typeof options === 'function')
+        options = {compileElementSelector: options};
+      operatorMatchers.push(
+        convertElementMatcherToBranchedMatcher(
+          options.compileElementSelector(
+            operand, valueSelector, matcher),
+          options));
+    } else {
+      throw new Error("Unrecognized operator: " + operator);
+    }
+  });
+
+  return andBranchedMatchers(operatorMatchers);
+};
+
+var compileArrayOfDocumentSelectors = function (
+    selectors, matcher, inElemMatch) {
+  if (!isArray(selectors) || _.isEmpty(selectors))
+    throw Error("$and/$or/$nor must be nonempty array");
+  return _.map(selectors, function (subSelector) {
+    if (!isPlainObject(subSelector))
+      throw Error("$or/$and/$nor entries need to be full objects");
+    return compileDocumentSelector(
+      subSelector, matcher, {inElemMatch: inElemMatch});
+  });
+};
+
+// Operators that appear at the top level of a document selector.
 var LOGICAL_OPERATORS = {
-  "$and": function(subSelector, operators, cursor) {
-    if (!isArray(subSelector) || _.isEmpty(subSelector))
-      throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor); });
-    return function (doc, wholeDoc) {
-      return _.all(subSelectorFunctions, function (f) {
-        return f(doc, wholeDoc);
+  $and: function (subSelector, matcher, inElemMatch) {
+    var matchers = compileArrayOfDocumentSelectors(
+      subSelector, matcher, inElemMatch);
+    return andDocumentMatchers(matchers);
+  },
+
+  $or: function (subSelector, matcher, inElemMatch) {
+    var matchers = compileArrayOfDocumentSelectors(
+      subSelector, matcher, inElemMatch);
+
+    // Special case: if there is only one matcher, use it directly, *preserving*
+    // any arrayIndex it returns.
+    if (matchers.length === 1)
+      return matchers[0];
+
+    return function (doc) {
+      var result = _.any(matchers, function (f) {
+        return f(doc).result;
       });
+      // $or does NOT set arrayIndex when it has multiple
+      // sub-expressions. (Tested against MongoDB.)
+      return {result: result};
     };
   },
 
-  "$or": function(subSelector, operators, cursor) {
-    if (!isArray(subSelector) || _.isEmpty(subSelector))
-      throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor); });
-    return function (doc, wholeDoc) {
-      return _.any(subSelectorFunctions, function (f) {
-        return f(doc, wholeDoc);
+  $nor: function (subSelector, matcher, inElemMatch) {
+    var matchers = compileArrayOfDocumentSelectors(
+      subSelector, matcher, inElemMatch);
+    return function (doc) {
+      var result = _.all(matchers, function (f) {
+        return !f(doc).result;
       });
+      // Never set arrayIndex, because we only match if nothing in particular
+      // "matched" (and because this is consistent with MongoDB).
+      return {result: result};
     };
   },
 
-  "$nor": function(subSelector, operators, cursor) {
-    if (!isArray(subSelector) || _.isEmpty(subSelector))
-      throw Error("$and/$or/$nor must be nonempty array");
-    var subSelectorFunctions = _.map(subSelector, function (selector) {
-      return compileDocumentSelector(selector, cursor); });
-    return function (doc, wholeDoc) {
-      return _.all(subSelectorFunctions, function (f) {
-        return !f(doc, wholeDoc);
-      });
-    };
-  },
-
-  "$where": function(selectorValue) {
+  $where: function (selectorValue, matcher) {
+    // Record that *any* path may be used.
+    matcher._recordPathUsed('');
+    matcher._hasWhere = true;
     if (!(selectorValue instanceof Function)) {
-      selectorValue = Function("return " + selectorValue);
+      // XXX MongoDB seems to have more complex logic to decide where or or not
+      // to add "return"; not sure exactly what it is.
+      selectorValue = Function("obj", "return " + selectorValue);
     }
     return function (doc) {
-      return selectorValue.call(doc);
+      // We make the document available as both `this` and `obj`.
+      // XXX not sure what we should do if this throws
+      return {result: selectorValue.call(doc, doc)};
+    };
+  },
+
+  // This is just used as a comment in the query (in MongoDB, it also ends up in
+  // query logs); it has no effect on the actual selection.
+  $comment: function () {
+    return function () {
+      return {result: true};
     };
   }
 };
 
-// Each value operator is a function with args:
-//  - operand - Anything
-//  - operators - Object - operators on the same level (neighbours)
-//  - cursor - Object - original cursor
-// returns a function with args:
-//  - value - a value the operator is tested against
-//  - doc - the whole document tested in this query
+// Returns a branched matcher that matches iff the given matcher does not.
+// Note that this implicitly "deMorganizes" the wrapped function.  ie, it
+// means that ALL branch values need to fail to match innerBranchedMatcher.
+var invertBranchedMatcher = function (branchedMatcher) {
+  return function (branchValues) {
+    var invertMe = branchedMatcher(branchValues);
+    // We explicitly choose to strip arrayIndex here: it doesn't make sense to
+    // say "update the array element that does not match something", at least
+    // in mongo-land.
+    return {result: !invertMe.result};
+  };
+};
+
+// Operators that (unlike LOGICAL_OPERATORS) pertain to individual paths in a
+// document, but (unlike ELEMENT_OPERATORS) do not have a simple definition as
+// "match each branched value independently and combine with
+// convertElementMatcherToBranchedMatcher".
 var VALUE_OPERATORS = {
-  "$in": function (operand) {
-    if (!isArray(operand))
-      throw new Error("Argument to $in must be array");
-    return function (value) {
-      return _anyIfArrayPlus(value, function (x) {
-        return _.any(operand, function (operandElt) {
-          return LocalCollection._f._equal(operandElt, x);
-        });
-      });
-    };
+  $not: function (operand, valueSelector, matcher) {
+    return invertBranchedMatcher(compileValueSelector(operand, matcher));
   },
-
-  "$all": function (operand) {
+  $ne: function (operand) {
+    return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
+      equalityElementMatcher(operand)));
+  },
+  $nin: function (operand) {
+    return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
+      ELEMENT_OPERATORS.$in(operand)));
+  },
+  $exists: function (operand) {
+    var exists = convertElementMatcherToBranchedMatcher(function (value) {
+      return value !== undefined;
+    });
+    return operand ? exists : invertBranchedMatcher(exists);
+  },
+  // $options just provides options for $regex; its logic is inside $regex
+  $options: function (operand, valueSelector) {
+    if (!valueSelector.$regex)
+      throw Error("$options needs a $regex");
+    return everythingMatcher;
+  },
+  // $maxDistance is basically an argument to $near
+  $maxDistance: function (operand, valueSelector) {
+    if (!valueSelector.$near)
+      throw Error("$maxDistance needs a $near");
+    return everythingMatcher;
+  },
+  $all: function (operand, valueSelector, matcher) {
     if (!isArray(operand))
-      throw new Error("Argument to $all must be array");
-    return function (value) {
-      if (!isArray(value))
+      throw Error("$all requires array");
+    // Not sure why, but this seems to be what MongoDB does.
+    if (_.isEmpty(operand))
+      return nothingMatcher;
+
+    var branchedMatchers = [];
+    _.each(operand, function (criterion) {
+      // XXX handle $all/$elemMatch combination
+      if (isOperatorObject(criterion))
+        throw Error("no $ expressions in $all");
+      // This is always a regexp or equality selector.
+      branchedMatchers.push(compileValueSelector(criterion, matcher));
+    });
+    // andBranchedMatchers does NOT require all selectors to return true on the
+    // SAME branch.
+    return andBranchedMatchers(branchedMatchers);
+  },
+  $near: function (operand, valueSelector, matcher, isRoot) {
+    if (!isRoot)
+      throw Error("$near can't be inside another $ operator");
+    matcher._hasGeoQuery = true;
+
+    // There are two kinds of geodata in MongoDB: coordinate pairs and
+    // GeoJSON. They use different distance metrics, too. GeoJSON queries are
+    // marked with a $geometry property.
+
+    var maxDistance, point, distance;
+    if (isPlainObject(operand) && _.has(operand, '$geometry')) {
+      // GeoJSON "2dsphere" mode.
+      maxDistance = operand.$maxDistance;
+      point = operand.$geometry;
+      distance = function (value) {
+        // XXX: for now, we don't calculate the actual distance between, say,
+        // polygon and circle. If people care about this use-case it will get
+        // a priority.
+        if (!value || !value.type)
+          return null;
+        if (value.type === "Point") {
+          return GeoJSON.pointDistance(point, value);
+        } else {
+          return GeoJSON.geometryWithinRadius(value, point, maxDistance)
+            ? 0 : maxDistance + 1;
+        }
+      };
+    } else {
+      maxDistance = valueSelector.$maxDistance;
+      if (!isArray(operand) && !isPlainObject(operand))
+        throw Error("$near argument must be coordinate pair or GeoJSON");
+      point = pointToArray(operand);
+      distance = function (value) {
+        if (!isArray(value) && !isPlainObject(value))
+          return null;
+        return distanceCoordinatePairs(point, value);
+      };
+    }
+
+    return function (branchedValues) {
+      // There might be multiple points in the document that match the given
+      // field. Only one of them needs to be within $maxDistance, but we need to
+      // evaluate all of them and use the nearest one for the implicit sort
+      // specifier. (That's why we can't just use ELEMENT_OPERATORS here.)
+      //
+      // Note: This differs from MongoDB's implementation, where a document will
+      // actually show up *multiple times* in the result set, with one entry for
+      // each within-$maxDistance branching point.
+      branchedValues = expandArraysInBranches(branchedValues);
+      var result = {result: false};
+      _.each(branchedValues, function (branch) {
+        var curDistance = distance(branch.value);
+        // Skip branches that aren't real points or are too far away.
+        if (curDistance === null || curDistance > maxDistance)
+          return;
+        // Skip anything that's a tie.
+        if (result.distance !== undefined && result.distance <= curDistance)
+          return;
+        result.result = true;
+        result.distance = curDistance;
+        if (branch.arrayIndex === undefined)
+          delete result.arrayIndex;
+        else
+          result.arrayIndex = branch.arrayIndex;
+      });
+      return result;
+    };
+  }
+};
+
+// Helpers for $near.
+var distanceCoordinatePairs = function (a, b) {
+  a = pointToArray(a);
+  b = pointToArray(b);
+  var x = a[0] - b[0];
+  var y = a[1] - b[1];
+  if (_.isNaN(x) || _.isNaN(y))
+    return null;
+  return Math.sqrt(x * x + y * y);
+};
+// Makes sure we get 2 elements array and assume the first one to be x and
+// the second one to y no matter what user passes.
+// In case user passes { lon: x, lat: y } returns [x, y]
+var pointToArray = function (point) {
+  return _.map(point, _.identity);
+};
+
+// Helper for $lt/$gt/$lte/$gte.
+var makeInequality = function (cmpValueComparator) {
+  return function (operand) {
+    // Arrays never compare false with non-arrays for any inequality.
+    if (isArray(operand)) {
+      return function () {
         return false;
-      return _.all(operand, function (operandElt) {
-        return _.any(value, function (valueElt) {
-          return LocalCollection._f._equal(operandElt, valueElt);
-        });
-      });
-    };
-  },
+      };
+    }
 
-  "$lt": function (operand) {
+    // Special case: consider undefined and null the same (so true with
+    // $gte/$lte).
+    if (operand === undefined)
+      operand = null;
+
+    var operandType = LocalCollection._f._type(operand);
+
     return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) < 0;
-      });
-    };
-  },
-
-  "$lte": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) <= 0;
-      });
-    };
-  },
-
-  "$gt": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) > 0;
-      });
-    };
-  },
-
-  "$gte": function (operand) {
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._cmp(x, operand) >= 0;
-      });
-    };
-  },
-
-  "$ne": function (operand) {
-    return function (value) {
-      return ! _anyIfArrayPlus(value, function (x) {
-        return LocalCollection._f._equal(x, operand);
-      });
-    };
-  },
-
-  "$nin": function (operand) {
-    if (!isArray(operand))
-      throw new Error("Argument to $nin must be array");
-    var inFunction = VALUE_OPERATORS.$in(operand);
-    return function (value, doc) {
-      // Field doesn't exist, so it's not-in operand
       if (value === undefined)
-        return true;
-      return !inFunction(value, doc);
-    };
-  },
-
-  "$exists": function (operand) {
-    return function (value) {
-      return operand === (value !== undefined);
-    };
-  },
-
-  "$mod": function (operand) {
-    var divisor = operand[0],
-        remainder = operand[1];
-    return function (value) {
-      return _anyIfArray(value, function (x) {
-        return x % divisor === remainder;
-      });
-    };
-  },
-
-  "$size": function (operand) {
-    return function (value) {
-      return isArray(value) && operand === value.length;
-    };
-  },
-
-  "$type": function (operand) {
-    return function (value) {
-      // A nonexistent field is of no type.
-      if (value === undefined)
+        value = null;
+      // Comparisons are never true among things of different type (except null
+      // vs undefined).
+      if (LocalCollection._f._type(value) !== operandType)
         return false;
-      // Definitely not _anyIfArrayPlus: $type: 4 only matches arrays that have
-      // arrays as elements according to the Mongo docs.
-      return _anyIfArray(value, function (x) {
-        return LocalCollection._f._type(x) === operand;
+      return cmpValueComparator(LocalCollection._f._cmp(value, operand));
+    };
+  };
+};
+
+// Each element selector is a function with args:
+//  - operand - the "right hand side" of the operator
+//  - valueSelector - the "context" for the operator (so that $regex can find
+//    $options)
+// Or is an object with an compileElementSelector field (the above) and optional
+// flags dontExpandLeafArrays and dontIncludeLeafArrays which control if
+// expandArraysInBranches is called and if it takes an optional argument.
+//
+// An element selector compiler returns a function mapping a single value to
+// bool.
+var ELEMENT_OPERATORS = {
+  $lt: makeInequality(function (cmpValue) {
+    return cmpValue < 0;
+  }),
+  $gt: makeInequality(function (cmpValue) {
+    return cmpValue > 0;
+  }),
+  $lte: makeInequality(function (cmpValue) {
+    return cmpValue <= 0;
+  }),
+  $gte: makeInequality(function (cmpValue) {
+    return cmpValue >= 0;
+  }),
+  $mod: function (operand) {
+    if (!(isArray(operand) && operand.length === 2
+          && typeof(operand[0]) === 'number'
+          && typeof(operand[1]) === 'number')) {
+      throw Error("argument to $mod must be an array of two numbers");
+    }
+    // XXX could require to be ints or round or something
+    var divisor = operand[0];
+    var remainder = operand[1];
+    return function (value) {
+      return typeof value === 'number' && value % divisor === remainder;
+    };
+  },
+  $in: function (operand) {
+    if (!isArray(operand))
+      throw Error("$in needs an array");
+
+    var elementMatchers = [];
+    _.each(operand, function (option) {
+      if (option instanceof RegExp)
+        elementMatchers.push(regexpElementMatcher(option));
+      else if (isOperatorObject(option))
+        throw Error("cannot nest $ under $in");
+      else
+        elementMatchers.push(equalityElementMatcher(option));
+    });
+
+    return function (value) {
+      // Allow {a: {$in: [null]}} to match when 'a' does not exist.
+      if (value === undefined)
+        value = null;
+      return _.any(elementMatchers, function (e) {
+        return e(value);
       });
     };
   },
+  $size: {
+    // {a: [[5, 5]]} must match {a: {$size: 1}} but not {a: {$size: 2}}, so we
+    // don't want to consider the element [5,5] in the leaf array [[5,5]] as a
+    // possible value.
+    dontExpandLeafArrays: true,
+    compileElementSelector: function (operand) {
+      if (typeof operand === 'string') {
+        // Don't ask me why, but by experimentation, this seems to be what Mongo
+        // does.
+        operand = 0;
+      } else if (typeof operand !== 'number') {
+        throw Error("$size needs a number");
+      }
+      return function (value) {
+        return isArray(value) && value.length === operand;
+      };
+    }
+  },
+  $type: {
+    // {a: [5]} must not match {a: {$type: 4}} (4 means array), but it should
+    // match {a: {$type: 1}} (1 means number), and {a: [[5]]} must match {$a:
+    // {$type: 4}}. Thus, when we see a leaf array, we *should* expand it but
+    // should *not* include it itself.
+    dontIncludeLeafArrays: true,
+    compileElementSelector: function (operand) {
+      if (typeof operand !== 'number')
+        throw Error("$type needs a number");
+      return function (value) {
+        return value !== undefined
+          && LocalCollection._f._type(value) === operand;
+      };
+    }
+  },
+  $regex: function (operand, valueSelector) {
+    if (!(typeof operand === 'string' || operand instanceof RegExp))
+      throw Error("$regex has to be a string or RegExp");
 
-  "$regex": function (operand, operators) {
-    var options = operators.$options;
-    if (options !== undefined) {
+    var regexp;
+    if (valueSelector.$options !== undefined) {
       // Options passed in $options (even the empty string) always overrides
       // options in the RegExp object itself. (See also
       // Meteor.Collection._rewriteSelector.)
@@ -273,105 +634,286 @@ var VALUE_OPERATORS = {
       // Be clear that we only support the JS-supported options, not extended
       // ones (eg, Mongo supports x and s). Ideally we would implement x and s
       // by transforming the regexp, but not today...
-      if (/[^gim]/.test(options))
+      if (/[^gim]/.test(valueSelector.$options))
         throw new Error("Only the i, m, and g regexp options are supported");
 
       var regexSource = operand instanceof RegExp ? operand.source : operand;
-      operand = new RegExp(regexSource, options);
-    } else if (!(operand instanceof RegExp)) {
-      operand = new RegExp(operand);
+      regexp = new RegExp(regexSource, valueSelector.$options);
+    } else if (operand instanceof RegExp) {
+      regexp = operand;
+    } else {
+      regexp = new RegExp(operand);
     }
-
-    return function (value) {
-      if (value === undefined)
-        return false;
-      return _anyIfArray(value, function (x) {
-        return operand.test(x);
-      });
-    };
+    return regexpElementMatcher(regexp);
   },
+  $elemMatch: {
+    dontExpandLeafArrays: true,
+    compileElementSelector: function (operand, valueSelector, matcher) {
+      if (!isPlainObject(operand))
+        throw Error("$elemMatch need an object");
 
-  "$options": function (operand) {
-    // evaluation happens at the $regex function above
-    return function (value) { return true; };
-  },
-
-  "$elemMatch": function (operand, selector, cursor) {
-    var matcher = compileDocumentSelector(operand, cursor);
-    return function (value, doc) {
-      if (!isArray(value))
-        return false;
-      return _.any(value, function (x) {
-        return matcher(x, doc);
-      });
-    };
-  },
-
-  "$not": function (operand, operators, cursor) {
-    var matcher = compileValueSelector(operand, operators, cursor);
-    return function (value, doc) {
-      return !matcher(value, doc);
-    };
-  },
-
-  "$near": function (operand, operators, cursor) {
-    function distanceCoordinatePairs (a, b) {
-      a = pointToArray(a);
-      b = pointToArray(b);
-      var x = a[0] - b[0];
-      var y = a[1] - b[1];
-      if (_.isNaN(x) || _.isNaN(y))
-        return null;
-      return Math.sqrt(x * x + y * y);
-    }
-    // Makes sure we get 2 elements array and assume the first one to be x and
-    // the second one to y no matter what user passes.
-    // In case user passes { lon: x, lat: y } returns [x, y]
-    function pointToArray (point) {
-      return _.map(point, _.identity);
-    }
-    // GeoJSON query is marked as $geometry property
-    var mode = _.isObject(operand) && _.has(operand, '$geometry') ? "2dsphere" : "2d";
-    var maxDistance = mode === "2d" ? operators.$maxDistance : operand.$maxDistance;
-    var point = mode === "2d" ? operand : operand.$geometry;
-    return function (value, doc) {
-      var dist = null;
-      switch (mode) {
-        case "2d":
-          dist = distanceCoordinatePairs(point, value);
-          break;
-        case "2dsphere":
-          // XXX: for now, we don't calculate the actual distance between, say,
-          // polygon and circle. If people care about this use-case it will get
-          // a priority.
-          if (value.type === "Point")
-            dist = GeoJSON.pointDistance(point, value);
-          else
-            dist = GeoJSON.geometryWithinRadius(value, point, maxDistance) ?
-                     0 : maxDistance + 1;
-          break;
-      }
-      // Used later in sorting by distance, since $near queries are sorted by
-      // distance from closest to farthest.
-      if (cursor) {
-        if (!cursor._distance)
-          cursor._distance = {};
-        cursor._distance[doc._id] = dist;
+      var subMatcher, isDocMatcher;
+      if (isOperatorObject(operand)) {
+        subMatcher = compileValueSelector(operand, matcher);
+        isDocMatcher = false;
+      } else {
+        // This is NOT the same as compileValueSelector(operand), and not just
+        // because of the slightly different calling convention.
+        // {$elemMatch: {x: 3}} means "an element has a field x:3", not
+        // "consists only of a field x:3". Also, regexps and sub-$ are allowed.
+        subMatcher = compileDocumentSelector(operand, matcher,
+                                             {inElemMatch: true});
+        isDocMatcher = true;
       }
 
-      // Distance couldn't parse a geometry object
-      if (dist === null)
+      return function (value) {
+        if (!isArray(value))
+          return false;
+        for (var i = 0; i < value.length; ++i) {
+          var arrayElement = value[i];
+          var arg;
+          if (isDocMatcher) {
+            // We can only match {$elemMatch: {b: 3}} against objects.
+            // (We can also match against arrays, if there's numeric indices,
+            // eg {$elemMatch: {'0.b': 3}} or {$elemMatch: {0: 3}}.)
+            if (!isPlainObject(arrayElement) && !isArray(arrayElement))
+              return false;
+            arg = arrayElement;
+          } else {
+            // dontIterate ensures that {a: {$elemMatch: {$gt: 5}}} matches
+            // {a: [8]} but not {a: [[8]]}
+            arg = [{value: arrayElement, dontIterate: true}];
+          }
+          // XXX support $near in $elemMatch by propagating $distance?
+          if (subMatcher(arg).result)
+            return i;   // specially understood to mean "use my arrayIndex"
+        }
         return false;
-
-      return maxDistance === undefined ? true : dist <= maxDistance;
-    };
-  },
-
-  "$maxDistance": function () {
-    // evaluation happens in the $near operator
-    return function () { return true; }
+      };
+    }
   }
 };
+
+// makeLookupFunction(key) returns a lookup function.
+//
+// A lookup function takes in a document and returns an array of matching
+// branches.  If no arrays are found while looking up the key, this array will
+// have exactly one branches (possibly 'undefined', if some segment of the key
+// was not found).
+//
+// If arrays are found in the middle, this can have more than one element, since
+// we "branch". When we "branch", if there are more key segments to look up,
+// then we only pursue branches that are plain objects (not arrays or scalars).
+// This means we can actually end up with no branches!
+//
+// We do *NOT* branch on arrays that are found at the end (ie, at the last
+// dotted member of the key). We just return that array; if you want to
+// effectively "branch" over the array's values, post-process the lookup
+// function with expandArraysInBranches.
+//
+// Each branch is an object with keys:
+//  - value: the value at the branch
+//  - dontIterate: an optional bool; if true, it means that 'value' is an array
+//    that expandArraysInBranches should NOT expand. This specifically happens
+//    when there is a numeric index in the key, and ensures the
+//    perhaps-surprising MongoDB behavior where {'a.0': 5} does NOT
+//    match {a: [[5]]}.
+//  - arrayIndex: if any array indexing was done during lookup (either
+//    due to explicit numeric indices or implicit branching), this will
+//    be the FIRST (outermost) array index used; it is undefined or absent
+//    if no array index is used. (Make sure to check its value vs undefined,
+//    not just for truth, since '0' is a legit array index!) This is used
+//    to implement the '$' modifier feature.
+//
+// At the top level, you may only pass in a plain object or arraym.
+//
+// See the text 'minimongo - lookup' for some examples of what lookup functions
+// return.
+makeLookupFunction = function (key) {
+  var parts = key.split('.');
+  var firstPart = parts.length ? parts[0] : '';
+  var firstPartIsNumeric = isNumericKey(firstPart);
+  var lookupRest;
+  if (parts.length > 1) {
+    lookupRest = makeLookupFunction(parts.slice(1).join('.'));
+  }
+
+  var elideUnnecessaryFields = function (retVal) {
+    if (!retVal.dontIterate)
+      delete retVal.dontIterate;
+    if (retVal.arrayIndex === undefined)
+      delete retVal.arrayIndex;
+    return retVal;
+  };
+
+  // Doc will always be a plain object or an array.
+  // apply an explicit numeric index, an array.
+  return function (doc, firstArrayIndex) {
+    if (isArray(doc)) {
+      // If we're being asked to do an invalid lookup into an array (non-integer
+      // or out-of-bounds), return no results (which is different from returning
+      // a single undefined result, in that `null` equality checks won't match).
+      if (!(firstPartIsNumeric && firstPart < doc.length))
+        return [];
+
+      // If this is the first array index we've seen, remember the index.
+      // (Mongo doesn't support multiple uses of '$', at least not in 2.5.
+      if (firstArrayIndex === undefined)
+        firstArrayIndex = +firstPart;
+    }
+
+    // Do our first lookup.
+    var firstLevel = doc[firstPart];
+
+    // If there is no deeper to dig, return what we found.
+    //
+    // If what we found is an array, most value selectors will choose to treat
+    // the elements of the array as matchable values in their own right, but
+    // that's done outside of the lookup function. (Exceptions to this are $size
+    // and stuff relating to $elemMatch.  eg, {a: {$size: 2}} does not match {a:
+    // [[1, 2]]}.)
+    //
+    // That said, if we just did an *explicit* array lookup (on doc) to find
+    // firstLevel, and firstLevel is an array too, we do NOT want value
+    // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.
+    // So in that case, we mark the return value as "don't iterate".
+    if (!lookupRest) {
+      return [elideUnnecessaryFields({
+        value: firstLevel,
+        dontIterate: isArray(doc) && isArray(firstLevel),
+        arrayIndex: firstArrayIndex})];
+    }
+
+    // We need to dig deeper.  But if we can't, because what we've found is not
+    // an array or plain object, we're done. If we just did a numeric index into
+    // an array, we return nothing here (this is a change in Mongo 2.5 from
+    // Mongo 2.4, where {'a.0.b': null} stopped matching {a: [5]}). Otherwise,
+    // return a single `undefined` (which can, for example, match via equality
+    // with `null`).
+    if (!isIndexable(firstLevel)) {
+      if (isArray(doc))
+        return [];
+      return [elideUnnecessaryFields({value: undefined,
+                                      arrayIndex: firstArrayIndex})];
+    }
+
+    var result = [];
+    var appendToResult = function (more) {
+      Array.prototype.push.apply(result, more);
+    };
+
+    // Dig deeper: look up the rest of the parts on whatever we've found.
+    // (lookupRest is smart enough to not try to do invalid lookups into
+    // firstLevel if it's an array.)
+    appendToResult(lookupRest(firstLevel, firstArrayIndex));
+
+    // If we found an array, then in *addition* to potentially treating the next
+    // part as a literal integer lookup, we should also "branch": try to do look
+    // up the rest of the parts on each array element in parallel.
+    //
+    // In this case, we *only* dig deeper into array elements that are plain
+    // objects. (Recall that we only got this far if we have further to dig.)
+    // This makes sense: we certainly don't dig deeper into non-indexable
+    // objects. And it would be weird to dig into an array: it's simpler to have
+    // a rule that explicit integer indexes only apply to an outer array, not to
+    // an array you find after a branching search.
+    if (isArray(firstLevel)) {
+      _.each(firstLevel, function (branch, arrayIndex) {
+        if (isPlainObject(branch)) {
+          appendToResult(lookupRest(
+            branch,
+            firstArrayIndex === undefined ? arrayIndex : firstArrayIndex));
+        }
+      });
+    }
+
+    return result;
+  };
+};
+MinimongoTest.makeLookupFunction = makeLookupFunction;
+
+expandArraysInBranches = function (branches, skipTheArrays) {
+  var branchesOut = [];
+  _.each(branches, function (branch) {
+    var thisIsArray = isArray(branch.value);
+    // We include the branch itself, *UNLESS* we it's an array that we're going
+    // to iterate and we're told to skip arrays.  (That's right, we include some
+    // arrays even skipTheArrays is true: these are arrays that were found via
+    // explicit numerical indices.)
+    if (!(skipTheArrays && thisIsArray && !branch.dontIterate)) {
+      branchesOut.push({
+        value: branch.value,
+        arrayIndex: branch.arrayIndex
+      });
+    }
+    if (thisIsArray && !branch.dontIterate) {
+      _.each(branch.value, function (leaf, i) {
+        branchesOut.push({
+          value: leaf,
+          // arrayIndex always defaults to the outermost array, but if we didn't
+          // need to use an array to get to this branch, we mark the index we
+          // just used as the arrayIndex.
+          arrayIndex: branch.arrayIndex === undefined ? i : branch.arrayIndex
+        });
+      });
+    }
+  });
+  return branchesOut;
+};
+
+var nothingMatcher = function (docOrBranchedValues) {
+  return {result: false};
+};
+
+var everythingMatcher = function (docOrBranchedValues) {
+  return {result: true};
+};
+
+
+// NB: We are cheating and using this function to implement "AND" for both
+// "document matchers" and "branched matchers". They both return result objects
+// but the argument is different: for the former it's a whole doc, whereas for
+// the latter it's an array of "branched values".
+var andSomeMatchers = function (subMatchers) {
+  if (subMatchers.length === 0)
+    return everythingMatcher;
+  if (subMatchers.length === 1)
+    return subMatchers[0];
+
+  return function (docOrBranches) {
+    // XXX arrayIndex!
+    var ret = {};
+    ret.result = _.all(subMatchers, function (f) {
+      var subResult = f(docOrBranches);
+      // Copy a 'distance' number out of the first sub-matcher that has
+      // one. Yes, this means that if there are multiple $near fields in a
+      // query, something arbitrary happens; this appears to be consistent with
+      // Mongo.
+      if (subResult.result && subResult.distance !== undefined
+          && ret.distance === undefined) {
+        ret.distance = subResult.distance;
+      }
+      // Similarly, propagate arrayIndex from sub-matchers... but to match
+      // MongoDB behavior, this time the *last* sub-matcher with an arrayIndex
+      // wins.
+      if (subResult.result && subResult.arrayIndex !== undefined) {
+        ret.arrayIndex = subResult.arrayIndex;
+      }
+      return subResult.result;
+    });
+
+    // If we didn't actually match, forget any extra metadata we came up with.
+    if (!ret.result) {
+      delete ret.distance;
+      delete ret.arrayIndex;
+    }
+    return ret;
+  };
+};
+
+var andDocumentMatchers = andSomeMatchers;
+var andBranchedMatchers = andSomeMatchers;
+
 
 // helpers used by compiled selector code
 LocalCollection._f = {
@@ -389,9 +931,9 @@ LocalCollection._f = {
     if (v === null)
       return 10;
     if (v instanceof RegExp)
+      // note that typeof(/x/) === "object"
       return 11;
     if (typeof v === "function")
-      // note that typeof(/x/) === "function"
       return 13;
     if (v instanceof Date)
       return 9;
@@ -538,251 +1080,11 @@ LocalCollection._f = {
   }
 };
 
-// For unit tests. True if the given document matches the given
-// selector.
-MinimongoTest.matches = function (selector, doc) {
-  return (LocalCollection._compileSelector(selector))(doc);
+// Oddball function used by upsert.
+LocalCollection._removeDollarOperators = function (selector) {
+  var selectorDoc = {};
+  for (var k in selector)
+    if (k.substr(0, 1) !== '$')
+      selectorDoc[k] = selector[k];
+  return selectorDoc;
 };
-
-// _makeLookupFunction(key) returns a lookup function.
-//
-// A lookup function takes in a document and returns an array of matching
-// values.  This array has more than one element if any segment of the key other
-// than the last one is an array.  ie, any arrays found when doing non-final
-// lookups result in this function "branching"; each element in the returned
-// array represents the value found at this branch. If any branch doesn't have a
-// final value for the full key, its element in the returned list will be
-// undefined. It always returns a non-empty array.
-//
-// _makeLookupFunction('a.x')({a: {x: 1}}) returns [1]
-// _makeLookupFunction('a.x')({a: {x: [1]}}) returns [[1]]
-// _makeLookupFunction('a.x')({a: 5})  returns [undefined]
-// _makeLookupFunction('a.x')({a: [{x: 1},
-//                                 {x: [2]},
-//                                 {y: 3}]})
-//   returns [1, [2], undefined]
-LocalCollection._makeLookupFunction = function (key) {
-  var dotLocation = key.indexOf('.');
-  var first, lookupRest, nextIsNumeric;
-  if (dotLocation === -1) {
-    first = key;
-  } else {
-    first = key.substr(0, dotLocation);
-    var rest = key.substr(dotLocation + 1);
-    lookupRest = LocalCollection._makeLookupFunction(rest);
-    // Is the next (perhaps final) piece numeric (ie, an array lookup?)
-    nextIsNumeric = /^\d+(\.|$)/.test(rest);
-  }
-
-  return function (doc) {
-    if (doc == null)  // null or undefined
-      return [undefined];
-    var firstLevel = doc[first];
-
-    // We don't "branch" at the final level.
-    if (!lookupRest)
-      return [firstLevel];
-
-    // It's an empty array, and we're not done: we won't find anything.
-    if (isArray(firstLevel) && firstLevel.length === 0)
-      return [undefined];
-
-    // For each result at this level, finish the lookup on the rest of the key,
-    // and return everything we find. Also, if the next result is a number,
-    // don't branch here.
-    //
-    // Technically, in MongoDB, we should be able to handle the case where
-    // objects have numeric keys, but Mongo doesn't actually handle this
-    // consistently yet itself, see eg
-    // https://jira.mongodb.org/browse/SERVER-2898
-    // https://github.com/mongodb/mongo/blob/master/jstests/array_match2.js
-    if (!isArray(firstLevel) || nextIsNumeric)
-      firstLevel = [firstLevel];
-    return Array.prototype.concat.apply([], _.map(firstLevel, lookupRest));
-  };
-};
-
-// The main compilation function for a given selector.
-var compileDocumentSelector = function (docSelector, cursor) {
-  var perKeySelectors = [];
-  _.each(docSelector, function (subSelector, key) {
-    if (key.substr(0, 1) === '$') {
-      // Outer operators are either logical operators (they recurse back into
-      // this function), or $where.
-      if (!_.has(LOGICAL_OPERATORS, key))
-        throw new Error("Unrecognized logical operator: " + key);
-      perKeySelectors.push(
-        LOGICAL_OPERATORS[key](subSelector, docSelector, cursor));
-    } else {
-      var lookUpByIndex = LocalCollection._makeLookupFunction(key);
-      var valueSelectorFunc =
-        compileValueSelector(subSelector, docSelector, cursor);
-      perKeySelectors.push(function (doc, wholeDoc) {
-        var branchValues = lookUpByIndex(doc);
-        // We apply the selector to each "branched" value and return true if any
-        // match. However, for "negative" selectors like $ne or $not we actually
-        // require *all* elements to match.
-        //
-        // This is because {'x.tag': {$ne: "foo"}} applied to {x: [{tag: 'foo'},
-        // {tag: 'bar'}]} should NOT match even though there is a branch that
-        // matches. (This matches the fact that $ne uses a negated
-        // _anyIfArrayPlus, for when the last level of the key is the array,
-        // which deMorgans into an 'all'.)
-        //
-        // XXX This isn't 100% consistent with MongoDB in 'null' cases:
-        //     https://jira.mongodb.org/browse/SERVER-8585
-        // XXX this still isn't right.  consider {a: {$ne: 5, $gt: 6}}. the
-        //     $ne needs to use the "all" logic and the $gt needs the "any"
-        //     logic
-        var combiner = (subSelector &&
-                        (subSelector.$not || subSelector.$ne ||
-                         subSelector.$nin))
-              ? _.all : _.any;
-        return combiner(branchValues, function (val) {
-          return valueSelectorFunc(val, wholeDoc);
-        });
-      });
-    }
-  });
-
-
-  return function (doc, wholeDoc) {
-    // If called w/o wholeDoc, doc is considered the original by default
-    if (wholeDoc === undefined)
-      wholeDoc = doc;
-    return _.all(perKeySelectors, function (f) {
-      return f(doc, wholeDoc);
-    });
-  };
-};
-
-// Given a selector, return a function that takes one argument, a
-// document, and returns true if the document matches the selector,
-// else false.
-LocalCollection._compileSelector = function (selector, cursor) {
-  // you can pass a literal function instead of a selector
-  if (selector instanceof Function)
-    return function (doc) {return selector.call(doc);};
-
-  // shorthand -- scalars match _id
-  if (LocalCollection._selectorIsId(selector)) {
-    return function (doc) {
-      return EJSON.equals(doc._id, selector);
-    };
-  }
-
-  // protect against dangerous selectors.  falsey and {_id: falsey} are both
-  // likely programmer error, and not what you want, particularly for
-  // destructive operations.
-  if (!selector || (('_id' in selector) && !selector._id))
-    return function (doc) {return false;};
-
-  // Top level can't be an array or true or binary.
-  if (typeof(selector) === 'boolean' || isArray(selector) ||
-      EJSON.isBinary(selector))
-    throw new Error("Invalid selector: " + selector);
-
-  return compileDocumentSelector(selector, cursor);
-};
-
-// Give a sort spec, which can be in any of these forms:
-//   {"key1": 1, "key2": -1}
-//   [["key1", "asc"], ["key2", "desc"]]
-//   ["key1", ["key2", "desc"]]
-//
-// (.. with the first form being dependent on the key enumeration
-// behavior of your javascript VM, which usually does what you mean in
-// this case if the key names don't look like integers ..)
-//
-// return a function that takes two objects, and returns -1 if the
-// first object comes first in order, 1 if the second object comes
-// first, or 0 if neither object comes before the other.
-
-LocalCollection._compileSort = function (spec, cursor) {
-  var sortSpecParts = [];
-
-  if (spec instanceof Array) {
-    for (var i = 0; i < spec.length; i++) {
-      if (typeof spec[i] === "string") {
-        sortSpecParts.push({
-          lookup: LocalCollection._makeLookupFunction(spec[i]),
-          ascending: true
-        });
-      } else {
-        sortSpecParts.push({
-          lookup: LocalCollection._makeLookupFunction(spec[i][0]),
-          ascending: spec[i][1] !== "desc"
-        });
-      }
-    }
-  } else if (typeof spec === "object") {
-    for (var key in spec) {
-      sortSpecParts.push({
-        lookup: LocalCollection._makeLookupFunction(key),
-        ascending: spec[key] >= 0
-      });
-    }
-  } else {
-    throw Error("Bad sort specification: ", JSON.stringify(spec));
-  }
-
-  // If there are no sorting rules specified, try to sort on _distance hidden
-  // fields on cursor we may acquire if query involved $near operator.
-  if (sortSpecParts.length === 0)
-    return function (a, b) {
-      if (!cursor || !cursor._distance)
-        return 0;
-      return cursor._distance[a._id] - cursor._distance[b._id];
-    };
-
-  // reduceValue takes in all the possible values for the sort key along various
-  // branches, and returns the min or max value (according to the bool
-  // findMin). Each value can itself be an array, and we look at its values
-  // too. (ie, we do a single level of flattening on branchValues, then find the
-  // min/max.)
-  var reduceValue = function (branchValues, findMin) {
-    var reduced;
-    var first = true;
-    // Iterate over all the values found in all the branches, and if a value is
-    // an array itself, iterate over the values in the array separately.
-    _.each(branchValues, function (branchValue) {
-      // Value not an array? Pretend it is.
-      if (!isArray(branchValue))
-        branchValue = [branchValue];
-      // Value is an empty array? Pretend it was missing, since that's where it
-      // should be sorted.
-      if (isArray(branchValue) && branchValue.length === 0)
-        branchValue = [undefined];
-      _.each(branchValue, function (value) {
-        // We should get here at least once: lookup functions return non-empty
-        // arrays, so the outer loop runs at least once, and we prevented
-        // branchValue from being an empty array.
-        if (first) {
-          reduced = value;
-          first = false;
-        } else {
-          // Compare the value we found to the value we found so far, saving it
-          // if it's less (for an ascending sort) or more (for a descending
-          // sort).
-          var cmp = LocalCollection._f._cmp(reduced, value);
-          if ((findMin && cmp > 0) || (!findMin && cmp < 0))
-            reduced = value;
-        }
-      });
-    });
-    return reduced;
-  };
-
-  return function (a, b) {
-    for (var i = 0; i < sortSpecParts.length; ++i) {
-      var specPart = sortSpecParts[i];
-      var aValue = reduceValue(specPart.lookup(a), specPart.ascending);
-      var bValue = reduceValue(specPart.lookup(b), specPart.ascending);
-      var compare = LocalCollection._f._cmp(aValue, bValue);
-      if (compare !== 0)
-        return specPart.ascending ? compare : -compare;
-    };
-    return 0;
-  };
-};
-
