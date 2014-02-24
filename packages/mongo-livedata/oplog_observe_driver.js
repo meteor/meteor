@@ -202,6 +202,8 @@ _.extend(OplogObserveDriver.prototype, {
   _addBuffered: function (id, doc) {
     var self = this;
     self._unpublishedBuffer.set(id, self._sharedProjectionFn(doc));
+
+    // If something is overflowing the buffer, we just remove it from cache
     if (self._unpublishedBuffer.size() > self._limit) {
       var maxBufferedId = self._unpublishedBuffer.maxElementId();
 
@@ -210,9 +212,14 @@ _.extend(OplogObserveDriver.prototype, {
       }
 
       self._unpublishedBuffer.remove(maxBufferedId);
+
+      // Since something matching is removed from cache (both published set and
+      // buffer), set flag to false
       self._safeAppendToBuffer = false;
     }
   },
+  // Is called either to remove the doc completely from matching set or to move
+  // it to the published set later.
   _removeBuffered: function (id) {
     var self = this;
     self._unpublishedBuffer.remove(id);
@@ -263,6 +270,9 @@ _.extend(OplogObserveDriver.prototype, {
       self._addPublished(id, doc);
     } else if (toBuffer) {
       self._addBuffered(id, doc);
+    } else {
+      // dropping it and not saving to the cache
+      self._safeAppendToBuffer = false;
     }
   },
   // Called when a document leaves the "Matching" results set.
@@ -475,10 +485,11 @@ _.extend(OplogObserveDriver.prototype, {
       } else if ((self._published.has(id) || self._unpublishedBuffer.has(id)) && canDirectlyModifyDoc) {
         // Oh great, we actually know what the document is, so we can apply
         // this directly.
-        if (self._published.has(id))
-          var newDoc = EJSON.clone(self._published.get(id));
-        else
-          var newDoc = EJSON.clone(self._unpublishedBuffer.get(id));
+        var newDoc = self._published.has(id) ?
+          self._published.get(id) :
+          self._unpublishedBuffer.get(id);
+        newDoc = EJSON.clone(newDoc);
+
         newDoc._id = id;
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
