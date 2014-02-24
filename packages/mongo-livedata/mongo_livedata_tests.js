@@ -793,9 +793,20 @@ if (Meteor.isServer) {
       return _.isEmpty(_.difference(a, b)) && _.isEmpty(_.difference(b, a));
     };
 
+    // tests '_id' subfields for all documents in oplog buffer
+    var testOplogBufferIds = function (ids) {
+      var bufferIds = [];
+      o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(function (x, id) {
+        bufferIds.push(id);
+      });
+
+      test.isTrue(setsEqual(ids, bufferIds));
+    };
+
     // Insert a doc and start observing.
     var docId1 = ins({foo: 22, bar: 5});
     var o = observer();
+    var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
     // Initial add.
     test.length(o.output, 1);
     test.equal(o.output.shift(), {added: docId1});
@@ -833,8 +844,9 @@ if (Meteor.isServer) {
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId5}, {added: docId2}]));
     clearOutput(o);
+    usesOplog && testOplogBufferIds([docId4]);
 
-    // Current state is [3 5 6] 7]
+    // Current state is [3 5 6 | 7]
     // Add some negative numbers overflowing the buffer.
     // New documents will take the published place, [3 5 6] will take the buffer
     // and 7 will be outside of the buffer in MongoDB.
@@ -849,7 +861,7 @@ if (Meteor.isServer) {
     test.equal(o.output, expected);
     clearOutput(o);
 
-    // Now the state is [-3 -2 -1] 3 5 6] 7
+    // Now the state is [-3 -2 -1 | 3 5 6] 7
     // If we update first 3 docs (increment them by 20), it would be
     // interesting.
     upd({ bar: { $lt: 0 }}, { $inc: { bar: 20 } }, { multi: true });
@@ -883,7 +895,7 @@ if (Meteor.isServer) {
     // XXX the oplog code analyzes the events one by one: one remove after
     // another. Poll-n-diff code, on the other side, analyzes the batch action
     // of multiple remove. Because of that difference, expected outputs differ.
-    if (o.handle._multiplexer._observeDriver._usesOplog) {
+    if (usesOplog) {
       var expectedRemoves = [{removed: docId3}, {removed: docId1},
                              {removed: docId2}, {removed: docId4}];
       var expectedAdds = [{added: docId4}, {added: docId8},
