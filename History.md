@@ -84,31 +84,26 @@
   tokens are upgraded to hashed tokens in the database as they are used
   in login requests.
 
+* Change default accounts-ui styling and add more CSS classes.
+
+* Refactor command-line tool. Add test harness and better tests. Run
+  `meteor self-test --help` for info on running the tools test suite.
+
+* Speed up application re-build in development mode by re-using file
+  hash computation between file change watching code and application
+  build code..
+
+* Fix issues with documents containing a key named `length` with a
+  numeric value. Underscore treated these as arrays instead of objects,
+  leading to exceptions when . Patch Underscore to not treat plain
+  objects (`x.constructor === Object`) with numeric `length` fields as
+  arrays. #594 #1737
+
 * Deprecate `Accounts.loginServiceConfiguration` in favor of
   `ServiceConfiguration.configurations`, exported by the
   `service-configuration` package. `Accounts.loginServiceConfiguration`
   is maintained for backwards-compatibility, but it is defined in a
   `Meteor.startup` block and so cannot be used from top-level code.
-
-* Fix races when calling login and/or logoutOtherClients from multiple
-  tabs. #1616
-
-* Change default accounts-ui styling and add more CSS classes.
-
-* Remove broken IE7 support from the `localstorage` package. Meteor
-  accounts logins no longer persist in IE7.
-
-* Add `Accounts.connection` to allow using Meteor accounts packages with
-  a non-default DDP connection.
-
-* Fix the `localstorage` package when used with Safari in private
-  browsing mode. This fixes a problem with login token storage and
-  account login. #1291
-
-* Include oauth_verifier as a header rather than a parameter in
-  the `oauth1` package. #1825
-
-* Deprecate `Oauth.initiateLogin` in favor of `Oauth.showPopup`.
 
 * Cursors with a field specifier containing `{_id: 0}` can no longer be
   used with `observeChanges` or `observe`. This includes the implicit
@@ -118,42 +113,33 @@
 * Transform functions must return objects and may not change the `_id`
   field, though they may leave it out.
 
-* Fix issues with documents containing a key named `length` with a
-  numeric value. Underscore treated these as arrays instead of objects,
-  leading to exceptions when . Patch Underscore to not treat plain
-  objects (`x.constructor === Object`) with numeric `length` fields as
-  arrays. #594 #1737
+* Remove broken IE7 support from the `localstorage` package. Meteor
+  accounts logins no longer persist in IE7.
 
-* Add `frame-src` to `browser-policy-content` and account for
-  cross-browser CSP disparities.
-
-* Fix namespacing in coffeescript files added to a package with the
-  `bare: true` option. #1668
-
-* Fix `force-ssl` to allow local development with `meteor run` in IPv6
-  environments. #1751`
+* Fix the `localstorage` package when used with Safari in private
+  browsing mode. This fixes a problem with login token storage and
+  account login. #1291
 
 * Types added with `EJSON.addType` now have default `clone` and `equals`
   implementations. Users may still specify `clone` or `equals` functions
   to override the default behavior.  #1745
 
-* Allow cursors on named local collections to be returned from a publish
-  function in an array.  #1820
+* Add `frame-src` to `browser-policy-content` and account for
+  cross-browser CSP disparities.
+
+* Deprecate `Oauth.initiateLogin` in favor of `Oauth.showPopup`.
+
+* Add `WebApp.rawConnectHandlers` for adding connect handlers that run
+  before any other Meteor handlers, except `connect.compress()`. Raw
+  connect handlers see the URL's full path (even if ROOT_URL contains a
+  non-empty path) and they run before static assets are served.
+
+* Add `Accounts.connection` to allow using Meteor accounts packages with
+  a non-default DDP connection.
 
 * Detect and reload if minified CSS files fail to load at startup. This
   prevents the application from running unstyled if the page load occurs
   while the server is switching versions.
-
-* Fix build failure caused by a directory in `programs/` without a
-  package.js file.
-
-* Do a better job of handling shrinkwrap files when an npm module
-  depends on something that isn't a semver. #1684
-
-* Fix failures updating npm dependencies when a node_modules directory exists
-  above the project directory.  #1761
-
-* Preserve permissions (eg, executable bit) on npm files.  #1808
 
 * Allow Npm.depends to specify any http or https URL containing a full
   40-hex-digit SHA.  #1686
@@ -163,32 +149,47 @@
 * Pass `update` and `remove` return values correctly when using
   collections validated with `allow` and `deny` rules. #1759
 
-* Don't leak sockets on error in dev-mode proxy.
-
-* Ensure springboarding to a different meteor tools version always uses
-  `exec` to run the old version. This simplifies process management for
-  wrapper scripts.
-
-* Speed up application re-build in development mode by re-using file
-  hash computation between file change watching code and application
-  build code..
-
-* Refactor command-line tool. Add test harness and better tests. Use
-  `meteor self-test` to run the tools test suite.
-
 * If you're using Deps on the server, computations and invalidation
-  functions are not allowed to yield.
+  functions are not allowed to yield. Throw an error instead of behaving
+  unpredictably.
+
+* Fix namespacing in coffeescript files added to a package with the
+  `bare: true` option. #1668
+
+* Fix races when calling login and/or logoutOtherClients from multiple
+  tabs. #1616
+
+* Include oauth_verifier as a header rather than a parameter in
+  the `oauth1` package. #1825
+
+* Fix `force-ssl` to allow local development with `meteor run` in IPv6
+  environments. #1751`
+
+* Allow cursors on named local collections to be returned from a publish
+  function in an array.  #1820
+
+* Fix build failure caused by a directory in `programs/` without a
+  package.js file.
+
+* Do a better job of handling shrinkwrap files when an npm module
+  depends on something that isn't a semver. #1684
+
+* Fix failures updating npm dependencies when a node_modules directory
+  exists above the project directory.  #1761
+
+* Preserve permissions (eg, executable bit) on npm files.  #1808
 
 * SockJS tweak to support relative base URLs.
 
-* Add `WebApp.rawConnectHandlers` for adding connect handlers that run
-  before any other Meteor handlers, except `connect.compress()`. Raw
-  connect handlers see the URL's full path (even if ROOT_URL contains a
-  non-empty path) and they run before static assets are served.
+* Don't leak sockets on error in dev-mode proxy.
 
 * Clone arguments to `added` and `changed` methods in publish
   functions. This allows callers to reuse objects and prevents already
   published data from changing after the fact.  #1750
+
+* Ensure springboarding to a different meteor tools version always uses
+  `exec` to run the old version. This simplifies process management for
+  wrapper scripts.
 
 Patches contributed by GitHub users, DenisGorbachev, EOT, OyoKooN, awwx,
 dandv, icellan, jfhamlin, marcandre, michaelbishop, mitar, mizzao,
