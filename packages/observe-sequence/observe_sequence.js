@@ -1,16 +1,13 @@
-var warn;
-if (typeof console !== 'undefined' && console.warn) {
-  warn = function () {
-    if (ObserveSequence._suppressWarnings) {
-      ObserveSequence._suppressWarnings--;
-    } else {
+var warn = function () {
+  if (ObserveSequence._suppressWarnings) {
+    ObserveSequence._suppressWarnings--;
+  } else {
+    if (typeof console !== 'undefined' && console.warn)
       console.warn.apply(console, arguments);
-      ObserveSequence._loggedWarnings++;
-    }
-  };
-} else {
-  warn = function () {};
-}
+
+    ObserveSequence._loggedWarnings++;
+  }
+};
 
 var idStringify = LocalCollection._idStringify;
 var idParse = LocalCollection._idParse;
