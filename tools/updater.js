@@ -71,9 +71,9 @@ var check = function (showBanner) {
     if (manifest.releases.stable.banner &&
         warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
       if (showBanner) {
-        runLog.log();
+        runLog.log("");
         runLog.log(manifest.releases.stable.banner);
-        runLog.log();
+        runLog.log("");
       }
       warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
     } else {
