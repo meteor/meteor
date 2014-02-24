@@ -48,7 +48,7 @@
     versions from 0.7.0 is now removed; 0.10.25+ is supported.
   - jquery: 1.11.0 (from 1.8.2). See
     http://jquery.com/upgrade-guide/1.9/ for incompatibilities.
-  - jquery-waypoints: 2.04 (from 1.1.7). Contains
+  - jquery-waypoints: 2.0.4 (from 1.1.7). Contains
     backwards-incompatible changes.
   - source-map: 0.3.2 (from 0.3.30) #1782
   - websocket-driver: 0.3.2 (from 0.3.1)
