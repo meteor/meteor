@@ -120,7 +120,7 @@ Example:
           count--;
           self.changed("counts", roomId, {count: count});
         }
-        // don't care about moved or changed
+        // don't care about changed
       });
 
       // Observe only returns after the initial added callbacks have
@@ -492,6 +492,30 @@ receive a different connection with a new `id` if it does.
 Register a callback to be called when the connection is closed. If the
 connection is already closed, the callback will be called immediately.
 {{/dtdd}}
+
+{{#dtdd name="clientAddress" type="String"}}
+  The IP address of the client in dotted form (such as `"127.0.0.1"`).
+
+  If you're running your Meteor server behind a proxy (so that clients
+  are connecting to the proxy instead of to your server directly),
+  you'll need to set the `HTTP_FORWARDED_COUNT` environment variable
+  for the correct IP address to be reported by `clientAddress`.
+
+  Set `HTTP_FORWARDED_COUNT` to an integer representing the number of
+  proxies in front of your server.  For example, you'd set it to `"1"`
+  when your server was behind one proxy.
+{{/dtdd}}
+
+{{#dtdd name="httpHeaders" type="Object"}}
+  When the connection came in over an HTTP transport (such as with
+  Meteor's default SockJS implementation), this field contains
+  whitelisted HTTP headers.
+
+  Cookies are deliberately excluded from the headers as they are a
+  security risk for this transport.  For details and alternatives, see
+  the [SockJS
+  documentation](https://github.com/sockjs/sockjs-node#authorisation).
+{{/dtdd}}
 </dl>
 
 {{#note}}
@@ -586,23 +610,30 @@ access the same collection using the same API.
 
 Specifically, when you pass a `name`, here's what happens:
 
-* On the server, a collection with that name is created on a backend
-Mongo server. When you call methods on that collection on the server,
-they translate directly into normal Mongo operations (after checking that
-they match your [access control rules](#allow)).
+* On the server (if you do not specify a `connection`), a collection with that
+name is created on a backend Mongo server. When you call methods on that
+collection on the server, they translate directly into normal Mongo operations
+(after checking that they match your [access control rules](#allow)).
 
-* On the client, a Minimongo instance is
-created. Minimongo is essentially an in-memory, non-persistent
-implementation of Mongo in pure JavaScript. It serves as a local cache
-that stores just the subset of the database that this client is working
-with. Queries on the client ([`find`](#find)) are served directly out of
-this cache, without talking to the server.
+* On the client (and on the server if you specify a `connection`), a Minimongo
+instance is created. Minimongo is essentially an in-memory, non-persistent
+implementation of Mongo in pure JavaScript. It serves as a local cache that
+stores just the subset of the database that this client is working with. Queries
+([`find`](#find)) on these collections are served directly out of this cache,
+without talking to the server.
 
 * When you write to the database on the client ([`insert`](#insert),
-[`update`](#update), [`remove`](#remove)), the command is executed
-immediately on the client, and, simultaneously, it's shipped up to the
-server and executed there too.  The `livedata` package is
-responsible for this.
+[`update`](#update), [`remove`](#remove)), the command is executed locally
+immediately, and, simultaneously, it's sent to the server and executed
+there too. This happens via [stubs](#meteor_methods), because writes are
+implemented as methods.
+
+{{#note}}
+When, on the server, you write to a collection which has a specified
+`connection` to another server, it sends the corresponding method to the other
+server and receives the changed values back from it over DDP. Unlike on the
+client, it does not execute the write locally first.
+{{/note}}
 
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
@@ -647,7 +678,8 @@ methods, documents are passed through the `transform` function before being
 returned or passed to callbacks.  This allows you to add methods or otherwise
 modify the contents of your collection from their database representation.  You
 can also specify `transform` on a particular `find`, `findOne`, `allow`, or
-`deny` call.
+`deny` call.  Transform functions must return an object and they may not change
+the value of the document's `_id` field (though it's OK to leave it out).
 
     // An Animal class that takes a document in its constructor
     Animal = function (doc) {
@@ -678,8 +710,6 @@ In this release, Minimongo has some limitations:
 
 * `$pull` in modifiers can only accept certain kinds
 of selectors.
-* `$` to denote the matched array position is not
-supported in modifier.
 * `findAndModify`, aggregate functions, and
 map/reduce aren't supported.
 
@@ -709,7 +739,7 @@ results of the cursor, or while fetching results from the cursor,
 those changes may or may not appear in the result set.
 {{/warning}}
 
-Cursors are a reactive data source.  The first time you retrieve a
+Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
 [`autorun`](#deps_autorun)), Meteor will register a
@@ -717,6 +747,12 @@ dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
 `find`.
+
+Note that when `fields` are specified, only changes to the included
+fields will trigger callbacks in `observe`, `observeChanges` and
+invalidations in reactive computations using this cursor. Careful use
+of `fields` allows for more fine-grained reactivity for computations
+that don't depend on an entire document.
 
 {{> api_box findone}}
 
@@ -1244,8 +1280,12 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
 
 {{#api_box_inline selectors}}
 
-In its simplest form, a selector is just a set of keys that must
-match in a document:
+The simplest selectors are just a string or
+[`Meteor.Collection.ObjectID`](#collection_object_id). These selectors match the
+document with that value in its `_id` field.
+
+A slightly more complex form of selector is an object containing a set of keys
+that must match in a document:
 
     // Matches all documents where deleted is false
     {deleted: false}
@@ -1268,7 +1308,7 @@ But they can also contain more complicated tests:
     {fruit: {$in: ["peach", "plum", "pear"]}}
 
 See the [complete
-documentation](http://www.mongodb.org/display/DOCS/Advanced+Queries).
+documentation](http://docs.mongodb.org/manual/reference/operator/).
 
 {{/api_box_inline}}
 
@@ -1319,21 +1359,32 @@ it's up to you to be sure.
 Queries can specify a particular set of fields to include or exclude from the
 result object.
 
-To exclude certain fields from the result objects, the field specifier
-is a dictionary whose keys are field names and whose values are `0`.
+To exclude specific fields from the result objects, the field specifier is a
+dictionary whose keys are field names and whose values are `0`. All unspecified
+fields are included.
 
     // Users.find({}, {fields: {password: 0, hash: 0}})
 
-To return an object that only includes the specified field, use `1` as
+To include only specific fields in the result documents, use `1` as
 the value. The `_id` field is still included in the result.
 
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
-It is not possible to mix inclusion and exclusion styles (except for the cases
-when `_id` is included by default or explicitly excluded). Field operators such
-as `$` and `$elemMatch` are not available on the client side yet.
+With one exception, it is not possible to mix inclusion and exclusion styles:
+the keys must either be all 1 or all 0.  The exception is that you may specify
+`_id: 0` in an inclusion specifier, which will leave `_id` out of the result
+object as well.  However, such field specifiers can not be used with
+[`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
+from a [publish function](#meteor_publish), or cursors used in
+`{{dstache}}#each}}` in a template. They may be used with [`fetch`](#fetch),
+[`findOne`](#findone), [`forEach`](#foreach), and [`map`](#map).
 
-More advanced example:
+
+<a href="http://docs.mongodb.org/manual/reference/operator/projection/">Field
+operators</a> such as `$` and `$elemMatch` are not available on the client side
+yet.
+
+A more advanced example:
 
     Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
                                { name: "L", alliance: "police" }],
@@ -1578,6 +1629,16 @@ This function is provided by the `accounts-password` package. See the
 
 {{> api_box loginWithExternalService}}
 
+Available functions are:
+
+* `Meteor.loginWithMeteorDeveloperAccount`
+* `Meteor.loginWithFacebook`
+* `Meteor.loginWithGithub`
+* `Meteor.loginWithGoogle`
+* `Meteor.loginWithMeetup`
+* `Meteor.loginWithTwitter`
+* `Meteor.loginWithWeibo`
+
 These functions initiate the login process with an external
 service (eg: Facebook, Google, etc), using OAuth. When called they open a new pop-up
 window that loads the provider's login page. Once the user has logged in
@@ -1602,20 +1663,21 @@ sites:
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 - Meetup: <http://www.meetup.com/meetup_api/auth/#oauth2-scopes>
-- Twitter, Weibo: `requestPermissions` currently not supported
+- Twitter, Weibo, Meteor developer accounts: `requestPermissions` currently not supported
 
 External login services typically require registering and configuring
 your application before use. The easiest way to do this is with the
 [`accounts-ui` package](#accountsui) which presents a step-by-step guide
 to configuring each service. However, the data can be also be entered
-manually in the `Accounts.loginServiceConfiguration` collection. For
-example:
+manually in the `ServiceConfiguration.configurations` collection, which
+is exported by the `service-configuration` package. For example, after
+running `meteor add service-configuration` in your app:
 
     // first, remove configuration entry in case service is already configured
-    Accounts.loginServiceConfiguration.remove({
+    ServiceConfiguration.configurations.remove({
       service: "weibo"
     });
-    Accounts.loginServiceConfiguration.insert({
+    ServiceConfiguration.configurations.insert({
       service: "weibo",
       clientId: "1292962797",
       secret: "75a730b58f5691de5522789070c319bc"
@@ -1737,11 +1799,11 @@ On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
 
-On the client, you must pass `password` and one of `username` or `email`
-&mdash; enough information for the user to be able to log in again
-later. On the server, you can pass any subset of these options, but the
-user will not be able to log in until it has an identifier and a
-password.
+On the client, you must pass `password` and at least one of `username` or
+`email` &mdash; enough information for the user to be able to log in again
+later. On the server, you do not need to specify `password`, but the user will
+not be able to log in until it has a password (eg, set with
+[`Accounts.setPassword`](#accounts_setpassword)).
 
 To create an account without a password on the server and still let the
 user pick their own password, call `createUser` with the `email` option
@@ -1921,7 +1983,7 @@ effects of `created`.  It fires once and is the last callback to fire.
 
 {{> api_box template_events}}
 
-Declare event handers for instances of this template. Multiple calls add
+Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
 
 See [Event Maps](#eventmaps) for a detailed description of the event
@@ -2616,7 +2678,7 @@ exactly the same work as `Deps.flush`.  The flushing process consists
 of rerunning any invalidated computations.  If additional
 invalidations happen while flushing, they are processed as part of the
 same flush until there is no more work to be done.  Callbacks
-registered with [`Meteor.afterFlush`](#deps_afterflush) are called
+registered with [`Deps.afterFlush`](#deps_afterflush) are called
 after processing outstanding invalidations.
 
 Any auto-updating DOM elements that are found to not be in the
@@ -2632,9 +2694,10 @@ computation.
 
 {{> api_box deps_nonreactive }}
 
-Calls `func()` with `Deps.currentComputation` temporarily set to
-`null`.  If `func` accesses reactive data sources, these data sources
-will never cause a rerun of the enclosing computation.
+Calls `func` with `Deps.currentComputation` temporarily set to `null`
+and returns `func`'s own return value.  If `func` accesses reactive data
+sources, these data sources will never cause a rerun of the enclosing
+computation.
 
 {{> api_box deps_active }}
 
@@ -2893,9 +2956,25 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
 {{/note}}
 
-Instances of your type should implement the following interface:
+Instances of your type must implement [`typeName`](#ejson_type_typeName) and
+[`toJSONValue`](#ejson_type_toJSONValue) methods, and may implement
+[`clone`](#ejson_type_clone) and [`equals`](#ejson_type_equals) methods if the
+default implementations are not sufficient.
+
+{{> api_box ejsonTypeName}}
+{{> api_box ejsonTypeToJSONValue}}
+
+For example, the `toJSONValue` method for
+[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
+
+    function () {
+      return this.toHexString();
+    };
 
 {{> api_box ejsonTypeClone}}
+
+If your type does not have a `clone` method, `EJSON.clone` will use
+[`toJSONValue`](#ejson_type_toJSONValue) and the factory instead.
 
 {{> api_box ejsonTypeEquals}}
 
@@ -2907,15 +2986,9 @@ the following properties:
  - *Symmetry* - for any two instances `a` and `b`: `a.equals(b)` if and only if `b.equals(a)`.
  - *Transitivity* - for any three instances `a`, `b`, and `c`: `a.equals(b)` and `b.equals(c)` implies `a.equals(c)`.
 
-{{> api_box ejsonTypeName}}
-{{> api_box ejsonTypeToJSONValue}}
+If your type does not have an `equals` method, `EJSON.equals` will compare the
+result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
 
-For example, the `toJSONValue` method for
-[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
-
-    function () {
-      return this.toHexString();
-    };
 
 <h2 id="http"><span>HTTP</span></h2>
 
