@@ -92,6 +92,12 @@ selftest.define("springboard", ['checkout'], function () {
     run.read('v2\ntools2\n');
     run.expectEnd();
     run.expectExit(0);
+
+    // .meteor/release exists but is empty. You get an error.
+    s.write(".meteor/release", "\n");
+    run = s.run("list", "--using");
+    run.matchErr("release file which is empty");
+    run.expectExit(1);
   });
 });
 

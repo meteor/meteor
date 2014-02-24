@@ -11,6 +11,7 @@ var auth = require('./auth.js');
 var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
+var buildmessage = require('./buildmessage.js');
 
 // a bit of a hack
 var getPackage = _.once(function () {
@@ -32,14 +33,14 @@ var handleError = function (error, galaxyName, messages) {
   var Package = getPackage();
   messages = messages || {};
 
-  if (e instanceof Package.meteor.Meteor.Error) {
+  if (error instanceof Package.meteor.Meteor.Error) {
     var msg = messages[error.error];
     if (msg)
       process.stderr.write(msg + "\n");
     else if (error.message)
       process.stderr.write("Denied: " + error.message + "\n");
     return 1;
-  } else if (e instanceof ConnectionTimeoutError) {
+  } else if (error instanceof ConnectionTimeoutError) {
     // If we have an http/https URL for a galaxyName instead of a
     // proper galaxyName (which is what the code in this file
     // currently passes), strip off the scheme and trailing slash.
@@ -150,7 +151,7 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
-    self.subscribe.apply(self, args);
+    self.connection.subscribe.apply(self.connection, args);
     return fut.wait();
   },
 
@@ -414,7 +415,7 @@ exports.deploy = function (options) {
     return 0;
   } finally {
     // Close the connection to Galaxy (otherwise Node will continue running).
-    conn.close();
+    conn && conn.close();
   }
 };
 

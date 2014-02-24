@@ -144,8 +144,7 @@ Options:
 Reset the project state. Erases the local database.
 Usage: meteor reset
 
-Reset the current project to a fresh state. Removes all local
-data.
+Reset the current project to a fresh state. Removes all local data.
 
 
 >>> deploy
@@ -216,6 +215,32 @@ If you deployed a site with an old version of Meteor that did not have
 support for developer accounts, you can use this command to claim that
 site into your account. If you had set a password on the site you will
 be prompted for it one last time.
+
+
+>>> login
+Log in to your Meteor developer account
+Usage: meteor login [--email]
+
+Prompts for your username and password and logs you in to your Meteor
+developer account. Pass --email to log in by email address rather than
+by username.
+
+
+>>> logout
+Log out of your Meteor developer account
+Usage: meteor logout
+
+Log out of your Meteor developer account.
+
+
+>>> whoami
+Prints the username of your Meteor developer account
+Usage: meteor whoami
+
+Prints the username of the currently logged-in Meteor developer.
+
+See 'meteor login' to log into or 'meteor logout' to log out of your
+Meteor developer account.
 
 
 >>> test-packages
@@ -291,29 +316,30 @@ Prompts for your username and password and logs you in to your
 Meteor account. Pass --email to log in by email address instead of
 username. Pass --galaxy to specify a galaxy to log in to.
 
+Builds the provided directory as a package, then loads the package and
+calls the main() function inside the package. The function will receive
+any remaining arguments. The exit status will be the return value of
+main() (which is called inside a fiber).
 
->>> logout
-Log out of your Meteor account
-Usage: meteor logout
+The arguments will be parsed by Meteor's option parser, which means that
+--release will be effective (but not passed to the command), and that it will be
+an error to pass any unknown options. If you want to pass options to your tool,
+place them after a '--' argument (which turns off option parsing for the rest of
+the arguments).
 
-Log out of your Meteor account.
-
-
->>> whoami
-Prints the username of your Meteor developer account
-Usage: meteor whoami
-
-Prints the username of the currently logged-in Meteor developer.
-
-See 'meteor login' to log into or 'meteor logout' to log out of of your
-Meteor account.
+This command is for temporary, internal use, until we have a more mature
+system for building standalone command-line programs with Meteor.
 
 
 >>> self-test
 Run tests of the 'meteor' tool.
-Usage: meteor self-test [--changed] [--slow] [--force-online] [--history n]
+Usage: meteor self-test [pattern] [--changed] [--slow]
+                        [--force-online] [--history n]
 
 Runs internal tests. Exits with status 0 on success.
+
+If 'pattern' is provided, it should be a regular expression. Only
+tests that match the regular expression will be run.
 
 Pass --changed to run only tests that have changed since they last
 passed. This uses a really rough heuristic: A test has changed iff
@@ -361,4 +387,3 @@ Grant a permission on an official service
 Usage: meteor admin grant [XXX]
 
 Not yet implemented
-

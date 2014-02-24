@@ -1,12 +1,15 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
+var testUtils = require('../test-utils.js');
 
 // XXX need to make sure that mother doesn't clean up:
 // 'legacy-password-app-for-selftest'
 // 'legacy-no-password-app-for-selftest'
 // 'app-for-selftest-not-test-owned'
 // 'app-for-selftest-test-owned'
+
+var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
 
 // Run 'meteor logs' or 'meteor mongo' against an app. Options:
@@ -37,7 +40,7 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
   }
 
   var run = sandbox.run.apply(sandbox, runArgs);
-  run.waitSecs(10);
+  run.waitSecs(commandTimeoutSecs);
 
   var expectSuccess = selftest.markStack(function () {
     run.match(matchString);
@@ -68,11 +71,26 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
     } else {
       // If we are not logged in and this is not a legacy app, then we
       // expect a login prompt.
+      //
+      // (If testReprompt is true, try getting reprompted as a result
+      // of entering no username or a bad password.)
+      if (options.testReprompt) {
+        run.matchErr('Username: ');
+        run.write("\n");
+        run.matchErr("Username:");
+        run.write("   \n");
+      }
       run.matchErr('Username: ');
       run.write((options.username || 'test') + '\n');
+      if (options.testReprompt) {
+        run.matchErr("Password:");
+        run.write("wrongpassword\n");
+        run.waitSecs(15);
+        run.matchErr("failed");
+      }
       run.matchErr('Password: ');
       run.write((options.password || 'testtest') + '\n');
-      run.waitSecs(15);
+      run.waitSecs(commandTimeoutSecs);
       if (options.authorized) {
         expectSuccess();
       } else {
@@ -90,16 +108,31 @@ _.each([false, true], function (loggedIn) {
       ['net'],
       function () {
         var s = new Sandbox;
+        var run;
         if (loggedIn) {
-          var run = s.run('login');
-          run.waitSecs(2);
+          run = s.run('login');
+          run.waitSecs(commandTimeoutSecs);
           run.matchErr('Username:');
           run.write('test\n');
           run.matchErr('Password:');
           run.write('testtest\n');
-          run.waitSecs(15);
+          run.waitSecs(commandTimeoutSecs);
           run.matchErr('Logged in as test.');
           run.expectExit(0);
+        }
+
+        // Running 'meteor logs' without an app name should fail.
+        if (command === 'logs') {
+          run = s.run(command);
+          run.matchErr('not enough arguments');
+          run.expectExit(1);
+        }
+        // Running 'meteor mongo' without an app name and not in an app
+        // dir should fail.
+        if (command === 'mongo') {
+          run = s.run('mongo');
+          run.matchErr('not in a Meteor project directory');
+          run.expectExit(1);
         }
 
         logsOrMongoForApp(s, command,
@@ -119,14 +152,15 @@ _.each([false, true], function (loggedIn) {
         logsOrMongoForApp(s, command,
                           'app-for-selftest-not-test-owned', {
                             loggedIn: loggedIn,
-                            authorized: false
+                            authorized: false,
+                            testReprompt: true
                           });
 
         if (! loggedIn) {
           // We logged in as a result of running the previous command,
           // so log out again.
           run = s.run('logout');
-          run.waitSecs(15);
+          run.waitSecs(commandTimeoutSecs);
           run.matchErr('Logged out');
           run.expectExit(0);
         }

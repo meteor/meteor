@@ -44,6 +44,7 @@ selftest.define("run", function () {
 
   // Crashes
   s.write("crash.js", "process.exit(42);");
+  run.waitSecs(5);
   run.match("with code: 42");
   run.waitSecs(5);
   run.match("is crashing");
@@ -171,7 +172,7 @@ selftest.define("run --once", function () {
   s.cd("onceapp");
   s.set("RUN_ONCE_OUTCOME", "mongo");
   run = s.run("--once");
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.expectExit(86);
 });
 

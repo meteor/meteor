@@ -43,7 +43,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {
     // XXX we should allow service packages to set their capitalized name
     return 'GitHub';
   else if (this.name === 'meteor-developer')
-    return 'a Meteor developer account';
+    return 'Meteor';
   else
     return capitalize(this.name);
 };
