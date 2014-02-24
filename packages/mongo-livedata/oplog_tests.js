@@ -43,4 +43,5 @@ Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   supported(true, {}, { sort: {x:1}, limit: 5 });
   supported(false, {}, { limit: 5 });
   supported(false, {}, { skip: 2, limit: 5 });
+  supported(false, {}, { skip: 2 });
 });
