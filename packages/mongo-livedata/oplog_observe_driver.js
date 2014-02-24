@@ -174,13 +174,16 @@ _.extend(OplogObserveDriver.prototype, {
     self._multiplexer.removed(id);
     if (! self._limit)
       return;
-    // xcxc size on heaps should be cached to O(1)
     if (self._published.size() < self._limit) {
       // The unpublished buffer is empty iff published contains the whole
       // matching set, i.e. number of matching documents is less or equal to the
       // queries limit.
-      if (! self._unpublishedBuffer.size())
+      if (! self._unpublishedBuffer.size()) {
+        // Assertion of the statement above
+        if (! self._safeAppendToBuffer && self._phase !== PHASE.QUERYING)
+          throw new Error("At this phase, buffer can be empty only if published contains the whole matching set");
         return;
+      }
 
       var newDocId = self._unpublishedBuffer.minElementId();
       var newDoc = self._unpublishedBuffer.get(newDocId);
