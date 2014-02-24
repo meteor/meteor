@@ -191,7 +191,7 @@
   `exec` to run the old version. This simplifies process management for
   wrapper scripts.
 
-Patches contributed by GitHub users, DenisGorbachev, EOT, OyoKooN, awwx,
+Patches contributed by GitHub users DenisGorbachev, EOT, OyoKooN, awwx,
 dandv, icellan, jfhamlin, marcandre, michaelbishop, mitar, mizzao,
 mquandalle, paulswartz, rdickert, rzymek, timhaines, and yeputons.
 
