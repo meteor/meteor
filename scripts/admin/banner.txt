@@ -3,4 +3,4 @@
    deploy`, you will be prompted to create a developer account.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.7.0.1 by running 'meteor update'.
+   project to Meteor 0.7.1 by running 'meteor update'.
