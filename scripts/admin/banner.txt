@@ -1,4 +1,6 @@
-=> Meteor 0.7.0.1: Fix failure to initialize local MongoDB server.
+=> Meteor 0.7.1: Introducing Meteor developer accounts, a new way of
+   managing your meteor.com deployed sites. When you use `meteor
+   deploy`, you will be prompted to create a developer account.
 
    This release is being downloaded in the background. Update your
    project to Meteor 0.7.0.1 by running 'meteor update'.
