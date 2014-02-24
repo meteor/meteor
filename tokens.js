@@ -136,6 +136,7 @@ parseStringLiteral = function (scanner) {
         if (esc === '\\0')
           jsonLiteral += '\\u0000';
         else if (esc === '\\v')
+          // Note: IE 8 doesn't correctly parse '\v' in JavaScript.
           jsonLiteral += '\\u000b';
         else if (esc.charAt(1) === 'x')
           jsonLiteral += '\\u00' + esc.slice(2);
