@@ -55,7 +55,8 @@ Tinytest.add("spacebars - token parsers", function (test) {
   runValue(parseStringLiteral, '\'"\'', '"');
   runValue(parseStringLiteral, '"a\\\nb"', 'ab'); // line continuation
   runValue(parseStringLiteral, '"a\u0062c"', 'abc');
-  runValue(parseStringLiteral, '"\\0\\b\\f\\n\\r\\t\\v"', '\0\b\f\n\r\t\v');
+  // Note: IE 8 doesn't correctly parse '\v' in JavaScript.
+  runValue(parseStringLiteral, '"\\0\\b\\f\\n\\r\\t\\v"', '\0\b\f\n\r\t\u000b');
   runValue(parseStringLiteral, '"\\x41"', 'A');
   runValue(parseStringLiteral, '"\\\\"', '\\');
   runValue(parseStringLiteral, '"\\\""', '\"');
