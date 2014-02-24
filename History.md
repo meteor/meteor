@@ -3,51 +3,51 @@
 ## v0.7.1
 
 * Integrate with Meteor developer accounts, a new way of managing your
-  meteor.com deployed sites. When you use 'meteor deploy', you will be
+  meteor.com deployed sites. When you use `meteor deploy`, you will be
   prompted to create a developer account.
     - Once you've created a developer account, you can log in and out
-      from the command line with 'meteor login' and 'meteor logout'.
-    - You can claim legacy sites with 'meteor claim'. This command will
+      from the command line with `meteor login` and `meteor logout`.
+    - You can claim legacy sites with `meteor claim`. This command will
       prompt you for your site password if you are claiming a
       password-protected site; after claiming it, you will not need to
       enter the site password again.
     - You can add or remove authorized users, and view the list of
-      authorized users, for a site with 'meteor authorized'.
-    - You can view your current username with 'meteor whoami'.
+      authorized users, for a site with `meteor authorized`.
+    - You can view your current username with `meteor whoami`.
     - This release also includes the `accounts-meteor-developer` package
       for building Meteor apps that allow users to log in with their own
       developer accounts.
 
-* Improve the oplog tailing implementation for getting realtime database
+* Improve the oplog tailing implementation for getting real-time database
   updates from MongoDB.
-    - Add support for all operators except $where and $near. Limit and
+    - Add support for all operators except `$where` and `$near`. Limit and
       skip are not supported yet.
     - Add optimizations to avoid needless data fetches from MongoDB.
     - Fix an error ("Cannot call method 'has' of null") in an oplog
       callback. #1767
 
 * Add and improve support for minimongo operators.
-  - Support $comment.
-  - Support 'obj' name in $where.
-  - $regexp matches actual regexps properly.
-  - Improve support for $nin, $ne, $not.
-  - Support using { $in: [/foo/, /bar/] }. #1707
-  - Support {$exists: false}.
+  - Support `$comment`.
+  - Support `obj` name in `$where`.
+  - `$regexp` matches actual regexps properly.
+  - Improve support for `$nin`, `$ne`, `$not`.
+  - Support using `{ $in: [/foo/, /bar/] }`. #1707
+  - Support `{$exists: false}`.
   - Improve type-checking for selectors.
-  - Support {x: {$elemMatch: {$gt: 5}}}.
-  - Match mongo's behavior better when there are arrays in the document.
-  - Support $near with sort.
-  - Implement updates with { $set: { 'a.$.b': 5 } }.
-  - Support {$type: 4} queries.
+  - Support `{x: {$elemMatch: {$gt: 5}}}`.
+  - Match Mongo's behavior better when there are arrays in the document.
+  - Support `$near` with sort.
+  - Implement updates with `{ $set: { 'a.$.b': 5 } }`.
+  - Support `{$type: 4}` queries.
   - Optimize `remove({})` when observers are paused.
   - Make update-by-id constant time.
-  - Allow {$set: {'x._id': 1}}.  #1794
+  - Allow `{$set: {'x._id': 1}}`.  #1794
 
 * Upgraded dependencies
   - node: 0.10.25 (from 0.10.22). The workaround for specific Node
     versions from 0.7.0 is now removed; 0.10.25+ is supported.
   - jquery: 1.11.0 (from 1.8.2). See
-    http://jquery.com/upgrade-guide/1.9/ for incompatibilities.
+    http://jquery.com/upgrade-guide/1.9/ for upgrade instructions.
   - jquery-waypoints: 2.0.4 (from 1.1.7). Contains
     backwards-incompatible changes.
   - source-map: 0.3.2 (from 0.3.30) #1782
@@ -69,24 +69,25 @@
   - coffeescript: 1.7.1 (from 1.6.3)
 
 * CSS preprocessing and sourcemaps:
-    - Add sourcemaps support for stylesheets, include LESS.
-    - XXX Add CSS linting that breaks on errors.
-    - Add CSS preprocessing to concatenate files correctly (including
-      pulling @imports to the beginning).
-    - XXX Support `.import.less` and `.import.styl` to stop Meteor from
-      processing stylesheets. `.lessimport` is deprecated.
+  - Add sourcemap support for CSS stylesheet preprocessors. Use
+    sourcemaps for stylesheets compiled with LESS.
+  - Improve CSS minification to deal with `@import` statements correctly.
+  - Lint CSS files for invalid `@` directives.
+  - Change the recommended suffix for imported LESS files from
+    `.lessimport` to `.import.less`. Add `.import.styl` to allow
+    `stylus` imports. `.lessimport` continues to work but is deprecated.
 
 * Add `clientAddress` and `httpHeaders` to `this.connection` in method
   calls and publish functions.
 
 * Hash login tokens before storing them in the database. Legacy unhashed
   tokens are upgraded to hashed tokens in the database as they are used
-  in logins.
+  in login requests.
 
 * Deprecate `Accounts.loginServiceConfiguration` in favor of
   `ServiceConfiguration.configurations`, exported by the
   `service-configuration` package. `Accounts.loginServiceConfiguration`
-  is maintained for backwards-compatability, but it is defined in a
+  is maintained for backwards-compatibility, but it is defined in a
   `Meteor.startup` block and so cannot be used from top-level code.
 
 * Fix races when calling login and/or logoutOtherClients from multiple
@@ -94,21 +95,20 @@
 
 * Change default accounts-ui styling and add more CSS classes.
 
-* Meteor accounts logins (or anything else using the `localstorage` package) no
-  longer persist in IE7.
+* Remove broken IE7 support from the `localstorage` package. Meteor
+  accounts logins no longer persist in IE7.
 
-* Add `Accounts.connection` for using Meteor accounts packages with a
-  non-default DDP connection.
+* Add `Accounts.connection` to allow using Meteor accounts packages with
+  a non-default DDP connection.
 
-* Fix order of setting login token and setting user id on a connection.
-
-* Fix `accounts-password` login with private-browsing Safari (and
-  generally, the use of the `localstorage` package). #1291
+* Fix the `localstorage` package when used with Safari in private
+  browsing mode. This fixes a problem with login token storage and
+  account login. #1291
 
 * Include oauth_verifier as a header rather than a parameter in
   the `oauth1` package. #1825
 
-* `Oauth.initiateLogin` is deprecated in favor of `Oauth.showPopup`.
+* Deprecate `Oauth.initiateLogin` in favor of `Oauth.showPopup`.
 
 * Cursors with a field specifier containing `{_id: 0}` can no longer be
   used with `observeChanges` or `observe`. This includes the implicit
@@ -116,58 +116,65 @@
   publish function or using `{{#each}}`.
 
 * Transform functions must return objects and may not change the `_id`
-  field (though they may leave it out).
+  field, though they may leave it out.
 
-* Patch Underscore to not treat plain objects (`x.constructor === Object`)
-  with numeric `length` fields as arrays.  Among other things, this allows you
-  to use documents with numeric `length` fields with Mongo.  #594 #1737
+* Fix issues with documents containing a key named `length` with a
+  numeric value. Underscore treated these as arrays instead of objects,
+  leading to exceptions when . Patch Underscore to not treat plain
+  objects (`x.constructor === Object`) with numeric `length` fields as
+  arrays. #594 #1737
 
 * Add `frame-src` to `browser-policy-content` and account for
   cross-browser CSP disparities.
 
-* Make sure that `api.add_files('foo.coffee', {bare: true})` works when
-  adding CoffeeScript files. #1668
+* Fix namespacing in coffeescript files added to a package with the
+  `bare: true` option. #1668
 
-* `force-ssl`: don't require SSL during `meteor run` in IPv6
-  environments. #1751
+* Fix `force-ssl` to allow local development with `meteor run` in IPv6
+  environments. #1751`
 
 * Types added with `EJSON.addType` now have default `clone` and `equals`
-  implementations.  #1745
+  implementations. Users may still specify `clone` or `equals` functions
+  to override the default behavior.  #1745
 
-* Allow cursors on named local collections to be returned from arrays in publish
-  functions.  #1820
+* Allow cursors on named local collections to be returned from a publish
+  function in an array.  #1820
 
-* On page load, detect if CSS failed to load and refresh.
+* Detect and reload if minified CSS files fail to load at startup. This
+  prevents the application from running unstyled if the page load occurs
+  while the server is switching versions.
 
-* Don't crash with an empty programs/foo directory or one without a
+* Fix build failure caused by a directory in `programs/` without a
   package.js file.
 
-* Do a better job of handling shrinkwrap files when a npm module depends
-  on something that isn't a semver. #1684
+* Do a better job of handling shrinkwrap files when an npm module
+  depends on something that isn't a semver. #1684
 
 * Fix failures updating npm dependencies when a node_modules directory exists
   above the project directory.  #1761
 
-* Don't lose permissions (eg, executable bit) on npm files.  #1808
+* Preserve permissions (eg, executable bit) on npm files.  #1808
 
 * Allow Npm.depends to specify any http or https URL containing a full
   40-hex-digit SHA.  #1686
 
-* In email package, print a message in dev mode when email is not sent. #1196
-
 * Add `retry` package for connection retry with exponential backoff.
 
-* Pass through `update` and `remove` return values for validated
-  operations. #1759
+* Pass `update` and `remove` return values correctly when using
+  collections validated with `allow` and `deny` rules. #1759
 
 * Don't leak sockets on error in dev-mode proxy.
 
-* Fix bug where springboarding to a different Meteor tools version was
-  not actually exec'ing.
+* Ensure springboarding to a different meteor tools version always uses
+  `exec` to run the old version. This simplifies process management for
+  wrapper scripts.
 
-* Speed up build by re-using file hashes.
+* Speed up application re-build in development mode by re-using file
+  hash computation between file change watching code and application
+  build code..
 
-* Refactor command-line tool. Add test harness and better tests.
+* Refactor command-line tool. Add test harness and better tests. Use
+  `meteor self-test` to run the tools test suite.
 
 * If you're using Deps on the server, computations and invalidation
   functions are not allowed to yield.
@@ -179,10 +186,11 @@
   connect handlers see the URL's full path (even if ROOT_URL contains a
   non-empty path) and they run before static assets are served.
 
-* Don't cache direct references to the fields arguments to the subscription
-  `added` and `changed` methods.  #1750
+* Clone arguments to `added` and `changed` methods in publish
+  functions. This allows callers to reuse objects and prevents already
+  published data from changing after the fact.  #1750
 
-Patches contributed by GitHub users, DenisGorbachev, OyoKooN, awwx,
+Patches contributed by GitHub users, DenisGorbachev, EOT, OyoKooN, awwx,
 dandv, icellan, jfhamlin, marcandre, michaelbishop, mitar, mizzao,
 mquandalle, paulswartz, rdickert, rzymek, timhaines, and yeputons.
 
