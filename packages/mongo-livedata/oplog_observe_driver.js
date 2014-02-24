@@ -233,12 +233,14 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._published.has(id))
       throw Error("tried to add something already published " + id);
     if (self._limit && self._unpublishedBuffer.has(id))
-      throw Error("tried to add something already existed in buffer " + id); // xcxc error msg
+      throw Error("tried to add something already existed in buffer " + id);
 
     var limit = self._limit;
     var comparator = self._comparator;
-    var maxPublished = (limit && self._published.size() > 0) ? self._published.get(self._published.maxElementId()) : null;
-    var maxBuffered = (limit && self._unpublishedBuffer.size() > 0) ? self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId()) : null;
+    var maxPublished = (limit && self._published.size() > 0) ?
+      self._published.get(self._published.maxElementId()) : null;
+    var maxBuffered = (limit && self._unpublishedBuffer.size() > 0) ?
+      self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId()) : null;
     // The query is unlimited or didn't publish enough documents yet or the new
     // document would fit into published set pushing the maximum element out,
     // then we need to publish the doc.
@@ -310,17 +312,27 @@ _.extend(OplogObserveDriver.prototype, {
         // that buffer can't be empty if there are matching documents not
         // published. Notably, we don't want to schedule repoll and continue
         // relying on this property.
-        if (!self._limit || self._unpublishedBuffer.size() === 0 || comparator(newDoc, minBuffered) <= 0) {
+        var staysInPublished = ! self._limit ||
+                               self._unpublishedBuffer.size() === 0 ||
+                               comparator(newDoc, minBuffered) <= 0;
+
+        if (staysInPublished) {
           self._changePublished(id, oldDoc, newDoc);
         } else {
           // after the change doc doesn't stay in the published, remove it
           self._removePublished(id);
           // but it can move into buffered now, check it
           var maxBuffered = self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId());
-          if (self._safeAppendToBuffer || (maxBuffered && comparator(newDoc, maxBuffered) < 0))
+
+          var toBuffer = self._safeAppendToBuffer ||
+                         (maxBuffered && comparator(newDoc, maxBuffered) < 0);
+
+          if (toBuffer) {
             self._addBuffered(id, newDoc);
-          else
+          } else {
+            // Throw away from both published set and buffer
             self._safeAppendToBuffer = false;
+          }
         }
       } else if (bufferedBefore) {
         oldDoc = self._unpublishedBuffer.get(id);
@@ -330,13 +342,21 @@ _.extend(OplogObserveDriver.prototype, {
 
         var maxPublished = self._published.get(self._published.maxElementId());
         var maxBuffered = self._unpublishedBuffer.size() && self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId());
+
         // the buffered doc was updated, it could move to published
-        if (comparator(newDoc, maxPublished) < 0) {
+        var toPublish = comparator(newDoc, maxPublished) < 0;
+
+        // or stays in buffer even after the change
+        var staysInBuffer = self._safeAppendToBuffer ||
+          (maxBuffered && comparator(newDoc, maxBuffered) < 0);
+
+        if (toPublish) {
           self._addPublished(id, newDoc);
-        } else if (self._safeAppendToBuffer || (maxBuffered && comparator(newDoc, maxBuffered) < 0)) {
-          // stays in buffer
+        } else if (staysInBuffer) {
+          // stays in buffer but changes
           self._unpublishedBuffer.set(id, newDoc);
         } else {
+          // Throw away from both published set and buffer
           self._safeAppendToBuffer = false;
         }
       } else {
