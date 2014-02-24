@@ -39,7 +39,7 @@
   - Support $near with sort.
   - Implement updates with { $set: { 'a.$.b': 5 } }.
   - Support {$type: 4} queries.
-  - Pptimize `remove({})` when observers are paused.
+  - Optimize `remove({})` when observers are paused.
   - Make update-by-id constant time.
   - Allow {$set: {'x._id': 1}}.  #1794
 
