@@ -270,8 +270,8 @@ _.extend(OplogObserveDriver.prototype, {
   // and the effect of limit enforced.
   _removeMatching: function (id) {
     var self = this;
-    if (!self._published.has(id) && !self._limit)
-      throw Error("tried to remove something unpublished " + id); // xcxc fix this error msg
+    if (! self._published.has(id) && ! self._limit)
+      throw Error("tried to remove something matching but not cached " + id);
 
     if (self._published.has(id)) {
       self._removePublished(id);
@@ -448,9 +448,10 @@ _.extend(OplogObserveDriver.prototype, {
       if (self._published.has(id) || (self._limit && self._unpublishedBuffer.has(id)))
         self._removeMatching(id);
     } else if (op.op === 'i') {
-      // xcxc what if buffer has it?
       if (self._published.has(id))
-        throw new Error("insert found for already-existing ID");
+        throw new Error("insert found for already-existing ID in published");
+      if (self._unpublishedBuffer && self._unpublishedBuffer.has(id))
+        throw new Error("insert found for already-existing ID in buffer");
 
       // XXX what if selector yields?  for now it can't but later it could have
       // $where
