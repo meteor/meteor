@@ -492,15 +492,11 @@ Tinytest.add("templating - helpers", function (test) {
   });
 
   div = renderToDiv(tmpl);
-  var txt = $(div).text().match(/\S+/)[0];
-  test.isTrue(txt.match(/^ABC?4D$/));
-  // We don't get 'C' (the ability to name a helper {{toString}})
-  // in IE < 9 because of the famed DontEnum bug.  This could be
-  // fixed but it would require making all the code that handles
-  // the dictionary of helpers be DontEnum-aware.  In practice,
-  // the Object prototype method names (toString, hasOwnProperty,
-  // isPropertyOf, ...) make poor helper names and are unlikely
-  // to be used in apps.
+  var txt = $(div).text();
+  txt = txt.replace('[object Object]', 'X'); // IE 8
+  txt = txt.match(/\S+/)[0];
+  test.isTrue(txt.match(/^AB[CX]4D$/));
+  // We don't make helpers with names like toString work in IE 8.
   test.expect_fail();
   test.equal(txt, 'ABC4D');
   Deps.flush();
