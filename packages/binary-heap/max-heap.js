@@ -4,7 +4,7 @@
 //      Object:
 //        - id - String - unique id of the item
 //        - value - Any - the data value
-//    the contents of initData is retained
+//    each value is retained
 MaxHeap = function (comparator, initData) {
   if (! _.isFunction(comparator))
     throw new Error('Passed comparator is invalid, should be a comparison function');
@@ -24,12 +24,12 @@ MaxHeap = function (comparator, initData) {
 
   // The Heap data-structure implemented as a 0-based contiguous array where
   // every item on index idx is a node in a complete binary tree. Every node can
-  // have leaves on indexes idx*2+1 and idx*2+2, except for the lists. Every
+  // have children on indexes idx*2+1 and idx*2+2, except for the leaves. Every
   // node has a parent on index (idx-1)/2;
   self._heap = [];
 
   // If the initial array is passed, we can build the heap in linear time
-  // complexity (O(N)) compared to linearithmetic time complexity (O(nlogn)) if
+  // complexity (O(N)) compared to linearithmic time complexity (O(nlogn)) if
   // we push elements one by one.
   if (_.isArray(initData))
     self._initFromData(initData);
@@ -41,7 +41,7 @@ _.extend(MaxHeap.prototype, {
     var self = this;
 
     self._heap = _.map(data, function (o) {
-      return { id: EJSON.clone(o.id), value: o.value };
+      return { id: o.id, value: o.value };
     });
 
     _.each(data, function (o, i) {
@@ -64,11 +64,11 @@ _.extend(MaxHeap.prototype, {
       var right = rightChildIdx(idx);
       var largest = idx;
 
-      if (left < self.size() && self._maxIndex(largest, left) === left) {
-        largest = left;
+      if (left < self.size()) {
+        largest = self._maxIndex(largest, left);
       }
-      if (right < self.size() && self._maxIndex(largest, right) === right) {
-        largest = right;
+      if (right < self.size()) {
+        largest = self._maxIndex(largest, right);
       }
 
       if (largest === idx)
@@ -133,7 +133,11 @@ _.extend(MaxHeap.prototype, {
 
       var idx = self._heapIdx.get(id);
       self._heap[idx].value = value;
+
+      // Fix the new value's position
+      // Either bubble new value up if it is greater than its parent
       self._upHeap(idx);
+      // or bubble it down if it is smaller than one of its children
       self._downHeap(idx);
     } else {
       self._heapIdx.set(id, self._heap.length);
@@ -152,8 +156,10 @@ _.extend(MaxHeap.prototype, {
         self._swap(idx, last);
         self._heap.pop();
         self._heapIdx.remove(id);
-        self._downHeap(idx);
+
+        // Fix the swapped value's position
         self._upHeap(idx);
+        self._downHeap(idx);
       } else {
         self._heap.pop();
         self._heapIdx.remove(id);
@@ -173,6 +179,7 @@ _.extend(MaxHeap.prototype, {
     self._heap = [];
     self._heapIdx.clear();
   },
+  // iterate over values in no particular order
   forEach: function (iterator) {
     var self = this;
     _.each(self._heap, function (obj) {
@@ -206,7 +213,7 @@ _.extend(MaxHeap.prototype, {
     for (var i = 1; i < self._heap.length; i++)
       if (self._maxIndex(parentIdx(i), i) !== parentIdx(i))
           throw new Error("An item with id " + self._heap[i].id +
-                          " has a parent younger than him: " +
+                          " has a parent younger than it: " +
                           self._heap[parentIdx(i)].id);
   }
 });
