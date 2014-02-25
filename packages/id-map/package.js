@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Dictionary data structure: a wrapper for a raw object",
+  summary: "Dictionary data structure allowing non-string keys",
   internal: true
 });
 
