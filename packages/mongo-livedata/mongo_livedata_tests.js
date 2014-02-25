@@ -860,6 +860,7 @@ if (Meteor.isServer) {
 
     test.equal(o.output, expected);
     clearOutput(o);
+    usesOplog && testOplogBufferIds([docId1, docId2, docId3]);
 
     // Now the state is [-3 -2 -1 | 3 5 6] 7
     // If we update first 3 docs (increment them by 20), it would be
