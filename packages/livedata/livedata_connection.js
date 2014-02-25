@@ -31,6 +31,8 @@ var Connection = function (url, options) {
     onDDPVersionNegotiationFailure: function (description) {
       Meteor._debug(description);
     },
+    heartbeatInterval: 35000,
+    heartbeatTimeout: 15000,
     // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
@@ -177,6 +179,13 @@ var Connection = function (url, options) {
   self._userId = null;
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
+  self._heartbeat = new Heartbeat({
+    heartbeatInterval: options.heartbeatInterval,
+    heartbeatTimeout: options.heartbeatTimeout,
+    sendMessage: _.bind(self._send, self),
+    closeConnection: _.bind(self._lostConnection, self)
+  });
+
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
     Package.reload.Reload._onMigrate(function (retry) {
@@ -232,6 +241,8 @@ var Connection = function (url, options) {
       self._livedata_result(msg);
     else if (msg.msg === 'error')
       self._livedata_error(msg);
+    else if (_.include(['ping', 'pong'], msg.msg))
+      self._heartbeat.pingpongReceived(msg);
     else
       Meteor._debug("discarding unknown livedata message type", msg);
   };
@@ -834,6 +845,14 @@ _.extend(Connection.prototype, {
     self._stream.send(stringifyDDP(obj));
   },
 
+  // We detected via DDP-level heartbeats that we've lost the
+  // connection.  Unlike `disconnect` or `close`, a lost connection
+  // will be automatically retried.
+  _lostConnection: function () {
+    var self = this;
+    self._stream._lostConnection();
+  },
+
   status: function (/*passthrough args*/) {
     var self = this;
     return self._stream.status.apply(self._stream, arguments);
@@ -892,6 +911,8 @@ _.extend(Connection.prototype, {
 
   _livedata_connected: function (msg) {
     var self = this;
+
+    self._heartbeat.start(self._version);
 
     // If this is a reconnect, we'll have to reset all stores.
     if (self._lastSessionId)
