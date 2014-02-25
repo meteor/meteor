@@ -1489,8 +1489,7 @@ Tinytest.add("spacebars - controls - radio", function(test) {
   var div = renderToDiv(tmpl);
   document.body.appendChild(div);
 
-  // get the three buttons; they should be considered 'labeled'
-  // by the patcher and not change identities!
+  // get the three buttons; they should not change identities!
   var btns = nodesToArray(div.getElementsByTagName("INPUT"));
   var text = function () {
     var text = div.innerText || div.textContent;
@@ -1500,7 +1499,16 @@ Tinytest.add("spacebars - controls - radio", function(test) {
   test.equal(_.pluck(btns, 'checked'), [false, false, false]);
   test.equal(text(), "Band: ");
 
-  clickElement(btns[0]);
+  var clickIt = function (elem) {
+    // jQuery's bubbling change event polyfill for IE 8 seems
+    // to require that the element in question have focus when
+    // it receives a simulated click.
+    if (elem.focus)
+      elem.focus();
+    clickElement(elem);
+  };
+
+  clickIt(btns[0]);
   test.equal(change_buf, ['AM']);
   change_buf.length = 0;
   Deps.flush();
@@ -1513,21 +1521,21 @@ Tinytest.add("spacebars - controls - radio", function(test) {
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(text(), "Band: AM");
 
-  clickElement(btns[1]);
+  clickIt(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
   Deps.flush();
   test.equal(_.pluck(btns, 'checked'), [false, true, false]);
   test.equal(text(), "Band: FM");
 
-  clickElement(btns[2]);
+  clickIt(btns[2]);
   test.equal(change_buf, ['XM']);
   change_buf.length = 0;
   Deps.flush();
   test.equal(_.pluck(btns, 'checked'), [false, false, true]);
   test.equal(text(), "Band: XM");
 
-  clickElement(btns[1]);
+  clickIt(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
   Deps.flush();
@@ -1595,4 +1603,3 @@ Tinytest.add("spacebars - controls - checkbox", function(test) {
   Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 });
-
