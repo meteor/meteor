@@ -343,5 +343,42 @@ _.extend(Deps, {
   afterFlush: function (f) {
     afterFlushCallbacks.push(f);
     requireFlush();
+  },
+
+  injective: function (v, options) {
+    return {
+      _value: v != null ? v : 0,
+      _dep: new Deps.Dependency,
+      _force: (options && options.force) ? (options.force != false) : false,
+
+      set: function (v) {
+        if ((this._value !== v) || this._force) {
+          this._value = v;
+          this.changed();
+        }
+        return this;
+      },
+
+      get: function () {
+        this.depend();
+        return this._value;
+      },
+
+      depend: function () {
+        this._dep.depend();
+        return this;
+      },
+
+      changed: function () {
+        this._dep.changed();
+        return this;
+      },
+
+      force: function(b) {
+        this._force = !!b;
+        return this;
+      }
+    };
   }
+
 });

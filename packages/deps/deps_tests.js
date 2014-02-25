@@ -372,3 +372,36 @@ Tinytest.add("deps - onInvalidate", function (test) {
   test.equal(buf, 'm');
   Deps.flush();
 });
+
+Tinytest.add("deps - injective", function (test) {
+  var farenheit = Deps.injective(32);
+  var centigrade;
+  Deps.autorun(function() { centigrade = (5.0/9.0)*(farenheit.get()-32) });
+  test.equal(farenheit.get(),32);
+  test.equal(centigrade,0);
+  farenheit.set(212);
+  Deps.flush();
+  test.equal(farenheit.get(),212);
+  test.equal(centigrade,100);
+  Deps.flush();
+});
+
+Tinytest.add("deps - indirect injective", function (test) {
+  var obj = { value: 5 };
+  var length = Deps.injective(obj, {force: true});
+  var square;
+  Deps.autorun(function() { square = length.get().value * length.get().value });
+  test.equal(length.get().value,5);
+  test.equal(square,25);
+  obj.value = 6;
+  length.set(obj);
+  test.equal(length.get().value,6);
+  Deps.flush();
+  test.equal(square,36);
+  obj.value = 7;
+  test.equal(length.get().value,7);
+  test.equal(square,36);
+  length.changed();
+  Deps.flush();
+  test.equal(square,49);
+});
