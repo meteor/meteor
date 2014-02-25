@@ -800,7 +800,7 @@ if (Meteor.isServer) {
         bufferIds.push(id);
       });
 
-      test.isTrue(setsEqual(ids, bufferIds));
+      test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
     };
 
     // Insert a doc and start observing.
@@ -885,8 +885,9 @@ if (Meteor.isServer) {
                           expectedRemoves));
     test.equal(_.filter(o.output, function (e){return e.added;}), expectedAdds);
     clearOutput(o);
+    usesOplog && testOplogBufferIds([docId4, docId7, docId8]);
 
-    // The new arrangement is [3 5 6] 7 17 18] 19
+    // The new arrangement is [3 5 6 | 7 17 18] 19
     // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
     // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
     // schedule a repoll.
@@ -921,27 +922,33 @@ if (Meteor.isServer) {
     var docId11 = ins({ foo: 22, bar: 41 });
     var docId12 = ins({ foo: 22, bar: 51 });
 
+    // Becomes [17 18 19 | 21 31 41] 51
+    usesOplog && testOplogBufferIds([docId9, docId10, docId11]);
     test.length(o.output, 0);
     upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
-    // Becomes [21 22 23] 24 31 41] 51
+    // Becomes [21 22 23 | 24 31 41] 51
     test.length(o.output, 4);
     test.isTrue(setsEqual(o.output, [{removed: docId6},
                                      {added: docId9},
                                      {changed: docId7},
                                      {changed: docId8}]));
     clearOutput(o);
+    usesOplog && testOplogBufferIds([docId6, docId10, docId11]);
 
     rem(docId9);
-    // Becomes [22 23 24] 31 41] 51
+    // Becomes [22 23 24 | 31 41] 51
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId9}, {added: docId6}]));
     clearOutput(o);
+    usesOplog && testOplogBufferIds([docId10, docId11]);
 
     upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
-    // Becomes [22 23 23.5] 24 33.5] 43.5
+    // Becomes [22 23 23.5 | 24 33.5] 43.5
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId6}, {added: docId10}]));
     clearOutput(o);
+    // xcxc this test fails :(
+    usesOplog && testOplogBufferIds([docId6, docId11]);
 
     // Force buffer objects to be moved into published set so we can check them
     rem(docId7);
@@ -957,6 +964,7 @@ if (Meteor.isServer) {
     test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
     test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
     clearOutput(o);
+    usesOplog && testOplogBufferIds([]);
 
     o.handle.stop();
     onComplete();
