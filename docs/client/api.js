@@ -532,7 +532,7 @@ Template.api.meteor_collection = {
     },
     {name: "transform",
      type: "Function",
-     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `allow`, and `deny`."
+     descr: "An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions."
     }
   ]
 };
@@ -544,7 +544,7 @@ Template.api.find = {
   descr: ["Find the documents in a collection that match the selector."],
   args: [
     {name: "selector",
-     type: "Mongo selector, or String",
+     type: "Mongo selector (Object or String)",
      type_link: "selectors",
      descr: "The query"}
   ],
@@ -579,7 +579,7 @@ Template.api.findone = {
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
     {name: "selector",
-     type: "Mongo selector, or String",
+     type: "Mongo selector (Object or String)",
      type_link: "selectors",
      descr: "The query"}
   ],

@@ -154,21 +154,18 @@ other packages. However sometimes load order dependencies in your
 application are unavoidable. The JavaScript and CSS files in an
 application are loaded according to these rules:
 
-* Files in directories named `lib` are loaded first.
-
-* Files that match `main.*` are loaded after everything else.
-
-* Files in subdirectories are loaded before files in parent
-  directories, so that files in the deepest subdirectory are loaded
-  first (after `lib`), and files in the root directory are loaded last
-  (other than `main.*`).
+* Files in subdirectories are loaded before files in parent directories, so that
+  files in the deepest subdirectory are loaded first, and files in the root
+  directory are loaded last.
 
 * Within a directory, files are loaded in alphabetical order by
   filename.
 
-These rules stack, so that within `lib`, for example, files are still
-loaded in alphabetical order; and if there are multiple files named
-`main.js`, the ones in subdirectories are loaded earlier.
+* After sorting as described above, all files under directories named `lib` are
+  moved before everything else (preserving their order).
+
+* Finally, all files that match `main.*` are moved after everything else
+  (preserving their order).
 
 {{/markdown}}
 </template>

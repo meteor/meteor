@@ -29,36 +29,6 @@ if (window.localStorage) {
   }
 }
 
-// XXX eliminate dependency on jQuery, detect browsers ourselves
-// Else, if we are on IE, which support userData
-if (!Meteor._localStorage && $.browser.msie) {
-  var userdata = document.createElement('span'); // could be anything
-  userdata.style.behavior = 'url("#default#userData")';
-  userdata.id = 'localstorage-helper';
-  userdata.style.display = 'none';
-  document.getElementsByTagName("head")[0].appendChild(userdata);
-
-  var userdataKey = 'localStorage';
-  userdata.load(userdataKey);
-
-  Meteor._localStorage = {
-    setItem: function (key, val) {
-      userdata.setAttribute(key, val);
-      userdata.save(userdataKey);
-    },
-
-    removeItem: function (key) {
-      userdata.removeAttribute(key);
-      userdata.save(userdataKey);
-    },
-
-    getItem: function (key) {
-      userdata.load(userdataKey);
-      return userdata.getAttribute(key);
-    }
-  };
-}
-
 if (!Meteor._localStorage) {
   Meteor._debug(
     "You are running a browser with no localStorage or userData "

@@ -23,7 +23,6 @@ Package.on_use(function (api) {
   api.add_files('errors.js', ['client', 'server']);
   api.add_files('fiber_helpers.js', 'server');
   api.add_files('fiber_stubs_client.js', 'client');
-  api.add_files('unyielding_queue.js');
   api.add_files('startup_client.js', ['client']);
   api.add_files('startup_server.js', ['server']);
   api.add_files('debug.js', ['client', 'server']);

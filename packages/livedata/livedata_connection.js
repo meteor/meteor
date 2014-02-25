@@ -8,7 +8,22 @@ if (Meteor.isServer) {
 //   or an object as a test hook (see code)
 // Options:
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
+//   headers: extra headers to send on the websockets connection, for
+//     server-to-server DDP only
+//   _sockjsOptions: Specifies options to pass through to the sockjs client
 //   onDDPNegotiationVersionFailure: callback when version negotiation fails.
+//
+// XXX There should be a way to destroy a DDP connection, causing all
+// outstanding method calls to fail.
+//
+// XXX Our current way of handling failure and reconnection is great
+// for an app (where we want to tolerate being disconnected as an
+// expect state, and keep trying forever to reconnect) but cumbersome
+// for something like a command line tool that wants to make a
+// connection, call a method, and print an error if connection
+// fails. We should have better usability in the latter case (while
+// still transparently reconnecting if it's just a transient failure
+// or the server migrating us).
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
@@ -32,7 +47,9 @@ var Connection = function (url, options) {
     self._stream = url;
   } else {
     self._stream = new LivedataTest.ClientStream(url, {
-      retry: options.retry
+      retry: options.retry,
+      headers: options.headers,
+      _sockjsOptions: options._sockjsOptions
     });
   }
 
@@ -530,6 +547,7 @@ _.extend(Connection.prototype, {
     var self = this;
     var f = new Future();
     var ready = false;
+    var handle;
     args = args || [];
     args.push({
       onReady: function () {
@@ -544,8 +562,9 @@ _.extend(Connection.prototype, {
       }
     });
 
-    self.subscribe.apply(self, [name].concat(args));
+    handle = self.subscribe.apply(self, [name].concat(args));
     f.wait();
+    return handle;
   },
 
   methods: function (methods) {

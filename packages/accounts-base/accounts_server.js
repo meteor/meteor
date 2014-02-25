@@ -51,20 +51,49 @@ Accounts.registerLoginHandler = function(handler) {
 loginHandlers = [];
 
 
-// Try all of the registered login handlers until one of them doesn'
-// return `undefined`, meaning it handled this call to `login`. Return
-// that return value, which ought to be a {id/token} pair.
-var tryAllLoginHandlers = function (options) {
+// Checks a user's credentials against all the registered login
+// handlers, and returns a login token if the credentials are valid. It
+// is like the login method, except that it doesn't set the logged-in
+// user on the connection. Throws a Meteor.Error if logging in fails,
+// including the case where none of the login handlers handled the login
+// request. Otherwise, returns {id: userId, token: *, tokenExpires: *}.
+//
+// For example, if you want to login with a plaintext password, `options` could be
+//   { user: { username: <username> }, password: <password> }, or
+//   { user: { email: <email> }, password: <password> }.
+Accounts._runLoginHandlers = function (options) {
+  // Try all of the registered login handlers until one of them doesn't return
+  // `undefined`, meaning it handled this call to `login`. Return that return
+  // value, which ought to be a {id/token} pair.
   for (var i = 0; i < loginHandlers.length; ++i) {
     var handler = loginHandlers[i];
-    var result = handler(options);
+    var result = handler.apply(this, [options]);
     if (result !== undefined)
       return result;
   }
-
   throw new Meteor.Error(400, "Unrecognized options for login request");
 };
 
+// Deletes the given loginToken from the database.
+//
+// For new-style hashed token, this will cause all connections
+// associated with the token to be closed.
+//
+// Any connections associated with old-style unhashed tokens will be
+// in the process of becoming associated with hashed tokens and then
+// they'll get closed.
+Accounts.destroyToken = function (userId, loginToken) {
+  Meteor.users.update(userId, {
+    $pull: {
+      "services.resume.loginTokens": {
+        $or: [
+          { hashedToken: loginToken },
+          { token: loginToken }
+        ]
+      }
+    }
+  });
+};
 
 // Actual methods for login and logout. This is the entry point for
 // clients to actually log in.
@@ -74,17 +103,27 @@ Meteor.methods({
   //   If unsuccessful (for example, if the user closed the oauth login popup),
   //     returns null
   login: function(options) {
+    var self = this;
+
     // Login handlers should really also check whatever field they look at in
     // options, but we don't enforce it.
     check(options, Object);
-    var result = tryAllLoginHandlers(options);
+    var result = Accounts._runLoginHandlers.apply(this, [options]);
     if (result !== null) {
-      this.setUserId(result.id);
-      Accounts._setLoginToken(
-        result.id,
-        this.connection,
-        Accounts._hashLoginToken(result.token)
-      );
+      // This order (and the avoidance of yields) is important to make
+      // sure that when publish functions are rerun, they see a
+      // consistent view of the world: this.userId is set and matches
+      // the login token on the connection (not that there is
+      // currently a public API for reading the login token on a
+      // connection).
+      Meteor._noYieldsAllowed(function () {
+        Accounts._setLoginToken(
+          result.id,
+          self.connection,
+          Accounts._hashLoginToken(result.token)
+        );
+      });
+      self.setUserId(result.id);
     }
     return result;
   },
@@ -93,7 +132,7 @@ Meteor.methods({
     var token = Accounts._getLoginToken(this.connection.id);
     Accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
-      removeLoginToken(this.userId, token);
+      Accounts.destroyToken(this.userId, token);
     this.setUserId(null);
   },
 
@@ -152,6 +191,8 @@ Meteor.methods({
 // connectionId -> {connection, loginToken, srpChallenge}
 var accountData = {};
 
+// HACK: This is used by 'meteor-accounts' to get the loginToken for a
+// connection. Maybe there should be a public way to do that.
 Accounts._getAccountData = function (connectionId, field) {
   var data = accountData[connectionId];
   return data && data[field];
@@ -377,30 +418,10 @@ Accounts.registerLoginHandler(function(options) {
 });
 
 // Semi-public. Used by other login methods to generate tokens.
+// (Also used by Meteor Accounts server)
 //
 Accounts._generateStampedLoginToken = function () {
   return {token: Random.id(), when: (new Date)};
-};
-
-// Deletes the given loginToken from the database.
-//
-// For new-style hashed token, this will cause all connections
-// associated with the token to be closed.
-//
-// Any connections associated with old-style unhashed tokens will be
-// in the process of becoming associated with hashed tokens and then
-// they'll get closed.
-var removeLoginToken = function (userId, loginToken) {
-  Meteor.users.update(userId, {
-    $pull: {
-      "services.resume.loginTokens": {
-        $or: [
-          {hashedToken: loginToken },
-          {token: loginToken}
-        ]
-      }
-    }
-  });
 };
 
 ///
@@ -760,6 +781,8 @@ if (Package.autopublish) {
 
 // Publish all login service configuration fields other than secret.
 Meteor.publish("meteor.loginServiceConfiguration", function () {
+  var ServiceConfiguration =
+    Package['service-configuration'].ServiceConfiguration;
   return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
 }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
@@ -778,6 +801,9 @@ Meteor.methods({
           && _.contains(Accounts.oauth.serviceNames(), options.service))) {
       throw new Meteor.Error(403, "Service unknown");
     }
+
+    var ServiceConfiguration =
+      Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
     ServiceConfiguration.configurations.insert(options);

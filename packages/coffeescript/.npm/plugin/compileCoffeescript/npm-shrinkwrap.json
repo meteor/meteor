@@ -1,13 +1,18 @@
 {
   "dependencies": {
     "coffee-script": {
-      "version": "1.6.3"
+      "version": "1.7.1",
+      "dependencies": {
+        "mkdirp": {
+          "version": "0.3.5"
+        }
+      }
     },
     "source-map": {
-      "version": "0.1.24",
+      "version": "0.1.32",
       "dependencies": {
         "amdefine": {
-          "version": "0.0.5"
+          "version": "0.1.0"
         }
       }
     }
