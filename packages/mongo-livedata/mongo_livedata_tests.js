@@ -802,6 +802,12 @@ if (Meteor.isServer) {
 
       test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
     };
+    var testSafeAppendToBufferFlag = function (expected) {
+      if (expected)
+        test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+      else
+        test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+    };
 
     // Insert a doc and start observing.
     var docId1 = ins({foo: 22, bar: 5});
@@ -845,6 +851,7 @@ if (Meteor.isServer) {
     test.isTrue(setsEqual(o.output, [{removed: docId5}, {added: docId2}]));
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId4]);
+    usesOplog && testSafeAppendToBufferFlag(true);
 
     // Current state is [3 5 6 | 7]
     // Add some negative numbers overflowing the buffer.
@@ -861,6 +868,7 @@ if (Meteor.isServer) {
     test.equal(o.output, expected);
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId1, docId2, docId3]);
+    usesOplog && testSafeAppendToBufferFlag(false);
 
     // Now the state is [-3 -2 -1 | 3 5 6] 7
     // If we update first 3 docs (increment them by 20), it would be
@@ -887,6 +895,7 @@ if (Meteor.isServer) {
     test.equal(_.filter(o.output, function (e){return e.added;}), expectedAdds);
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId4, docId7, docId8]);
+    usesOplog && testSafeAppendToBufferFlag(false);
 
     // The new arrangement is [3 5 6 | 7 17 18] 19
     // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
@@ -917,6 +926,7 @@ if (Meteor.isServer) {
     test.equal(_.filter(o.output, function (e) {return e.added;}), expectedAdds);
     clearOutput(o);
     usesOplog && testOplogBufferIds([]);
+    usesOplog && testSafeAppendToBufferFlag(true);
 
     // The new arrangement is [17 18 19] or [docId6 docId7 docId8]
     var docId9 = ins({ foo: 22, bar: 21 });
@@ -926,6 +936,7 @@ if (Meteor.isServer) {
 
     // Becomes [17 18 19 | 21 31 41] 51
     usesOplog && testOplogBufferIds([docId9, docId10, docId11]);
+    usesOplog && testSafeAppendToBufferFlag(false);
     test.length(o.output, 0);
     upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
     // Becomes [21 22 23 | 24 31 41] 51
@@ -936,6 +947,7 @@ if (Meteor.isServer) {
                                      {changed: docId8}]));
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId6, docId10, docId11]);
+    usesOplog && testSafeAppendToBufferFlag(false);
 
     rem(docId9);
     // Becomes [22 23 24 | 31 41] 51
@@ -943,6 +955,7 @@ if (Meteor.isServer) {
     test.isTrue(setsEqual(o.output, [{removed: docId9}, {added: docId6}]));
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId10, docId11]);
+    usesOplog && testSafeAppendToBufferFlag(false);
 
     upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
     // Becomes [22 23 23.5 | 24] 33.5 43.5 - 33.5 doesn't update in-place in
@@ -952,6 +965,7 @@ if (Meteor.isServer) {
     test.isTrue(setsEqual(o.output, [{removed: docId6}, {added: docId10}]));
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId6]);
+    usesOplog && testSafeAppendToBufferFlag(false);
 
     // Force buffer objects to be moved into published set so we can check them
     rem(docId7);
@@ -968,6 +982,7 @@ if (Meteor.isServer) {
     test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
     clearOutput(o);
     usesOplog && testOplogBufferIds([]);
+    usesOplog && testSafeAppendToBufferFlag(true);
 
     o.handle.stop();
     onComplete();
