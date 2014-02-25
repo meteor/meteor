@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Use "faye-websocket" (0.7.2) npm module instead of "websocket" (1.0.8) for
+  server-to-server DDP.
+
+
 ## v0.7.1.2
 
 * Fix bug in tool error handling that caused `meteor` to crash on Mac
