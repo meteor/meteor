@@ -189,9 +189,9 @@ Tinytest.add("templating - safestring", function(test) {
   var html = canonicalizeHtml(
     renderToDiv(Template.test_safestring_a.extend({data: obj})).innerHTML);
 
-  test.equal(html.replace(/\s+/g, ' '),
-             "&lt;br&gt; <br> <hr> <hr> "+
-             "&lt;br&gt; <br> <hr> <hr>");
+  test.equal(html,
+             "&lt;br&gt;<br><hr><hr>"+
+             "&lt;br&gt;<br><hr><hr>");
 
 });
 

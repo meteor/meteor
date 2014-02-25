@@ -7,8 +7,13 @@ canonicalizeHtml = function(html) {
   // make all tags lowercase
   h = h.replace(/<\/?(\w+)/g, function(m) {
     return m.toLowerCase(); });
-  // kill \n and \r characters
-  h = h.replace(/[\n\r]/g, '');
+  // replace whitespace sequences with spaces
+  h = h.replace(/\s+/g, ' ');
+  // Trim leading and trailing whitespace
+  h = h.replace(/^\s+|\s+$/g, '');
+  // remove whitespace before and after tags
+  h = h.replace(/\s*(<\/?\w.*?>)\s*/g, function (m, tag) {
+    return tag; });
   // make tag attributes uniform
   h = h.replace(/<(\w+)\s+(.*?)\s*>/g, function(m, tagName, attrs) {
     // Drop expando property used by Sizzle (part of jQuery) which leaks into
