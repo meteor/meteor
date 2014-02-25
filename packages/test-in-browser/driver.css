@@ -141,7 +141,7 @@ body {
   text-decoration: none;
 }
 .string_equal_expected ins {
-  background: #fe0;
+  background: #ed0;
 }
 .string_equal_actual ins {
   color: #d00;
