@@ -200,12 +200,7 @@ var toc = [
       "Meteor.logout",
       "Meteor.logoutOtherClients",
       "Meteor.loginWithPassword",
-      {name: "Meteor.loginWithFacebook", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithGithub", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithGoogle", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithMeetup", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithTwitter", id: "meteor_loginwithexternalservice"},
-      {name: "Meteor.loginWithWeibo", id: "meteor_loginwithexternalservice"},
+      {name: "Meteor.loginWith<Service>", id: "meteor_loginwithexternalservice"},
       {type: "spacer"},
 
       {name: "{{currentUser}}", id: "template_currentuser"},
@@ -310,10 +305,10 @@ var toc = [
       {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
-        {instance: "instance", id: "ejson_type_clone", name: "clone"},
-        {instance: "instance", id: "ejson_type_equals", name: "equals"},
         {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
-        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"}
+        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"},
+        {instance: "instance", id: "ejson_type_clone", name: "clone"},
+        {instance: "instance", id: "ejson_type_equals", name: "equals"}
       ]
     ],
 
