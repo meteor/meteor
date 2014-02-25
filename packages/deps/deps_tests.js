@@ -408,3 +408,23 @@ Tinytest.add('deps - invalidate at flush time', function (test) {
   test.equal(buf.join(''), 'ABC');
 
 });
+
+Tinytest.add('deps - throwFirstError', function (test) {
+  var d = new Deps.Dependency;
+  Deps.autorun(function (c) {
+    d.depend();
+
+    if (!c.firstRun)
+      throw new Error("foo");
+  });
+
+  d.changed();
+  // doesn't throw; logs instead.
+  Meteor._suppress_log(1);
+  Deps.flush();
+
+  d.changed();
+  test.throws(function () {
+    Deps.flush({_throwFirstError: true});
+  }, /foo/);
+});
