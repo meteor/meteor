@@ -49,7 +49,8 @@ var Connection = function (url, options) {
     self._stream = new LivedataTest.ClientStream(url, {
       retry: options.retry,
       headers: options.headers,
-      _sockjsOptions: options._sockjsOptions
+      _sockjsOptions: options._sockjsOptions,
+      _dontPrintErrors: options._dontPrintErrors
     });
   }
 
