@@ -372,3 +372,39 @@ Tinytest.add("deps - onInvalidate", function (test) {
   test.equal(buf, 'm');
   Deps.flush();
 });
+
+Tinytest.add('deps - invalidate at flush time', function (test) {
+  // Test this sentence of the docs: Functions are guaranteed to be
+  // called at a time when there are no invalidated computations that
+  // need rerunning.
+
+  var buf = [];
+
+  Deps.afterFlush(function () {
+    buf.push('C');
+  });
+
+  // When c1 is invalidated, it invalidates c2, then stops.
+  var c1 = Deps.autorun(function (c) {
+    if (! c.firstRun) {
+      buf.push('A');
+      c2.invalidate();
+      c.stop();
+    }
+  });
+
+  var c2 = Deps.autorun(function (c) {
+    if (! c.firstRun) {
+      buf.push('B');
+      c.stop();
+    }
+  });
+
+  // Invalidate c1.  If all goes well, the re-running of
+  // c2 should happen before the afterFlush.
+  c1.invalidate();
+  Deps.flush();
+
+  test.equal(buf.join(''), 'ABC');
+
+});
