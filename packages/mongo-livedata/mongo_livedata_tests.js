@@ -915,6 +915,7 @@ if (Meteor.isServer) {
                           expectedRemoves));
     test.equal(_.filter(o.output, function (e) {return e.added;}), expectedAdds);
     clearOutput(o);
+    usesOplog && testOplogBufferIds([]);
 
     // The new arrangement is [17 18 19] or [docId6 docId7 docId8]
     var docId9 = ins({ foo: 22, bar: 21 });
