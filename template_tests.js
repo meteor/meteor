@@ -1208,16 +1208,15 @@ Tinytest.add('spacebars - templates - inclusion helpers are isolated', function 
   };
 
   dep.changed();
-  Deps.flush({_throwErrors: true}); // `subtmpl.rendered` not called
+  Deps.flush({_throwFirstError: true}); // `subtmpl.rendered` not called
 
   R.set(null);
-  Deps.flush({_throwErrors: true}); // no error thrown
+  Deps.flush({_throwFirstError: true}); // no error thrown
 
   R.set("neither a component nor null");
 
-  test.fail("XXX need _throwErrors to work");
   test.throws(function () {
-    Deps.flush({_throwErrors: true});
+    Deps.flush({_throwFirstError: true});
   }, /Expected null or template/);
 });
 
