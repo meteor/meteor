@@ -109,8 +109,8 @@ UI.EachImpl = Component.extend({
       }
     });
 
-      // on initial render, display the else clause if no items
-      addToCount(0);
+    // on initial render, display the else clause if no items
+    addToCount(0);
   },
   destroyed: function () {
     if (this.observeHandle)
