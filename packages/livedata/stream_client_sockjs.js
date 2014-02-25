@@ -12,7 +12,7 @@ LivedataTest.ClientStream = function (url, options) {
 
 
   // how long between hearing heartbeat from the server until we declare
-  // the connection dead. heartbeats come every 25s (stream_server.js)
+  // the connection dead. heartbeats come every 45s (stream_server.js)
   //
   // NOTE: this is a workaround until sockjs detects heartbeats on the
   // client automatically.

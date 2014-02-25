@@ -43,6 +43,7 @@ Package.on_use(function (api) {
   // _idParse, _idStringify.
   api.use('minimongo', ['client', 'server']);
 
+  api.add_files('heartbeat.js', ['client', 'server']);
 
   api.add_files('livedata_server.js', 'server');
 

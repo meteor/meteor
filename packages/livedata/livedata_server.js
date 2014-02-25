@@ -216,7 +216,7 @@ _.extend(SessionCollectionView.prototype, {
 /* Session                                                                    */
 /******************************************************************************/
 
-var Session = function (server, version, socket) {
+var Session = function (server, version, socket, options) {
   var self = this;
   self.id = Random.id();
 
@@ -268,7 +268,7 @@ var Session = function (server, version, socket) {
   self.connectionHandle = {
     id: self.id,
     close: function () {
-      self.server._closeSession(self);
+      self.close();
     },
     onClose: function (fn) {
       var cb = Meteor.bindEnvironment(fn, "connection onClose callback");
@@ -280,7 +280,8 @@ var Session = function (server, version, socket) {
       }
     },
     clientAddress: self._clientAddress(),
-    httpHeaders: self.socket.headers
+    httpHeaders: self.socket.headers,
+    _internal: self
   };
 
   socket.send(stringifyDDP({msg: 'connected',
@@ -289,6 +290,14 @@ var Session = function (server, version, socket) {
   Fiber(function () {
     self.startUniversalSubs();
   }).run();
+
+  self.heartbeat = new Heartbeat({
+    heartbeatInterval: options.heartbeatInterval,
+    heartbeatTimeout: options.heartbeatTimeout,
+    sendMessage: _.bind(self.send, self),
+    closeConnection: _.bind(self.destroy, self)
+  });
+  self.heartbeat.start(version);
 
   Package.facts && Package.facts.Facts.incrementServerFact(
     "livedata", "sessions", 1);
@@ -391,6 +400,12 @@ _.extend(Session.prototype, {
   destroy: function () {
     var self = this;
 
+    // Already destroyed.
+    if (!self.inQueue)
+      return;
+
+    self.heartbeat.stop();
+
     if (self.socket) {
       self.socket.close();
       self.socket._meteorSession = null;
@@ -415,6 +430,19 @@ _.extend(Session.prototype, {
         callback();
       });
     });
+  },
+
+  // Destroy this session and unregister it at the server.
+  close: function () {
+    var self = this;
+
+    // Unconditionally destroy this session, even if it's not
+    // registered at the server.
+    self.destroy();
+
+    // Unregister the session.  This will also call `destroy`, but
+    // that's OK because `destroy` is idempotent.
+    self.server._closeSession(self);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
@@ -456,6 +484,15 @@ _.extend(Session.prototype, {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
+
+    // Respond to ping and pong messages immediately without queuing.
+    // If the negotiated DDP version is "pre1" which didn't support
+    // pings, preserve the "pre1" behavior of responding with a "bad
+    // request" for the unknown messages.
+    if (self.heartbeat.supported && _.include(['ping', 'pong'], msg_in.msg)) {
+      self.heartbeat.pingpongReceived(msg_in);
+      return;
+    }
 
     self.inQueue.push(msg_in);
     if (self.workerRunning)
@@ -1040,8 +1077,13 @@ _.extend(Subscription.prototype, {
 /* Server                                                                     */
 /******************************************************************************/
 
-Server = function () {
+Server = function (options) {
   var self = this;
+
+  self.options = _.defaults({} || options, {
+    heartbeatInterval: 30000,
+    heartbeatTimeout: 15000
+  });
 
   // Map of callbacks to call when a new connection comes in to the
   // server and completes DDP version negotiation. Use an object instead
@@ -1110,7 +1152,7 @@ Server = function () {
     socket.on('close', function () {
       if (socket._meteorSession) {
         Fiber(function () {
-          self._closeSession(socket._meteorSession);
+          socket._meteorSession.close();
         }).run();
       }
     });
@@ -1142,7 +1184,7 @@ _.extend(Server.prototype, {
 
     if (msg.version === version) {
       // Creating a new session
-      socket._meteorSession = new Session(self, version, socket);
+      socket._meteorSession = new Session(self, version, socket, self.options);
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
       _.each(_.keys(self.connectionCallbacks), function (id) {
         if (_.has(self.connectionCallbacks, id) && socket._meteorSession) {
