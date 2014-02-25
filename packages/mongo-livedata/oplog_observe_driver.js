@@ -38,11 +38,12 @@ OplogObserveDriver = function (options) {
     // comparator only once in the constructor.
     var sorter = new Minimongo.Sorter(options.cursorDescription.options.sort);
     var comparator = sorter.getComparator();
+    var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
-    self._unpublishedBuffer = new DummyStructure(comparator);
+    self._unpublishedBuffer = new MinMaxHeap(comparator, heapOptions);
     // We need something that can find Max value in addition to IdMap interface
-    self._published = new DummyStructure(comparator);
+    self._published = new MaxHeap(comparator, heapOptions);
   } else {
     self._limit = 0;
     self._comparator = null;

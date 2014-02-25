@@ -24,6 +24,10 @@ Package.on_use(function (api) {
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
+  // Binary Heap data structure is used to optimize oplog observe driver
+  // performance.
+  api.use('binary-heap', 'server');
+
   // Allow us to detect 'insecure'.
   api.use('insecure', {weak: true});
 
@@ -47,8 +51,6 @@ Package.on_use(function (api) {
   // For tests only.
   api.export('MongoTest', 'server', {testOnly: true});
 
-  // xcxc temporary
-  api.add_files('dummy-structure.js', 'server');
   api.add_files(['mongo_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
                  'polling_observe_driver.js','oplog_observe_driver.js'],
