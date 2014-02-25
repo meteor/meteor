@@ -90,6 +90,7 @@ Tinytest.add("binary-heap - big test for min-max-heap", function (test) {
   var heap = new MinMaxHeap(function (a, b) { return a-b; });
   var output = [];
 
+  var initialSets = _.clone(allNumbers);
   _.each(allNumbers, function (n) {
     heap.set(n, n);
     heap._selfCheck();
@@ -97,6 +98,8 @@ Tinytest.add("binary-heap - big test for min-max-heap", function (test) {
   });
 
   allNumbers = _.shuffle(allNumbers);
+  var secondarySets = _.clone(allNumbers);
+
   _.each(allNumbers, function (n) {
     heap.set(-n, n);
     heap._selfCheck();
@@ -110,8 +113,26 @@ Tinytest.add("binary-heap - big test for min-max-heap", function (test) {
     heap._selfCheck(); heap._minHeap._selfCheck();
   });
 
+  test.equal(heap.size(), 0);
+
   allNumbers.sort(function (a, b) { return a-b; });
 
-  test.equal(output, allNumbers);
+  var initialTestText = "initial sets: " + initialSets.toString() +
+    "; secondary sets: " + secondarySets.toString();
+  test.equal(output, allNumbers, initialTestText);
+
+  _.each(initialSets, function (n) { heap.set(n, n); })
+  _.each(secondarySets, function (n) { heap.set(-n, n); });
+
+  allNumbers.sort(function (a, b) { return b-a; });
+  output = [];
+  _.times(positiveNumbers.length + negativeNumbers.length, function () {
+    var maxId = heap.maxElementId();
+    output.push(heap.get(maxId));
+    heap.remove(maxId);
+    heap._selfCheck(); heap._minHeap._selfCheck();
+  });
+
+  test.equal(output, allNumbers, initialTestText);
 });
 
