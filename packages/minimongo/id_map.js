@@ -3,5 +3,5 @@ LocalCollection._IdMap = function () {
   IdMap.call(self, LocalCollection._idStringify, LocalCollection._idParse);
 };
 
-LocalCollection._IdMap.prototype = IdMap.prototype;
+Meteor._inherits(LocalCollection._IdMap, IdMap);
 

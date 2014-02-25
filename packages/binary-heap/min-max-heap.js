@@ -19,9 +19,7 @@ MinMaxHeap = function (comparator, options) {
   }, options);
 };
 
-var F = function () {};
-F.prototype = MaxHeap.prototype;
-MinMaxHeap.prototype = new F;
+Meteor._inherits(MinMaxHeap, MaxHeap);
 
 _.extend(MinMaxHeap.prototype, {
   set: function (id, value) {
