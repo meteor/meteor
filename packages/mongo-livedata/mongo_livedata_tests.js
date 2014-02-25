@@ -945,12 +945,13 @@ if (Meteor.isServer) {
     usesOplog && testOplogBufferIds([docId10, docId11]);
 
     upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
-    // Becomes [22 23 23.5 | 24 33.5] 43.5
+    // Becomes [22 23 23.5 | 24] 33.5 43.5 - 33.5 doesn't update in-place in
+    // buffer, because it the driver is not sure it can do it and there is no a
+    // different doc which is less than 33.5.
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId6}, {added: docId10}]));
     clearOutput(o);
-    // xcxc this test fails :(
-    usesOplog && testOplogBufferIds([docId6, docId11]);
+    usesOplog && testOplogBufferIds([docId6]);
 
     // Force buffer objects to be moved into published set so we can check them
     rem(docId7);
