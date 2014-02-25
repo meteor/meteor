@@ -7,7 +7,6 @@ Package.on_use(function (api) {
   api.export('MaxHeap');
   api.export('MinMaxHeap');
   api.use(['underscore', 'id-map']);
-  api.use(['minimongo'], { weak: true });
   api.add_files(['max-heap.js', 'min-max-heap.js']);
 });
 

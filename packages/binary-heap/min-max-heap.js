@@ -10,13 +10,13 @@
 // (http://www.cs.otago.ac.nz/staffpriv/mike/Papers/MinMaxHeaps/MinMaxHeaps.pdf)
 // and Interval Heaps
 // (http://www.cise.ufl.edu/~sahni/dsaac/enrich/c13/double.htm)
-MinMaxHeap = function (comparator, initialData) {
+MinMaxHeap = function (comparator, options) {
   var self = this;
 
-  MaxHeap.call(self, comparator, initialData);
+  MaxHeap.call(self, comparator, options);
   self._minHeap = new MaxHeap(function (a, b) {
     return -comparator(a, b);
-  }, initialData);
+  }, options);
 };
 
 var F = function () {};

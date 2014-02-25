@@ -1,11 +1,14 @@
 // Constructor of Heap
 // - comparator - Function - given two items returns a number
-// - initData - Array - the initial data in a format:
-//      Object:
-//        - id - String - unique id of the item
-//        - value - Any - the data value
-//    each value is retained
-MaxHeap = function (comparator, initData) {
+// - options:
+//   - initData - Array - Optional - the initial data in a format:
+//        Object:
+//          - id - String - unique id of the item
+//          - value - Any - the data value
+//      each value is retained
+//   - IdMap - Constructor - Optional - custom IdMap class to store id->index
+//       mappings internally. Standard IdMap is used by default.
+MaxHeap = function (comparator, options) {
   if (! _.isFunction(comparator))
     throw new Error('Passed comparator is invalid, should be a comparison function');
   var self = this;
@@ -15,12 +18,11 @@ MaxHeap = function (comparator, initData) {
   // value is greater than the first and zero if they are equal.
   self._comparator = comparator;
 
+  options = _.defaults(options || {}, { IdMap: IdMap });
+
   // _heapIdx maps an id to an index in the Heap array the corresponding value
   // is located on.
-  if (Package && Package.minimongo)
-    self._heapIdx = new Package.minimongo.LocalCollection._IdMap;
-  else
-    self._heapIdx = new IdMap;
+  self._heapIdx = new options.IdMap;
 
   // The Heap data-structure implemented as a 0-based contiguous array where
   // every item on index idx is a node in a complete binary tree. Every node can
@@ -31,8 +33,8 @@ MaxHeap = function (comparator, initData) {
   // If the initial array is passed, we can build the heap in linear time
   // complexity (O(N)) compared to linearithmic time complexity (O(nlogn)) if
   // we push elements one by one.
-  if (_.isArray(initData))
-    self._initFromData(initData);
+  if (_.isArray(options.initData))
+    self._initFromData(options.initData);
 };
 
 _.extend(MaxHeap.prototype, {
