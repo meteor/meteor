@@ -2125,6 +2125,24 @@ testAsyncMulti('mongo-livedata - specified _id', [
   }
 ]);
 
+
+testAsyncMulti('mongo-livedata - consistent _id generation', [
+  function (test, expect) {
+    var collectionName = "consistentid_" + Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.subscribe('c-' + collectionName);
+    }
+    var coll = new Meteor.Collection(collectionName);
+    
+    var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
+      test.equal(id, clientSideId);
+      var doc = coll.findOne();
+      test.equal(doc._id, clientSideId);
+    }));
+  }
+]);
+
 testAsyncMulti('mongo-livedata - empty string _id', [
   function (test, expect) {
     var self = this;

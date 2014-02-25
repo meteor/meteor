@@ -31,6 +31,9 @@ MethodInvocation = function (options) {
 
   // On the server, the connection this method call came in on.
   this.connection = options.connection;
+  
+  // The seed for repeatable 'random' id generation
+  this.randomSeed = options.randomSeed;
 };
 
 _.extend(MethodInvocation.prototype, {

@@ -1,3 +1,9 @@
+var withoutRandomSeed = function(msg) {
+  var copy = _.extend({}, msg);
+  delete copy['randomSeed'];
+  return copy;
+};
+
 var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
@@ -52,7 +58,7 @@ var testGotMessage = function (test, stream, expected) {
   }
 
   test.equal(got, expected);
-  return retVal;
+  return got;
 };
 
 var startAndConnect = function(test, stream) {
@@ -275,7 +281,7 @@ Tinytest.add("livedata stub - this", function (test) {
   conn.call('test_this', _.identity);
   // satisfy method, quiesce connection
   var message = JSON.parse(stream.sent.shift());
-  test.equal(message, {msg: 'method', method: 'test_this',
+  test.equal(withoutRandomSeed(message), {msg: 'method', method: 'test_this',
                        params: [], id:message.id});
   test.length(stream.sent, 0);
 
@@ -323,7 +329,7 @@ if (Meteor.isClient) {
 
     // get response from server
     var message = JSON.parse(stream.sent.shift());
-    test.equal(message, {msg: 'method', method: 'do_something',
+    test.equal(withoutRandomSeed(message), {msg: 'method', method: 'do_something',
                          params: ['friday!'], id:message.id});
 
     test.equal(coll.find({}).count(), 1);
@@ -357,8 +363,8 @@ if (Meteor.isClient) {
 
     // test we still send a method request to server
     var message2 = JSON.parse(stream.sent.shift());
-    test.equal(message2, {msg: 'method', method: 'do_something_else',
-                          params: ['monday'], id: message2.id});
+    test.equal(withoutRandomSeed(message2), {msg: 'method', method: 'do_something_else',
+                          params: ['monday'], id: message2.id });
 
     // get the first data satisfied message. changes are applied to database even
     // though another method is outstanding, because the other method didn't have
@@ -401,7 +407,7 @@ Tinytest.add("livedata stub - mutating method args", function (test) {
 
   // Method should be called with original arg, not mutated arg.
   var message = JSON.parse(stream.sent.shift());
-  test.equal(message, {msg: 'method', method: 'mutateArgs',
+  test.equal(withoutRandomSeed(message), {msg: 'method', method: 'mutateArgs',
                        params: [{foo: 50}], id: message.id});
   test.length(stream.sent, 0);
 });
@@ -454,7 +460,7 @@ if (Meteor.isClient) {
 
     // see we only send message for outer methods
     var message = JSON.parse(stream.sent.shift());
-    test.equal(message, {msg: 'method', method: 'do_something',
+    test.equal(withoutRandomSeed(message), {msg: 'method', method: 'do_something',
                          params: [], id:message.id});
     test.length(stream.sent, 0);
 
@@ -509,7 +515,7 @@ Tinytest.add("livedata stub - method call before connect", function (test) {
 
   testGotMessage(test, stream, makeConnectMessage());
   testGotMessage(test, stream, {msg: 'method', method: 'someMethod',
-                                params: [], id: '*'});
+                                params: [], id: '*', randomSeed: '*'});
 });
 
 Tinytest.add("livedata stub - reconnect", function (test) {
@@ -566,7 +572,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
 
   // The non-wait method should send, but not the wait method.
   var methodMessage = JSON.parse(stream.sent.shift());
-  test.equal(methodMessage, {msg: 'method', method: 'do_something',
+  test.equal(withoutRandomSeed(methodMessage), {msg: 'method', method: 'do_something',
                              params: [], id:methodMessage.id});
   test.equal(stream.sent.length, 0);
 
@@ -623,7 +629,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   o.expectCallbacks({added: 1, changed: 1});
 
   var waitMethodMessage = JSON.parse(stream.sent.shift());
-  test.equal(waitMethodMessage, {msg: 'method', method: 'do_something_else',
+  test.equal(withoutRandomSeed(waitMethodMessage), {msg: 'method', method: 'do_something_else',
                                  params: [], id: waitMethodMessage.id});
   test.equal(stream.sent.length, 0);
   stream.receive({msg: 'result', id: waitMethodMessage.id, result: "bupkis"});
@@ -633,7 +639,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   // wait method done means we can send the third method
   test.equal(stream.sent.length, 1);
   var laterMethodMessage = JSON.parse(stream.sent.shift());
-  test.equal(laterMethodMessage, {msg: 'method', method: 'do_something_later',
+  test.equal(withoutRandomSeed(laterMethodMessage), {msg: 'method', method: 'do_something_later',
                                   params: [], id: laterMethodMessage.id});
 
   o.stop();
@@ -677,7 +683,7 @@ if (Meteor.isClient) {
     // Method sent.
     var methodId = testGotMessage(
       test, stream, {msg: 'method', method: 'writeSomething',
-                     params: [], id: '*'});
+                     params: [], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // Get some data.
@@ -744,7 +750,7 @@ if (Meteor.isClient) {
     // Method sent.
     var methodId2 = testGotMessage(
       test, stream, {msg: 'method', method: 'writeSomething',
-                     params: [], id: '*'});
+                     params: [], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // Get some data.
@@ -777,7 +783,7 @@ if (Meteor.isClient) {
     testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1));
     var slowMethodId = testGotMessage(
       test, stream,
-      {msg: 'method', method: 'slowMethod', params: [], id: '*'});
+      {msg: 'method', method: 'slowMethod', params: [], id: '*', randomSeed: '*'}).id;
     // Still holding out hope for session resumption, so nothing updated yet.
     test.equal(coll.find().count(), 2);
     test.equal(coll.findOne(stubWrittenId2), {_id: stubWrittenId2, foo: 'bar'});
@@ -840,7 +846,7 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   // Method sent.
   var methodId = testGotMessage(
     test, stream, {msg: 'method', method: 'doLittle',
-                   params: [], id: '*'});
+                   params: [], id: '*', randomSeed: '*'}).id;
   test.equal(stream.sent.length, 0);
 
   // Get some data.
@@ -867,7 +873,7 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
   testGotMessage(
     test, stream, {msg: 'method', method: 'doLittle',
-                   params: [], id: methodId});
+                   params: [], id: methodId, randomSeed: '*'});
   // Still holding out hope for session resumption, so nothing updated yet.
   test.equal(coll.find().count(), 1);
   test.equal(coll.findOne('photo'), {_id: 'photo', baz: 42});
@@ -930,7 +936,7 @@ if (Meteor.isClient) {
     // Method sent.
     var insertMethodId = testGotMessage(
       test, stream, {msg: 'method', method: 'insertSomething',
-                     params: [], id: '*'});
+                     params: [], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // Call update method.
@@ -943,7 +949,7 @@ if (Meteor.isClient) {
     // Method sent.
     var updateMethodId = testGotMessage(
       test, stream, {msg: 'method', method: 'updateIt',
-                     params: [stubWrittenId], id: '*'});
+                     params: [stubWrittenId], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // Get some data... slightly different than what we wrote.
@@ -1019,7 +1025,7 @@ if (Meteor.isClient) {
     // first method sent
     var firstMethodId = testGotMessage(
       test, stream, {msg: 'method', method: 'no-op',
-                     params: [], id: '*'});
+                     params: [], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // ack the first method
@@ -1029,7 +1035,7 @@ if (Meteor.isClient) {
     // Wait method sent.
     var waitMethodId = testGotMessage(
       test, stream, {msg: 'method', method: 'no-op',
-                     params: [], id: '*'});
+                     params: [], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // ack the wait method
@@ -1039,7 +1045,7 @@ if (Meteor.isClient) {
     // insert method sent.
     var insertMethodId = testGotMessage(
       test, stream, {msg: 'method', method: 'insertSomething',
-                     params: [], id: '*'});
+                     params: [], id: '*', randomSeed: '*'}).id;
     test.equal(stream.sent.length, 0);
 
     // ack the insert method
@@ -1448,7 +1454,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
   // Test that we sent just the login message.
   var loginId = testGotMessage(
     test, stream, {msg: 'method', method: 'do_something',
-                   params: ['login'], id: '*'});
+                   params: ['login'], id: '*', randomSeed: '*'}).id;
 
   // we connect.
   stream.receive({msg: 'connected', session: Random.id()});
@@ -1463,7 +1469,7 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
 
   testGotMessage(
     test, stream, {msg: 'method', method: 'do_something',
-                   params: ['one'], id: '*'});
+                   params: ['one'], id: '*', randomSeed: '*'}).id;
 });
 
 
@@ -1488,7 +1494,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   // Method sent.
   var halfwayId = testGotMessage(
     test, stream, {msg: 'method', method: 'halfwayMethod',
-                   params: [], id: '*'});
+                   params: [], id: '*', randomSeed: '*'}).id;
   test.equal(stream.sent.length, 0);
 
   // Get the result. This means it will not be resent.
@@ -1502,7 +1508,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
   var reconnectId = testGotMessage(
     test, stream, {msg: 'method', method: 'reconnectMethod',
-                   params: [], id: '*'});
+                   params: [], id: '*', randomSeed: '*'}).id;
   test.length(stream.sent, 0);
   // Still holding out hope for session resumption, so no callbacks yet.
   test.equal(output, []);
@@ -1529,7 +1535,7 @@ Tinytest.add("livedata stub - reconnect double wait method", function (test) {
   // an empty block in _outstandingMethodBlocks blocking it from being sent.
   conn.call('lastMethod', _.identity);
   testGotMessage(test, stream,
-                 {msg: 'method', method: 'lastMethod', params: [], id: '*'});
+                 {msg: 'method', method: 'lastMethod', params: [], id: '*', randomSeed: '*'});
 });
 
 Tinytest.add("livedata stub - subscribe errors", function (test) {
@@ -1593,7 +1599,7 @@ if (Meteor.isClient) {
     test.equal(coll.findOne(), {_id: "foo", bar: 42});
     // It also sends the method message.
     var methodMessage = JSON.parse(stream.sent.shift());
-    test.equal(methodMessage, {msg: 'method', method: '/' + collName + '/insert',
+    test.equal(withoutRandomSeed(methodMessage), {msg: 'method', method: '/' + collName + '/insert',
                                params: [{_id: "foo", bar: 42}],
                                id: methodMessage.id});
     test.length(stream.sent, 0);

@@ -46,7 +46,7 @@ Meteor.Collection = function (name, options) {
   case 'STRING':
   default:
     self._makeNewID = function () {
-      return Random.id();
+      return self._makeNewConsistentID();
     };
     break;
   }
@@ -883,4 +883,22 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   // an ID, we don't have to any more.
 
   return self._collection.remove.call(self._collection, selector);
+};
+
+// Generate an id for a new object, using repeatableRandom, so that the client
+// and server will produce the same id values.  By using the name of the collection
+// as the key for the random seed, we can tolerate reorderings of operations iff
+// these happen on different collections.
+Meteor.Collection.prototype._makeNewConsistentID = function() {
+  var self = this;
+  
+  var name = self._name;
+  
+  if (name) {
+    var id = Meteor.repeatableRandom('/collection/' + name).id();
+    //Meteor._debug("Generated id " + id);
+    return id;
+  } else {
+    return Random.id();
+  }
 };

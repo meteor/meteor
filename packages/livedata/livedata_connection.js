@@ -673,6 +673,8 @@ _.extend(Connection.prototype, {
     var enclosing = DDP._CurrentInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
+    var randomSeed = Meteor.repeatableRandom('/rpc/' + name, self).hexString(20);
+
     var stub = self._methodHandlers[name];
     if (stub) {
       var setUserId = function(userId) {
@@ -681,7 +683,8 @@ _.extend(Connection.prototype, {
       var invocation = new MethodInvocation({
         isSimulation: true,
         userId: self.userId(),
-        setUserId: setUserId
+        setUserId: setUserId,
+        randomSeed: randomSeed
       });
 
       if (!alreadyInSimulation)
@@ -766,7 +769,8 @@ _.extend(Connection.prototype, {
         msg: 'method',
         method: name,
         params: args,
-        id: methodId()
+        id: methodId(),
+        randomSeed: randomSeed
       }
     });
 
