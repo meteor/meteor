@@ -841,9 +841,9 @@ if (Meteor.isServer) {
     var docId5 = ins({ foo: 22, bar: -1 });
     // We should get an added and a removed events
     test.length(o.output, 2);
-    test.equal(o.output.shift(), {added: docId5});
     // doc 2 was removed from the published set as it is too big to be in
-    test.equal(o.output.shift(), {removed: docId2});
+    test.isTrue(setsEqual(o.output, [{added: docId5}, {removed: docId2}]));
+    clearOutput(o);
 
     // Now remove something and that doc 2 should be right back
     rem(docId5);
@@ -865,7 +865,7 @@ if (Meteor.isServer) {
                     {added: docId7}, {removed: docId1},
                     {added: docId8}, {removed: docId3}];
 
-    test.equal(o.output, expected);
+    test.isTrue(setsEqual(o.output, expected));
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId1, docId2, docId3]);
     usesOplog && testSafeAppendToBufferFlag(false);
@@ -887,12 +887,7 @@ if (Meteor.isServer) {
                         {added: docId1},
                         {added: docId2}];
 
-    // Note: since we are updating multiple things, the order of updates may
-    // differ from launch to launch. That's why we compare even positions
-    // (removes) w/o looking at ordering.
-    test.isTrue(setsEqual(_.filter(o.output, function (e) {return e.removed;}),
-                          expectedRemoves));
-    test.equal(_.filter(o.output, function (e){return e.added;}), expectedAdds);
+    test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
     clearOutput(o);
     usesOplog && testOplogBufferIds([docId4, docId7, docId8]);
     usesOplog && testSafeAppendToBufferFlag(false);
@@ -921,9 +916,7 @@ if (Meteor.isServer) {
       test.length(o.output, 6);
     }
 
-    test.isTrue(setsEqual(_.filter(o.output, function (e) {return e.removed;}),
-                          expectedRemoves));
-    test.equal(_.filter(o.output, function (e) {return e.added;}), expectedAdds);
+    test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
     clearOutput(o);
     usesOplog && testOplogBufferIds([]);
     usesOplog && testSafeAppendToBufferFlag(true);
@@ -977,6 +970,7 @@ if (Meteor.isServer) {
                                      {removed: docId10}, {added: docId6},
                                      {added: docId11}, {added: docId12}]));
 
+    test.length(_.keys(o.state), 3);
     test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
     test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
     test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
