@@ -840,8 +840,16 @@ _.extend(ClientTarget.prototype, {
     _.each(originals, function (file, name) {
       if (! file.sourceMap)
         return;
-      newMap.applySourceMap(
-        new sourcemap.SourceMapConsumer(file.sourceMap), name);
+      try {
+        newMap.applySourceMap(
+          new sourcemap.SourceMapConsumer(file.sourceMap), name);
+      } catch (err) {
+        // If we can't apply the source map, silently drop it.
+        //
+        // XXX This is here because there are some less files that
+        // produce source maps that throw when consumed. We should
+        // figure out exactly why and fix it, but this will do for now.
+      }
     });
 
     self.css[0].setSourceMap(JSON.stringify(newMap));

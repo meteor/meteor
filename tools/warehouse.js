@@ -341,11 +341,24 @@ _.extend(warehouse, {
     // (whether or not we just downloaded them). (Don't do this if we didn't
     // print the installing message!)
     if (newPieces && showInstalling) {
+      var unlinkIfExists = function (file) {
+        try {
+          fs.unlinkSync(file);
+        } catch (e) {
+          // If two processes populate the warehouse in parallel, the other
+          // process may have deleted the fresh file. That's OK!
+          if (e.code === "ENOENT")
+            return;
+          throw e;
+        }
+      };
+
       if (newPieces.tools) {
-        fs.unlinkSync(warehouse.getToolsFreshFile(newPieces.tools.version));
+        unlinkIfExists(warehouse.getToolsFreshFile(newPieces.tools.version));
       }
       _.each(newPieces.packages, function (packageInfo, name) {
-        fs.unlinkSync(warehouse.getPackageFreshFile(name, packageInfo.version));
+        unlinkIfExists(
+          warehouse.getPackageFreshFile(name, packageInfo.version));
       });
     }
 

@@ -336,7 +336,8 @@ _.extend(Slice.prototype, {
       // - appendDocument({ section: "head", data: "my markup" })
       //   Browser targets only. Add markup to the "head" or "body"
       //   section of the document.
-      // - addStylesheet({ path: "my/stylesheet.css", data: "my css" })
+      // - addStylesheet({ path: "my/stylesheet.css", data: "my css",
+      //                   sourceMap: "stringified json sourcemap"})
       //   Browser targets only. Add a stylesheet to the
       //   document. 'path' is a requested URL for the stylesheet that
       //   may or may not ultimately be honored. (Meteor will add
@@ -453,7 +454,8 @@ _.extend(Slice.prototype, {
           resources.push({
             type: "css",
             data: new Buffer(options.data, 'utf8'),
-            servePath: path.join(self.pkg.serveRoot, options.path)
+            servePath: path.join(self.pkg.serveRoot, options.path),
+            sourceMap: options.sourceMap
           });
         },
         addJavaScript: function (options) {

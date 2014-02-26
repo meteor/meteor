@@ -247,19 +247,13 @@ var runWebAppServer = function () {
   // webserver
   var app = connect();
 
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  app.use(connect.query());
-
   // Auto-compress any json, javascript, or text.
   app.use(connect.compress());
 
-  // Packages and apps can add handlers to this via
-  // WebApp.connectHandlers.  They are inserted before our default
-  // handler. If a path prefix is in use, they see the actual
-  // requested URL before the path prefix has been stripped off.
-  var packageAndAppHandlers = connect();
-  app.use(packageAndAppHandlers);
+  // Packages and apps can add handlers that run before any other Meteor
+  // handlers via WebApp.rawConnectHandlers.
+  var rawConnectHandlers = connect();
+  app.use(rawConnectHandlers);
 
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
@@ -283,6 +277,10 @@ var runWebAppServer = function () {
       next();
     }
   });
+
+  // Parse the query string into res.query. Used by oauth_server, but it's
+  // generally pretty handy..
+  app.use(connect.query());
 
   var getItemPathname = function (itemUrl) {
     return decodeURIComponent(url.parse(itemUrl).pathname);
@@ -415,6 +413,11 @@ var runWebAppServer = function () {
       .pipe(res);
   });
 
+  // Packages and apps can add handlers to this via WebApp.connectHandlers.
+  // They are inserted before our default handler.
+  var packageAndAppHandlers = connect();
+  app.use(packageAndAppHandlers);
+
   var suppressConnectErrors = false;
   // connect knows it is an error handler because it has 4 arguments instead of
   // 3. go figure.  (It is not smart enough to find such a thing if it's hidden
@@ -520,6 +523,7 @@ var runWebAppServer = function () {
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
+    rawConnectHandlers: rawConnectHandlers,
     httpServer: httpServer,
     // metadata about the client program that we serve
     clientProgram: {

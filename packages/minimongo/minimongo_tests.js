@@ -1949,6 +1949,7 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
   modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
   modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  exception({}, {$inc: {_id: 1}});
 
   // $set
   modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
@@ -1960,6 +1961,9 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
   modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
   modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
+  modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  exception({}, {$set: {_id: 4}});
+  exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
 
   // $unset
   modify({}, {$unset: {a: 1}}, {});
@@ -1977,6 +1981,7 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
   modify({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
   modify({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
+  exception({}, {$unset: {_id: 1}});
 
   // $push
   modify({}, {$push: {a: 1}}, {a: [1]});
