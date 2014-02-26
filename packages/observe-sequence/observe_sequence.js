@@ -102,13 +102,15 @@ ObserveSequence = {
             if (typeof item === 'string' ||
                 typeof item === 'number' ||
                 typeof item === 'boolean' ||
-                item === undefined)
-              id = item;
-            else if (typeof item === 'object')
+                item === undefined) {
+              // ensure not empty, since other layers (eg DomRange) assume this as well
+              id = "-" + item;
+            } else if (typeof item === 'object') {
               id = (item && item._id) || index;
-            else
+            } else {
               throw new Error("{{#each}} doesn't support arrays with " +
                               "elements of type " + typeof item);
+            }
 
             var idString = idStringify(id);
             if (idsUsed[idString]) {
