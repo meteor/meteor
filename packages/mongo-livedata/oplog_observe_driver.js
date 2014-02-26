@@ -142,8 +142,10 @@ OplogObserveDriver = function (options) {
 _.extend(OplogObserveDriver.prototype, {
   _addPublished: function (id, doc) {
     var self = this;
+    var fields = _.clone(doc);
+    delete fields._id;
     self._published.set(id, self._sharedProjectionFn(doc));
-    self._multiplexer.added(id, self._projectionFn(doc));
+    self._multiplexer.added(id, self._projectionFn(fields));
 
     // After adding this document, the published set might be overflowed
     // (exceeding capacity specified by limit). If so, push the maximum element
@@ -236,8 +238,6 @@ _.extend(OplogObserveDriver.prototype, {
   _addMatching: function (doc) {
     var self = this;
     var id = doc._id;
-    var doc = _.clone(doc);
-    delete doc._id;
     if (self._published.has(id))
       throw Error("tried to add something already published " + id);
     if (self._limit && self._unpublishedBuffer.has(id))
@@ -310,7 +310,6 @@ _.extend(OplogObserveDriver.prototype, {
     } else if (cachedBefore && !matchesNow) {
       self._removeMatching(id);
     } else if (cachedBefore && matchesNow) {
-      delete newDoc._id;
       var oldDoc = self._published.get(id);
       var comparator = self._comparator;
       var minBuffered = self._limit && self._unpublishedBuffer.size() &&
@@ -690,7 +689,6 @@ _.extend(OplogObserveDriver.prototype, {
 
     // Finally, replace the buffer
     newBuffer.forEach(function (doc, id) {
-      delete doc._id;
       self._addBuffered(id, doc);
     });
 
