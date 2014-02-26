@@ -210,10 +210,6 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._unpublishedBuffer.size() > self._limit) {
       var maxBufferedId = self._unpublishedBuffer.maxElementId();
 
-      if (EJSON.equals(maxBufferedId, id)) {
-        throw new Error("The document just added to buffer is overflowing the buffer");
-      }
-
       self._unpublishedBuffer.remove(maxBufferedId);
 
       // Since something matching is removed from cache (both published set and
@@ -253,7 +249,7 @@ _.extend(OplogObserveDriver.prototype, {
     // document would fit into published set pushing the maximum element out,
     // then we need to publish the doc.
     var toPublish = ! limit || self._published.size() < limit ||
-                    comparator(maxPublished, doc) > 0;
+                    comparator(doc, maxPublished) < 0;
 
     // Otherwise we might need to buffer it (only in case of limited query).
     // Buffering is allowed if the buffer is not filled up yet and all matching
@@ -264,7 +260,7 @@ _.extend(OplogObserveDriver.prototype, {
     // Or if it is small enough to be safely inserted to the middle or the
     // beginning of the buffer.
     var canInsertIntoBuffer = !toPublish && maxBuffered &&
-                              comparator(maxBuffered, doc) > 0;
+                              comparator(doc, maxBuffered) <= 0;
 
     var toBuffer = canAppendToBuffer || canInsertIntoBuffer;
 
@@ -336,7 +332,7 @@ _.extend(OplogObserveDriver.prototype, {
           var maxBuffered = self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId());
 
           var toBuffer = self._safeAppendToBuffer ||
-                         (maxBuffered && comparator(newDoc, maxBuffered) < 0);
+                         (maxBuffered && comparator(newDoc, maxBuffered) <= 0);
 
           if (toBuffer) {
             self._addBuffered(id, newDoc);
@@ -359,7 +355,7 @@ _.extend(OplogObserveDriver.prototype, {
 
         // or stays in buffer even after the change
         var staysInBuffer = (! toPublish && self._safeAppendToBuffer) ||
-          (!toPublish && maxBuffered && comparator(newDoc, maxBuffered) < 0);
+          (!toPublish && maxBuffered && comparator(newDoc, maxBuffered) <= 0);
 
         if (toPublish) {
           self._addPublished(id, newDoc);
