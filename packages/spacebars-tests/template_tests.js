@@ -5,7 +5,7 @@ var renderToDiv = function (comp) {
 };
 
 var divRendersTo = function (test, div, html) {
-  Deps.flush();
+  Deps.flush({_throwFirstError: true});
   var actual = canonicalizeHtml(div.innerHTML);
   test.equal(actual, html);
 };
@@ -475,6 +475,27 @@ Tinytest.add("spacebars - templates - each on cursor", function (test) {
   coll.update({text: "three"}, {$set: {pos: 0}});
   rendersTo("three one");
   coll.remove({});
+  rendersTo("else-clause");
+});
+
+Tinytest.add("spacebars - templates - each on array", function (test) {
+  var tmpl = Template.spacebars_template_test_each;
+  var R = new ReactiveVar([]);
+  tmpl.items = function () {
+    return R.get();
+  };
+
+  var div = renderToDiv(tmpl);
+  var rendersTo = function (html) { divRendersTo(test, div, html); };
+
+  rendersTo("else-clause");
+  R.set([""]);
+  rendersTo("");
+  R.set(["", "toString"]);
+  rendersTo(" toString");
+  R.set(["toString"]);
+  rendersTo("toString");
+  R.set([]);
   rendersTo("else-clause");
 });
 
