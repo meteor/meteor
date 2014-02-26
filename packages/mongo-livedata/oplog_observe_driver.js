@@ -216,7 +216,7 @@ _.extend(OplogObserveDriver.prototype, {
     // _removeBuffered, we should have called _needToPollQuery, which will
     // either put something in _unpublishedBuffer or set _safeAppendToBuffer (or
     // both), and it will put us in QUERYING for that whole time. So in fact, we
-    // shouldnt' be able to get here.
+    // shouldn't be able to get here.
 
     throw new Error("Buffer inexplicably empty");
   },
