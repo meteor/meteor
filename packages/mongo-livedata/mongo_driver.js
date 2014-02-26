@@ -754,11 +754,15 @@ MongoConnection.prototype._createSynchronousCursor = function(
     // ... and to keep querying the server indefinitely rather than just 5 times
     // if there's no more data.
     mongoOptions.numberOfRetries = -1;
-    // And if this cursor specifies a 'ts', then set the undocumented oplog
-    // replay flag, which does a special scan to find the first document
-    // (instead of creating an index on ts).
-    if (cursorDescription.selector.ts)
+    // And if this is on the oplog collection and the cursor specifies a 'ts',
+    // then set the undocumented oplog replay flag, which does a special scan to
+    // find the first document (instead of creating an index on ts). This is a
+    // very hard-coded Mongo flag which only works on the oplog collection and
+    // only works with the ts field.
+    if (cursorDescription.collectionName === OPLOG_COLLECTION &&
+        cursorDescription.selector.ts) {
       mongoOptions.oplogReplay = true;
+    }
   }
 
   var dbCursor = collection.find(
