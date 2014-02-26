@@ -759,7 +759,7 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   // skip is not supported: to support it we would need to keep track of all
   // "skipped" documents or at least their ids.
   // limit w/o a sort specifier is not supported: current implementation needs a
-  // determent way to order documents.
+  // deterministic way to order documents.
   if (options.skip || (options.limit && !options.sort)) return false;
 
   // If a fields projection option is given check if it is supported by
