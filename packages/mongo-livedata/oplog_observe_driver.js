@@ -258,12 +258,13 @@ _.extend(OplogObserveDriver.prototype, {
     // Otherwise we might need to buffer it (only in case of limited query).
     // Buffering is allowed if the buffer is not filled up yet and all matching
     // docs are either in the published set or in the buffer.
-    var canAppendToBuffer = self._safeAppendToBuffer &&
+    var canAppendToBuffer = !toPublish && self._safeAppendToBuffer &&
                             self._unpublishedBuffer.size() < limit;
 
     // Or if it is small enough to be safely inserted to the middle or the
     // beginning of the buffer.
-    var canInsertIntoBuffer = maxBuffered && comparator(maxBuffered, doc) > 0;
+    var canInsertIntoBuffer = !toPublish && maxBuffered &&
+                              comparator(maxBuffered, doc) > 0;
 
     var toBuffer = canAppendToBuffer || canInsertIntoBuffer;
 
@@ -358,8 +359,8 @@ _.extend(OplogObserveDriver.prototype, {
         var toPublish = comparator(newDoc, maxPublished) < 0;
 
         // or stays in buffer even after the change
-        var staysInBuffer = self._safeAppendToBuffer ||
-          (maxBuffered && comparator(newDoc, maxBuffered) < 0);
+        var staysInBuffer = (! toPublish && self._safeAppendToBuffer) ||
+          (!toPublish && maxBuffered && comparator(newDoc, maxBuffered) < 0);
 
         if (toPublish) {
           self._addPublished(id, newDoc);
