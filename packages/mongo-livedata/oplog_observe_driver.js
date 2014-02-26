@@ -175,24 +175,50 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     self._published.remove(id);
     self._multiplexer.removed(id);
-    if (! self._limit)
+    if (! self._limit || self._published.size() === self._limit)
       return;
-    if (self._published.size() < self._limit) {
-      // The unpublished buffer is empty iff published contains the whole
-      // matching set, i.e. number of matching documents is less or equal to the
-      // queries limit.
-      if (! self._unpublishedBuffer.size()) {
-        // Assertion of the statement above
-        if (! self._safeAppendToBuffer && self._phase !== PHASE.QUERYING)
-          throw new Error("At this phase, buffer can be empty only if published contains the whole matching set");
-        return;
-      }
 
+    if (self._published.size() > self._limit)
+      throw Error("self._published got too big");
+
+    // OK, we are publishing less than the limit. Maybe we should look in the
+    // buffer to find the next element past what we were publishing before.
+
+    if (!self._unpublishedBuffer.empty()) {
+      // There's something in the buffer; move the first thing in it to
+      // _published.
       var newDocId = self._unpublishedBuffer.minElementId();
       var newDoc = self._unpublishedBuffer.get(newDocId);
       self._removeBuffered(newDocId);
       self._addPublished(newDocId, newDoc);
+      return;
     }
+
+    // There's nothing in the buffer.  This could mean one of a few things.
+
+    // (a) We could be in the middle of re-running the query (specifically, we
+    // could be in _publishNewResults). In that case, _unpublishedBuffer is
+    // empty because we clear it at the beginning of _publishNewResults. In this
+    // case, our caller already knows the entire answer to the query and we
+    // don't need to do anything fancy here.  Just return.
+    if (self._phase === PHASE.QUERYING)
+      return;
+
+    // (b) We're pretty confident that the union of _published and
+    // _unpublishedBuffer contain all documents that match selector. Because
+    // _unpublishedBuffer is empty, that means we're confident that _published
+    // contains all documents that match selector. So we have nothing to do.
+    if (self._safeAppendToBuffer)
+      return;
+
+    // (c) Maybe there are other documents out there that should be in our
+    // buffer. But in that case, when we emptied _unpublishedBuffer in
+    // _removeBuffered, we should have called _needToPollQuery, which will
+    // either put something in _unpublishedBuffer or set _safeAppendToBuffer (or
+    // both), and it will put us in QUERYING for that whole time. So in fact, we
+    // shouldnt' be able to get here.
+
+    throw new Error("Buffer inexplicably empty");
   },
   _changePublished: function (id, oldDoc, newDoc) {
     var self = this;
