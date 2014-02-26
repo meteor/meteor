@@ -1528,6 +1528,7 @@ Tinytest.add("spacebars - controls - checkbox", function(test) {
   var changeBuf = [];
 
   var div = renderToDiv(tmpl);
+  document.body.appendChild(div);
 
   var boxes = nodesToArray(div.getElementsByTagName("INPUT"));
 
@@ -1572,4 +1573,6 @@ Tinytest.add("spacebars - controls - checkbox", function(test) {
   Rs.Foo.set(false);
   Deps.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
+
+  document.body.removeChild(div);
 });
