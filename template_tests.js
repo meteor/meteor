@@ -484,6 +484,9 @@ Tinytest.add("spacebars - templates - each on array", function (test) {
   tmpl.items = function () {
     return R.get();
   };
+  tmpl.text = function () {
+    return this;
+  };
 
   var div = renderToDiv(tmpl);
   var rendersTo = function (html) { divRendersTo(test, div, html); };
@@ -491,8 +494,8 @@ Tinytest.add("spacebars - templates - each on array", function (test) {
   rendersTo("else-clause");
   R.set([""]);
   rendersTo("");
-  R.set(["", "toString"]);
-  rendersTo(" toString");
+  R.set(["x", "", "toString"]);
+  rendersTo("x toString");
   R.set(["toString"]);
   rendersTo("toString");
   R.set([]);
