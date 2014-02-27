@@ -478,9 +478,11 @@ files.run = function (command /*, arguments */) {
   var child_process = require("child_process");
   child_process.execFile(
     command, args, {}, function (error, stdout, stderr) {
-      if (! (error === null || error.code === 0))
+      if (! (error === null || error.code === 0)) {
         future.return(null);
-      future.return(stdout);
+      } else {
+        future.return(stdout);
+      }
     });
   return future.wait();
 };
