@@ -117,10 +117,12 @@ _.extend(ServiceConnection.prototype, {
     var args = _.toArray(arguments);
     var name = args.shift();
     self.connection.apply(name, args, function (err, result) {
-      if (err)
+      if (err) {
         fut['throw'](err);
-      else
+      } else {
+        self._cleanUpTimer();
         fut['return'](result);
+      }
     });
 
     return fut.wait();
@@ -141,6 +143,7 @@ _.extend(ServiceConnection.prototype, {
     args.push({
       onReady: function () {
         ready = true;
+        self._cleanUpTimer();
         fut['return']();
       },
       onError: function (e) {
@@ -156,6 +159,13 @@ _.extend(ServiceConnection.prototype, {
     return sub;
   },
 
+  _cleanUpTimer: function () {
+    var self = this;
+    var Package = getPackage();
+    Package.meteor.Meteor.clearTimeout(self.connectionTimer);
+    self.connectionTimer = null;
+  },
+
   close: function () {
     var self = this;
     if (self.connection) {
@@ -164,9 +174,7 @@ _.extend(ServiceConnection.prototype, {
     }
     if (self.connectionTimer) {
       // Clean up the timer so that Node can exit cleanly
-      var Package = getPackage();
-      Package.meteor.Meteor.clearTimeout(self.connectionTimer);
-      self.connectionTimer = null;
+      self._cleanUpTimer();
     }
   }
 });
