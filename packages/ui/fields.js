@@ -12,20 +12,23 @@ var lookupComponentProp = function (comp, prop) {
 };
 
 // Component that's a no-op when used as a block helper like
-// `{{#foo}}...{{/foo}}`.
-var noOpComponent = Component.extend({
-  kind: 'NoOp',
-  render: function () {
-    return this.__content;
-  }
-});
+// `{{#foo}}...{{/foo}}`. Prints a warning that it is deprecated.
+var noOpComponent = function (name) {
+  return Component.extend({
+    kind: 'NoOp',
+    render: function () {
+      Meteor._debug("{{#" + name + "}} is now unnecessary and deprecated.");
+      return this.__content;
+    }
+  });
+};
 
 // This map is searched first when you do something like `{{#foo}}` in
 // a template.
 var builtInComponents = {
   // for past compat:
-  'constant': noOpComponent,
-  'isolate': noOpComponent
+  'constant': noOpComponent("constant"),
+  'isolate': noOpComponent("isolate")
 };
 
 _extend(UI.Component, {

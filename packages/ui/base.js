@@ -348,4 +348,6 @@ UI.Component.notifyParented = function () {
 };
 
 // past compat
-UI.Component.preserve = function () {};
+UI.Component.preserve = function () {
+  Meteor._debug("The 'preserve' method on templates is now unnecessary and deprecated.");
+};
