@@ -151,8 +151,9 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
-    self.connection.subscribe.apply(self.connection, args);
-    return fut.wait();
+    var sub = self.connection.subscribe.apply(self.connection, args);
+    fut.wait();
+    return sub;
   },
 
   close: function () {
