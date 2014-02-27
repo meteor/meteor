@@ -78,7 +78,7 @@ var ServiceConnection = function (galaxy, service) {
   // from the hostname of endpointUrl, and run the login command for
   // that galaxy.
   if (! authToken)
-    throw new Error("not logged in to galaxy?")
+    throw new Error("not logged in to galaxy?");
 
   self.connection = Package.livedata.DDP.connect(endpointUrl, {
     headers: {
