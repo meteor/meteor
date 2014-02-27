@@ -333,8 +333,6 @@ _.extend(OplogObserveDriver.prototype, {
   },
   _handleDoc: function (id, newDoc) {
     var self = this;
-    newDoc = _.clone(newDoc);
-
     var matchesNow = newDoc && self._matcher.documentMatches(newDoc).result;
 
     var publishedBefore = self._published.has(id);
