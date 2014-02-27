@@ -7,6 +7,20 @@ var PHASE = {
   STEADY: "STEADY"
 };
 
+// Exception thrown by _needToPollQuery which unrolls the stack up to the
+// enclosing call to finishIfNeedToPollQuery.
+var SwitchedToQuery = function () {};
+var finishIfNeedToPollQuery = function (f) {
+  return function () {
+    try {
+      f.apply(this, arguments);
+    } catch (e) {
+      if (!(e instanceof SwitchedToQuery))
+        throw e;
+    }
+  };
+};
+
 // OplogObserveDriver is an alternative to PollingObserveDriver which follows
 // the Mongo operation log instead of just re-polling the query. It obeys the
 // same simple interface: constructing it starts sending observeChanges
@@ -84,7 +98,7 @@ OplogObserveDriver = function (options) {
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
-        Meteor._noYieldsAllowed(function () {
+        Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
           var op = notification.op;
           if (notification.dropCollection) {
             // Note: this call is not allowed to block on anything (especially
@@ -98,7 +112,7 @@ OplogObserveDriver = function (options) {
             else
               self._handleOplogEntrySteadyOrFetching(op);
           }
-        });
+        }));
       }
     ));
   });
@@ -134,9 +148,9 @@ OplogObserveDriver = function (options) {
 
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
-  Meteor.defer(function () {
+  Meteor.defer(finishIfNeedToPollQuery(function () {
     self._runInitialQuery();
-  });
+  }));
 };
 
 _.extend(OplogObserveDriver.prototype, {
@@ -398,7 +412,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._registerPhaseChange(PHASE.FETCHING);
     // Defer, because nothing called from the oplog entry handler may yield, but
     // fetch() yields.
-    Meteor.defer(function () {
+    Meteor.defer(finishIfNeedToPollQuery(function () {
       while (!self._stopped && !self._needToFetch.empty()) {
         if (self._phase !== PHASE.FETCHING)
           throw new Error("phase in fetchModifiedDocuments: " + self._phase);
@@ -415,36 +429,40 @@ _.extend(OplogObserveDriver.prototype, {
           waiting++;
           self._mongoHandle._docFetcher.fetch(
             self._cursorDescription.collectionName, id, cacheKey,
-            function (err, doc) {
-              if (err) {
-                if (!anyError)
-                  anyError = err;
-              } else if (!self._stopped && self._phase === PHASE.FETCHING
-                         && self._fetchGeneration === thisGeneration) {
-                // We re-check the generation in case we've had an explicit
-                // _pollQuery call which should effectively cancel this round of
-                // fetches.  (_pollQuery increments the generation.)
-                self._handleDoc(id, doc);
+            finishIfNeedToPollQuery(function (err, doc) {
+              try {
+                if (err) {
+                  if (!anyError)
+                    anyError = err;
+                } else if (!self._stopped && self._phase === PHASE.FETCHING
+                           && self._fetchGeneration === thisGeneration) {
+                  // We re-check the generation in case we've had an explicit
+                  // _pollQuery call (eg, in another fiber) which should
+                  // effectively cancel this round of fetches.  (_pollQuery
+                  // increments the generation.)
+                  self._handleDoc(id, doc);
+                }
+              } finally {
+                waiting--;
+                // Because fetch() never calls its callback synchronously, this
+                // is safe (ie, we won't call fut.return() before the forEach is
+                // done).
+                if (waiting === 0)
+                  fut.return();
               }
-              waiting--;
-              // Because fetch() never calls its callback synchronously, this is
-              // safe (ie, we won't call fut.return() before the forEach is
-              // done).
-              if (waiting === 0)
-                fut.return();
-            });
+            }));
         });
         fut.wait();
         // XXX do this even if we've switched to PHASE.QUERYING?
         if (anyError)
           throw anyError;
-        // Exit now if we've had a _pollQuery call.
+        // Exit now if we've had a _pollQuery call (here or in another fiber).
         if (self._phase === PHASE.QUERYING)
           return;
         self._currentlyFetching = null;
       }
       self._beSteady();
-    });
+    }));
   },
   _beSteady: function () {
     var self = this;
@@ -579,7 +597,8 @@ _.extend(OplogObserveDriver.prototype, {
     ++self._fetchGeneration;  // ignore any in-flight fetches
     self._registerPhaseChange(PHASE.QUERYING);
 
-    // Defer so that we don't block.
+    // Defer so that we don't block.  We don't need finishIfNeedToPollQuery here
+    // because SwitchedToQuery is not called in QUERYING mode.
     Meteor.defer(function () {
       // subtle note: _published does not contain _id fields, but newResults
       // does
@@ -604,7 +623,14 @@ _.extend(OplogObserveDriver.prototype, {
   // ensures that we will query again later.
   //
   // This function may not block, because it is called from an oplog entry
-  // handler.
+  // handler. However, if we were not already in the QUERYING phase, it throws
+  // an exception that is caught by the closest surrounding
+  // finishIfNeedToPollQuery call; this ensures that we don't continue running
+  // close that was designed for another phase inside PHASE.QUERYING.
+  //
+  // (It's also necessary whenever logic in this file yields to check that other
+  // phases haven't put us into QUERYING mode, though; eg,
+  // _fetchModifiedDocuments does this.)
   _needToPollQuery: function () {
     var self = this;
     if (self._stopped)
@@ -614,7 +640,7 @@ _.extend(OplogObserveDriver.prototype, {
     // pausing FETCHING).
     if (self._phase !== PHASE.QUERYING) {
       self._pollQuery();
-      return;
+      throw new SwitchedToQuery;
     }
 
     // We're currently in QUERYING. Set a flag to ensure that we run another
