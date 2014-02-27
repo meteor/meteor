@@ -457,7 +457,21 @@ exports.logs = function (options) {
       throw new Error("Can't listen to messages on the logs collection");
 
     var logsSubscription = null;
-    // In case of reconnect recover the state so user sees only new logs
+    try {
+      logsSubscription =
+        logReader.subscribeAndWait("logsForApp", options.app,
+                                   { streaming: options.streaming });
+    } catch (e) {
+      return handleError(e, galaxy, {
+        "no-such-app": "No such app: " + options.app
+      });
+    }
+
+    // In case of reconnect recover the state so user sees only new logs.
+    // Only set up the onReconnect handler after the subscribe and wait
+    // has returned; if we set it up before, then we'll end up with two
+    // subscriptions, because the onReconnect handler will run for the
+    // first time before the subscribeAndWait returns.
     logReader.connection.onReconnect = function () {
       logsSubscription && logsSubscription.stop();
       var opts = { streaming: options.streaming };
@@ -475,16 +489,6 @@ exports.logs = function (options) {
         opts
       );
     };
-
-    try {
-      logsSubscription =
-        logReader.subscribeAndWait("logsForApp", options.app,
-                                   { streaming: options.streaming });
-    } catch (e) {
-      return handleError(e, galaxy, {
-        "no-such-app": "No such app: " + options.app
-      });
-    }
 
     return options.streaming ? null : 0;
   } finally {
