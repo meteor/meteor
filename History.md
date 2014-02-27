@@ -1,5 +1,14 @@
 ## v.NEXT
 
+## v0.7.1.2
+
+* Fix bug in tool error handling that caused `meteor` to crash on Mac
+  OSX when no computer name is set.
+
+* Work around a bug that caused MongoDB to fail an assertion when using
+  tailable cursors on non-oplog collections.
+
+
 ## v0.7.1.1
 
 * Integrate with Meteor developer accounts, a new way of managing your
