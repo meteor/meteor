@@ -99,12 +99,13 @@ ObserveSequence = {
         } else if (seq instanceof Array) {
           var idsUsed = {};
           seqArray = _.map(seq, function (item, index) {
-            if (typeof item === 'string' ||
-                typeof item === 'number' ||
-                typeof item === 'boolean' ||
-                item === undefined) {
+            if (typeof item === 'string') {
               // ensure not empty, since other layers (eg DomRange) assume this as well
               id = "-" + item;
+            } else if (typeof item === 'number' ||
+                       typeof item === 'boolean' ||
+                       item === undefined) {
+              id = item;
             } else if (typeof item === 'object') {
               id = (item && item._id) || index;
             } else {
@@ -227,24 +228,24 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   // it appropriately.
   diffFn(oldIdObjects, newIdObjects, {
     addedBefore: function (id, doc, before) {
-      callbacks.addedAt(
-        id,
-        seqArray[posNew[idStringify(id)]].item,
-        posNew[idStringify(id)],
-        before);
+        callbacks.addedAt(
+          id,
+          seqArray[posNew[idStringify(id)]].item,
+          posNew[idStringify(id)],
+          before);
     },
     movedBefore: function (id, before) {
-      callbacks.movedTo(
-        id,
-        seqArray[posNew[idStringify(id)]].item,
-        posOld[idStringify(id)],
-        posNew[idStringify(id)],
-        before);
+        callbacks.movedTo(
+          id,
+          seqArray[posNew[idStringify(id)]].item,
+          posOld[idStringify(id)],
+          posNew[idStringify(id)],
+          before);
     },
     removed: function (id) {
-      callbacks.removed(
-        id,
-        lastSeqArray[posOld[idStringify(id)]].item);
+        callbacks.removed(
+          id,
+          lastSeqArray[posOld[idStringify(id)]].item);
     }
   });
 
@@ -262,7 +263,7 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
       var oldItem = lastSeqArray[posOld[idString]].item;
 
       if (typeof newItem === 'object' || newItem !== oldItem)
-        callbacks.changed(id, newItem, oldItem);
-    }
+          callbacks.changed(id, newItem, oldItem);
+      }
   });
 };

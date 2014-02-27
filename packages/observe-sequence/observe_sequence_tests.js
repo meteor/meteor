@@ -165,10 +165,10 @@ Tinytest.add('observe sequence - array to other array, strings', function (test)
     seq = ["B", "C"];
     dep.changed();
   }, [
-    {addedAt: ["A", "A", 0, null]},
-    {addedAt: ["B", "B", 1, null]},
-    {removed: ["A", "A"]},
-    {addedAt: ["C", "C", 1, null]}
+    {addedAt: ["-A", "A", 0, null]},
+    {addedAt: ["-B", "B", 1, null]},
+    {removed: ["-A", "A"]},
+    {addedAt: ["-C", "C", 1, null]}
   ]);
 });
 
@@ -450,10 +450,10 @@ Tinytest.add('observe sequence - string arrays', function (test) {
     seq = ['B', 'C'];
     dep.changed();
   }, [
-    {addedAt: ['A', 'A', 0, null]},
-    {addedAt: ['B', 'B', 1, null]},
-    {removed: ['A', 'A']},
-    {addedAt: ['C', 'C', 1, null]}
+    {addedAt: ['-A', 'A', 0, null]},
+    {addedAt: ['-B', 'B', 1, null]},
+    {removed: ['-A', 'A']},
+    {addedAt: ['-C', 'C', 1, null]}
   ]);
 });
 
