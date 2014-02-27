@@ -675,6 +675,7 @@ Tinytest.add('spacebars - templates - no data context', function (test) {
 Tinytest.add('spacebars - templates - isolate', function (test) {
   var tmpl = Template.spacebars_template_test_isolate;
 
+  Meteor._suppress_log(1); // we print a deprecation notice
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 
@@ -684,6 +685,7 @@ Tinytest.add('spacebars - templates - isolate', function (test) {
 Tinytest.add('spacebars - templates - constant', function (test) {
   var tmpl = Template.spacebars_template_test_constant;
 
+  Meteor._suppress_log(1); // we print a deprecation notice
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 
