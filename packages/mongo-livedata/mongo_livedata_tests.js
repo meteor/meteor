@@ -746,6 +746,13 @@ if (Meteor.isServer) {
     x++;
   });
 
+  // compares arrays a and b w/o looking at order
+  var setsEqual = function (a, b) {
+    a = _.map(a, EJSON.stringify);
+    b = _.map(b, EJSON.stringify);
+    return _.isEmpty(_.difference(a, b)) && _.isEmpty(_.difference(b, a));
+  };
+
   // This test mainly checks the correctness of oplog code dealing with limited
   // queries. Compitablity with poll-diff is added as well.
   Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
@@ -786,13 +793,6 @@ if (Meteor.isServer) {
         coll.update(sel, mod, opt);
       });
     };
-    // compares arrays a and b w/o looking at order
-    var setsEqual = function (a, b) {
-      a = _.map(a, EJSON.stringify);
-      b = _.map(b, EJSON.stringify);
-      return _.isEmpty(_.difference(a, b)) && _.isEmpty(_.difference(b, a));
-    };
-
     // tests '_id' subfields for all documents in oplog buffer
     var testOplogBufferIds = function (ids) {
       var bufferIds = [];
@@ -979,6 +979,62 @@ if (Meteor.isServer) {
     usesOplog && testSafeAppendToBufferFlag(true);
 
     o.handle.stop();
+    onComplete();
+  });
+
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+
+    var observer = function () {
+      var state = {};
+      var output = [];
+      var callbacks = {
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        added: function (newDoc) {
+          output.push({added: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        removed: function (oldDoc) {
+          output.push({removed: oldDoc._id});
+          delete state[oldDoc._id];
+        }
+      };
+      var handle = coll.find({}, {sort: {x: 1},
+                                  limit: 2,
+                                  fields: {y: 1}}).observe(callbacks);
+
+      return {output: output, handle: handle, state: state};
+    };
+    var clearOutput = function (o) { o.output.splice(0, o.output.length); };
+    var ins = function (doc) {
+      var id; runInFence(function () { id = coll.insert(doc); });
+      return id;
+    };
+
+    var o = observer();
+
+    var docId1 = ins({ x: 1, y: 1222 });
+    var docId2 = ins({ x: 5, y: 5222 });
+
+    test.length(o.output, 2);
+    test.equal(o.output, [{added: docId1}, {added: docId2}]);
+    clearOutput(o);
+
+    var docId3 = ins({ x: 7, y: 7222 });
+    var docId4 = ins({ x: -1, y: -1222 });
+
+    // Becomes [docId4 docId1 | docId2 docId3]
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{added: docId4}, {removed: docId2}]));
+
+    test.equal(_.size(o.state), 2);
+    test.equal(o.state[docId4], {_id: docId4, y: -1222});
+    test.equal(o.state[docId1], {_id: docId1, y: 1222});
+
     onComplete();
   });
 }
