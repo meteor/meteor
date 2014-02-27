@@ -121,10 +121,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // subprotocol and the server doesn't send one back (and sockjs doesn't).
     // Faye doesn't have that behavior; it's unclear from reading RFC 6455 if
     // Faye is erroneous or not.  So for now, we don't specify protocols.
-    var url = toWebsocketUrl(self.endpoint);
-
     var client = self.client = new FayeWebSocket.Client(
-      url,
+      toWebsocketUrl(self.endpoint),
       [/*no subprotocols*/],
       {headers: self.headers}
     );

@@ -50,6 +50,8 @@ var Connection = function (url, options) {
       retry: options.retry,
       headers: options.headers,
       _sockjsOptions: options._sockjsOptions,
+      // To keep some tests quiet (because we don't have a real API for handling
+      // client-stream-level errors).
       _dontPrintErrors: options._dontPrintErrors
     });
   }
