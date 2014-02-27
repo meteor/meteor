@@ -500,6 +500,10 @@ Tinytest.add("spacebars - templates - each on array", function (test) {
   rendersTo("toString");
   R.set([]);
   rendersTo("else-clause");
+  R.set([0, 1, 2]);
+  rendersTo("0 1 2");
+  R.set([]);
+  rendersTo("else-clause");
 });
 
 Tinytest.add("spacebars - templates - ..", function (test) {
