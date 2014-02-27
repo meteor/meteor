@@ -12,12 +12,23 @@ Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
   if (_.contains(selectorPaths, ''))
     return {};
 
+  return combineImportantPathsIntoProjection(selectorPaths, projection);
+};
+
+Minimongo.Matcher.prototype._getPathsElidingNumericKeys = function () {
+  var self = this;
+  return _.map(self._getPaths(), function (path) {
+    return _.reject(path.split('.'), isNumericKey).join('.');
+  });
+};
+
+combineImportantPathsIntoProjection = function (paths, projection) {
   var prjDetails = projectionDetails(projection);
   var tree = prjDetails.tree;
   var mergedProjection = {};
 
   // merge the paths to include
-  tree = pathsToTree(selectorPaths,
+  tree = pathsToTree(paths,
                      function (path) { return true; },
                      function (node, path, fullPath) { return true; },
                      tree);
@@ -38,13 +49,6 @@ Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
 
     return mergedExclProjection;
   }
-};
-
-Minimongo.Matcher.prototype._getPathsElidingNumericKeys = function () {
-  var self = this;
-  return _.map(self._getPaths(), function (path) {
-    return _.reject(path.split('.'), isNumericKey).join('.');
-  });
 };
 
 // Returns a set of key paths similar to

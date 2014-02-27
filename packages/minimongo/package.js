@@ -28,7 +28,8 @@ Package.on_use(function (api) {
   // Functionality used only by oplog tailing on the server side
   api.add_files([
     'selector_projection.js',
-    'selector_modifier.js'
+    'selector_modifier.js',
+    'sorter_projection.js'
   ], 'server');
 });
 

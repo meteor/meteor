@@ -38,7 +38,7 @@ Sorter = function (spec) {
       });
     }
   } else {
-    throw Error("Bad sort specification: ", JSON.stringify(spec));
+    throw Error("Bad sort specification: " + JSON.stringify(spec));
   }
 
   // reduceValue takes in all the possible values for the sort key along various
