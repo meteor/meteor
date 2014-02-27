@@ -462,9 +462,17 @@ exports.logs = function (options) {
       var opts = { streaming: options.streaming };
       if (lastLogId)
         opts.resumeAfterId = lastLogId;
+      // Don't use subscribeAndWait here; it'll deadlock. We can't
+      // process the sub messages until `onReconnect` returns, and
+      // `onReconnect` won't return unless the sub messages have been
+      // processed. There's no reason we need to wait for the sub to be
+      // ready here anyway.
       // XXX correctly handle errors on resubscribe
-      logsSubscription = logReader.subscribeAndWait("logsForApp",
-                                                    options.app, opts);
+      logsSubscription = logReader.connection.subscribe(
+        "logsForApp",
+        options.app,
+        opts
+      );
     };
 
     try {
