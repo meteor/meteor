@@ -30,24 +30,13 @@ OplogObserveDriver = function (options) {
 
   self._registerPhaseChange(PHASE.QUERYING);
 
-  // A minimongo LocalCollection containing the docs that match the selector,
-  // and maybe more. It is guaranteed to contain all the fields needed for the
-  // selector and the projection, and may have other fields too. (In the future
-  // we may try to make this collection be shared between multiple
-  // OplogObserveDrivers, but not currently.)
-  self._collection =
-    new LocalCollection({_observeCallbacksWillNeverYield: true});
-  // XXX think about what all the options are
-  var minimongoCursor = self._collection.find(
-    self._cursorDescription.selector, self._cursorDescription.options);
-  self._stopHandles.push(minimongoCursor.observeChanges(self._multiplexer));
-
+  self._published = new LocalCollection._IdMap;
   var selector = self._cursorDescription.selector;
   self._matcher = options.matcher;
-
+  var projection = self._cursorDescription.options.fields || {};
+  self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
-  var projection = self._cursorDescription.options.fields || {};
   self._sharedProjection = self._matcher.combineIntoProjection(projection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
     self._sharedProjection);
@@ -120,51 +109,47 @@ OplogObserveDriver = function (options) {
 _.extend(OplogObserveDriver.prototype, {
   _add: function (doc) {
     var self = this;
-    doc = self._sharedProjectionFn(doc);
-    // XXX does _sharedProjection always preserve id?
-    if (!_.has(doc, '_id'))
-      throw Error("Can't add doc without _id");
-    self._collection.insert(doc);
+    var id = doc._id;
+    var fields = _.clone(doc);
+    delete fields._id;
+    if (self._published.has(id))
+      throw Error("tried to add something already published " + id);
+    self._published.set(id, self._sharedProjectionFn(fields));
+    self._multiplexer.added(id, self._projectionFn(fields));
   },
-  _remove: function (id, options) {
+  _remove: function (id) {
     var self = this;
-    options = options || {};
-    var removed = self._collection.remove({_id: id});
-    if (options.mustExist && removed !== 1)
+    if (!self._published.has(id))
       throw Error("tried to remove something unpublished " + id);
+    self._published.remove(id);
+    self._multiplexer.removed(id);
   },
   _handleDoc: function (id, newDoc, mustMatchNow) {
     var self = this;
-    newDoc = _.clone(newDoc);  // *shallow* clone
+    newDoc = _.clone(newDoc);
 
-    // XXX this is just about "matching selector", not about skip/limit
     var matchesNow = newDoc && self._matcher.documentMatches(newDoc).result;
     if (mustMatchNow && !matchesNow) {
       throw Error("expected " + EJSON.stringify(newDoc) + " to match "
                   + EJSON.stringify(self._cursorDescription));
     }
 
-    var inCollection = !!self._collection.find(id).count();
+    var matchedBefore = self._published.has(id);
 
-    if (matchesNow && !inCollection) {
-      // It matches the selector and it isn't in our collection, so add it.
-      // XXX once we add skip/limit, this may not always send an added, and
-      // we may need to do some GC
+    if (matchesNow && !matchedBefore) {
       self._add(newDoc);
-    } else if (inCollection && !matchesNow) {
-      // We remove this from the collection to achieve two goals: (a) causing
-      // the observeChanges to fire removed() and (b) saving memory.  That said,
-      // it would be legitimate (if !!newDoc) to update the collection instead
-      // of removing, if we thought we might need this doc again soon.
-      self._remove(id, {mustExist: true});
+    } else if (matchedBefore && !matchesNow) {
+      self._remove(id);
     } else if (matchesNow) {
-      // Replace the doc inside our collection, which may trigger a changed
-      // callback.
-      newDoc = self._sharedProjectionFn(newDoc);
-      // XXX does _sharedProjection always preserve id?
-      if (!_.has(newDoc, '_id'))
-        throw Error("Can't add newDoc without _id");
-      self._collection.update(id, newDoc);
+      var oldDoc = self._published.get(id);
+      if (!oldDoc)
+        throw Error("thought that " + id + " was there!");
+      delete newDoc._id;
+      self._published.set(id, self._sharedProjectionFn(newDoc));
+      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
+      changed = self._projectionFn(changed);
+      if (!_.isEmpty(changed))
+        self._multiplexer.changed(id, changed);
     }
   },
   _fetchModifiedDocuments: function () {
@@ -248,9 +233,10 @@ _.extend(OplogObserveDriver.prototype, {
     }
 
     if (op.op === 'd') {
-      self._remove(id);
+      if (self._published.has(id))
+        self._remove(id);
     } else if (op.op === 'i') {
-      if (self._collection.find(id).count())
+      if (self._published.has(id))
         throw new Error("insert found for already-existing ID");
 
       // XXX what if selector yields?  for now it can't but later it could have
@@ -272,24 +258,18 @@ _.extend(OplogObserveDriver.prototype, {
 
       if (isReplace) {
         self._handleDoc(id, _.extend({_id: id}, op.o));
-      } else {
-        var newDoc = self._collection.findOne(id);
-        if (newDoc && canDirectlyModifyDoc) {
-          // Oh great, we actually know what the document is, so we can apply
-          // this directly.
-          // XXX just send the modifier to _collection.update? but then
-          // we don't necessarily get to GC
-
-          // We can avoid another deep clone here since the findOne above would
-          // return a copy anyways
-          LocalCollection._modify(newDoc, op.o);
-          self._handleDoc(id, newDoc);
-        } else if (!canDirectlyModifyDoc ||
-                   self._matcher.canBecomeTrueByModifier(op.o)) {
-          self._needToFetch.set(id, op.ts.toString());
-          if (self._phase === PHASE.STEADY)
-            self._fetchModifiedDocuments();
-        }
+      } else if (self._published.has(id) && canDirectlyModifyDoc) {
+        // Oh great, we actually know what the document is, so we can apply
+        // this directly.
+        var newDoc = EJSON.clone(self._published.get(id));
+        newDoc._id = id;
+        LocalCollection._modify(newDoc, op.o);
+        self._handleDoc(id, self._sharedProjectionFn(newDoc));
+      } else if (!canDirectlyModifyDoc ||
+                 self._matcher.canBecomeTrueByModifier(op.o)) {
+        self._needToFetch.set(id, op.ts.toString());
+        if (self._phase === PHASE.STEADY)
+          self._fetchModifiedDocuments();
       }
     } else {
       throw Error("XXX SURPRISING OPERATION: " + op);
@@ -338,19 +318,18 @@ _.extend(OplogObserveDriver.prototype, {
     self._currentlyFetching = null;
     ++self._fetchGeneration;  // ignore any in-flight fetches
     self._registerPhaseChange(PHASE.QUERYING);
-    self._collection.pauseObservers();
-    // XXX this won't be quite correct for skip/limit
-    self._collection.remove({});
 
     // Defer so that we don't block.
     Meteor.defer(function () {
-      // Insert all the documents currently found by the query.
-      self._cursorForQuery().forEach(function (doc) {
-        self._collection.insert(doc);
+      // subtle note: _published does not contain _id fields, but newResults
+      // does
+      var newResults = new LocalCollection._IdMap;
+      var cursor = self._cursorForQuery();
+      cursor.forEach(function (doc) {
+        newResults.set(doc._id, doc);
       });
 
-      // Allow observe callbacks (ie multiplexer invocations) to fire.
-      self._collection.resumeObservers();
+      self._publishNewResults(newResults);
 
       self._doneQuerying();
     });
@@ -420,6 +399,34 @@ _.extend(OplogObserveDriver.prototype, {
   },
 
 
+  // Replace self._published with newResults (both are IdMaps), invoking observe
+  // callbacks on the multiplexer.
+  //
+  // XXX This is very similar to LocalCollection._diffQueryUnorderedChanges. We
+  // should really: (a) Unify IdMap and OrderedDict into Unordered/OrderedDict (b)
+  // Rewrite diff.js to use these classes instead of arrays and objects.
+  _publishNewResults: function (newResults) {
+    var self = this;
+
+    // First remove anything that's gone. Be careful not to modify
+    // self._published while iterating over it.
+    var idsToRemove = [];
+    self._published.forEach(function (doc, id) {
+      if (!newResults.has(id))
+        idsToRemove.push(id);
+    });
+    _.each(idsToRemove, function (id) {
+      self._remove(id);
+    });
+
+    // Now do adds and changes.
+    newResults.forEach(function (doc, id) {
+      // "true" here means to throw if we think this doc doesn't match the
+      // selector.
+      self._handleDoc(id, doc, true);
+    });
+  },
+
   // This stop function is invoked from the onStop of the ObserveMultiplexer, so
   // it shouldn't actually be possible to call it until the multiplexer is
   // ready.
@@ -443,6 +450,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._writesToCommitWhenWeReachSteady = null;
 
     // Proactively drop references to potentially big things.
+    self._published = null;
     self._needToFetch = null;
     self._currentlyFetching = null;
     self._oplogEntryHandle = null;
@@ -455,9 +463,6 @@ _.extend(OplogObserveDriver.prototype, {
   _registerPhaseChange: function (phase) {
     var self = this;
     var now = new Date;
-
-    if (phase === self._phase)
-      return;
 
     if (self._phase) {
       var timeDiff = now - self._phaseStartTime;

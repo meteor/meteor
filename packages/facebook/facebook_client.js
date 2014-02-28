@@ -32,5 +32,8 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
         '&display=' + display + '&scope=' + scope + '&state=' + credentialToken;
 
-  Oauth.initiateLogin(credentialToken, loginUrl, credentialRequestCompleteCallback);
+  Oauth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken)
+  );
 };

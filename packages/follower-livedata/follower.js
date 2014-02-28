@@ -104,7 +104,7 @@ Follower = {
           url: url
         }]);
       } else {
-        conn = DDP.connect(url);
+        conn = DDP.connect(url, options);
         prevReconnect = conn.reconnect;
         prevDisconnect = conn.disconnect;
         prevApply = conn.apply;

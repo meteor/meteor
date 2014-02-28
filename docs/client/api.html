@@ -1629,6 +1629,16 @@ This function is provided by the `accounts-password` package. See the
 
 {{> api_box loginWithExternalService}}
 
+Available functions are:
+
+* `Meteor.loginWithMeteorDeveloperAccount`
+* `Meteor.loginWithFacebook`
+* `Meteor.loginWithGithub`
+* `Meteor.loginWithGoogle`
+* `Meteor.loginWithMeetup`
+* `Meteor.loginWithTwitter`
+* `Meteor.loginWithWeibo`
+
 These functions initiate the login process with an external
 service (eg: Facebook, Google, etc), using OAuth. When called they open a new pop-up
 window that loads the provider's login page. Once the user has logged in
@@ -1653,20 +1663,21 @@ sites:
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
 - Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
 - Meetup: <http://www.meetup.com/meetup_api/auth/#oauth2-scopes>
-- Twitter, Weibo: `requestPermissions` currently not supported
+- Twitter, Weibo, Meteor developer accounts: `requestPermissions` currently not supported
 
 External login services typically require registering and configuring
 your application before use. The easiest way to do this is with the
 [`accounts-ui` package](#accountsui) which presents a step-by-step guide
 to configuring each service. However, the data can be also be entered
-manually in the `Accounts.loginServiceConfiguration` collection. For
-example:
+manually in the `ServiceConfiguration.configurations` collection, which
+is exported by the `service-configuration` package. For example, after
+running `meteor add service-configuration` in your app:
 
     // first, remove configuration entry in case service is already configured
-    Accounts.loginServiceConfiguration.remove({
+    ServiceConfiguration.configurations.remove({
       service: "weibo"
     });
-    Accounts.loginServiceConfiguration.insert({
+    ServiceConfiguration.configurations.insert({
       service: "weibo",
       clientId: "1292962797",
       secret: "75a730b58f5691de5522789070c319bc"

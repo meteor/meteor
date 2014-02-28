@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.30
+BUNDLE_VERSION=0.3.32
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -99,11 +99,11 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/tools/meteor.js"
+    METEOR="$SCRIPT_DIR/tools/main.js"
 else
     # In an install
     DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/tools/meteor.js"
+    METEOR="$DEV_BUNDLE/tools/main.js"
 fi
 
 

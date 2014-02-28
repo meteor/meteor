@@ -86,6 +86,7 @@ mv "${INSTALL_TMPDIR}/.meteor" "$HOME"
 rmdir "${INSTALL_TMPDIR}"
 # just double-checking :)
 test -x "$HOME/.meteor/meteor"
+"$HOME/.meteor/meteor" --get-ready
 
 echo
 echo "Meteor __RELEASE__ has been installed in your home directory (~/.meteor)."

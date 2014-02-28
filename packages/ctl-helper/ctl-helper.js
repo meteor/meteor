@@ -45,12 +45,16 @@ _.extend(Ctl, {
       Ctl.findGalaxy(), 'getAppConfiguration', [Ctl.myAppName()]);
     if (typeof admin == 'undefined')
       admin = appConfig.admin;
+    admin = !!admin;
 
-    var proxyConfig;
-    var bindPathPrefix = "";
     var jobId = null;
-    if (admin) {
-      bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
+    var rootUrl = Ctl.rootUrl;
+    if (! rootUrl) {
+      var bindPathPrefix = "";
+      if (admin) {
+        bindPathPrefix = "/" + encodeURIComponent(Ctl.myAppName()).replace(/\./g, '_');
+      }
+      rootUrl = "https://" + appConfig.sitename + bindPathPrefix;
     }
 
     // Allow appConfig settings to be objects or strings. We need to stringify
@@ -62,13 +66,15 @@ _.extend(Ctl, {
     });
 
     // XXX args? env?
+    var env = {
+      ROOT_URL: rootUrl,
+      METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS
+    };
+    if (admin)
+      env.ADMIN_APP = 'true';
     jobId = Ctl.prettyCall(Ctl.findGalaxy(), 'run', [Ctl.myAppName(), program, {
       exitPolicy: 'restart',
-      env: {
-        ROOT_URL: "https://" + appConfig.sitename + bindPathPrefix,
-        METEOR_SETTINGS: appConfig.settings || appConfig.METEOR_SETTINGS,
-        ADMIN_APP: admin
-      },
+      env: env,
       ports: {
         "main": {
           bindEnv: "PORT",
@@ -133,31 +139,49 @@ _.extend(Ctl, {
     }
   },
 
-  updateProxyActiveTags: function (tags) {
+  updateProxyActiveTags: function (tags, options) {
     var proxy;
     var proxyTagSwitchFuture = new Future;
-    AppConfig.configureService('proxy', function (proxyService) {
-      try {
-        proxy = Follower.connect(proxyService.providers.proxy, {
-        group: "proxy"
-        });
-        proxy.call('updateTags', Ctl.myAppName(), tags);
-        proxy.disconnect();
-        if (!proxyTagSwitchFuture.isResolved())
-          proxyTagSwitchFuture['return']();
-      } catch (e) {
-        if (!proxyTagSwitchFuture.isResolved())
-          proxyTagSwitchFuture['throw'](e);
+    options = options || {};
+    AppConfig.configureService('proxy', 'pre0', function (proxyService) {
+      if (proxyService && ! _.isEmpty(proxyService)) {
+        try {
+          proxy = Follower.connect(proxyService, {
+            group: "proxy"
+          });
+          var tries = 0;
+          while (tries < 100) {
+            try {
+              proxy.call('updateTags', Ctl.myAppName(), tags, options);
+              break;
+            } catch (e) {
+              if (e.error === 'not-enough-bindings') {
+                tries++;
+                // try again in a sec.
+                Meteor._sleepForMs(1000);
+              } else {
+                throw e;
+              }
+            }
+          }
+          proxy.disconnect();
+          if (!proxyTagSwitchFuture.isResolved())
+            proxyTagSwitchFuture['return']();
+        } catch (e) {
+          if (!proxyTagSwitchFuture.isResolved())
+            proxyTagSwitchFuture['throw'](e);
+        }
       }
     });
 
     var proxyTimeout = Meteor.setTimeout(function () {
       if (!proxyTagSwitchFuture.isResolved())
         proxyTagSwitchFuture['throw'](
-          new Error("timed out looking for a proxy " +
-                    "or trying to change tags on it " +
-                    proxy.status().status));
-    }, 10*1000);
+          new Error("Timed out looking for a proxy " +
+                    "or trying to change tags on it. Status: " +
+                    (proxy ? proxy.status().status : "no connection"))
+        );
+    }, 50*1000);
     proxyTagSwitchFuture.wait();
     Meteor.clearTimeout(proxyTimeout);
   },
