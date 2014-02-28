@@ -191,7 +191,7 @@ WatchSet.fromJSON = function (json) {
   set.files = _.clone(json.files);
 
   var reFromJSON = function (j) {
-    if (j.$regex)
+    if (_.has(j, '$regex'))
       return new RegExp(j.$regex, j.$options);
     return new RegExp(j);
   };
