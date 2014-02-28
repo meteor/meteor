@@ -17,12 +17,6 @@ HTML.isNully = function (node) {
   return false;
 };
 
-HTML.asciiLowerCase = function (str) {
-  return str.replace(/[A-Z]/g, function (c) {
-    return String.fromCharCode(c.charCodeAt(0) + 32);
-  });
-};
-
 HTML.escapeData = function (str) {
   // string; escape the two special chars in HTML data and RCDATA
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;');
