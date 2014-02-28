@@ -1392,6 +1392,16 @@ main.registerCommand({
 });
 
 
+main.registerCommand({
+  name: 'update',
+  options: {},
+  maxArgs: 3,
+  hidden: true
+}, function (options) {
+  console.log("test");
+  loadPackageData();
+});
+
 ///////////////////////////////////////////////////////////////////////////////
 // dummy
 ///////////////////////////////////////////////////////////////////////////////

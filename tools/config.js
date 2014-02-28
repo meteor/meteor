@@ -135,6 +135,15 @@ _.extend(exports, {
     }
   },
 
+  getPackagesSyncToken: function() {
+    return  path.join(process.env.HOME, ".meteorPackages", "syncToken.json");
+  },
+
+
+  getPackagesCollections: function() {
+    return  path.join(process.env.HOME, ".meteorPackages", "collections");
+  },
+
   // Return the domain name of the current Meteor Accounts server in
   // use. This is used as a key for storing your Meteor Accounts
   // login token.
