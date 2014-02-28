@@ -42,7 +42,7 @@
 * Add and improve support for minimongo operators.
   - Support `$comment`.
   - Support `obj` name in `$where`.
-  - `$regexp` matches actual regexps properly.
+  - `$regex` matches actual regexps properly.
   - Improve support for `$nin`, `$ne`, `$not`.
   - Support using `{ $in: [/foo/, /bar/] }`. #1707
   - Support `{$exists: false}`.
