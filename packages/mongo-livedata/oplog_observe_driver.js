@@ -39,6 +39,8 @@ OplogObserveDriver = function (options) {
   }
 
   var sortSpec = options.cursorDescription.options.sort;
+  var sorter = sortSpec && new Minimongo.Sorter(sortSpec);
+  var comparator = sorter && sorter.getComparator();
 
   if (options.cursorDescription.options.limit) {
     // There are several properties ordered driver implements:
@@ -52,8 +54,6 @@ OplogObserveDriver = function (options) {
 
     // We don't support $near and other geo-queries so it's OK to initialize the
     // comparator only once in the constructor.
-    var sorter = new Minimongo.Sorter(sortSpec);
-    var comparator = sorter.getComparator();
     var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
@@ -87,8 +87,8 @@ OplogObserveDriver = function (options) {
   // Projection function, result of combining important fields for selector and
   // existing fields projection
   self._sharedProjection = self._matcher.combineIntoProjection(projection);
-  if (sortSpec)
-    self._sharedProjection = Minimongo.Sorter.combineSpecIntoProjection(sortSpec, self._sharedProjection);
+  if (sorter)
+    self._sharedProjection = sorter.combineIntoProjection(self._sharedProjection);
   self._sharedProjectionFn = LocalCollection._compileProjection(
     self._sharedProjection);
 
