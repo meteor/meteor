@@ -1326,7 +1326,7 @@ main.registerCommand({
 
   var conn = packageClient.loggedInPackagesConnection();
   if (! conn) {
-    process.stderr.write('Publish failed');
+    process.stderr.write('Publish failed\n');
     return 1;
   }
 
