@@ -9,7 +9,10 @@ Package.on_use(function (api) {
   api.use('htmljs');
   api.imply('htmljs');
 
-  api.add_files(['scanner.js',
+  api.export('HTMLTools');
+
+  api.add_files(['utils.js',
+                 'scanner.js',
                  'charref.js',
                  'tokenize.js',
                  'parse.js',
