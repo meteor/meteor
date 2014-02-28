@@ -97,8 +97,8 @@ You can also specify additional arguments to be passed into meteor, like:
 $ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.json
 ```
 
-## Errors
-1. Not migrating, control is locked meteor migration
+### Errors
+1. "`Not migrating, control is locked meteor migration`"
    - There is an object acting as a lock in the "migrations" collection
     `{ "_id" : "control", "locked" : false, "version" : 1 }`
 
