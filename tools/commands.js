@@ -1306,7 +1306,6 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: 0,
   options: {
-    versionString: { type: String, short: "v", required: true },
     // XXX A temporary option to create the package, until we sync
     // package metadata to the client.
     create: { type: Boolean }
@@ -1318,7 +1317,12 @@ main.registerCommand({
   ));
 
   var name = pkg.name;
-  var version = options.version;
+  var version = pkg.metadata.version;
+
+  if (! version) {
+    process.stderr.write('Package must have a version\n');
+    return 1;
+  }
 
   var conn = packageClient.loggedInPackagesConnection();
   if (! conn) {
@@ -1338,7 +1342,7 @@ main.registerCommand({
   process.stdout.write('Creating package version...\n');
   var uploadInfo = conn.call('createPackageVersion', {
     packageName: pkg.name,
-    version: options.versionString,
+    version: version,
     description: pkg.metadata.summary
   });
 
@@ -1385,7 +1389,7 @@ main.registerCommand({
   conn.call('publishPackageVersion', uploadInfo.uploadToken, tarballHash);
   conn.close();
   process.stdout.write('Published ' + pkg.name +
-                       ', version ' + options.versionString);
+                       ', version ' + version);
 
   process.stdout.write('\nDone!\n');
   return 0;
