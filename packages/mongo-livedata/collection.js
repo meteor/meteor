@@ -57,7 +57,8 @@ Meteor.Collection = function (name, options) {
     self._connection = Meteor.server;
 
   if (!options._driver) {
-    if (name && self._connection === Meteor.server &&
+    if (name && (self._connection !== null) &&
+        self._connection === Meteor.server &&
         typeof MongoInternals !== "undefined" &&
         MongoInternals.defaultRemoteCollectionDriver) {
       options._driver = MongoInternals.defaultRemoteCollectionDriver();
