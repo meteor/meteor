@@ -207,7 +207,7 @@ var pushOrAppendString = function (items, string) {
     items.push(string);
 };
 
-// get RCDATA to go in the lowercase tagName (e.g. "textarea")
+// get RCDATA to go in the lowercase (or camel case) tagName (e.g. "textarea")
 getRCData = function (scanner, tagName, shouldStopFunc) {
   var items = [];
 
@@ -332,7 +332,7 @@ var parseAttrs = function (attrs) {
     } else {
       var outValue = (inValue.length === 0 ? '' :
                       (outParts.length === 1 ? outParts[0] : outParts));
-      var properKey = HTML.properCaseAttributeName(k);
+      var properKey = HTMLTools.properCaseAttributeName(k);
       result[properKey] = outValue;
     }
   }

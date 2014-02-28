@@ -238,7 +238,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
   run("<asdf>{{foo}}</asdf>",
       function () {
         var self = this;
-        return HTML.getTag("ASDF")(function () {
+        return HTML.getTag("asdf")(function () {
           return Spacebars.mustache(self.lookup("foo"));
         });
       });

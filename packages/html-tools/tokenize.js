@@ -19,7 +19,7 @@
 // { t: 'Tag',
 //   isEnd: Boolean (optional),
 //   isSelfClosing: Boolean (optional),
-//   n: String (tag name, ASCII-lowercased),
+//   n: String (tag name, in lowercase or camel case),
 //   attrs: { String: [zero or more 'Chars' or 'CharRef' objects] }
 //     (only for start tags; required)
 // }
@@ -393,7 +393,7 @@ getTagToken = function (scanner) {
   var tagName = getTagName(scanner);
   if (! tagName)
     scanner.fatal("Expected tag name after `<`");
-  tag.n = HTML.asciiLowerCase(tagName);
+  tag.n = HTMLTools.properCaseTagName(tagName);
 
   if (scanner.peek() === '/' && tag.isEnd)
     scanner.fatal("End tag can't have trailing slash");
@@ -450,7 +450,7 @@ getTagToken = function (scanner) {
       // allow it, so who cares.
       if (attributeName.indexOf('{') >= 0)
         scanner.fatal("Unexpected `{` in attribute name.");
-      attributeName = HTML.asciiLowerCase(attributeName);
+      attributeName = HTMLTools.properCaseAttributeName(attributeName);
 
       if (tag.attrs.hasOwnProperty(attributeName))
         scanner.fatal("Duplicate attribute in tag: " + attributeName);
@@ -514,13 +514,13 @@ TEMPLATE_TAG_POSITION = {
   IN_RAWTEXT: 5
 };
 
-// tagName is lowercase
+// tagName must be proper case
 isLookingAtEndTag = function (scanner, tagName) {
   var rest = scanner.rest();
   var pos = 0; // into rest
   var firstPart = /^<\/([a-zA-Z]+)/.exec(rest);
   if (firstPart &&
-      HTML.asciiLowerCase(firstPart[1]) === tagName) {
+      HTMLTools.properCaseTagName(firstPart[1]) === tagName) {
     // we've seen `</foo`, now see if the end tag continues
     pos += firstPart[0].length;
     while (pos < rest.length && HTML_SPACE.test(rest.charAt(pos)))

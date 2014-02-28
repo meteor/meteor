@@ -46,11 +46,14 @@ HTML.Tag.prototype.toJS = function (options) {
     argStrs.push(HTML.toJS(this.children[i], options));
   }
 
-  var tagSymbol = this.tagName;
-  if ((this instanceof HTML.Tag) && ! HTML.isTagEnsured(tagSymbol))
-    tagSymbol = 'HTML.getTag(' + toJSLiteral(tagSymbol) + ')';
+  var tagName = this.tagName;
+  var tagSymbol;
+  if (! (this instanceof HTML.Tag))
+    tagSymbol = 'HTML.' + tagName; // a CharRef or Comment, say
+  else if (! HTML.isTagEnsured(tagName))
+    tagSymbol = 'HTML.getTag(' + toJSLiteral(tagName) + ')';
   else
-    tagSymbol = 'HTML.' + tagSymbol;
+    tagSymbol = 'HTML.' + HTML.getSymbolName(tagName);
 
   return tagSymbol + '(' + argStrs.join(', ') + ')';
 };

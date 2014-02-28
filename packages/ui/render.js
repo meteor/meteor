@@ -342,10 +342,9 @@ var materialize = function (node, parent, before, parentComponent) {
     };
     insert(range, parent, before);
   } else if (node instanceof HTML.Tag) {
-    var tagName = HTML.properCaseTagName(node.tagName);
+    var tagName = node.tagName;
     var elem;
-    if (HTML.isKnownSVGElement(tagName) && (! HTML.isKnownElement(tagName)) &&
-        document.createElementNS) {
+    if (HTML.isKnownSVGElement(tagName) && document.createElementNS) {
       elem = document.createElementNS('http://www.w3.org/2000/svg', tagName);
     } else {
       elem = document.createElement(node.tagName);
@@ -353,7 +352,7 @@ var materialize = function (node, parent, before, parentComponent) {
 
     var rawAttrs = node.attrs;
     var children = node.children;
-    if (node.tagName === 'TEXTAREA') {
+    if (node.tagName === 'textarea') {
       rawAttrs = (rawAttrs || {});
       rawAttrs.value = children;
       children = [];
