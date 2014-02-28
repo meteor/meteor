@@ -122,7 +122,7 @@ var getDoctypeQuotedString = function (scanner) {
 //
 // If `getDocType` sees "<!DOCTYPE" (case-insensitive), it will match or fail fatally.
 getDoctype = function (scanner) {
-  if (HTML.asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
+  if (HTMLTools.asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
     return null;
   var start = scanner.pos;
   scanner.pos += 9;
@@ -141,7 +141,7 @@ getDoctype = function (scanner) {
     name += ch;
     scanner.pos++;
   }
-  name = HTML.asciiLowerCase(name);
+  name = HTMLTools.asciiLowerCase(name);
 
   // Now we're looking at a space or a `>`.
   skipSpaces(scanner);
@@ -154,7 +154,7 @@ getDoctype = function (scanner) {
     // but we're not looking at space or `>`.
 
     // this should be "public" or "system".
-    var publicOrSystem = HTML.asciiLowerCase(scanner.rest().slice(0, 6));
+    var publicOrSystem = HTMLTools.asciiLowerCase(scanner.rest().slice(0, 6));
 
     if (publicOrSystem === 'system') {
       scanner.pos += 6;
