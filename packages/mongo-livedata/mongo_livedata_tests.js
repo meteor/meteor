@@ -1014,6 +1014,9 @@ if (Meteor.isServer) {
       var id; runInFence(function () { id = coll.insert(doc); });
       return id;
     };
+    var rem = function (id) {
+      runInFence(function () { coll.remove(id); });
+    };
 
     var o = observer();
 
@@ -1025,6 +1028,8 @@ if (Meteor.isServer) {
     clearOutput(o);
 
     var docId3 = ins({ x: 7, y: 7222 });
+    test.length(o.output, 0);
+
     var docId4 = ins({ x: -1, y: -1222 });
 
     // Becomes [docId4 docId1 | docId2 docId3]
@@ -1034,6 +1039,21 @@ if (Meteor.isServer) {
     test.equal(_.size(o.state), 2);
     test.equal(o.state[docId4], {_id: docId4, y: -1222});
     test.equal(o.state[docId1], {_id: docId1, y: 1222});
+    clearOutput(o);
+
+    rem(docId2);
+    // Becomes [docId4 docId1 | docId3]
+    test.length(o.output, 0);
+
+    rem(docId4);
+    // Becomes [docId1 docId3]
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{added: docId3}, {removed: docId4}]));
+
+    test.equal(_.size(o.state), 2);
+    test.equal(o.state[docId3], {_id: docId3, y: 7222});
+    test.equal(o.state[docId1], {_id: docId1, y: 1222});
+    clearOutput(o);
 
     onComplete();
   });
