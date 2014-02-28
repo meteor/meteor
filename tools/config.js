@@ -127,6 +127,14 @@ _.extend(exports, {
     return addScheme(host);
   },
 
+  getPackageServerDomain: function () {
+    if (isLocalUniverse()) {
+      return localhostOffset(20);
+    } else {
+      return getUniverse();
+    }
+  },
+
   // Return the domain name of the current Meteor Accounts server in
   // use. This is used as a key for storing your Meteor Accounts
   // login token.

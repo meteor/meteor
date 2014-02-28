@@ -14,6 +14,9 @@ var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js').runLog;
+var packageClient = require('./package-client.js');
+var utils = require('./utils.js');
+var httpHelpers = require('./http-helpers.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1292,6 +1295,100 @@ main.registerCommand({
     historyLines: options.history,
     testRegexp: testRegexp
   });
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// publish a package
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'publish',
+  minArgs: 0,
+  maxArgs: 0,
+  options: {
+    versionString: { type: String, short: "v", required: true },
+    // XXX A temporary option to create the package, until we sync
+    // package metadata to the client.
+    create: { type: Boolean }
+  },
+  requiresPackage: true
+}, function (options) {
+  var pkg = release.current.library.get(path.basename(
+    options.packageDir
+  ));
+
+  var name = pkg.name;
+  var version = options.version;
+
+  var conn = packageClient.loggedInPackagesConnection();
+  if (! conn) {
+    process.stderr.write('Publish failed');
+    return 1;
+  }
+
+  // Create the package.
+  // XXX First sync package metadata and check if it exists.
+  if (options.create) {
+    process.stdout.write('Creating package...\n');
+    var packageId = conn.call('createPackage', {
+      name: pkg.name
+    });
+  }
+
+  process.stdout.write('Creating package version...\n');
+  var uploadInfo = conn.call('createPackageVersion', {
+    packageName: pkg.name,
+    version: options.versionString,
+    description: pkg.metadata.summary
+  });
+
+  process.stdout.write('Bundling source...\n');
+  var tempTarball = path.join(options.packageDir,
+                              'source-' + utils.randomToken() + '.tgz');
+  files.createTarball(options.packageDir, tempTarball, {
+    ignoreDotFiles: true
+  });
+
+  var size = fs.statSync(tempTarball).size;
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.setEncoding('base64');
+  var rs = fs.createReadStream(tempTarball);
+  var fut = new Future();
+  rs.on('end', function () {
+    fut.return(hash.digest('base64'));
+  });
+  rs.pipe(hash, { end: false });
+  var tarballHash = fut.wait();
+
+  rs.close();
+  rs = fs.createReadStream(tempTarball);
+
+  process.stdout.write('Uploading source...\n');
+  httpHelpers.request({
+    method: 'PUT',
+    url: uploadInfo.uploadUrl,
+    headers: {
+      'content-length': size,
+      'content-type': 'application/octet-stream',
+      'x-amz-acl': 'public-read'
+    },
+    bodyStream: rs
+  });
+
+  // XXX Make sure this gets cleaned up even if we throw above
+  fs.unlinkSync(tempTarball);
+
+  // XXX Upload build tarball
+
+  process.stdout.write('Publishing package version...\n');
+  conn.call('publishPackageVersion', uploadInfo.uploadToken, tarballHash);
+  conn.close();
+  process.stdout.write('Published ' + pkg.name +
+                       ', version ' + options.versionString);
+
+  process.stdout.write('\nDone!\n');
+  return 0;
 });
 
 

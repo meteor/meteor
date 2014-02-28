@@ -515,13 +515,16 @@ Fiber(function () {
     rawArgs.push(term);
   }
 
-  // Figure out if we're running in a directory that is part of a
-  // Meteor application. Determine any additional directories to
+  // Figure out if we're running in a directory that is part of a Meteor
+  // application or package. Determine any additional directories to
   // search for packages.
 
   var appDir = files.findAppDir();
   if (appDir)
     appDir = path.resolve(appDir);
+  var packageDir = files.findPackageDir();
+  if (packageDir)
+    packageDir = path.resolve(packageDir);
 
   var packageDirs = [];
   if (appDir)
@@ -907,6 +910,22 @@ commandName + ": You're not in a Meteor project directory.\n" +
 "   meteor create myapp\n" +
 "\n" +
 "For more help, see 'meteor --help'.\n");
+    process.exit(1);
+  }
+
+  // Same check for commands that can only be run from a package dir.
+  var requiresPackage = command.requiresPackage;
+  if (typeof requiresPackage === "function") {
+    requiresPackage = requiresPackage(options);
+  }
+
+  if (packageDir) {
+    options.packageDir = packageDir;
+  }
+
+  if (requiresPackage && ! options.packageDir) {
+    process.stderr.write(
+commandName + ": You're not in a Meteor package directory.\n");
     process.exit(1);
   }
 

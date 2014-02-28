@@ -85,6 +85,18 @@ files.findAppDir = function (filepath) {
   return findUpwards(isAppDir, filepath);
 };
 
+files.findPackageDir = function (filepath) {
+  var isPackageDir = function (filepath) {
+    try {
+      return fs.statSync(path.join(filepath, 'package.js')).isFile();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  return findUpwards(isPackageDir, filepath);
+};
+
 // create a .gitignore file in dirPath if one doesn't exist. add
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
@@ -404,17 +416,31 @@ files.extractTarGz = function (buffer, destPath) {
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
-files.createTarGzStream = function (dirPath) {
+// options:
+//  - ignoreDotFiles: boolean
+files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
-  return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
-    tar.Pack()).pipe(zlib.createGzip());
+  var filter;
+  if (options.ignoreDotFiles) {
+    filter = function () {
+      return ! this.basename.match(/^\./);
+    };
+  }
+  var reader = fstream.Reader({
+    path: dirPath,
+    type: 'Directory',
+    filter: filter
+  });
+  return reader.pipe(tar.Pack()).pipe(zlib.createGzip());
 };
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
-files.createTarball = function (dirPath, tarball) {
+// options:
+//  - ignoreDotFiles: boolean
+files.createTarball = function (dirPath, tarball, options) {
   var future = new Future;
   var out = fs.createWriteStream(tarball);
   out.on('error', function (err) {
@@ -424,7 +450,7 @@ files.createTarball = function (dirPath, tarball) {
     future.return();
   });
 
-  files.createTarGzStream(dirPath).pipe(out);
+  files.createTarGzStream(dirPath, options).pipe(out);
   future.wait();
 };
 

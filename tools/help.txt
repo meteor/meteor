@@ -387,3 +387,7 @@ Grant a permission on an official service
 Usage: meteor admin grant [XXX]
 
 Not yet implemented
+
+>>> publish
+Publish a package
+Usage: meteor publish --versionString <semver>
