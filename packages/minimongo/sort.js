@@ -14,17 +14,19 @@
 Sorter = function (spec) {
   var self = this;
 
-  var sortSpecParts = [];
+  var sortSpecParts = self._sortSpecParts = [];
 
   if (spec instanceof Array) {
     for (var i = 0; i < spec.length; i++) {
       if (typeof spec[i] === "string") {
         sortSpecParts.push({
+          path: spec[i],
           lookup: makeLookupFunction(spec[i]),
           ascending: true
         });
       } else {
         sortSpecParts.push({
+          path: spec[i][0],
           lookup: makeLookupFunction(spec[i][0]),
           ascending: spec[i][1] !== "desc"
         });
@@ -33,6 +35,7 @@ Sorter = function (spec) {
   } else if (typeof spec === "object") {
     for (var key in spec) {
       sortSpecParts.push({
+        path: key,
         lookup: makeLookupFunction(key),
         ascending: spec[key] >= 0
       });
@@ -116,6 +119,11 @@ Sorter.prototype.getComparator = function (options) {
       throw Error("Missing distance for " + b._id);
     return distances.get(a._id) - distances.get(b._id);
   }]);
+};
+
+Sorter.prototype._getPaths = function () {
+  var self = this;
+  return _.pluck(self._sortSpecParts, 'path');
 };
 
 Minimongo.Sorter = Sorter;

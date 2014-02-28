@@ -3,7 +3,7 @@
 // @returns Object - projection object (same as fields option of mongo cursor)
 Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
   var self = this;
-  var selectorPaths = self._getPathsElidingNumericKeys();
+  var selectorPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
 
   // Special case for $where operator in the selector - projection should depend
   // on all fields of the document. getSelectorPaths returns a list of paths
@@ -15,9 +15,9 @@ Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
   return combineImportantPathsIntoProjection(selectorPaths, projection);
 };
 
-Minimongo.Matcher.prototype._getPathsElidingNumericKeys = function () {
+Minimongo._pathsElidingNumericKeys = function (paths) {
   var self = this;
-  return _.map(self._getPaths(), function (path) {
+  return _.map(paths, function (path) {
     return _.reject(path.split('.'), isNumericKey).join('.');
   });
 };
