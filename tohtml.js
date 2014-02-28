@@ -46,18 +46,17 @@ HTML.Tag.prototype.toHTML = function (parentComponent) {
   var attrs = this.evaluateAttributes(parentComponent);
   if (attrs) {
     for (var k in attrs) {
-      k = HTML.properCaseAttributeName(k);
       var v = HTML.toText(attrs[k], HTML.TEXTMODE.ATTRIBUTE, parentComponent);
       attrStrs.push(' ' + k + '="' + v + '"');
     }
   }
 
   var tagName = this.tagName;
-  var startTag = '<' + HTML.properCaseTagName(tagName) + attrStrs.join('') + '>';
+  var startTag = '<' + tagName + attrStrs.join('') + '>';
 
   var childStrs = [];
   var content;
-  if (tagName === 'TEXTAREA') {
+  if (tagName === 'textarea') {
     for (var i = 0; i < this.children.length; i++)
       childStrs.push(HTML.toText(this.children[i], HTML.TEXTMODE.RCDATA, parentComponent));
 
@@ -80,7 +79,7 @@ HTML.Tag.prototype.toHTML = function (parentComponent) {
     // "Void" elements like BR are the only ones that don't get a close
     // tag in HTML5.  They shouldn't have contents, either, so we could
     // throw an error upon seeing contents here.
-    result += '</' + HTML.properCaseTagName(tagName) + '>';
+    result += '</' + tagName + '>';
   }
 
   return result;
