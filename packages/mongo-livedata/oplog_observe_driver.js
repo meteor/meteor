@@ -552,19 +552,7 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._stopped)
       throw new Error("oplog stopped surprisingly early");
 
-    // Query 2x documents as the half excluded from the original query will go
-    // into unpublished buffer to reduce additional Mongo lookups in cases when
-    // documents are removed from the published set and need a replacement.
-    // XXX needs more thought on non-zero skip
-    // XXX "2" here is a "magic number"
-    var initialCursor = self._cursorForQuery({ limit: self._limit * 2 });
-    var fetchedDocsCount = 0;
-    initialCursor.forEach(function (initialDoc) {
-      self._addMatching(initialDoc);
-      fetchedDocsCount++;
-    });
-
-    self._safeAppendToBuffer = fetchedDocsCount < self._limit * 2;
+    self._runQuery();
 
     if (self._stopped)
       throw new Error("oplog stopped quite early");
@@ -604,23 +592,31 @@ _.extend(OplogObserveDriver.prototype, {
     // Defer so that we don't block.  We don't need finishIfNeedToPollQuery here
     // because SwitchedToQuery is not called in QUERYING mode.
     Meteor.defer(function () {
-      // subtle note: _published does not contain _id fields, but newResults
-      // does
-      var newResults = new LocalCollection._IdMap;
-      var newBuffer = new LocalCollection._IdMap;
-      // XXX 2 is a "magic number" meaning there is an extra chunk of docs for
-      // buffer if such is needed.
-      var cursor = self._cursorForQuery({ limit: self._limit * 2 });
-      cursor.forEach(function (doc, i) {
-        if (!self._limit || i < self._limit)
-          newResults.set(doc._id, doc);
-        else
-          newBuffer.set(doc._id, doc);
-      });
-
-      self._publishNewResults(newResults, newBuffer);
+      self._runQuery();
       self._doneQuerying();
     });
+  },
+
+  _runQuery: function () {
+    var self = this;
+    var newResults = new LocalCollection._IdMap;
+    var newBuffer = new LocalCollection._IdMap;
+
+    // Query 2x documents as the half excluded from the original query will go
+    // into unpublished buffer to reduce additional Mongo lookups in cases when
+    // documents are removed from the published set and need a replacement.
+    // XXX needs more thought on non-zero skip
+    // XXX 2 is a "magic number" meaning there is an extra chunk of docs for
+    // buffer if such is needed.
+    var cursor = self._cursorForQuery({ limit: self._limit * 2 });
+    cursor.forEach(function (doc, i) {
+      if (!self._limit || i < self._limit)
+        newResults.set(doc._id, doc);
+      else
+        newBuffer.set(doc._id, doc);
+    });
+
+    self._publishNewResults(newResults, newBuffer);
   },
 
   // Transitions to QUERYING and runs another query, or (if already in QUERYING)
