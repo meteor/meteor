@@ -40,6 +40,8 @@ OplogObserveDriver = function (options) {
 
   var sortSpec = options.cursorDescription.options.sort;
   var sorter = sortSpec && new Minimongo.Sorter(sortSpec);
+  // We don't support $near and other geo-queries so it's OK to initialize the
+  // comparator only once in the constructor.
   var comparator = sorter && sorter.getComparator();
 
   if (options.cursorDescription.options.limit) {
@@ -52,8 +54,6 @@ OplogObserveDriver = function (options) {
     //                      into published set.
     // - _published - Min Heap (also implements IdMap methods)
 
-    // We don't support $near and other geo-queries so it's OK to initialize the
-    // comparator only once in the constructor.
     var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
