@@ -1781,19 +1781,27 @@ Tinytest.add("minimongo - array sort", function (test) {
   // in the document, and when sorting descending, you use the maximum value you
   // can find. So [1, 4] shows up in the 1 slot when sorting ascending and the 4
   // slot when sorting descending.
-  c.insert({up: 1, down: 1, a: {x: [1, 4]}});
-  c.insert({up: 2, down: 2, a: [{x: [2]}, {x: 3}]});
-  c.insert({up: 0, down: 4, a: {x: 0}});
-  c.insert({up: 3, down: 3, a: {x: 2.5}});
-  c.insert({up: 4, down: 0, a: {x: 5}});
+  //
+  // Similarly, "selected" is the index that the doc should have in the query
+  // that sorts ascending on "a.x" and selects {'a.x': {$gt: 1}}. In this case,
+  // the 1 in [1, 4] may not be used as a sort key.
+  c.insert({up: 1, down: 1, selected: 2, a: {x: [1, 4]}});
+  c.insert({up: 2, down: 2, selected: 0, a: [{x: [2]}, {x: 3}]});
+  c.insert({up: 0, down: 4,              a: {x: 0}});
+  c.insert({up: 3, down: 3, selected: 1, a: {x: 2.5}});
+  c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
 
   test.equal(
     _.pluck(c.find({}, {sort: {'a.x': 1}}).fetch(), 'up'),
-    _.range(c.find().count()));
+    _.range(5));
 
   test.equal(
     _.pluck(c.find({}, {sort: {'a.x': -1}}).fetch(), 'down'),
-    _.range(c.find().count()));
+    _.range(5));
+
+  test.equal(
+    _.pluck(c.find({'a.x': {$gt: 1}}, {sort: {'a.x': 1}}).fetch(), 'selected'),
+    _.range(4));
 });
 
 Tinytest.add("minimongo - sort keys", function (test) {
