@@ -1693,7 +1693,13 @@ Tinytest.add("minimongo - ordering", function (test) {
     {a: [5, [3, 19], 18]}
   ]);
 
-
+  // (0,4) < (0,5), so they go in this order.  It's not correct to consider
+  // (0,3) as a sort key for the second document because they come from
+  // different a-branches.
+  verify({'a.x': 1, 'a.y': 1}, [
+    {a: [{x: 0, y: 4}]},
+    {a: [{x: 0, y: 5}, {x: 1, y: 3}]}
+  ]);
 });
 
 Tinytest.add("minimongo - sort", function (test) {
