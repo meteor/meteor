@@ -1057,6 +1057,113 @@ if (Meteor.isServer) {
 
     onComplete();
   });
+
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+
+    var observer = function () {
+      var state = {};
+      var output = [];
+      var callbacks = {
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        added: function (newDoc) {
+          output.push({added: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        removed: function (oldDoc) {
+          output.push({removed: oldDoc._id});
+          delete state[oldDoc._id];
+        }
+      };
+      var handle = coll.find({}, {sort: {x: 1, y: 1}, limit: 3})
+                    .observe(callbacks);
+
+      return {output: output, handle: handle, state: state};
+    };
+    var clearOutput = function (o) { o.output.splice(0, o.output.length); };
+    var ins = function (doc) {
+      var id; runInFence(function () { id = coll.insert(doc); });
+      return id;
+    };
+    var rem = function (id) {
+      runInFence(function () { coll.remove(id); });
+    };
+    // tests '_id' subfields for all documents in oplog buffer
+    var testOplogBufferIds = function (ids) {
+      var bufferIds = [];
+      o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(function (x, id) {
+        bufferIds.push(id);
+      });
+
+      test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
+    };
+    var testSafeAppendToBufferFlag = function (expected) {
+      if (expected)
+        test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+      else
+        test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+    };
+
+    var ids = {};
+    _.each([2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5], function (x, i) {
+      ids[i] = ins({ x: x, y: i });
+    });
+
+    var o = observer();
+    var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
+    //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
+    // id: [2 7 0 | 9 3 8] 1 4 5 10 6
+
+    test.length(o.output, 3);
+    test.isTrue(setsEqual([{added: ids[2]}, {added: ids[7]}, {added: ids[0]}], o.output));
+    usesOplog && testOplogBufferIds([ids[9], ids[3], ids[8]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem(ids[0]);
+    //  x: [1 1 2 | 3 3] 4 5 5 5  9
+    // id: [2 7 9 | 3 8] 1 4 5 10 6
+    test.length(o.output, 2);
+    test.isTrue(setsEqual([{removed: ids[0]}, {added: ids[9]}], o.output));
+    usesOplog && testOplogBufferIds([ids[3], ids[8]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem(ids[7]);
+    //  x: [1 2 3 | 3] 4 5 5 5  9
+    // id: [2 9 3 | 8] 1 4 5 10 6
+    test.length(o.output, 2);
+    test.isTrue(setsEqual([{removed: ids[7]}, {added: ids[3]}], o.output));
+    usesOplog && testOplogBufferIds([ids[8]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem(ids[3]);
+    //  x: [1 2 3 | 4 5 5] 5  9
+    // id: [2 9 8 | 1 4 5] 10 6
+    test.length(o.output, 2);
+    test.isTrue(setsEqual([{removed: ids[3]}, {added: ids[8]}], o.output));
+    usesOplog && testOplogBufferIds([ids[1], ids[4], ids[5]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem({ x: {$lt: 4} });
+    //  x: [4 5 5 | 5  9]
+    // id: [1 4 5 | 10 6]
+    test.length(o.output, 6);
+    test.isTrue(setsEqual([{removed: ids[2]}, {removed: ids[9]}, {removed: ids[8]},
+                           {added: ids[5]}, {added: ids[4]}, {added: ids[1]}], o.output));
+    usesOplog && testOplogBufferIds([ids[10], ids[6]]);
+    usesOplog && testSafeAppendToBufferFlag(true);
+    clearOutput(o);
+
+
+    onComplete();
+  });
 }
 
 
