@@ -24,6 +24,10 @@ Package.on_use(function (api) {
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
+  // Binary Heap data structure is used to optimize oplog observe driver
+  // performance.
+  api.use('binary-heap', 'server');
+
   // Allow us to detect 'insecure'.
   api.use('insecure', {weak: true});
 

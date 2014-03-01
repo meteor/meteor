@@ -55,6 +55,7 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("restarted (x2)"); // see that restart counter reset
   s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
+  run.waitSecs(5);
   run.match("from signal: SIGKILL");
   run.waitSecs(5);
   run.match("is crashing");
@@ -82,6 +83,7 @@ selftest.define("run", function () {
 "  fs.writeFileSync(crashmark);\n" +
 "  process.exit(137);\n" +
 "}\n");
+  run.waitSecs(5);
   run.match("with code: 137");
   run.match("restarted");
   run.stop();
