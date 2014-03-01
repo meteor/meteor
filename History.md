@@ -3,6 +3,8 @@
 * Use "faye-websocket" (0.7.2) npm module instead of "websocket" (1.0.8) for
   server-to-server DDP.
 
+* minimongo: Support {a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}}  #1875
+
 
 ## v0.7.1.2
 

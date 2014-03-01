@@ -820,6 +820,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({$or: [{a: 2}, {a: 3}], b: 2}, {a: 1, b: 2});
   nomatch({$or: [{a: 1}, {a: 2}], b: 3}, {a: 1, b: 2});
 
+  // Combining $or with equality
+  match({x: 1, $or: [{a: 1}, {b: 1}]}, {x: 1, b: 1});
+  match({$or: [{a: 1}, {b: 1}], x: 1}, {x: 1, b: 1});
+  nomatch({x: 1, $or: [{a: 1}, {b: 1}]}, {b: 1});
+  nomatch({x: 1, $or: [{a: 1}, {b: 1}]}, {x: 1});
+
   // $or and $lt, $lte, $gt, $gte
   match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
   nomatch({$or: [{a: {$lt: 1}}, {a: 2}]}, {a: 1});
@@ -1103,6 +1109,16 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$elemMatch: {x: 5}}}, {a: {x: 5}});
   match({a: {$elemMatch: {0: {$gt: 5, $lt: 9}}}}, {a: [[6]]});
   match({a: {$elemMatch: {'0.b': {$gt: 5, $lt: 9}}}}, {a: [[{b:6}]]});
+  match({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}], x: 1}}},
+        {a: [{x: 1, b: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{b: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1}, {b: 1}]});
 
   // $comment
   match({a: 5, $comment: "asdf"}, {a: 5});
