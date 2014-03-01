@@ -268,30 +268,40 @@ Tinytest.add("minimongo - lookup", function (test) {
   test.equal(lookupAX({a: {x: [1]}}), [{value: [1]}]);
   test.equal(lookupAX({a: 5}), [{value: undefined}]);
   test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
-             [{value: 1, arrayIndex: 0},
-              {value: [2], arrayIndex: 1},
-              {value: undefined, arrayIndex: 2}]);
+             [{value: 1, arrayIndices: [0]},
+              {value: [2], arrayIndices: [1]},
+              {value: undefined, arrayIndices: [2]}]);
 
   var lookupA0X = MinimongoTest.makeLookupFunction('a.0.x');
   test.equal(lookupA0X({a: [{x: 1}]}), [
     // From interpreting '0' as "0th array element".
-    {value: 1, arrayIndex: 0},
+    {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
-    {value: undefined, arrayIndex: 0}]);
+    {value: undefined, arrayIndices: [0]}]);
   test.equal(lookupA0X({a: [{x: [1]}]}), [
-    {value: [1], arrayIndex: 0},
-    {value: undefined, arrayIndex: 0}]);
+    {value: [1], arrayIndices: [0, 'x']},
+    {value: undefined, arrayIndices: [0]}]);
   test.equal(lookupA0X({a: 5}), [{value: undefined}]);
   test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [
     // From interpreting '0' as "0th array element".
-    {value: 1, arrayIndex: 0},
+    {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
-    {value: undefined, arrayIndex: 0},
-    {value: undefined, arrayIndex: 1},
-    {value: undefined, arrayIndex: 2}
+    {value: undefined, arrayIndices: [0]},
+    {value: undefined, arrayIndices: [1]},
+    {value: undefined, arrayIndices: [2]}
   ]);
+
+  test.equal(
+    MinimongoTest.makeLookupFunction('w.x.0.z')({
+      w: [{x: [{z: 5}]}]}), [
+        // From interpreting '0' as "0th array element".
+        {value: 5, arrayIndices: [0, 0, 'x']},
+        // From interpreting '0' as "after branching in the array, look in the
+        // object {z:5} for a field named "0".
+        {value: undefined, arrayIndices: [0, 0]}
+      ]);
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
