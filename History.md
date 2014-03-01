@@ -5,6 +5,7 @@
 
 * minimongo: Support {a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}}  #1875
 
+* minimongo: Support {a: {$regex: '', $options: 'i'}}  #1874
 
 ## v0.7.1.2
 
