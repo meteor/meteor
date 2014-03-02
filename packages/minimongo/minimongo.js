@@ -100,7 +100,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
     self._selectorId = undefined;
     self.matcher = new Minimongo.Matcher(selector, self);
     self.sorter = (self.matcher.hasGeoQuery() || options.sort) ?
-      new Sorter(options.sort || []) : null;
+      new Minimongo.Sorter(options.sort || []) : null;
   }
   self.skip = options.skip;
   self.limit = options.limit;

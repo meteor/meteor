@@ -11,7 +11,7 @@
 // first object comes first in order, 1 if the second object comes
 // first, or 0 if neither object comes before the other.
 
-Sorter = function (spec) {
+Minimongo.Sorter = function (spec) {
   var self = this;
 
   var sortSpecParts = self._sortSpecParts = [];
@@ -99,34 +99,36 @@ Sorter = function (spec) {
   self._baseComparator = composeComparators(comparators);
 };
 
-Sorter.prototype.getComparator = function (options) {
-  var self = this;
+// In addition to these methods, sorter_project.js defines combineIntoProjection
+// on the server only.
+_.extend(Minimongo.Sorter.prototype, {
+  getComparator: function (options) {
+    var self = this;
 
-  // If we have no distances, just use the comparator from the source
-  // specification (which defaults to "everything is equal".
-  if (!options || !options.distances) {
-    return self._baseComparator;
+    // If we have no distances, just use the comparator from the source
+    // specification (which defaults to "everything is equal".
+    if (!options || !options.distances) {
+      return self._baseComparator;
+    }
+
+    var distances = options.distances;
+
+    // Return a comparator which first tries the sort specification, and if that
+    // says "it's equal", breaks ties using $near distances.
+    return composeComparators([self._baseComparator, function (a, b) {
+      if (!distances.has(a._id))
+        throw Error("Missing distance for " + a._id);
+      if (!distances.has(b._id))
+        throw Error("Missing distance for " + b._id);
+      return distances.get(a._id) - distances.get(b._id);
+    }]);
+  },
+
+  _getPaths: function () {
+    var self = this;
+    return _.pluck(self._sortSpecParts, 'path');
   }
-
-  var distances = options.distances;
-
-  // Return a comparator which first tries the sort specification, and if that
-  // says "it's equal", breaks ties using $near distances.
-  return composeComparators([self._baseComparator, function (a, b) {
-    if (!distances.has(a._id))
-      throw Error("Missing distance for " + a._id);
-    if (!distances.has(b._id))
-      throw Error("Missing distance for " + b._id);
-    return distances.get(a._id) - distances.get(b._id);
-  }]);
-};
-
-Sorter.prototype._getPaths = function () {
-  var self = this;
-  return _.pluck(self._sortSpecParts, 'path');
-};
-
-Minimongo.Sorter = Sorter;
+});
 
 // Given an array of comparators
 // (functions (a,b)->(negative or positive or zero)), returns a single

@@ -249,7 +249,7 @@ var MODIFIERS = {
       // actually an extension of the Node driver, so it won't work
       // server-side. Could be confusing!
       // XXX is it correct that we don't do geo-stuff here?
-      sortFunction = new Sorter(arg.$sort).getComparator();
+      sortFunction = new Minimongo.Sorter(arg.$sort).getComparator();
       for (var i = 0; i < toPush.length; i++) {
         if (LocalCollection._f._type(toPush[i]) !== 3) {
           throw MinimongoError("$push like modifiers using $sort " +
