@@ -3,7 +3,11 @@ Package.describe({
   internal: true
 });
 
-Npm.depends({sockjs: "0.3.8", websocket: "1.0.8"});
+// We use 'faye-websocket' for connections in server-to-server DDP, mostly
+// because it's the same library used as a server in sockjs, and it's easiest to
+// deal with a single websocket implementation.  (Plus, its maintainer is easy
+// to work with on pull requests.)
+Npm.depends({sockjs: "0.3.8", "faye-websocket": "0.7.2"});
 
 Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps',
