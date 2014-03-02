@@ -91,7 +91,6 @@ _.extend(Minimongo.Sorter.prototype, {
   // 1, y: 3}]} with sort spec {'a.x': 1, 'a.y': 1}, the only keys are [0,5] and
   // [1,3], and the minimum key is [0,5]; notably, [0,3] is NOT a key.
   //
-  // XXX we don't actually implement this yet because we aren't path-sensitive
   // XXX write direct unit tests for this stuff
   _getMinKeyFromDoc: function (doc) {
     var self = this;
@@ -131,48 +130,98 @@ _.extend(Minimongo.Sorter.prototype, {
 
   // Iterates over each possible "key" from doc (ie, over each branch), calling
   // 'cb' with the key.
-  // XXX match up paths
   _generateKeysFromDoc: function (doc, cb) {
     var self = this;
 
     if (self._sortSpecParts.length === 0)
       throw new Error("can't generate keys without a spec");
 
-    var branchesForEachKey = _.map(self._sortSpecParts, function (spec) {
+    // maps index -> ({'' -> value} or {path -> value})
+    var valuesBySomething = [];
+
+    var pathFromIndices = function (indices) {
+      return indices.join(',') + ',';
+    };
+
+    var knownPaths = null;
+
+    _.each(self._sortSpecParts, function (spec, whichField) {
       // Expand any leaf arrays that we find, and ignore those arrays
       // themselves.  (We never sort based on an array itself.)
       var branches = expandArraysInBranches(spec.lookup(doc), true);
+
       // If there are no values for a key (eg, key goes to an empty array),
       // pretend we found one null value.
       if (!branches.length)
         branches = [{value: null}];
-      return branches;
-    });
 
-    var indices = _.map(self._sortSpecParts, function () {
-      return 0;
-    });
+      var usedPaths = false;
+      valuesBySomething[whichField] = {};
+      _.each(branches, function (branch) {
+        if (!branch.arrayIndices) {
+          // If there are no array indices for a branch, then it must be the
+          // only branch, because the only thing that produces multiple branches
+          // is the use of arrays.
+          if (branches.length > 1)
+            throw Error("multiple branches but no array used?");
+          valuesBySomething[whichField][''] = branch.value;
+          return;
+        }
 
-    var done = false;
-    while (!done) {
-      var currentKey = _.map(indices, function (index, whichKey) {
-        return branchesForEachKey[whichKey][index].value;
+        usedPaths = true;
+        var path = pathFromIndices(branch.arrayIndices);
+        if (_.has(valuesBySomething[whichField], path))
+          throw Error("duplicate path: " + path);
+        valuesBySomething[whichField][path] = branch.value;
+
+        // If two sort fields both go into arrays, they have to go into the
+        // exact same arrays and we have to find the same paths.  This is
+        // roughly the same condition that makes MongoDB throw this strange
+        // error message.  eg, the main thing is that if sort spec is {a: 1,
+        // b:1} then a and b cannot both be arrays.
+        //
+        // (In MongoDB it seems to be OK to have {a: 1, 'a.x.y': 1} where 'a'
+        // and 'a.x.y' are both arrays, but we don't allow this for now.
+        // XXX achieve full compatibility here
+        if (knownPaths && !_.has(knownPaths, path)) {
+          throw Error("cannot index parallel arrays");
+        }
       });
-      // Produce this key.
-      cb(currentKey);
 
-      for (var i = 0; i < indices.length; ++i) {
-        if (indices[i] + 1 < branchesForEachKey[i].length) {
-          ++indices[i];
-          break;
+      if (knownPaths) {
+        // Similarly to above, paths must match everywhere.
+        if (_.size(knownPaths) !== _.size(valuesBySomething[whichField])) {
+          throw Error("cannot index parallel arrays!");
         }
-        if (i === indices.length - 1) {
-          done = true;
-          break;
-        }
-        indices[i] = 0;
+      } else if (usedPaths) {
+        knownPaths = {};
+        _.each(valuesBySomething[whichField], function (x, path) {
+          knownPaths[path] = true;
+        });
       }
+    });
+
+    if (!knownPaths) {
+      // Easy case: no use of arrays.
+      var soleKey = _.map(valuesBySomething, function (values) {
+        if (!_.has(values, ''))
+          throw Error("no value in sole key case?");
+        return values[''];
+      });
+      cb(soleKey);
+      return;
     }
+
+    _.each(knownPaths, function (x, path) {
+      var key = _.map(valuesBySomething, function (values) {
+        if (_.has(values, ''))
+          return values[''];
+        if (!_.has(values, path))
+          throw Error("missing path?");
+        return values[path];
+      });
+      cb(key);
+    });
   },
 
   // Takes in two keys: arrays whose lengths match the number of spec
