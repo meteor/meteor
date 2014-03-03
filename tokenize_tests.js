@@ -1,7 +1,7 @@
-var Scanner = HTML._$.Scanner;
-var getComment = HTML._$.getComment;
-var getDoctype = HTML._$.getDoctype;
-var getHTMLToken = HTML._$.getHTMLToken;
+var Scanner = HTMLTools.Scanner;
+var getComment = HTMLTools.Parse.getComment;
+var getDoctype = HTMLTools.Parse.getDoctype;
+var getHTMLToken = HTMLTools.Parse.getHTMLToken;
 
 // "tokenize" is not really a great operation for real use, because
 // it ignores the special content rules for tags like "style" and

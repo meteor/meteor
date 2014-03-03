@@ -9,7 +9,7 @@
 // * `scanner.isEOF()` - true if `pos` is at or beyond the end of `input`
 // * `scanner.fatal(msg)` - throw an error indicating a problem at `pos`
 
-Scanner = function (input) {
+Scanner = HTMLTools.Scanner = function (input) {
   this.input = input; // public, read-only
   this.pos = 0; // public, read-write
 };

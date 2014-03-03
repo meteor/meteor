@@ -4,10 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  // we attach stuff to the global symbol `HTML`, exported
-  // by `htmljs`, so we both use and effectively imply it.
   api.use('htmljs');
-  api.imply('htmljs');
 
   api.export('HTMLTools');
 
@@ -15,8 +12,7 @@ Package.on_use(function (api) {
                  'scanner.js',
                  'charref.js',
                  'tokenize.js',
-                 'parse.js',
-                 'exports.js']);
+                 'parse.js']);
 });
 
 Package.on_test(function (api) {

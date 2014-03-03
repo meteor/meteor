@@ -1,21 +1,21 @@
 
-HTML.Special = function (value) {
-  if (! (this instanceof HTML.Special))
+HTMLTools.Special = function (value) {
+  if (! (this instanceof HTMLTools.Special))
     // called without `new`
-    return new HTML.Special(value);
+    return new HTMLTools.Special(value);
 
   this.value = value;
 };
-HTML.Special.prototype.toJS = function (options) {
+HTMLTools.Special.prototype.toJS = function (options) {
   // XXX this is weird because toJS is defined in spacebars-compiler.
-  // Think about where HTML.Special and toJS should go.
-  return HTML.Tag.prototype.toJS.call({tagName: 'Special',
+  // Think about where HTMLTools.Special and toJS should go.
+  return HTML.Tag.prototype.toJS.call({tagName: 'HTMLTools.Special',
                                        attrs: this.value,
                                        children: []},
                                       options);
 };
 
-parseFragment = function (input, options) {
+HTMLTools.parseFragment = function (input, options) {
   var scanner;
   if (typeof input === 'string')
     scanner = new Scanner(input);
@@ -28,7 +28,7 @@ parseFragment = function (input, options) {
 
   // ```
   // { getSpecialTag: function (scanner, templateTagPosition) {
-  //     if (templateTagPosition === HTML.TEMPLATE_TAG_POSITION.ELEMENT) {
+  //     if (templateTagPosition === HTMLTools.TEMPLATE_TAG_POSITION.ELEMENT) {
   //       ...
   // ```
   if (options && options.getSpecialTag)
@@ -72,7 +72,7 @@ parseFragment = function (input, options) {
 //
 // Adapted from
 // http://stackoverflow.com/questions/7126384/expressing-utf-16-unicode-characters-in-javascript/7126661.
-codePointToString = function(cp) {
+codePointToString = HTMLTools.codePointToString = function(cp) {
   if (cp >= 0 && cp <= 0xD7FF || cp >= 0xE000 && cp <= 0xFFFF) {
     return String.fromCharCode(cp);
   } else if (cp >= 0x10000 && cp <= 0x10FFFF) {
@@ -95,7 +95,7 @@ codePointToString = function(cp) {
   }
 };
 
-getContent = function (scanner, shouldStopFunc) {
+getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
   var items = [];
 
   while (! scanner.isEOF()) {
@@ -123,7 +123,7 @@ getContent = function (scanner, shouldStopFunc) {
       items.push(HTML.Comment(token.v));
     } else if (token.t === 'Special') {
       // token.v is an object `{ ... }`
-      items.push(HTML.Special(token.v));
+      items.push(HTMLTools.Special(token.v));
     } else if (token.t === 'Tag') {
       if (token.isEnd)
         // we've already screened for `</` so this shouldn't be
@@ -208,7 +208,7 @@ var pushOrAppendString = function (items, string) {
 };
 
 // get RCDATA to go in the lowercase (or camel case) tagName (e.g. "textarea")
-getRCData = function (scanner, tagName, shouldStopFunc) {
+getRCData = HTMLTools.Parse.getRCData = function (scanner, tagName, shouldStopFunc) {
   var items = [];
 
   while (! scanner.isEOF()) {
@@ -231,7 +231,7 @@ getRCData = function (scanner, tagName, shouldStopFunc) {
       items.push(convertCharRef(token));
     } else if (token.t === 'Special') {
       // token.v is an object `{ ... }`
-      items.push(HTML.Special(token.v));
+      items.push(HTMLTools.Special(token.v));
     } else {
       // (can't happen)
       scanner.fatal("Unknown or unexpected token type: " + token.t);
@@ -267,7 +267,7 @@ var getRawText = function (scanner, tagName, shouldStopFunc) {
       pushOrAppendString(items, token.v);
     } else if (token.t === 'Special') {
       // token.v is an object `{ ... }`
-      items.push(HTML.Special(token.v));
+      items.push(HTMLTools.Special(token.v));
     } else {
       // (can't happen)
       scanner.fatal("Unknown or unexpected token type: " + token.t);
@@ -319,7 +319,7 @@ var parseAttrs = function (attrs) {
       if (token.t === 'CharRef') {
         outParts.push(convertCharRef(token));
       } else if (token.t === 'Special') {
-        outParts.push(HTML.Special(token.v));
+        outParts.push(HTMLTools.Special(token.v));
       } else if (token.t === 'Chars') {
         pushOrAppendString(outParts, token.v);
       }

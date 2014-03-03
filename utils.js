@@ -1,5 +1,6 @@
 
 HTMLTools = {};
+HTMLTools.Parse = {};
 
 var asciiLowerCase = HTMLTools.asciiLowerCase = function (str) {
   return str.replace(/[A-Z]/g, function (c) {
