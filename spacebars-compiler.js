@@ -3,7 +3,7 @@
 
 Spacebars.parse = function (input) {
 
-  var tree = HTML.parseFragment(
+  var tree = HTMLTools.parseFragment(
     input,
     { getSpecialTag: TemplateTag.parseCompleteTag });
 
@@ -65,7 +65,7 @@ var optimize = function (tree) {
   };
 
   var doesAttributeValueHaveSpecials = function (v) {
-    if (v instanceof HTML.Special)
+    if (v instanceof HTMLTools.Special)
       return true;
     if (typeof v === 'function')
       return true;
@@ -161,7 +161,7 @@ Spacebars.isReservedName = function (name) {
 };
 
 var codeGenTemplateTag = function (tag) {
-  if (tag.position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+  if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
     // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
     return HTML.EmitCode('function () { return ' +
                          codeGenMustache(tag.path, tag.args, 'attrMustache')
@@ -446,7 +446,7 @@ var replaceSpecials = function (node) {
     return newTag;
   } else if (node instanceof Array) {
     return _.map(node, replaceSpecials);
-  } else if (node instanceof HTML.Special) {
+  } else if (node instanceof HTMLTools.Special) {
     return codeGenTemplateTag(node.value);
   } else {
     return node;
