@@ -159,6 +159,13 @@ UI.emboxValue = function (funcOrValue, equals) {
 
 ////////////////////////////////////////
 
+UI.insert = function (renderedTemplate, parentElement, nextNode) {
+  if (! renderedTemplate.dom)
+    throw new Error("Expected template rendered with UI.render");
+
+  UI.DomRange.insert(renderedTemplate.dom, parentElement, nextNode);
+};
+
 // Insert a DOM node or DomRange into a DOM element or DomRange.
 //
 // One of three things happens depending on what needs to be inserted into what:
