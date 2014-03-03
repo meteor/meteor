@@ -1,5 +1,5 @@
-var Scanner = HTML._$.Scanner;
-var getCharacterReference = HTML._$.getCharacterReference;
+var Scanner = HTMLTools.Scanner;
+var getCharacterReference = HTMLTools.Parse.getCharacterReference;
 
 Tinytest.add("html-tools - entities", function (test) {
   var succeed = function (input, match, codepoints) {

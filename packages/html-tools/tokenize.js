@@ -53,7 +53,7 @@ var convertCRLF = function (str) {
   return str.replace(/\r\n?/g, '\n');
 };
 
-getComment = function (scanner) {
+getComment = HTMLTools.Parse.getComment = function (scanner) {
   if (scanner.rest().slice(0, 4) !== '<!--')
     return null;
   scanner.pos += 4;
@@ -121,7 +121,7 @@ var getDoctypeQuotedString = function (scanner) {
 // See http://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype.
 //
 // If `getDocType` sees "<!DOCTYPE" (case-insensitive), it will match or fail fatally.
-getDoctype = function (scanner) {
+getDoctype = HTMLTools.Parse.getDoctype = function (scanner) {
   if (HTMLTools.asciiLowerCase(scanner.rest().slice(0, 9)) !== '<!doctype')
     return null;
   var start = scanner.pos;
@@ -205,7 +205,7 @@ var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 // consumes characters and emits nothing (e.g. in the case of template
 // comments), we may go from not-at-EOF to at-EOF and return `null`,
 // while otherwise we always find some token to return.
-getHTMLToken = function (scanner, dataMode) {
+getHTMLToken = HTMLTools.Parse.getHTMLToken = function (scanner, dataMode) {
   var result = null;
   if (scanner.getSpecialTag) {
     var lastPos = -1;
@@ -377,7 +377,7 @@ var getUnquotedAttributeValue = function (scanner) {
   }
 };
 
-getTagToken = function (scanner) {
+getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
   if (! (scanner.peek() === '<' && scanner.rest().charAt(1) !== '!'))
     return null;
   scanner.pos++;
@@ -506,7 +506,7 @@ getTagToken = function (scanner) {
   }
 };
 
-TEMPLATE_TAG_POSITION = {
+TEMPLATE_TAG_POSITION = HTMLTools.TEMPLATE_TAG_POSITION = {
   ELEMENT: 1,
   IN_START_TAG: 2,
   IN_ATTRIBUTE: 3,

@@ -28,7 +28,7 @@ toObjectLiteralKey = function (k) {
 // and it will still work by accessing `this.tagName`, `this.attrs`,
 // and `this.children`.  It's ok if `this.attrs` has content that
 // isn't allowed in an attribute (this feature is used by
-// HTML.Special.prototype.toJS).
+// HTMLTools.Special.prototype.toJS).
 HTML.Tag.prototype.toJS = function (options) {
   var argStrs = [];
   if (this.attrs) {
@@ -49,7 +49,8 @@ HTML.Tag.prototype.toJS = function (options) {
   var tagName = this.tagName;
   var tagSymbol;
   if (! (this instanceof HTML.Tag))
-    tagSymbol = 'HTML.' + tagName; // a CharRef or Comment, say
+    // a CharRef or Comment, say
+    tagSymbol = (tagName.indexOf('.') >= 0 ? tagName : 'HTML.' + tagName);
   else if (! HTML.isTagEnsured(tagName))
     tagSymbol = 'HTML.getTag(' + toJSLiteral(tagName) + ')';
   else

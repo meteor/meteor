@@ -1,9 +1,9 @@
-var Scanner = HTML._$.Scanner;
-var getContent = HTML._$.getContent;
+var Scanner = HTMLTools.Scanner;
+var getContent = HTMLTools.Parse.getContent;
 
 var CharRef = HTML.CharRef;
 var Comment = HTML.Comment;
-var Special = HTML.Special;
+var Special = HTMLTools.Special;
 
 var BR = HTML.BR;
 var HR = HTML.HR;
@@ -149,15 +149,15 @@ Tinytest.add("html-tools - parser getContent", function (test) {
 });
 
 Tinytest.add("html-tools - parseFragment", function (test) {
-  test.equal(HTML.toJS(HTML.parseFragment("<div><p id=foo>Hello</p></div>")),
+  test.equal(HTML.toJS(HTMLTools.parseFragment("<div><p id=foo>Hello</p></div>")),
              HTML.toJS(DIV(P({id:'foo'}, 'Hello'))));
 
   test.throws(function() {
-    HTML.parseFragment('asdf</a>');
+    HTMLTools.parseFragment('asdf</a>');
   });
 
   (function () {
-    var p = HTML.parseFragment('<p></p>');
+    var p = HTMLTools.parseFragment('<p></p>');
     test.equal(p.tagName, 'p');
     test.equal(p.attrs, null);
     test.isTrue(p instanceof HTML.Tag);
@@ -165,7 +165,7 @@ Tinytest.add("html-tools - parseFragment", function (test) {
   })();
 
   (function () {
-    var p = HTML.parseFragment('<p>x</p>');
+    var p = HTMLTools.parseFragment('<p>x</p>');
     test.equal(p.tagName, 'p');
     test.equal(p.attrs, null);
     test.isTrue(p instanceof HTML.Tag);
@@ -174,7 +174,7 @@ Tinytest.add("html-tools - parseFragment", function (test) {
   })();
 
   (function () {
-    var p = HTML.parseFragment('<p>x&#65;</p>');
+    var p = HTMLTools.parseFragment('<p>x&#65;</p>');
     test.equal(p.tagName, 'p');
     test.equal(p.attrs, null);
     test.isTrue(p instanceof HTML.Tag);
@@ -187,7 +187,7 @@ Tinytest.add("html-tools - parseFragment", function (test) {
   })();
 
   (function () {
-    var pp = HTML.parseFragment('<p>x</p><p>y</p>');
+    var pp = HTMLTools.parseFragment('<p>x</p><p>y</p>');
     test.isTrue(pp instanceof Array);
     test.equal(pp.length, 2);
 
@@ -206,12 +206,12 @@ Tinytest.add("html-tools - parseFragment", function (test) {
 
   var scanner = new Scanner('asdf');
   scanner.pos = 1;
-  test.equal(HTML.parseFragment(scanner), 'sdf');
+  test.equal(HTMLTools.parseFragment(scanner), 'sdf');
 
   test.throws(function () {
     var scanner = new Scanner('asdf</p>');
     scanner.pos = 1;
-    HTML.parseFragment(scanner);
+    HTMLTools.parseFragment(scanner);
   });
 });
 

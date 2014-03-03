@@ -26,15 +26,16 @@
 //
 // These additional are typically set during parsing:
 //
-// - `position` - The HTML.TEMPLATE_TAG_POSITION specifying at what sort
+// - `position` - The HTMLTools.TEMPLATE_TAG_POSITION specifying at what sort
 //   of site the TemplateTag was encountered (e.g. at element level or as
 //   part of an attribute value). Its absence implies
-//   HTML.TEMPLATE_TAG_POSITION.ELEMENT.
+//   TEMPLATE_TAG_POSITION.ELEMENT.
 //
 // - `content` and `elseContent` - When a BLOCKOPEN tag's contents are
 //   parsed, they are put here.  `elseContent` will only be present if
 //   an `{{else}}` was found.
 
+var TEMPLATE_TAG_POSITION = HTMLTools.TEMPLATE_TAG_POSITION;
 
 TemplateTag = Spacebars.TemplateTag = function () {};
 
@@ -65,7 +66,7 @@ var ends = {
 TemplateTag.parse = function (scannerOrString) {
   var scanner = scannerOrString;
   if (typeof scanner === 'string')
-    scanner = new HTML.Scanner(scannerOrString);
+    scanner = new HTMLTools.Scanner(scannerOrString);
 
   if (! (scanner.peek() === '{' &&
          (scanner.rest()).slice(0, 2) === '{{'))
@@ -289,14 +290,14 @@ TemplateTag.peek = function (scanner) {
 // - Returns `null` for a COMMENT.  (This case is distinguishable from
 //   parsing no tag by the fact that the scanner is advanced.)
 //
-// - Takes an HTML.TEMPLATE_TAG_POSITION `position` and sets it as the
+// - Takes an HTMLTools.TEMPLATE_TAG_POSITION `position` and sets it as the
 //   TemplateTag's `.position` property.
 //
 // - Validates the tag's well-formedness and legality at in its position.
 TemplateTag.parseCompleteTag = function (scannerOrString, position) {
   var scanner = scannerOrString;
   if (typeof scanner === 'string')
-    scanner = new HTML.Scanner(scannerOrString);
+    scanner = new HTMLTools.Scanner(scannerOrString);
 
   var startPos = scanner.pos; // for error messages
   var result = TemplateTag.parse(scannerOrString);
@@ -312,8 +313,8 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
   if (result.type === 'BLOCKCLOSE')
     scanner.fatal("Unexpected closing template tag");
 
-  position = (position || HTML.TEMPLATE_TAG_POSITION.ELEMENT);
-  if (position !== HTML.TEMPLATE_TAG_POSITION.ELEMENT)
+  position = (position || TEMPLATE_TAG_POSITION.ELEMENT);
+  if (position !== TEMPLATE_TAG_POSITION.ELEMENT)
     result.position = position;
 
   if (result.type === 'BLOCKOPEN') {
@@ -327,10 +328,10 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
 
     var textMode = null;
       if (blockName === 'markdown' ||
-          position === HTML.TEMPLATE_TAG_POSITION.IN_RAWTEXT) {
+          position === TEMPLATE_TAG_POSITION.IN_RAWTEXT) {
         textMode = HTML.TEXTMODE.STRING;
-      } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_RCDATA ||
-                 position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+      } else if (position === TEMPLATE_TAG_POSITION.IN_RCDATA ||
+                 position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
         textMode = HTML.TEXTMODE.RCDATA;
       }
       var parserOptions = {
@@ -338,7 +339,7 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
         shouldStop: isAtBlockCloseOrElse,
         textMode: textMode
       };
-    result.content = HTML.parseFragment(scanner, parserOptions);
+    result.content = HTMLTools.parseFragment(scanner, parserOptions);
 
     if (scanner.rest().slice(0, 2) !== '{{')
       scanner.fatal("Expected {{else}} or block close for " + blockName);
@@ -348,7 +349,7 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
 
     if (tmplTag.type === 'ELSE') {
       // parse {{else}} and content up to close tag
-      result.elseContent = HTML.parseFragment(scanner, parserOptions);
+      result.elseContent = HTMLTools.parseFragment(scanner, parserOptions);
 
       if (scanner.rest().slice(0, 2) !== '{{')
         scanner.fatal("Expected block close for " + blockName);
@@ -408,8 +409,8 @@ var validateTag = function (ttag, scanner) {
     }
   }
 
-  var position = ttag.position || HTML.TEMPLATE_TAG_POSITION.ELEMENT;
-  if (position === HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+  var position = ttag.position || TEMPLATE_TAG_POSITION.ELEMENT;
+  if (position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
     if (ttag.type === 'DOUBLE') {
       return;
     } else if (ttag.type === 'BLOCKOPEN') {
@@ -424,7 +425,7 @@ var validateTag = function (ttag, scanner) {
     } else {
       scanner.fatal(ttag.type + " template tag is not allowed in an HTML attribute");
     }
-  } else if (position === HTML.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+  } else if (position === TEMPLATE_TAG_POSITION.IN_START_TAG) {
     if (! (ttag.type === 'DOUBLE')) {
       scanner.fatal("Reactive HTML attributes must either have a constant name or consist of a single {{helper}} providing a dictionary of names and values.  A template tag of type " + ttag.type + " is not allowed here.");
     }

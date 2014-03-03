@@ -2360,7 +2360,7 @@ var isLegalCodepoint = function (cp) {
 // either `"`, `'`, or `>` and is supplied when parsing attribute values.  NOTE: In the current spec, the
 // value of `allowedChar` doesn't actually seem to end up mattering, but there is still some debate about
 // the right approach to ampersands.
-getCharacterReference = function (scanner, inAttribute, allowedChar) {
+getCharacterReference = HTMLTools.Parse.getCharacterReference = function (scanner, inAttribute, allowedChar) {
   if (scanner.peek() !== '&')
     // no ampersand
     return null;

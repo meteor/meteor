@@ -1,7 +1,7 @@
 Tinytest.add("spacebars - token parsers", function (test) {
 
   var run = function (func, input, expected) {
-    var scanner = new HTML.Scanner('z' + input);
+    var scanner = new HTMLTools.Scanner('z' + input);
     // make sure the parse function respects `scanner.pos`
     scanner.pos = 1;
     var result = func(scanner);
