@@ -121,6 +121,12 @@ Tinytest.add("spacebars - stache tags", function (test) {
               ['NUMBER', 2, 'y']]});
   run('{{> foo x=1 y=2 z}}',
       "Can't have a non-keyword argument");
+
+  run('{{true.foo}}', "Can't use");
+  run('{{foo.this}}', "Can only use");
+  run('{{./this}}', "Can only use");
+  run('{{../this}}', "Can only use");
+
 });
 
 
