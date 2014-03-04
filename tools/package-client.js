@@ -21,56 +21,84 @@ var openPackageServerConnection = function () {
   });
 };
 
-// XXX onReconnect
+// Returns a logged-in DDP connection to the package server, or null if
+// we cannot log in.
+// XXX needs a timeout
 exports.loggedInPackagesConnection = function () {
-
+  // Make sure that we are logged in with Meteor Accounts so that we can
+  // do an OAuth flow.
   if (! auth.isLoggedIn()) {
     auth.doUsernamePasswordLogin({ retry: true });
   }
 
   var conn = openPackageServerConnection();
-  var serviceConfigurations = new (getLoadedPackages()['meteor'].
-        Meteor.Collection)('meteor_accounts_loginServiceConfiguration', {
-          connection: conn
-        });
-  var fut = new Future();
-  var serviceConfigurationsSub = conn.subscribe(
-    'meteor.loginServiceConfiguration',
-    fut.resolver()
+
+  var setUpOnReconnect = function () {
+    conn.onReconnect = function () {
+      conn.apply('login', [{
+        resume: auth.getSessionToken(config.getPackageServerDomain())
+      }], { wait: true }, function () { });
+    };
+  };
+
+  // Subscribe to the package server's service configurations so that we
+  // can get the OAuth client ID to kick off the OAuth flow.
+  var serviceConfigurations = new (getLoadedPackages().meteor.Meteor.Collection)(
+    'meteor_accounts_loginServiceConfiguration',
+    { connection: conn }
   );
-  fut.wait();
+  var serviceConfigurationsSub = conn.
+        _subscribeAndWait('meteor.loginServiceConfiguration');
 
   var accountsConfiguration = serviceConfigurations.findOne({
     service: 'meteor-developer'
   });
 
-  if (! accountsConfiguration) {
+  var cleanUp = function () {
+    serviceConfigurationsSub.stop();
+    conn.close();
+  };
+
+  if (! accountsConfiguration || ! accountsConfiguration.clientId) {
+    cleanUp();
     return null;
   }
 
   var clientId = accountsConfiguration.clientId;
   var loginResult;
 
-  if (! auth.getSessionToken(config.getPackageServerDomain())) {
-    // Since we passed retry: true, we shouldn't ever get to this point
-    // unless we are now logged in with the accounts server.
-    var redirectUri = config.getPackageServerUrl() +
-          '/_oauth/meteor-developer?close';
-    loginResult = auth.oauthFlow(conn, clientId, redirectUri,
-                                     config.getPackageServerDomain(),
-                                     'package-server');
-    if (! loginResult) {
-      conn.close();
-      return null;
-    }
-  } else {
+  // Try to log in with an existing login token, if we have one.
+  var existingToken = auth.getSessionToken(config.getPackageServerDomain());
+  if (existingToken) {
     loginResult = conn.apply('login', [{
-      resume: auth.getSessionToken(config.getPackageServerDomain())
+      resume: existingToken
     }], { wait: true });
-    if (! loginResult || ! loginResult.token || ! loginResult.id) {
-      conn.close();
-      return null;
+
+    if (loginResult && loginResult.token && loginResult.id) {
+      // Success!
+      setUpOnReconnect();
+      return conn;
     }
   }
-  return conn;
+
+  // Either we didn't have an existing token, or it didn't work. Do an
+  // OAuth flow to log in.
+  var redirectUri = config.getPackageServerUrl() +
+        '/_oauth/meteor-developer?close';
+  loginResult = auth.oauthFlow(conn, {
+    clientId: clientId,
+    redirectUri: redirectUri,
+    domain: config.getPackageServerDomain(),
+    sessionType: 'package-server'
+  });
+
+  if (loginResult && ! loginResult.error) {
+    setUpOnReconnect();
+    return conn;
+  } else {
+    process.stderr.write('Error logging in to package server: ' +
+                         loginResult.error + '\n');
+    cleanUp();
+    return null;
+  }
 };

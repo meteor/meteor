@@ -408,15 +408,10 @@ var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
   }
 };
 
-// XXX De-dup with logInToGalaxy
-// XXX make args options
-var oauthFlow = function (conn, clientId, redirectUri,
-                          domain, sessionType) {
-  var crypto = require('crypto');
-  var credentialToken = crypto.randomBytes(16).toString('hex');
+var sendAuthorizeRequest = function (clientId, redirectUri, state) {
   var authCodeUrl = config.getOauthUrl() + "/authorize?" +
         querystring.stringify({
-          state: credentialToken,
+          state: state,
           response_type: "code",
           client_id: clientId,
           redirect_uri: redirectUri
@@ -450,9 +445,36 @@ var oauthFlow = function (conn, clientId, redirectUri,
     return { error: 'access-denied' };
   }
 
+  return { location: response.headers.location };
+};
+
+// Do an OAuth flow with the Meteor developer accounts server to log in
+// to an OAuth client. `conn` is expected to be a DDP connection to the
+// OAuth client app. Options are:
+//  - clientId: OAuth client id parameter
+//  - redirectUri: OAuth redirect_uri parameter
+//  - domain: the domain for saving the received login token on success
+//    in the Meteor session file
+//  - sessionType: the value of the 'type' field for the session saved
+//    in the Meteor session file on success
+// All options are required.
+var oauthFlow = function (conn, options) {
+  var crypto = require('crypto');
+  var credentialToken = crypto.randomBytes(16).toString('hex');
+
+  var authorizeResult = sendAuthorizeRequest(
+    options.clientId,
+    options.redirectUri,
+    credentialToken
+  );
+
+  if (authorizeResult.error) {
+    return authorizeResult;
+  }
+
   try {
     var redirectResult = httpHelpers.request({
-      url: response.headers.location,
+      url: authorizeResult.location,
       method: 'GET',
       strictSSL: true
     });
@@ -460,7 +482,7 @@ var oauthFlow = function (conn, clientId, redirectUri,
     return { error: 'no-package-server' };
   }
 
-  response = redirectResult.response;
+  var response = redirectResult.response;
   // 'access-denied' isn't exactly right because it's possible that the server
   // went down since our last request, but close enough.
 
@@ -475,14 +497,14 @@ var oauthFlow = function (conn, clientId, redirectUri,
 
   if (loginResult.token && loginResult.id) {
     var data = readSessionData();
-    var session = getSession(data, domain);
-    ensureSessionType(session, sessionType);
+    var session = getSession(data, options.domain);
+    ensureSessionType(session, options.sessionType);
     session.token = loginResult.token;
     writeSessionData(data);
-    return 0;
+    return true;
   } else {
     process.stderr.write('Login failed');
-    return 1;
+    return false;
   }
 };
 
@@ -501,52 +523,32 @@ var logInToGalaxy = function (galaxyName) {
   var galaxyClientId = oauthInfo.oauthClientId;
   var galaxyRedirect = oauthInfo.redirectUri;
 
+  // If the redirect URI is not in the DNS namespace that belongs to the
+  // Galaxy, then something is wrong.
+  if (url.parse(galaxyRedirect).hostname !== galaxyName) {
+    // XXX It's more like 'bad-galaxy' than 'no-galaxy'.
+    return { error: 'no-galaxy' };
+  }
+
   // Ask the accounts server for an authorization code.
   var crypto = require('crypto');
   var session = crypto.randomBytes(16).toString('hex');
   var stateInfo = { session: session };
 
-  var authCodeUrl = config.getOauthUrl() + "/authorize?" +
-        querystring.stringify({
-          state: encodeURIComponent(JSON.stringify(stateInfo)),
-          response_type: "code",
-          client_id: galaxyClientId,
-          redirect_uri: galaxyRedirect
-        });
+  var authorizeResult = sendAuthorizeRequest(
+    galaxyClientId,
+    galaxyRedirect,
+    encodeURIComponent(JSON.stringify(stateInfo))
+  );
 
-  // It's very important that we don't have request follow the
-  // redirect for us, but instead issue the second request ourselves,
-  // since request would pass our credentials along to the redirected
-  // URL. See comments in http-helpers.js.
-  try {
-    var codeResult = httpHelpers.request({
-      url: authCodeUrl,
-      method: 'POST',
-      strictSSL: true,
-      useAuthHeader: true
-    });
-  } catch (e) {
-    return { error: 'no-account-server' };
-  }
-  var response = codeResult.response;
-  if (response.statusCode !== 302 || ! response.headers.location) {
-    return { error: 'access-denied' };
-  }
-
-  if (url.parse(response.headers.location).hostname !== galaxyName) {
-    // If we didn't get an immediate redirect to the redirectUri
-    // (which had better be in DNS namespace that belongs to the
-    // Galaxy) then presumably the oauth server is trying to interact
-    // with us (make us log in, authorize the client, or something
-    // like that). We're not a web browser so we can't participate in
-    // such things.
-    return { error: 'access-denied' };
+  if (authorizeResult.error) {
+    return authorizeResult;
   }
 
   // Ask the galaxy to log us in with our auth code.
   try {
     var galaxyResult = httpHelpers.request({
-      url: response.headers.location,
+      url: authorizeResult.location,
       method: 'GET',
       strictSSL: true,
       headers: {
@@ -559,7 +561,7 @@ var logInToGalaxy = function (galaxyName) {
   } catch (e) {
     return { error: (body && body.error) || 'no-galaxy' };
   }
-  response = galaxyResult.response;
+  var response = galaxyResult.response;
 
   // 'access-denied' isn't exactly right because it's possible that the galaxy
   // went down since our last request, but close enough.
