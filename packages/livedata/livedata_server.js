@@ -839,6 +839,13 @@ var Subscription = function (
 
 _.extend(Subscription.prototype, {
   _runHandler: function () {
+    // XXX should we unblock() here? Either before running the publish
+    // function, or before running _publishCursor.
+    //
+    // Right now, each publish function blocks all future publishes and
+    // methods waiting on data from Mongo (or whatever else the function
+    // blocks on). This probably slows page load in common cases.
+
     var self = this;
     try {
       var res = maybeAuditArgumentChecks(
