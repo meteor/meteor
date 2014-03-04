@@ -1568,7 +1568,7 @@ Tinytest.add("minimongo - ordering", function (test) {
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
     _.each(_.isArray(sorts) ? sorts : [sorts], function (sort) {
-      var sorter = new MinimongoTest.Sorter(sort);
+      var sorter = new Minimongo.Sorter(sort);
       assert_ordering(test, sorter.getComparator(), docs);
     });
   };
@@ -1596,15 +1596,15 @@ Tinytest.add("minimongo - ordering", function (test) {
          [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
   test.throws(function () {
-    new MinimongoTest.Sorter("a");
+    new Minimongo.Sorter("a");
   });
 
   test.throws(function () {
-    new MinimongoTest.Sorter(123);
+    new Minimongo.Sorter(123);
   });
 
   // No sort spec implies everything equal.
-  test.equal(new MinimongoTest.Sorter({}).getComparator()({a:1}, {a:2}), 0);
+  test.equal(new Minimongo.Sorter({}).getComparator()({a:1}, {a:2}), 0);
 
   // All sorts of array edge cases!
   // Increasing sort sorts by the smallest element it finds; 1 < 2.
