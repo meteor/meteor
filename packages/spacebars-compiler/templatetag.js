@@ -141,9 +141,13 @@ TemplateTag.parse = function (scannerOrString) {
         segments.push(seg);
       } else {
         var id = scanIdentifier(! segments.length);
-        if (id === 'this' && ! segments.length) {
-          // initial `this`
-          segments.push('.');
+        if (id === 'this') {
+          if (! segments.length) {
+            // initial `this`
+            segments.push('.');
+          } else {
+            error("Can only use `this` at the beginning of a path.\nInstead of `foo.this` or `../this`, just write `foo` or `..`.");
+          }
         } else {
           segments.push(id);
         }
