@@ -38,10 +38,10 @@ var waitForClientConnectionStatus = function (connection, status) {
 
 // Override the server heartbeat for an incoming connection.
 
-var serverHeartbeatOverride = {};
+var serverOverride = {};
 
 Meteor.onConnection(function (serverConnection) {
-  _.extend(serverConnection._internal.heartbeat, serverHeartbeatOverride);
+  _.extend(serverConnection._internal, serverOverride);
 });
 
 
@@ -62,9 +62,8 @@ var expectConnectAndReconnect = function (clientConnection) {
 var testClientTimeout = function () {
   console.log("Test client timeout");
 
-  serverHeartbeatOverride = {
-    _sendPing: false,   // don't send pings from server
-    _sendPong: false    // don't respond to pings, which should cause the client to timeout
+  serverOverride = {
+    _disableHeartbeat: true
   };
 
   var clientConnection = DDP.connect(Meteor.absoluteUrl());
@@ -79,14 +78,10 @@ var testClientTimeout = function () {
 var testServerTimeout = function () {
   console.log("Test server timeout");
 
-  serverHeartbeatOverride = {};
+  serverOverride = {};
 
   var clientConnection = DDP.connect(Meteor.absoluteUrl());
-
-  _.extend(clientConnection._heartbeat, {
-    _sendPing: false,   // don't send pings from client
-    _sendPong: false    // don't respond to pings, which should cause the server to timeout
-  });
+  clientConnection._disableHeartbeat = true;
 
   expectConnectAndReconnect(clientConnection);
 

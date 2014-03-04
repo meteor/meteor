@@ -3,6 +3,9 @@ StubStream = function () {
 
   self.sent = [];
   self.callbacks = {};
+
+  // Don't confuse tests by sending pings or timing out on heartbeats.
+  self.disableHeartbeat = true;
 };
 
 
@@ -29,7 +32,6 @@ _.extend(StubStream.prototype, {
   reconnect: function () {
     // no-op
   },
-
 
   // Methods for tests
   receive: function (data) {

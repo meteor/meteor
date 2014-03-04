@@ -291,13 +291,24 @@ var Session = function (server, version, socket, options) {
     self.startUniversalSubs();
   }).run();
 
-  self.heartbeat = new Heartbeat({
-    heartbeatInterval: options.heartbeatInterval,
-    heartbeatTimeout: options.heartbeatTimeout,
-    sendMessage: _.bind(self.send, self),
-    closeConnection: _.bind(self.destroy, self)
-  });
-  self.heartbeat.start(version);
+  if (version === 'pre2') {
+    self.heartbeat = new Heartbeat({
+      heartbeatInterval: options.heartbeatInterval,
+      heartbeatTimeout: options.heartbeatTimeout,
+      onTimeout: function () {
+        if (!self._disableHeartbeat)
+          self.destroy();
+      },
+      sendPing: function () {
+        if (!self._disableHeartbeat) {
+          self.send({msg: 'ping'});
+        }
+      }
+    });
+    Fiber(function () {
+      self.heartbeat.start();
+    }).run();
+  }
 
   Package.facts && Package.facts.Facts.incrementServerFact(
     "livedata", "sessions", 1);
@@ -404,7 +415,8 @@ _.extend(Session.prototype, {
     if (!self.inQueue)
       return;
 
-    self.heartbeat.stop();
+    if (self.heartbeat)
+      self.heartbeat.stop();
 
     if (self.socket) {
       self.socket.close();
@@ -489,8 +501,22 @@ _.extend(Session.prototype, {
     // If the negotiated DDP version is "pre1" which didn't support
     // pings, preserve the "pre1" behavior of responding with a "bad
     // request" for the unknown messages.
-    if (self.heartbeat.supported && _.include(['ping', 'pong'], msg_in.msg)) {
-      self.heartbeat.pingpongReceived(msg_in);
+    if (self.version === 'pre2' && msg_in.msg === 'ping') {
+      // For testing the heartbeat can be disabled so that we don't
+      // respond to pings, but we don't send a "bad request" either.
+      if (!self._disableHeartbeat) {
+        self.send({msg: "pong", id: msg_in.id});
+        Fiber(function () {
+          self.heartbeat.pingReceived();
+        }).run();
+      }
+      return;
+    }
+    if (self.version === 'pre2' && msg_in.msg === 'pong') {
+      if (!self._disableHeartbeat)
+        Fiber(function () {
+          self.heartbeat.pongReceived();
+        }).run();
       return;
     }
 
