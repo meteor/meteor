@@ -264,6 +264,18 @@ UI.render = function (kind, parentComponent) {
   return inst;
 };
 
+UI.renderWithData = function (kind, data, parentComponent) {
+  if (! UI.isComponent(kind))
+    throw new Error("Component required here");
+  if (kind.isInited)
+    throw new Error("Can't render component instance, only component kind");
+  if (typeof data === 'function')
+    throw new Error("Data argument can't be a function");
+
+  return UI.render(kind.extend({data: function () { return data; }}),
+                   parentComponent);
+};
+
 var contentEquals = function (a, b) {
   if (a instanceof HTML.Raw) {
     return (b instanceof HTML.Raw) && (a.value === b.value);
