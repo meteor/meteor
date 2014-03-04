@@ -66,6 +66,9 @@ var Connection = function (url, options) {
   self._nextMethodId = 1;
   self._supportedDDPVersions = options.supportedDDPVersions;
 
+  self._heartbeatInterval = options.heartbeatInterval;
+  self._heartbeatTimeout = options.heartbeatTimeout;
+
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
   // of their writes to be written to the local cache). Map from method ID to
@@ -179,13 +182,6 @@ var Connection = function (url, options) {
   self._userId = null;
   self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
 
-  self._heartbeat = new Heartbeat({
-    heartbeatInterval: options.heartbeatInterval,
-    heartbeatTimeout: options.heartbeatTimeout,
-    sendMessage: _.bind(self._send, self),
-    closeConnection: _.bind(self._lostConnection, self)
-  });
-
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
     Package.reload.Reload._onMigrate(function (retry) {
@@ -233,6 +229,18 @@ var Connection = function (url, options) {
         options.onDDPVersionNegotiationFailure(description);
       }
     }
+    else if (msg.msg === 'ping') {
+      if (!self._disableHeartbeat) {
+        self._send({msg: "pong", id: msg.id});
+        if (self._heartbeat)
+          self._heartbeat.pingReceived();
+      }
+    }
+    else if (msg.msg === 'pong') {
+      if (!self._disableHeartbeat && self._heartbeat) {
+        self._heartbeat.pongReceived();
+      }
+    }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
     else if (msg.msg === 'nosub')
@@ -241,8 +249,6 @@ var Connection = function (url, options) {
       self._livedata_result(msg);
     else if (msg.msg === 'error')
       self._livedata_error(msg);
-    else if (_.include(['ping', 'pong'], msg.msg))
-      self._heartbeat.pingpongReceived(msg);
     else
       Meteor._debug("discarding unknown livedata message type", msg);
   };
@@ -912,7 +918,17 @@ _.extend(Connection.prototype, {
   _livedata_connected: function (msg) {
     var self = this;
 
-    self._heartbeat.start(self._version);
+    if (self._version === 'pre2' && !self._disableHeartbeat && !self._stream.disableHeartbeat) {
+      self._heartbeat = new Heartbeat({
+        heartbeatInterval: self._heartbeatInterval,
+        heartbeatTimeout: self._heartbeatTimeout,
+        onTimeout: _.bind(self._lostConnection, self),
+        sendPing: function () {
+          self._send({msg: 'ping'});
+        }
+      });
+      self._heartbeat.start();
+    }
 
     // If this is a reconnect, we'll have to reset all stores.
     if (self._lastSessionId)
