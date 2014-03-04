@@ -1,6 +1,6 @@
 var Future = Npm.require('fibers/future');
 
-var OPLOG_COLLECTION = 'oplog.rs';
+OPLOG_COLLECTION = 'oplog.rs';
 var REPLSET_COLLECTION = 'system.replset';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See

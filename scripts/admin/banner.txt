@@ -1,7 +1,4 @@
-=> Meteor 0.7.1.1: Extend oplog tailing driver to support most common
-   MongoDB queries.  Introduce Meteor developer accounts, a new way of
-   managing your meteor.com deployed sites. When you use `meteor
-   deploy`, you will be prompted to create a developer account.
+=> Meteor 0.7.1.2: Fix crash on OSX machines with no hostname set.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.7.1.1 by running 'meteor update'.
+   project to Meteor 0.7.1.2 by running 'meteor update'.

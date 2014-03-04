@@ -1202,7 +1202,7 @@ _.extend(Server.prototype, {
       // drop all future data coming over this connection on the
       // floor. We don't want to confuse things.
       socket.removeAllListeners('data');
-      setTimeout(function () {
+      Meteor.setTimeout(function () {
         socket.send(stringifyDDP({msg: 'failed', version: version}));
         socket.close();
       }, timeout);
