@@ -26,15 +26,6 @@ var _defineNonEnum = function (tgt, name, value) {
   return tgt;
 };
 
-// Make `typeName` a non-empty string starting with an ASCII
-// letter or underscore and containing only letters, underscores,
-// and numbers.  This makes it safe to insert into evaled JS
-// code.
-var sanitizeTypeName = function (typeName) {
-  return String(typeName).replace(/^[^a-zA-Z_]|[^a-zA-Z_0-9]+/g,
-                                  '') || 'Component';
-};
-
 // Named function (like `function Component() {}` below) make
 // inspection in debuggers more descriptive. In IE, this sets the
 // value of the `Component` var in the function scope in which it's
@@ -107,20 +98,6 @@ _extend(UI, {
 Component = UI.Component;
 
 _extend(UI.Component, {
-  // If a Component has a `kind` property set via `extend`,
-  // we make it use that name when printed in Chrome Dev Tools.
-  // If you then extend this Component and don't supply any
-  // new `kind`, it should use the same value of kind (or the
-  // most specific one in the case of an `extend` chain with
-  // `kind` set at multiple points).
-  //
-  // To accomplish this, keeping performance in mind,
-  // any Component where `kind` is explicitly set
-  // also has a function property `_constr` whose source-code
-  // name is `kind`.  `extend` creates this `_constr`
-  // function, which can then be used internally as a
-  // constructor to quickly create new instances that
-  // pretty-print correctly.
   kind: "Component",
   guid: "1",
   dom: null,
@@ -150,12 +127,13 @@ _extend(UI.Component, {
 
     var constr;
     var constrMade = false;
-    // Any Component with a kind of "Foo" (say) is given
-    // a `._constr` of the form `function Foo() {}`.
     if (props && props.kind) {
-      constr = Function("return function " +
-                        sanitizeTypeName(props.kind) +
-                        "() {};")();
+      // If `kind` is different from super, set a constructor.
+      // We used to set the function name here so that components
+      // printed better in the console, but we took it out because
+      // of CSP (and in hopes that Chrome finally adds proper
+      // displayName support).
+      constr = function () {};
       constrMade = true;
     } else {
       constr = this._constr;
