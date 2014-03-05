@@ -24,26 +24,16 @@ var openPackageServerConnection = function () {
 };
 
 var loadLocalPackageData = function () {
-  var finalCollections = {};
-//  var packages = ["versions", "packages", "builds"];
-  var packages = [];
-  _.forEach(packages, function(file) {
-    var filepath = config.getPackagesCollections() + file + ".json";
-    var parsed = requre(filepath);
-    finalCollections[file] = parsed;
-  })
-
-  // Return them all.
+  var finalCollections = require(config.getPackageStorage());
   return finalCollections;
-}
+};
 
 var loadRemotePackageData = function (syncToken) {
   var conn = openPackageServerConnection();
   var collectionData = conn.call('syncNewPackageData', syncToken);
   conn.close();
-  console.log(collectionData);
   return collectionData;
-}
+};
 
 // Takes in two javascript objects of the form:
 //  { collectionName : arrayOfRecords }
@@ -86,23 +76,23 @@ var mergeCollections = function (coll1, collUpdate) {
 }
 
 var writePackagesToDisk = function (syncToken, collectionData) {
-  fs.writeFileSync(config.getPackagesSyncToken(), JSON.stringify(syncToken, null, 2));
-  console.log("New", syncToken);
-
-  // Write each collection to disk in its separate file.
-  _.forEach(collectionData, function(collection, key) {
-    var filepath = path.join(config.getPackagesCollections(), key + ".json");
-    fs.writeFileSync(filepath, JSON.stringify(collection.find().fetch(), null, 2));
+  var finalWrite = {};
+  finalWrite.syncToken = syncToken;
+  finalWrite.formatVersion = "1.0";
+  finalWrite.collections = {};
+  _.forEach(collectionData, function(coll, name) {
+    finalWrite.collections[name] = coll.find().fetch();
   })
+  fs.writeFileSync(config.getPackageStorage(),
+                   JSON.stringify(finalWrite, null, 2));
 }
 
 loadPackageData = function() {
-  var syncToken = require(config.getPackagesSyncToken());
-  console.log("OLD", syncToken);
-
   //XXX: We can consider optimizing this with concurrency or something.
+  var localData = loadLocalPackageData();
+  var syncToken = localData.syncToken;
+  var localCollections = localData.collections;
   var remoteData = loadRemotePackageData(syncToken);
-  var localCollections = loadLocalPackageData();
   var allPackageData = mergeCollections(localCollections, remoteData.collections);
   writePackagesToDisk(remoteData.syncToken, allPackageData);
   return allPackageData;

@@ -135,13 +135,12 @@ _.extend(exports, {
     }
   },
 
-  getPackagesSyncToken: function() {
-    return  path.join(process.env.HOME, ".meteorPackages", "syncToken.json");
+  getPackageStorage: function() {
+    return path.join(process.env.HOME, ".meteor", "package-metadata", "v1", "data.json");
   },
 
-
-  getPackagesCollections: function() {
-    return  path.join(process.env.HOME, ".meteorPackages", "collections");
+  getPackageStorageVersion: function() {
+    return "1.0";
   },
 
   // Return the domain name of the current Meteor Accounts server in

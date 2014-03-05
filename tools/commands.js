@@ -1395,15 +1395,22 @@ main.registerCommand({
   return 0;
 });
 
-
+// This command will list all packages in existence.
+// This command may go away after testing is done.
 main.registerCommand({
-  name: 'update',
+  name: 'list',
   options: {},
   maxArgs: 3,
   hidden: true
 }, function (options) {
-  console.log("test");
-  loadPackageData();
+  var all = loadPackageData();
+  var Packages = all.packages;
+  var Versions = all.versions;
+  Packages.find().forEach(function(package) {
+   // Hm. What is the right way to sort by version if we store version as string?
+   var desc = Versions.findOne({packageName: package.name}, {sort: {version: 1}});
+   console.log(package.name, desc.description);
+  })
 });
 
 ///////////////////////////////////////////////////////////////////////////////
