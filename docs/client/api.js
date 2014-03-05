@@ -512,7 +512,7 @@ Template.api.meteor_collection = {
   id: "meteor_collection",
   name: "new Meteor.Collection(name, [options])",
   locus: "Anywhere",
-  descr: ["Constructor for a Collection"],
+  descr: ["Constructor for a Collection. Only one collection with a given name can be instantiated. In other words, local scoping with var of an existing collection won't work."],
   args: [
     {name: "name",
      type: "String",
