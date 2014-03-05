@@ -76,7 +76,7 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
         // XXX this error message should be improved so you can get a lot more
         // context, like what are initial exact dependencies (those user
         // specified) and what is the eventual conflict.
-        if (pick[dep.packageName] !== dep.version)
+        if (picks[dep.packageName] !== dep.version)
           throw new Error("Unresolvable: two exact dependencies conflict: " +
                           dep.packageName + " versions: " +
                           [pick[dep.packageName], dep.version]);

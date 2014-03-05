@@ -25,8 +25,10 @@ var t = function (deps, expected) {
   currentTest.equal(resolvedDeps, expected);
 };
 
-Tinytest.add("constraint solver - basics", function (test) {
+Tinytest.add("constraint solver - exact dependencies", function (test) {
   currentTest = test;
   t({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
+  t({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
+  t({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
 });
 
