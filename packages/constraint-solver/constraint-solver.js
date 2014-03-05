@@ -100,7 +100,6 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
 
   var self = this;
 
-
   var depsStack = rejectExactDeps(dependencies);
   var exactDepsStack = pickExactDeps(dependencies);
 
@@ -109,10 +108,27 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
   return self._propagateExactDeps(depsStack, exactDepsStack);
 };
 
-// accepts dependencies in simpler format
 ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
   var self = this;
+  return self._resolve(toStructuredDeps(dependencies));
+};
 
+ConstraintSolver.Resolver.prototype.propagatedExactDeps = function (dependencies) {
+  var self = this;
+
+  dependencies = toStructuredDeps(dependencies);
+  var depsStack = rejectExactDeps(dependencies);
+  var exactDepsStack = pickExactDeps(dependencies);
+  return self._propagateExactDeps(depsStack, exactDepsStack);
+};
+
+// helpers
+var isExact = function (dep) { return dep.exact; }
+var pickExactDeps = function (deps) { return _.filter(deps, isExact); };
+var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
+
+// converts dependencies from simple format to the structured format
+var toStructuredDeps = function (dependencies) {
   var structuredDeps = [];
   _.each(dependencies, function (details, packageName) {
     if (typeof details === "string") {
@@ -122,11 +138,6 @@ ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
     }
   });
 
-  return self._resolve(structuredDeps);
+  return structuredDeps;
 };
-
-// helpers
-var isExact = function (dep) { return dep.exact; }
-var pickExactDeps = function (deps) { return _.filter(deps, isExact); };
-var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
 

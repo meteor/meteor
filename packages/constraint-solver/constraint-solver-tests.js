@@ -34,6 +34,11 @@ var t = function (deps, expected) {
   currentTest.equal(resolvedDeps, expected);
 };
 
+var t_progagateExact = function (deps, expected) {
+  var resolvedDeps = resolver.propagatedExactDeps(deps);
+  currentTest.equal(resolvedDeps, expected);
+};
+
 var FAIL = function (deps) {
   currentTest.throws(function () {
     var resolvedDeps = resolver.resolve(deps);
@@ -42,9 +47,9 @@ var FAIL = function (deps) {
 
 Tinytest.add("constraint solver - exact dependencies", function (test) {
   currentTest = test;
-  t({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
-  t({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
-  t({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
+  t_progagateExact({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
+  t_progagateExact({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
+  t_progagateExact({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
 
   FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=1.0.0" });
   // something that isn't available for your architecture
