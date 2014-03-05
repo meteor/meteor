@@ -136,7 +136,10 @@ _.extend(exports, {
   },
 
   getPackageStorage: function() {
-    return path.join(process.env.HOME, ".meteor", "package-metadata", "v1", "data.json");
+    // XXX respect process.env.METEOR_WAREHOUSE_DIR
+    var warehouseBase = files.inCheckout()
+          ? files.getCurrentToolsDir() : process.env.HOME;
+    return path.join(warehouseBase, ".meteor", "package-metadata", "v1", "data.json");
   },
 
   getPackageStorageVersion: function() {
