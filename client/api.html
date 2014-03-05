@@ -182,8 +182,9 @@ publish handler, this is the place to stop the observes.
 When you subscribe to a record set, it tells the server to send records to the
 client.  The client stores these records in local [Minimongo
 collections](#meteor_collection), with the same name as the `collection`
-argument used in the publish handler's `added`, `changed`, and `removed`
-callbacks.  Meteor will queue incoming attributes until you declare the
+argument used in the publish handler's [`added`](#publish_added),
+[`changed`](#publish_changed), and [`removed`](#publish_removed)
+callbacks.  Meteor will queue incoming records until you declare the
 [`Meteor.Collection`](#meteor_collection) on the client with the matching
 collection name.
 

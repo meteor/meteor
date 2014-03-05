@@ -209,7 +209,7 @@ Template.api.publish = {
   args: [
     {name: "name",
      type: "String",
-     descr: "Name of the attribute set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients."},
+     descr: "Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients."},
     {name: "func",
      type: "Function",
      descr: "Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments."}
@@ -334,7 +334,7 @@ Template.api.subscribe = {
   args: [
     {name: "name",
      type: "String",
-     descr: "Name of the subscription.  Matches name of server's publish() call."},
+     descr: "Name of the subscription.  Matches the name of the server's `publish()` call."},
     {name: "arg1, arg2, ...",
      type: "Any",
      descr: "Optional arguments passed to publisher function on server."},
