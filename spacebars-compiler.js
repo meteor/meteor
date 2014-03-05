@@ -150,14 +150,16 @@ var builtInBlockHelpers = {
   'each': 'UI.Each'
 };
 
+// These must be prefixed with `UI.` when you use them in a template.
 var builtInLexicals = {
-  'content': 'template.__content',
-  'elseContent': 'template.__elseContent'
+  'contentBlock': 'template.__content',
+  'elseBlock': 'template.__elseContent'
 };
 
+// A "reserved name" can't be used as a <template> name.  This
+// function is used by the template file scanner.
 Spacebars.isReservedName = function (name) {
-  return builtInBlockHelpers.hasOwnProperty(name) ||
-    builtInLexicals.hasOwnProperty(name);
+  return builtInBlockHelpers.hasOwnProperty(name);
 };
 
 var codeGenTemplateTag = function (tag) {
@@ -231,7 +233,8 @@ var codeGenTemplateTag = function (tag) {
             Spacebars.codeGen(HTML.EmitCode(includeCode)) + '))';
         }
 
-        if (path[0] === 'content' || path[0] === 'elseContent') {
+        if (path[0] === 'UI' &&
+            (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
           includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
         }
 
@@ -268,13 +271,15 @@ var makeObjectLiteral = function (obj) {
 var codeGenPath = function (path, opts) {
   if (builtInBlockHelpers.hasOwnProperty(path[0]))
     throw new Error("Can't use the built-in '" + path[0] + "' here");
-  // Let `{{#if content}}` check whether this template was invoked via
+  // Let `{{#if UI.contentBlock}}` check whether this template was invoked via
   // inclusion or as a block helper, in addition to supporting
-  // `{{> content}}`.
-  if (builtInLexicals.hasOwnProperty(path[0])) {
-    if (path.length > 1)
-      throw new Error("Unexpected dotted path beginning with " + path[0]);
-    return builtInLexicals[path[0]];
+  // `{{> UI.contentBlock}}`.
+  if (path.length >= 2 &&
+      path[0] === 'UI' && builtInLexicals.hasOwnProperty(path[1])) {
+    if (path.length > 2)
+      throw new Error("Unexpected dotted path beginning with " +
+                      path[0] + '.' + path[1]);
+    return builtInLexicals[path[1]];
   }
 
   var args = [toJSLiteral(path[0])];
@@ -476,7 +481,7 @@ Spacebars.codeGen = function (parseTree, options) {
 
   var code = '(function () { var self = this; ';
   if (isTemplate) {
-    // support `{{> content}}` and `{{> elseContent}}` with
+    // support `{{> UI.contentBlock}}` and `{{> UI.elseBlock}}` with
     // lexical scope by creating a local variable in the
     // template's render function.
     code += 'var template = this; ';
