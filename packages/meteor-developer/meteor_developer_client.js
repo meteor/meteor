@@ -1,5 +1,3 @@
-MeteorDeveloperAccounts = {};
-
 // Request Meteor developer account credentials for the user
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on
@@ -19,7 +17,8 @@ var requestCredential = function (credentialRequestCompleteCallback) {
   var credentialToken = Random.id();
 
   var loginUrl =
-        METEOR_DEVELOPER_URL + "/oauth2/authorize?" +
+        MeteorDeveloperAccounts._server +
+        "/oauth2/authorize?" +
         "state=" + credentialToken +
         "&response_type=code&" +
         "client_id=" + config.clientId +
