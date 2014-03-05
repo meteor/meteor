@@ -14,6 +14,7 @@ ConstraintSolver.Dependency = {
 ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   var self = this;
 
+  options = options || {};
   var architecture = options.architecture || "all";
 
   self.packageDeps = {};
@@ -22,7 +23,7 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   // required architecture is available.
   Packages.find().forEach(function (packageDef) {
     self.packageDeps[packageDef.name] = {};
-    Versions.find({ name: packageDef.name }).forEach(function (versionDef) {
+    Versions.find({ packageName: packageDef.name }).forEach(function (versionDef) {
       // XXX somehow use earliestCompatibleVersion and warning
       var build = Builds.findOne({packageName: packageDef.name,
                                   version: versionDef.version,
@@ -30,8 +31,9 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
                                         {architecture: "all"}]});
 
       if (build) {
+        build.dependencies = build.dependencies || [];
         var deps = build.dependencies.map(function (dep) {
-          return _.extend({}, dep, PackageVersion.parseVersion(dep.version));
+          return _.extend({}, dep, PackageVersion.parseVersionConstraint(dep.version));
         });
 
         // assert the schema
@@ -45,8 +47,10 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   });
 };
 
-ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
+ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
   check(dependencies, [ConstraintSolver.Dependency]);
+
+  var self = this;
 
   var picks = {};
   var isExact = function (dep) { return dep.exact; }
@@ -62,9 +66,13 @@ ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
 
   while (exactDepsStack.length > 0) {
     var currentPick = exactDepsStack.pop();
+    // XXX if there is no info of such package or no version for this
+    // architecture, throw a meaningful error
+    var currentDependencies =
+      self.packageDeps[currentPick.packageName][currentPick.version].dependencies;
 
-    _.each(pickExactDeps(currentPick.dependencies), function (dep) {
-      if (_.has(pick, dep.packageName)) {
+    _.each(pickExactDeps(currentDependencies), function (dep) {
+      if (_.has(picks, dep.packageName)) {
         // XXX this error message should be improved so you can get a lot more
         // context, like what are initial exact dependencies (those user
         // specified) and what is the eventual conflict.
@@ -73,7 +81,7 @@ ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
                           dep.packageName + " versions: " +
                           [pick[dep.packageName], dep.version]);
       } else {
-        pick[dep.packageName] = dep.version;
+        picks[dep.packageName] = dep.version;
         exactDepsStack.push(dep);
       }
     });
@@ -88,5 +96,22 @@ ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
 
   // xcxc: check that all deps in depsStack satisfy first, then try doing
   // something smart and then backtracking.
+  return picks;
+};
+
+// accepts dependencies in simpler format
+ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
+  var self = this;
+
+  var structuredDeps = [];
+  _.each(dependencies, function (details, packageName) {
+    if (typeof details === "string") {
+      structuredDeps.push(_.extend({ packageName: packageName }, PackageVersion.parseVersionConstraint(details)));
+    } else {
+      structuredDeps.push(_.extend({ packageName: packageName }, details));
+    }
+  });
+
+  return self._resolve(structuredDeps);
 };
 
