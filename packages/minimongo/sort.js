@@ -90,8 +90,6 @@ _.extend(Minimongo.Sorter.prototype, {
   // you can find along the same paths".  ie, for a doc {a: [{x: 0, y: 5}, {x:
   // 1, y: 3}]} with sort spec {'a.x': 1, 'a.y': 1}, the only keys are [0,5] and
   // [1,3], and the minimum key is [0,5]; notably, [0,3] is NOT a key.
-  //
-  // XXX write direct unit tests for this stuff
   _getMinKeyFromDoc: function (doc) {
     var self = this;
     var minKey = null;
@@ -182,6 +180,7 @@ _.extend(Minimongo.Sorter.prototype, {
         //
         // (In MongoDB it seems to be OK to have {a: 1, 'a.x.y': 1} where 'a'
         // and 'a.x.y' are both arrays, but we don't allow this for now.
+        // #NestedArraySort
         // XXX achieve full compatibility here
         if (knownPaths && !_.has(knownPaths, path)) {
           throw Error("cannot index parallel arrays");

@@ -1811,6 +1811,13 @@ Tinytest.add("minimongo - sort keys", function (test) {
     test.equal(actualKeys, expectedKeys);
   };
 
+  var testParallelError = function (sortSpec, doc) {
+    var sorter = new Minimongo.Sorter(sortSpec);
+    test.throws(function () {
+      sorter._generateKeysFromDoc(doc, function (){});
+    }, /parallel arrays/);
+  };
+
   // Just non-array fields.
   testKeys({'a.x': 1, 'a.y': 1},
            {a: {x: 0, y: 5}},
@@ -1831,6 +1838,19 @@ Tinytest.add("minimongo - sort keys", function (test) {
   testKeys({'a.x': 1, b: -1, 'a.y': 1},
            {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
            [[0,42,5], [1,42,3]]);
+  testKeys({a: 1, b: 1},
+           {a: [1, 2, 3], b: 42},
+           [[1,42], [2,42], [3,42]]);
+
+  // Don't support multiple arrays at the same level.
+  testParallelError({a: 1, b: 1},
+                    {a: [1, 2, 3], b: [42]});
+
+  // We are MORE STRICT than Mongo here; Mongo supports this!
+  // XXX support this too  #NestedArraySort
+  testParallelError({'a.x': 1, 'a.y': 1},
+                    {a: [{x: 1, y: [2, 3]},
+                         {x: 2, y: [4, 5]}]});
 });
 
 Tinytest.add("minimongo - binary search", function (test) {
