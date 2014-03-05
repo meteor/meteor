@@ -161,10 +161,13 @@ var writeSessionData = function (data) {
       continue;
     }
 
-    // Write `data` to the file.
-    var buf = new Buffer(JSON.stringify(data, undefined, 2), 'utf8');
-    fs.writeSync(fd, buf, 0, buf.length, 0);
-    fs.closeSync(fd);
+    try {
+      // Write `data` to the file.
+      var buf = new Buffer(JSON.stringify(data, undefined, 2), 'utf8');
+      fs.writeSync(fd, buf, 0, buf.length, 0);
+    } finally {
+      fs.closeSync(fd);
+    }
 
     // Atomically remove the old file (if any) and replace it with
     // the temporary file we just created.
