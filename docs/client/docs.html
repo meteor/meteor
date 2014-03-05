@@ -41,22 +41,22 @@
 
 <template name="nav_section">
   {{#if depthIs 1}}
-    <h1>{{> content}}</h1>
+    <h1>{{> UI.contentBlock}}</h1>
   {{/if}}
   {{#if depthIs 2}}
-    <h2>{{> content}}</h2>
+    <h2>{{> UI.contentBlock}}</h2>
   {{/if}}
   {{#if depthIs 3}}
-    <h3>{{> content}}</h3>
+    <h3>{{> UI.contentBlock}}</h3>
   {{/if}}
   {{#if depthIs 4}}
-    <h4>{{> content}}</h4>
+    <h4>{{> UI.contentBlock}}</h4>
   {{/if}}
   {{#if depthIs 5}}
-    <h5>{{> content}}</h5>
+    <h5>{{> UI.contentBlock}}</h5>
   {{/if}}
   {{#if depthIs 6}}
-    <h6>{{> content}}</h6>
+    <h6>{{> UI.contentBlock}}</h6>
   {{/if}}
 </template>
 
@@ -77,7 +77,7 @@
   {{else}}
     <dt><span class="name">{{{.}}}</span></dt>
   {{/if}}
-  <dd>{{#markdown}}{{> content}}{{/markdown}}</dd>
+  <dd>{{#markdown}}{{> UI.contentBlock}}{{/markdown}}</dd>
 </template>
 
 
@@ -86,7 +86,7 @@
      http://daringfireball.net/projects/markdown/syntax#html -->
 <template name="warning">
 <div class="warning">
-  {{#markdown}}{{> content}}{{/markdown}}
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
 </div>
 </template>
 
@@ -94,7 +94,7 @@
      http://daringfireball.net/projects/markdown/syntax#html -->
 <template name="note">
 <div class="note">
-  {{#markdown}}{{> content}}{{/markdown}}
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
 </div>
 </template>
 

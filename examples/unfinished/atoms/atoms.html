@@ -15,7 +15,7 @@
 <template name="atom">
   <g class="atom">
     <circle style="fill: {{#if color}}{{color}}{{else}}white{{/if}}" cx={{x}} cy={{y}} r={{#if r}}{{r}}{{else}}20{{/if}} />
-    <text x={{x}} y={{textY}}>{{> content}}</text>
+    <text x={{x}} y={{textY}}>{{> UI.contentBlock}}</text>
   </g>
 </template>
 
@@ -24,5 +24,5 @@
 </template>
 
 <template name="giantatom">
-  {{#atom x=x y=y r=50 color=color}}{{> content}}{{/atom}}
+  {{#atom x=x y=y r=50 color=color}}{{> UI.contentBlock}}{{/atom}}
 </template>

@@ -380,14 +380,14 @@ Tinytest.add("spacebars - templates - block helper with dotted arg", function (t
 });
 
 Tinytest.add("spacebars - templates - nested content", function (test) {
-  // Test that `{{> content}}` in an `{{#if}}` works.
+  // Test that `{{> UI.contentBlock}}` in an `{{#if}}` works.
 
   // ```
   // <template name="spacebars_template_test_iftemplate">
   //   {{#if condition}}
-  //     {{> content}}
+  //     {{> UI.contentBlock}}
   //   {{else}}
-  //     {{> elseContent}}
+  //     {{> UI.elseBlock}}
   //   {{/if}}
   // </template>
   // ```
@@ -414,7 +414,7 @@ Tinytest.add("spacebars - templates - nested content", function (test) {
   Deps.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 
-  // Also test that `{{> content}}` in a custom block helper works.
+  // Also test that `{{> UI.contentBlock}}` in a custom block helper works.
   tmpl = Template.spacebars_template_test_nested_content2;
   R = ReactiveVar(true);
   tmpl.x = function () {
