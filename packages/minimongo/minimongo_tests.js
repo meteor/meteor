@@ -1811,12 +1811,26 @@ Tinytest.add("minimongo - sort keys", function (test) {
     test.equal(actualKeys, expectedKeys);
   };
 
+  // Just non-array fields.
+  testKeys({'a.x': 1, 'a.y': 1},
+           {a: {x: 0, y: 5}},
+           [[0,5]]);
+
+  // Ensure that we don't get [0,3] and [1,5].
   testKeys({'a.x': 1, 'a.y': 1},
            {a: [{x: 0, y: 5}, {x: 1, y: 3}]},
            [[0,5], [1,3]]);
+
+  // Ensure we can combine "array fields" with "non-array fields".
   testKeys({'a.x': 1, 'a.y': 1, b: -1},
            {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
            [[0,5,42], [1,3,42]]);
+  testKeys({b: -1, 'a.x': 1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[42,0,5], [42,1,3]]);
+  testKeys({'a.x': 1, b: -1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[0,42,5], [1,42,3]]);
 });
 
 Tinytest.add("minimongo - binary search", function (test) {
