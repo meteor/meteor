@@ -47,18 +47,11 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   });
 };
 
-ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
-  check(dependencies, [ConstraintSolver.Dependency]);
-
+// The propagation of exact dependencies
+ConstraintSolver.Resolver.prototype._propagateExactDeps =
+  function (depsStack, exactDepsStack) {
   var self = this;
-
   var picks = {};
-  var isExact = function (dep) { return dep.exact; }
-  var pickExactDeps = function (deps) { return _.filter(deps, isExact); };
-  var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
-
-  var depsStack = rejectExactDeps(dependencies);
-  var exactDepsStack = pickExactDeps(dependencies);
 
   _.each(exactDepsStack, function (dep) { picks[dep.packageName] = dep.version; });
   var willConsider = {};
@@ -99,9 +92,21 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
     });
   };
 
+  return picks;
+};
+
+ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
+  check(dependencies, [ConstraintSolver.Dependency]);
+
+  var self = this;
+
+
+  var depsStack = rejectExactDeps(dependencies);
+  var exactDepsStack = pickExactDeps(dependencies);
+
   // xcxc: check that all deps in depsStack satisfy first, then try doing
   // something smart and then backtracking.
-  return picks;
+  return self._propagateExactDeps(depsStack, exactDepsStack);
 };
 
 // accepts dependencies in simpler format
@@ -119,4 +124,9 @@ ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
 
   return self._resolve(structuredDeps);
 };
+
+// helpers
+var isExact = function (dep) { return dep.exact; }
+var pickExactDeps = function (deps) { return _.filter(deps, isExact); };
+var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
 
