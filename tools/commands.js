@@ -1409,7 +1409,9 @@ main.registerCommand({
   Packages.find().forEach(function(package) {
    // Hm. What is the right way to sort by version if we store version as string?
    var desc = Versions.findOne({packageName: package.name}, {sort: {version: 1}});
-   console.log(package.name, desc.description);
+   if (desc) {
+     console.log(package.name, desc.description);
+   }
   })
 });
 
