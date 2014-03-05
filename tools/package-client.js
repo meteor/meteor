@@ -47,9 +47,7 @@ var mergeCollections = function (coll1, collUpdate) {
   var meteorServer = getLoadedPackages()['meteor'];
   _.forEach(coll1, function (records, key) {
      finalCollections[key] = new (getLoadedPackages()['meteor'].
-        Meteor.Collection)(key, {
-          connection: null
-        });
+        Meteor.Collection)(null);
      _.forEach(records, function (record) {
        if (!finalCollections[key].findOne(record._id)) {
          finalCollections[key].insert(record);
@@ -61,9 +59,7 @@ var mergeCollections = function (coll1, collUpdate) {
   _.forEach(collUpdate, function (records, key) {
     if (!_.has(finalCollections, key)) {
       finalCollections[key] = new (meteorServer.
-        Meteor.Collection)(key, {
-          connection: null
-        });
+        Meteor.Collection)(null);
     }
     _.forEach(records, function (record) {
       finalCollections[key].remove(record._id);
