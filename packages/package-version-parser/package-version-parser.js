@@ -2,38 +2,44 @@ var semver = Npm.require('semver');
 
 PackageVersion = {};
 
-PackageVersion.parse = function (versionString) {
-  if (typeof versionString !== "string")
-    throw new TypeError("versionString must be a string");
+PackageVersion.parseVersionConstraint = function (versionString) {
+  var versionDesc = { version: null, exact: false };
+  if (versionString.charAt(0) === '=') {
+    versionDesc.exact = true;
+    versionString = versionString.substr(1);
+  }
 
-  var splitted = versionString.split('@');
+  // XXX check for a dash in the version in case of foo@1.2.3-rc0
 
-  var versionDesc = { name: "", version: null, sticky: false };
+  if (! semver.valid(versionString))
+    throw new Error("Version string must look like semver (1.2.3)");
+
+  versionDesc.version = versionString;
+
+  return versionDesc;
+};
+
+PackageVersion.parseConstraint = function (constraintString) {
+  if (typeof constraintString !== "string")
+    throw new TypeError("constraintString must be a string");
+
+  var splitted = constraintString.split('@');
+
+  var constraint = { name: "", version: null, exact: false };
   var name = splitted[0];
-  var version = splitted[1];
+  var versionString = splitted[1];
 
   if (! /^[a-z0-9-]+$/.test(name) || splitted.length > 2)
     throw new Error("Package name must contain lowercase latin letters, digits or dashes");
 
-  versionDesc.name = name;
+  constraint.name = name;
 
-  if (splitted.length === 2 && !version)
+  if (splitted.length === 2 && !versionString)
     throw new Error("semver version cannot be empty");
 
-  if (version) {
-    if (version.charAt(0) === '=') {
-      versionDesc.sticky = true;
-      version = version.substr(1);
-    }
+  if (versionString)
+    _.extend(constraint, PackageVersion.parseVersionConstraint(versionString));
 
-    // XXX check for a dash in the version in case of foo@1.2.3-rc0
-
-    if (! semver.valid(version))
-      throw new Error(version + " doesn't look like a semver version (e.g. 1.2.0)");
-
-    versionDesc.version = version;
-  }
-
-  return versionDesc;
+  return constraint;
 };
 
