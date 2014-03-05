@@ -252,7 +252,7 @@ _.extend(Slice.prototype, {
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
       _.each(self[field], function (u) {
-        var pkg = self.pkg.library.get(u.package, /* throwOnError */ false);
+        var pkg = self.pkg.library.get(u.package, { throwOnError: false });
         if (! pkg) {
           buildmessage.error("no such package: '" + u.package + "'");
           // recover by omitting this package from the field

@@ -1158,7 +1158,7 @@ main.registerCommand({
       // bail out if that creates a conflict.
       var packageDir = path.resolve(options.args[0]);
       packageName = path.basename(packageDir) + "-tool";
-      if (library.get(packageName, false)) {
+      if (library.get(packageName, { throwOnError: false })) {
         buildmessage.error("'" + packageName +
                            "' conflicts with the name " +
                            "of a package in the library");
