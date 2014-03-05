@@ -57,6 +57,10 @@ Meteor.Collection = function (name, options) {
     self._connection = Meteor.server;
 
   if (!options._driver) {
+    // XXX This check assumes that webapp is loaded so that Meteor.server !==
+    // null. We should fully support the case of "want to use a Mongo-backed
+    // collection from Node code without webapp", but we don't yet.
+    // #MeteorServerNull
     if (name && self._connection === Meteor.server &&
         typeof MongoInternals !== "undefined" &&
         MongoInternals.defaultRemoteCollectionDriver) {
@@ -400,6 +404,7 @@ _.each(["insert", "update", "remove"], function (name) {
       };
     }
 
+    // XXX see #MeteorServerNull
     if (self._connection && self._connection !== Meteor.server) {
       // just remote to another endpoint, propagate return value or
       // exception.
@@ -672,6 +677,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
+    // XXX see #MeteorServerNull
     if (Meteor.isClient || self._connection === Meteor.server)
       self._connection.methods(m);
   }
