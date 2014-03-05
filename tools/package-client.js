@@ -85,7 +85,7 @@ var writePackagesToDisk = function (syncToken, collectionData) {
   var filename = config.getPackageStorage();
   // XXX think about permissions?
   files.mkdir_p(path.dirname(filename));
-  fs.writeFileSync(filename, JSON.stringify(finalWrite, null, 2));
+  files.writeFileAtomically(filename, JSON.stringify(finalWrite, null, 2));
 };
 
 loadPackageData = function() {

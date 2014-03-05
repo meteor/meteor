@@ -482,6 +482,14 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
     files.rm_recursive(garbageDir);
 };
 
+files.writeFileAtomically = function (filename, contents) {
+  var tmpFile = path.join(
+    path.dirname(filename),
+    '.' + path.basename(filename) + '.' + utils.randomToken());
+  fs.writeFileSync(tmpFile, contents);
+  fs.renameSync(tmpFile, filename);
+};
+
 // Run a program synchronously and, assuming it returns success (0),
 // return whatever it wrote to stdout, as a string. Otherwise (if it
 // did not exit gracefully and return 0) return null. As node has
