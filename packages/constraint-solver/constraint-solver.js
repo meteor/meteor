@@ -79,7 +79,7 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
         if (picks[dep.packageName] !== dep.version)
           throw new Error("Unresolvable: two exact dependencies conflict: " +
                           dep.packageName + " versions: " +
-                          [pick[dep.packageName], dep.version]);
+                          [picks[dep.packageName], dep.version]);
       } else {
         picks[dep.packageName] = dep.version;
         exactDepsStack.push(dep);
