@@ -88,9 +88,6 @@ _.extend(warehouse, {
     if (!files.usesWarehouse())
       throw new Error("Not in a warehouse but requesting a manifest!");
 
-    var manifestPath = path.join(
-      warehouse.getWarehouseDir(), 'releases', release + '.release.json');
-
     return warehouse._populateWarehouseForRelease(release, !quiet);
   },
 
