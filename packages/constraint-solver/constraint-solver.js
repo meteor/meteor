@@ -66,10 +66,15 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
 
   while (exactDepsStack.length > 0) {
     var currentPick = exactDepsStack.pop();
-    // XXX if there is no info of such package or no version for this
-    // architecture, throw a meaningful error
-    var currentDependencies =
-      self.packageDeps[currentPick.packageName][currentPick.version].dependencies;
+    try {
+      var currentDependencies =
+        self.packageDeps[currentPick.packageName][currentPick.version].dependencies;
+    } catch (err) {
+      if (! _.has(self.packageDeps, currentPick.packageName))
+        throw new Error("There is no required package found: " + currentPick.packageName);
+      if (! _.has(self.packageDeps[currentPick.packageName], currentPick.version))
+        throw new Error("There is no required package version found for the requested architecture: " + currentPick.packageName + "@" + currentPick.version);
+    }
 
     _.each(pickExactDeps(currentDependencies), function (dep) {
       if (_.has(picks, dep.packageName)) {
@@ -79,7 +84,7 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
         if (picks[dep.packageName] !== dep.version)
           throw new Error("Unresolvable: two exact dependencies conflict: " +
                           dep.packageName + " versions: " +
-                          [picks[dep.packageName], dep.version]);
+                          [picks[dep.packageName], dep.version].join(", "));
       } else {
         picks[dep.packageName] = dep.version;
         exactDepsStack.push(dep);

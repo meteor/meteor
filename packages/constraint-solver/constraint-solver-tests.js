@@ -10,12 +10,14 @@ Packages.insert({ name: "sparkle" });
 Versions.insert({ packageName: "sparky-forms", version: "1.1.2", earliestCompatibleVersion: "1.1.0" });
 Versions.insert({ packageName: "forms", version: "1.0.1", earliestCompatibleVersion: "1.0.0" });
 Versions.insert({ packageName: "sparkle", version: "2.1.1", earliestCompatibleVersion: "2.1.0" });
+Versions.insert({ packageName: "sparkle", version: "1.0.0", earliestCompatibleVersion: "1.0.0" });
 
 Builds.insert({ packageName: "sparky-forms", version: "1.1.2", earliestCompatibleVersion: "1.1.0", architecture: "all",
                 dependencies: [{ packageName: "forms", version: "=1.0.1" }, { packageName: "sparkle", version: "=2.1.1" }]});
 
 Builds.insert({ packageName: "forms", version: "1.0.1", earliestCompatibleVersion: "1.0.0", architecture: "all" });
 Builds.insert({ packageName: "sparkle", version: "2.1.1", earliestCompatibleVersion: "2.1.0", architecture: "all" });
+Builds.insert({ packageName: "sparkle", version: "1.0.0", earliestCompatibleVersion: "1.0.0", architecture: "all" });
 
 var resolver = new ConstraintSolver.Resolver(Packages, Versions, Builds);
 
@@ -25,10 +27,21 @@ var t = function (deps, expected) {
   currentTest.equal(resolvedDeps, expected);
 };
 
+var FAIL = function (deps) {
+  currentTest.throws(function () {
+    var resolvedDeps = resolver.resolve(deps);
+  });
+};
+
 Tinytest.add("constraint solver - exact dependencies", function (test) {
   currentTest = test;
   t({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
+
+  FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=1.0.0" });
+  // something that isn't available for your architecture
+  FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=2.0.0" });
+  FAIL({ "sparky-forms": "=0.0.1" });
 });
 
