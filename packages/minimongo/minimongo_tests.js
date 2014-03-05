@@ -1814,6 +1814,9 @@ Tinytest.add("minimongo - sort keys", function (test) {
   testKeys({'a.x': 1, 'a.y': 1},
            {a: [{x: 0, y: 5}, {x: 1, y: 3}]},
            [[0,5], [1,3]]);
+  testKeys({'a.x': 1, 'a.y': 1, b: -1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[0,5,42], [1,3,42]]);
 });
 
 Tinytest.add("minimongo - binary search", function (test) {

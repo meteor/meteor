@@ -189,8 +189,10 @@ _.extend(Minimongo.Sorter.prototype, {
       });
 
       if (knownPaths) {
-        // Similarly to above, paths must match everywhere.
-        if (_.size(knownPaths) !== _.size(valuesBySomething[whichField])) {
+        // Similarly to above, paths must match everywhere, unless this is a
+        // non-array field.
+        if (!_.has(valuesBySomething[whichField], '') &&
+            _.size(knownPaths) !== _.size(valuesBySomething[whichField])) {
           throw Error("cannot index parallel arrays!");
         }
       } else if (usedPaths) {
