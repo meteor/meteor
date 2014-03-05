@@ -840,7 +840,7 @@ var Package = function (library, packageDirectoryForBuildInfo) {
   // dependencies
   self.library = library;
 
-  // Package metadata. Keys are 'summary' and 'internal'.
+  // Package metadata. Keys are 'summary', 'internal', 'version'.
   self.metadata = {};
 
   // Available editions/subpackages ("slices") of this package. Array
@@ -1190,6 +1190,7 @@ _.extend(Package.prototype, {
       // Set package metadata. Options:
       // - summary: for 'meteor list'
       // - internal: if true, hide in list
+      // - version: package version string (semver)
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
@@ -1940,7 +1941,8 @@ _.extend(Package.prototype, {
     self.name = name;
     self.metadata = {
       summary: mainJson.summary,
-      internal: mainJson.internal
+      internal: mainJson.internal,
+      version: mainJson.version
     };
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;
@@ -2121,6 +2123,7 @@ _.extend(Package.prototype, {
         format: "unipackage-pre1",
         summary: self.metadata.summary,
         internal: self.metadata.internal,
+        version: self.metadata.version,
         slices: [],
         defaultSlices: self.defaultSlices,
         testSlices: self.testSlices,
