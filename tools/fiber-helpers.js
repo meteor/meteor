@@ -37,3 +37,12 @@ exports.parallelEach = function (collection, callback, context) {
   // Throw if any threw.
   _.each(futures, function (f) { f.get(); });
 };
+
+exports.firstTimeResolver = function (fut) {
+  var resolver = fut.resolver();
+  return function (err, val) {
+    if (fut.isResolved())
+      return;
+    resolver(err, val);
+  };
+};

@@ -6,7 +6,7 @@ var files = require('./files.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
-var inFiber = require('./fiber-helpers.js').inFiber;
+var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
@@ -109,21 +109,25 @@ var sessionMethodCaller = function (methodName, options) {
     });
     var fut = new Future();
     var conn = options.connection || openAccountsConnection();
-    conn.apply(methodName, args, fut.resolver());
+    conn.apply(methodName, args, fiberHelpers.firstTimeResolver(fut));
     if (options.timeout !== undefined) {
-      var timer = setTimeout(inFiber(function () {
-        fut.throw(new Error('Method call timed out'));
+      var timer = setTimeout(fiberHelpers.inFiber(function () {
+        if (!fut.isResolved())
+          fut.throw(new Error('Method call timed out'));
       }), options.timeout);
     }
-    var result = fut.wait();
-    if (timer) {
-      clearTimeout(timer);
+    try {
+      var result = fut.wait();
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (! options.connection)
+        conn.close();
     }
     if (result && result.session) {
       auth.setSessionId(config.getAccountsDomain(), result.session);
     }
-    if (! options.connection)
-      conn.close();
     return result && result.result;
   };
 };
@@ -736,7 +740,7 @@ exports.pollForRegistrationCompletion = function (options) {
     fut['return'](result);
   });
 
-  var timer = setTimeout(inFiber(function () {
+  var timer = setTimeout(fiberHelpers.inFiber(function () {
     if (! fut.isResolved()) {
       fut['return'](null);
     }
