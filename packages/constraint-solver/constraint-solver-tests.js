@@ -8,6 +8,8 @@ Packages.insert({ name: "forms" });
 Packages.insert({ name: "sparkle" });
 Packages.insert({ name: "awesome-dropdown" });
 Packages.insert({ name: "dropdown" });
+Packages.insert({ name: "jquery-widgets" });
+Packages.insert({ name: "jquery" });
 
 var insertVersion = function (name, version, ecv) {
   Versions.insert({ packageName: name, version: version, earliestCompatibleVersion: ecv });
@@ -18,6 +20,10 @@ insertVersion("sparkle", "2.1.1", "2.1.0");
 insertVersion("sparkle", "1.0.0", "1.0.0");
 insertVersion("awesome-dropdown", "1.5.0", "1.0.0");
 insertVersion("dropdown", "1.2.2", "1.0.0");
+insertVersion("jquery-widgets", "1.0.0", "1.0.0");
+insertVersion("jquery-widgets", "1.0.2", "1.0.0");
+insertVersion("jquery", "1.8.0", "1.0.0");
+insertVersion("jquery", "1.9.0", "1.0.0");
 
 var insertBuild = function (name, version, ecv, deps) {
   Builds.insert({ packageName: name, version: version,
@@ -27,11 +33,15 @@ var insertBuild = function (name, version, ecv, deps) {
 
 insertBuild("sparky-forms", "1.1.2", "1.1.0", [{ packageName: "forms", version: "=1.0.1" }, { packageName: "sparkle", version: "=2.1.1" }]);
 insertBuild("forms", "1.0.1", "1.0.0", [{ packageName: "sparkle", version: "2.1.0" }]);
-insertBuild("sparkle", "2.1.1", "2.1.0");
-insertBuild("sparkle", "2.1.0", "2.1.0");
+insertBuild("sparkle", "2.1.0", "2.1.0", [{ packageName: "jquery", version: "1.8.2" }]);
+insertBuild("sparkle", "2.1.1", "2.1.0", [{ packageName: "jquery", version: "1.8.2" }]);
 insertBuild("sparkle", "1.0.0", "1.0.0");
 insertBuild("awesome-dropdown", "1.5.0", "1.0.0", [{ packageName: "dropdown", version: "=1.2.2" }]);
-insertBuild("dropdown", "1.2.2", "1.0.0", []);
+insertBuild("dropdown", "1.2.2", "1.0.0", [{ packageName: "jquery-widgets", version: "1.0.0" }]);
+insertBuild("jquery-widgets", "1.0.0", "1.0.0", [{ packageName: "jquery", version: "1.8.0" }, { packageName: "sparkle", version: "2.1.1" }]);
+insertBuild("jquery-widgets", "1.0.2", "1.0.0", [{ packageName: "jquery", version: "1.8.0" }, { packageName: "sparkle", version: "2.1.1" }]);
+insertBuild("jquery", "1.8.0", "1.8.0");
+insertBuild("jquery", "1.8.2", "1.8.0");
 
 var resolver = new ConstraintSolver.Resolver(Packages, Versions, Builds);
 
