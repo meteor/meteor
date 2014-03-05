@@ -110,6 +110,11 @@ Example:
       check(roomId, String);
       var count = 0;
       var initializing = true;
+
+      // observeChanges only returns after the initial `added` callbacks
+      // have run. Until then, we don't want to send a lot of
+      // `self.changed()` messages - hence tracking the
+      // `initializing` state.
       var handle = Messages.find({roomId: roomId}).observeChanges({
         added: function (id) {
           count++;
@@ -123,9 +128,9 @@ Example:
         // don't care about changed
       });
 
-      // Observe only returns after the initial added callbacks have
-      // run.  Now return an initial value and mark the subscription
-      // as ready.
+      // Instead, we'll send one `self.added()` message right after
+      // observeChanges has returned, and mark the subscription as
+      // ready.
       initializing = false;
       self.added("counts", roomId, {count: count});
       self.ready();
