@@ -1400,7 +1400,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'list',
   options: {},
-  maxArgs: 3,
+  maxArgs: 0,
   hidden: true
 }, function (options) {
   var all = loadPackageData();
