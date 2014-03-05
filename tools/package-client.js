@@ -24,8 +24,9 @@ var openPackageServerConnection = function () {
 };
 
 var loadLocalPackageData = function () {
-  var finalCollections = require(config.getPackageStorage());
-  return finalCollections;
+  // XXX pretty error handling
+  var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
+  return JSON.parse(data);
 };
 
 var loadRemotePackageData = function (syncToken) {
