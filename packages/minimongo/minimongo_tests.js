@@ -1790,6 +1790,32 @@ Tinytest.add("minimongo - array sort", function (test) {
     _.range(c.find().count()));
 });
 
+Tinytest.add("minimongo - sort keys", function (test) {
+  var keyListToObject = function (keyList) {
+    var obj = {};
+    _.each(keyList, function (key) {
+      obj[EJSON.stringify(key)] = true;
+    });
+    return obj;
+  };
+
+  var testKeys = function (sortSpec, doc, expectedKeyList) {
+    var expectedKeys = keyListToObject(expectedKeyList);
+    var sorter = new Minimongo.Sorter(sortSpec);
+
+    var actualKeyList = [];
+    sorter._generateKeysFromDoc(doc, function (key) {
+      actualKeyList.push(key);
+    });
+    var actualKeys = keyListToObject(actualKeyList);
+    test.equal(actualKeys, expectedKeys);
+  };
+
+  testKeys({'a.x': 1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}]},
+           [[0,5], [1,3]]);
+});
+
 Tinytest.add("minimongo - binary search", function (test) {
   var forwardCmp = function (a, b) {
     return a - b;
