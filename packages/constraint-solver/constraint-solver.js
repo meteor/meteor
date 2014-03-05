@@ -48,6 +48,45 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
 ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
   check(dependencies, [ConstraintSolver.Dependency]);
 
-  // XXX write some algorithm here
+  var picks = {};
+  var isExact = function (dep) { return dep.exact; }
+  var pickExactDeps = function (deps) { return _.filter(deps, isExact); };
+  var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
+
+  var depsStack = rejectExactDeps(dependencies);
+  var exactDepsStack = pickExactDeps(dependencies);
+
+  _.each(exactDepsStack, function (dep) { picks[dep.packageName] = dep.version; });
+  var willConsider = {};
+  _.each(depsStack, function (dep) { willConsider[dep.packageName] = true; });
+
+  while (exactDepsStack.length > 0) {
+    var currentPick = exactDepsStack.pop();
+
+    _.each(pickExactDeps(currentPick.dependencies), function (dep) {
+      if (_.has(pick, dep.packageName)) {
+        // XXX this error message should be improved so you can get a lot more
+        // context, like what are initial exact dependencies (those user
+        // specified) and what is the eventual conflict.
+        if (pick[dep.packageName] !== dep.version)
+          throw new Error("Unresolvable: two exact dependencies conflict: " +
+                          dep.packageName + " versions: " +
+                          [pick[dep.packageName], dep.version]);
+      } else {
+        pick[dep.packageName] = dep.version;
+        exactDepsStack.push(dep);
+      }
+    });
+
+    _.each(rejectExactDeps(currentPick.dependencies), function (dep) {
+      if (! _.has(willConsider, dep.packageName)) {
+        willConsider[dep.packageName] = true;
+        depsStack.push(dep);
+      }
+    });
+  };
+
+  // xcxc: check that all deps in depsStack satisfy first, then try doing
+  // something smart and then backtracking.
 };
 
