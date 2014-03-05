@@ -1398,7 +1398,7 @@ main.registerCommand({
 // This command will list all packages in existence.
 // This command may go away after testing is done.
 main.registerCommand({
-  name: 'list',
+  name: 'list-all',
   options: {},
   maxArgs: 0,
   hidden: true

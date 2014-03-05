@@ -187,6 +187,11 @@ main.registerCommand = function (options, func) {
       target[part] = {};
     target = target[part];
   }
+
+  if (_.has(target, nameParts[0])) {
+    throw Error("Duplicate command: " + options.name);
+  }
+
   target[nameParts[0]] = new Command(options);
 };
 
