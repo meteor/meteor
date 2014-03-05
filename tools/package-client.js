@@ -2,6 +2,7 @@ var auth = require('./auth.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
+var files = require('./files.js');
 var fs = require('fs');
 var path = require('path');
 var Future = require('fibers/future');
@@ -25,7 +26,18 @@ var openPackageServerConnection = function () {
 
 var loadLocalPackageData = function () {
   // XXX pretty error handling
-  var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
+  try {
+    var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
+  } catch (e) {
+    if (e.code !== 'ENOENT')
+      throw e;
+    // Default: no data, send us everything.
+    return {
+      // XXX have a better sync token for "all"
+      syncToken: {time: 'Sun, 01 Jan 2012 00:00:00 GMT'},
+      collections: null
+    };
+  }
   return JSON.parse(data);
 };
 
@@ -42,35 +54,25 @@ var loadRemotePackageData = function (syncToken) {
 //  { collectionName : miniMongoCollection }
 // where the miniMongo collection contains all of the records from
 // both objects and the updateCollection overrides the first.
-var mergeCollections = function (coll1, collUpdate) {
+var createCollections = function (sources) {
   var finalCollections = {};
   // Start collections. Insert records.
   var meteorServer = getLoadedPackages()['meteor'];
-  _.forEach(coll1, function (records, key) {
-     finalCollections[key] = new (getLoadedPackages()['meteor'].
-        Meteor.Collection)(null);
-     _.forEach(records, function (record) {
-       if (!finalCollections[key].findOne(record._id)) {
-         finalCollections[key].insert(record);
-       }
-     })
-   });
 
-  // Add the second batch in.
-  _.forEach(collUpdate, function (records, key) {
-    if (!_.has(finalCollections, key)) {
-      finalCollections[key] = new (meteorServer.
-        Meteor.Collection)(null);
-    }
-    _.forEach(records, function (record) {
-      finalCollections[key].remove(record._id);
-      finalCollections[key].insert(record);
-    })
+  _.each(sources, function (source) {
+    _.each(source, function (records, key) {
+      if (!_.has(finalCollections, key)) {
+        finalCollections[key] = new (meteorServer.Meteor.Collection)(null);
+      }
+      _.each(records, function (record) {
+        finalCollections[key].remove(record._id);
+        finalCollections[key].insert(record);
+      });
+    });
   });
 
-  // And return.
   return finalCollections;
-}
+};
 
 var writePackagesToDisk = function (syncToken, collectionData) {
   var finalWrite = {};
@@ -79,21 +81,29 @@ var writePackagesToDisk = function (syncToken, collectionData) {
   finalWrite.collections = {};
   _.forEach(collectionData, function(coll, name) {
     finalWrite.collections[name] = coll.find().fetch();
-  })
-  fs.writeFileSync(config.getPackageStorage(),
-                   JSON.stringify(finalWrite, null, 2));
-}
+  });
+  var filename = config.getPackageStorage();
+  // XXX think about permissions?
+  files.mkdir_p(path.dirname(filename));
+  fs.writeFileSync(filename, JSON.stringify(finalWrite, null, 2));
+};
 
 loadPackageData = function() {
   //XXX: We can consider optimizing this with concurrency or something.
+  var sources = [];
+
   var localData = loadLocalPackageData();
+  if (localData.collections)
+    sources.push(localData.collections);
   var syncToken = localData.syncToken;
-  var localCollections = localData.collections;
+
   var remoteData = loadRemotePackageData(syncToken);
-  var allPackageData = mergeCollections(localCollections, remoteData.collections);
+  sources.push(remoteData.collections);
+
+  var allPackageData = createCollections(sources);
   writePackagesToDisk(remoteData.syncToken, allPackageData);
   return allPackageData;
-}
+};
 
 // XXX onReconnect
 // Returns a logged-in DDP connection to the package server, or null if
