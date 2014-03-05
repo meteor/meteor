@@ -7,17 +7,24 @@ Packages.insert({ name: "sparky-forms" });
 Packages.insert({ name: "forms" });
 Packages.insert({ name: "sparkle" });
 
-Versions.insert({ packageName: "sparky-forms", version: "1.1.2", earliestCompatibleVersion: "1.1.0" });
-Versions.insert({ packageName: "forms", version: "1.0.1", earliestCompatibleVersion: "1.0.0" });
-Versions.insert({ packageName: "sparkle", version: "2.1.1", earliestCompatibleVersion: "2.1.0" });
-Versions.insert({ packageName: "sparkle", version: "1.0.0", earliestCompatibleVersion: "1.0.0" });
+var insertVersion = function (name, version, ecv) {
+  Versions.insert({ packageName: name, version: version, earliestCompatibleVersion: ecv });
+};
+insertVersion("sparky-forms", "1.1.2", "1.1.0");
+insertVersion("forms", "1.0.1", "1.0.0");
+insertVersion("sparkle", "2.1.1", "2.1.0");
+insertVersion("sparkle", "1.0.0", "1.0.0");
 
-Builds.insert({ packageName: "sparky-forms", version: "1.1.2", earliestCompatibleVersion: "1.1.0", architecture: "all",
-                dependencies: [{ packageName: "forms", version: "=1.0.1" }, { packageName: "sparkle", version: "=2.1.1" }]});
+var insertBuild = function (name, version, ecv, deps) {
+  Builds.insert({ packageName: name, version: version,
+                  earliestCompatibleVersion: ecv, architecture: "all",
+                  dependencies: deps});
+};
 
-Builds.insert({ packageName: "forms", version: "1.0.1", earliestCompatibleVersion: "1.0.0", architecture: "all" });
-Builds.insert({ packageName: "sparkle", version: "2.1.1", earliestCompatibleVersion: "2.1.0", architecture: "all" });
-Builds.insert({ packageName: "sparkle", version: "1.0.0", earliestCompatibleVersion: "1.0.0", architecture: "all" });
+insertBuild("sparky-forms", "1.1.2", "1.1.0", [{ packageName: "forms", version: "=1.0.1" }, { packageName: "sparkle", version: "=2.1.1" }]);
+insertBuild("forms", "1.0.1", "1.0.0");
+insertBuild("sparkle", "2.1.1", "2.1.0");
+insertBuild("sparkle", "1.0.0", "1.0.0");
 
 var resolver = new ConstraintSolver.Resolver(Packages, Versions, Builds);
 
