@@ -17,6 +17,7 @@ var insertVersion = function (name, version, ecv) {
 insertVersion("sparky-forms", "1.1.2", "1.1.0");
 insertVersion("forms", "1.0.1", "1.0.0");
 insertVersion("sparkle", "2.1.1", "2.1.0");
+insertVersion("sparkle", "2.1.0", "2.1.0");
 insertVersion("sparkle", "1.0.0", "1.0.0");
 insertVersion("awesome-dropdown", "1.5.0", "1.0.0");
 insertVersion("dropdown", "1.2.2", "1.0.0");
@@ -32,7 +33,7 @@ var insertBuild = function (name, version, ecv, deps) {
 };
 
 insertBuild("sparky-forms", "1.1.2", "1.1.0", [{ packageName: "forms", version: "=1.0.1" }, { packageName: "sparkle", version: "=2.1.1" }]);
-insertBuild("forms", "1.0.1", "1.0.0", [{ packageName: "sparkle", version: "2.1.0" }]);
+insertBuild("forms", "1.0.1", "1.0.0", [{ packageName: "sparkle", version: "2.1.0" }, { packageName: "jquery-widgets", version: "1.0.0" }]);
 insertBuild("sparkle", "2.1.0", "2.1.0", [{ packageName: "jquery", version: "1.8.2" }]);
 insertBuild("sparkle", "2.1.1", "2.1.0", [{ packageName: "jquery", version: "1.8.2" }]);
 insertBuild("sparkle", "1.0.0", "1.0.0");
@@ -73,5 +74,16 @@ Tinytest.add("constraint solver - exact dependencies", function (test) {
   // something that isn't available for your architecture
   FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=2.0.0" });
   FAIL({ "sparky-forms": "=0.0.1" });
+});
+
+Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
+  currentTest = test;
+  t({ "sparky-forms": "=1.1.2" }, {
+    "sparky-forms": "1.1.2",
+    "forms": "1.0.1",
+    "sparkle": "2.1.1",
+    "jquery-widgets": "1.0.2",
+    "jquery": "1.8.2"
+  });
 });
 
