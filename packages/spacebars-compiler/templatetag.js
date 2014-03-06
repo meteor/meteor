@@ -333,10 +333,10 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
     var textMode = null;
       if (blockName === 'markdown' ||
           position === TEMPLATE_TAG_POSITION.IN_RAWTEXT) {
-        textMode = HTML.TEXTMODE.STRING;
+        textMode = 'RAWTEXT';
       } else if (position === TEMPLATE_TAG_POSITION.IN_RCDATA ||
                  position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-        textMode = HTML.TEXTMODE.RCDATA;
+        textMode = 'RCDATA';
       }
       var parserOptions = {
         getSpecialTag: TemplateTag.parseCompleteTag,

@@ -60,7 +60,7 @@ Tinytest.add("htmljs - construction", function (test) {
   test.equal(A(new f).children.length, 1);
   test.equal(A(new Date).children.length, 1);
 
-  test.equal(HTML.toHTML(HTML.CharRef({html: '&amp;', str: '&'})), '&amp;');
+  test.equal(UI.toHTML(HTML.CharRef({html: '&amp;', str: '&'})), '&amp;');
   test.throws(function () {
     HTML.CharRef({html: '&amp;'}); // no 'str'
   });
@@ -83,7 +83,7 @@ Tinytest.add("htmljs - attributes", function (test) {
   var SPAN = HTML.SPAN;
   var amp = HTML.CharRef({html: '&amp;', str: '&'});
 
-  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
+  test.equal(UI.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
              '<span title="M&amp;Ms">M&amp;M candies</span>');
 
   // test that evaluateAttributes calls functions in both normal and dynamic attributes
@@ -98,5 +98,5 @@ Tinytest.add("htmljs - attributes", function (test) {
 });
 
 Tinytest.add("htmljs - details", function (test) {
-  test.equal(HTML.toHTML(false), "false");
+  test.equal(UI.toHTML(false), "false");
 });

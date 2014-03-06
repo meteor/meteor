@@ -41,14 +41,14 @@ var optimize = function (tree) {
           // This is our first special item.  Stringify the other parts.
           result = [];
           for (var j = 0; j < i; j++)
-            pushRawHTML(result, HTML.toHTML(array[j]));
+            pushRawHTML(result, UI.toHTML(array[j]));
         }
         result.push(part);
       } else {
         // just plain HTML found
         if (result !== null) {
           // we've already found something special, so convert this to Raw
-          pushRawHTML(result, HTML.toHTML(array[i]));
+          pushRawHTML(result, UI.toHTML(array[i]));
         }
       }
     }
@@ -134,7 +134,7 @@ var optimize = function (tree) {
     // tree was optimized in parts
     return optTree;
 
-  optTree = HTML.Raw(HTML.toHTML(tree));
+  optTree = HTML.Raw(UI.toHTML(tree));
 
   if (isPureChars(optTree.value))
     return optTree.value;

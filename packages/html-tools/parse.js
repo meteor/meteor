@@ -39,9 +39,9 @@ HTMLTools.parseFragment = function (input, options) {
 
   var result;
   if (options && options.textMode) {
-    if (options.textMode === HTML.TEXTMODE.STRING) {
+    if (options.textMode === 'RAWTEXT') {
       result = getRawText(scanner, null, shouldStop);
-    } else if (options.textMode === HTML.TEXTMODE.RCDATA) {
+    } else if (options.textMode === 'RCDATA') {
       result = getRCData(scanner, null, shouldStop);
     } else {
       throw new Error("Unsupported textMode: " + options.textMode);
