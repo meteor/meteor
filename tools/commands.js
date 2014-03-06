@@ -569,14 +569,14 @@ main.registerCommand({
     }
 
     var name = packReqArray[0];
-    var versionConstraint = packReqArray[1];
+    var constraint = packReqArray[1];
 
     if (!Packages.findOne({name: name})) {
       process.stderr.write(name + ": no such package\n");
       process.exit(1);
     } else {
       // Add a package here.
-      var addVersion = versionConstraint;
+      var addVersion = constraint;
 
       var versionObj = Versions.findOne({packageName: name,
                              version: addVersion});
@@ -1429,15 +1429,15 @@ main.registerCommand({
     _.each(slice.uses, function (use) {
       if (!_.has(dependencies, use.package)) {
         dependencies[use.package] = {
-          versionConstraint: "=1.0.0",  // XXX fix this
-          fromSlices: []
+          constraint: "=1.0.0",  // XXX fix this
+          references: []
         };
       }
 
-      dependencies[use.package].fromSlices.push({
+      dependencies[use.package].references.push({
         slice: slice.sliceName,
         arch: archinfo.withoutSpecificOs(slice.arch),
-        toSlice: use.slice,  // usually undefined, which means "default slices"
+        targetSlice: use.slice,  // usually undefined, for "default slices"
         weak: use.weak,
         unordered: use.unordered
       });

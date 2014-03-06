@@ -35,7 +35,7 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
       packageDep.earliestCompatibleVersion = versionDef.earliestCompatibleVersion;
       packageDep.dependencies = _.map(versionDef.dependencies, function (dep, packageName) {
         return _.extend({packageName: packageName},
-                        PackageVersion.parseVersionConstraint(dep.versionConstraint));
+                        PackageVersion.parseVersionConstraint(dep.constraint));
       });
 
       self.packageDeps[packageDef.name][versionDef.version] = packageDep;
@@ -167,7 +167,9 @@ var toStructuredDeps = function (dependencies) {
   var structuredDeps = [];
   _.each(dependencies, function (details, packageName) {
     if (typeof details === "string") {
-      structuredDeps.push(_.extend({ packageName: packageName }, PackageVersion.parseVersionConstraint(details)));
+      structuredDeps.push(_.extend(
+        { packageName: packageName },
+        PackageVersion.parseVersionConstraint(details)));
     } else {
       structuredDeps.push(_.extend({ packageName: packageName }, details));
     }

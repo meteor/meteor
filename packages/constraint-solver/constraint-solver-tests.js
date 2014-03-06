@@ -15,10 +15,12 @@ var insertVersion = function (name, version, ecv, deps) {
   var constructedDeps = {};
   _.each(deps, function (constraint, name) {
     constructedDeps[name] = {
-      versionConstraint: constraint,
-      fromSlices: [
-        { slice: "os", arch: "all", toSlice: "os", weak: false, implied: false, unordered: false },
-        { slice: "browser", arch: "all", toSlice: "browser", weak: false, implied: false, unordered: false }]
+      constraint: constraint,
+      references: [
+        { slice: "os", arch: "all", targetSlice: "os", weak: false,
+          implied: false, unordered: false },
+        { slice: "browser", arch: "all", targetSlice: "browser", weak: false,
+          implied: false, unordered: false }]
     };
   });
   Versions.insert({ packageName: name, version: version, earliestCompatibleVersion: ecv,
