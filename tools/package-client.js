@@ -97,6 +97,7 @@ loadPackageData = function() {
     sources.push(localData.collections);
   var syncToken = localData.syncToken;
 
+  // XXX support offline use too
   var remoteData = loadRemotePackageData(syncToken);
   sources.push(remoteData.collections);
 
