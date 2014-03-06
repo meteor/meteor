@@ -33,6 +33,9 @@ Match = {
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
+  ObjectWithValues: function (pattern) {
+    return new ObjectWithValues(pattern);
+  },
   // Matches only signed 32-bit integers
   Integer: ['__integer__'],
 
@@ -97,6 +100,10 @@ var Where = function (condition) {
 };
 
 var ObjectIncluding = function (pattern) {
+  this.pattern = pattern;
+};
+
+var ObjectWithValues = function (pattern) {
   this.pattern = pattern;
 };
 
@@ -210,9 +217,15 @@ var checkSubtree = function (value, pattern) {
   }
 
   var unknownKeysAllowed = false;
+  var unknownKeyPattern;
   if (pattern instanceof ObjectIncluding) {
     unknownKeysAllowed = true;
     pattern = pattern.pattern;
+  }
+  if (pattern instanceof ObjectWithValues) {
+    unknownKeysAllowed = true;
+    unknownKeyPattern = [pattern.pattern];
+    pattern = {};  // no required keys
   }
 
   if (typeof pattern !== "object")
@@ -247,6 +260,9 @@ var checkSubtree = function (value, pattern) {
       } else {
         if (!unknownKeysAllowed)
           throw new Match.Error("Unknown key");
+        if (unknownKeyPattern) {
+          checkSubtree(subValue, unknownKeyPattern[0]);
+        }
       }
     } catch (err) {
       if (err instanceof Match.Error)
