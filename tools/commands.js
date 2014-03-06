@@ -1312,9 +1312,19 @@ main.registerCommand({
   },
   requiresPackage: true
 }, function (options) {
+
+  // XXX Prettify error messages
+
+  // We load the package with `forceRebuild` to avoid loading the
+  // package from a built unipackage. If we load from unipackage, then
+  // we can't go through the build process to retrieve the sources that
+  // we used to build the package, and we need the source list to
+  // compile the source tarball.
   var pkg = release.current.library.get(path.basename(
     options.packageDir
-  ));
+  ), {
+    forceRebuild: true
+  });
 
   var name = pkg.name;
   var version = pkg.metadata.version;
@@ -1364,17 +1374,41 @@ main.registerCommand({
   });
 
   process.stdout.write('Bundling source...\n');
-  var tempTarball = path.join(options.packageDir,
-                              'source-' + utils.randomToken() + '.tgz');
-  files.createTarball(options.packageDir, tempTarball, {
-    ignoreDotFiles: true
+
+  var tempDir = files.mkdtemp('build-source-package-');
+  var packageTarName = name + '-' + version + '-source';
+  var dirToTar = path.join(tempDir, 'source', packageTarName);
+  var sourcePackageDir = path.join(
+    dirToTar,
+    name
+  );
+  if (! files.mkdir_p(sourcePackageDir)) {
+    process.stderr.write('Failed to create temporary source directory: ' +
+                         sourcePackageDir);
+    return 1;
+  }
+
+  // We copy source files into a temp directory and then tar up the temp
+  // directory. It would be great if we could avoid the copy, but as far
+  // as we can tell, this is the only way to get a tarball with the
+  // directory structure that we want (<package name>-<version-source/
+  // at the top level).
+  var r = files.cp_r(options.packageDir, sourcePackageDir, {
+    include: pkg.sources
   });
 
-  var size = fs.statSync(tempTarball).size;
+  // We put this inside the temp dir because mkdtemp makes sure that the
+  // temp dir gets cleaned up on process exit, so we don't have to worry
+  // about cleaning up our tarball (or our copied source files)
+  // ourselves.
+  var sourceTarball = path.join(tempDir, packageTarName + '.tgz');
+  files.createTarball(dirToTar, sourceTarball);
+
+  var size = fs.statSync(sourceTarball).size;
   var crypto = require('crypto');
   var hash = crypto.createHash('sha256');
   hash.setEncoding('base64');
-  var rs = fs.createReadStream(tempTarball);
+  var rs = fs.createReadStream(sourceTarball);
   var fut = new Future();
   rs.on('end', function () {
     fut.return(hash.digest('base64'));
@@ -1383,7 +1417,7 @@ main.registerCommand({
   var tarballHash = fut.wait();
 
   rs.close();
-  rs = fs.createReadStream(tempTarball);
+  rs = fs.createReadStream(sourceTarball);
 
   process.stdout.write('Uploading source...\n');
   httpHelpers.request({
@@ -1396,9 +1430,6 @@ main.registerCommand({
     },
     bodyStream: rs
   });
-
-  // XXX Make sure this gets cleaned up even if we throw above
-  fs.unlinkSync(tempTarball);
 
   // XXX Upload build tarball
 
