@@ -17,33 +17,28 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   options = options || {};
   var architecture = options.architecture || "all";
 
+  // map package-name -> map
+  //  map version -> object
+  //    - dependendencies
+  //    - earliestCompatibleVersion
   self.packageDeps = {};
 
   // Extract all dependencies for every package version if a build for the
   // required architecture is available.
+
+
   Packages.find().forEach(function (packageDef) {
     self.packageDeps[packageDef.name] = {};
     Versions.find({ packageName: packageDef.name }).forEach(function (versionDef) {
-      // XXX somehow use earliestCompatibleVersion and warning
-      var build = Builds.findOne({packageName: packageDef.name,
-                                  version: versionDef.version,
-                                  $or: [{architecture: architecture},
-                                        {architecture: "all"}]});
+      // version is a string #version-name-conflict
+      var packageDep = {};
+      packageDep.earliestCompatibleVersion = versionDef.earliestCompatibleVersion;
+      packageDep.dependencies = _.map(versionDef.dependencies, function (dep, packageName) {
+        return _.extend({packageName: packageName},
+                        PackageVersion.parseVersionConstraint(dep.versionConstraint));
+      });
 
-      if (build) {
-        build.dependencies = build.dependencies || [];
-        var deps = build.dependencies.map(function (dep) {
-          return _.extend({}, dep, PackageVersion.parseVersionConstraint(dep.version));
-        });
-
-        // assert the schema
-        check(deps, [ConstraintSolver.Dependency]);
-
-        self.packageDeps[packageDef.name][versionDef.version] = {
-          dependencies: deps,
-          earliestCompatibleVersion: build.earliestCompatibleVersion
-        };
-      }
+      self.packageDeps[packageDef.name][versionDef.version] = packageDep;
     });
   });
 };
@@ -155,6 +150,7 @@ ConstraintSolver.Resolver.prototype.propagatedExactDeps = function (dependencies
 
 ConstraintSolver.Resolver.prototype.dependencyIsSatisfied =
   function (dep, version) {
+  // XXX check for exact
   var self = this;
   var versionSpec = self.packageDeps[dep.packageName][version];
   return semver.lte(dep.version, version) &&
