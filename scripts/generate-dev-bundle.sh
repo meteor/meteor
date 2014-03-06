@@ -107,8 +107,10 @@ npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
-npm install http-proxy@1.0.2
 npm install heapdump@0.2.5
+
+# Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
+npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
 
 # Using the unreleased 1.1 branch. We can probably switch to a built NPM version
 # when it gets released.

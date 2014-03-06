@@ -25,10 +25,17 @@ Plugin.registerSourceHandler("less", function (compileStep) {
 
   var parser = new less.Parser(options);
   var astFuture = new Future;
-  var ast;
+  var sourceMap = null;
   try {
     parser.parse(source, astFuture.resolver());
-    ast = astFuture.wait();
+    var ast = astFuture.wait();
+
+    var css = ast.toCSS({
+      sourceMap: true,
+      writeSourceMap: function (sm) {
+        sourceMap = JSON.parse(sm);
+      }
+    });
   } catch (e) {
     // less.Parser.parse is supposed to report any errors via its
     // callback. But sometimes, it throws them instead. This is
@@ -41,14 +48,6 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     });
     return;
   }
-
-  var sourceMap = null;
-  var css = ast.toCSS({
-    sourceMap: true,
-    writeSourceMap: function (sm) {
-      sourceMap = JSON.parse(sm);
-    }
-  });
 
 
   if (sourceMap) {

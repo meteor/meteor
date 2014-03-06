@@ -1585,10 +1585,18 @@ By default, the current user's `username`, `emails` and `profile` are
 published to the client. You can publish additional fields for the
 current user with:
 
+    // server
     Meteor.publish("userData", function () {
-      return Meteor.users.find({_id: this.userId},
-                               {fields: {'other': 1, 'things': 1}});
+      if (this.userId) {
+        return Meteor.users.find({_id: this.userId},
+                                 {fields: {'other': 1, 'things': 1}});
+      } else {
+        this.ready();
+      }
     });
+
+    // client
+    Meteor.subscribe("userData");
 
 If the autopublish package is installed, information about all users
 on the system is published to all clients. This includes `username`,
