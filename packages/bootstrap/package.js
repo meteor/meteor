@@ -1,6 +1,5 @@
 Package.describe({
-  summary: "Front-end framework from Twitter",
-  version: "1.0.0"
+  summary: "Front-end framework from Twitter"
 });
 
 Package.on_use(function (api) {
