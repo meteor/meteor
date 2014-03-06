@@ -204,6 +204,16 @@ var hashTarball = function (tarball) {
   return tarballHash;
 };
 
+// XXX this is missing a few things:
+//    - package.js
+//    - locking down build-time dependencies: tools version, versions
+//      of all (not-built-from-source) plugins used
+//    - .npm/npm-shrinkwrap.json (which also needs to be in the watchSet)
+// in general, we need to include all the stuff that goes into the watchSet
+//
+// In retrospect a better approach here might be to actually make "save source
+// somewhere else" or perhaps "add source to tarball" be part of the package
+// build itself...
 exports.bundleSource = function (pkg, packageDir) {
   var name = pkg.name;
   var version = pkg.metadata.version;
