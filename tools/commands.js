@@ -1393,7 +1393,7 @@ main.registerCommand({
   // as we can tell, this is the only way to get a tarball with the
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
-  var r = files.cp_r(options.packageDir, sourcePackageDir, {
+  files.cp_r(options.packageDir, sourcePackageDir, {
     include: pkg.sources
   });
 
