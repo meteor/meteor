@@ -1339,11 +1339,28 @@ main.registerCommand({
     });
   }
 
+  var dependencies = [];
+  _.each(pkg.slices, function (slice) {
+    // XXX also iterate over "implies"
+    _.each(slice.uses, function (use) {
+      dependencies.push({
+        packageName: use.package,
+        versionConstraint: "=1.0.0",  //  XXX fix this
+        fromSlice: slice.sliceName,
+        fromArch: slice.arch,
+        toSlice: use.slice,  // usually undefined, which means "default slices"
+        weak: use.weak,
+        unordered: use.unordered
+      });
+    });
+  });
+
   process.stdout.write('Creating package version...\n');
   var uploadInfo = conn.call('createPackageVersion', {
     packageName: pkg.name,
     version: version,
-    description: pkg.metadata.summary
+    description: pkg.metadata.summary,
+    dependencies: dependencies
   });
 
   process.stdout.write('Bundling source...\n');
