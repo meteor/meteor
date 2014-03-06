@@ -274,6 +274,8 @@ _.extend(Slice.prototype, {
         servePath: path.join(self.pkg.serveRoot, relPath),
         hash: hash
       });
+
+      self.pkg.sources.push(relPath);
     };
 
     _.each(self.getSourcesFunc(), function (source) {
@@ -284,6 +286,8 @@ _.extend(Slice.prototype, {
       var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
       var file = watch.readAndWatchFileWithHash(self.watchSet, absPath);
       var contents = file.contents;
+
+      self.pkg.sources.push(relPath);
 
       if (contents === null) {
         buildmessage.error("File not found: " + source.relPath);
@@ -1047,6 +1051,8 @@ _.extend(Package.prototype, {
     if (self.pluginsBuilt || self.slicesBuilt)
       throw new Error("package already built?");
 
+    self.sources = [];
+
     // Build plugins
     _.each(self.pluginInfo, function (info) {
       buildmessage.enterJob({
@@ -1066,6 +1072,11 @@ _.extend(Package.prototype, {
           // shrinkwrap and cache state.
           npmDir: path.resolve(path.join(self.sourceRoot, '.npm', 'plugin',
                                          info.name))
+        });
+
+        // Add the plugin's sources to our list.
+        _.each(info.sources, function (source) {
+          self.sources.push(source);
         });
 
         // Add this plugin's dependencies to our "plugin dependency" WatchSet.
@@ -1088,6 +1099,8 @@ _.extend(Package.prototype, {
       slice.build();
     });
     self.slicesBuilt = true;
+
+    self.sources = _.uniq(self.sources);
   },
 
   // Programmatically initialized a package from scratch. For now,
