@@ -137,6 +137,14 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Expected null, got " + EJSON.stringify(value));
   }
 
+  // Strings and numbers match literally.  Goes well with Match.OneOf.
+  if (typeof pattern === "string" || typeof pattern === "number") {
+    if (value === pattern)
+      return;
+    throw new Match.Error("Expected " + pattern + ", got " +
+                          EJSON.stringify(value));
+  }
+
   // Match.Integer is special type encoded with array
   if (pattern === Match.Integer) {
     // There is no consistent and reliable way to check if variable is a 64-bit
