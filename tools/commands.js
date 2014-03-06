@@ -1373,68 +1373,38 @@ main.registerCommand({
     dependencies: dependencies
   });
 
+  // XXX If package version already exists, print a nice error message
+  // telling them to try 'meteor publish-for-arch' if they want to
+  // publish a new build.
+
   process.stdout.write('Bundling source...\n');
-
-  var tempDir = files.mkdtemp('build-source-package-');
-  var packageTarName = name + '-' + version + '-source';
-  var dirToTar = path.join(tempDir, 'source', packageTarName);
-  var sourcePackageDir = path.join(
-    dirToTar,
-    name
-  );
-  if (! files.mkdir_p(sourcePackageDir)) {
-    process.stderr.write('Failed to create temporary source directory: ' +
-                         sourcePackageDir);
-    return 1;
-  }
-
-  // We copy source files into a temp directory and then tar up the temp
-  // directory. It would be great if we could avoid the copy, but as far
-  // as we can tell, this is the only way to get a tarball with the
-  // directory structure that we want (<package name>-<version-source/
-  // at the top level).
-  files.cp_r(options.packageDir, sourcePackageDir, {
-    include: pkg.sources
-  });
-
-  // We put this inside the temp dir because mkdtemp makes sure that the
-  // temp dir gets cleaned up on process exit, so we don't have to worry
-  // about cleaning up our tarball (or our copied source files)
-  // ourselves.
-  var sourceTarball = path.join(tempDir, packageTarName + '.tgz');
-  files.createTarball(dirToTar, sourceTarball);
-
-  var size = fs.statSync(sourceTarball).size;
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  var rs = fs.createReadStream(sourceTarball);
-  var fut = new Future();
-  rs.on('end', function () {
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  var tarballHash = fut.wait();
-
-  rs.close();
-  rs = fs.createReadStream(sourceTarball);
+  var bundleResult = packageClient.bundleSource(pkg, options.packageDir);
 
   process.stdout.write('Uploading source...\n');
-  httpHelpers.request({
-    method: 'PUT',
-    url: uploadInfo.uploadUrl,
-    headers: {
-      'content-length': size,
-      'content-type': 'application/octet-stream',
-      'x-amz-acl': 'public-read'
-    },
-    bodyStream: rs
-  });
-
-  // XXX Upload build tarball
+  packageClient.uploadTarball(uploadInfo.uploadUrl,
+                              bundleResult.sourceTarball);
 
   process.stdout.write('Publishing package version...\n');
-  conn.call('publishPackageVersion', uploadInfo.uploadToken, tarballHash);
+  conn.call('publishPackageVersion',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
+  process.stdout.write('Creating package build...\n');
+  uploadInfo = conn.call('createPackageBuild', {
+    packageName: pkg.name,
+    version: version,
+    architecture: pkg.architectures().join(',')
+  });
+
+  bundleResult = packageClient.bundleBuild(pkg, options.packageDir);
+
+  process.stdout.write('Uploading build...\n');
+  packageClient.uploadTarball(uploadInfo.uploadUrl,
+                              bundleResult.buildTarball);
+
+  process.stdout.write('Publishing package build...\n');
+  conn.call('publishPackageBuild',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
   conn.close();
   process.stdout.write('Published ' + pkg.name +
                        ', version ' + version);

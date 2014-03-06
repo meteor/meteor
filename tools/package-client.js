@@ -188,3 +188,94 @@ exports.loggedInPackagesConnection = function () {
     return null;
   }
 };
+
+var hashTarball = function (tarball) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.setEncoding('base64');
+  var rs = fs.createReadStream(tarball);
+  var fut = new Future();
+  rs.on('end', function () {
+    fut.return(hash.digest('base64'));
+  });
+  rs.pipe(hash, { end: false });
+  var tarballHash = fut.wait();
+  rs.close();
+  return tarballHash;
+};
+
+exports.bundleSource = function (pkg, packageDir) {
+  var name = pkg.name;
+  var version = pkg.metadata.version;
+
+  var tempDir = files.mkdtemp('build-source-package-');
+  var packageTarName = name + '-' + version + '-source';
+  var dirToTar = path.join(tempDir, 'source', packageTarName);
+  var sourcePackageDir = path.join(
+    dirToTar,
+    name
+  );
+  if (! files.mkdir_p(sourcePackageDir)) {
+    process.stderr.write('Failed to create temporary source directory: ' +
+                         sourcePackageDir);
+    return null;
+  }
+
+  // We copy source files into a temp directory and then tar up the temp
+  // directory. It would be great if we could avoid the copy, but as far
+  // as we can tell, this is the only way to get a tarball with the
+  // directory structure that we want (<package name>-<version-source/
+  // at the top level).
+  files.cp_r(packageDir, sourcePackageDir, {
+    include: pkg.sources
+  });
+
+  // We put this inside the temp dir because mkdtemp makes sure that the
+  // temp dir gets cleaned up on process exit, so we don't have to worry
+  // about cleaning up our tarball (or our copied source files)
+  // ourselves.
+  var sourceTarball = path.join(tempDir, packageTarName + '.tgz');
+  files.createTarball(dirToTar, sourceTarball);
+
+  var tarballHash = hashTarball(sourceTarball);
+
+  return {
+    sourceTarball: sourceTarball,
+    tarballHash: tarballHash
+  };
+};
+
+exports.uploadTarball = function (putUrl, tarball) {
+  var size = fs.statSync(tarball).size;
+  var rs = fs.createReadStream(tarball);
+  httpHelpers.request({
+    method: 'PUT',
+    url: putUrl,
+    headers: {
+      'content-length': size,
+      'content-type': 'application/octet-stream',
+      'x-amz-acl': 'public-read'
+    },
+    bodyStream: rs
+  });
+  rs.close();
+};
+
+exports.bundleBuild = function (pkg, packageDir) {
+  var tempDir = files.mkdtemp('build-package-');
+  var packageTarName = pkg.name + '-' + pkg.metadata.version + '-' +
+        pkg.architectures().join(',');
+
+  files.cp_r(path.join(packageDir, '.build'),
+             path.join(tempDir, packageTarName));
+
+  var buildTarball = path.join(tempDir, packageTarName + '.tgz');
+  files.createTarball(path.join(tempDir, packageTarName), buildTarball);
+
+  var tarballHash = hashTarball(buildTarball);
+
+  return {
+    buildTarball: buildTarball,
+    tarballHash: tarballHash
+  };
+};

@@ -913,6 +913,11 @@ _.extend(Package.prototype, {
     self.testSlices = {'': []};
   },
 
+  architectures: function () {
+    var self = this;
+    return _.uniq(_.pluck(self.slices, 'arch')).sort();
+  },
+
   // Return the slice of the package to use for a given slice name
   // (eg, 'main' or 'test') and target architecture (eg,
   // 'os.linux.x86_64' or 'browser'), or throw an exception if
