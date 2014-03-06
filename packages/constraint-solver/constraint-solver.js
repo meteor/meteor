@@ -23,10 +23,6 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   //    - earliestCompatibleVersion
   self.packageDeps = {};
 
-  // Extract all dependencies for every package version if a build for the
-  // required architecture is available.
-
-
   Packages.find().forEach(function (packageDef) {
     self.packageDeps[packageDef.name] = {};
     Versions.find({ packageName: packageDef.name }).forEach(function (versionDef) {
@@ -41,6 +37,8 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
       self.packageDeps[packageDef.name][versionDef.version] = packageDep;
     });
   });
+
+  self._Versions = Versions;
 };
 
 // The propagation of exact dependencies
@@ -90,48 +88,80 @@ ConstraintSolver.Resolver.prototype._propagateExactDeps =
   return picks;
 };
 
-ConstraintSolver.Resolver.prototype._resolve = function (dependencies, picks) {
+ConstraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
   check(dependencies, [ConstraintSolver.Dependency]);
 
-  picks = picks || {};
+  state = state || {};
+  state.picks = state.picks || {};
 
   var self = this;
 
-  var depsDict = {};
+  state.depsDict = state.depsDict || {};
   _.each(rejectExactDeps(dependencies), function (dep) {
-    depsDict[dep.packageName] = depsDict[dep.packageName] || [];
-    depsDict[dep.packageName].push(dep);
+    state.depsDict[dep.packageName] = state.depsDict[dep.packageName] || [];
+    state.depsDict[dep.packageName].push(dep);
   });
 
-  var exactDepsStack = pickExactDeps(dependencies);
+  state.exactDepsStack = state.exactDepsStack || pickExactDeps(dependencies);
 
-  var exactPicks = self._propagateExactDeps(depsDict, exactDepsStack);
+  var exactPicks = self._propagateExactDeps(state.depsDict, state.exactDepsStack);
 
   // add all exact dependencies the propagator picked to the set of picks
   _.each(exactPicks, function (version, packageName) {
-    if (_.has(picks, packageName)) {
-      if (picks[packageName] !== version)
+    if (_.has(state.picks, packageName)) {
+      if (state.picks[packageName] !== version)
         throw new Error("Exact dependencies contradict with already picked version for a package: "
-                        + packageName + " " + picks[packageName] + ": " + version);
+                        + packageName + " " + state.picks[packageName] + ": " + version);
     } else {
-      picks[packageName] = version;
+      state.picks[packageName] = version;
     }
   });
 
   // check if all non-exact dependencies are still satisfied
-  _.each(picks, function (version, packageName) {
-    _.each(depsDict[packageName], function (dep) {
+  _.each(state.picks, function (version, packageName) {
+    _.each(state.depsDict[packageName], function (dep) {
       if (! self.dependencyIsSatisfied(dep, version))
         throw new Error("Exact dependency contradicts on of the constraints for a package: "
                         + packageName + " " + version + ": " + dep.version);
     });
   });
 
-  if (_.size(depsDict) !== 0) {
-    // backtrack here
+  // calculate packages we depend on but didn't pick a version for yet
+  // pick one of those and try different versions
+  var candidatePackageNames = _.difference(_.keys(state.depsDict), _.keys(state.picks));
+  if (_.isEmpty(candidatePackageNames)) {
+    //console.log('there is nothing to look for! successsss');
+    return state.picks;
   }
 
-  return picks;
+  var candidatePackageName = candidatePackageNames[0];
+  var availableVersions = self._Versions.find({ packageName: candidatePackageName }).fetch();
+  var satisfyingVersions = _.filter(availableVersions, function (versionDef) {
+    return _.all(state.depsDict[candidatePackageName], function (dep) {
+      return self.dependencyIsSatisfied(dep, versionDef.version);
+    });
+  });
+
+  if (_.isEmpty(satisfyingVersions))
+    throw new Error("Cannot find a satisfying versions of package: "
+                    + candidatePackageName);
+
+  for (var i = 0; i < satisfyingVersions.length; i++) {
+    var versionDef = satisfyingVersions[i];
+    var newState = EJSON.clone(state);
+    newState.picks[candidatePackageName] = versionDef.version;
+    newState.exactDepsStack.push(_.pick(versionDef, 'packageName', 'version'));
+    //console.log('trying ' + candidatePackageName + ' v.' + versionDef.version);
+    // recurse
+    try {
+      // if not failed, return a happy result
+      return self._resolve(dependencies, newState);
+    } catch (err) {
+      //console.log('picking ' + candidatePackageName + ' v.' + versionDef.version + ' kinda failed, lets not do that: ' + err.message);
+    }
+  };
+
+  throw new Error("Cannot pick a satisfying version of package " + candidatePackageName);
 };
 
 ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
