@@ -544,6 +544,63 @@ main.registerCommand({
   });
 });
 
+
+
+main.registerCommand({
+  name: 'add-package',
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true
+}, function (options) {
+
+  var all = loadPackageData();
+  var Packages = all.packages;
+  var Versions = all.versions;
+  var Builds = all.builds;
+
+  // XXX: We do not currently error if you already have the package at that constraint. Maybe do that.
+
+  _.each(options.args, function (packageReq) {
+    var packReqArray = packageReq.split("@");
+    if (packReqArray.length < 2) {
+      process.stderr.write("be sad \n");
+    }
+
+    var name = packReqArray[0];
+    var versionConstraint = packReqArray[1];
+
+    if (!Packages.findOne({name: name})) {
+      process.stderr.write(name + ": no such package\n");
+    } else {
+      // Add a package here.
+      var addVersion = versionConstraint;
+      if (!Versions.findOne({packageName: name,
+                             version: addVersion})) {
+        process.stderr.write("Nonexistent version");
+      }
+
+      // Our architecture.
+      var archinfo = require("./archinfo.js");
+      var architecture = archinfo.host();
+
+      // Here is the output of our constraint solver:
+      //   architecture: architecture
+      //   addVersion : addVersion
+
+      // Find the build.
+      var buildRecord = Builds.findOne({packageName: name,
+                                        version: addVersion,
+                                        architecture: architecture});
+      project.addPackage(options.appDir, name + "@" + addVersion);
+
+
+      var note = Versions.findOne({packageName: name, version: addVersion}).description;
+      process.stderr.write(name + ": " + note + "\n");
+    }
+  });
+});
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // remove
 ///////////////////////////////////////////////////////////////////////////////
@@ -1414,6 +1471,9 @@ main.registerCommand({
    }
   })
 });
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // dummy
