@@ -44,9 +44,12 @@ _.extend(Library.prototype, {
   // two overrides for the same packageName.
   override: function (packageName, packageDir) {
     var self = this;
-    if (_.has(self.overrides, packageName))
+    var resolvedPath = path.resolve(packageDir);
+    if (_.has(self.overrides, packageName) &&
+        self.overrides[packageName] !== resolvedPath) {
       throw new Error("Duplicate override for package '" + packageName + "'");
-    self.overrides[packageName] = path.resolve(packageDir);
+    }
+    self.overrides[packageName] = resolvedPath;
   },
 
   // Undo an override previously set up with override().

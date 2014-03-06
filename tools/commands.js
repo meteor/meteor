@@ -598,24 +598,17 @@ main.registerCommand({
         process.exit(1);
       }
 
+      // If the tarball is not in the warehouse, download it there.
       if (!tropohouse.hasSpecifiedBuild(name,
                                        addVersion,
                                        buildRecord.architecture)) {
-        console.log("Downloading to warehouse");
-        tropohouse.downloadSpecifiedBuild(name,
-                                          addVersion,
-                                          buildRecord);
+        tropohouse.downloadSpecifiedBuild(name, addVersion, buildRecord);
       }
 
-      console.log("Tarball is at:", buildRecord.build.url);
-      console.log("Checking warehouse location of package + arch");
-      console.log("If not there/not right: fetch from tarball");
-      console.log("What do we do once we have the tarball?");
-
       // XXX: What format are we storing this in? Probably not like this.
-      project.addPackage(options.appDir, name + "@" + addVersion);
+      project.addPackage(options.appDir, name + "@=" + addVersion);
 
-
+      // Log that this happened! Yay!
       var note = Versions.findOne({packageName: name, version: addVersion}).description;
       process.stderr.write(name + ": " + note + "\n");
     }
@@ -1399,6 +1392,7 @@ main.registerCommand({
   // we can't go through the build process to retrieve the sources that
   // we used to build the package, and we need the source list to
   // compile the source tarball.
+  release.current.library.override(path.basename(options.packageDir), options.packageDir);
   var pkg = release.current.library.get(path.basename(
     options.packageDir
   ), {

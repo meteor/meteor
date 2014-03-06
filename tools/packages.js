@@ -13,6 +13,7 @@ var linker = require(path.join(__dirname, 'linker.js'));
 var unipackage = require('./unipackage.js');
 var fs = require('fs');
 var sourcemap = require('source-map');
+var tropohouse = require('./tropohouse.js');
 
 // Whenever you change anything about the code that generates unipackages, bump
 // this version number. The idea is that the "format" field of the unipackage
@@ -1711,6 +1712,17 @@ _.extend(Package.prototype, {
       // Determine used packages
       var names = project.getPackages(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
+
+
+      // XXXX: We actually want to run the constraint solver and also edit the library to use trops
+      // instead of an override.
+      names = _.map(names, function(name) {
+        var pieces = name.split('@=');
+        if (pieces.length > 1) {
+          self.library.override(pieces[0], tropohouse.calculatePath(pieces[0], pieces[1], "browser+os"));
+        }
+        return pieces[0];
+      })
 
       // Create slice
       var slice = new Slice(self, {
