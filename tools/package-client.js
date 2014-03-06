@@ -264,7 +264,7 @@ exports.uploadTarball = function (putUrl, tarball) {
 exports.bundleBuild = function (pkg, packageDir) {
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = pkg.name + '-' + pkg.metadata.version + '-' +
-        pkg.architectures().join(',');
+        pkg.architectures().join('+');
 
   files.cp_r(path.join(packageDir, '.build'),
              path.join(tempDir, packageTarName));
