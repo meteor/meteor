@@ -1,6 +1,6 @@
 var materialize = UI.materialize;
 var toHTML = UI.toHTML;
-var toCode = HTML.toJS;
+var toCode = BlazeTools.toJS;
 
 var P = HTML.P;
 var CharRef = HTML.CharRef;

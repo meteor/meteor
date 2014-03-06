@@ -253,7 +253,7 @@ var codeGenTemplateTag = function (tag) {
 var makeObjectLiteral = function (obj) {
   var parts = [];
   for (var k in obj)
-    parts.push(toObjectLiteralKey(k) + ': ' + obj[k]);
+    parts.push(BlazeTools.toObjectLiteralKey(k) + ': ' + obj[k]);
   return '{' + parts.join(', ') + '}';
 };
 
@@ -284,7 +284,7 @@ var codeGenPath = function (path, opts) {
     return builtInLexicals[path[1]];
   }
 
-  var args = [toJSLiteral(path[0])];
+  var args = [BlazeTools.toJSLiteral(path[0])];
   var lookupMethod = 'lookup';
   if (opts && opts.lookupTemplate && path.length === 1)
     lookupMethod = 'lookupTemplate';
@@ -292,7 +292,7 @@ var codeGenPath = function (path, opts) {
 
   if (path.length > 1) {
     code = 'Spacebars.dot(' + code + ', ' +
-      _.map(path.slice(1), toJSLiteral).join(', ') + ')';
+      _.map(path.slice(1), BlazeTools.toJSLiteral).join(', ') + ')';
   }
 
   return code;
@@ -313,7 +313,7 @@ var codeGenArgValue = function (arg) {
   case 'NUMBER':
   case 'BOOLEAN':
   case 'NULL':
-    argCode = toJSLiteral(argValue);
+    argCode = BlazeTools.toJSLiteral(argValue);
     break;
   case 'PATH':
     argCode = codeGenPath(argValue);
@@ -489,7 +489,7 @@ Spacebars.codeGen = function (parseTree, options) {
     code += 'var template = this; ';
   }
   code += 'return ';
-  code += HTML.toJS(tree);
+  code += BlazeTools.toJS(tree);
   code += '; })';
 
   code = beautify(code);

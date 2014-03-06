@@ -1,6 +1,7 @@
+BlazeTools = {};
 
 // Turns any JSONable value into a JavaScript literal.
-toJSLiteral = function (obj) {
+toJSLiteral = BlazeTools.toJSLiteral = function (obj) {
   // See <http://timelessrepo.com/json-isnt-a-javascript-subset> for `\u2028\u2029`.
   // Also escape Unicode surrogates.
   return (JSON.stringify(obj)
@@ -10,15 +11,14 @@ toJSLiteral = function (obj) {
 };
 
 
-
 var jsReservedWordSet = (function (set) {
-  _.each("abstract else instanceof super boolean enum int switch break export interface synchronized byte extends let this case false long throw catch final native throws char finally new transient class float null true const for package try continue function private typeof debugger goto protected var default if public void delete implements return volatile do import short while double in static with".split(' '), function (w) {
-    set[w] = 1;
-  });
+  var words = "abstract else instanceof super boolean enum int switch break export interface synchronized byte extends let this case false long throw catch final native throws char finally new transient class float null true const for package try continue function private typeof debugger goto protected var default if public void delete implements return volatile do import short while double in static with".split(' ');
+  for (var i = 0, N = words.length; i < N; i++)
+    set[words[i]] = 1;
   return set;
 })({});
 
-toObjectLiteralKey = function (k) {
+toObjectLiteralKey = BlazeTools.toObjectLiteralKey = function (k) {
   if (/^[a-zA-Z$_][a-zA-Z$0-9_]*$/.test(k) && jsReservedWordSet[k] !== 1)
     return k;
   return toJSLiteral(k);
@@ -36,14 +36,14 @@ HTML.Tag.prototype.toJS = function (options) {
     for (var k in this.attrs) {
       if (! HTML.isNully(this.attrs[k]))
         kvStrs.push(toObjectLiteralKey(k) + ': ' +
-                    HTML.toJS(this.attrs[k], options));
+                    toJS(this.attrs[k], options));
     }
     if (kvStrs.length)
       argStrs.push('{' + kvStrs.join(', ') + '}');
   }
 
   for (var i = 0; i < this.children.length; i++) {
-    argStrs.push(HTML.toJS(this.children[i], options));
+    argStrs.push(toJS(this.children[i], options));
   }
 
   var tagName = this.tagName;
@@ -85,7 +85,7 @@ HTML.EmitCode.prototype.toJS = function (options) {
   return this.value;
 };
 
-HTML.toJS = function (node, options) {
+toJS = BlazeTools.toJS = function (node, options) {
   if (node == null) {
     // null or undefined
     return 'null';
@@ -96,7 +96,7 @@ HTML.toJS = function (node, options) {
     // array
     var parts = [];
     for (var i = 0; i < node.length; i++)
-      parts.push(HTML.toJS(node[i], options));
+      parts.push(toJS(node[i], options));
     return '[' + parts.join(', ') + ']';
   } else if (node.toJS) {
     // Tag or something else

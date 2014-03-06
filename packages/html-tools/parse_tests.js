@@ -13,6 +13,8 @@ var DIV = HTML.DIV;
 var P = HTML.P;
 var TEXTAREA = HTML.TEXTAREA;
 
+var toJS = BlazeTools.toJS;
+
 Tinytest.add("html-tools - parser getContent", function (test) {
 
   var succeed = function (input, expected) {
@@ -23,7 +25,7 @@ Tinytest.add("html-tools - parser getContent", function (test) {
     var scanner = new Scanner(input.replace('^^^', ''));
     var result = getContent(scanner);
     test.equal(scanner.pos, endPos);
-    test.equal(HTML.toJS(result), HTML.toJS(expected));
+    test.equal(toJS(result), toJS(expected));
   };
 
   var fatal = function (input, messageContains) {
@@ -149,8 +151,8 @@ Tinytest.add("html-tools - parser getContent", function (test) {
 });
 
 Tinytest.add("html-tools - parseFragment", function (test) {
-  test.equal(HTML.toJS(HTMLTools.parseFragment("<div><p id=foo>Hello</p></div>")),
-             HTML.toJS(DIV(P({id:'foo'}, 'Hello'))));
+  test.equal(toJS(HTMLTools.parseFragment("<div><p id=foo>Hello</p></div>")),
+             toJS(DIV(P({id:'foo'}, 'Hello'))));
 
   test.throws(function() {
     HTMLTools.parseFragment('asdf</a>');
@@ -258,7 +260,7 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
       result = String(e);
     }
     test.equal(scanner.pos, endPos);
-    test.equal(HTML.toJS(result), HTML.toJS(expected));
+    test.equal(toJS(result), toJS(expected));
   };
 
   var fatal = function (input, messageContains) {
