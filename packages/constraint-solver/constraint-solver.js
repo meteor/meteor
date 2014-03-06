@@ -40,7 +40,8 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
         check(deps, [ConstraintSolver.Dependency]);
 
         self.packageDeps[packageDef.name][versionDef.version] = {
-          dependencies: deps
+          dependencies: deps,
+          earliestCompatibleVersion: build.earliestCompatibleVersion
         };
       }
     });
@@ -48,14 +49,15 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
 };
 
 // The propagation of exact dependencies
+// XXX empties the exactDepsStack
+// XXX extends the depsDict
+// XXX after this depsStack can contain duplicates
 ConstraintSolver.Resolver.prototype._propagateExactDeps =
-  function (depsStack, exactDepsStack) {
+  function (depsDict, exactDepsStack) {
   var self = this;
   var picks = {};
 
   _.each(exactDepsStack, function (dep) { picks[dep.packageName] = dep.version; });
-  var willConsider = {};
-  _.each(depsStack, function (dep) { willConsider[dep.packageName] = true; });
 
   while (exactDepsStack.length > 0) {
     var currentPick = exactDepsStack.pop();
@@ -84,28 +86,57 @@ ConstraintSolver.Resolver.prototype._propagateExactDeps =
       }
     });
 
-    _.each(rejectExactDeps(currentPick.dependencies), function (dep) {
-      if (! _.has(willConsider, dep.packageName)) {
-        willConsider[dep.packageName] = true;
-        depsStack.push(dep);
-      }
+    _.each(rejectExactDeps(currentDependencies), function (dep) {
+      depsDict[dep.packageName] = depsDict[dep.packageName] || [];
+      depsDict[dep.packageName].push(dep);
     });
   };
 
   return picks;
 };
 
-ConstraintSolver.Resolver.prototype._resolve = function (dependencies) {
+ConstraintSolver.Resolver.prototype._resolve = function (dependencies, picks) {
   check(dependencies, [ConstraintSolver.Dependency]);
+
+  picks = picks || {};
 
   var self = this;
 
-  var depsStack = rejectExactDeps(dependencies);
+  var depsDict = {};
+  _.each(rejectExactDeps(dependencies), function (dep) {
+    depsDict[dep.packageName] = depsDict[dep.packageName] || [];
+    depsDict[dep.packageName].push(dep);
+  });
+
   var exactDepsStack = pickExactDeps(dependencies);
 
-  // xcxc: check that all deps in depsStack satisfy first, then try doing
-  // something smart and then backtracking.
-  return self._propagateExactDeps(depsStack, exactDepsStack);
+  var exactPicks = self._propagateExactDeps(depsDict, exactDepsStack);
+
+  // add all exact dependencies the propagator picked to the set of picks
+  _.each(exactPicks, function (version, packageName) {
+    if (_.has(picks, packageName)) {
+      if (picks[packageName] !== version)
+        throw new Error("Exact dependencies contradict with already picked version for a package: "
+                        + packageName + " " + picks[packageName] + ": " + version);
+    } else {
+      picks[packageName] = version;
+    }
+  });
+
+  // check if all non-exact dependencies are still satisfied
+  _.each(picks, function (version, packageName) {
+    _.each(depsDict[packageName], function (dep) {
+      if (! self.dependencyIsSatisfied(dep, version))
+        throw new Error("Exact dependency contradicts on of the constraints for a package: "
+                        + packageName + " " + version + ": " + dep.version);
+    });
+  });
+
+  if (_.size(depsDict) !== 0) {
+    // backtrack here
+  }
+
+  return picks;
 };
 
 ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
@@ -120,6 +151,14 @@ ConstraintSolver.Resolver.prototype.propagatedExactDeps = function (dependencies
   var depsStack = rejectExactDeps(dependencies);
   var exactDepsStack = pickExactDeps(dependencies);
   return self._propagateExactDeps(depsStack, exactDepsStack);
+};
+
+ConstraintSolver.Resolver.prototype.dependencyIsSatisfied =
+  function (dep, version) {
+  var self = this;
+  var versionSpec = self.packageDeps[dep.packageName][version];
+  return semver.lte(dep.version, version) &&
+    semver.lte(versionSpec.earliestCompatibleVersion, dep.version);
 };
 
 // helpers
