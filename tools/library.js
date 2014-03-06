@@ -153,12 +153,17 @@ _.extend(Library.prototype, {
     return null;
   },
 
-  // Given a package name as a string, retrieve a Package object. If
-  // throwOnError is true, the default, throw an error if the package
-  // can't be found. (If false is passed for throwOnError, then return
-  // null if the package can't be found.) When called inside
-  // buildmessage.enterJob, however, instead of throwing an error it
-  // will record a build error and return a dummy (empty) package.
+  // Given a package name as a string, retrieve a Package
+  // object. Options are:
+  //  - throwOnError: if true (the default), throw an error if the
+  //    package can't be found. (If false is passed for throwOnError,
+  //    then return null if the package can't be found.) When called
+  //    inside buildmessage.enterJob, however, instead of throwing an
+  //    error it will record a build error and return a dummy (empty)
+  //    package.
+  //  - forceRebuild: defaults to false. If true, we will initialize the
+  //    package from the source and ignore a built unipackage if it
+  //    exists. This option is ignored if you pass `name` as a Package.
   //
   // Searches overrides first, then any localPackageDirs you have
   // provided, then the manifest/warehouse if provided.
@@ -168,15 +173,22 @@ _.extend(Library.prototype, {
   // changes. To flush the package cache and force all of the packages
   // to be reloaded the next time get() is called for them, see
   // refresh().
-  get: function (name, throwOnError) {
+  get: function (name, options) {
     var self = this;
 
+    options = options || {};
+    if (options.throwOnError === undefined) {
+      options.throwOnError = true;
+    }
+
     // Passed a Package?
+    // XXX Ignoring forceRebuild here, not sure what the right thing to
+    // do is.
     if (name instanceof packages.Package)
       return name;
 
     // Packages cached from previous calls
-    if (_.has(self.loadedPackages, name)) {
+    if (! options.forceRebuild && _.has(self.loadedPackages, name)) {
       return self.loadedPackages[name].pkg;
     }
 
@@ -186,7 +198,7 @@ _.extend(Library.prototype, {
     //
     // XXX revisit this later. What about unicode package names?
     if (/[^A-Za-z0-9.\-]/.test(name) || !/[A-Za-z]/.test(name) ) {
-      if (throwOnError === false)
+      if (options.throwOnError === false)
         return null;
       throw new Error("Invalid package name: " + name);
     }
@@ -194,7 +206,7 @@ _.extend(Library.prototype, {
     var packageDir = self.findPackageDirectory(name);
 
     if (! packageDir) {
-      if (throwOnError === false)
+      if (options.throwOnError === false)
         return null;
       buildmessage.error("package not available: " + name);
       // recover by returning a dummy (empty) package
@@ -205,7 +217,7 @@ _.extend(Library.prototype, {
 
     // See if we can reuse a package that we have cached from before
     // the last soft refresh.
-    if (_.has(self.softReloadCache, name)) {
+    if (! options.forceRebuild && _.has(self.softReloadCache, name)) {
       var entry = self.softReloadCache[name];
 
       // Either we will decide that the cache is invalid, or we will "upgrade"
@@ -224,19 +236,28 @@ _.extend(Library.prototype, {
     var pkg = new packages.Package(self, packageDir);
     if (fs.existsSync(path.join(packageDir, 'unipackage.json'))) {
       // It's an already-built package
+      if (options.forceRebuild) {
+        if (options.throwOnError === false) {
+          return null;
+        } else {
+          throw new Error('Cannot rebuild from a unipackage directory.');
+        }
+      }
       pkg.initFromUnipackage(name, packageDir);
       self.loadedPackages[name] = {pkg: pkg, packageDir: packageDir};
     } else {
       // It's a source tree. Does it have a built unipackage inside it?
       var buildDir = path.join(packageDir, '.build');
-      if (fs.existsSync(buildDir) &&
+      if (! options.forceRebuild &&
+          fs.existsSync(buildDir) &&
           pkg.initFromUnipackage(name, buildDir,
                                  { onlyIfUpToDate: true,
                                    buildOfPath: packageDir })) {
         // We already had a build and it was up to date.
         self.loadedPackages[name] = {pkg: pkg, packageDir: packageDir};
       } else {
-        // Either we didn't have a build, or it was out of date. Build the
+        // Either we didn't have a build, or it was out of date, or the
+        // caller wanted us to rebuild no matter what. Build the
         // package.
         buildmessage.enterJob({
           title: "building package `" + name + "`",
@@ -296,7 +317,7 @@ _.extend(Library.prototype, {
     if (typeof spec === "string")
       spec = packages.parseSpec(spec);
 
-    var pkg = self.get(spec.package, true);
+    var pkg = self.get(spec.package, { throwOnError: true });
     if (spec.slice)
       return [pkg.getSingleSlice(spec.slice, arch)];
     else
@@ -354,7 +375,7 @@ _.extend(Library.prototype, {
       }
 
       _.each(names, function (name) {
-        var pkg = self.get(name, false);
+        var pkg = self.get(name, { throwOnError: false });
         if (pkg)
           packages[name] = pkg;
       });
@@ -430,8 +451,9 @@ _.extend(Library.prototype, {
     _.each(all, function (name, packageDir) {
       // Tolerate missing packages. This can happen because our crude
       // logic above misdetects an empty directory as a package.
-      if (self.get(name, /* throwOnError */ false))
+      if (self.get(name, { throwOnError: false })) {
         count ++;
+      }
     });
 
     return count;

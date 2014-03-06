@@ -252,7 +252,7 @@ _.extend(Slice.prototype, {
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
       _.each(self[field], function (u) {
-        var pkg = self.pkg.library.get(u.package, /* throwOnError */ false);
+        var pkg = self.pkg.library.get(u.package, { throwOnError: false });
         if (! pkg) {
           buildmessage.error("no such package: '" + u.package + "'");
           // recover by omitting this package from the field
@@ -274,6 +274,8 @@ _.extend(Slice.prototype, {
         servePath: path.join(self.pkg.serveRoot, relPath),
         hash: hash
       });
+
+      self.pkg.sources.push(relPath);
     };
 
     _.each(self.getSourcesFunc(), function (source) {
@@ -284,6 +286,8 @@ _.extend(Slice.prototype, {
       var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
       var file = watch.readAndWatchFileWithHash(self.watchSet, absPath);
       var contents = file.contents;
+
+      self.pkg.sources.push(relPath);
 
       if (contents === null) {
         buildmessage.error("File not found: " + source.relPath);
@@ -909,6 +913,11 @@ _.extend(Package.prototype, {
     self.testSlices = {'': []};
   },
 
+  architectures: function () {
+    var self = this;
+    return _.uniq(_.pluck(self.slices, 'arch')).sort();
+  },
+
   // Return the slice of the package to use for a given slice name
   // (eg, 'main' or 'test') and target architecture (eg,
   // 'os.linux.x86_64' or 'browser'), or throw an exception if
@@ -1047,6 +1056,8 @@ _.extend(Package.prototype, {
     if (self.pluginsBuilt || self.slicesBuilt)
       throw new Error("package already built?");
 
+    self.sources = [];
+
     // Build plugins
     _.each(self.pluginInfo, function (info) {
       buildmessage.enterJob({
@@ -1066,6 +1077,11 @@ _.extend(Package.prototype, {
           // shrinkwrap and cache state.
           npmDir: path.resolve(path.join(self.sourceRoot, '.npm', 'plugin',
                                          info.name))
+        });
+
+        // Add the plugin's sources to our list.
+        _.each(info.sources, function (source) {
+          self.sources.push(source);
         });
 
         // Add this plugin's dependencies to our "plugin dependency" WatchSet.
@@ -1088,6 +1104,8 @@ _.extend(Package.prototype, {
       slice.build();
     });
     self.slicesBuilt = true;
+
+    self.sources = _.uniq(self.sources);
   },
 
   // Programmatically initialized a package from scratch. For now,

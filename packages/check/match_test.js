@@ -102,6 +102,18 @@ Tinytest.add("check - check", function (test) {
   // objects.
   fails({a: undefined}, {a: Match.Optional(Number)});
 
+  matches({}, Match.ObjectWithValues(Number));
+  matches({x: 1}, Match.ObjectWithValues(Number));
+  matches({x: 1, y: 2}, Match.ObjectWithValues(Number));
+  fails({x: 1, y: "2"}, Match.ObjectWithValues(Number));
+
+  matches("asdf", "asdf");
+  fails("asdf", "monkey");
+  matches(123, 123);
+  fails(123, 456);
+  fails("123", 123);
+  fails(123, "123");
+
   matches(/foo/, RegExp);
   fails(/foo/, String);
   matches(new Date, Date);

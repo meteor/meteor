@@ -17,6 +17,7 @@ var runLog = require('./run-log.js').runLog;
 var packageClient = require('./package-client.js');
 var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
+var archinfo = require('./archinfo.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1219,7 +1220,7 @@ main.registerCommand({
       // bail out if that creates a conflict.
       var packageDir = path.resolve(options.args[0]);
       packageName = path.basename(packageDir) + "-tool";
-      if (library.get(packageName, false)) {
+      if (library.get(packageName, { throwOnError: false })) {
         buildmessage.error("'" + packageName +
                            "' conflicts with the name " +
                            "of a package in the library");
@@ -1373,9 +1374,19 @@ main.registerCommand({
   },
   requiresPackage: true
 }, function (options) {
+
+  // XXX Prettify error messages
+
+  // We load the package with `forceRebuild` to avoid loading the
+  // package from a built unipackage. If we load from unipackage, then
+  // we can't go through the build process to retrieve the sources that
+  // we used to build the package, and we need the source list to
+  // compile the source tarball.
   var pkg = release.current.library.get(path.basename(
     options.packageDir
-  ));
+  ), {
+    forceRebuild: true
+  });
 
   var name = pkg.name;
   var version = pkg.metadata.version;
@@ -1400,15 +1411,21 @@ main.registerCommand({
     });
   }
 
-  var dependencies = [];
+  // XXX factor this out into a method on Package in packages.js
+  var dependencies = {};
   _.each(pkg.slices, function (slice) {
     // XXX also iterate over "implies"
     _.each(slice.uses, function (use) {
-      dependencies.push({
-        packageName: use.package,
-        versionConstraint: "=1.0.0",  //  XXX fix this
-        fromSlice: slice.sliceName,
-        fromArch: slice.arch,
+      if (!_.has(dependencies, use.package)) {
+        dependencies[use.package] = {
+          versionConstraint: "=1.0.0",  // XXX fix this
+          fromSlices: []
+        };
+      }
+
+      dependencies[use.package].fromSlices.push({
+        slice: slice.sliceName,
+        arch: archinfo.withoutSpecificOs(slice.arch),
         toSlice: use.slice,  // usually undefined, which means "default slices"
         weak: use.weak,
         unordered: use.unordered
@@ -1424,47 +1441,38 @@ main.registerCommand({
     dependencies: dependencies
   });
 
+  // XXX If package version already exists, print a nice error message
+  // telling them to try 'meteor publish-for-arch' if they want to
+  // publish a new build.
+
   process.stdout.write('Bundling source...\n');
-  var tempTarball = path.join(options.packageDir,
-                              'source-' + utils.randomToken() + '.tgz');
-  files.createTarball(options.packageDir, tempTarball, {
-    ignoreDotFiles: true
-  });
-
-  var size = fs.statSync(tempTarball).size;
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  var rs = fs.createReadStream(tempTarball);
-  var fut = new Future();
-  rs.on('end', function () {
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  var tarballHash = fut.wait();
-
-  rs.close();
-  rs = fs.createReadStream(tempTarball);
+  var bundleResult = packageClient.bundleSource(pkg, options.packageDir);
 
   process.stdout.write('Uploading source...\n');
-  httpHelpers.request({
-    method: 'PUT',
-    url: uploadInfo.uploadUrl,
-    headers: {
-      'content-length': size,
-      'content-type': 'application/octet-stream',
-      'x-amz-acl': 'public-read'
-    },
-    bodyStream: rs
-  });
-
-  // XXX Make sure this gets cleaned up even if we throw above
-  fs.unlinkSync(tempTarball);
-
-  // XXX Upload build tarball
+  packageClient.uploadTarball(uploadInfo.uploadUrl,
+                              bundleResult.sourceTarball);
 
   process.stdout.write('Publishing package version...\n');
-  conn.call('publishPackageVersion', uploadInfo.uploadToken, tarballHash);
+  conn.call('publishPackageVersion',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
+  process.stdout.write('Creating package build...\n');
+  uploadInfo = conn.call('createPackageBuild', {
+    packageName: pkg.name,
+    version: version,
+    architecture: pkg.architectures().join('+')
+  });
+
+  bundleResult = packageClient.bundleBuild(pkg, options.packageDir);
+
+  process.stdout.write('Uploading build...\n');
+  packageClient.uploadTarball(uploadInfo.uploadUrl,
+                              bundleResult.buildTarball);
+
+  process.stdout.write('Publishing package build...\n');
+  conn.call('publishPackageBuild',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
   conn.close();
   process.stdout.write('Published ' + pkg.name +
                        ', version ' + version);

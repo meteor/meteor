@@ -293,11 +293,38 @@ files.mkdir_p = function (dir, mode) {
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
 //
+// If options.include is present, it should be a list of filenames
+// (either absolute or will be interpreted relative to `from`). Only
+// files matching those filenames will be copied. options.ignore will
+// override options.include. Any directories beneath `from` are only
+// included if they contain any files in options.include, or are
+// themselves explicitly listed in options.include.
+//
 // Returns the list of relative file paths copied to the destination,
 // as filtered by ignore and transformed by transformFilename.
 files.cp_r = function (from, to, options) {
   options = options || {};
-  files.mkdir_p(to, 0755);
+
+  // We resolve to absolute paths at the beginning so that the caller
+  // can specify relative paths that will be resolved relative to
+  // `from`. If we didn't do this and instead resolved when we do the
+  // options.include check below, then we would be resolving relative to
+  // `from` after recursing, whcih is not useful.
+  if (options.include) {
+    options.include = _.map(
+      options.include,
+      function (filename) {
+        return path.resolve(from, filename);
+      }
+    );
+  }
+
+  var absTo = path.resolve(to);
+  if (! options.include || _.any(options.include, function (include) {
+    return include.indexOf(absTo) === 0;
+  })) {
+    files.mkdir_p(to, 0755);
+  }
   var copied = [];
   _.each(fs.readdirSync(from), function (f) {
     if (_.any(options.ignore || [], function (pattern) {
@@ -315,15 +342,19 @@ files.cp_r = function (from, to, options) {
       }));
     }
     else {
-      if (!options.transformContents) {
-        // XXX reads full file into memory.. lame.
-        fs.writeFileSync(fullTo, fs.readFileSync(fullFrom));
-      } else {
-        var contents = fs.readFileSync(fullFrom);
-        contents = options.transformContents(contents, f);
-        fs.writeFileSync(fullTo, contents);
+      var absFullFrom = path.resolve(fullFrom);
+      if (! options.include ||
+          _.contains(options.include, absFullFrom)) {
+        if (!options.transformContents) {
+          // XXX reads full file into memory.. lame.
+          fs.writeFileSync(fullTo, fs.readFileSync(fullFrom));
+        } else {
+          var contents = fs.readFileSync(fullFrom);
+          contents = options.transformContents(contents, f);
+          fs.writeFileSync(fullTo, contents);
+        }
+        copied.push(f);
       }
-      copied.push(f);
     }
   });
   return copied;
@@ -416,30 +447,19 @@ files.extractTarGz = function (buffer, destPath) {
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
-// options:
-//  - ignoreDotFiles: boolean
 files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
-  var filter;
-  if (options.ignoreDotFiles) {
-    filter = function () {
-      return ! this.basename.match(/^\./);
-    };
-  }
   var reader = fstream.Reader({
     path: dirPath,
-    type: 'Directory',
-    filter: filter
+    type: 'Directory'
   });
   return reader.pipe(tar.Pack()).pipe(zlib.createGzip());
 };
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
-// options:
-//  - ignoreDotFiles: boolean
 files.createTarball = function (dirPath, tarball, options) {
   var future = new Future;
   var out = fs.createWriteStream(tarball);
