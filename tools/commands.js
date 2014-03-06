@@ -1399,7 +1399,7 @@ main.registerCommand({
   uploadInfo = conn.call('createPackageBuild', {
     packageName: pkg.name,
     version: version,
-    architecture: pkg.architectures().join(',')
+    architecture: pkg.architectures().join('+')
   });
 
   bundleResult = packageClient.bundleBuild(pkg, options.packageDir);
