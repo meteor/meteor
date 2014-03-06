@@ -17,6 +17,7 @@ var runLog = require('./run-log.js').runLog;
 var packageClient = require('./package-client.js');
 var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
+var archinfo = require('./archinfo.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1349,15 +1350,21 @@ main.registerCommand({
     });
   }
 
-  var dependencies = [];
+  // XXX factor this out into a method on Package in packages.js
+  var dependencies = {};
   _.each(pkg.slices, function (slice) {
     // XXX also iterate over "implies"
     _.each(slice.uses, function (use) {
-      dependencies.push({
-        packageName: use.package,
-        versionConstraint: "=1.0.0",  //  XXX fix this
-        fromSlice: slice.sliceName,
-        fromArch: slice.arch,
+      if (!_.has(dependencies, use.package)) {
+        dependencies[use.package] = {
+          versionConstraint: "=1.0.0",  // XXX fix this
+          fromSlices: []
+        };
+      }
+
+      dependencies[use.package].fromSlices.push({
+        slice: slice.sliceName,
+        arch: archinfo.withoutSpecificOs(slice.arch),
         toSlice: use.slice,  // usually undefined, which means "default slices"
         weak: use.weak,
         unordered: use.unordered
