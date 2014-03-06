@@ -319,9 +319,9 @@ files.cp_r = function (from, to, options) {
     );
   }
 
-  var absTo = path.resolve(to);
+  var absFrom = path.resolve(from);
   if (! options.include || _.any(options.include, function (include) {
-    return include.indexOf(absTo) === 0;
+    return include === absFrom || include.indexOf(absFrom + "/") === 0;
   })) {
     files.mkdir_p(to, 0755);
   }
