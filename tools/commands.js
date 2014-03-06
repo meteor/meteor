@@ -18,6 +18,7 @@ var packageClient = require('./package-client.js');
 var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
+var tropohouse = require('./tropohouse.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -572,32 +573,48 @@ main.registerCommand({
 
     if (!Packages.findOne({name: name})) {
       process.stderr.write(name + ": no such package\n");
+      process.exit(1);
     } else {
       // Add a package here.
       var addVersion = versionConstraint;
-      if (!Versions.findOne({packageName: name,
-                             version: addVersion})) {
+
+      var versionObj = Versions.findOne({packageName: name,
+                             version: addVersion});
+      if (!versionObj) {
         process.stderr.write("Nonexistent version");
-      }
+        process.exit(1);
+     }
 
       // Our architecture.
-      var archinfo = require("./archinfo.js");
-      var architecture = archinfo.host();
-
-      // Here is the output of our constraint solver:
-      //   addVersion : addVersion
+      //var archinfo = require("./archinfo.js");
+      //var architecture = archinfo.host();
 
       // Find the build.
-      var buildRecord = Builds.findOne({packageName: name,
-                                        version: addVersion,
-                                        architecture: architecture});
+      // XXX: Find the one with the right architecture.
+      var buildRecord = Builds.findOne({versionId: versionObj._id});
 
+      if (!buildRecord) {
+        process.stderr.write("Nonexistent build");
+        process.exit(1);
+      }
+
+      if (!tropohouse.hasSpecifiedBuild(name,
+                                       addVersion,
+                                       buildRecord.architecture)) {
+        console.log("Downloading to warehouse");
+        tropohouse.downloadSpecifiedBuild(name,
+                                          addVersion,
+                                          buildRecord);
+      }
+
+      console.log("Tarball is at:", buildRecord.build.url);
+      console.log("Checking warehouse location of package + arch");
+      console.log("If not there/not right: fetch from tarball");
+      console.log("What do we do once we have the tarball?");
+
+      // XXX: What format are we storing this in? Probably not like this.
       project.addPackage(options.appDir, name + "@" + addVersion);
 
-      console.log("Find the right atuff");
-      console.log("Checking warehouse location of package + arch");
-      console.log("If not there/not right: fetch from", buildRecord);
-      console.log("What do we do once we have the tarball?");
 
       var note = Versions.findOne({packageName: name, version: addVersion}).description;
       process.stderr.write(name + ": " + note + "\n");
