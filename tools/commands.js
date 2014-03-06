@@ -584,15 +584,19 @@ main.registerCommand({
       var architecture = archinfo.host();
 
       // Here is the output of our constraint solver:
-      //   architecture: architecture
       //   addVersion : addVersion
 
       // Find the build.
       var buildRecord = Builds.findOne({packageName: name,
                                         version: addVersion,
                                         architecture: architecture});
+
       project.addPackage(options.appDir, name + "@" + addVersion);
 
+      console.log("Find the right atuff");
+      console.log("Checking warehouse location of package + arch");
+      console.log("If not there/not right: fetch from", buildRecord);
+      console.log("What do we do once we have the tarball?");
 
       var note = Versions.findOne({packageName: name, version: addVersion}).description;
       process.stderr.write(name + ": " + note + "\n");
