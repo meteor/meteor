@@ -1031,6 +1031,14 @@ _.extend(Package.prototype, {
     _.each(self.plugins, function (pluginsByArch, name) {
       var arch = archinfo.mostSpecificMatch(
         archinfo.host(), _.keys(pluginsByArch));
+      if (!arch) {
+        buildmessage.error("package `" + name + "` is built for incompatible " +
+                           "architecture");
+        // Recover by ignoring plugin
+        // XXX does this recovery work?
+        return;
+      }
+
       var plugin = pluginsByArch[arch];
       buildmessage.enterJob({
         title: "loading plugin `" + name +
@@ -1991,13 +1999,6 @@ _.extend(Package.prototype, {
       rejectBadPath(pluginMeta.path);
 
       var plugin = bundler.readJsImage(path.join(dir, pluginMeta.path));
-
-      if (! archinfo.matches(archinfo.host(), plugin.arch)) {
-        buildmessage.error("package `" + name + "` is built for incompatible " +
-                           "architecture: " + plugin.arch);
-        // Recover by ignoring plugin
-        return;
-      }
 
       if (!_.has(self.plugins, pluginMeta.name)) {
         self.plugins[pluginMeta.name] = {};
