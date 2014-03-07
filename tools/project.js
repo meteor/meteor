@@ -127,7 +127,7 @@ project.rewriteIndirectDependencies = function (appDir, deps) {
   });
 
   fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
-                   lines.join('\n') + '\n', 'utf8');
+                   lines.join(), 'utf8');
 };
 
 
