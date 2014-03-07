@@ -3,6 +3,7 @@ var path = require('path');
 var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
+var archinfo = require('./archinfo.js');
 
 var catalog = exports;
 
@@ -249,18 +250,59 @@ _.extend(catalog.Catalog.prototype, {
     return self.getVersion(name, versions[versions.length - 1]);
   },
 
-  // If this package has any builds at this version, return an
-  // arbitrarily chosen one, or null if it has no builds.  XXX
-  // temporary hack, should go away
-  getAnyBuild: function (name, version) {
+  // If this package has any builds at this version, return an array of builds
+  // which cover all of the required arches, or null if it is impossible to
+  // cover them all (or if the version does not exist).
+  getBuildsForArches: function (name, version, arches) {
     var self = this;
     self._ensureLoaded();
 
     var versionInfo = self.getVersion(name, version);
     if (! versionInfo)
       return null;
-    var buildInfo = self.builds.findOne({ versionId: versionInfo._id });
-    return buildInfo;
+
+    // XXX this uses a greedy algorithm that might decide, when we're looking
+    // for ["browser", "os.mac"] that we should download browser+os.linux to
+    // satisfy browser and browser+os.mac to satisfy os.mac.  This is not
+    // optimal, but on the other hand you might want the linux one later anyway
+    // for deployment.
+    // XXX if we have a choice between os and os.mac, this returns a random one.
+    //     so in practice we don't really support "maybe-platform-specific"
+    //     packages
+
+    var neededArches = {};
+    _.each(arches, function (arch) {
+      neededArches[arch] = true;
+    });
+
+    var buildsToUse = [];
+    var allBuilds = self.builds.find({ versionId: versionInfo._id }).fetch();
+    for (var i = 0; i < allBuilds.length && !_.isEmpty(neededArches); ++i) {
+      var build = allBuilds[i];
+      // XXX why isn't this a list in the DB?  I guess because of the unique
+      // index?
+      var buildArches = build.architecture.split('+');
+      var usingThisBuild = false;
+      _.each(neededArches, function (ignored, neededArch) {
+        if (archinfo.mostSpecificMatch(neededArch, buildArches)) {
+          // This build gives us something we need! We don't need it any
+          // more. (It is safe to delete keys of something you are each'ing over
+          // because _.each internally is doing an iteration over _.keys.)
+          delete neededArches[neededArch];
+          if (!usingThisBuild) {
+            usingThisBuild = true;
+            buildsToUse.push(build);
+            // XXX this should probably be denormalized in the DB
+            build.version = version;
+          }
+        }
+      });
+    }
+
+    if (_.isEmpty(neededArches))
+      return buildsToUse;
+    // We couldn't satisfy it!
+    return null;
   }
 });
 

@@ -700,3 +700,18 @@ files.FancySyntaxError = function () {};
 files.OfflineError = function (error) {
   this.error = error;
 };
+
+// Like fs.readdirSync, but skips entries whose names begin with dots, and
+// converts ENOENT to [].
+files.readdirNoDots = function (path) {
+  try {
+    var entries = fs.readdirSync(path);
+  } catch (e) {
+    if (e.code === 'ENOENT')
+      return [];
+    throw e;
+  }
+  return _.filter(entries, function (entry) {
+    return entry && entry[0] !== '.';
+  });
+};

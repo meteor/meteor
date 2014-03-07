@@ -1764,7 +1764,7 @@ _.extend(Package.prototype, {
       names = _.map(names, function(name) {
         var narr = name.split("@=");
         if (narr.length === 2) {
-          var newPath =  tropohouse.calculatePath(narr[0], narr[1], "browser+os");
+          var newPath =  tropohouse.packagePath(narr[0], narr[1]);
           self.library.override(narr[0], newPath);
         }
         return narr[0];
@@ -2195,12 +2195,6 @@ _.extend(Package.prototype, {
     return watch.isUpToDate(_watchSet);
   },
 
-  // True if this package can be saved as a unipackage
-  canBeSavedAsUnipackage: function () {
-    var self = this;
-    return true;
-  },
-
   // options:
   //
   // - buildOfPath: Optional. The absolute path on local disk of the
@@ -2209,12 +2203,10 @@ _.extend(Package.prototype, {
   //   then modified.
   saveAsUnipackage: function (outputPath, options) {
     var self = this;
+    options = options || {};
 
     if (!self.pluginsBuilt || !self.slicesBuilt)
       throw new Error("Unbuilt packages cannot be saved");
-
-    if (! self.canBeSavedAsUnipackage())
-      throw new Error("This package can not yet be saved as a unipackage");
 
     var builder = new Builder({ outputPath: outputPath });
 

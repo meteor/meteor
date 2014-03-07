@@ -5,11 +5,13 @@ var Future = require("fibers/future");
 var _ = require("underscore");
 
 var files = require('./files.js');
+var packages = require('./packages.js');
 var utils = require('./utils.js');
 var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
+var archinfo = require('./archinfo.js');
 
 var tropohouse = exports;
 
@@ -26,57 +28,104 @@ tropohouse.getWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor");
 };
 
-tropohouse.calculatePath = function(packageName, version, archString) {
-  var uniquePath = path.join(packageName, version, archString);
-  var fullPath = path.join(tropohouse.getWarehouseDir(), "packages", uniquePath);
-  return fullPath;
+tropohouse.downloadedBuildsDirectory = function(packageName, version) {
+  return path.join(tropohouse.getWarehouseDir(), "downloaded-builds",
+                   packageName, version);
 };
 
-tropohouse.hasSpecifiedBuild = function(packageName, version, archString) {
-  return fs.existsSync(tropohouse.calculatePath(packageName, version, archString));
+tropohouse.downloadedBuildPath = function(packageName, version, buildArches) {
+  return path.join(tropohouse.downloadedBuildsDirectory(packageName, version),
+                   buildArches);
 };
 
-tropohouse.downloadSpecifiedBuild = function(packageName, version, buildRecord) {
-  var path = tropohouse.calculatePath(packageName, version, buildRecord.architecture);
+tropohouse.downloadedArches = function (packageName, version) {
+  var downloadedBuilds = tropohouse.downloadedBuilds(packageName, version);
+  var downloadedArches = {};
+  _.each(downloadedBuilds, function (build) {
+    _.each(build.split('+'), function (arch) {
+      downloadedArches[arch] = true;
+    });
+  });
+  return _.keys(downloadedArches);
+};
+
+tropohouse.downloadedBuilds = function (packageName, version) {
+  return files.readdirNoDots(
+    tropohouse.downloadedBuildsDirectory(packageName, version));
+};
+
+tropohouse.packagePath = function (packageName, version) {
+  return path.join(tropohouse.getWarehouseDir(), "packages", packageName,
+                   version);
+};
+
+tropohouse.downloadSpecifiedBuild = function (buildRecord) {
+  // XXX nb: "version" field is calculated by getBuildsForArches
+  var path = tropohouse.downloadedBuildPath(
+    buildRecord.packageName, buildRecord.version, buildRecord.architecture);
   var packageTarball = httpHelpers.getUrl({
       url: buildRecord.build.url,
       encoding: null
   });
   files.extractTarGz(packageTarball, path);
-
-  // Make symlinks.
-  // XXX: if there is a plus in archstring, split and for each one that does not exist, split into symlink.
-  // XXX: make atomic.
 };
 
 // Returns true if we now have the package.
 // XXX more precise error handling in offline case. maybe throw instead like
 // warehouse does.
 tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
-                                                            architectures) {
+                                                            requiredArches) {
   var cat = release.current.catalog;
+  var packageName = versionInfo.packageName;
+  var version = versionInfo.version;
 
   // If this package isn't coming from the package server (loaded from
   // a checkout, or from an app package directory), don't try to
   // download it (we already have it)
-  if (cat.isLocalPackage(versionInfo.packageName))
+  if (cat.isLocalPackage(packageName))
     return true;
 
-  // XXX rather than getAnyBuild, should specifically look to see if
-  // we have builds that match architectures
-  var buildInfo = cat.getAnyBuild(versionInfo.packageName, versionInfo.version);
-  if (! buildInfo) {
-    return false;
+  // Figure out what arches (if any) we have downloaded for this package version
+  // already.
+  var downloadedArches = tropohouse.downloadedArches(packageName, version);
+  var archesToDownload = _.filter(requiredArches, function (requiredArch) {
+    return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
+  });
+
+  if (archesToDownload.length) {
+    var buildsToDownload = cat.getBuildsForArches(
+      packageName, version, archesToDownload);
+    if (! buildsToDownload) {
+      // XXX throw a special error instead?
+      return false;
+    }
+
+    // XXX how does concurrency work here?  we could just get errors if we try
+    // to rename over the other thing?  but that's the same as in warehouse?
+    _.each(buildsToDownload, function (build) {
+      tropohouse.downloadSpecifiedBuild(build);
+    });
   }
 
-  // If the tarball is not in the warehouse, download it there.
-  if (tropohouse.hasSpecifiedBuild(versionInfo.packageName,versionInfo.version,
-                                   buildInfo.architecture)) {
-    return true;
+  var packageDir = tropohouse.packagePath(packageName, version);
+  if (fs.existsSync(packageDir)) {
+    // XXX package exists but it may need to be rebuilt if we added more slices!
+    // do we have to do that here, or can we trust that the automatic rebuild
+    // will work once implemented?
+  } else {
+    // We need to turn our builds into a unipackage.
+    // XXX should this go through the library?
+    var pkg = new packages.Package(null  /* no library?? */);
+    var builds = tropohouse.downloadedBuilds(packageName, version);
+    _.each(builds, function (build, i) {
+      pkg._loadSlicesFromUnipackage(
+        packageName,
+        tropohouse.downloadedBuildPath(packageName, version, build),
+        {firstUnipackage: i === 0});
+    });
+    // XXX save new buildinfo stuff so it auto-rebuilds
+    pkg.saveAsUnipackage(packageDir);
   }
 
-  // XXX error handling
-  tropohouse.downloadSpecifiedBuild(
-    versionInfo.packageName, versionInfo.version, buildInfo);
   return true;
 };

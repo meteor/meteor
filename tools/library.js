@@ -279,8 +279,7 @@ _.extend(Library.prototype, {
           self.loadedPackages[name] = {pkg: pkg, packageDir: packageDir};
           pkg.build();
 
-          if (! buildmessage.jobHasMessages() && // ensure no errors!
-              pkg.canBeSavedAsUnipackage()) {
+          if (! buildmessage.jobHasMessages()) {
             // Save it, for a fast load next time
             try {
               files.addToGitignore(packageDir, '.build*');
