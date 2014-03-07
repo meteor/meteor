@@ -1732,10 +1732,12 @@ _.extend(Package.prototype, {
 
       // XXXX: We actually want to run the constraint solver and also edit the library to use trops
       // instead of an override.
-     names = _.map(names, function(name) {
-        narr = name.split("@=");
-        var newPath =  tropohouse.calculatePath(narr[0], narr[1], "browser+os");
-        self.library.override(narr[0], newPath);
+      names = _.map(names, function(name) {
+        var narr = name.split("@=");
+        if (narr.length === 2) {
+          var newPath =  tropohouse.calculatePath(narr[0], narr[1], "browser+os");
+          self.library.override(narr[0], newPath);
+        }
         return narr[0];
       });
 
