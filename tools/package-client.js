@@ -293,7 +293,9 @@ exports.bundleBuild = function (pkg, packageDir) {
 
   // Don't upload buildinfo.json. It's only of interest locally (for
   // example, it contains a watchset with local paths).
-  fs.unlinkSync(path.join(tarInputDir, 'buildinfo.json'));
+  var buildInfoPath = path.join(tarInputDir, 'buildinfo.json');
+  if (fs.existsSync(buildInfoPath))
+    fs.unlinkSync(buildInfoPath);
 
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);
