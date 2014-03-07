@@ -1977,7 +1977,8 @@ _.extend(Package.prototype, {
     self.metadata = {
       summary: mainJson.summary,
       internal: mainJson.internal,
-      version: mainJson.version
+      version: mainJson.version,
+      earliestCompatibleVersion: mainJson.earliestCompatibleVersion
     };
     self.defaultSlices = mainJson.defaultSlices;
     self.testSlices = mainJson.testSlices;

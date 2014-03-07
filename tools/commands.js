@@ -1487,6 +1487,7 @@ main.registerCommand({
     packageName: pkg.name,
     version: version,
     description: pkg.metadata.summary,
+    earliestCompatibleVersion: pkg.metadata.earliestCompatibleVersion,
     dependencies: dependencies
   });
 
