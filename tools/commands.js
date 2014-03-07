@@ -561,7 +561,7 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
 
-  var all = loadPackageData();
+  var all = packageClient.loadPackageData();
   var Packages = all.packages;
   var Versions = all.versions;
   var Builds = all.builds;
@@ -1538,7 +1538,7 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true
 }, function (options) {
-  var all = loadPackageData();
+  var all = packageClient.loadPackageData();
   var Packages = all.packages;
   var Versions = all.versions;
   Packages.find().forEach(function(package) {

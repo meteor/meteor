@@ -88,7 +88,7 @@ var writePackagesToDisk = function (syncToken, collectionData) {
   files.writeFileAtomically(filename, JSON.stringify(finalWrite, null, 2));
 };
 
-loadPackageData = function() {
+exports.loadPackageData = function() {
   //XXX: We can consider optimizing this with concurrency or something.
   var sources = [];
 
