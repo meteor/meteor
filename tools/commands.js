@@ -1441,10 +1441,11 @@ main.registerCommand({
   });
 
   var name = pkg.name;
-  var version = pkg.metadata.version;
+  var version = pkg.version;
 
   if (! version) {
-    process.stderr.write('Package must have a version\n');
+    process.stderr.write(
+"That package cannot be published because it doesn't have a version.\n");
     return 1;
   }
 
@@ -1468,7 +1469,7 @@ main.registerCommand({
     packageName: pkg.name,
     version: version,
     description: pkg.metadata.summary,
-    earliestCompatibleVersion: pkg.metadata.earliestCompatibleVersion,
+    earliestCompatibleVersion: pkg.earliestCompatibleVersion,
     dependencies: pkg.getDependencyMetadata()
   });
 

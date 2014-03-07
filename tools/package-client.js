@@ -215,10 +215,9 @@ var hashTarball = function (tarball) {
 // build itself...
 exports.bundleSource = function (pkg, packageDir) {
   var name = pkg.name;
-  var version = pkg.metadata.version;
 
   var tempDir = files.mkdtemp('build-source-package-');
-  var packageTarName = name + '-' + version + '-source';
+  var packageTarName = name + '-' + pkg.version + '-source';
   var dirToTar = path.join(tempDir, 'source', packageTarName);
   var sourcePackageDir = path.join(
     dirToTar,
@@ -287,7 +286,7 @@ exports.uploadTarball = uploadTarball;
 
 var bundleBuild = function (pkg, packageDir) {
   var tempDir = files.mkdtemp('build-package-');
-  var packageTarName = pkg.name + '-' + pkg.metadata.version + '-' +
+  var packageTarName = pkg.name + '-' + pkg.version + '-' +
         pkg.architectures().join('+');
   var tarInputDir = path.join(tempDir, packageTarName);
 

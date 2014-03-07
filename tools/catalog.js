@@ -132,9 +132,9 @@ _.extend(catalog.Catalog.prototype, {
       });
       var versionId = self.versions.insert({
         packageName: name,
-        version: pkg.metadata.version,
+        version: pkg.version,
         publishedBy: null,
-        earliestCompatibleVersion: pkg.metadata.earliestCompatibleVersion,
+        earliestCompatibleVersion: pkg.earliestCompatibleVersion,
         changelog: null, // XXX get actual changelog when we have it?
         description: pkg.metadata.summary,
         dependencies: pkg.getDependencyMetadata(),

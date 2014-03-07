@@ -1,6 +1,7 @@
 var path = require('path');
 var os = require('os');
 var _ = require('underscore');
+var semver = require('semver');
 var files = require('./files.js');
 var watch = require('./watch.js');
 var bundler = require('./bundler.js');
@@ -41,13 +42,28 @@ var rejectBadPath = function (p) {
 };
 
 var parseSpec = function (spec) {
-  var parts = spec.split(':');
-  if (parts.length > 2 || parts.length === 0)
+  var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/)
+  if (! m)
     throw new Error("Bad package spec: " + spec);
-  var ret = {package: parts[0]};
-  if (parts.length === 2)
-    ret.slice = parts[1];
+  var ret = { package: m[1] };
+  if (m[3])
+    ret.slice = m[3];
+  if (m[5])
+    ret.constraint = m[5];
   return ret;
+};
+
+// Given a semver version string, return the earliest semver for which
+// we are a replacement. This is used to compute the default
+// earliestCompatibleVersion.
+var earliestCompatible = function (version) {
+  // This is not the place to check to see if version parses as
+  // semver. That should have been done when we first received it from
+  // the user.
+  var m = version.match(/^(\d)+\./);
+  if (! m)
+    throw new Error("not a valid version: " + version);
+  return m[1] + ".0.0";
 };
 
 // A sort comparator to order files into load order.
@@ -845,9 +861,19 @@ var Package = function (library, packageDirectoryForBuildInfo) {
   // dependencies
   self.library = library;
 
-  // Package metadata. Keys are 'summary', 'internal', 'version',
-  //  'earliestCompatibleVersion'.
+  // Package metadata. Keys are 'summary' and 'internal'. Currently
+  // both of these are optional.
   self.metadata = {};
+
+  // Package version as a semver string. Optional; not all packages
+  // (for example, the app) have versions.
+  // XXX when we have names, maybe we want to say that all packages
+  // with names have versions? certainly the reverse is true
+  self.version = null;
+
+  // The earliest version for which this package is supposed to be a
+  // compatible replacement. Set if and only if version is set.
+  self.earliestCompatibleVersion = null;
 
   // Available editions/subpackages ("slices") of this package. Array
   // of Slice.
@@ -993,19 +1019,53 @@ _.extend(Package.prototype, {
   // by the package catalog.
   getDependencyMetadata: function () {
     var self = this;
+    var ret = self._computeDependencyMetadata();
+    if (! ret)
+      throw new Error("inconsistent dependency constraint across slices?");
+    return ret;
+  },
+
+  // If dependencies aren't consistent across slices, return false and
+  // also log a buildmessage error if inside a buildmessage job. Else
+  // return true.
+  _checkCrossSliceVersionConstraints: function () {
+    var self = this;
+    return !! self._computeDependencyMetadata(true);
+  },
+
+  // Compute the return value for getDependencyMetadata, or return
+  // null if there is a dependency that doesn't have the same
+  // constraint across all slices (and, if logError is true, log a
+  // buildmessage error).
+  _computeDependencyMetadata: function (logError) {
+    var self = this;
     var dependencies = {};
+    var allConstraints = {}; // for error reporting. package name to array
+    var failed = false;
 
     _.each(self.slices, function (slice) {
       // XXX also iterate over "implies"
       _.each(slice.uses, function (use) {
         if (!_.has(dependencies, use.package)) {
           dependencies[use.package] = {
-            constraint: "=1.0.0",  // XXX fix this
+            constraint: null,
             references: []
           };
+          allConstraints[use.package] = [];
+        }
+        var d = dependencies[use.package];
+
+        if (use.constraint) {
+          allConstraints[use.package].push(use.constraint);
+
+          if (d.constraint === null) {
+            d.constraint = use.constraint;
+          } else if (d.constraint !== use.constraint) {
+            failed = true;
+          }
         }
 
-        dependencies[use.package].references.push({
+        d.references.push({
           slice: slice.sliceName,
           arch: archinfo.withoutSpecificOs(slice.arch),
           targetSlice: use.slice,  // usually undefined, for "default slices"
@@ -1015,7 +1075,22 @@ _.extend(Package.prototype, {
       });
     });
 
-    return dependencies;
+    if (failed && logError) {
+      _.each(allConstraints, function (constraints, name) {
+        constraints = _.uniq(constraints);
+        if (constraints.length > 1) {
+          buildmessage.error(
+            "The version constraint for a dependency must be the same " +
+              "at every place it is mentioned in a package. " +
+              "'" + name + "' is constrained both as "  +
+              constraints.join(' and ') + ". Change them to match.");
+          // recover by returning false (the caller had better detect
+          // this and use its own recovery logic)
+        }
+      });
+    }
+
+    return failed ? null : dependencies;
   },
 
   // This is called on all packages at Meteor install time so they can
@@ -1166,6 +1241,8 @@ _.extend(Package.prototype, {
   // go wrong. Be sure to call jobHasMessages to see if it actually
   // succeeded.
   //
+  // Note that this does not set a version on the package!
+  //
   // Options:
   // - sourceRoot (required if sources present)
   // - serveRoot (required if sources present)
@@ -1216,6 +1293,9 @@ _.extend(Package.prototype, {
     });
     self.slices.push(slice);
 
+    if (! self._checkCrossSliceVersionConstraints())
+      throw new Error("only one slice, so how can consistency check fail?");
+
     self.defaultSlices = {'os': [options.sliceName]};
   },
 
@@ -1258,7 +1338,18 @@ _.extend(Package.prototype, {
       // 'environments', but it was never implemented and no package
       // ever used it.
       describe: function (options) {
-        _.extend(self.metadata, options);
+        _.each(options, function (value, key) {
+          if (key === "summary" || key === "internal")
+            self.metadata[key] = value;
+          else if (key === "version")
+            // XXX validate that version parses
+            self.version = value;
+          else if (key === "earliestCompatibleVersion")
+            self.earliestCompatibleVersion = value;
+          else
+            buildmessage.error("unknown attribute '" + key + "' " +
+                               "in package description");
+        });
       },
 
       on_use: function (f) {
@@ -1411,6 +1502,31 @@ _.extend(Package.prototype, {
       roleHandlers = {use: null, test: null};
       self.pluginInfo = {};
       npmDependencies = null;
+    }
+
+
+    if (! self.version) {
+      if (! buildmessage.jobHasMessages()) {
+        // Only write the error if there have been no errors so
+        // far. (Otherwise if there is a parse error we'll always get
+        // this message, because we won't have been able to run any
+        // code.)
+        buildmessage.error("A version must be specified for the package. " +
+                           "Set it with Package.describe.");
+      }
+      // Recover by leaving the version unset. This is sort of
+      // unfortunate (it means that whereever we work with Package
+      // objects, we need to consider the possibility that their
+      // version is not set) but short of failing the build we have no
+      // alternative. Using a dummy version like "1.0.0" would cause
+      // endless confusion and a fake version like "unknown" wouldn't
+      // parse as semver. Anyway, apps don't have versions, so it's
+      // not like we didn't already have to think about this case.
+    }
+
+    if (self.version && ! self.earliestCompatibleVersion) {
+      self.earliestCompatibleVersion =
+        earliestCompatible(self.version);
     }
 
     // source files used
@@ -1655,6 +1771,14 @@ _.extend(Package.prototype, {
       }
     });
 
+
+    // Make sure that if a dependency was specified in multiple
+    // slices, the constraint is exactly the same.
+    if (! self._checkCrossSliceVersionConstraints()) {
+      // A build error was written. Recover by ignoring the
+      // fact that we have differing constraints.
+    }
+
     // Grab any npm dependencies. Keep them in a cache in the package
     // source directory so we don't have to do this from scratch on
     // every build.
@@ -1761,7 +1885,7 @@ _.extend(Package.prototype, {
 
       // XXXX: We actually want to run the constraint solver and also edit the library to use trops
       // instead of an override.
-      names = _.map(names, function(name) {
+      _.each(names, function(name) {
         var narr = name.split("@=");
         return narr[0];
       });
@@ -1938,6 +2062,13 @@ _.extend(Package.prototype, {
       };
     });
 
+    if (! self._checkCrossSliceVersionConstraints()) {
+      // should never happen since we created the slices from
+      // .meteor/packages, which doesn't have a way to express
+      // different constraints for different slices
+      throw new Error("conflicting constraints in a package?");
+    }
+
     self.defaultSlices = { browser: ['client'], 'os': ['server'] };
   },
 
@@ -2038,10 +2169,10 @@ _.extend(Package.prototype, {
       self.name = name;
       self.metadata = {
         summary: mainJson.summary,
-        internal: mainJson.internal,
-        version: mainJson.version,
-        earliestCompatibleVersion: mainJson.earliestCompatibleVersion
+        internal: mainJson.internal
       };
+      self.version = mainJson.version;
+      self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
     }
     // If multiple sub-unipackages specify defaultSlices or testSlices for the
     // same arch, just take the answer from the first sub-unipackage.
@@ -2208,8 +2339,16 @@ _.extend(Package.prototype, {
     var self = this;
     options = options || {};
 
-    if (!self.pluginsBuilt || !self.slicesBuilt)
+    if (! self.pluginsBuilt || ! self.slicesBuilt)
       throw new Error("Unbuilt packages cannot be saved");
+
+    if (! self.version) {
+      // XXX is this going to work? may need to relax it for apps?
+      // that seems reasonable/useful. I guess the basic rules then
+      // becomes that you can't depend on something if it doesn't have
+      // a name and a version
+      throw new Error("Packages without versions cannot be saved");
+    }
 
     var builder = new Builder({ outputPath: outputPath });
 
@@ -2219,7 +2358,8 @@ _.extend(Package.prototype, {
         format: "unipackage-pre1",
         summary: self.metadata.summary,
         internal: self.metadata.internal,
-        version: self.metadata.version,
+        version: self.version,
+        earliestCompatibleVersion: self.earliestCompatibleVersion,
         slices: [],
         defaultSlices: self.defaultSlices,
         testSlices: self.testSlices,
@@ -2316,9 +2456,10 @@ _.extend(Package.prototype, {
           uses: _.map(slice.uses, function (u) {
             return {
               'package': u.package,
-              slice: u.slice || undefined,
               // For cosmetic value, leave false values for these options out of
               // the JSON file.
+              constraint: u.constraint || undefined,
+              slice: u.slice || undefined,
               unordered: u.unordered || undefined,
               weak: u.weak || undefined
             };
