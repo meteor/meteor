@@ -2215,12 +2215,15 @@ _.extend(Package.prototype, {
 
       builder.reserve("unipackage.json");
       builder.reserve("buildinfo.json");
-      // These is where we put the NPM dependencies of the slices (but not of
-      // plugins). The node_modules directory is nested inside "npm" so that it
-      // is not visible from within plugins.
-      builder.reserve("npm/node_modules", { directory: true });
       builder.reserve("head");
       builder.reserve("body");
+
+      // Map from absolute path to npm directory in the slice, to the generated
+      // filename in the unipackage we're writing.  Multiple slices can use the
+      // same npm modules (eg, for now, main and tests slices), but also there
+      // can be different sets of directories as well (eg, for a unipackage
+      // merged with from multiple unipackages with _loadSlicesFromUnipackage).
+      var npmDirectories = {};
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to
       // contain a file called "package.js"; they use this as part of deciding
@@ -2263,6 +2266,22 @@ _.extend(Package.prototype, {
         buildInfoJson.sliceDependencies[sliceJsonFile] =
           slice.watchSet.toJSON();
 
+        // Figure out where the npm dependencies go.
+        var nodeModulesPath = undefined;
+        var needToCopyNodeModules = false;
+        if (slice.nodeModulesPath) {
+          if (_.has(npmDirectories, slice.nodeModulesPath)) {
+            // We already have this npm directory from another slice.
+            nodeModulesPath = npmDirectories[slice.nodeModulesPath];
+          } else {
+            // It's important not to put node_modules at the top level of the
+            // unipackage, so that it is not visible from within plugins.
+            nodeModulesPath = npmDirectories[slice.nodeModulesPath] =
+              builder.generateFilename("npm/node_modules", {directory: true});
+            needToCopyNodeModules = true;
+          }
+        }
+
         // Construct slice metadata
         var sliceJson = {
           format: "unipackage-slice-pre1",
@@ -2279,7 +2298,7 @@ _.extend(Package.prototype, {
             };
           }),
           implies: (_.isEmpty(slice.implies) ? undefined : slice.implies),
-          node_modules: slice.nodeModulesPath ? 'npm/node_modules' : undefined,
+          node_modules: nodeModulesPath,
           resources: []
         };
 
@@ -2354,10 +2373,10 @@ _.extend(Package.prototype, {
         });
 
         // If slice has included node_modules, copy them in
-        if (slice.nodeModulesPath) {
+        if (needToCopyNodeModules) {
           builder.copyDirectory({
             from: slice.nodeModulesPath,
-            to: 'npm/node_modules'
+            to: nodeModulesPath
           });
         }
 

@@ -1167,10 +1167,15 @@ _.extend(JsImage.prototype, {
     // that we will use
     var nodeModulesDirectories = [];
     _.each(self.nodeModulesDirectories || [], function (nmd) {
+      // We do a little manipulation to make sure that generateFilename only
+      // adds suffixes to parts of the path other than the final node_modules,
+      // which needs to stay node_modules.
+      var dirname = path.dirname(nmd.preferredBundlePath);
+      var base = path.basename(nmd.preferredBundlePath);
+      var generatedDir = builder.generateFilename(dirname, {directory: true});
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: builder.generateFilename(nmd.preferredBundlePath,
-                                                      { directory: true })
+        preferredBundlePath: path.join(generatedDir, base)
       }));
     });
 
