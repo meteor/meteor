@@ -141,6 +141,20 @@ var ValueHandler = AttributeHandler.extend({
   }
 });
 
+// attributes of the type 'xlink:something' should be set using
+// the correct namespace in order to work
+var XlinkHandler = AttributeHandler.extend({
+  update: function(element, oldValue, value) {
+    var NS = 'http://www.w3.org/1999/xlink';
+    if (value === null) {
+      if (oldValue !== null)
+        element.removeAttributeNS(NS, this.name);
+    } else {
+      element.setAttributeNS(NS, this.name, this.value);
+    }
+  }
+});
+
 // cross-browser version of `instanceof SVGElement`
 var isSVGElement = function (elem) {
   return 'ownerSVGElement' in elem;
@@ -164,6 +178,8 @@ makeAttributeHandler = function (elem, name, value) {
     // internally, TEXTAREAs tracks their value in the 'value'
     // attribute just like INPUTs.
     return new ValueHandler(name, value);
+  } else if (name.substring(0,6) === 'xlink:') {
+    return new XlinkHandler(name.substring(6), value);
   } else {
     return new AttributeHandler(name, value);
   }
