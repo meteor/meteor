@@ -204,11 +204,11 @@ var hashTarball = function (tarball) {
 };
 
 // XXX this is missing a few things:
-//    - package.js
 //    - locking down build-time dependencies: tools version, versions
 //      of all (not-built-from-source) plugins used
-//    - .npm/npm-shrinkwrap.json (which also needs to be in the watchSet)
 // in general, we need to include all the stuff that goes into the watchSet
+// We include npm-shrinkwrap which does not go in the watchSet but
+// probably should.
 //
 // In retrospect a better approach here might be to actually make "save source
 // somewhere else" or perhaps "add source to tarball" be part of the package
@@ -230,13 +230,26 @@ exports.bundleSource = function (pkg, packageDir) {
     return null;
   }
 
+  var includeSources = _.clone(pkg.sources);
+  includeSources.push('package.js');
+  if (fs.existsSync('.npm/package/npm-shrinkwrap.json')) {
+    includeSources.push('.npm/package/npm-shrinkwrap.json');
+  }
+  _.each(pkg.plugins, function (plugin, pluginName) {
+    var pluginShrinkwrap = path.join('.npm/plugin/', pluginName,
+                                     'npm-shrinkwrap.json');
+    if (fs.existsSync(pluginShrinkwrap)) {
+      includeSources.push(pluginShrinkwrap);
+    }
+  });
+
   // We copy source files into a temp directory and then tar up the temp
   // directory. It would be great if we could avoid the copy, but as far
   // as we can tell, this is the only way to get a tarball with the
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
   files.cp_r(packageDir, sourcePackageDir, {
-    include: pkg.sources
+    include: includeSources
   });
 
   // We put this inside the temp dir because mkdtemp makes sure that the
