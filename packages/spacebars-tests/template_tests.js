@@ -1606,3 +1606,9 @@ Tinytest.add("spacebars - controls - checkbox", function(test) {
 
   document.body.removeChild(div);
 });
+
+Tinytest.add('spacebars - template - unfound template', function (test) {
+  test.throws(function () {
+    renderToDiv(Template.spacebars_test_nonexistent_template);
+  }, /Can't find template/);
+});

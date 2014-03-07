@@ -96,6 +96,8 @@ _extend(UI.Component, {
       // Resolve id `foo` as `data.foo` (with a "soft dot").
       return function (/*arguments*/) {
         var data = getComponentData(self);
+        if (template && !(data && _.has(data, id)))
+          throw new Error("Can't find template, helper or data context key: " + id);
         if (! data)
           return data;
         var result = data[id];
