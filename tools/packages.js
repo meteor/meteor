@@ -1715,7 +1715,7 @@ _.extend(Package.prototype, {
 
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
-      var znames = project.getAllDependencies(appDir);
+      var names = project.getAllDependencies(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
 
