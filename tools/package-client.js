@@ -315,7 +315,7 @@ exports.createAndPublishBuiltPackage = function (conn, pkg, packageDir) {
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: pkg.name,
-    version: pkg.metadata.version,
+    version: pkg.version,
     architecture: pkg.architectures().join('+')
   });
 
@@ -331,7 +331,7 @@ exports.createAndPublishBuiltPackage = function (conn, pkg, packageDir) {
 
   conn.close();
   process.stdout.write('Published ' + pkg.name +
-                       ', version ' + pkg.metadata.version);
+                       ', version ' + pkg.version);
 
   process.stdout.write('\nDone!\n');
 };
