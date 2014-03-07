@@ -11,7 +11,12 @@ ConstraintSolver.Dependency = {
 };
 
 // main class
-// cat is a catalog.Catalog object
+
+// cat is a catalog.Catalog object. We have to pass this in because
+// we're in a package and can't require('release.js'). If this code
+// moves to the tool, or if all of the tool code moves to a star, we
+// should get cat from release.current.catalog rather than passing it
+// in.
 ConstraintSolver.Resolver = function (cat, options) {
   var self = this;
 

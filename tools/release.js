@@ -3,6 +3,7 @@ var files = require('./files.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
 var path = require('path');
+var catalog = require('./catalog.js');
 var library = require('./library.js');
 
 var release = exports;
@@ -14,8 +15,12 @@ var Release = function (options) {
   // release, eg, "1.0". If not a proper release, null.
   self.name = options.name;
 
-  // A Library object that can be used to access the packages in this
-  // release.
+  // A Catalog contains the metadata for all of the packages that we
+  // know about, including packages that we haven't downloaded from
+  // the package server.
+  self.catalog = null;
+
+  // A Library object that can be used to load packages.
   self.library = null;
 
   var packageDirs = _.clone(options.packageDirs || []);
@@ -27,6 +32,8 @@ var Release = function (options) {
     // Running a proper release
     self._manifest = options.manifest;
   }
+
+  self.catalog = new catalog.Catalog;
 
   self.library = new library.Library({
     localPackageDirs: packageDirs,

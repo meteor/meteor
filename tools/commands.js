@@ -5,7 +5,6 @@ var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var library = require('./library.js');
-var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
 var project = require('./project.js');
@@ -562,7 +561,7 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
 
-  var cat = new catalog.Catalog;
+  var cat = release.current.catalog;
 
   // Read in existing package dependencies.
   var usingDirectly = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
@@ -1538,7 +1537,7 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true
 }, function (options) {
-  var cat = new catalog.Catalog;
+  var cat = release.current.catalog;
   _.each(cat.getAllPackageNames(), function (name) {
     var versionInfo = cat.getLatestVersion(name);
     if (versionInfo) {
