@@ -119,7 +119,6 @@ project.rewriteIndirectDependencies = function (appDir, deps) {
     lines.push(name + "@" + version + "\n");
   })
 
-  console.log(lines);
   fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
                    lines.join('\n') + '\n', 'utf8');
 }

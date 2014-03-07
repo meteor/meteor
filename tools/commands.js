@@ -596,7 +596,8 @@ main.registerCommand({
       // Add the package to the list of packages that we use directly.
       usingDirectly[constraint.packageName] = constraint.versionConstraint;
       var usingIndirectly = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
-      console.log(usingIndirectly);
+
+      console.log("U", usingDirectly);
 
       // Call the constraint solver.
       var ConstraintSolver = unipackage.load({
@@ -637,6 +638,8 @@ main.registerCommand({
                                           buildRecord.architecture)) {
            tropohouse.downloadSpecifiedBuild(name, addVersion, buildRecord);
         }
+
+        process.stdout.write("Added :" + packageName + " at " + version);
 
         // XXX: Probably want to log all packages that we add.
       })
