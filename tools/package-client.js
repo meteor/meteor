@@ -287,12 +287,16 @@ exports.bundleBuild = function (pkg, packageDir) {
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = pkg.name + '-' + pkg.metadata.version + '-' +
         pkg.architectures().join('+');
+  var tarInputDir = path.join(tempDir, packageTarName);
 
-  files.cp_r(path.join(packageDir, '.build'),
-             path.join(tempDir, packageTarName));
+  files.cp_r(path.join(packageDir, '.build'), tarInputDir);
+
+  // Don't upload buildinfo.json. It's only of interest locally (for
+  // example, it contains a watchset with local paths).
+  fs.unlink(path.join(tarInputDir, 'buildinfo.json'));
 
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');
-  files.createTarball(path.join(tempDir, packageTarName), buildTarball);
+  files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = hashTarball(buildTarball);
 
