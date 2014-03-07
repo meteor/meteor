@@ -267,7 +267,7 @@ exports.bundleSource = function (pkg, packageDir) {
   };
 };
 
-exports.uploadTarball = function (putUrl, tarball) {
+var uploadTarball = function (putUrl, tarball) {
   var size = fs.statSync(tarball).size;
   var rs = fs.createReadStream(tarball);
   httpHelpers.request({
@@ -283,7 +283,9 @@ exports.uploadTarball = function (putUrl, tarball) {
   rs.close();
 };
 
-exports.bundleBuild = function (pkg, packageDir) {
+exports.uploadTarball = uploadTarball;
+
+var bundleBuild = function (pkg, packageDir) {
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = pkg.name + '-' + pkg.metadata.version + '-' +
         pkg.architectures().join('+');
@@ -306,4 +308,31 @@ exports.bundleBuild = function (pkg, packageDir) {
     buildTarball: buildTarball,
     tarballHash: tarballHash
   };
+};
+
+exports.bundleBuild = bundleBuild;
+
+exports.createAndPublishBuiltPackage = function (conn, pkg, packageDir) {
+  process.stdout.write('Creating package build...\n');
+  var uploadInfo = conn.call('createPackageBuild', {
+    packageName: pkg.name,
+    version: pkg.metadata.version,
+    architecture: pkg.architectures().join('+')
+  });
+
+  var bundleResult = bundleBuild(pkg, packageDir);
+
+  process.stdout.write('Uploading build...\n');
+  uploadTarball(uploadInfo.uploadUrl,
+                bundleResult.buildTarball);
+
+  process.stdout.write('Publishing package build...\n');
+  conn.call('publishPackageBuild',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
+  conn.close();
+  process.stdout.write('Published ' + pkg.name +
+                       ', version ' + pkg.metadata.version);
+
+  process.stdout.write('\nDone!\n');
 };

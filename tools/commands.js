@@ -19,6 +19,7 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
+var packages = require('./packages.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1486,28 +1487,9 @@ main.registerCommand({
   conn.call('publishPackageVersion',
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
-  process.stdout.write('Creating package build...\n');
-  uploadInfo = conn.call('createPackageBuild', {
-    packageName: pkg.name,
-    version: version,
-    architecture: pkg.architectures().join('+')
-  });
+  packageClient.createAndPublishBuiltPackage(conn, pkg,
+                                             options.packageDir);
 
-  bundleResult = packageClient.bundleBuild(pkg, options.packageDir);
-
-  process.stdout.write('Uploading build...\n');
-  packageClient.uploadTarball(uploadInfo.uploadUrl,
-                              bundleResult.buildTarball);
-
-  process.stdout.write('Publishing package build...\n');
-  conn.call('publishPackageBuild',
-            uploadInfo.uploadToken, bundleResult.tarballHash);
-
-  conn.close();
-  process.stdout.write('Published ' + pkg.name +
-                       ', version ' + version);
-
-  process.stdout.write('\nDone!\n');
   return 0;
 });
 
@@ -1526,6 +1508,62 @@ main.registerCommand({
       console.log(name, versionInfo.description);
     }
   });
+});
+
+main.registerCommand({
+  name: 'publish-for-arch',
+  minArgs: 0,
+  maxArgs: 0,
+  options: {
+    versionString: { type: String, required: true },
+    name: { type: String, required: true }
+  }
+}, function (options) {
+  var cat = release.current.catalog;
+  if (! cat.getPackage(options.name)) {
+    process.stderr.write('No package named ' + options.name);
+    return 1;
+  }
+  var pkgVersion = cat.getVersion(options.name, options.versionString);
+  if (! pkgVersion) {
+    process.stderr.write('There is no version ' +
+                         options.versionString + ' for package ' +
+                         options.name);
+    return 1;
+  }
+
+  if (! pkgVersion.source || ! pkgVersion.source.url) {
+    process.stderr.write('There is no source uploaded for ' +
+                         options.name + ' ' + options.versionString);
+    return 1;
+  }
+
+  var sourceTarball = httpHelpers.getUrl({
+    url: pkgVersion.source.url,
+    encoding: null
+  });
+  var sourcePath = files.mkdtemp(options.name + '-' +
+                                 options.versionString + '-source-');
+  files.extractTarGz(sourceTarball, sourcePath);
+
+  // XXX Factor out with packageClient.bundleSource so that we don't
+  // have knowledge of the tarball structure in two places.
+  var packageDir = path.join(sourcePath, options.name);
+
+  if (! fs.existsSync(packageDir)) {
+    process.stderr.write('Malformed source tarball');
+    return 1;
+  }
+
+  var pkg = new packages.Package(release.current.library, packageDir);
+  pkg.initFromPackageDir(options.name, packageDir);
+  pkg.build();
+  pkg.saveAsUnipackage(path.join(packageDir, '.build'));
+
+  var conn = packageClient.loggedInPackagesConnection();
+  packageClient.createAndPublishBuiltPackage(conn, pkg, packageDir);
+
+  return 0;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
