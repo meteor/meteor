@@ -45,8 +45,6 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
     self.sortedVersionsForPackage[packageDef.name] = _.pluck(Versions.find({
       packageName: packageDef.name
     }).fetch(), 'version');
-    console.log("Sorted versions for", packageDef.name,
-                self.sortedVersionsForPackage[packageDef.name]);
     self.sortedVersionsForPackage[packageDef.name].sort(semver.compare);
   });
 };
