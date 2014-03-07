@@ -54,9 +54,9 @@ tropohouse.downloadedBuilds = function (packageName, version) {
     tropohouse.downloadedBuildsDirectory(packageName, version));
 };
 
-tropohouse.packagePath = function (packageName, version) {
+tropohouse.packagePath = function (packageName, version, arch) {
   return path.join(tropohouse.getWarehouseDir(), "packages", packageName,
-                   version);
+                   version, arch);
 };
 
 tropohouse.downloadSpecifiedBuild = function (buildRecord) {

@@ -1754,8 +1754,8 @@ _.extend(Package.prototype, {
 
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
-//      var names = project.getAllDependencies(appDir);
       var names = project.getPackages(appDir);
+      var vers = project.getAllDependencies(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
 
@@ -1763,13 +1763,16 @@ _.extend(Package.prototype, {
       // instead of an override.
       names = _.map(names, function(name) {
         var narr = name.split("@=");
-        if (narr.length === 2) {
-          var newPath =  tropohouse.packagePath(narr[0], narr[1]);
-          self.library.override(narr[0], newPath);
-        }
         return narr[0];
       });
 
+      vers = _.map(vers,  function(name) {
+        var newPath =  tropohouse.packagePath(name.packageName, name.versionConstraint, "browser+os");
+        self.library.override(name.packageName, newPath);
+        return name.packageName;
+      });
+
+      names = _.union(names, vers);
       // Create slice
       var slice = new Slice(self, {
         name: sliceName,

@@ -99,7 +99,10 @@ _.extend(WatchSet.prototype, {
       if (self.files[filePath] === hash)
         return;
       // Nope, inconsistent.
-      self.alwaysFire = true;
+      console.log(filePath, hash, self.files[filePath]);
+      self.files[filePath] = hash;
+
+  //    self.alwaysFire = true;
       return;
     }
     self.files[filePath] = hash;
@@ -135,9 +138,9 @@ _.extend(WatchSet.prototype, {
       self.alwaysFire = true;
       return;
     }
-    _.each(other.files, function (hash, name) {
-      self.addFile(name, hash);
-    });
+//    _.each(other.files, function (hash, name) {
+//      self.addFile(name, hash);
+//    });
     _.each(other.directories, function (dir) {
       // XXX this doesn't deep-clone the directory, but I think these objects
       // are never mutated
