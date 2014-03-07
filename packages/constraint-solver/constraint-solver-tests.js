@@ -1,3 +1,5 @@
+var semver = Npm.require('semver');
+
 // Setup mock data for tests
 var Packages = new LocalCollection;
 var Versions = new LocalCollection;
@@ -55,7 +57,37 @@ insertBuild("jquery-widgets", "1.0.2", "1.0.0");
 insertBuild("jquery", "1.8.0", "1.0.0");
 insertBuild("jquery", "1.9.0", "1.0.0");
 
-var resolver = new ConstraintSolver.Resolver(Packages, Versions, Builds);
+// XXX Temporary hack: make a catalog stub to pass in to the constraint
+// solver. We'll soon move constraint-solver into tools and just run
+// tests with self-test, passing a real Catalog object.
+var catalogStub = {
+  packages: Packages,
+  versions: Versions,
+  builds: Builds,
+  getAllPackageNames: function () {
+    return _.pluck(Packages.find().fetch(), 'name');
+  },
+  getPackage: function (name) {
+    return this.packages.findOne({ name: name });
+  },
+  getSortedVersions: function (name) {
+    return _.pluck(
+      this.versions.find({
+        packageName: name
+      }, { fields: { version: 1 } }).fetch(),
+      'version'
+    ).sort(semver.compare);
+  },
+  getVersion: function (name, version) {
+    return this.versions.findOne({
+      packageName: name,
+      version: version
+    });
+  }
+};
+
+var resolver = new ConstraintSolver.Resolver(catalogStub, Packages,
+                                             Versions, Builds);
 
 var currentTest = null;
 var t = function (deps, expected) {
