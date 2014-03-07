@@ -612,7 +612,6 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
 
       // Call the constraint solver.
       var ConstraintSolver = unipackage.load({
-      	library: release.current.library,
         packages: ['constraint-solver'],
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
@@ -1301,7 +1300,6 @@ main.registerCommand({
       library.override(packageName, packageDir);
 
       world = unipackage.load({
-        library: library,
         packages: [ packageName ],
         release: release.current.name
       });

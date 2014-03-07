@@ -11,7 +11,6 @@ var _ = require('underscore');
 var getLoadedPackages = _.once(function () {
   var unipackage = require('./unipackage.js');
   return unipackage.load({
-    library: release.current.library,
     packages: [ 'meteor', 'livedata', 'minimongo', 'mongo-livedata' ],
     release: release.current.name
   });

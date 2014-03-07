@@ -19,7 +19,6 @@ var release = require('./release.js');
 
 var getLoggingPackage = _.once(function () {
   var Log = unipackage.load({
-    library: release.current.library,
     packages: ['logging']
   }).logging.Log;
 

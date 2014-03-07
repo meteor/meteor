@@ -528,7 +528,6 @@ _.extend(Slice.prototype, {
     var jsAnalyze = null;
     if (! _.isEmpty(js) && self.pkg.name !== "js-analyze") {
       jsAnalyze = unipackage.load({
-        library: self.pkg.library,
         packages: ["js-analyze"]
       })["js-analyze"].JSAnalyze;
     }

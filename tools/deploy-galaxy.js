@@ -16,7 +16,6 @@ var buildmessage = require('./buildmessage.js');
 // a bit of a hack
 var getPackage = _.once(function () {
   return unipackage.load({
-    library: release.current.library,
     packages: [ 'meteor', 'livedata' ],
     release: release.current.name
   });
@@ -442,7 +441,6 @@ exports.logs = function (options) {
   try {
     var lastLogId = null;
     var Log = unipackage.load({
-      library: release.current.library,
       packages: [ 'logging' ],
       release: release.current.name
     }).logging.Log;

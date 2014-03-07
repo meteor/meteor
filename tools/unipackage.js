@@ -21,9 +21,12 @@ var buildmessage = require('./buildmessage.js');
 // whenever you call load() with a different library the cache is
 // flushed.
 //
+// Library: This function used to take a library, but now it always
+// uses release.current.library. XXX this will need to be revisited
+// for the post-manifest world; we'll need to have something about
+// wrapper packages instead?
+//
 // Options:
-// - library: The Library to use to retrieve packages and their
-//   dependencies. Required.
 // - packages: The packages to load, as an array of strings. Each
 //   string may be either "packagename" or "packagename.slice".
 // - release: Optional. Not used to load packages! The release name to
@@ -46,13 +49,12 @@ var cache = null; // map from package names (joined with ',') to return value
 
 var load = function (options) {
   options = options || {};
-  if (! (options.library instanceof library.Library))
-    throw new Error("unipackage.load requires a library");
+  var library = release.current.library;
 
   // Check the cache first
-  if (cacheLibrary !== options.library ||
+  if (cacheLibrary !== library ||
       cacheRelease !== options.release) {
-    cacheLibrary = options.library;
+    cacheLibrary = library;
     cacheRelease = options.release;
     cache = {};
   }
@@ -77,7 +79,7 @@ var load = function (options) {
     // Load the code
     var image = bundler.buildJsImage({
       name: "load",
-      library: options.library,
+      library: library,
       use: options.packages || []
     }).image;
     ret = image.load(env);

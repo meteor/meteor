@@ -17,7 +17,6 @@ var auth = exports;
 var getLoadedPackages = _.once(function () {
   var unipackage = require('./unipackage.js');
   return unipackage.load({
-    library: release.current.library,
     packages: [ 'meteor', 'livedata' ],
     release: release.current.name
   });

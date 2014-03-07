@@ -467,7 +467,6 @@ _.extend(Target.prototype, {
     // Minify, if requested
     if (options.minify) {
       var minifiers = unipackage.load({
-        library: self.library,
         packages: ['minifiers']
       }).minifiers;
       self.minifyJs(minifiers);
@@ -787,7 +786,6 @@ _.extend(ClientTarget.prototype, {
   mergeCss: function () {
     var self = this;
     var minifiers = unipackage.load({
-      library: self.library,
       packages: ['minifiers']
     }).minifiers;
     var CssTools = minifiers.CssTools;
@@ -1441,7 +1439,6 @@ _.extend(ServerTarget.prototype, {
     devBundleVersion = devBundleVersion.split('\n')[0];
 
     var script = unipackage.load({
-      library: self.library,
       packages: ['dev-bundle-fetcher']
     })["dev-bundle-fetcher"].DevBundleFetcher.script();
     script = script.replace(/##PLATFORM##/g, platform);
