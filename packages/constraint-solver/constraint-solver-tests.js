@@ -96,5 +96,14 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
     "jquery-widgets": "1.0.0",
     "jquery": "1.8.2"
   });
-});
 
+  t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
+    "sparky-forms": "1.1.2",
+    "forms": "1.0.1",
+    "sparkle": "2.1.1",
+    "jquery-widgets": "1.0.0",
+    "jquery": "1.8.2",
+    "awesome-dropdown": "1.5.0",
+    "dropdown": "1.2.2"
+  });
+});
