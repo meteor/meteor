@@ -16,7 +16,10 @@ isIndexable = function (x) {
   return isArray(x) || isPlainObject(x);
 };
 
-isOperatorObject = function (valueSelector) {
+// Returns true if this is an object with at least one key and all keys begin
+// with $.  Unless inconsistentOK is set, throws if some keys begin with $ and
+// others don't.
+isOperatorObject = function (valueSelector, inconsistentOK) {
   if (!isPlainObject(valueSelector))
     return false;
 
@@ -26,7 +29,10 @@ isOperatorObject = function (valueSelector) {
     if (theseAreOperators === undefined) {
       theseAreOperators = thisIsOperator;
     } else if (theseAreOperators !== thisIsOperator) {
-      throw new Error("Inconsistent operator: " + valueSelector);
+      if (!inconsistentOK)
+        throw new Error("Inconsistent operator: " +
+                        JSON.stringify(valueSelector));
+      theseAreOperators = false;
     }
   });
   return !!theseAreOperators;  // {} has no operators

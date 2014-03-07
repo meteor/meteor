@@ -78,7 +78,7 @@ var ServiceConnection = function (galaxy, service) {
   // from the hostname of endpointUrl, and run the login command for
   // that galaxy.
   if (! authToken)
-    throw new Error("not logged in to galaxy?")
+    throw new Error("not logged in to galaxy?");
 
   self.connection = Package.livedata.DDP.connect(endpointUrl, {
     headers: {
@@ -117,10 +117,12 @@ _.extend(ServiceConnection.prototype, {
     var args = _.toArray(arguments);
     var name = args.shift();
     self.connection.apply(name, args, function (err, result) {
-      if (err)
+      if (err) {
         fut['throw'](err);
-      else
+      } else {
+        self._cleanUpTimer();
         fut['return'](result);
+      }
     });
 
     return fut.wait();
@@ -141,6 +143,7 @@ _.extend(ServiceConnection.prototype, {
     args.push({
       onReady: function () {
         ready = true;
+        self._cleanUpTimer();
         fut['return']();
       },
       onError: function (e) {
@@ -151,8 +154,16 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
-    self.connection.subscribe.apply(self.connection, args);
-    return fut.wait();
+    var sub = self.connection.subscribe.apply(self.connection, args);
+    fut.wait();
+    return sub;
+  },
+
+  _cleanUpTimer: function () {
+    var self = this;
+    var Package = getPackage();
+    Package.meteor.Meteor.clearTimeout(self.connectionTimer);
+    self.connectionTimer = null;
   },
 
   close: function () {
@@ -163,9 +174,7 @@ _.extend(ServiceConnection.prototype, {
     }
     if (self.connectionTimer) {
       // Clean up the timer so that Node can exit cleanly
-      var Package = getPackage();
-      Package.meteor.Meteor.clearTimeout(self.connectionTimer);
-      self.connectionTimer = null;
+      self._cleanUpTimer();
     }
   }
 });
@@ -456,17 +465,6 @@ exports.logs = function (options) {
       throw new Error("Can't listen to messages on the logs collection");
 
     var logsSubscription = null;
-    // In case of reconnect recover the state so user sees only new logs
-    logReader.connection.onReconnect = function () {
-      logsSubscription && logsSubscription.stop();
-      var opts = { streaming: options.streaming };
-      if (lastLogId)
-        opts.resumeAfterId = lastLogId;
-      // XXX correctly handle errors on resubscribe
-      logsSubscription = logReader.subscribeAndWait("logsForApp",
-                                                    options.app, opts);
-    };
-
     try {
       logsSubscription =
         logReader.subscribeAndWait("logsForApp", options.app,
@@ -476,6 +474,29 @@ exports.logs = function (options) {
         "no-such-app": "No such app: " + options.app
       });
     }
+
+    // In case of reconnect recover the state so user sees only new logs.
+    // Only set up the onReconnect handler after the subscribe and wait
+    // has returned; if we set it up before, then we'll end up with two
+    // subscriptions, because the onReconnect handler will run for the
+    // first time before the subscribeAndWait returns.
+    logReader.connection.onReconnect = function () {
+      logsSubscription && logsSubscription.stop();
+      var opts = { streaming: options.streaming };
+      if (lastLogId)
+        opts.resumeAfterId = lastLogId;
+      // Don't use subscribeAndWait here; it'll deadlock. We can't
+      // process the sub messages until `onReconnect` returns, and
+      // `onReconnect` won't return unless the sub messages have been
+      // processed. There's no reason we need to wait for the sub to be
+      // ready here anyway.
+      // XXX correctly handle errors on resubscribe
+      logsSubscription = logReader.connection.subscribe(
+        "logsForApp",
+        options.app,
+        opts
+      );
+    };
 
     return options.streaming ? null : 0;
   } finally {

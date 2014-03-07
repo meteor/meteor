@@ -14,17 +14,19 @@
 Sorter = function (spec) {
   var self = this;
 
-  var sortSpecParts = [];
+  var sortSpecParts = self._sortSpecParts = [];
 
   if (spec instanceof Array) {
     for (var i = 0; i < spec.length; i++) {
       if (typeof spec[i] === "string") {
         sortSpecParts.push({
+          path: spec[i],
           lookup: makeLookupFunction(spec[i]),
           ascending: true
         });
       } else {
         sortSpecParts.push({
+          path: spec[i][0],
           lookup: makeLookupFunction(spec[i][0]),
           ascending: spec[i][1] !== "desc"
         });
@@ -33,12 +35,13 @@ Sorter = function (spec) {
   } else if (typeof spec === "object") {
     for (var key in spec) {
       sortSpecParts.push({
+        path: key,
         lookup: makeLookupFunction(key),
         ascending: spec[key] >= 0
       });
     }
   } else {
-    throw Error("Bad sort specification: ", JSON.stringify(spec));
+    throw Error("Bad sort specification: " + JSON.stringify(spec));
   }
 
   // reduceValue takes in all the possible values for the sort key along various
@@ -118,7 +121,12 @@ Sorter.prototype.getComparator = function (options) {
   }]);
 };
 
-MinimongoTest.Sorter = Sorter;
+Sorter.prototype._getPaths = function () {
+  var self = this;
+  return _.pluck(self._sortSpecParts, 'path');
+};
+
+Minimongo.Sorter = Sorter;
 
 // Given an array of comparators
 // (functions (a,b)->(negative or positive or zero)), returns a single

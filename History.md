@@ -1,5 +1,25 @@
 ## v.NEXT
 
+* Use "faye-websocket" (0.7.2) npm module instead of "websocket" (1.0.8) for
+  server-to-server DDP.
+
+* minimongo: Support {a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}}  #1875
+
+* minimongo: Support {a: {$regex: '', $options: 'i'}}  #1874
+
+* Upgraded dependencies
+  - amplify: 1.1.2 (from 1.1.0)
+
+
+## v0.7.1.2
+
+* Fix bug in tool error handling that caused `meteor` to crash on Mac
+  OSX when no computer name is set.
+
+* Work around a bug that caused MongoDB to fail an assertion when using
+  tailable cursors on non-oplog collections.
+
+
 ## v0.7.1.1
 
 * Integrate with Meteor developer accounts, a new way of managing your
@@ -29,7 +49,7 @@
 * Add and improve support for minimongo operators.
   - Support `$comment`.
   - Support `obj` name in `$where`.
-  - `$regexp` matches actual regexps properly.
+  - `$regex` matches actual regexps properly.
   - Improve support for `$nin`, `$ne`, `$not`.
   - Support using `{ $in: [/foo/, /bar/] }`. #1707
   - Support `{$exists: false}`.
