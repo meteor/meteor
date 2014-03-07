@@ -135,7 +135,7 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
       // on its name?
       var isVoid = HTML.isVoidElement(tagName);
       if (token.isSelfClosing) {
-        if (! (isVoid || HTML.isKnownSVGElement(tagName)))
+        if (! (isVoid || HTML.isKnownSVGElement(tagName) || tagName.indexOf(':') >= 0))
           scanner.fatal('Only certain elements like BR, HR, IMG, etc. (and foreign elements like SVG) are allowed to self-close');
       }
 
