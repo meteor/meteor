@@ -23,8 +23,13 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   //    - earliestCompatibleVersion
   self.packageDeps = {};
 
+  // package name -> list of version strings that we know about for the
+  // package, sorted in ascending semver order
+  self.sortedVersionsForPackage = {};
+
   Packages.find().forEach(function (packageDef) {
     self.packageDeps[packageDef.name] = {};
+
     Versions.find({ packageName: packageDef.name }).forEach(function (versionDef) {
       // version is a string #version-name-conflict
       var packageDep = {};
@@ -36,9 +41,14 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
 
       self.packageDeps[packageDef.name][versionDef.version] = packageDep;
     });
-  });
 
-  self._Versions = Versions;
+    self.sortedVersionsForPackage[packageDef.name] = _.pluck(Versions.find({
+      packageName: packageDef.name
+    }).fetch(), 'version');
+    console.log("Sorted versions for", packageDef.name,
+                self.sortedVersionsForPackage[packageDef.name]);
+    self.sortedVersionsForPackage[packageDef.name].sort(semver.compare);
+  });
 };
 
 // The propagation of exact dependencies
@@ -135,10 +145,10 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
   }
 
   var candidatePackageName = candidatePackageNames[0];
-  var availableVersions = self._Versions.find({ packageName: candidatePackageName }).fetch();
-  var satisfyingVersions = _.filter(availableVersions, function (versionDef) {
+  var availableVersions = self.sortedVersionsForPackage[candidatePackageName];
+  var satisfyingVersions = _.filter(availableVersions, function (version) {
     return _.all(state.depsDict[candidatePackageName], function (dep) {
-      return self.dependencyIsSatisfied(dep, versionDef.version);
+      return self.dependencyIsSatisfied(dep, version);
     });
   });
 
@@ -147,17 +157,20 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
                     + candidatePackageName);
 
   for (var i = 0; i < satisfyingVersions.length; i++) {
-    var versionDef = satisfyingVersions[i];
+    var version = satisfyingVersions[i];
     var newState = EJSON.clone(state);
-    newState.picks[candidatePackageName] = versionDef.version;
-    newState.exactDepsStack.push(_.pick(versionDef, 'packageName', 'version'));
+    newState.picks[candidatePackageName] = version;
+    newState.exactDepsStack.push({
+      packageName: candidatePackageName,
+      version: version
+    });
     //console.log('trying ' + candidatePackageName + ' v.' + versionDef.version);
     // recurse
     try {
       // if not failed, return a happy result
       return self._resolve(dependencies, newState);
     } catch (err) {
-      //console.log('picking ' + candidatePackageName + ' v.' + versionDef.version + ' kinda failed, lets not do that: ' + err.message);
+      //console.log('picking ' + candidatePackageName + ' v.' + version + ' kinda failed, lets not do that: ' + err.message);
     }
   };
 
@@ -188,7 +201,7 @@ ConstraintSolver.Resolver.prototype.dependencyIsSatisfied =
 };
 
 // helpers
-var isExact = function (dep) { return dep.exact; }
+var isExact = function (dep) { return dep.exact; };
 var pickExactDeps = function (deps) { return _.filter(deps, isExact); };
 var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
 
@@ -207,4 +220,3 @@ var toStructuredDeps = function (dependencies) {
 
   return structuredDeps;
 };
-
