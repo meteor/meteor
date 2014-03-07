@@ -583,7 +583,7 @@ main.registerCommand({
 
     if (! versionInfo) {
       process.stderr.write(
-constraint.packageName + constraint.versionConstraint  + ": no such version\n");
+constraint.packageName + "@" + constraint.versionConstraint  + ": no such version\n");
       process.exit(1);
     }
 
@@ -623,20 +623,24 @@ constraint.packageName + constraint.versionConstraint  + ": no such version\n");
           process.exit(1);
         }
 
-        var buildInfo = cat.getAnyBuild(packageName, version);
-        if (! buildInfo) {
-          process.stderr.write("This package has no build at this version");
+        // Make sure we have enough builds of the package downloaded such that
+        // we can load a browser slice and a slice that will run on this
+        // system. (Later we may also need to download more builds to be able to
+        // deploy to another architecture.)
+        var available = tropohouse.maybeDownloadPackageForArchitectures(
+          versionInfo, ['browser', archinfo.host()]);
+        if (! available) {
+          // XXX maybe we shouldn't be letting the constraint solver choose
+          // things that don't have the right arches?
+          process.stderr.write("Package " + packageName +
+                               " has no compatible build for version " +
+                               version);
           process.exit(1);
         }
 
-        // If the tarball is not in the warehouse, download it there.
-        if (! tropohouse.hasSpecifiedBuild(packageName, version,
-                                           buildInfo.architecture)) {
-           tropohouse.downloadSpecifiedBuild(packageName, version, buildInfo);
-        }
 
-        process.stdout.write("Added :" + packageName + " at " + version + "\n");
-      })
+        process.stdout.write("Added: " + packageName + " at " + version + "\n");
+      });
 
       // Write the new indirect dependencies file.
       project.rewriteIndirectDependencies(options.appDir, newVersions);

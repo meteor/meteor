@@ -9,6 +9,7 @@ var utils = require('./utils.js');
 var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var release = require('./release.js');
 
 var tropohouse = exports;
 
@@ -25,7 +26,7 @@ tropohouse.getWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor");
 };
 
-tropohouse.calculatePath= function(packageName, version, archString) {
+tropohouse.calculatePath = function(packageName, version, archString) {
   var uniquePath = path.join(packageName, version, archString);
   var fullPath = path.join(tropohouse.getWarehouseDir(), "packages", uniquePath);
   return fullPath;
@@ -46,4 +47,27 @@ tropohouse.downloadSpecifiedBuild = function(packageName, version, buildRecord) 
   // Make symlinks.
   // XXX: if there is a plus in archstring, split and for each one that does not exist, split into symlink.
   // XXX: make atomic.
+};
+
+// Returns true if we now have the package.
+// XXX more precise error handling in offline case. maybe throw instead like
+// warehouse does.
+tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
+                                                            architectures) {
+  var cat = release.current.catalog;
+  var buildInfo = cat.getAnyBuild(versionInfo.packageName, versionInfo.version);
+  if (! buildInfo) {
+    return false;
+  }
+
+  // If the tarball is not in the warehouse, download it there.
+  if (tropohouse.hasSpecifiedBuild(versionInfo.packageName,versionInfo.version,
+                                   buildInfo.architecture)) {
+    return true;
+  }
+
+  // XXX error handling
+  tropohouse.downloadSpecifiedBuild(
+    versionInfo.packageName, versionInfo.version, buildInfo);
+  return true;
 };
