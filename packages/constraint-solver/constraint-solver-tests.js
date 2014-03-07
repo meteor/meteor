@@ -26,7 +26,7 @@ var insertVersion = function (name, version, ecv, deps) {
   Versions.insert({ packageName: name, version: version, earliestCompatibleVersion: ecv,
                     dependencies: constructedDeps });
 };
-insertVersion("sparky-forms", "1.1.2", "1.1.0", {"forms": "=1.0.1", "sparkle": "=2.1.1"});
+insertVersion("sparky-forms", "1.1.2", "1.0.0", {"forms": "=1.0.1", "sparkle": "=2.1.1"});
 insertVersion("forms", "1.0.1", "1.0.0", {"sparkle": "2.1.0", "jquery-widgets": "1.0.0"});
 insertVersion("sparkle", "2.1.0", "2.1.0", {"jquery": "1.8.2"});
 insertVersion("sparkle", "2.1.1", "2.1.0", {"jquery": "1.8.2"});
@@ -98,6 +98,22 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
   });
 
   t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
+    "sparky-forms": "1.1.2",
+    "forms": "1.0.1",
+    "sparkle": "2.1.1",
+    "jquery-widgets": "1.0.0",
+    "jquery": "1.8.2",
+    "awesome-dropdown": "1.5.0",
+    "dropdown": "1.2.2"
+  });
+});
+
+Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
+  currentTest = test;
+  // sparky-forms 1.0.0 won't be chosen because it depends on a very old
+  // jquery, which is not compatible with the jquery that
+  // awesome-dropdown uses.
+  t({ "sparky-forms": "1.0.0", "awesome-dropdown": "=1.5.0" }, {
     "sparky-forms": "1.1.2",
     "forms": "1.0.1",
     "sparkle": "2.1.1",

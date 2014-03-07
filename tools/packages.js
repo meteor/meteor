@@ -868,8 +868,8 @@ var Package = function (library, packageDirectoryForBuildInfo) {
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
-  // Plugins in this package. Map from plugin name to JsImage. Present only when
-  // pluginsBuilt is true.
+  // Plugins in this package. Map from plugin name to {arch -> JsImage}. Present
+  // only when pluginsBuilt is true.
   self.plugins = {};
 
   // A WatchSet for the full transitive dependencies for all plugins in this
@@ -1027,7 +1027,10 @@ _.extend(Package.prototype, {
     };
 
     self.sourceHandlers = {};
-    _.each(self.plugins, function (plugin, name) {
+    _.each(self.plugins, function (pluginsByArch, name) {
+      var arch = archinfo.mostSpecificMatch(
+        archinfo.host(), _.keys(pluginsByArch));
+      var plugin = pluginsByArch[arch];
       buildmessage.enterJob({
         title: "loading plugin `" + name +
           "` from package `" + self.name + "`"
@@ -1094,7 +1097,9 @@ _.extend(Package.prototype, {
                  buildResult.pluginProviderPackageDirs);
 
         // Register the built plugin's code.
-        self.plugins[info.name] = buildResult.image;
+        if (!_.has(self.plugins, info.name))
+          self.plugins[info.name] = {};
+        self.plugins[info.name][buildResult.image.arch] = buildResult.image;
       });
     });
     self.pluginsBuilt = true;
@@ -1989,16 +1994,10 @@ _.extend(Package.prototype, {
         return;
       }
 
-      // XXX should refactor so that we can have plugins of multiple
-      // different arches happily coexisting in memory, to match
-      // slices. If this becomes a problem before we have a chance to
-      // refactor, could just ignore plugins for arches that we don't
-      // support, if we are careful to not then try to write out the
-      // package and expect them to be intact..
-      if (pluginMeta.name in self.plugins)
-        throw new Error("Implementation limitation: this program " +
-                        "cannot yet handle fat plugins, sorry");
-      self.plugins[pluginMeta.name] = plugin;
+      if (!_.has(self.plugins, pluginMeta.name)) {
+        self.plugins[pluginMeta.name] = {};
+      }
+      self.plugins[pluginMeta.name][plugin.arch] = plugin;
     });
     self.pluginsBuilt = true;
 
@@ -2324,15 +2323,17 @@ _.extend(Package.prototype, {
       });
 
       // Plugins
-      _.each(self.plugins, function (plugin, name) {
-        var pluginDir =
-          builder.generateFilename('plugin.' + name + '.' + plugin.arch,
-                                   { directory: true });
-        var relPath = plugin.write(builder.enter(pluginDir));
-        mainJson.plugins.push({
-          name: name,
-          arch: plugin.arch,
-          path: path.join(pluginDir, relPath)
+      _.each(self.plugins, function (pluginsByArch, name) {
+        _.each(pluginsByArch, function (plugin) {
+          var pluginDir =
+                builder.generateFilename('plugin.' + name + '.' + plugin.arch,
+                                         { directory: true });
+          var relPath = plugin.write(builder.enter(pluginDir));
+          mainJson.plugins.push({
+            name: name,
+            arch: plugin.arch,
+            path: path.join(pluginDir, relPath)
+          });
         });
       });
 
