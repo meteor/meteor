@@ -62,6 +62,8 @@ var getPackages = function () {
   return null;
 };
 
+var XXX_DEPLOY_ARCH = 'os.linux.x86_64';
+
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
 ///////////////////////////////////////////////////////////////////////////////
@@ -640,7 +642,9 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         // system. (Later we may also need to download more builds to be able to
         // deploy to another architecture.)
         var available = tropohouse.maybeDownloadPackageForArchitectures(
-          versionInfo, ['browser', archinfo.host()]);
+          // XXX we also download the deploy arch now, because we don't run the
+          // constraint solver / downloader anywhere other than add-package yet.
+          versionInfo, ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
         if (! available) {
           // XXX maybe we shouldn't be letting the constraint solver choose
           // things that don't have the right arches?
@@ -778,7 +782,8 @@ main.registerCommand({
     outputPath: bundlePath,
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     buildOptions: {
-      minify: ! options.debug
+      minify: ! options.debug,
+      arch: XXX_DEPLOY_ARCH  // XXX should do this in deploy instead but it's easier to test with bundle
     }
   });
   if (bundleResult.errors) {

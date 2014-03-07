@@ -1229,10 +1229,10 @@ _.extend(Package.prototype, {
     self.sources = _.uniq(self.sources);
   },
 
-  // Programmatically initialized a package from scratch. For now,
-  // cannot create browser packages. This function does not retrieve
-  // the package's dependencies from the library, and on return,
-  // the package will be in an unbuilt state.
+  // Programmatically initialized a package from scratch. For now, cannot create
+  // browser packages or cross-targeted packages (eg os.linux when host is
+  // os.osx). This function does not retrieve the package's dependencies from
+  // the library, and on return, the package will be in an unbuilt state.
   //
   // Unlike user-facing methods of creating a package
   // (initFromPackageDir, initFromAppDir) this does not implicitly add

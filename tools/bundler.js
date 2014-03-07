@@ -1427,11 +1427,10 @@ _.extend(ServerTarget.prototype, {
       'os.linux.x86_64': 'Linux_x86_64',
       'os.osx.x86_64': 'Darwin_x86_64'
     };
-    var arch = archinfo.host();
-    var platform = archToPlatform[arch];
+    var platform = archToPlatform[self.arch];
     if (! platform) {
       buildmessage.error("MDG does not publish dev_bundles for arch: " +
-                         arch);
+                         self.arch);
       // Recover by bailing out and leaving a partially built target
       return;
     }
@@ -1661,6 +1660,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   - minify: minify the CSS and JS assets (boolean, default false)
  *   - testPackages: array of package objects or package names whose
  *     tests should be additionally included in this bundle
+ *   - arch: the server architecture to target (defaults to archinfo.host())
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -1737,7 +1737,7 @@ exports.bundle = function (options) {
     var makeServerTarget = function (app, clientTarget) {
       var targetOptions = {
         library: library,
-        arch: archinfo.host(),
+        arch: buildOptions.arch || archinfo.host(),
         releaseName: releaseName
       };
       if (clientTarget)
@@ -2005,6 +2005,11 @@ exports.buildJsImage = function (options) {
 
   var target = new JsImageTarget({
     library: options.library,
+    // This function does not yet support cross-compilation (neither does
+    // initFromOptions). That's OK for now since we're only trying to support
+    // cross-bundling, not cross-package-building, and this function is only
+    // used to build plugins (during package build) and for unipackage.load
+    // (which always wants to build for the current host).
     arch: archinfo.host()
   });
   target.make({ packages: [pkg] });
