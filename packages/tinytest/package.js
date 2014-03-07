@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Tiny testing framework",
+  version: '1.0.0',
   internal: true
 });
 

@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Retry logic with exponential backoff",
+  version: '1.0.0',
   internal: true
 });
 

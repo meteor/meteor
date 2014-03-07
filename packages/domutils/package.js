@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Utility functions for DOM manipulation",
+  version: '1.0.0',
   internal: true
 });
 

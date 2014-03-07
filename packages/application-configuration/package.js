@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Interaction with the configuration sources for your apps",
+  version: '1.0.0',
   internal: true
 });
 

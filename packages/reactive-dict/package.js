@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
+  version: '1.0.0',
   internal: true
 });
 

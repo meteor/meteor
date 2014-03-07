@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Easy macros for generating DOM elements in Javascript"
+  summary: "Easy macros for generating DOM elements in Javascript",
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

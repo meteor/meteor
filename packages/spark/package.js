@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Toolkit for live-updating HTML interfaces",
+  version: '1.0.0',
   internal: true
 });
 

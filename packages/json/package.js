@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Provides JSON.stringify and JSON.parse for older browsers",
+  version: '1.0.0',
   internal: true
 });
 

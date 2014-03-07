@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Check whether a value matches a pattern",
+  version: '1.0.0',
   internal: true
 });
 

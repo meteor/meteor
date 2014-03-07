@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Maintain a connection to the leader of an election set",
+  version: '1.0.0',
   internal: true
 });
 

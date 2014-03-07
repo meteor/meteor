@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Session variable",
+  version: '1.0.0',
   internal: true
 });
 

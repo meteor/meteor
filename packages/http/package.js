@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Make HTTP calls to remote servers"
+  summary: "Make HTTP calls to remote servers",
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

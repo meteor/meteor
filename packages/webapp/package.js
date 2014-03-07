@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
+  version: '1.0.0',
   internal: true
 });
 

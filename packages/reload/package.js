@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
+  version: '1.0.0',
   internal: true
 });
 

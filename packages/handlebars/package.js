@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Simple semantic templating language",
+  version: '1.0.0',
   internal: true
 });
 

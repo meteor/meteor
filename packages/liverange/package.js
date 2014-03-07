@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Mark, track, and update an arbitrary region in the DOM",
+  version: '1.0.0',
   internal: true
 });
 

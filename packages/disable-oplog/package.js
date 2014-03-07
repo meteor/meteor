@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Disables oplog tailing",
+  version: '1.0.0',
   internal: true
 });
 

@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Listen to events globally, and normalize them",
+  version: '1.0.0',
   internal: true
 });
 

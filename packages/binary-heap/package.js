@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Binary Heap datastructure implementation",
+  version: '1.0.0',
   internal: true
 });
 
