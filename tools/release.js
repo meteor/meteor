@@ -15,13 +15,13 @@ var Release = function (options) {
   // release, eg, "1.0". If not a proper release, null.
   self.name = options.name;
 
+  // A Library object that can be used to load packages.
+  self.library = null;
+
   // A Catalog contains the metadata for all of the packages that we
   // know about, including packages that we haven't downloaded from
   // the package server.
   self.catalog = null;
-
-  // A Library object that can be used to load packages.
-  self.library = null;
 
   var packageDirs = _.clone(options.packageDirs || []);
   if (self.name === null) {
@@ -33,11 +33,13 @@ var Release = function (options) {
     self._manifest = options.manifest;
   }
 
-  self.catalog = new catalog.Catalog;
-
   self.library = new library.Library({
     localPackageDirs: packageDirs,
     releaseManifest: self._manifest
+  });
+
+  self.catalog = new catalog.Catalog(self.library, {
+    localPackageDirs: packageDirs
   });
 };
 

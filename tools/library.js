@@ -499,6 +499,7 @@ _.extend(exports, {
   }
 });
 
+// XXX copied to catalog.js
 var isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK

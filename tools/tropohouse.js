@@ -55,6 +55,15 @@ tropohouse.downloadSpecifiedBuild = function(packageName, version, buildRecord) 
 tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
                                                             architectures) {
   var cat = release.current.catalog;
+
+  // If this package isn't coming from the package server (loaded from
+  // a checkout, or from an app package directory), don't try to
+  // download it (we already have it)
+  if (cat.isLocalPackage(versionInfo.packageName))
+    return true;
+
+  // XXX rather than getAnyBuild, should specifically look to see if
+  // we have builds that match architectures
   var buildInfo = cat.getAnyBuild(versionInfo.packageName, versionInfo.version);
   if (! buildInfo) {
     return false;

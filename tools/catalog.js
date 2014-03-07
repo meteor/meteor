@@ -1,3 +1,5 @@
+var fs = require('fs');
+var path = require('path');
 var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
@@ -8,17 +10,38 @@ var catalog = exports;
 // we know about (including packages on the package server that we
 // haven't actually download yet).
 //
-// XXX move into release
-// XXX add packageDirs
+// 'library' is a library to use for loading packages.
 //
-// XXX make constraint solver take 'cat'
-catalog.Catalog = function () {
-  var self = this;
+// Options:
+// - localPackageDirs: paths on local disk, that contain
+//   subdirectories, that each contain a package that should override
+//   the packages on the package server. For example, if there is a
+//   package 'foo' that we find through localPackageDirs, then we will
+//   ignore all versions of 'foo' that we find through the package
+//   server. Directories that don't exist (or paths that aren't
+//   directories) will be silently ignored.
 
+catalog.Catalog = function (library, options) {
+  var self = this;
+  options = options || {};
+
+  self.library = library;
   self.loaded = false; // #CatalogLazyLoading
+
+  // Package server data
   self.packages = null;
   self.versions = null;
   self.builds = null;
+
+  // Trim down localPackageDirs to just those that actually exist (and
+  // that are actually directories)
+  self.localPackageDirs = _.filter(options.localPackageDirs, isDirectory);
+
+  // Packages specified by addLocalPackage
+  self.localPackages = {}; // package name to package directory
+
+  // All packages found either by localPackageDirs or localPackages
+  self.effectiveLocalPackages = {}; // package name to package directory
 };
 
 _.extend(catalog.Catalog.prototype, {
@@ -36,12 +59,136 @@ _.extend(catalog.Catalog.prototype, {
     var self = this;
     if (self.loaded)
       return;
+    self.refresh();
+  },
 
+  // XXX refresh() needs to be called by at least some of the
+  // callsites that call library.refresh()
+  refresh: function () {
+    var self = this;
+
+    // Get packages from package server
+    // XXX this syncs with the network. probably should rethink that
+    // so that every time a file changes in development mode we don't resync
     var collections = packageClient.loadPackageData();
     self.packages = collections.packages;
     self.versions = collections.versions;
     self.builds = collections.builds;
+
+    // Find local packages that override packages from the package server
+    self.effectiveLocalPackages = {};
+
+    _.each(self.localPackageDirs, function (localPackageDir) {
+      if (! isDirectory(localPackageDir))
+        return;
+      var contents = fs.readdirSync(localPackageDir);
+      _.each(contents, function (item) {
+        var packageDir = path.resolve(path.join(localPackageDir, item));
+        if (! isDirectory(packageDir))
+          return;
+
+        // Consider a directory to be a package source tree if it
+        // contains 'package.js'. (We used to support unipackages in
+        // localPackageDirs, but no longer.)
+        if (fs.existsSync(path.join(packageDir, 'package.js'))) {
+          // Let earlier package directories override later package
+          // directories.
+
+          // XXX XXX for now, get the package name from the
+          // directory. in a future refactor, should instead build the
+          // package right here and get the name from the (not yet
+          // added) 'name' attribute in package.js. in this future,
+          // Library caches packages by path rather than by name.
+          if (! _.has(self.effectiveLocalPackages, item))
+            self.effectiveLocalPackages[item] = packageDir;
+        }
+      });
+    });
+
+    _.extend(self.effectiveLocalPackages, self.localPackages);
+
+    // Construct metadata for the local packages and load them into
+    // the collections, shadowing any versions of those packages from
+    // the package server.
+    _.each(self.effectiveLocalPackages, function (packageDir, name) {
+      // Load the package
+      var pkg = self.library.get(name, {
+        packageDir: packageDir
+      });
+
+      // Hide any versions from the package server
+      self.versions.find({ packageName: name }).forEach(function (versionInfo) {
+        self.builds.remove({ versionId: versionInfo._id });
+      });
+      self.versions.remove({ packageName: name });
+      self.packages.remove({ name: name });
+
+      // Insert our local version
+      self.packages.insert({
+        name: name,
+        maintainers: null,
+        lastUpdated: null
+      });
+      var versionId = self.versions.insert({
+        packageName: name,
+        version: pkg.metadata.version,
+        publishedBy: null,
+        earliestCompatibleVersion: pkg.metadata.earliestCompatibleVersion,
+        changelog: null, // XXX get actual changelog when we have it?
+        description: pkg.metadata.summary,
+        dependencies: pkg.getDependencyMetadata(),
+        source: null,
+        lastUpdated: null,
+        published: null
+      });
+      self.builds.insert({
+        packageName: name,
+        architecture: pkg.architectures().join('+'),
+        builtBy: null,
+        build: null, // this would be the URL and hash
+        versionId: versionId,
+        lastUpdated: null,
+        buildPublished: null
+      });
+    });
+
+    // Done!
     self.loaded = true;
+  },
+
+  // Add a local package to the catalog. `name` is the name to use for
+  // the package and `directory` is the directory that contains either
+  // its source or an unpacked unipackage.
+  //
+  // If a package named `name` exists on the package server, it will
+  // be overridden (it will be as if that package doesn't exist on the
+  // package server at all). And for now, it's an error to call this
+  // function twice with the same `name`.
+  //
+  // IMPORTANT: This will not take effect until the next call to
+  // refresh().
+  addLocalPackage: function (name, directory) {
+    var self = this;
+
+    var resolvedPath = path.resolve(directory);
+    if (_.has(self.localPackages, name) &&
+        self.localPackages[name] !== resolvedPath) {
+      throw new Error("Duplicate override for package '" + name + "'");
+    }
+    self.localPackages[name] = resolvedPath;
+  },
+
+  // XXX implement removeLocalPackage
+  // XXX make callers of override/removeOverride call addLocalPackage/removeLocalPackage, and remember to call refresh()
+
+  // True if `name` is a local package (is to be loaded via
+  // localPackageDirs or addLocalPackage rather than from the package
+  // server)
+  isLocalPackage: function (name) {
+    var self = this;
+    self._ensureLoaded();
+
+    return _.has(self.effectiveLocalPackages, name);
   },
 
   // Return an array with the names of all of the packages that we
@@ -115,5 +262,15 @@ _.extend(catalog.Catalog.prototype, {
     var buildInfo = self.builds.findOne({ versionId: versionInfo._id });
     return buildInfo;
   }
-
 });
+
+// XXX copied from library.js
+var isDirectory = function (dir) {
+  try {
+    // use stat rather than lstat since symlink to dir is OK
+    var stats = fs.statSync(dir);
+  } catch (e) {
+    return false;
+  }
+  return stats.isDirectory();
+};
