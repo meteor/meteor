@@ -25,7 +25,8 @@ var getPackagesLines = function (appDir) {
 };
 
 var getVersionsLines = function (appDir) {
-  return getLines(path.join(appDir, '.meteor', 'versions'));
+  var versionsFile = path.join(appDir, '.meteor', 'versions');
+  return fs.existsSync(versionsFile) ? getLines(versionsFile) : [];
 };
 
 
