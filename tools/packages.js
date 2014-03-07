@@ -845,7 +845,8 @@ var Package = function (library, packageDirectoryForBuildInfo) {
   // dependencies
   self.library = library;
 
-  // Package metadata. Keys are 'summary', 'internal', 'version'.
+  // Package metadata. Keys are 'summary', 'internal', 'version',
+  //  'earliestCompatibleVersion'.
   self.metadata = {};
 
   // Available editions/subpackages ("slices") of this package. Array
@@ -1215,6 +1216,7 @@ _.extend(Package.prototype, {
       // - summary: for 'meteor list'
       // - internal: if true, hide in list
       // - version: package version string (semver)
+      // - earliestCompatibleVersion: version string
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
