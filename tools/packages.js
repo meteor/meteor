@@ -982,14 +982,14 @@ _.extend(Package.prototype, {
                                                 _.keys(self.defaultSlices));
 
     //XXX: this is commented out, but maybe shouldn't be.
-    if (! chosenArch) {
+    /*if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
           " is not compatible with architecture '" + arch + "'",
         { secondary: true });
       // recover by returning by no slices
       return [];
-    }
+    }*/
 
     return _.map(self.defaultSlices[chosenArch], function (name) {
       return self.getSingleSlice(name, arch);

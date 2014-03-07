@@ -551,7 +551,7 @@ main.registerCommand({
 
 
 var getVersionFromVersionConstraint = function(constraint) {
-  if (constraint[0] === "=") {
+  if (constraint && constraint[0] === "=") {
     return constraint.split("=")[1];
   }
   return constraint;
@@ -609,6 +609,7 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
       // Add the package to the list of packages that we use directly.
       usingDirectly[constraint.packageName] = constraint.versionConstraint;
       var usingIndirectly = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+      console.log(usingDirectly);
 
       // Call the constraint solver.
       var ConstraintSolver = unipackage.load({
@@ -617,7 +618,10 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
 
+      console.log("Going to init constraint resolver");
       var resolver = new ConstraintSolver.Resolver(cat);
+      console.log("Initialized constraint resolver");
+
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
                                          { optionsGoHere : false });
@@ -1476,7 +1480,7 @@ main.registerCommand({
 
   if (! version) {
     process.stderr.write(
-"That package cannot be published because it doesn't have a version.\n");
+     "That package cannot be published because it doesn't have a version.\n");
     return 1;
   }
 
