@@ -1,5 +1,6 @@
 Package.describe({
   summary: "A shell script for downloading the Meteor dev bundle",
+  version: "1.0.0",
   internal: true
 });
 

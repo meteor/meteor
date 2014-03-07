@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
+  version: "1.0.0",
   internal: true
 });
 

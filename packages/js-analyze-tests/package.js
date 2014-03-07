@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Tests for JavaScript code analysis for Meteor",
+  version: "1.0.0",
   internal: true
 });
 

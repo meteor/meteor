@@ -1,5 +1,6 @@
 Package.describe({
   summary: "A package for translating old bundles into stars",
+  version: "1.0.0",
   internal: true
 });
 

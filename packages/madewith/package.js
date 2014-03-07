@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Made With Meteor badge"
+  summary: "Made With Meteor badge",
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {
