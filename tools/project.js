@@ -66,7 +66,7 @@ project.processPackageConstraint = function(constraint) {
    constObj.versionConstraint = constArray[1];
  }
  return constObj;
-}
+};
 
 // Return an array of form [{packageName: foo, versionConstraint: 1.0}]
 project.processPerConstraintLines = function(lines) {
@@ -81,12 +81,12 @@ project.processPerConstraintLines = function(lines) {
   });
   return ret;
 
-}
+};
 
 // Read in the .meteor/packages file.
 project.getDirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getPackagesLines(appDir));
-}
+};
 
 // Given a list of dep constraints:
 //  foo@1.0 or just foo
@@ -102,19 +102,19 @@ project.getDepsAsObj = function(deps) {
     }
   });
   return using;
-}
+};
 
 
 // Get a list of constraints from the .meteor/versions file.
 project.getIndirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getVersionsLines(appDir));
-}
+};
 
 project.getAllDependencies = function(appDir) {
   // Aha! Actually, it turns out that indirect dependenceis include all dependencies.
   // Maybe I should clean up this code later.
   return project.getIndirectDependencies(appDir);
-}
+};
 
 // Write the .meteor/versions file after running the constraint solver.
 project.rewriteIndirectDependencies = function (appDir, deps) {
@@ -123,11 +123,11 @@ project.rewriteIndirectDependencies = function (appDir, deps) {
 
   _.each(deps, function (version, name) {
     lines.push(name + "@" + version + "\n");
-  })
+  });
 
   fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
                    lines.join('\n') + '\n', 'utf8');
-}
+};
 
 
 var meteorReleaseFilePath = function (appDir) {
