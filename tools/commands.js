@@ -572,6 +572,7 @@ main.registerCommand({
   // For every package name specified, run it through the constraint solver and add the right stuff
   // to .meteor/package and .meteor/versions files.
   _.each(options.args, function (packageReq) {
+
     var constraint = project.processPackageConstraint(packageReq);
 
     if (!Packages.findOne({name: constraint.packageName})) {
