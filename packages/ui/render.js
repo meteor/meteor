@@ -600,3 +600,49 @@ HTML.CharRef.prototype.toText = function (textMode) {
   else
     throw new Error("Unknown TEXTMODE: " + textMode);
 };
+
+////////////////////////////////////////
+
+var View = UI.View = function (value) {
+  if (! (this instanceof View))
+    // called without `new`
+    return new View(value);
+
+  this.value = value;
+};
+View.prototype.getInitialContent = function () {
+  return this.value;
+};
+
+View.extend = function (methods) {
+  var curType = this;
+  var subType = function ViewSubtype(value) {
+    if (! (this instanceof ViewSubtype))
+      // called without `new`
+      return new ViewSubtype(value);
+
+    // call base constructor
+    View.call(this, value);
+  };
+  subType.prototype = new curType;
+  subType.extend = curType.extend;
+  if (methods)
+    for (var k in methods)
+      subType.prototype[k] = methods[k];
+  return subType;
+};
+/// these are temporary:
+View.prototype.toHTML = function (parentComponent) {
+  return UI.toHTML(this.getInitialContent(), parentComponent);
+};
+View.prototype.toText = function (textMode, parentComponent) {
+  return UI.toText(this.getInitialContent(), textMode, parentComponent);
+};
+
+/*
+ * Where does materialize go?  Eventually, on the View.
+ *
+ * Template instance has a `$view` property.  This makes it renderable.
+ *
+ * Template instance has a `render` method.
+ */
