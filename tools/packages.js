@@ -1710,19 +1710,17 @@ _.extend(Package.prototype, {
 
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
-      var names = project.getPackages(appDir);
+      var znames = project.getAllDependencies(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
 
       // XXXX: We actually want to run the constraint solver and also edit the library to use trops
       // instead of an override.
-      names = _.map(names, function(name) {
-        var pieces = name.split('@=');
-        if (pieces.length > 1) {
-          self.library.override(pieces[0], tropohouse.calculatePath(pieces[0], pieces[1], "browser+os"));
-        }
-        return pieces[0];
-      })
+  /*   names = _.map(znames, function(dep) {
+        var newPath =  tropohouse.calculatePath(dep.packageName, dep.versionConstraint, "browser+os");
+        self.library.override(dep.packageName, newPath);
+        return dep.packageName;
+      }); */
 
       // Create slice
       var slice = new Slice(self, {

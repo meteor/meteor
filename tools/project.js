@@ -110,6 +110,12 @@ project.getIndirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getVersionsLines(appDir));
 }
 
+project.getAllDependencies = function(appDir) {
+  // Aha! Actually, it turns out that indirect dependenceis include all dependencies.
+  // Maybe I should clean up this code later.
+  return project.getIndirectDependencies(appDir);
+}
+
 // Write the .meteor/versions file after running the constraint solver.
 project.rewriteIndirectDependencies = function (appDir, deps) {
 
