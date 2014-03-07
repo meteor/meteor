@@ -563,6 +563,7 @@ main.registerCommand({
 }, function (options) {
 
   var cat = release.current.catalog;
+  var failed = false;
 
   // Read in existing package dependencies.
   var usingDirectly = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
@@ -571,12 +572,15 @@ main.registerCommand({
   // solver and add the right stuff to .meteor/package and
   // .meteor/versions files.
   _.each(options.args, function (packageReq) {
+    if (failed)
+      return;
 
     var constraint = project.processPackageConstraint(packageReq);
 
     if (! cat.getPackage(constraint.packageName)) {
       process.stderr.write(constraint.packageName + ": no such package\n");
-      process.exit(1);
+      failed = true;
+      return;
     }
     var versionInfo = cat.getVersion(
       constraint.packageName,
@@ -585,16 +589,19 @@ main.registerCommand({
     if (! versionInfo) {
       process.stderr.write(
 constraint.packageName + "@" + constraint.versionConstraint  + ": no such version\n");
-      process.exit(1);
+      failed = true;
+      return;
     }
 
     if (_.has(usingDirectly, constraint.packageName)) {
       if (usingDirectly[constraint.packageName] === constraint.versionConstraint) {
         process.stderr.write(constraint.packageName + "@" + constraint.versionConstraint   + ": already added\n");
-        process.exit(1);
+        failed = true;
+        return;
       } else if (!constraint.versionConstraint && (usingDirectly[constraint.packageName] === "none")) {
         process.stderr.write(constraint.packageName + ": already added\n");
-        process.exit(1);
+        failed = true;
+        return;
       }
     } else {
       // Add the package to the list of packages that we use directly.
@@ -613,6 +620,9 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
                                          usingIndirectly,
                                          { optionsGoHere : false });
       _.forEach(newVersions, function(version, packageName) {
+        if (failed)
+          return;
+
         // Find the build.
         // XXX: Find the one with the right architecture.
         var versionInfo = cat.getVersion(packageName, version);
@@ -621,7 +631,8 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         // constraint solver is doing something it shouldn't.
         if (! versionInfo) {
           process.stderr.write("This package has no version at this version");
-          process.exit(1);
+          failed = true;
+          return;
         }
 
         // Make sure we have enough builds of the package downloaded such that
@@ -636,12 +647,16 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
           process.stderr.write("Package " + packageName +
                                " has no compatible build for version " +
                                version);
-          process.exit(1);
+          failed = true;
+          return;
         }
 
-
+        // XXX shouldn't log a message yet as we could still fail
         process.stdout.write("Added: " + packageName + " at " + version + "\n");
       });
+
+      if (failed)
+        return;
 
       // Write the new indirect dependencies file.
       project.rewriteIndirectDependencies(options.appDir, newVersions);
@@ -654,6 +669,8 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
       process.stdout.write(constraint.packageName + ": " + note + "\n");
     }
   });
+
+  return failed ? 1 : 0;
 });
 
 
