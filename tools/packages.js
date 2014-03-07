@@ -989,6 +989,35 @@ _.extend(Package.prototype, {
     });
   },
 
+  // Return dependency metadata for all slices, in the format needed
+  // by the package catalog.
+  getDependencyMetadata: function () {
+    var self = this;
+    var dependencies = {};
+
+    _.each(self.slices, function (slice) {
+      // XXX also iterate over "implies"
+      _.each(slice.uses, function (use) {
+        if (!_.has(dependencies, use.package)) {
+          dependencies[use.package] = {
+            constraint: "=1.0.0",  // XXX fix this
+            references: []
+          };
+        }
+
+        dependencies[use.package].references.push({
+          slice: slice.sliceName,
+          arch: archinfo.withoutSpecificOs(slice.arch),
+          targetSlice: use.slice,  // usually undefined, for "default slices"
+          weak: use.weak,
+          unordered: use.unordered
+        });
+      });
+    });
+
+    return dependencies;
+  },
+
   // This is called on all packages at Meteor install time so they can
   // do any prep work necessary for the user's first Meteor run to be
   // fast, for example fetching npm dependencies. Currently thanks to

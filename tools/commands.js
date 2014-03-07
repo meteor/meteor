@@ -1462,35 +1462,13 @@ main.registerCommand({
     });
   }
 
-  // XXX factor this out into a method on Package in packages.js
-  var dependencies = {};
-  _.each(pkg.slices, function (slice) {
-    // XXX also iterate over "implies"
-    _.each(slice.uses, function (use) {
-      if (!_.has(dependencies, use.package)) {
-        dependencies[use.package] = {
-          constraint: "=1.0.0",  // XXX fix this
-          references: []
-        };
-      }
-
-      dependencies[use.package].references.push({
-        slice: slice.sliceName,
-        arch: archinfo.withoutSpecificOs(slice.arch),
-        targetSlice: use.slice,  // usually undefined, for "default slices"
-        weak: use.weak,
-        unordered: use.unordered
-      });
-    });
-  });
-
   process.stdout.write('Creating package version...\n');
   var uploadInfo = conn.call('createPackageVersion', {
     packageName: pkg.name,
     version: version,
     description: pkg.metadata.summary,
     earliestCompatibleVersion: pkg.metadata.earliestCompatibleVersion,
-    dependencies: dependencies
+    dependencies: pkg.getDependencyMetadata()
   });
 
   // XXX If package version already exists, print a nice error message
