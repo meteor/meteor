@@ -4,6 +4,13 @@ PackageVersion = {};
 
 PackageVersion.parseVersionConstraint = function (versionString) {
   var versionDesc = { version: null, exact: false };
+
+  // XXX #noconstraint #geoff #changed
+  // XXX remove none when it is no longer used
+  if (versionString === "none" || versionString === null) {
+    return versionDesc;
+  }
+
   if (versionString.charAt(0) === '=') {
     versionDesc.exact = true;
     versionString = versionString.substr(1);

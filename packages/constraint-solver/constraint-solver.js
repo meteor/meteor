@@ -199,6 +199,11 @@ ConstraintSolver.Resolver.prototype.dependencyIsSatisfied =
   function (dep, version) {
   // XXX check for exact
   var self = this;
+
+  if (dep.version === null)
+    return true;
+
+
   var versionSpec = self.packageDeps[dep.packageName][version];
   return semver.lte(dep.version, version) &&
     semver.lte(versionSpec.earliestCompatibleVersion, dep.version);
@@ -213,7 +218,8 @@ var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
 var toStructuredDeps = function (dependencies) {
   var structuredDeps = [];
   _.each(dependencies, function (details, packageName) {
-    if (typeof details === "string") {
+    // if details is null, it means 'no constraint'
+    if (typeof details === "string" || details === null) {
       structuredDeps.push(_.extend(
         { packageName: packageName },
         PackageVersion.parseVersionConstraint(details)));
