@@ -11,7 +11,8 @@ ConstraintSolver.Dependency = {
 };
 
 // main class
-ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
+// cat is a catalog.Catalog object
+ConstraintSolver.Resolver = function (cat, options) {
   var self = this;
 
   options = options || {};
@@ -27,10 +28,15 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
   // package, sorted in ascending semver order
   self.sortedVersionsForPackage = {};
 
-  Packages.find().forEach(function (packageDef) {
+  _.each(cat.getAllPackageNames(), function (packageName) {
+    var packageDef = cat.getPackage(packageName);
     self.packageDeps[packageDef.name] = {};
 
-    Versions.find({ packageName: packageDef.name }).forEach(function (versionDef) {
+    var versions = cat.getSortedVersions(packageName);
+    self.sortedVersionsForPackage[packageDef.name] = versions;
+
+    _.each(versions, function (version) {
+      var versionDef = cat.getVersion(packageName, version);
       // version is a string #version-name-conflict
       var packageDep = {};
       packageDep.earliestCompatibleVersion = versionDef.earliestCompatibleVersion;
@@ -41,11 +47,6 @@ ConstraintSolver.Resolver = function (Packages, Versions, Builds, options) {
 
       self.packageDeps[packageDef.name][versionDef.version] = packageDep;
     });
-
-    self.sortedVersionsForPackage[packageDef.name] = _.pluck(Versions.find({
-      packageName: packageDef.name
-    }).fetch(), 'version');
-    self.sortedVersionsForPackage[packageDef.name].sort(semver.compare);
   });
 };
 

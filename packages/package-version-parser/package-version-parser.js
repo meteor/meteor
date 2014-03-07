@@ -12,7 +12,7 @@ PackageVersion.parseVersionConstraint = function (versionString) {
   // XXX check for a dash in the version in case of foo@1.2.3-rc0
 
   if (! semver.valid(versionString))
-    throw new Error("Version string must look like semver (1.2.3)");
+    throw new Error("Version string must look like semver (1.2.3) -- " + versionString);
 
   versionDesc.version = versionString;
 

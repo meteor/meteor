@@ -5,6 +5,7 @@ var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var library = require('./library.js');
+var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
 var project = require('./project.js');
@@ -561,30 +562,33 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
 
-  var all = packageClient.loadPackageData();
-  var Packages = all.packages;
-  var Versions = all.versions;
-  var Builds = all.builds;
+  var cat = new catalog.Catalog;
 
-  // Read in existing builds.
+  // Read in existing package dependencies.
   var usingDirectly = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
 
-  // For every package name specified, run it through the constraint solver and add the right stuff
-  // to .meteor/package and .meteor/versions files.
+  // For every package name specified, run it through the constraint
+  // solver and add the right stuff to .meteor/package and
+  // .meteor/versions files.
   _.each(options.args, function (packageReq) {
 
     var constraint = project.processPackageConstraint(packageReq);
 
-    if (!Packages.findOne({name: constraint.packageName})) {
+    if (! cat.getPackage(constraint.packageName)) {
       process.stderr.write(constraint.packageName + ": no such package\n");
       process.exit(1);
     }
-    var versionRecord = Versions.findOne({packageName: constraint.packageName,
-                                       version: getVersionFromVersionConstraint(constraint.versionConstraint)});
-    if (!versionRecord) {
-      process.stderr.write(constraint.packageName + constraint.versionConstraint  + ": no such version\n");
+    var versionInfo = cat.getVersion(
+      constraint.packageName,
+      getVersionFromVersionConstraint(constraint.versionConstraint));
+
+    if (! versionInfo) {
+      process.stderr.write(
+constraint.packageName + constraint.versionConstraint  + ": no such version\n");
       process.exit(1);
-    } else if (_.has(usingDirectly, constraint.packageName)) {
+    }
+
+    if (_.has(usingDirectly, constraint.packageName)) {
       if (usingDirectly[constraint.packageName] === constraint.versionConstraint) {
         process.stderr.write(constraint.packageName + "@" + constraint.versionConstraint   + ": already added\n");
         process.exit(1);
@@ -604,37 +608,32 @@ main.registerCommand({
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
 
-      // XXX: David Glasser! What do I do about the architecture.
-      var resolver = new ConstraintSolver.Resolver(
-          Packages, Versions, Builds, { architecture: "browser+os" });
-
+      var resolver = new ConstraintSolver.Resolver(cat);
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
                                          { optionsGoHere : false });
       _.forEach(newVersions, function(version, packageName) {
         // Find the build.
         // XXX: Find the one with the right architecture.
-        var versionRecord = Versions.findOne({packageName : packageName,
-                                              version: version});
+        var versionInfo = cat.getVersion(packageName, version);
 
-        // Safety check, but this should not happen unless the constraint solver is
-        // doing something it shouldn't.
-        if (!versionRecord) {
+        // Safety check, but this should not happen unless the
+        // constraint solver is doing something it shouldn't.
+        if (! versionInfo) {
           process.stderr.write("This package has no version at this version");
           process.exit(1);
         }
 
-        var buildRecord = Builds.findOne({versionId: versionRecord._id});
-        if (!buildRecord) {
+        var buildInfo = cat.getAnyBuild(packageName, version);
+        if (! buildInfo) {
           process.stderr.write("This package has no build at this version");
           process.exit(1);
         }
 
         // If the tarball is not in the warehouse, download it there.
-        if (!tropohouse.hasSpecifiedBuild(packageName,
-                                          version,
-                                          buildRecord.architecture)) {
-           tropohouse.downloadSpecifiedBuild(packageName, version, buildRecord);
+        if (! tropohouse.hasSpecifiedBuild(packageName, version,
+                                           buildInfo.architecture)) {
+           tropohouse.downloadSpecifiedBuild(packageName, version, buildInfo);
         }
 
         process.stdout.write("Added :" + packageName + " at " + version + "\n");
@@ -647,7 +646,7 @@ main.registerCommand({
       project.addDirectDependency(options.appDir, packageReq);
 
       // Log that this happened! Yay!
-      var note = versionRecord.description;
+      var note = versionInfo.description;
       process.stdout.write(constraint.packageName + ": " + note + "\n");
     }
   });
@@ -1539,20 +1538,14 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true
 }, function (options) {
-  var all = packageClient.loadPackageData();
-  var Packages = all.packages;
-  var Versions = all.versions;
-  Packages.find().forEach(function(package) {
-   // Hm. What is the right way to sort by version if we store version as string?
-   var desc = Versions.findOne({packageName: package.name}, {sort: {version: 1}});
-   if (desc) {
-     console.log(package.name, desc.description);
-   }
-  })
+  var cat = new catalog.Catalog;
+  _.each(cat.getAllPackageNames(), function (name) {
+    var versionInfo = cat.getLatestVersion(name);
+    if (versionInfo) {
+      console.log(name, versionInfo.description);
+    }
+  });
 });
-
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // dummy
