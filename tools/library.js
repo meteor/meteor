@@ -211,7 +211,7 @@ _.extend(Library.prototype, {
     if (! packageDir) {
       if (options.throwOnError === false)
         return null;
-      buildmessage.error("package not available: " + name);
+    //XXX  buildmessage.error("package not available: " + name);
       // recover by returning a dummy (empty) package
       var pkg = new packages.Package(self);
       pkg.initEmpty(name);

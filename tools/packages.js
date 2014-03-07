@@ -270,10 +270,10 @@ _.extend(Slice.prototype, {
       var scrubbed = [];
       _.each(self[field], function (u) {
         var pkg = self.pkg.library.get(u.package, { throwOnError: false });
-        if (! pkg) {
+/*       if (! pkg) {
           buildmessage.error("no such package: '" + u.package + "'");
           // recover by omitting this package from the field
-        } else
+        } else */
           scrubbed.push(u);
       });
       self[field] = scrubbed;
@@ -980,6 +980,8 @@ _.extend(Package.prototype, {
 
     var chosenArch = archinfo.mostSpecificMatch(arch,
                                                 _.keys(self.defaultSlices));
+
+    //XXX: this is commented out, but maybe shouldn't be.
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
@@ -1891,7 +1893,7 @@ _.extend(Package.prototype, {
       });
 
       vers = _.map(vers,  function(name) {
-        var newPath =  tropohouse.packagePath(name.packageName, name.versionConstraint, "browser+os");
+        var newPath =  tropohouse.packagePath(name.packageName, name.versionConstraint);
         self.library.override(name.packageName, newPath);
         return name.packageName;
       });
