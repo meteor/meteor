@@ -155,3 +155,20 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
     "dropdown": "1.2.2"
   });
 });
+
+Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
+  currentTest = test;
+  var versions = resolver.resolve({ "sparkle": "none" });
+  test.isTrue(_.isString(versions.sparkle));
+  versions = resolver.resolve({ "sparkle": null });
+  test.isTrue(_.isString(versions.sparkle));
+});
+
+Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
+  currentTest = test;
+  var versions = resolver.resolve({ "sparkle": "none", "sparky-forms": "1.1.2" });
+  test.equal(versions.sparkle, "2.1.1");
+  var versions = resolver.resolve({ "sparkle": null, "sparky-forms": "1.1.2" });
+  test.equal(versions.sparkle, "2.1.1");
+});
+
