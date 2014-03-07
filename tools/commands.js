@@ -1434,11 +1434,20 @@ main.registerCommand({
   // we used to build the package, and we need the source list to
   // compile the source tarball.
   release.current.library.override(path.basename(options.packageDir), options.packageDir);
-  var pkg = release.current.library.get(path.basename(
-    options.packageDir
-  ), {
-    forceRebuild: true
+
+  var pkg;
+  var messages = buildmessage.capture(function () {
+    pkg = release.current.library.get(path.basename(
+      options.packageDir
+    ), {
+      forceRebuild: true
+    });
   });
+
+  if (messages.hasMessages()) {
+    process.stdout.write(messages.formatMessages());
+    return 1;
+  }
 
   var name = pkg.name;
   var version = pkg.version;
