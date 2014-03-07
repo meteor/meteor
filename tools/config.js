@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var files = require('./files.js');
 var _ = require('underscore');
+var tropohouse = require('./tropohouse.js');
 
 // A few functions in the `meteor` tool talk to MDG servers: primarily
 // checking for updates, logging into your Meteor account, and
@@ -136,10 +137,7 @@ _.extend(exports, {
   },
 
   getPackageStorage: function() {
-    // XXX respect process.env.METEOR_WAREHOUSE_DIR
-    var warehouseBase = files.inCheckout()
-          ? files.getCurrentToolsDir() : process.env.HOME;
-    return path.join(warehouseBase, ".meteor", "package-metadata", "v1", "data.json");
+    return path.join(tropohouse.getWarehouseDir(), "package-metadata", "v1", "data.json");
   },
 
   getPackageStorageVersion: function() {

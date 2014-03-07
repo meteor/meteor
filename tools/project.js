@@ -24,6 +24,11 @@ var getPackagesLines = function (appDir) {
   return getLines(path.join(appDir, '.meteor', 'packages'));
 };
 
+var getVersionsLines = function (appDir) {
+  return getLines(path.join(appDir, '.meteor', 'versions'));
+};
+
+
 var trimLine = function (line) {
   var match = line.match(/^([^#]*)#/);
   if (match)
@@ -51,9 +56,91 @@ project.getPackages = function (appDir) {
   return ret;
 };
 
+
+// Convert foo@1.0 into an object.
+project.processPackageConstraint = function(constraint) {
+  var constArray = constraint.split("@");
+  var constObj  = {};
+  constObj.packageName = constArray[0];
+  if (constArray.length > 1) {
+   constObj.versionConstraint = constArray[1];
+ }
+ return constObj;
+}
+
+// Return an array of form [{packageName: foo, versionConstraint: 1.0}]
+project.processPerConstraintLines = function(lines) {
+  var ret = [];
+
+  // read from .meteor/packages
+  _.each(lines, function (line) {
+    line = trimLine(line);
+    if (line !== '') {
+      ret.push(project.processPackageConstraint(line));
+     }
+  });
+  return ret;
+
+}
+
+// Read in the .meteor/packages file.
+project.getDirectDependencies = function(appDir) {
+  return project.processPerConstraintLines(getPackagesLines(appDir));
+}
+
+// Given a list of dep constraints:
+//  foo@1.0 or just foo
+// return an object.
+project.getDepsAsObj = function(deps) {
+  var using = {};
+
+  _.each(deps, function (constraint) {
+    if (!_.has(constraint, "versionConstraint")) {
+      using[constraint.packageName] = "none";
+    } else {
+      using[constraint.packageName] = constraint.versionConstraint;
+    }
+  });
+  return using;
+}
+
+
+// Get a list of constraints from the .meteor/versions file.
+project.getIndirectDependencies = function(appDir) {
+  return project.processPerConstraintLines(getVersionsLines(appDir));
+}
+
+// Write the .meteor/versions file after running the constraint solver.
+project.rewriteIndirectDependencies = function (appDir, deps) {
+
+  var lines = [];
+
+  _.each(deps, function (version, name) {
+    lines.push(name + "@" + version + "\n");
+  })
+
+  console.log(lines);
+  fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
+                   lines.join('\n') + '\n', 'utf8');
+}
+
+
 var meteorReleaseFilePath = function (appDir) {
   return path.join(appDir, '.meteor', 'release');
 };
+
+
+// Add a direct dependency
+project.addDirectDependency = function (appDir, constraintString) {
+  var lines = getPackagesLines(appDir);
+
+  // XXX: Remove previous instance of constraint if one existed.
+
+  lines.push(constraintString);
+  writePackages(appDir, lines);
+};
+
+
 
 // This will return "none" if the project is not pinned to a release
 // (it was created by a checkout), or null for a legacy app with no

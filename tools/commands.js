@@ -547,6 +547,12 @@ main.registerCommand({
 });
 
 
+var getVersionFromVersionConstraint = function(constraint) {
+  if (constraint[0] === "=") {
+    return constraint.split("=")[1];
+  }
+  return constraint;
+}
 
 main.registerCommand({
   name: 'add-package',
@@ -560,57 +566,89 @@ main.registerCommand({
   var Versions = all.versions;
   var Builds = all.builds;
 
-  // XXX: We do not currently error if you already have the package at that constraint. Maybe do that.
+  // Read in existing builds.
+  var usingDirectly = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
 
+  // For every package name specified, run it through the constraint solver and add the right stuff
+  // to .meteor/package and .meteor/versions files.
   _.each(options.args, function (packageReq) {
-    var packReqArray = packageReq.split("@");
-    if (packReqArray.length < 2) {
-      process.stderr.write("be sad \n");
-    }
+    var constraint = project.processPackageConstraint(packageReq);
 
-    var name = packReqArray[0];
-    var versionConstraint = packReqArray[1];
-
-    if (!Packages.findOne({name: name})) {
-      process.stderr.write(name + ": no such package\n");
+    if (!Packages.findOne({name: constraint.packageName})) {
+      process.stderr.write(constraint.packageName + ": no such package\n");
       process.exit(1);
+    }
+    var versionRecord = Versions.findOne({packageName: constraint.packageName,
+                                       version: getVersionFromVersionConstraint(constraint.versionConstraint)});
+    if (!versionRecord) {
+      process.stderr.write(constraint.packageName + constraint.versionConstraint  + ": no such version\n");
+      process.exit(1);
+    } else if (_.has(usingDirectly, constraint.packageName)) {
+      if (usingDirectly[constraint.packageName] === constraint.versionConstraint) {
+        process.stderr.write(constraint.packageName + "@" + constraint.versionConstraint   + ": already added\n");
+        process.exit(1);
+      } else if (!constraint.versionConstraint && (usingDirectly[constraint.packageName] === "none")) {
+        process.stderr.write(constraint.packageName + ": already added\n");
+        process.exit(1);
+      }
     } else {
-      // Add a package here.
-      var addVersion = versionConstraint;
+      // Add the package to the list of packages that we use directly.
+      usingDirectly[constraint.packageName] = constraint.versionConstraint;
+      var usingIndirectly = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+      console.log(usingIndirectly);
 
-      var versionObj = Versions.findOne({packageName: name,
-                             version: addVersion});
-      if (!versionObj) {
-        process.stderr.write("Nonexistent version");
-        process.exit(1);
-     }
+      // Call the constraint solver.
+      var ConstraintSolver = unipackage.load({
+      	library: release.current.library,
+        packages: ['constraint-solver'],
+        release: release.current.name
+      })['constraint-solver'].ConstraintSolver;
 
-      // Our architecture.
-      //var archinfo = require("./archinfo.js");
-      //var architecture = archinfo.host();
+      // XXX: David Glasser! What do I do about the architecture.
+      var resolver = new ConstraintSolver.Resolver(
+          Packages, Versions, Builds, { architecture: "browser+os" });
 
-      // Find the build.
-      // XXX: Find the one with the right architecture.
-      var buildRecord = Builds.findOne({versionId: versionObj._id});
+      var newVersions = resolver.resolve(usingDirectly,
+                                         usingIndirectly,
+                                         { optionsGoHere : false });
+      _.forEach(newVersions, function(version, packageName) {
+        // Find the build.
+        // XXX: Find the one with the right architecture.
+        var versionRecord = Versions.findOne({packageName : packageName,
+                                              version: version});
 
-      if (!buildRecord) {
-        process.stderr.write("Nonexistent build");
-        process.exit(1);
-      }
+        // Safety check, but this should not happen unless the constraint solver is
+        // doing something it shouldn't.
+        if (!versionRecord) {
+          process.stderr.write("This package has no version at this version");
+          process.exit(1);
+        }
 
-      // If the tarball is not in the warehouse, download it there.
-      if (!tropohouse.hasSpecifiedBuild(name,
-                                       addVersion,
-                                       buildRecord.architecture)) {
-        tropohouse.downloadSpecifiedBuild(name, addVersion, buildRecord);
-      }
+        var buildRecord = Builds.findOne({versionId: versionRecord._id});
+        if (!buildRecord) {
+          process.stderr.write("This package has no build at this version");
+          process.exit(1);
+        }
 
-      // XXX: What format are we storing this in? Probably not like this.
-      project.addPackage(options.appDir, name + "@=" + addVersion);
+        // If the tarball is not in the warehouse, download it there.
+        if (!tropohouse.hasSpecifiedBuild(packageName,
+                                          version,
+                                          buildRecord.architecture)) {
+           tropohouse.downloadSpecifiedBuild(name, addVersion, buildRecord);
+        }
+
+        // XXX: Probably want to log all packages that we add.
+      })
+
+      // Write the new indirect dependencies file.
+      project.rewriteIndirectDependencies(options.appDir, newVersions);
+
+      // Add to the new direct dependencies file.
+      project.addDirectDependency(options.appDir, packageReq);
 
       // Log that this happened! Yay!
-      var note = Versions.findOne({packageName: name, version: addVersion}).description;
-      process.stderr.write(name + ": " + note + "\n");
+      var note = versionRecord.description;
+      process.stdout.write(constraint.packageName + ": " + note + "\n");
     }
   });
 });
@@ -1429,15 +1467,15 @@ main.registerCommand({
     _.each(slice.uses, function (use) {
       if (!_.has(dependencies, use.package)) {
         dependencies[use.package] = {
-          versionConstraint: "=1.0.0",  // XXX fix this
-          fromSlices: []
+          constraint: "=1.0.0",  // XXX fix this
+          references: []
         };
       }
 
-      dependencies[use.package].fromSlices.push({
+      dependencies[use.package].references.push({
         slice: slice.sliceName,
         arch: archinfo.withoutSpecificOs(slice.arch),
-        toSlice: use.slice,  // usually undefined, which means "default slices"
+        targetSlice: use.slice,  // usually undefined, for "default slices"
         weak: use.weak,
         unordered: use.unordered
       });
