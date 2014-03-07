@@ -10,14 +10,19 @@
           "version": "0.7.0",
           "dependencies": {
             "websocket-driver": {
-              "version": "0.3.1"
+              "version": "0.3.2"
             }
           }
         }
       }
     },
-    "websocket": {
-      "version": "1.0.8"
+    "faye-websocket": {
+      "version": "0.7.2",
+      "dependencies": {
+        "websocket-driver": {
+          "version": "0.3.2"
+        }
+      }
     }
   }
 }

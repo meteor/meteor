@@ -331,8 +331,7 @@ LiveRange.prototype.visit = function(visitRange, visitNode) {
           recurse(rangeStart, rangeEnd, startIndex+1);
         visitRange(false, range);
         n = rangeEnd;
-      }
-      else {
+      } else {
         // bare node
         if (visitNode(true, n) !== false && n.firstChild)
           recurse(n.firstChild, n.lastChild);

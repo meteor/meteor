@@ -8,7 +8,22 @@ if (Meteor.isServer) {
 //   or an object as a test hook (see code)
 // Options:
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
+//   headers: extra headers to send on the websockets connection, for
+//     server-to-server DDP only
+//   _sockjsOptions: Specifies options to pass through to the sockjs client
 //   onDDPNegotiationVersionFailure: callback when version negotiation fails.
+//
+// XXX There should be a way to destroy a DDP connection, causing all
+// outstanding method calls to fail.
+//
+// XXX Our current way of handling failure and reconnection is great
+// for an app (where we want to tolerate being disconnected as an
+// expect state, and keep trying forever to reconnect) but cumbersome
+// for something like a command line tool that wants to make a
+// connection, call a method, and print an error if connection
+// fails. We should have better usability in the latter case (while
+// still transparently reconnecting if it's just a transient failure
+// or the server migrating us).
 var Connection = function (url, options) {
   var self = this;
   options = _.extend({
@@ -32,7 +47,12 @@ var Connection = function (url, options) {
     self._stream = url;
   } else {
     self._stream = new LivedataTest.ClientStream(url, {
-      retry: options.retry
+      retry: options.retry,
+      headers: options.headers,
+      _sockjsOptions: options._sockjsOptions,
+      // To keep some tests quiet (because we don't have a real API for handling
+      // client-stream-level errors).
+      _dontPrintErrors: options._dontPrintErrors
     });
   }
 
@@ -93,7 +113,7 @@ var Connection = function (url, options) {
   // methods whose stub wrote at least one document, and whose data-done message
   // has not yet been received.
   self._documentsWrittenByStub = {};
-  // collection -> id -> "server document" object. A "server document" has:
+  // collection -> IdMap of "server document" object. A "server document" has:
   // - "document": the version of the document according the
   //   server (ie, the snapshot before a stub wrote it, amended by any changes
   //   received from the server)
@@ -530,6 +550,7 @@ _.extend(Connection.prototype, {
     var self = this;
     var f = new Future();
     var ready = false;
+    var handle;
     args = args || [];
     args.push({
       onReady: function () {
@@ -544,8 +565,9 @@ _.extend(Connection.prototype, {
       }
     });
 
-    self.subscribe.apply(self, [name].concat(args));
+    handle = self.subscribe.apply(self, [name].concat(args));
     f.wait();
+    return handle;
   },
 
   methods: function (methods) {
@@ -762,11 +784,14 @@ _.extend(Connection.prototype, {
     var docsWritten = [];
     _.each(self._stores, function (s, collection) {
       var originals = s.retrieveOriginals();
-      _.each(originals, function (doc, id) {
-        if (typeof id !== 'string')
-          throw new Error("id is not a string");
+      // not all stores define retrieveOriginals
+      if (!originals)
+        return;
+      originals.forEach(function (doc, id) {
         docsWritten.push({collection: collection, id: id});
-        var serverDoc = Meteor._ensure(self._serverDocuments, collection, id);
+        if (!_.has(self._serverDocuments, collection))
+          self._serverDocuments[collection] = new LocalCollection._IdMap;
+        var serverDoc = self._serverDocuments[collection].setDefault(id, {});
         if (serverDoc.writtenByStubs) {
           // We're not the first stub to write this doc. Just add our method ID
           // to the record.
@@ -1054,17 +1079,24 @@ _.extend(Connection.prototype, {
     updates[collection].push(msg);
   },
 
+  _getServerDoc: function (collection, id) {
+    var self = this;
+    if (!_.has(self._serverDocuments, collection))
+      return null;
+    var serverDocsForCollection = self._serverDocuments[collection];
+    return serverDocsForCollection.get(id) || null;
+  },
+
   _process_added: function (msg, updates) {
     var self = this;
-    var serverDoc = Meteor._get(self._serverDocuments, msg.collection, msg.id);
+    var id = LocalCollection._idParse(msg.id);
+    var serverDoc = self._getServerDoc(msg.collection, id);
     if (serverDoc) {
       // Some outstanding stub wrote here.
-      if (serverDoc.document !== undefined) {
-        throw new Error("It doesn't make sense to be adding something we know exists: "
-                        + msg.id);
-      }
+      if (serverDoc.document !== undefined)
+        throw new Error("Server sent add for existing id: " + msg.id);
       serverDoc.document = msg.fields || {};
-      serverDoc.document._id = LocalCollection._idParse(msg.id);
+      serverDoc.document._id = id;
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }
@@ -1072,12 +1104,11 @@ _.extend(Connection.prototype, {
 
   _process_changed: function (msg, updates) {
     var self = this;
-    var serverDoc = Meteor._get(self._serverDocuments, msg.collection, msg.id);
+    var serverDoc = self._getServerDoc(
+      msg.collection, LocalCollection._idParse(msg.id));
     if (serverDoc) {
-      if (serverDoc.document === undefined) {
-        throw new Error("It doesn't make sense to be changing something we don't think exists: "
-                        + msg.id);
-      }
+      if (serverDoc.document === undefined)
+        throw new Error("Server sent changed for nonexisting id: " + msg.id);
       LocalCollection._applyChanges(serverDoc.document, msg.fields);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
@@ -1086,14 +1117,12 @@ _.extend(Connection.prototype, {
 
   _process_removed: function (msg, updates) {
     var self = this;
-    var serverDoc = Meteor._get(
-      self._serverDocuments, msg.collection, msg.id);
+    var serverDoc = self._getServerDoc(
+      msg.collection, LocalCollection._idParse(msg.id));
     if (serverDoc) {
       // Some outstanding stub wrote here.
-      if (serverDoc.document === undefined) {
-        throw new Error("It doesn't make sense to be deleting something we don't know exists: "
-                        + msg.id);
-      }
+      if (serverDoc.document === undefined)
+        throw new Error("Server sent removed for nonexisting id:" + msg.id);
       serverDoc.document = undefined;
     } else {
       self._pushUpdate(updates, msg.collection, {
@@ -1109,8 +1138,7 @@ _.extend(Connection.prototype, {
     // Process "method done" messages.
     _.each(msg.methods, function (methodId) {
       _.each(self._documentsWrittenByStub[methodId], function (written) {
-        var serverDoc = Meteor._get(self._serverDocuments,
-                                    written.collection, written.id);
+        var serverDoc = self._getServerDoc(written.collection, written.id);
         if (!serverDoc)
           throw new Error("Lost serverDoc for " + JSON.stringify(written));
         if (!serverDoc.writtenByStubs[methodId])
@@ -1123,11 +1151,12 @@ _.extend(Connection.prototype, {
           // change if the server did not write to this object, or applying the
           // server's writes if it did).
 
-          // This is a fake ddp 'replace' message.  It's just for talking between
-          // livedata connections and minimongo.
+          // This is a fake ddp 'replace' message.  It's just for talking
+          // between livedata connections and minimongo.  (We have to stringify
+          // the ID because it's supposed to look like a wire message.)
           self._pushUpdate(updates, written.collection, {
             msg: 'replace',
-            id: written.id,
+            id: LocalCollection._idStringify(written.id),
             replace: serverDoc.document
           });
           // Call all flush callbacks.
@@ -1136,9 +1165,9 @@ _.extend(Connection.prototype, {
           });
 
           // Delete this completed serverDocument. Don't bother to GC empty
-          // objects inside self._serverDocuments, since there probably aren't
+          // IdMaps inside self._serverDocuments, since there probably aren't
           // many collections and they'll be written repeatedly.
-          delete self._serverDocuments[written.collection][written.id];
+          self._serverDocuments[written.collection].remove(written.id);
         }
       });
       delete self._documentsWrittenByStub[methodId];
@@ -1192,7 +1221,7 @@ _.extend(Connection.prototype, {
       }
     };
     _.each(self._serverDocuments, function (collectionDocs) {
-      _.each(collectionDocs, function (serverDoc) {
+      collectionDocs.forEach(function (serverDoc) {
         var writtenByStubForAMethodWithSentMessage = _.any(
           serverDoc.writtenByStubs, function (dummy, methodId) {
             var invoker = self._methodInvokers[methodId];

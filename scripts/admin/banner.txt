@@ -1,4 +1,4 @@
-=> Meteor 0.7.0.1: Fix hang while setting up local MongoDB.
+=> Meteor 0.7.1.2: Fix crash on OSX machines with no hostname set.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.7.0.1 by running 'meteor update'.
+   project to Meteor 0.7.1.2 by running 'meteor update'.

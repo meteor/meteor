@@ -51,6 +51,16 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     url = newSchemeBase + "://" + url;
   }
 
+  // XXX This is not what we should be doing: if I have a site
+  // deployed at "/foo", then DDP.connect("/") should actually connect
+  // to "/", not to "/foo". "/" is an absolute path. (Contrast: if
+  // deployed at "/foo", it would be reasonable for DDP.connect("bar")
+  // to connect to "/foo/bar").
+  //
+  // We should make this properly honor absolute paths rather than
+  // forcing the path to be relative to the site root. Simultaneously,
+  // we should set DDP_DEFAULT_CONNECTION_URL to include the site
+  // root. See also client_convenience.js #RationalizingRelativeDDPURLs
   url = Meteor._relativeToSiteRootUrl(url);
 
   if (endsWith(url, "/"))
@@ -125,6 +135,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     if (options.url) {
       self._changeUrl(options.url);
+    }
+
+    if (options._sockjsOptions) {
+      self.options._sockjsOptions = options._sockjsOptions;
     }
 
     if (self.currentStatus.connected) {

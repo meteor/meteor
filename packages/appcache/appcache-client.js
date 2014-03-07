@@ -58,8 +58,7 @@ window.applicationCache.addEventListener('noupdate', cacheIsNowUpToDate, false);
 window.applicationCache.addEventListener('obsolete', (function() {
   if (reloadRetry) {
     cacheIsNowUpToDate();
-  }
-  else {
+  } else {
     appcacheUpdated = true;
     Reload._reload();
   }

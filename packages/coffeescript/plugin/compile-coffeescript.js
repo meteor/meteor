@@ -10,7 +10,7 @@ var stripExportedVars = function (source, exports) {
   var lines = source.split("\n");
 
   // We make the following assumptions, based on the output of CoffeeScript
-  // 1.6.3.
+  // 1.7.1.
   //   - The var declaration in question is not indented and is the first such
   //     var declaration.  (CoffeeScript only produces one var line at each
   //     scope and there's only one top-level scope.)  All relevant variables
@@ -149,15 +149,15 @@ var handler = function (compileStep, isLiterate) {
     path: outputFile,
     sourcePath: compileStep.inputPath,
     data: sourceWithMap.source,
-    sourceMap: sourceWithMap.sourceMap
+    sourceMap: sourceWithMap.sourceMap,
+    bare: compileStep.fileOptions.bare
   });
 };
 
 var literateHandler = function (compileStep) {
   return handler(compileStep, true);
-}
+};
 
 Plugin.registerSourceHandler("coffee", handler);
 Plugin.registerSourceHandler("litcoffee", literateHandler);
 Plugin.registerSourceHandler("coffee.md", literateHandler);
-

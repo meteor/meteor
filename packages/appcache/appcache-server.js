@@ -44,8 +44,7 @@ Meteor.AppCache = {
         _.each(value, function (urlPrefix) {
           RoutePolicy.declare(urlPrefix, 'static-online');
         });
-      }
-      else {
+      } else {
         throw new Error('Invalid AppCache config option: ' + option);
       }
     });
@@ -178,7 +177,8 @@ WebApp.connectHandlers.use(function(req, res, next) {
 var sizeCheck = function() {
   var totalSize = 0;
   _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.cacheable && resource.where === 'client') {
+    if (resource.where === 'client' &&
+        ! RoutePolicy.classify(resource.url)) {
       totalSize += resource.size;
     }
   });

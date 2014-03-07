@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.26
+BUNDLE_VERSION=0.3.33
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -51,15 +51,25 @@ function install_dev_bundle {
     rm -rf "$BUNDLE_TMPDIR"
     mkdir "$BUNDLE_TMPDIR"
 
+    # fyi: URL duplicated in packages/dev-bundle-fetcher/dev-bundle
+    DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
+    # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
+    # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.
+    # It still only does this if the version number has changed
+    # (setting it won't cause it to automatically delete a prod dev bundle).
+    if [ -n "$USE_TEST_DEV_BUNDLE_SERVER" ] ; then
+        DEV_BUNDLE_URL_ROOT="https://com.meteor.static.s3.amazonaws.com/test/"
+    fi
+
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
         echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL" >&2
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
     elif [ -n "$SAVE_DEV_BUNDLE_TARBALL" ] ; then
         # URL duplicated in tools/server/target.sh.in
-        curl -# "https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL" >"$SCRIPT_DIR/$TARBALL"
+        curl -# "$DEV_BUNDLE_URL_ROOT$TARBALL" >"$SCRIPT_DIR/$TARBALL"
         tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
     else
-        curl -# "https://d3sqy0vbqsdhku.cloudfront.net/$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
+        curl -# "$DEV_BUNDLE_URL_ROOT$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
     fi
 
     test -x "${BUNDLE_TMPDIR}/bin/node" # bomb out if it didn't work, eg no net
@@ -89,11 +99,11 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
     fi
 
     DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/tools/meteor.js"
+    METEOR="$SCRIPT_DIR/tools/main.js"
 else
     # In an install
     DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/tools/meteor.js"
+    METEOR="$DEV_BUNDLE/tools/main.js"
 fi
 
 

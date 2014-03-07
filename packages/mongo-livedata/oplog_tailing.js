@@ -1,6 +1,7 @@
 var Future = Npm.require('fibers/future');
 
-var OPLOG_COLLECTION = 'oplog.rs';
+OPLOG_COLLECTION = 'oplog.rs';
+var REPLSET_COLLECTION = 'system.replset';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -27,10 +28,10 @@ idForOp = function (op) {
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
 
-OplogHandle = function (oplogUrl, dbNameFuture) {
+OplogHandle = function (oplogUrl, dbName) {
   var self = this;
   self._oplogUrl = oplogUrl;
-  self._dbNameFuture = dbNameFuture;
+  self._dbName = dbName;
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
@@ -41,26 +42,17 @@ OplogHandle = function (oplogUrl, dbNameFuture) {
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
   self._lastProcessedTS = null;
-  // Lazily calculate the basic selector. Don't call _baseOplogSelector() at the
-  // top level of the constructor, because we don't want the constructor to
-  // block. Note that the _.once is per-handle.
-  self._baseOplogSelector = _.once(function () {
-    return {
-      ns: new RegExp('^' + quotemeta(self._dbNameFuture.wait()) + '\\.'),
-      $or: [
-        { op: {$in: ['i', 'u', 'd']} },
-        // If it is not db.collection.drop(), ignore it
-        { op: 'c', 'o.drop': { $exists: true } }]
-    };
-  });
+  self._baseOplogSelector = {
+    ns: new RegExp('^' + quotemeta(self._dbName) + '\\.'),
+    $or: [
+      { op: {$in: ['i', 'u', 'd']} },
+      // If it is not db.collection.drop(), ignore it
+      { op: 'c', 'o.drop': { $exists: true } }]
+  };
   // XXX doc
   self._catchingUpFutures = [];
 
-  // Setting up the connections and tail handler is a blocking operation, so we
-  // do it "later".
-  Meteor.defer(function () {
-    self._startTailing();
-  });
+  self._startTailing();
 };
 
 _.extend(OplogHandle.prototype, {
@@ -82,13 +74,9 @@ _.extend(OplogHandle.prototype, {
     self._readyFuture.wait();
 
     var originalCallback = callback;
-    callback = Meteor.bindEnvironment(function (notification, onComplete) {
+    callback = Meteor.bindEnvironment(function (notification) {
       // XXX can we avoid this clone by making oplog.js careful?
-      try {
-        originalCallback(EJSON.clone(notification));
-      } finally {
-        onComplete();
-      }
+      originalCallback(EJSON.clone(notification));
     }, function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
     });
@@ -117,7 +105,7 @@ _.extend(OplogHandle.prototype, {
     // tailing selector (ie, we need to specify the DB name) or else we might
     // find a TS that won't show up in the actual tail stream.
     var lastEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, self._baseOplogSelector(),
+      OPLOG_COLLECTION, self._baseOplogSelector,
       {fields: {ts: 1}, sort: {$natural: -1}});
 
     if (!lastEntry) {
@@ -168,13 +156,19 @@ _.extend(OplogHandle.prototype, {
     self._oplogLastEntryConnection = new MongoConnection(
       self._oplogUrl, {poolSize: 1});
 
-    // Find the last oplog entry. Blocks until the connection is ready.
+    // First, make sure that there actually is a repl set here. If not, oplog
+    // tailing won't ever find anything! (Blocks until the connection is ready.)
+    var replSetInfo = self._oplogLastEntryConnection.findOne(
+      REPLSET_COLLECTION, {});
+    if (!replSetInfo)
+      throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
+                  "a Mongo replica set");
+
+    // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
       OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
 
-    var dbName = self._dbNameFuture.wait();
-
-    var oplogSelector = _.clone(self._baseOplogSelector());
+    var oplogSelector = _.clone(self._baseOplogSelector);
     if (lastOplogEntry) {
       // Start after the last entry that currently exists.
       oplogSelector.ts = {$gt: lastOplogEntry.ts};
@@ -189,11 +183,13 @@ _.extend(OplogHandle.prototype, {
 
     self._tailHandle = self._oplogTailConnection.tail(
       cursorDescription, function (doc) {
-        if (!(doc.ns && doc.ns.length > dbName.length + 1 &&
-              doc.ns.substr(0, dbName.length + 1) === (dbName + '.')))
+        if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
+              doc.ns.substr(0, self._dbName.length + 1) ===
+              (self._dbName + '.'))) {
           throw new Error("Unexpected ns");
+        }
 
-        var trigger = {collection: doc.ns.substr(dbName.length + 1),
+        var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
                        dropCollection: false,
                        op: doc};
 
@@ -208,9 +204,7 @@ _.extend(OplogHandle.prototype, {
           trigger.id = idForOp(doc);
         }
 
-        var f = new Future;
-        self._crossbar.fire(trigger, f.resolver());
-        f.wait();
+        self._crossbar.fire(trigger);
 
         // Now that we've processed this operation, process pending sequencers.
         if (!doc.ts)

@@ -165,7 +165,7 @@ MongoConnection = function (url, options) {
     self._withDb(function (db) {
       dbNameFuture.return(db.databaseName);
     });
-    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture);
+    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
   }
 };
 
@@ -491,7 +491,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     // the behavior of modifiers is concerned, whether `_modify`
     // is run on EJSON or on mongo-converted EJSON.
     var selectorDoc = LocalCollection._removeDollarOperators(selector);
-    LocalCollection._modify(selectorDoc, mod, true);
+    LocalCollection._modify(selectorDoc, mod, {isInsert: true});
     newDoc = selectorDoc;
   } else {
     newDoc = mod;
@@ -698,8 +698,7 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
 });
 
 Cursor.prototype.getTransform = function () {
-  var self = this;
-  return self._cursorDescription.options.transform;
+  return this._cursorDescription.options.transform;
 };
 
 // When you call Meteor.publish() with a function that returns a Cursor, we need
@@ -755,11 +754,15 @@ MongoConnection.prototype._createSynchronousCursor = function(
     // ... and to keep querying the server indefinitely rather than just 5 times
     // if there's no more data.
     mongoOptions.numberOfRetries = -1;
-    // And if this cursor specifies a 'ts', then set the undocumented oplog
-    // replay flag, which does a special scan to find the first document
-    // (instead of creating an index on ts).
-    if (cursorDescription.selector.ts)
+    // And if this is on the oplog collection and the cursor specifies a 'ts',
+    // then set the undocumented oplog replay flag, which does a special scan to
+    // find the first document (instead of creating an index on ts). This is a
+    // very hard-coded Mongo flag which only works on the oplog collection and
+    // only works with the ts field.
+    if (cursorDescription.collectionName === OPLOG_COLLECTION &&
+        cursorDescription.selector.ts) {
       mongoOptions.oplogReplay = true;
+    }
   }
 
   var dbCursor = collection.find(
@@ -779,9 +782,8 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   // inside a user-visible Cursor, we want to provide the outer cursor!
   self._selfForIteration = options.selfForIteration || self;
   if (options.useTransform && cursorDescription.options.transform) {
-    self._transform = Deps._makeNonreactive(
-      cursorDescription.options.transform
-    );
+    self._transform = LocalCollection.wrapTransform(
+      cursorDescription.options.transform);
   } else {
     self._transform = null;
   }
@@ -792,7 +794,7 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   self._synchronousNextObject = Future.wrap(
     dbCursor.nextObject.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
-  self._visitedIds = {};
+  self._visitedIds = new LocalCollection._IdMap;
 };
 
 _.extend(SynchronousCursor.prototype, {
@@ -812,9 +814,8 @@ _.extend(SynchronousCursor.prototype, {
         // because we want to maintain O(1) memory usage. And if there isn't _id
         // for some reason (maybe it's the oplog), then we don't do this either.
         // (Be careful to do this for falsey but existing _id, though.)
-        var strId = LocalCollection._idStringify(doc._id);
-        if (self._visitedIds[strId]) continue;
-        self._visitedIds[strId] = true;
+        if (self._visitedIds.has(doc._id)) continue;
+        self._visitedIds.set(doc._id, true);
       }
 
       if (self._transform)
@@ -854,7 +855,7 @@ _.extend(SynchronousCursor.prototype, {
     // known to be synchronous
     self._dbCursor.rewind();
 
-    self._visitedIds = {};
+    self._visitedIds = new LocalCollection._IdMap;
   },
 
   // Mostly usable for tailable cursors.
@@ -880,9 +881,9 @@ _.extend(SynchronousCursor.prototype, {
     if (ordered) {
       return self.fetch();
     } else {
-      var results = {};
+      var results = new LocalCollection._IdMap;
       self.forEach(function (doc) {
-        results[doc._id] = doc;
+        results.set(doc._id, doc);
       });
       return results;
     }
@@ -957,6 +958,14 @@ MongoConnection.prototype._observeChanges = function (
     return self._observeChangesTailable(cursorDescription, ordered, callbacks);
   }
 
+  // You may not filter out _id when observing changes, because the id is a core
+  // part of the observeChanges API.
+  if (cursorDescription.options.fields &&
+      (cursorDescription.options.fields._id === 0 ||
+       cursorDescription.options.fields._id === false)) {
+    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+  }
+
   var observeKey = JSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 
@@ -987,21 +996,32 @@ MongoConnection.prototype._observeChanges = function (
 
   if (firstHandle) {
     var driverClass = PollingObserveDriver;
-    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback
-        && OplogObserveDriver.cursorSupported(cursorDescription)) {
-      driverClass = OplogObserveDriver;
+    var matcher;
+    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback) {
+      try {
+        matcher = new Minimongo.Matcher(cursorDescription.selector);
+      } catch (e) {
+        // Ignore and avoid oplog driver. eg, maybe we're trying to compile some
+        // newfangled $selector that minimongo doesn't support yet.
+        // XXX make all compilation errors MinimongoError or something
+        //     so that this doesn't ignore unrelated exceptions
+      }
+      if (matcher
+          && OplogObserveDriver.cursorSupported(cursorDescription, matcher)) {
+        driverClass = OplogObserveDriver;
+      }
     }
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,
       multiplexer: multiplexer,
       ordered: ordered,
+      matcher: matcher,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 
-    // This field is only set for the first ObserveHandle in an
-    // ObserveMultiplexer. It is only there for use tests.
-    observeHandle._observeDriver = observeDriver;
+    // This field is only set for use in tests.
+    multiplexer._observeDriver = observeDriver;
   }
 
   // Blocks until the initial adds have been sent.

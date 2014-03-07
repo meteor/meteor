@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "esprima": {
-      "from": "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018"
+      "version": "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018"
     },
     "escope": {
       "version": "1.0.0",

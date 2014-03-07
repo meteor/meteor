@@ -154,22 +154,18 @@ other packages. However sometimes load order dependencies in your
 application are unavoidable. The JavaScript and CSS files in an
 application are loaded according to these rules:
 
-* Files in the `lib` directory at the root of your application are
-  loaded first.
-
-* Files that match `main.*` are loaded after everything else.
-
-* Files in subdirectories are loaded before files in parent
-  directories, so that files in the deepest subdirectory are loaded
-  first (after `lib`), and files in the root directory are loaded last
-  (other than `main.*`).
+* Files in subdirectories are loaded before files in parent directories, so that
+  files in the deepest subdirectory are loaded first, and files in the root
+  directory are loaded last.
 
 * Within a directory, files are loaded in alphabetical order by
   filename.
 
-These rules stack, so that within `lib`, for example, files are still
-loaded in alphabetical order; and if there are multiple files named
-`main.js`, the ones in subdirectories are loaded earlier.
+* After sorting as described above, all files under directories named `lib` are
+  moved before everything else (preserving their order).
+
+* Finally, all files that match `main.*` are moved after everything else
+  (preserving their order).
 
 {{/better_markdown}}
 </template>
@@ -559,8 +555,9 @@ database cursor is passed to `#each`, it will wire up all of the
 machinery to efficiently add and move DOM nodes as new results enter
 the query.
 
-Helpers can take arguments, and they receive the current template data
-in `this`:
+Helpers can take arguments, and they receive the current template context data
+in `this`. Note that some block helpers change the current context (notably
+`each` and `with`):
 
     // in a JavaScript file
     Template.players.leagueIs = function (league) {
@@ -826,10 +823,11 @@ To get started, run
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
-0.10.22, and is recommended for use with 0.10.22 through 0.10.24 only.) You can
-then run the application by invoking node, specifying the HTTP port for the
-application to listen on, and the MongoDB endpoint.  If you don't already have a
-MongoDB server, we can recommend our friends at [MongoHQ](http://mongohq.com).
+0.10.25; older versions contain a serious bug that can cause production servers
+to stall.) You can then run the application by invoking node, specifying the
+HTTP port for the application to listen on, and the MongoDB endpoint.  If
+you don't already have a MongoDB server, we can recommend our friends at
+[MongoHQ](http://mongohq.com).
 
     $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node bundle/main.js
 

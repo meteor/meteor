@@ -94,7 +94,7 @@ if (autoLoginEnabled) {
     // On startup, optimistically present us as logged in while the
     // request is in flight. This reduces page flicker on startup.
     var userId = storedUserId();
-    userId && Meteor.connection.setUserId(userId);
+    userId && Accounts.connection.setUserId(userId);
     Meteor.loginWithToken(token, function (err) {
       if (err) {
         Meteor._debug("Error logging in with token: " + err);
@@ -115,10 +115,14 @@ var pollStoredLoginToken = function() {
 
   // != instead of !== just to make sure undefined and null are treated the same
   if (lastLoginTokenWhenPolled != currentLoginToken) {
-    if (currentLoginToken)
-      Meteor.loginWithToken(currentLoginToken); // XXX should we pass a callback here?
-    else
+    if (currentLoginToken) {
+      Meteor.loginWithToken(currentLoginToken, function (err) {
+        if (err)
+          makeClientLoggedOut();
+      });
+    } else {
       Meteor.logout();
+    }
   }
   lastLoginTokenWhenPolled = currentLoginToken;
 };

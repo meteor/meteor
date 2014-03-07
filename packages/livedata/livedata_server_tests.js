@@ -24,7 +24,6 @@ Tinytest.addAsync(
   }
 );
 
-
 Tinytest.addAsync(
   "livedata server - connectionHandle.close()",
   function (test, onComplete) {

@@ -107,6 +107,13 @@ _.extend(TestCaseResults.prototype, {
 
   // XXX eliminate 'message' and 'not' arguments
   equal: function (actual, expected, message, not) {
+
+    if ((! not) && (typeof actual === 'string') &&
+        (typeof expected === 'string')) {
+      this._stringEqual(actual, expected, message);
+      return;
+    }
+
     /* If expected is a DOM node, do a literal '===' comparison with
      * actual. Otherwise do a deep comparison, as implemented by _.isEqual.
      */
@@ -162,7 +169,7 @@ _.extend(TestCaseResults.prototype, {
   },
 
   // XXX nodejs assert.throws can take an expected error, as a class,
-  // regular expression, or predicate function.  However, with its 
+  // regular expression, or predicate function.  However, with its
   // implementation if a constructor (class) is passed in and `actual`
   // fails the instanceof test, the constructor is then treated as
   // a predicate and called with `actual` (!)
@@ -248,11 +255,9 @@ _.extend(TestCaseResults.prototype, {
     else if (typeof s === "object")
       pass = v in s;
     else if (typeof s === "string")
-      for (var i = 0; i < s.length; i++)
-        if (s.charAt(i) === v) {
-          pass = true;
-          break;
-        }
+      if (s.indexOf(v) > -1) {
+        pass = true;
+      }
     else
       /* fail -- not something that contains other things */;
     if (pass)
@@ -269,7 +274,22 @@ _.extend(TestCaseResults.prototype, {
     else
       this.fail({type: "length", expected: expected_length,
                  actual: obj.length});
+  },
+
+  // EXPERIMENTAL way to compare two strings that results in
+  // a nicer display in the test runner, e.g. for multiline
+  // strings
+  _stringEqual: function (actual, expected, message) {
+    if (actual !== expected) {
+      this.fail({type: "string_equal",
+                 message: message,
+                 expected: expected,
+                 actual: actual});
+    } else {
+      this.ok();
+    }
   }
+
 
 });
 
