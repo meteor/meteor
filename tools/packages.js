@@ -1925,6 +1925,14 @@ _.extend(Package.prototype, {
   //   dependency information.
   initFromUnipackage: function (name, dir, options) {
     var self = this;
+    options = _.clone(options || {});
+    options.firstUnipackage = true;
+
+    return self._loadSlicesFromUnipackage(name, dir, options);
+  },
+
+  _loadSlicesFromUnipackage: function (name, dir, options) {
+    var self = this;
     options = options || {};
 
     var mainJson =
@@ -1935,8 +1943,15 @@ _.extend(Package.prototype, {
                       JSON.stringify(mainJson.format));
 
     var buildInfoPath = path.join(dir, 'buildinfo.json');
-    var buildInfoJson = fs.existsSync(buildInfoPath) ?
-      JSON.parse(fs.readFileSync(buildInfoPath)) : {};
+    var buildInfoJson = fs.existsSync(buildInfoPath) &&
+      JSON.parse(fs.readFileSync(buildInfoPath));
+    if (buildInfoJson) {
+      if (!options.firstUnipackage) {
+        throw Error("can't merge unipackages with buildinfo");
+      }
+    } else {
+      buildInfoJson = {};
+    }
 
     // XXX should comprehensively sanitize (eg, typecheck) everything
     // read from json files
@@ -1983,15 +1998,25 @@ _.extend(Package.prototype, {
         return false;
     }
 
-    self.name = name;
-    self.metadata = {
-      summary: mainJson.summary,
-      internal: mainJson.internal,
-      version: mainJson.version,
-      earliestCompatibleVersion: mainJson.earliestCompatibleVersion
-    };
-    self.defaultSlices = mainJson.defaultSlices;
-    self.testSlices = mainJson.testSlices;
+    // If we are loading multiple unipackages, only take this stuff from the
+    // first one.
+    if (options.firstUnipackage) {
+      self.name = name;
+      self.metadata = {
+        summary: mainJson.summary,
+        internal: mainJson.internal,
+        version: mainJson.version,
+        earliestCompatibleVersion: mainJson.earliestCompatibleVersion
+      };
+    }
+    // If multiple sub-unipackages specify defaultSlices or testSlices for the
+    // same arch, just take the answer from the first sub-unipackage.
+    self.defaultSlices = _.extend(mainJson.defaultSlices,
+                                  self.defaultSlices || {});
+    self.testSlices = _.extend(mainJson.testSlices,
+                               self.testSlices || {});
+    // In the multi-sub-unipackage case, these are guaranteed to be trivial
+    // (since we check that there's no buildinfo.json), so no need to merge.
     self.pluginWatchSet = pluginWatchSet;
     self.pluginProviderPackageDirs = pluginProviderPackageDirs;
 
@@ -2003,7 +2028,10 @@ _.extend(Package.prototype, {
       if (!_.has(self.plugins, pluginMeta.name)) {
         self.plugins[pluginMeta.name] = {};
       }
-      self.plugins[pluginMeta.name][plugin.arch] = plugin;
+      // If we already loaded a plugin of this name/arch, just ignore this one.
+      if (!_.has(self.plugins[pluginMeta.name], plugin.arch)) {
+        self.plugins[pluginMeta.name][plugin.arch] = plugin;
+      }
     });
     self.pluginsBuilt = true;
 
@@ -2011,6 +2039,15 @@ _.extend(Package.prototype, {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
       rejectBadPath(sliceMeta.path);
+
+      // Skip slices we already have.
+      var alreadyHaveSlice = _.find(self.slices, function (slice) {
+        return slice.sliceName === sliceMeta.name &&
+          slice.arch === sliceMeta.arch;
+      });
+      if (alreadyHaveSlice)
+        return;
+
       var sliceJson = JSON.parse(
         fs.readFileSync(path.join(dir, sliceMeta.path)));
       var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
