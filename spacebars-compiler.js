@@ -90,8 +90,10 @@ var optimize = function (tree) {
       // not special; let parent decide how whether to optimize
       return null;
     } else if (node instanceof HTML.Tag) {
-
-      if (node.tagName === 'textarea' || (! HTML.isKnownElement(node.tagName))) {
+      var tagName = node.tagName;
+      if (tagName === 'textarea' ||
+          (! (HTML.isKnownElement(tagName) &&
+              ! HTML.isKnownSVGElement(tagName)))) {
         // optimizing into a TEXTAREA's RCDATA would require being a little
         // more clever.  foreign elements like SVG can't be stringified for
         // innerHTML.
