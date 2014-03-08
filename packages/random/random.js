@@ -109,6 +109,8 @@ RandomGenerator.prototype.fraction = function () {
     var array = new Uint32Array(1);
     window.crypto.getRandomValues(array);
     return array[0] * 2.3283064365386963e-10; // 2^-32
+  } else {
+    throw new Error('No random generator available');
   }
 };
 
@@ -180,13 +182,21 @@ var width = (typeof window !== 'undefined' && window.innerWidth) ||
 
 var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
 
-if (nodeCrypto ||
-    (typeof window !== "undefined" &&
-     window.crypto && window.crypto.getRandomValues))
-  Random = new RandomGenerator();
-else
-  Random = new RandomGenerator([new Date(), height, width, agent, Math.random()]);
+function createRandomGenerator() {
+  if (nodeCrypto ||
+      (typeof window !== "undefined" &&
+       window.crypto && window.crypto.getRandomValues))
+    return new RandomGenerator();
+  else
+    return new RandomGenerator([new Date(), height, width, agent, Math.random()]);
+};
+
+Random = createRandomGenerator();
 
 Random.create = function () {
-  return new RandomGenerator(arguments);
+  if (arguments.length == 0) {
+    return createRandomGenerator();
+  } else {
+    return new RandomGenerator(arguments);
+  }
 };
