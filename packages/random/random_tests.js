@@ -27,3 +27,16 @@ Tinytest.add('random - format', function (test) {
   test.isTrue(frac < 1.0);
   test.isTrue(frac >= 0.0);
 });
+
+Tinytest.add('random - Alea is last resort', function (test) {
+  if (Meteor.isServer) {
+    test.isTrue(Random.alea === undefined);
+    test.isTrue(Random.create().alea === undefined);
+  }
+  if (Meteor.isClient) {
+    var useGetRandomValues = !!(typeof window !== "undefined" &&
+        window.crypto && window.crypto.getRandomValues);
+    test.equal(Random.alea === undefined, useGetRandomValues);
+    test.equal(Random.create().alea === undefined, useGetRandomValues);
+  }
+});
