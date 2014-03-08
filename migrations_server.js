@@ -84,7 +84,7 @@ Migrations.migrateTo = function(command) {
 
   // remember to run meteor with --once otherwise it will restart
   if (subcommand === 'exit')
-    process.exit(0);
+    process.exit(0); 
 }
 
 // just returns the current version
@@ -127,17 +127,17 @@ Migrations._migrateTo = function(version, rerun) {
   // run the actual migration
   function migrate(direction, idx) {
     var migration = self._list[idx];
-
+    
     if (typeof migration[direction] !== 'function') {
-      throw new Meteor.Error('Cannot migrate ' + direction + ' on version '
+      throw new Meteor.Error('Cannot migrate ' + direction + ' on version ' 
         + migration.version);
     }
 
-    function maybeName() {
+    function maybeName() { 
       return migration.name ? ' (' + migration.name + ')' : '';
     }
 
-    console.log('Running ' + direction + '() on version '
+    console.log('Running ' + direction + '() on version ' 
       + migration.version + maybeName());
     migration[direction].call();
   }
@@ -166,7 +166,7 @@ Migrations._migrateTo = function(version, rerun) {
 }
 
 // gets the current control record, optionally creating it if non-existant
-Migrations._getControl = function() {
+Migrations._getControl = function() {  
   var control = this._collection.findOne({_id: 'control'});
 
   return control || this._setControl({version: 0, locked: false});
@@ -178,7 +178,7 @@ Migrations._setControl = function(control) {
   check(control.version, Number);
   check(control.locked, Boolean);
 
-  this._collection.update({_id: 'control'},
+  this._collection.update({_id: 'control'}, 
     {$set: {version: control.version, locked: control.locked}}, {upsert: true});
 
   return control;
@@ -188,7 +188,7 @@ Migrations._setControl = function(control) {
 Migrations._findIndexByVersion = function(version) {
   for (var i = 0;i < this._list.length;i++) {
     if (this._list[i].version === version)
-      return i;
+      return i; 
   }
 
   throw new Meteor.Error('Can\'t find migration version ' + version);
