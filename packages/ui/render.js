@@ -245,7 +245,9 @@ UI.render = function (kind, parentComponent) {
     throw new Error("Can't render component instance, only component kind");
   var inst = kind.instantiate(parentComponent);
 
-  var content = (inst.render && inst.render());
+  var content = withCurrentParentComponent(inst, function () {
+    return (inst.render && inst.render());
+  });
 
   var range = new UI.DomRange;
   inst.dom = range;
@@ -331,7 +333,7 @@ var materialize = function (node, parent, before, parentComponent) {
     var lastContent = null;
     var rangeUpdater = Deps.autorun(function (c) {
       var content = node();
-      // normalize content a little, for easier comparison
+      // normalize content a little, for better comparison
       if (HTML.isNully(content))
         content = null;
       else if ((content instanceof Array) && content.length === 1)
@@ -376,7 +378,7 @@ var materialize = function (node, parent, before, parentComponent) {
           c.handlers = {};
 
         try {
-          var attrs = HTML.evaluateAttributes(rawAttrs, parentComponent);
+          var attrs = evaluateAttributes(rawAttrs, parentComponent);
           var stringAttrs = {};
           if (attrs) {
             for (var k in attrs) {
@@ -396,6 +398,10 @@ var materialize = function (node, parent, before, parentComponent) {
     materialize(children, elem, null, parentComponent);
 
     insert(elem, parent, before);
+  } else if (node instanceof View) {
+    withCurrentParentComponent(parentComponent, function () {
+      node.materialize(parent, before, parentComponent);
+    });
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = UI.render(node, parentComponent);
@@ -461,7 +467,9 @@ UI.toHTML = function (node, parentComponent) {
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = node.instantiate(parentComponent || null);
-    var content = instance.render('STATIC');
+    var content = withCurrentParentComponent(instance, function () {
+      return instance.render('STATIC');
+    });
     // recurse with a new value for parentComponent
     return UI.toHTML(content, instance);
   } else if (typeof node === 'function') {
@@ -489,7 +497,7 @@ HTML.Raw.prototype.toHTML = function () {
 
 HTML.Tag.prototype.toHTML = function (parentComponent) {
   var attrStrs = [];
-  var attrs = this.evaluateAttributes(parentComponent);
+  var attrs = evaluateAttributes(this.attrs, parentComponent);
   if (attrs) {
     for (var k in attrs) {
       var v = UI.toText(attrs[k], UI.TEXTMODE.ATTRIBUTE, parentComponent);
@@ -565,7 +573,9 @@ UI.toText = function (node, textMode, parentComponent) {
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = node.instantiate(parentComponent || null);
-    var content = instance.render('STATIC');
+    var content = withCurrentParentComponent(instance, function () {
+      return instance.render('STATIC');
+    });
     return UI.toText(content, textMode, instance);
   } else if (node.toText) {
     // Something else
@@ -603,14 +613,120 @@ HTML.CharRef.prototype.toText = function (textMode) {
 
 ////////////////////////////////////////
 
+// Call all functions and instantiate all components, when fine-grained
+// reactivity is not needed (for example, in attributes).
+var evaluate = function (node, parentComponent) {
+  if (node == null) {
+    return node;
+  } else if (node instanceof View) {
+    // XXX
+    if (Deps.active) {
+      node.thingToKickOnChange = Deps.currentComputation;
+    }
+    var content = withCurrentParentComponent(parentComponent, function () {
+      return node.getContent();
+    });
+    return evaluate(content, parentComponent);
+  } else if (typeof node === 'function') {
+    //throw new Error("BLAH");
+    return evaluate(node(), parentComponent);
+  } else if (node instanceof Array) {
+    var result = [];
+    for (var i = 0; i < node.length; i++)
+      result.push(evaluate(node[i], parentComponent));
+    return result;
+  } else if (typeof node.instantiate === 'function') {
+    // component
+    var instance = node.instantiate(parentComponent || null);
+    var content = withCurrentParentComponent(instance, function () {
+      return instance.render('STATIC');
+    });
+    return withCurrentParentComponent(instance, function () {
+      return evaluate(content, instance);
+    });
+  } else if (node instanceof HTML.Tag) {
+    var newChildren = [];
+    for (var i = 0; i < node.children.length; i++)
+      newChildren.push(evaluate(node.children[i], parentComponent));
+    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
+    newTag.attrs = {};
+    for (var k in node.attrs)
+      newTag.attrs[k] = evaluate(node.attrs[k], parentComponent);
+    return newTag;
+  } else {
+    return node;
+  }
+};
+
+var extendAttrs = function (tgt, src, parentComponent) {
+  for (var k in src) {
+    if (k === '$dynamic')
+      continue;
+    if (! HTML.isValidAttributeName(k))
+      throw new Error("Illegal HTML attribute name: " + k);
+    var value = evaluate(src[k], parentComponent);
+    if (! HTML.isNully(value))
+      tgt[k] = value;
+  }
+};
+
+// Process the `attrs.$dynamic` directive, if present, returning the final
+// attributes dictionary.  The value of `attrs.$dynamic` must be an array
+// of attributes dictionaries or functions returning attribute dictionaries.
+// These attributes are used to extend `attrs` as long as they are non-nully.
+// All attributes are "evaluated," calling functions and instantiating
+// components.
+var evaluateAttributes = UI._evaluateAttributes = function (attrs, parentComponent) {
+  if (! attrs)
+    return attrs;
+
+  var result = {};
+  extendAttrs(result, attrs, parentComponent);
+
+  if ('$dynamic' in attrs) {
+    if (! (attrs.$dynamic instanceof Array))
+      throw new Error("$dynamic must be an array");
+    // iterate over attrs.$dynamic, calling each element if it
+    // is a function and then using it to extend `result`.
+    var dynamics = attrs.$dynamic;
+    for (var i = 0; i < dynamics.length; i++) {
+      var moreAttrs = dynamics[i];
+      if (typeof moreAttrs === 'function')
+        moreAttrs = moreAttrs();
+      extendAttrs(result, moreAttrs, parentComponent);
+    }
+  }
+
+  return result;
+};
+
+
+////////////////////////////////////////
+
+// XXX
+var currentParentComponent = null;
+var withCurrentParentComponent = function (parentComponent, f) {
+  var old = currentParentComponent;
+  try {
+    currentParentComponent = parentComponent;
+    return f();
+  } finally {
+    currentParentComponent = old;
+  }
+};
+
 var View = UI.View = function (value) {
   if (! (this instanceof View))
     // called without `new`
     return new View(value);
 
+  this.isStopped = false;
   this.value = value;
+
+  if (this.init)
+    this.init();
 };
-View.prototype.getInitialContent = function () {
+View.prototype.getContent = function () {
   return this.value;
 };
 
@@ -633,16 +749,113 @@ View.extend = function (methods) {
 };
 /// these are temporary:
 View.prototype.toHTML = function (parentComponent) {
-  return UI.toHTML(this.getInitialContent(), parentComponent);
+  var self = this;
+  return withCurrentParentComponent(parentComponent, function () {
+    return UI.toHTML(self.getContent(), parentComponent);
+  });
 };
 View.prototype.toText = function (textMode, parentComponent) {
-  return UI.toText(this.getInitialContent(), textMode, parentComponent);
+  var self = this;
+  return withCurrentParentComponent(parentComponent, function () {
+    return UI.toText(self.getContent(), textMode, parentComponent);
+  });
+};
+View.prototype.stop = function () {
+  if (! this.isStopped) {
+    this.isStopped = true;
+    this.stopped();
+  }
+};
+View.prototype.stopped = function () {};
+View.prototype.materialize = function (parent, before, parentComponent) {
+  var self = this;
+
+  var range = new UI.DomRange;
+  self.range = range;
+
+  // XXX think about why Deps.nonreactive is needed
+  Deps.nonreactive(function () {
+    materialize(self.getContent(), range, null, parentComponent);
+  });
+  insert(range, parent, before);
+
+  range.removed = function () {
+    self.stop();
+  };
 };
 
-/*
- * Where does materialize go?  Eventually, on the View.
- *
- * Template instance has a `$view` property.  This makes it renderable.
- *
- * Template instance has a `render` method.
- */
+UI.Live = function (block) {
+  if (typeof block !== 'function')
+    throw new Error("Expected function as argument");
+
+  var view;
+  var parentComponent = currentParentComponent;
+
+  var updater = Deps.autorun(function (c) {
+    var content;
+
+    if (c.firstRun) {
+      content = block();
+      view = new UI.Live.View(content);
+    } else {
+      content = withCurrentParentComponent(parentComponent, block);
+      // XXX won't have to wrap this when the content is actually
+      // fully evaluated
+      withCurrentParentComponent(parentComponent, function () {
+        view.updateValue(content);
+      });
+    }
+  });
+
+  view.updater = updater;
+
+  return view;
+};
+
+// normalize content a little, for better comparison
+var normalizeContent = function (content) {
+  if (HTML.isNully(content))
+    content = null;
+  else if ((content instanceof Array) && content.length === 1)
+    content = content[0];
+
+  return content;
+};
+
+UI.Live.View = View.extend({
+  init: function () {
+    this.value = normalizeContent(this.value);
+  },
+  stopped: function () {
+    if (this.updater)
+      this.updater.stop();
+  },
+  updateValue: function (newValue) {
+    var self = this;
+
+    newValue = normalizeContent(newValue);
+
+    if (! (self.range || self.thingToKickOnChange))
+      self.stop();
+
+    if (self.isStopped)
+      return;
+
+    // update if content is different from last time
+    if (! contentEquals(newValue, self.value)) {
+      self.value = newValue;
+
+      if (self.range) {
+        self.range.removeAll();
+
+        Deps.nonreactive(function () {
+          materialize(newValue,
+                      self.range, null,
+                      currentParentComponent);
+        });
+      } else if (self.thingToKickOnChange) {
+        self.thingToKickOnChange.invalidate();
+      }
+    }
+  }
+});

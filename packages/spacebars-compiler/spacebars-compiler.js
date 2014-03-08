@@ -172,11 +172,15 @@ var codeGenTemplateTag = function (tag) {
                          + '; }');
   } else {
     if (tag.type === 'DOUBLE') {
-      return HTML.EmitCode('function () { return ' +
-                           codeGenMustache(tag.path, tag.args) + '; }');
+      if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.ELEMENT)
+        return HTML.EmitCode('UI.Live(function () { return ' +
+                             codeGenMustache(tag.path, tag.args) + '; })');
+      else
+        return HTML.EmitCode('UI.Live(function () { return ' +
+                             codeGenMustache(tag.path, tag.args) + '; })');
     } else if (tag.type === 'TRIPLE') {
-      return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
-                           codeGenMustache(tag.path, tag.args) + '); }');
+      return HTML.EmitCode('UI.Live(function () { return Spacebars.makeRaw(' +
+                           codeGenMustache(tag.path, tag.args) + '); })');
     } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
       var path = tag.path;
 

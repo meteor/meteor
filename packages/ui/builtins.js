@@ -2,24 +2,24 @@
 UI.If = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('If', argFunc, contentBlock, elseContentBlock);
 
-  return function () {
+  return UI.Live(function () {
     if (getCondition(argFunc))
       return contentBlock;
     else
       return elseContentBlock || null;
-  };
+  });
 };
 
 
 UI.Unless = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('Unless', argFunc, contentBlock, elseContentBlock);
 
-  return function () {
+  return UI.Live(function () {
     if (! getCondition(argFunc))
       return contentBlock;
     else
       return elseContentBlock || null;
-  };
+  });
 };
 
 // Returns true if `a` and `b` are `===`, unless they are of a mutable type.

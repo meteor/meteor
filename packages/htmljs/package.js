@@ -13,5 +13,6 @@ Package.on_test(function (api) {
   api.use('html-tools');
   api.use('tinytest');
   api.use('underscore');
+  api.use('ui');
   api.add_files(['htmljs_test.js']);
 });
