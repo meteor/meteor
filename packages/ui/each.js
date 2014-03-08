@@ -33,7 +33,6 @@ UI.EachImpl = Component.extend({
       } else {
         return elseContent;
       }
-      return parts;
     } else {
       return null;
     }
