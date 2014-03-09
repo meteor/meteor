@@ -256,8 +256,10 @@ UI.render = function (kind, parentComponent) {
   range.removed = function () {
     inst.isDestroyed = true;
     if (inst.destroyed) {
-      updateTemplateInstance(inst);
-      inst.destroyed.call(inst.templateInstance);
+      Deps.nonreactive(function () {
+        updateTemplateInstance(inst);
+        inst.destroyed.call(inst.templateInstance);
+      });
     }
   };
 
