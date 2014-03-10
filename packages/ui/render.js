@@ -243,13 +243,20 @@ var updateAttributes = function(elem, newAttrs, handlers) {
 UI.render = function (kind, parentComponent) {
   if (kind.isInited)
     throw new Error("Can't render component instance, only component kind");
-  var inst = kind.instantiate(parentComponent);
 
-  var content = (inst.render && inst.render());
+  var inst, content, range;
 
-  var range = new UI.DomRange;
-  inst.dom = range;
-  range.component = inst;
+  Deps.nonreactive(function () {
+
+    inst = kind.instantiate(parentComponent);
+
+    content = (inst.render && inst.render());
+
+    range = new UI.DomRange;
+    inst.dom = range;
+    range.component = inst;
+
+  });
 
   materialize(content, range, null, inst);
 
@@ -346,9 +353,7 @@ var materialize = function (node, parent, before, parentComponent) {
         if (! c.firstRun)
           range.removeAll();
 
-        Deps.nonreactive(function () {
-          materialize(content, range, null, parentComponent);
-        });
+        materialize(content, range, null, parentComponent);
       }
     });
     range.removed = function () {
