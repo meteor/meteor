@@ -337,23 +337,6 @@ _.extend(Deps, {
     }
   },
 
-  // Wrap `f` so that it is always run nonreactively.
-  _makeNonreactive: function (f) {
-    if (f.$isNonreactive) // avoid multiple layers of wrapping.
-      return f;
-    var nonreactiveVersion = function (/*arguments*/) {
-      var self = this;
-      var args = _.toArray(arguments);
-      var ret;
-      Deps.nonreactive(function () {
-        ret = f.apply(self, args);
-      });
-      return ret;
-    };
-    nonreactiveVersion.$isNonreactive = true;
-    return nonreactiveVersion;
-  },
-
   // http://docs.meteor.com/#deps_oninvalidate
   onInvalidate: function (f) {
     if (! Deps.active)
