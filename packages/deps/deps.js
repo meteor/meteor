@@ -310,7 +310,7 @@ _.extend(Deps, {
 
     constructingComputation = true;
     var c = new Deps.Computation(function (c) {
-      Meteor._noYieldsAllowed(_.bind(f, this, c));
+      Meteor._noYieldsAllowed(function () { f(c); });
     }, Deps.currentComputation);
 
     if (Deps.active)
@@ -335,23 +335,6 @@ _.extend(Deps, {
     } finally {
       setCurrentComputation(previous);
     }
-  },
-
-  // Wrap `f` so that it is always run nonreactively.
-  _makeNonreactive: function (f) {
-    if (f.$isNonreactive) // avoid multiple layers of wrapping.
-      return f;
-    var nonreactiveVersion = function (/*arguments*/) {
-      var self = this;
-      var args = _.toArray(arguments);
-      var ret;
-      Deps.nonreactive(function () {
-        ret = f.apply(self, args);
-      });
-      return ret;
-    };
-    nonreactiveVersion.$isNonreactive = true;
-    return nonreactiveVersion;
   },
 
   // http://docs.meteor.com/#deps_oninvalidate
