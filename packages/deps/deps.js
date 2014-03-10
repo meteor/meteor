@@ -310,7 +310,7 @@ _.extend(Deps, {
 
     constructingComputation = true;
     var c = new Deps.Computation(function (c) {
-      Meteor._noYieldsAllowed(_.bind(f, this, c));
+      Meteor._noYieldsAllowed(function () { f(c); });
     }, Deps.currentComputation);
 
     if (Deps.active)
