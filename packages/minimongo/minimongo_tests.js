@@ -678,6 +678,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$regex: 'a'}}, {a: 'cut'});
   nomatch({a: {$regex: 'a'}}, {a: 'CAT'});
   match({a: {$regex: 'a', $options: 'i'}}, {a: 'CAT'});
+  match({a: {$regex: '', $options: 'i'}}, {a: 'foo'});
+  nomatch({a: {$regex: '', $options: 'i'}}, {});
+  nomatch({a: {$regex: '', $options: 'i'}}, {a: 5});
   nomatch({a: /undefined/}, {});
   nomatch({a: {$regex: 'undefined'}}, {});
   nomatch({a: /xxx/}, {});
@@ -816,6 +819,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$or: [{a: 1}, {a: 2}], b: 2}, {a: 1, b: 2});
   nomatch({$or: [{a: 2}, {a: 3}], b: 2}, {a: 1, b: 2});
   nomatch({$or: [{a: 1}, {a: 2}], b: 3}, {a: 1, b: 2});
+
+  // Combining $or with equality
+  match({x: 1, $or: [{a: 1}, {b: 1}]}, {x: 1, b: 1});
+  match({$or: [{a: 1}, {b: 1}], x: 1}, {x: 1, b: 1});
+  nomatch({x: 1, $or: [{a: 1}, {b: 1}]}, {b: 1});
+  nomatch({x: 1, $or: [{a: 1}, {b: 1}]}, {x: 1});
 
   // $or and $lt, $lte, $gt, $gte
   match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
@@ -1100,6 +1109,16 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$elemMatch: {x: 5}}}, {a: {x: 5}});
   match({a: {$elemMatch: {0: {$gt: 5, $lt: 9}}}}, {a: [[6]]});
   match({a: {$elemMatch: {'0.b': {$gt: 5, $lt: 9}}}}, {a: [[{b:6}]]});
+  match({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}], x: 1}}},
+        {a: [{x: 1, b: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{b: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1}, {b: 1}]});
 
   // $comment
   match({a: 5, $comment: "asdf"}, {a: 5});
@@ -1549,7 +1568,7 @@ Tinytest.add("minimongo - ordering", function (test) {
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
     _.each(_.isArray(sorts) ? sorts : [sorts], function (sort) {
-      var sorter = new MinimongoTest.Sorter(sort);
+      var sorter = new Minimongo.Sorter(sort);
       assert_ordering(test, sorter.getComparator(), docs);
     });
   };
@@ -1577,15 +1596,15 @@ Tinytest.add("minimongo - ordering", function (test) {
          [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
   test.throws(function () {
-    new MinimongoTest.Sorter("a");
+    new Minimongo.Sorter("a");
   });
 
   test.throws(function () {
-    new MinimongoTest.Sorter(123);
+    new Minimongo.Sorter(123);
   });
 
   // No sort spec implies everything equal.
-  test.equal(new MinimongoTest.Sorter({}).getComparator()({a:1}, {a:2}), 0);
+  test.equal(new Minimongo.Sorter({}).getComparator()({a:1}, {a:2}), 0);
 
   // All sorts of array edge cases!
   // Increasing sort sorts by the smallest element it finds; 1 < 2.
@@ -1949,6 +1968,7 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1, 2]}, {$inc: {'a.3': 10}}, {a: [1, 2, null, 10]});
   modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
   modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  exception({}, {$inc: {_id: 1}});
 
   // $set
   modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});
@@ -1960,6 +1980,9 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1], b: 2}, {$set: {'a.1': 9}}, {a: [1, 9], b: 2});
   modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
   modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
+  modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  exception({}, {$set: {_id: 4}});
+  exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
 
   // $unset
   modify({}, {$unset: {a: 1}}, {});
@@ -1977,6 +2000,7 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 1}}, {$unset: {'a.b.c.d': 1}}, {a: {b: 1}});
   modify({a: {b: 1}}, {$unset: {'a.x.c.d': 1}}, {a: {b: 1}});
   modify({a: {b: {c: 1}}}, {$unset: {'a.b.c': 1}}, {a: {b: {}}});
+  exception({}, {$unset: {_id: 1}});
 
   // $push
   modify({}, {$push: {a: 1}}, {a: [1]});

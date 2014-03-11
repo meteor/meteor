@@ -384,7 +384,7 @@ var VALUE_OPERATORS = {
   },
   // $options just provides options for $regex; its logic is inside $regex
   $options: function (operand, valueSelector) {
-    if (!valueSelector.$regex)
+    if (!_.has(valueSelector, '$regex'))
       throw Error("$options needs a $regex");
     return everythingMatcher;
   },
@@ -653,7 +653,7 @@ var ELEMENT_OPERATORS = {
         throw Error("$elemMatch need an object");
 
       var subMatcher, isDocMatcher;
-      if (isOperatorObject(operand)) {
+      if (isOperatorObject(operand, true)) {
         subMatcher = compileValueSelector(operand, matcher);
         isDocMatcher = false;
       } else {

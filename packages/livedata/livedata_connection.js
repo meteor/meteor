@@ -10,6 +10,7 @@ if (Meteor.isServer) {
 //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?
 //   headers: extra headers to send on the websockets connection, for
 //     server-to-server DDP only
+//   _sockjsOptions: Specifies options to pass through to the sockjs client
 //   onDDPNegotiationVersionFailure: callback when version negotiation fails.
 //
 // XXX There should be a way to destroy a DDP connection, causing all
@@ -47,7 +48,11 @@ var Connection = function (url, options) {
   } else {
     self._stream = new LivedataTest.ClientStream(url, {
       retry: options.retry,
-      headers: options.headers
+      headers: options.headers,
+      _sockjsOptions: options._sockjsOptions,
+      // To keep some tests quiet (because we don't have a real API for handling
+      // client-stream-level errors).
+      _dontPrintErrors: options._dontPrintErrors
     });
   }
 

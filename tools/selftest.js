@@ -477,6 +477,21 @@ _.extend(Sandbox.prototype, {
   unlink: function (filename) {
     var self = this;
     fs.unlinkSync(path.join(self.cwd, filename));
+  },
+
+  // Return the current contents of .meteorsession in the sandbox.
+  readSessionFile: function () {
+    var self = this;
+    return fs.readFileSync(path.join(self.root, '.meteorsession'), 'utf8');
+  },
+
+  // Overwrite .meteorsession in the sandbox with 'contents'. You
+  // could use this in conjunction with readSessionFile to save and
+  // restore authentication states.
+  writeSessionFile: function (contents) {
+    var self = this;
+    return fs.writeFileSync(path.join(self.root, '.meteorsession'),
+                            contents, 'utf8');
   }
 });
 
@@ -839,7 +854,7 @@ _.extend(Run.prototype, {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 20;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 50;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
@@ -976,7 +991,7 @@ var tagDescriptions = {
   // these last two are not actually test tags; they reflect the use of
   // --changed and --tests
   unchanged: 'unchanged since last pass',
-  misnamed: "don't match --tests argument"
+  'non-matching': "don't match specified pattern"
 };
 
 // options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
@@ -1015,7 +1030,7 @@ var runTests = function (options) {
     tests = _.filter(tests, function (test) {
       return options.testRegexp.test(test.name);
     });
-    skipCounts.misnamed = lengthBeforeTestRegexp - tests.length;
+    skipCounts['non-matching'] = lengthBeforeTestRegexp - tests.length;
   }
 
   if (options.onlyChanged) {

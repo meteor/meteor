@@ -24,6 +24,13 @@ var REQUEST_TIMEOUT = 15*1000;
 var MAX_BUFFER = 5*1024*1024; // 5MB
 
 WebApp.connectHandlers.use(function (req, res, next) {
+  // _escaped_fragment_ comes from Google's AJAX crawling spec:
+  // https://developers.google.com/webmasters/ajax-crawling/docs/specification
+  // This spec was designed during the brief era where using "#!" URLs was
+  // common, so it mostly describes how to translate "#!" URLs into
+  // _escaped_fragment_ URLs. Since then, "#!" URLs have gone out of style, but
+  // the <meta name="fragment" content="!"> (see spiderable.html) approach also
+  // described in the spec is still common and used by several crawlers.
   if (/\?.*_escaped_fragment_=/.test(req.url) ||
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {

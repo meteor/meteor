@@ -57,7 +57,8 @@ var meteorReleaseFilePath = function (appDir) {
 
 // This will return "none" if the project is not pinned to a release
 // (it was created by a checkout), or null for a legacy app with no
-// .meteor/release file.
+// .meteor/release file.  It returns the empty string if the file exists
+// but is empty.
 project.getMeteorReleaseVersion = function (appDir) {
   var releasePath = meteorReleaseFilePath(appDir);
   try {
@@ -65,6 +66,9 @@ project.getMeteorReleaseVersion = function (appDir) {
   } catch (e) {
     return null;
   }
+  // This should really never happen, and the caller will print a special error.
+  if (!lines.length)
+    return '';
   return trimLine(lines[0]);
 };
 

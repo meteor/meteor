@@ -6,7 +6,7 @@ var files = require('./files.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
-var inFiber = require('./fiber-helpers.js').inFiber;
+var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
@@ -50,25 +50,41 @@ var withAccountsConnection = function (f) {
   };
 };
 
-// Open a DDP connection to the accounts server, log in using the
-// provided token, and ensure that the connection stays logged in across
-// reconnects.
+// Open a DDP connection to the accounts server and log in using the
+// provided token. Returns the connection, or null if login fails.
+//
+// XXX if we reconnect we won't reauthenticate. Fix that before using
+// this for long-lived connections.
 var loggedInAccountsConnection = function (token) {
   var connection = getLoadedPackages().livedata.DDP.connect(
     config.getAuthDDPUrl()
   );
-  var onReconnect = function () {
-    connection.apply(
-      'login',
-      [{ resume: token }],
-      { wait: true },
-      function (err, result) {
-        if (err)
-          throw err;
-      }
-    );
-  };
-  onReconnect();
+
+  var fut = new Future;
+  connection.apply(
+    'login',
+    [{ resume: token }],
+    { wait: true },
+    function (err, result) {
+      fut['return']({ err: err, result: result });
+    }
+  );
+  var outcome = fut.wait();
+
+  if (outcome.err) {
+    connection.close();
+
+    if (outcome.err.error === 403) {
+      // This is not an ideal value for the error code, but it means
+      // "server rejected our access token". For example, it expired
+      // or we revoked it from the web.
+      return null;
+    }
+
+    // Something else went wrong
+    throw outcome.err;
+  }
+
   return connection;
 };
 
@@ -93,21 +109,25 @@ var sessionMethodCaller = function (methodName, options) {
     });
     var fut = new Future();
     var conn = options.connection || openAccountsConnection();
-    conn.apply(methodName, args, fut.resolver());
+    conn.apply(methodName, args, fiberHelpers.firstTimeResolver(fut));
     if (options.timeout !== undefined) {
-      var timer = setTimeout(inFiber(function () {
-        fut.throw(new Error('Method call timed out'));
+      var timer = setTimeout(fiberHelpers.inFiber(function () {
+        if (!fut.isResolved())
+          fut.throw(new Error('Method call timed out'));
       }), options.timeout);
     }
-    var result = fut.wait();
-    if (timer) {
-      clearTimeout(timer);
+    try {
+      var result = fut.wait();
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (! options.connection)
+        conn.close();
     }
     if (result && result.session) {
       auth.setSessionId(config.getAccountsDomain(), result.session);
     }
-    if (! options.connection)
-      conn.close();
     return result && result.result;
   };
 };
@@ -189,26 +209,33 @@ var writeMeteorAccountsUsername = function (username) {
 // Given an object 'data' in the format returned by readSessionData,
 // modify it to make the user logged out.
 var logOutAllSessions = function (data) {
+  _.each(data.sessions, function (session, domain) {
+    logOutSession(session);
+  });
+};
+
+// As logOutAllSessions, but for a session on a particular domain
+// rather than all sessions.
+var logOutSession = function (session) {
   var crypto = require('crypto');
 
-  _.each(data.sessions, function (session, domain) {
-    delete session.username;
-    delete session.userId;
+  delete session.username;
+  delete session.userId;
+  delete session.registrationUrl;
 
-    if (_.has(session, 'token')) {
-      if (! (session.pendingRevoke instanceof Array))
-        session.pendingRevoke = [];
+  if (_.has(session, 'token')) {
+    if (! (session.pendingRevoke instanceof Array))
+      session.pendingRevoke = [];
 
-      // Delete the auth token itself, but save the tokenId, which
-      // is useless for authentication. The next time we're online,
-      // we'll send the tokenId to the server to revoke the token on
-      // the server side too.
-      if (typeof session.tokenId === "string")
-        session.pendingRevoke.push(session.tokenId);
-      delete session.token;
-      delete session.tokenId;
-    }
-  });
+    // Delete the auth token itself, but save the tokenId, which is
+    // useless for authentication. The next time we're online, we'll
+    // send the tokenId to the server to revoke the token on the
+    // server side too.
+    if (typeof session.tokenId === "string")
+      session.pendingRevoke.push(session.tokenId);
+    delete session.token;
+    delete session.tokenId;
+  }
 };
 
 // Given an object 'data' in the format returned by readSessionData,
@@ -222,37 +249,7 @@ var loggedIn = function (data) {
 // the logged in user doesn't have a username.
 var currentUsername = function (data) {
   var sessionData = getSession(data, config.getAccountsDomain());
-  if (sessionData.username) {
-    return sessionData.username;
-  } else if (loggedIn(data) && sessionData.token) {
-    // If it looks like we are logged in but we don't yet have a
-    // username, then ask the server if we have one.
-    var username = null;
-    var fut = new Future();
-    var connection = loggedInAccountsConnection(sessionData.token);
-    connection.call('getUsername', function (err, result) {
-      if (err) {
-        // If anything went wrong, return null just as we would have if
-        // we hadn't bothered to ask the server.
-        fut['return'](null);
-        return;
-      }
-      fut['return'](result);
-    });
-
-    setTimeout(inFiber(function () {
-      fut['return'](null);
-    }), 5000);
-
-    username = fut.wait();
-    connection.close();
-    if (username) {
-      writeMeteorAccountsUsername(username);
-    }
-    return username;
-  } else {
-    return null;
-  }
+  return sessionData.username || null;
 };
 
 var removePendingRevoke = function (domain, tokenIds) {
@@ -584,13 +581,18 @@ var doInteractivePasswordLogin = function (options) {
   return true;
 };
 
-// options are the same as for doInteractivePasswordLogin, exept without
+// options are the same as for doInteractivePasswordLogin, except without
 // username and email.
 exports.doUsernamePasswordLogin = function (options) {
-  var username = utils.readLine({
-    prompt: "Username: ",
-    stream: process.stderr
-  });
+  var username;
+
+  do {
+    username = utils.readLine({
+      prompt: "Username: ",
+      stream: process.stderr
+    }).trim();
+  } while (username.length === 0);
+
   return doInteractivePasswordLogin(_.extend({}, options, {
     username: username
   }));
@@ -685,9 +687,71 @@ exports.logoutCommand = function (options) {
     process.stderr.write("Not logged in.\n");
 };
 
-exports.currentUsername = function () {
+// If this is fully set up account (with a username and password), or
+// if not logged in, do nothing. If it is an account without a
+// username, contact the server and see if the user finished setting
+// it up, and if so grab and save the username. But contact the server
+// only once per run of the program. Options:
+//  - noLogout: boolean. Set to true if you don't want this function to
+//    log out the session if wehave an invalid credential (for example,
+//    if a caller wants to do its own error handling for invalid
+//    credentials). Defaults to false.
+var alreadyPolledForRegistration = false;
+exports.pollForRegistrationCompletion = function (options) {
+  if (alreadyPolledForRegistration)
+    return;
+  alreadyPolledForRegistration = true;
+
+  options = options || {};
+
   var data = readSessionData();
-  return currentUsername(data);
+  var session = getSession(data, config.getAccountsDomain());
+  if (session.username || ! session.token)
+    return;
+
+  // We are logged in but we don't yet have a username. Ask the server
+  // if a username was chosen since we last checked.
+  var username = null;
+  var fut = new Future();
+  var connection = loggedInAccountsConnection(session.token);
+
+  if (! connection) {
+    // Server says our credential isn't any good anymore! Get rid of
+    // it. Note that, out of an abundance of caution, this also will
+    // enqueue the credential for invalidation (on a future run, we
+    // will try to explicitly revoke the credential ourselves).
+    if (! options.noLogout) {
+      logOutSession(session);
+      writeSessionData(data);
+    }
+    return;
+  }
+
+  connection.call('getUsername', function (err, result) {
+    if (fut.isResolved())
+      return;
+
+    if (err) {
+      // If anything went wrong, return null just as we would have if
+      // we hadn't bothered to ask the server.
+      fut['return'](null);
+      return;
+    }
+    fut['return'](result);
+  });
+
+  var timer = setTimeout(fiberHelpers.inFiber(function () {
+    if (! fut.isResolved()) {
+      fut['return'](null);
+    }
+  }), 5000);
+
+  username = fut.wait();
+  connection.close();
+  clearTimeout(timer);
+  if (username) {
+    writeMeteorAccountsUsername(username);
+  }
 };
 
 exports.registrationUrl = function () {
@@ -698,6 +762,7 @@ exports.registrationUrl = function () {
 
 exports.whoAmICommand = function (options) {
   config.printUniverseBanner();
+  auth.pollForRegistrationCompletion();
 
   var data = readSessionData();
   if (! loggedIn(data)) {
@@ -775,11 +840,23 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
     process.stderr.write(
 "\n" +
-"That email address is already in use. We need to confirm that it belongs\n" +
-"to you. Luckily this will only take a moment.\n" +
-"\n" +
-"Check your mail! We've sent you a link. Click it, pick a password,\n" +
-"and then come back here to deploy your app.\n");
+"You need to pick a password for your account so that you can log in.\n" +
+"An email has been sent to you with the link.\n\n");
+
+    var animationFrame = 0;
+    var lastLinePrinted = "";
+    var timer = setInterval(function () {
+      var spinner = ['-', '\\', '|', '/'];
+      lastLinePrinted = "Waiting for you to register on the web... " +
+        spinner[animationFrame];
+      process.stderr.write(lastLinePrinted + "\r");
+      animationFrame = (animationFrame + 1) % spinner.length;
+    }, 200);
+    var stopSpinner = function () {
+      process.stderr.write(new Array(lastLinePrinted.length + 1).join(' ') +
+                           "\r");
+      clearInterval(timer);
+    };
 
     try {
       var waitForRegistrationResult = connection.call(
@@ -787,17 +864,17 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
         email
       );
     } catch (e) {
+      stopSpinner();
       if (! (e instanceof getLoadedPackages().meteor.Meteor.Error))
         throw e;
       process.stderr.write(
-        "\nWhen you've picked your password, run 'meteor login' and then you'll\n" +
-          "be good to go.\n");
+        "When you've picked your password, run 'meteor login' to log in.\n")
       return false;
     }
 
-    process.stderr.write("\nGreat! Nice to meet you, " +
-                         waitForRegistrationResult.username +
-                         "! Now log in with your new password.\n");
+    stopSpinner();
+    process.stderr.write("Username: " +
+                         waitForRegistrationResult.username + "\n");
     loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true,
@@ -820,6 +897,34 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     return false;
   }
 });
+
+// options: firstTime, leadingNewline
+exports.maybePrintRegistrationLink = function (options) {
+  options = options || {};
+
+  auth.pollForRegistrationCompletion();
+
+  var data = readSessionData();
+  var session = getSession(data, config.getAccountsDomain());
+
+  if (session.userId && ! session.username && session.registrationUrl) {
+    if (options.leadingNewline)
+      process.stderr.write("\n");
+    if (! options.firstTime) {
+      // If they've already been prompted to set a password then this
+      // is more of a friendly reminder, so we word it slightly
+      // differently than the first time they're being shown a
+      // registration url.
+      process.stderr.write(
+"You should set a password on your Meteor developer account. It takes\n" +
+"about a minute at: " + session.registrationUrl + "\n\n");
+    } else {
+      process.stderr.write(
+"You can set a password on your account or change your email address at:\n" +
+session.registrationUrl + "\n\n");
+    }
+  }
+};
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 

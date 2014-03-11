@@ -79,6 +79,19 @@
     "release": "0.7.0.1"
   },
   {
+    "release": "0.7.1"
+  },
+  {
+    "release": "0.7.1.1",
+    "packageNotices": {
+      "jquery": ["jquery has been upgraded to 1.11.0. See ",
+                 "http://jquery.com/upgrade-guide/1.9/"]
+    }
+  },
+  {
+    "release": "0.7.1.2"
+  },
+  {
     "release": "NEXT"
   }
 ]

@@ -147,13 +147,14 @@ _.extend(LivedataTest.ClientStream.prototype, {
     var self = this;
     self._cleanup(); // cleanup the old socket, if there was one.
 
+    var options = _.extend({
+      protocols_whitelist:self._sockjsProtocolsWhitelist()
+    }, self.options._sockjsOptions);
+
     // Convert raw URL to SockJS URL each time we open a connection, so that we
     // can connect to random hostnames and get around browser per-host
     // connection limits.
-    self.socket = new SockJS(
-      toSockjsUrl(self.rawUrl), undefined, {
-        debug: false, protocols_whitelist: self._sockjsProtocolsWhitelist()
-      });
+    self.socket = new SockJS(toSockjsUrl(self.rawUrl), undefined, options);
     self.socket.onopen = function (data) {
       self._connected();
     };

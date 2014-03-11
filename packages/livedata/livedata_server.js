@@ -68,6 +68,10 @@ _.extend(SessionDocumentView.prototype, {
     // Publish API ignores _id if present in fields
     if (key === "_id")
       return;
+
+    // Don't share state with the data passed in by the user.
+    value = EJSON.clone(value);
+
     if (!_.has(self.dataByKey, key)) {
       self.dataByKey[key] = [{subscriptionHandle: subscriptionHandle,
                               value: value}];
@@ -835,6 +839,13 @@ var Subscription = function (
 
 _.extend(Subscription.prototype, {
   _runHandler: function () {
+    // XXX should we unblock() here? Either before running the publish
+    // function, or before running _publishCursor.
+    //
+    // Right now, each publish function blocks all future publishes and
+    // methods waiting on data from Mongo (or whatever else the function
+    // blocks on). This probably slows page load in common cases.
+
     var self = this;
     try {
       var res = maybeAuditArgumentChecks(
@@ -1146,7 +1157,7 @@ _.extend(Server.prototype, {
       // drop all future data coming over this connection on the
       // floor. We don't want to confuse things.
       socket.removeAllListeners('data');
-      setTimeout(function () {
+      Meteor.setTimeout(function () {
         socket.send(stringifyDDP({msg: 'failed', version: version}));
         socket.close();
       }, timeout);

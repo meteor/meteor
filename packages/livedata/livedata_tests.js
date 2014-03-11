@@ -683,13 +683,39 @@ if (Meteor.isServer) {
   testAsyncMulti("livedata - connect fails to unknown place", [
     function (test, expect) {
       var self = this;
-      self.conn = DDP.connect("example.com");
+      self.conn = DDP.connect("example.com", {_dontPrintErrors: true});
       Meteor.setTimeout(expect(function () {
         test.isFalse(self.conn.status().connected, "Not connected");
+        self.conn.close();
       }), 500);
     }
   ]);
 })();
+
+if (Meteor.isServer) {
+  Meteor.publish("publisherCloning", function () {
+    var self = this;
+    var fields = {x: {y: 42}};
+    self.added("publisherCloning", "a", fields);
+    fields.x.y = 43;
+    self.changed("publisherCloning", "a", fields);
+    self.ready();
+  });
+} else {
+  var PublisherCloningCollection = new Meteor.Collection("publisherCloning");
+  testAsyncMulti("livedata - publish callbacks clone", [
+    function (test, expect) {
+      Meteor.subscribe("publisherCloning", {normal: 1}, {
+        onReady: expect(function () {
+          test.equal(PublisherCloningCollection.findOne(), {
+            _id: "a",
+            x: {y: 43}});
+        }),
+        onError: failure()
+      });
+    }
+  ]);
+}
 
 
 // XXX some things to test in greater detail:

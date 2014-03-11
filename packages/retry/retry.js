@@ -57,7 +57,7 @@ _.extend(Retry.prototype, {
     var timeout = self._timeout(count);
     if (self.retryTimer)
       clearTimeout(self.retryTimer);
-    self.retryTimer = setTimeout(fn, timeout);
+    self.retryTimer = Meteor.setTimeout(fn, timeout);
     return timeout;
   }
 

@@ -255,11 +255,9 @@ _.extend(TestCaseResults.prototype, {
     else if (typeof s === "object")
       pass = v in s;
     else if (typeof s === "string")
-      for (var i = 0; i < s.length; i++)
-        if (s.charAt(i) === v) {
-          pass = true;
-          break;
-        }
+      if (s.indexOf(v) > -1) {
+        pass = true;
+      }
     else
       /* fail -- not something that contains other things */;
     if (pass)

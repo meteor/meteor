@@ -573,7 +573,19 @@ Fiber(function () {
     // appRelease will be null if a super old project with no
     // .meteor/release or 'none' if created by a checkout
     appRelease = project.getMeteorReleaseVersion(appDir);
+    // This is what happens if the file exists and is empty. This really
+    // shouldn't happen unless the user did it manually.
+    if (appRelease === '') {
+      process.stderr.write(
+"Problem! This project has a .meteor/release file which is empty.\n" +
+"The file should either contain the release of Meteor that you want to use,\n" +
+"or the word 'none' if you will only use the project with unreleased\n" +
+"checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
+"and change it to a valid Meteor release or 'none'.\n");
+      process.exit(1);
+    }
   }
+
   if (! files.usesWarehouse()) {
     // Running from a checkout
     if (releaseOverride) {
@@ -909,7 +921,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
   }
 
   if (command.requiresApp && release.current.isCheckout() &&
-      appRelease !== "none") {
+      appRelease && appRelease !== "none") {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     process.stderr.write(
