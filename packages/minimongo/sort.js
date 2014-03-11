@@ -107,10 +107,11 @@ _.extend(Minimongo.Sorter.prototype, {
       //                 {_id: 'y', a: [{x: 5}, {x: 15}]}),
       //     then C.find({'a.x': {$gt: 3}}, {sort: {'a.x': 1}}) and
       //          C.find({a: {$elemMatch: {x: {$gt: 3}}}}, {sort: {'a.x': 1}})
-      //     both follow this rule (y before x).  ie, you do have to apply this
-      //     through $elemMatch.
+      //     both follow this rule (y before x).  (ie, you do have to apply this
+      //     through $elemMatch.)
       //
-      // So we have to skip keys here that don't work for the selector.
+      //     So we ought to skip keys here that don't work for the selector, but
+      //     we don't do that yet.
 
       if (minKey === null) {
         minKey = key;
@@ -122,7 +123,7 @@ _.extend(Minimongo.Sorter.prototype, {
     });
 
     if (minKey === null)
-      throw Error("no keys?");
+      throw Error("sort selector found no keys in doc?");
     return minKey;
   },
 
@@ -135,7 +136,7 @@ _.extend(Minimongo.Sorter.prototype, {
       throw new Error("can't generate keys without a spec");
 
     // maps index -> ({'' -> value} or {path -> value})
-    var valuesBySomething = [];
+    var valuesByIndexAndPath = [];
 
     var pathFromIndices = function (indices) {
       return indices.join(',') + ',';
@@ -154,7 +155,7 @@ _.extend(Minimongo.Sorter.prototype, {
         branches = [{value: null}];
 
       var usedPaths = false;
-      valuesBySomething[whichField] = {};
+      valuesByIndexAndPath[whichField] = {};
       _.each(branches, function (branch) {
         if (!branch.arrayIndices) {
           // If there are no array indices for a branch, then it must be the
@@ -162,15 +163,15 @@ _.extend(Minimongo.Sorter.prototype, {
           // is the use of arrays.
           if (branches.length > 1)
             throw Error("multiple branches but no array used?");
-          valuesBySomething[whichField][''] = branch.value;
+          valuesByIndexAndPath[whichField][''] = branch.value;
           return;
         }
 
         usedPaths = true;
         var path = pathFromIndices(branch.arrayIndices);
-        if (_.has(valuesBySomething[whichField], path))
+        if (_.has(valuesByIndexAndPath[whichField], path))
           throw Error("duplicate path: " + path);
-        valuesBySomething[whichField][path] = branch.value;
+        valuesByIndexAndPath[whichField][path] = branch.value;
 
         // If two sort fields both go into arrays, they have to go into the
         // exact same arrays and we have to find the same paths.  This is
@@ -190,13 +191,13 @@ _.extend(Minimongo.Sorter.prototype, {
       if (knownPaths) {
         // Similarly to above, paths must match everywhere, unless this is a
         // non-array field.
-        if (!_.has(valuesBySomething[whichField], '') &&
-            _.size(knownPaths) !== _.size(valuesBySomething[whichField])) {
+        if (!_.has(valuesByIndexAndPath[whichField], '') &&
+            _.size(knownPaths) !== _.size(valuesByIndexAndPath[whichField])) {
           throw Error("cannot index parallel arrays!");
         }
       } else if (usedPaths) {
         knownPaths = {};
-        _.each(valuesBySomething[whichField], function (x, path) {
+        _.each(valuesByIndexAndPath[whichField], function (x, path) {
           knownPaths[path] = true;
         });
       }
@@ -204,7 +205,7 @@ _.extend(Minimongo.Sorter.prototype, {
 
     if (!knownPaths) {
       // Easy case: no use of arrays.
-      var soleKey = _.map(valuesBySomething, function (values) {
+      var soleKey = _.map(valuesByIndexAndPath, function (values) {
         if (!_.has(values, ''))
           throw Error("no value in sole key case?");
         return values[''];
@@ -214,7 +215,7 @@ _.extend(Minimongo.Sorter.prototype, {
     }
 
     _.each(knownPaths, function (x, path) {
-      var key = _.map(valuesBySomething, function (values) {
+      var key = _.map(valuesByIndexAndPath, function (values) {
         if (_.has(values, ''))
           return values[''];
         if (!_.has(values, path))
