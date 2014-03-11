@@ -81,10 +81,10 @@ if (Meteor.isClient) {
   };
 
   DomBackend.newFragment = function (nodeArray) {
-    // jQuery fragments are built specially in
-    // IE<9 so that they can safely hold HTML5
-    // elements.
-    return $jq.buildFragment(nodeArray, document);
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < nodeArray.length; i++)
+      frag.appendChild(nodeArray[i]);
+    return frag;
   };
 
   // `selector` is non-null.  `type` is one type (but
