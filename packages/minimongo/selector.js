@@ -507,6 +507,9 @@ var pointToArray = function (point) {
 var makeInequality = function (cmpValueComparator) {
   return function (operand) {
     // Arrays never compare false with non-arrays for any inequality.
+    // XXX This was behavior we observed in pre-release MongoDB 2.5, but
+    //     it seems to have been reverted.
+    //     See https://jira.mongodb.org/browse/SERVER-11444
     if (isArray(operand)) {
       return function () {
         return false;
