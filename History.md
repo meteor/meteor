@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Add hooks to login process. This allows for rate limiting login
+  attempts, logging an audit trail, account lockout flags, etc. See:
+  http://docs.meteor.com/#accounts_validLoginAttempt  #1815
+
 * Use "faye-websocket" (0.7.2) npm module instead of "websocket" (1.0.8) for
   server-to-server DDP.
 
