@@ -729,9 +729,17 @@ var ELEMENT_OPERATORS = {
 //
 //    Note: arrayIndices is used for two purposes. First, it is used to
 //    implement the '$' modifier feature, which only ever looks at its first
-//    element. Second, it is used for sort key generation, which only needs to
-//    be able to tell the difference between different paths (and needs to
-//    differentiate between explicit and implicit branching).
+//    element.
+//
+//    Second, it is used for sort key generation, which needs to be able to tell
+//    the difference between different paths. Moreover, it needs to
+//    differentiate between explicit and implicit branching, which is why
+//    there's the somewhat hacky 'x' entry: this means that explicit and
+//    implicit array lookups will have different full arrayIndices paths. (That
+//    code only requires that different paths have different arrayIndices; it
+//    doesn't actually "parse" arrayIndices. As an alternative, arrayIndices
+//    could contain objects with flags like "implicit", but I think that only
+//    makes the code surrounding them more complex.)
 //
 //    (By the way, this field ends up getting passed around a lot without
 //    cloning, so never mutate any arrayIndices field/var in this package!)
