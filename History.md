@@ -7,6 +7,12 @@
 
 * minimongo: Support {a: {$regex: '', $options: 'i'}}  #1874
 
+* minimongo: Fix sort implementation with multiple sort fields which each look
+  inside an array. eg, ensure that with sort key `{'a.x': 1, 'a.y': 1}`, the
+  document `{a: [{x: 0, y: 4}]}` sorts before
+  `{a: [{x: 0, y: 5}, {x: 1, y: 3}]}`, because the 3 should not be used as a
+  tie-breaker because it is not "next to" the tied 0s.
+
 * Upgraded dependencies
   - amplify: 1.1.2 (from 1.1.0)
 
