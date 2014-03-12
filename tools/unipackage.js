@@ -2,6 +2,9 @@ var _ = require('underscore');
 var library = require('./library.js');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
+var release = require('./release.js');
+var PackageLoader = require("./package-loader.js");
+var packageCache = require("./package-cache.js");
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
@@ -77,9 +80,15 @@ var load = function (options) {
     title: "loading unipackage"
   }, function () {
     // Load the code
+    // #RunningTheConstraintSolverToBuildAPackage ???
+    var versions = { }; // XXX XXX actually run the constraint solver!
+    var loader = new PackageLoader.PackageLoader({
+      versions: versions
+    });
+
     var image = bundler.buildJsImage({
       name: "load",
-      library: library,
+      packageLoader: loader,
       use: options.packages || []
     }).image;
     ret = image.load(env);

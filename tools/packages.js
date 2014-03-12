@@ -1886,7 +1886,7 @@ _.extend(Package.prototype, {
   // (has .meteor/packages).  This function does not load the
   // package's dependencies, and on return, the package will be in an
   // unbuilt state.
-  XXX XXX make dependencies provide packageLoader
+  // XXX XXX make dependencies provide packageLoader
   initFromAppDir: function (appDir, packageLoader, ignoreFiles) {
     var self = this;
     appDir = path.resolve(appDir);

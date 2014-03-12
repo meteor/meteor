@@ -1,19 +1,14 @@
-// XXX XXX make this a global singleton and eliminate the calls to
-// 'new PackageCache' and 'getPackageCache()'
+var packageLoader = require("./package-loader.js");
+var _ = require('underscore');
 
-var packageCache = exports;
+// both map from package load path to:
+// - pkg: cached Package object
+// - packageDir: directory from which it was loaded
+PackageCache = {};
+PackageCache.softReloadCache = {};
+PackageCache.loadedPackages = {};
 
-packageCache.PackageCache = function () {
-  var self = this;
-
-  // both map from package load path to:
-  // - pkg: cached Package object
-  // - packageDir: directory from which it was loaded
-  self.softReloadCache = {};
-  self.loadedPackages = {};
-};
-
-_.extend(packageCache.PackageCache, {
+_.extend(PackageCache, {
   // Force reload of changed packages. See description at loadPackageAtPath().
   //
   // If soft is false, the default, the cache is totally flushed and
@@ -112,9 +107,7 @@ _.extend(packageCache.PackageCache, {
           // #RunningTheConstraintSolverToBuildAPackage
           var versions = { }; // XXX XXX actually run the constraint solver!
           var loader = new packageLoader.PackageLoader({
-            catalog: release.current.catalog,
             versions: versions,
-            packageCache: self
           });
           pkg.build(loader);
 
@@ -147,9 +140,7 @@ _.extend(packageCache.PackageCache, {
     // #RunningTheConstraintSolverToBuildAPackage
     var versions = { }; // XXX XXX actually run the constraint solver!
     var loader = new packageLoader.PackageLoader({
-      catalog: release.current.catalog,
       versions: versions,
-      packageCache: self
     });
     pkg.build(loader);
 

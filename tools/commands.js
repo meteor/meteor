@@ -56,11 +56,10 @@ var hostedWithGalaxy = function (site) {
 var getPackages = function () {
   var ret = {};
 
-  var catalog = release.current.catalog;
   var messages = buildmessage.capture(function () {
-    var names = catalog.getAllPackageNames();
+    var names = Catalog.getAllPackageNames();
     _.each(names, function (name) {
-      ret[name] = catalog.getLatestVersion(name);
+      ret[name] = Catalog.getLatestVersion(name);
     });
   });
 
@@ -557,7 +556,6 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
 
-  var cat = release.current.catalog;
   var failed = false;
 
   // Read in existing package dependencies.
@@ -572,12 +570,12 @@ main.registerCommand({
 
     var constraint = project.processPackageConstraint(packageReq);
 
-    if (! cat.getPackage(constraint.packageName)) {
+    if (! Catalog.getPackage(constraint.packageName)) {
       process.stderr.write(constraint.packageName + ": no such package\n");
       failed = true;
       return;
     }
-    var versionInfo = cat.getVersion(
+    var versionInfo = Catalog.getVersion(
       constraint.packageName,
       getVersionFromVersionConstraint(constraint.versionConstraint));
 
@@ -609,7 +607,8 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
 
-      var resolver = new ConstraintSolver.Resolver(cat);
+      // XXX: Do packages access global variables?
+      var resolver = new ConstraintSolver.Resolver(Catalog);
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
                                          { optionsGoHere : false });
@@ -619,7 +618,7 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
 
         // Find the build.
         // XXX: Find the one with the right architecture.
-        var versionInfo = cat.getVersion(packageName, version);
+        var versionInfo = Catalog.getVersion(packageName, version);
 
         // Safety check, but this should not happen unless the
         // constraint solver is doing something it shouldn't.
@@ -1238,7 +1237,7 @@ main.registerCommand({
 
   var count = null;
   var messages = buildmessage.capture(function () {
-    count = release.current.catalog.rebuildLocalPackages();
+    count = Catalog.rebuildLocalPackages();
   });
   if (count)
     console.log("Built " + count + " packages.");
@@ -1515,9 +1514,8 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true
 }, function (options) {
-  var cat = release.current.catalog;
-  _.each(cat.getAllPackageNames(), function (name) {
-    var versionInfo = cat.getLatestVersion(name);
+  _.each(Catalog.getAllPackageNames(), function (name) {
+    var versionInfo = Catalog.getLatestVersion(name);
     if (versionInfo) {
       console.log(name, versionInfo.description);
     }
@@ -1533,12 +1531,11 @@ main.registerCommand({
     name: { type: String, required: true }
   }
 }, function (options) {
-  var cat = release.current.catalog;
-  if (! cat.getPackage(options.name)) {
+  if (! Catalog.getPackage(options.name)) {
     process.stderr.write('No package named ' + options.name);
     return 1;
   }
-  var pkgVersion = cat.getVersion(options.name, options.versionString);
+  var pkgVersion = Catalog.getVersion(options.name, options.versionString);
   if (! pkgVersion) {
     process.stderr.write('There is no version ' +
                          options.versionString + ' for package ' +
@@ -1572,9 +1569,7 @@ main.registerCommand({
   // #RunningTheConstraintSolverToBuildAPackage
   var versions = { }; // XXX XXX actually run the constraint solver!
   var loader = new packageLoader.PackageLoader({
-    catalog: release.current.catalog,
     versions: versions,
-    packageCache: new PackageCache
   });
 
   var pkg = new packages.Package(packageDir);

@@ -1,15 +1,13 @@
+var _ = require('underscore');
+var packageCache = require('./package-cache.js');
+
 var packageLoader = exports;
 
 // options:
-//   catalog: the Catalog used to locate the packages on disk
 //   versions: a map from package name to the version to use
-//   packageCache: the PackageCache used to load packages and cache them
-//     in memory
 packageLoader.PackageLoader = function (options) {
   var self = this;
-  self.catalog = options.catalog;
   self.versions = options.versions;
-  self.packageCache = options.packageCache;
 };
 
 _.extend(packageLoader.PackageLoader, {
@@ -41,8 +39,8 @@ _.extend(packageLoader.PackageLoader, {
     if (! _.has(self.versions, name))
       throw new Error("no version chosen for package?");
 
-    var loadPath = self.catalog.getLoadPathForPackage(name,
-                                                      self.versions[name]);
+    var loadPath = Catalog.getLoadPathForPackage(name,
+                                                 self.versions[name]);
     if (! loadPath) {
       if (options.throwOnError === false)
         return null;
@@ -53,7 +51,7 @@ _.extend(packageLoader.PackageLoader, {
       return pkg;
     }
 
-    return self.packageCache.loadPackageAtPath(name, loadPath, {
+    return PackageCache.loadPackageAtPath(name, loadPath, {
       forceRebuild: options.forceRebuild
     });
   },
@@ -74,11 +72,4 @@ _.extend(packageLoader.PackageLoader, {
     else
       return pkg.getDefaultSlices(arch);
   },
-
-  // Return the PackageCache that backs this loader.
-  getPackageCache: function () {
-    var self = this;
-    return self.packageCache;
-  }
-
 });

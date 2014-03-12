@@ -5,9 +5,6 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 
-
-var catalog = exports;
-
 // Use this class to query the metadata for all of the packages that
 // we know about (including packages on the package server that we
 // haven't actually download yet).
@@ -41,7 +38,7 @@ Catalog.localPackages = {}; // package name to package directory
 // All packages found either by localPackageDirs or localPackages
 Catalog.effectiveLocalPackages = {}; // package name to package directory
 
-_.extend(catalog.Catalog.prototype, {
+_.extend(Catalog, {
 
   // The catalog needs a list of local package directories to check for presence of local
   // packages. (Note that we don't need this always nessessarily, since the catalog can still
@@ -49,7 +46,7 @@ _.extend(catalog.Catalog.prototype, {
   setLocalPackageDirs: function (options) {
     options = options || {};
     Catalog.localPackageDirs = _.filter(options.localPackageDirs, isDirectory);
-  };
+  },
 
   // #CatalogLazyLoading
   // Currently, packageClient.loadPackageData() talks to the network
@@ -116,10 +113,8 @@ _.extend(catalog.Catalog.prototype, {
     // the collections, shadowing any versions of those packages from
     // the package server.
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
-      var cache = new packageCache.PackageCache; // XXX make singleton
-
       // Load the package
-      var pkg = cache.loadPackageAtPath(name, packageDir);
+      var pkg = PackageCache.loadPackageAtPath(name, packageDir);
 
       // Hide any versions from the package server
       self.versions.find({ packageName: name }).forEach(function (versionInfo) {
@@ -230,9 +225,9 @@ _.extend(catalog.Catalog.prototype, {
     // called to implement a command-line command, that shouldn't be a
     // problem.
     //
-    // Note that if we were reusing an existing PackageCache, we'd
-    // want to call refresh() on it first.
-    var packageCache = new packageCache.PackageCache;
+    // Since we are reusing an existing PackageCache, we
+    // have to call refresh() on it first.
+    PackageCache.refresh();
 
     // Delete any that are source packages with builds.
     var count = 0;
@@ -245,7 +240,7 @@ _.extend(catalog.Catalog.prototype, {
     // passes because otherwise we might end up rebuilding a package
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      packageCache.loadPackageAtPath(name, loadPath, { throwOnError: false });
+      PackageCache.loadPackageAtPath(name, loadPath, { throwOnError: false });
       count ++;
     });
 

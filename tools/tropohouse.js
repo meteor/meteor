@@ -91,14 +91,13 @@ tropohouse.downloadSpecifiedBuild = function (buildRecord) {
 // warehouse does.
 tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
                                                             requiredArches) {
-  var cat = release.current.catalog;
   var packageName = versionInfo.packageName;
   var version = versionInfo.version;
 
   // If this package isn't coming from the package server (loaded from
   // a checkout, or from an app package directory), don't try to
   // download it (we already have it)
-  if (cat.isLocalPackage(packageName))
+  if (Catalog.isLocalPackage(packageName))
     return true;
 
   // Figure out what arches (if any) we have downloaded for this package version
@@ -109,7 +108,7 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
   });
 
   if (archesToDownload.length) {
-    var buildsToDownload = cat.getBuildsForArches(
+    var buildsToDownload = Catalog.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
       // XXX throw a special error instead?

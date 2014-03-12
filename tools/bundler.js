@@ -176,7 +176,7 @@ var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js').runLog;
-
+var PackageLoader = require('./package-loader.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [

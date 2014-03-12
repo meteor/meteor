@@ -3,7 +3,6 @@ var files = require('./files.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
 var path = require('path');
-var catalog = require('./catalog.js');
 var library = require('./library.js');
 
 var release = exports;
@@ -18,11 +17,6 @@ var Release = function (options) {
   // A Library object that can be used to load packages.
   self.library = null;
 
-  // A Catalog contains the metadata for all of the packages that we
-  // know about, including packages that we haven't downloaded from
-  // the package server.
-  self.catalog = null;
-
   var packageDirs = _.clone(options.packageDirs || []);
   if (self.name === null) {
     // Running from checkout.
@@ -36,11 +30,6 @@ var Release = function (options) {
   self.library = new library.Library({
     localPackageDirs: packageDirs,
     releaseManifest: self._manifest
-  });
-
-  // XXX XXX make Catalog a global singleton
-  self.catalog = new catalog.Catalog({
-    localPackageDirs: packageDirs
   });
 };
 
