@@ -1272,7 +1272,7 @@ Template.api.accounts_validateLoginAttempt = {
 };
 
 Template.api.accounts_onLogin = {
-  id: "accounts_onLogin",
+  id: "accounts_onlogin",
   name: "Accounts.onLogin(func)",
   locus: "Server",
   descr: ["Register a callback to be called after a login is successful."],
