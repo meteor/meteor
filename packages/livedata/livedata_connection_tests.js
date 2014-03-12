@@ -23,6 +23,12 @@ var makeConnectMessage = function (session) {
   return msg;
 }
 
+// Tests that stream got a message that matches expected.
+// Expected is normally an object, and allows a wildcard value of '*',
+// which will then match any value.
+// Returns the message (parsed as a JSON object if expected is an object);
+// which is particularly handy if you want to extract a value that was
+// matched as a wildcard.
 var testGotMessage = function (test, stream, expected) {
   var retVal = undefined;
 
@@ -36,6 +42,8 @@ var testGotMessage = function (test, stream, expected) {
   if (typeof got === 'string' && typeof expected === 'object')
     got = JSON.parse(got);
 
+  retVal = got;
+
   // An expected value of '*' matches any value, and the matching value (or
   // array of matching values, if there are multiple) is returned from this
   // function.
@@ -48,17 +56,10 @@ var testGotMessage = function (test, stream, expected) {
     _.each(keysWithStarValues, function (k) {
       expected[k] = got[k];
     });
-    if (keysWithStarValues.length === 1) {
-      retVal = got[keysWithStarValues[0]];
-    } else {
-      retVal = _.map(keysWithStarValues, function (k) {
-        return got[k];
-      });
-    }
   }
 
   test.equal(got, expected);
-  return got;
+  return retVal;
 };
 
 var startAndConnect = function(test, stream) {
