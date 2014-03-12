@@ -118,7 +118,7 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   testUtils.registerWithToken(token, username, 'testtest', email);
 
   // Success! 'meteor whoami' should now know who we are.
-  run = s.run('whoami');
+  var run = s.run('whoami');
   run.waitSecs(testUtils.accountsCommandTimeoutSecs);
   run.read(username + '\n');
   run.expectExit(0);
