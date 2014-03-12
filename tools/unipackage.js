@@ -3,7 +3,7 @@ var library = require('./library.js');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
-var PackageLoader = require("./package-loader.js");
+var PackageLoader = require("./package-loader.js").PackageLoader;
 var packageCache = require("./package-cache.js");
 
 // Load unipackages into the currently running node.js process. Use
@@ -80,10 +80,8 @@ var load = function (options) {
     title: "loading unipackage"
   }, function () {
     // Load the code
-    // #RunningTheConstraintSolverToBuildAPackage ???
-    var versions = { }; // XXX XXX actually run the constraint solver!
-    var loader = new PackageLoader.PackageLoader({
-      versions: versions
+    var loader = new PackageLoader({
+      versions: null
     });
 
     var image = bundler.buildJsImage({

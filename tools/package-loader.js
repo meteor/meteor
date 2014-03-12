@@ -5,7 +5,8 @@ var catalog = require('./catalog.js');
 var packageLoader = exports;
 
 // options:
-//   versions: a map from package name to the version to use
+//  - versions: a map from package name to the version to use.  or null to only
+//    use local packages and ignore the package versions.
 packageLoader.PackageLoader = function (options) {
   var self = this;
   self.versions = options.versions;
@@ -37,11 +38,17 @@ _.extend(packageLoader.PackageLoader, {
       options.throwOnError = true;
     }
 
-    if (! _.has(self.versions, name))
+    if (! self.versions && ! _.has(self.versions, name))
       throw new Error("no version chosen for package?");
 
-    var loadPath = catalog.getLoadPathForPackage(name,
-                                                 self.versions[name]);
+    var version;
+    if (self.versions) {
+      version = self.versions[name];
+    } else {
+      version = null;
+    }
+
+    var loadPath = catalog.getLoadPathForPackage(name, version);
     if (! loadPath) {
       if (options.throwOnError === false)
         return null;
@@ -72,5 +79,5 @@ _.extend(packageLoader.PackageLoader, {
       return [pkg.getSingleSlice(spec.slice, arch)];
     else
       return pkg.getDefaultSlices(arch);
-  },
+  }
 });

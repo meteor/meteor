@@ -252,12 +252,16 @@ _.extend(Catalog.prototype, {
   //
   // Doesn't download packages. Downloading should be done at the time
   // that .meteor/versions is updated.
+  //
+  // HACK: Version can be null if you are certain that the package is to be
+  // loaded from local packages. In the future, version should always be
+  // required and we should confirm that the version on disk is the version that
+  // we asked for. This is to support unipackage loader not having a version
+  // manifest.
   getLoadPathForPackage: function (name, version) {
     var self = this;
 
     if (_.has(self.effectiveLocalPackages, name)) {
-      // XXX should confirm that the version on disk actually matches
-      // the requested version
       return self.effectiveLocalPackages[name];
     }
 
