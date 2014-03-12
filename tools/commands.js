@@ -20,6 +20,7 @@ var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var packages = require('./packages.js');
+var packageLoader = require('./package-loader.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -48,18 +49,28 @@ var hostedWithGalaxy = function (site) {
 };
 
 // Get all packages available. Returns a map from the package name to
-// a Package object.
+// a Package object -- for the latest version of the package.
 //
 // If problems happen while generating the list, print appropriate
 // messages to stderr and return null.
 var getPackages = function () {
-  var result = release.current.library.list();
-  if (result.packages)
-    return result.packages;
+  var ret = {};
 
-  process.stderr.write("=> Errors while scanning packages:\n\n");
-  process.stderr.write(result.messages.formatMessages());
-  return null;
+  var catalog = release.current.catalog;
+  var messages = buildmessage.capture(function () {
+    var names = catalog.getAllPackageNames();
+    _.each(names, function (name) {
+      ret[name] = catalog.getLatestVersion(name);
+    });
+  });
+
+  if (message.hasMessages()) {
+    process.stderr.write("=> Errors while scanning packages:\n\n");
+    process.stderr.write(result.messages.formatMessages());
+    return null;
+  } else {
+    return ret;
+  }
 };
 
 var XXX_DEPLOY_ARCH = 'os.linux.x86_64';
@@ -148,8 +159,9 @@ main.registerCommand({
     if (! packages)
       return 1; // build failed
 
-    // XXX we rely on the fact that library.list() forces all of the
-    // packages to be built. #ListingPackagesImpliesBuildingThem
+    // XXX we rely on the fact that loading a package, even to get its
+    // metadata, forces it to be built if it's a source
+    // package. #ListingPackagesImpliesBuildingThem
   }
 });
 
@@ -527,26 +539,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  var all = getPackages();
-  if (! all)
-    return 1;
-
-  var using = {};
-  _.each(project.getPackages(options.appDir), function (name) {
-    using[name] = true;
-  });
-
-  _.each(options.args, function (name) {
-    if (! _.has(all, name)) {
-      process.stderr.write(name + ": no such package\n");
-    } else if (_.has(using, name)) {
-      process.stderr.write(name + ": already using\n");
-    } else {
-      project.addPackage(options.appDir, name);
-      var note = all[name].metadata.summary || '';
-      process.stderr.write(name + ": " + note + "\n");
-    }
-  });
+  throw new Error("XXX replace with add-package");
 });
 
 
@@ -733,16 +726,7 @@ main.registerCommand({
     return;
   }
 
-  var list = getPackages();
-  if (! list)
-    return 1;
-  var names = _.keys(list);
-  names.sort();
-  var pkgs = [];
-  _.each(names, function (name) {
-    pkgs.push(list[name]);
-  });
-  process.stdout.write("\n" + library.formatList(pkgs) + "\n");
+  throw new Error("XXX replace with list-all or remove completely");
 });
 
 
@@ -1184,7 +1168,7 @@ main.registerCommand({
   // on each other.
   //
   // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
-  // package search path baked into release.current.library: we are
+  // package search path baked into release.current.catalog: we are
   // bundling the test runner app, but finding app packages from the
   // current app (if any).
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
@@ -1235,7 +1219,7 @@ main.registerCommand({
   hidden: true
 }, function (options) {
   if (options.appDir) {
-    // The library doesn't know about other programs in your app. Let's blow
+    // The catalog doesn't know about other programs in your app. Let's blow
     // away their .build directories if they have them, and not rebuild
     // them. Sort of hacky, but eh.
     var programsDir = path.join(options.appDir, 'programs');
@@ -1254,7 +1238,7 @@ main.registerCommand({
 
   var count = null;
   var messages = buildmessage.capture(function () {
-    count = release.current.library.rebuildAll();
+    count = release.current.catalog.rebuildLocalPackages();
   });
   if (count)
     console.log("Built " + count + " packages.");
@@ -1585,9 +1569,17 @@ main.registerCommand({
     return 1;
   }
 
-  var pkg = new packages.Package(release.current.library, packageDir);
+  // #RunningTheConstraintSolverToBuildAPackage
+  var versions = { }; // XXX XXX actually run the constraint solver!
+  var loader = new packageLoader.PackageLoader({
+    catalog: release.current.catalog,
+    versions: versions,
+    packageCache: new PackageCache
+  });
+
+  var pkg = new packages.Package(packageDir);
   pkg.initFromPackageDir(options.name, packageDir);
-  pkg.build();
+  pkg.build(loader);
   pkg.saveAsUnipackage(path.join(packageDir, '.build'));
 
   var conn = packageClient.loggedInPackagesConnection();

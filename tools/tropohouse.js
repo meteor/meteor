@@ -54,9 +54,25 @@ tropohouse.downloadedBuilds = function (packageName, version) {
     tropohouse.downloadedBuildsDirectory(packageName, version));
 };
 
+// Returns null if the package isn't in the tropohouse.
 tropohouse.packagePath = function (packageName, version) {
-  return path.join(tropohouse.getWarehouseDir(), "packages", packageName,
-                   version);
+  // Check for invalid package names. Currently package names can only
+  // contain ASCII alphanumerics, dash, and dot, and must contain at
+  // least one letter.
+  //
+  // XXX we should factor this out somewhere else, but it's nice to
+  // make sure that package names that we get here are sanitized to
+  // make sure that we don't try to read random locations on disk
+  //
+  // XXX revisit this later. What about unicode package names?
+  if (/[^A-Za-z0-9.\-]/.test(packageName) || !/[A-Za-z]/.test(packageName) )
+    return null;
+
+  var loadPath = path.join(tropohouse.getWarehouseDir(), "packages",
+                           packageName, version);
+  if (! fs.existsSync(loadPath))
+    return null;
+  return loadPath;
 };
 
 tropohouse.downloadSpecifiedBuild = function (buildRecord) {
@@ -114,8 +130,7 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
     // will work once implemented?
   } else {
     // We need to turn our builds into a unipackage.
-    // XXX should this go through the library?
-    var pkg = new packages.Package(null  /* no library?? */);
+    var pkg = new packages.Package;
     var builds = tropohouse.downloadedBuilds(packageName, version);
     _.each(builds, function (build, i) {
       pkg._loadSlicesFromUnipackage(

@@ -38,7 +38,8 @@ var Release = function (options) {
     releaseManifest: self._manifest
   });
 
-  self.catalog = new catalog.Catalog(self.library, {
+  // XXX XXX make Catalog a global singleton
+  self.catalog = new catalog.Catalog({
     localPackageDirs: packageDirs
   });
 };

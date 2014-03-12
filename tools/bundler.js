@@ -394,15 +394,15 @@ _.extend(File.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options:
-// - library: package library to use for resolving package dependenices
+// - packageLoader: PackageLoader to use for resolving package dependenices
 // - arch: the architecture to build
 //
 // see subclasses for additional options
 var Target = function (options) {
   var self = this;
 
-  // Package library to use for resolving package dependenices.
-  self.library = options.library;
+  // PackageLoader to use for resolving package dependenices.
+  self.packageLoader = options.packageLoader;
 
   // Something like "browser.w3c" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
@@ -498,19 +498,19 @@ _.extend(Target.prototype, {
   //   strings) whose test slices should be included
   _determineLoadOrder: function (options) {
     var self = this;
-    var library = self.library;
+    var packageLoader = self.packageLoader;
 
     // Find the roots
     var rootSlices =
       _.flatten([
         _.map(options.packages || [], function (p) {
           if (typeof p === "string")
-            return library.getSlices(p, self.arch);
+            return packageLoader.getSlices(p, self.arch);
           else
             return p.getDefaultSlices(self.arch);
         }),
         _.map(options.test || [], function (p) {
-          var pkg = (typeof p === "string" ? library.get(p) : p);
+          var pkg = (typeof p === "string" ? packageLoader.getPackage(p) : p);
           return pkg.getTestSlices(self.arch);
         })
       ]);
@@ -528,7 +528,8 @@ _.extend(Target.prototype, {
       if (_.has(getsUsed, slice.id))
         return;
       getsUsed[slice.id] = slice;
-      slice.eachUsedSlice(self.arch, {skipWeak: true}, addToGetsUsed);
+      slice.eachUsedSlice(self.arch, packageLoader,
+                          {skipWeak: true}, addToGetsUsed);
     };
     _.each(rootSlices, addToGetsUsed);
 
@@ -559,7 +560,8 @@ _.extend(Target.prototype, {
       // those edge. Because we did follow those edges in Phase 1, any unordered
       // slices were at some point in `needed` and will not be left out).
       slice.eachUsedSlice(
-        self.arch, {skipUnordered: true}, function (usedSlice, useOptions) {
+        self.arch, packageLoader, {skipUnordered: true},
+        function (usedSlice, useOptions) {
           // If this is a weak dependency, and nothing else in the target had a
           // strong dependency on it, then ignore this edge.
           if (useOptions.weak && ! _.has(getsUsed, usedSlice.id))
@@ -602,7 +604,7 @@ _.extend(Target.prototype, {
       var isApp = ! slice.pkg.name;
 
       // Emit the resources
-      var resources = slice.getResources(self.arch);
+      var resources = slice.getResources(self.arch, self.packageLoader);
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os slices).
@@ -699,8 +701,8 @@ _.extend(Target.prototype, {
 
       // Depend on the source files that produced these resources.
       self.watchSet.merge(slice.watchSet);
-      // Remember the library resolution of all packages used in these
-      // resources.
+      // Remember the versions of all of the build-time dependencies
+      // that were used in these resources.
       // XXX assumes that this merges cleanly
       _.extend(self.pluginProviderPackageDirs,
                slice.pkg.pluginProviderPackageDirs)
@@ -1363,7 +1365,7 @@ var ServerTarget = function (options) {
 
   self.clientTarget = options.clientTarget;
   self.releaseName = options.releaseName;
-  self.library = options.library;
+  self.packageLoader = options.packageLoader;
 
   if (! archinfo.matches(self.arch, "os"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1636,6 +1638,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
  *
+ * - packageLoader: Required. The PackageLoader used to retrieve any
+ *   packages needed by the app or its dependencies at the appropriate
+ *   versions.
+ *
  * - nodeModulesMode: what to do about the core npm modules needed by
  *   the server bootstrap. one of:
  *   - 'copy': copy from a prebuilt local installation. used by
@@ -1682,12 +1688,12 @@ exports.bundle = function (options) {
   var appDir = options.appDir;
   var outputPath = options.outputPath;
   var nodeModulesMode = options.nodeModulesMode || 'copy';
+  var packageLoader = options.packageLoader;
   var buildOptions = options.buildOptions || {};
 
   if (! release.usingRightReleaseForApp(appDir))
     throw new Error("running wrong release for app?");
 
-  var library = release.current.library;
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
   var builtBy = "Meteor" + (release.current.name ?
@@ -1704,7 +1710,7 @@ exports.bundle = function (options) {
 
     var makeClientTarget = function (app) {
       var client = new ClientTarget({
-        library: library,
+        packageLoader: packageLoader,
         arch: "browser"
       });
 
@@ -1720,7 +1726,7 @@ exports.bundle = function (options) {
 
     var makeBlankClientTarget = function () {
       var client = new ClientTarget({
-        library: library,
+        packageLoader: packageLoader,
         arch: "browser"
       });
       client.make({
@@ -1733,7 +1739,7 @@ exports.bundle = function (options) {
 
     var makeServerTarget = function (app, clientTarget) {
       var targetOptions = {
-        library: library,
+        packageLoader: packageLoader,
         arch: buildOptions.arch || archinfo.host(),
         releaseName: releaseName
       };
@@ -1761,7 +1767,8 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
-      var app = library.getForApp(appDir, ignoreFiles);
+      var app = packageLoader.getPackageCache().loadAppAtPath(appDir,
+                                                              ignoreFiles);
 
       // Client
       var client = makeClientTarget(app);
@@ -1871,11 +1878,13 @@ exports.bundle = function (options) {
     _.each(programs, function (p) {
       // Read this directory as a package and create a target from
       // it
-      library.override(p.name, p.path);
+
+      var pkg = packageLoader.getPackageCache().
+        loadPackageAtPath(p.name, p.loadPath);
       var target;
       switch (p.type) {
       case "server":
-        target = makeServerTarget(p.name);
+        target = makeServerTarget(pkg);
         break;
       case "traditional":
         var clientTarget;
@@ -1900,10 +1909,10 @@ exports.bundle = function (options) {
         // We don't check whether targets[p.client] is actually a
         // ClientTarget. If you want to be clever, go ahead.
 
-        target = makeServerTarget(p.name, clientTarget);
+        target = makeServerTarget(pkg, clientTarget);
         break;
       case "client":
-        target = makeClientTarget(p.name);
+        target = makeClientTarget(pkg);
         break;
       default:
         buildmessage.error(
@@ -1912,7 +1921,6 @@ exports.bundle = function (options) {
         // recover by ignoring target
         return;
       };
-      library.removeOverride(p.name);
       targets[p.name] = target;
     });
 
@@ -1920,10 +1928,6 @@ exports.bundle = function (options) {
     // controlProgram anymore.
     if (! (controlProgram in targets))
       controlProgram = undefined;
-
-    // Make sure notice when somebody adds a package to the app packages dir
-    // that may override a warehouse package.
-    library.watchLocalPackageDirs(watchSet);
 
     // Write to disk
     starResult = writeSiteArchive(targets, outputPath, {
@@ -1960,7 +1964,7 @@ exports.bundle = function (options) {
 // letting exceptions escape?
 //
 // options:
-// - library: required. the Library for resolving package dependencies
+// - packageLoader: required. the PackageLoader for resolving dependencies
 // - name: required. a name for this image (cosmetic, but will appear
 //   in, eg, error messages) -- technically speaking, this is the name
 //   of the package created to contain the sources and package
@@ -1987,7 +1991,7 @@ exports.buildJsImage = function (options) {
   if (! options.name)
     throw new Error("Must provide a name");
 
-  var pkg = new packages.Package(options.library);
+  var pkg = new packages.Package;
 
   pkg.initFromOptions(options.name, {
     sliceName: "plugin",
@@ -1998,10 +2002,10 @@ exports.buildJsImage = function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });
-  pkg.build();
+  pkg.build(options.packageLoader);
 
   var target = new JsImageTarget({
-    library: options.library,
+    packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only

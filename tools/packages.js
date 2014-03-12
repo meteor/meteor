@@ -250,7 +250,11 @@ _.extend(Slice.prototype, {
   // resulting JavaScript. Also add all provided source files to the
   // package dependencies. Sets fields such as dependencies, exports,
   // prelinkFiles, packageVariables, and resources.
-  build: function () {
+  //
+  // packageLoader is the PackageLoader to use to validate that the
+  // slice's dependencies actually exist (for cleaner error
+  // messages).
+  build: function (packageLoader) {
     var self = this;
     var isApp = ! self.pkg.name;
 
@@ -269,11 +273,12 @@ _.extend(Slice.prototype, {
     _.each(['uses', 'implies'], function (field) {
       var scrubbed = [];
       _.each(self[field], function (u) {
-        var pkg = self.pkg.library.get(u.package, { throwOnError: false });
-/*       if (! pkg) {
+        var pkg = packageLoader.getPackage(u.package,
+                                           { throwOnError: false });
+       if (! pkg) {
           buildmessage.error("no such package: '" + u.package + "'");
           // recover by omitting this package from the field
-        } else */
+        } else
           scrubbed.push(u);
       });
       self[field] = scrubbed;
@@ -300,7 +305,8 @@ _.extend(Slice.prototype, {
       var fileOptions = _.clone(source.fileOptions) || {};
       var absPath = path.resolve(self.pkg.sourceRoot, relPath);
       var filename = path.basename(relPath);
-      var handler = !fileOptions.isAsset && self._getSourceHandler(filename);
+      var handler = !fileOptions.isAsset &&
+        self._getSourceHandler(filename, packageLoader);
       var file = watch.readAndWatchFileWithHash(self.watchSet, absPath);
       var contents = file.contents;
 
@@ -551,7 +557,7 @@ _.extend(Slice.prototype, {
     // plugin program itself uses), as well as the package.js file from every
     // package we directly use (since changing the package.js may add or remove
     // a plugin).
-    _.each(self._activePluginPackages(), function (otherPkg) {
+    _.each(self._activePluginPackages(packageLoader), function (otherPkg) {
       self.watchSet.merge(otherPkg.pluginWatchSet);
       // XXX this assumes this is not overwriting something different
       self.pkg.pluginProviderPackageDirs[otherPkg.name] =
@@ -600,9 +606,11 @@ _.extend(Slice.prototype, {
   // is resolved at bundle time. (On the other hand, when it comes to
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
-  getResources: function (bundleArch) {
+  //
+  // packageLoader is the PackageLoader that should be used to resolve
+  // the package's bundle-time dependencies.
+  getResources: function (bundleArch, packageLoader) {
     var self = this;
-    var library = self.pkg.library;
 
     if (! self.isBuilt)
       throw new Error("getting resources of unbuilt slice?" + self.pkg.name + " " + self.sliceName + " " + self.arch);
@@ -621,7 +629,8 @@ _.extend(Slice.prototype, {
     // unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
     self.eachUsedSlice(
-      bundleArch, {skipWeak: true, skipUnordered: true}, function (otherSlice) {
+      bundleArch, packageLoader,
+      {skipWeak: true, skipUnordered: true}, function (otherSlice) {
         if (! otherSlice.isBuilt)
           throw new Error("dependency wasn't built?");
         _.each(otherSlice.packageVariables, function (symbol) {
@@ -664,7 +673,10 @@ _.extend(Slice.prototype, {
   // are transitively "implied" by used slices. (But not slices that are used by
   // slices that we use!)  Options are skipWeak and skipUnordered, meaning to
   // ignore direct "uses" that are weak or unordered.
-  eachUsedSlice: function (arch, options, callback) {
+  //
+  // packageLoader is the PackageLoader that should be used to resolve
+  // the package's bundle-time dependencies.
+  eachUsedSlice: function (arch, packageLoader, options, callback) {
     var self = this;
     if (typeof options === "function") {
       callback = options;
@@ -685,7 +697,8 @@ _.extend(Slice.prototype, {
       var use = usesToProcess.shift();
 
       var slices =
-            self.pkg.library.getSlices(_.pick(use, 'package', 'spec'), arch);
+            packageLoader.getSlices(_.pick(use, 'package', 'spec'),
+                                    arch);
       _.each(slices, function (slice) {
         if (_.has(processedSliceId, slice.id))
           return;
@@ -704,7 +717,7 @@ _.extend(Slice.prototype, {
 
   // Return an array of all plugins that are active in this slice, as
   // a list of Packages.
-  _activePluginPackages: function () {
+  _activePluginPackages: function (packageLoader) {
     var self = this;
 
     // XXX we used to include our own extensions only if we were the
@@ -725,9 +738,12 @@ _.extend(Slice.prototype, {
     // We pass archinfo.host here, not self.arch, because it may be more
     // specific, and because plugins always have to run on the host
     // architecture.
-    self.eachUsedSlice(archinfo.host(), {skipWeak: true}, function (usedSlice) {
-      ret.push(usedSlice.pkg);
-    });
+    self.eachUsedSlice(
+      archinfo.host(), packageLoader, {skipWeak: true},
+      function (usedSlice) {
+        ret.push(usedSlice.pkg);
+      }
+    );
 
     // Only need one copy of each package.
     ret = _.uniq(ret);
@@ -742,7 +758,7 @@ _.extend(Slice.prototype, {
   // Get all extensions handlers registered in this slice, as a map
   // from extension (no leading dot) to handler function. Throws an
   // exception if two packages are registered for the same extension.
-  _allHandlers: function () {
+  _allHandlers: function (packageLoader) {
     var self = this;
     var ret = {};
 
@@ -761,7 +777,7 @@ _.extend(Slice.prototype, {
       }
     });
 
-    _.each(self._activePluginPackages(), function (otherPkg) {
+    _.each(self._activePluginPackages(packageLoader), function (otherPkg) {
       _.each(otherPkg.sourceHandlers, function (handler, ext) {
         if (ext in ret && ret[ext] !== handler) {
           buildmessage.error(
@@ -783,17 +799,17 @@ _.extend(Slice.prototype, {
   // Return a list of all of the extension that indicate source files
   // for this slice, not including leading dots. Computed based on
   // this.uses, so should only be called once that has been set.
-  registeredExtensions: function () {
+  _registeredExtensions: function (packageLoader) {
     var self = this;
-    return _.keys(self._allHandlers());
+    return _.keys(self._allHandlers(packageLoader));
   },
 
   // Find the function that should be used to handle a source file for
   // this slice, or return null if there isn't one. We'll use handlers
   // that are defined in this package and in its immediate dependencies.
-  _getSourceHandler: function (filename) {
+  _getSourceHandler: function (filename, packageLoader) {
     var self = this;
-    var handlers = self._allHandlers();
+    var handlers = self._allHandlers(packageLoader);
     var parts = filename.split('.');
     for (var i = 0; i < parts.length; i++) {
       var extension = parts.slice(i).join('.');
@@ -820,7 +836,7 @@ _.extend(Slice.prototype, {
 // (find better names, though).
 
 var nextPackageId = 1;
-var Package = function (library, packageDirectoryForBuildInfo) {
+var Package = function (packageDirectoryForBuildInfo) {
   var self = this;
 
   // A unique ID (guaranteed to not be reused in this process -- if
@@ -850,15 +866,11 @@ var Package = function (library, packageDirectoryForBuildInfo) {
 
   // The package's directory. This is used only by other packages that use this
   // package in their buildinfo.json (to detect that they need to be rebuilt if
-  // the library's resolution of the package name changes); it is not used to
+  // the PackageLoader resolves it to a different package); it is not used to
   // read files or anything else. Notably, it should be the same if a package is
   // read from a source tree or read from the .build unipackage inside that
   // source tree.
   self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
-
-  // Package library that should be used to resolve this package's
-  // dependencies
-  self.library = library;
 
   // Package metadata. Keys are 'summary' and 'internal'. Currently
   // both of these are optional.
@@ -1165,10 +1177,14 @@ _.extend(Package.prototype, {
   // completed, any errors detected in the package will have been
   // emitted to buildmessage.
   //
-  // build() may retrieve the package's dependencies from the library,
-  // so it is illegal to call build() from library.get() (until the
-  // package has actually been put in the loaded package list).
-  build: function () {
+  // packageLoader is the PackageLoader to use for determining the
+  // package's build-time dependencies.
+  //
+  // Since build() retrieves the package's dependencies from the
+  // PackageLoader, it is illegal to call build() from
+  // packageLoader.getPackage() (until the package has actually been
+  // put in the PackageCache's cached package list.
+  build: function (packageLoader) {
     var self = this;
 
     if (self.pluginsBuilt || self.slicesBuilt)
@@ -1185,7 +1201,7 @@ _.extend(Package.prototype, {
       }, function () {
         var buildResult = bundler.buildJsImage({
           name: info.name,
-          library: self.library,
+          packageLoader: packageLoader,
           use: info.use,
           sourceRoot: self.sourceRoot,
           sources: info.sources,
@@ -1205,8 +1221,8 @@ _.extend(Package.prototype, {
         // Add this plugin's dependencies to our "plugin dependency" WatchSet.
         self.pluginWatchSet.merge(buildResult.watchSet);
 
-        // Remember the library resolution of all packages used by the plugin.
-        // XXX assumes that this merges cleanly
+        // Remember the versions of all of the build-time dependencies
+        // that were used.
         _.extend(self.pluginProviderPackageDirs,
                  buildResult.pluginProviderPackageDirs);
 
@@ -1221,7 +1237,7 @@ _.extend(Package.prototype, {
     // Build slices. Might use our plugins, so needs to happen
     // second.
     _.each(self.slices, function (slice) {
-      slice.build();
+      slice.build(packageLoader);
     });
     self.slicesBuilt = true;
 
@@ -1230,8 +1246,8 @@ _.extend(Package.prototype, {
 
   // Programmatically initialized a package from scratch. For now, cannot create
   // browser packages or cross-targeted packages (eg os.linux when host is
-  // os.osx). This function does not retrieve the package's dependencies from
-  // the library, and on return, the package will be in an unbuilt state.
+  // os.osx). This function does not load the package's dependencies, and on
+  // return, the package will be in an unbuilt state.
   //
   // Unlike user-facing methods of creating a package
   // (initFromPackageDir, initFromAppDir) this does not implicitly add
@@ -1301,9 +1317,9 @@ _.extend(Package.prototype, {
   },
 
   // Initialize a package from a legacy-style (package.js) package
-  // directory. This function does not retrieve the package's
-  // dependencies from the library, and on return, the package will be
-  // in an unbuilt state.
+  // directory. This function does not load the package's
+  // dependencies, and on return, the package will be in an unbuilt
+  // state.
   initFromPackageDir: function (name, dir, options) {
     var self = this;
     var isPortable = true;
@@ -1867,10 +1883,11 @@ _.extend(Package.prototype, {
   },
 
   // Initialize a package from a legacy-style application directory
-  // (has .meteor/packages).  This function does not retrieve the
-  // package's dependencies from the library, and on return, the
-  // package will be in an unbuilt state.
-  initFromAppDir: function (appDir, ignoreFiles) {
+  // (has .meteor/packages).  This function does not load the
+  // package's dependencies, and on return, the package will be in an
+  // unbuilt state.
+  XXX XXX make dependencies provide packageLoader
+  initFromAppDir: function (appDir, packageLoader, ignoreFiles) {
     var self = this;
     appDir = path.resolve(appDir);
     self.name = null;
@@ -1880,24 +1897,8 @@ _.extend(Package.prototype, {
     _.each(["client", "server"], function (sliceName) {
       // Determine used packages
       var names = project.getPackages(appDir);
-      var vers = project.getAllDependencies(appDir);
       var arch = sliceName === "server" ? "os" : "browser";
 
-
-      // XXXX: We actually want to run the constraint solver and also edit the library to use trops
-      // instead of an override.
-      _.each(names, function(name) {
-        var narr = name.split("@=");
-        return narr[0];
-      });
-
-      vers = _.map(vers,  function(name) {
-        var newPath =  tropohouse.packagePath(name.packageName, name.versionConstraint);
-        self.library.override(name.packageName, newPath);
-        return name.packageName;
-      });
-
-      names = _.union(names, vers);
       // Create slice
       var slice = new Slice(self, {
         name: sliceName,
@@ -1915,9 +1916,12 @@ _.extend(Package.prototype, {
 
       // Determine source files
       slice.getSourcesFunc = function () {
-        var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
-          return new RegExp('\\.' + quotemeta(ext) + '$');
-        });
+        var sourceInclude = _.map(
+          slice._registeredExtensions(packageLoader),
+          function (ext) {
+            return new RegExp('\\.' + quotemeta(ext) + '$');
+          }
+        );
         var sourceExclude = [/^\./].concat(ignoreFiles);
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
@@ -2075,8 +2079,7 @@ _.extend(Package.prototype, {
 
   // Initialize a package from a prebuilt Unipackage on disk. On
   // return, the package will be a built state. This function does not
-  // retrieve the package's dependencies from the library (it is not
-  // necessary).
+  // load the package's dependencies (it is not necessary).
   //
   // options:
   // - onlyIfUpToDate: if true, then first check the unipackage's

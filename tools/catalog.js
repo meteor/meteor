@@ -11,8 +11,6 @@ var catalog = exports;
 // we know about (including packages on the package server that we
 // haven't actually download yet).
 //
-// 'library' is a library to use for loading packages.
-//
 // Options:
 // - localPackageDirs: paths on local disk, that contain
 //   subdirectories, that each contain a package that should override
@@ -22,11 +20,10 @@ var catalog = exports;
 //   server. Directories that don't exist (or paths that aren't
 //   directories) will be silently ignored.
 
-catalog.Catalog = function (library, options) {
+catalog.Catalog = function (options) {
   var self = this;
   options = options || {};
 
-  self.library = library;
   self.loaded = false; // #CatalogLazyLoading
 
   // Package server data
@@ -98,8 +95,7 @@ _.extend(catalog.Catalog.prototype, {
           // XXX XXX for now, get the package name from the
           // directory. in a future refactor, should instead build the
           // package right here and get the name from the (not yet
-          // added) 'name' attribute in package.js. in this future,
-          // Library caches packages by path rather than by name.
+          // added) 'name' attribute in package.js.
           if (! _.has(self.effectiveLocalPackages, item))
             self.effectiveLocalPackages[item] = packageDir;
         }
@@ -112,10 +108,10 @@ _.extend(catalog.Catalog.prototype, {
     // the collections, shadowing any versions of those packages from
     // the package server.
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
+      var cache = new packageCache.PackageCache; // XXX make singleton
+
       // Load the package
-      var pkg = self.library.get(name, {
-        packageDir: packageDir
-      });
+      var pkg = cache.loadPackageAtPath(name, packageDir);
 
       // Hide any versions from the package server
       self.versions.find({ packageName: name }).forEach(function (versionInfo) {
@@ -190,6 +186,81 @@ _.extend(catalog.Catalog.prototype, {
     self._ensureLoaded();
 
     return _.has(self.effectiveLocalPackages, name);
+  },
+
+  // Register local package directories with a watchSet. We want to know if a
+  // package is created or deleted, which includes both its top-level source
+  // directory and its main package metadata file.
+  watchLocalPackageDirs: function (watchSet) {
+    var self = this;
+    _.each(self.localPackageDirs, function (packageDir) {
+      var packages = watch.readAndWatchDirectory(watchSet, {
+        absPath: packageDir,
+        include: [/\/$/]
+      });
+      _.each(packages, function (p) {
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'package.js'));
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'unipackage.json'));
+      });
+    });
+  },
+
+  // Rebuild all source packages in our search paths. If two packages
+  // have the same name only the one that we would load will get
+  // rebuilt.
+  //
+  // Returns a count of packages rebuilt.
+  rebuildLocalPackages: function () {
+    var self = this;
+
+    // We're going to need a PackageCache -- just for the purpose of
+    // forcing builds of the packages. We'll just create a new one and
+    // throw it away when we're done. That will mean that the builds
+    // we do won't be cached in memory, but since this is only ever
+    // called to implement a command-line command, that shouldn't be a
+    // problem.
+    //
+    // Note that if we were reusing an existing PackageCache, we'd
+    // want to call refresh() on it first.
+    var packageCache = new packageCache.PackageCache;
+
+    // Delete any that are source packages with builds.
+    var count = 0;
+    _.each(self.effectiveLocalPackages, function (loadPath, name) {
+      var buildDir = path.join(loadPath, '.build');
+      files.rm_recursive(loadPath);
+    });
+
+    // Now reload them, forcing a rebuild. We have to do this in two
+    // passes because otherwise we might end up rebuilding a package
+    // and then immediately deleting it.
+    _.each(self.effectiveLocalPackages, function (loadPath, name) {
+      packageCache.loadPackageAtPath(name, loadPath, { throwOnError: false });
+      count ++;
+    });
+
+    return count;
+  },
+
+  // Given a name and a version of a package, return a path on disk
+  // from which we can load it. If we don't have it on disk (we
+  // haven't downloaded it, or it just plain doesn't exist in the
+  // catalog) return null.
+  //
+  // Doesn't download packages. Downloading should be done at the time
+  // that .meteor/versions is updated.
+  getLoadPathForPackage: function (name, version) {
+    var self = this;
+
+    if (_.has(self.effectiveLocalPackages, name)) {
+      // XXX should confirm that the version on disk actually matches
+      // the requested version
+      return self.effectiveLocalPackages[name];
+    }
+
+    return tropohouse.packagePath(name, version);
   },
 
   // Return an array with the names of all of the packages that we
