@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "stylus": {
-      "version": "0.42.2",
+      "version": "0.42.3",
       "dependencies": {
         "css-parse": {
           "version": "1.7.0"
@@ -16,7 +16,7 @@
           "version": "0.5.8"
         },
         "glob": {
-          "version": "3.2.8",
+          "version": "3.2.9",
           "dependencies": {
             "minimatch": {
               "version": "0.2.14",
