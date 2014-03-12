@@ -135,6 +135,8 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   expectInvalidToken(token);
   expectInvalidToken(apiToken);
 
+  testUtils.logout(s);
+
   // XXX Test that registration URLs get printed when they should
 });
 
@@ -212,6 +214,8 @@ selftest.define(
       throw new Error('No registration token in email');
     }
     expectInvalidToken(emailToken[1]);
+
+    testUtils.logout(s);
   }
 );
 
@@ -267,5 +271,6 @@ selftest.define(
     run.expectExit(0);
 
     testUtils.cleanUpApp(s, appName);
+    testUtils.logout(s);
   }
 );

@@ -170,6 +170,10 @@ _.each([false, true], function (loggedIn) {
                             loggedIn: loggedIn,
                             authorized: true
                           });
+
+        if (loggedIn) {
+          testUtils.logout(s);
+        }
       });
   });
 });
