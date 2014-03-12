@@ -224,15 +224,7 @@ _.extend(Catalog.prototype, {
   rebuildLocalPackages: function () {
     var self = this;
 
-    // We're going to need a PackageCache -- just for the purpose of
-    // forcing builds of the packages. We'll just create a new one and
-    // throw it away when we're done. That will mean that the builds
-    // we do won't be cached in memory, but since this is only ever
-    // called to implement a command-line command, that shouldn't be a
-    // problem.
-    //
-    // Since we are reusing an existing PackageCache, we
-    // have to call refresh() on it first.
+    // Clear any cached builds in the package cache.
     packageCache.refresh();
 
     // Delete any that are source packages with builds.
