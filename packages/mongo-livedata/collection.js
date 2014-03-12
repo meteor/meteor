@@ -5,7 +5,7 @@ Meteor.Collection = function (name, options) {
   var self = this;
   if (! (self instanceof Meteor.Collection))
     throw new Error('use "new" to construct a Meteor.Collection');
-  check(name, String);
+  check(name, Match.Optional(String));
   check(options, Match.Optional(Object)); // XXX be more specific
   if (options && options.methods) {
     // Backwards compatibility hack with original signature (which passed
