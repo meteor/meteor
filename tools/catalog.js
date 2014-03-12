@@ -41,11 +41,11 @@ Catalog.effectiveLocalPackages = {}; // package name to package directory
 _.extend(Catalog, {
 
   // The catalog needs a list of local package directories to check for presence of local
-  // packages. (Note that we don't need this always nessessarily, since the catalog can still
-  // talk to the package server without these being initialized.
-  setLocalPackageDirs: function (options) {
-    options = options || {};
-    Catalog.localPackageDirs = _.filter(options.localPackageDirs, isDirectory);
+  // packages. (Theoretically, we don't need this always nessessarily, since the catalog can still
+  // talk to the package server without these being initialized.) They are also dependent on the
+  // program.
+  setLocalPackageDirs: function (localPackageDirs) {
+    Catalog.localPackageDirs = _.filter(localPackageDirs, isDirectory);
   },
 
   // #CatalogLazyLoading

@@ -540,6 +540,10 @@ Fiber(function () {
     // PACKAGE_DIRS (colon-separated).
     packageDirs = packageDirs.concat(process.env.PACKAGE_DIRS.split(':'));
 
+  // We should push these directories into our catalog, so it knows where
+  // to find local packages.
+  Catalog.setLocalPackageDirs(packageDirs);
+
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
   // quit and run those tools instead.
