@@ -47,23 +47,39 @@ var userQueryValidator = Match.Where(function (user) {
 //   salt: random string ID
 //   B: hex encoded int. server's public key for this exchange
 Meteor.methods({beginPasswordExchange: function (request) {
-  check(request, {
-    user: userQueryValidator,
-    A: String
-  });
-  var selector = selectorFromUserQuery(request.user);
+  var self = this;
+  try {
+    check(request, {
+      user: userQueryValidator,
+      A: String
+    });
+    var selector = selectorFromUserQuery(request.user);
 
-  var user = Meteor.users.findOne(selector);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+    var user = Meteor.users.findOne(selector);
+    if (!user)
+      throw new Meteor.Error(403, "User not found");
 
-  if (!user.services || !user.services.password ||
-      !user.services.password.srp)
-    throw new Meteor.Error(403, "User has no password set");
+    if (!user.services || !user.services.password ||
+        !user.services.password.srp)
+      throw new Meteor.Error(403, "User has no password set");
 
-  var verifier = user.services.password.srp;
-  var srp = new SRP.Server(verifier);
-  var challenge = srp.issueChallenge({A: request.A});
+    var verifier = user.services.password.srp;
+    var srp = new SRP.Server(verifier);
+    var challenge = srp.issueChallenge({A: request.A});
+
+  } catch (err) {
+    // Report login failure if the method fails, so that login hooks are
+    // called. If the method succeeds, login hooks will be called when
+    // the second step method ('login') is called. If a user calls
+    // 'beginPasswordExchange' but then never calls the second step
+    // 'login' method, no login hook will fire.
+    Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
+      type: 'password',
+      error: err,
+      userId: user && user._id
+    });
+    throw err;
+  }
 
   // Save results so we can verify them later.
   Accounts._setAccountData(this.connection.id, 'srpChallenge',

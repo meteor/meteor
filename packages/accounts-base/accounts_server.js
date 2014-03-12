@@ -276,6 +276,29 @@ Accounts._loginMethod = function (methodInvocation, methodName, methodArgs, type
 };
 
 
+// Report a login attempt failed outside the context of a normal login
+// method. This is for use in the case where there is a multi-step login
+// procedure (eg SRP based password login). If a method early in the
+// chain fails, it should call this function to report a failure. There
+// is no corresponding method for a successful login; methods that can
+// succeed at logging a user in should always be actual login methods
+// (using either Accounts._loginMethod or Accounts.registerLoginHandler).
+Accounts._reportLoginFailure = function (methodInvocation, methodName, methodArgs, result) {
+  var attempt = {
+    type: result.type || "unknown",
+    allowed: false,
+    error: result.error,
+    methodName: methodName,
+    methodArguments: _.toArray(methodArgs)
+  };
+  if (result.userId)
+    attempt.user = Meteor.users.findOne(result.userId);
+
+  validateLogin(methodInvocation.connection, attempt);
+  failedLogin(methodInvocation.connection, attempt);
+};
+
+
 ///
 /// LOGIN HANDLERS
 ///

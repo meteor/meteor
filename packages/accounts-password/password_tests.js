@@ -626,6 +626,28 @@ if (Meteor.isClient) (function () {
         test.isFalse(attempt.allowed);
         test.equal(attempt.error.reason, "Incorrect password");
       }));
+    },
+    function (test, expect) {
+      Meteor.call("testCaptureLogins", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.loginWithPassword("no such user", "incorrect", expect(function (error) {
+        test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.call("testFetchCapturedLogins", expect(function (error, logins) {
+        test.isFalse(error);
+        test.equal(logins.length, 1);
+        var login = logins[0];
+        test.isFalse(login.successful);
+        var attempt = login.attempt;
+        test.equal(attempt.type, "password");
+        test.isFalse(attempt.allowed);
+        test.equal(attempt.error.reason, "User not found");
+      }));
     }
   ]);
 
