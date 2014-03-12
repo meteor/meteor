@@ -1289,7 +1289,7 @@ Template.api.accounts_onLoginFailure = {
   id: "accounts_onloginfailure",
   name: "Accounts.onLoginFailure(func)",
   locus: "Server",
-  descr: ["Register a callback to be called when a login is attempted and is unsuccessful."],
+  descr: ["Register a callback to be called when a login is attempted and is unsuccessful. See [`Accounts.onLogin`](#accounts_onlogin) for details."],
   args: [
     {
       name: "func",
