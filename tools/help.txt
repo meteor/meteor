@@ -389,5 +389,9 @@ Usage: meteor admin grant [XXX]
 Not yet implemented
 
 >>> publish
-Publish a package
-Usage: meteor publish --versionString <semver>
+Publish a new version of a package, as specified in your package.js file
+to the meteor package server.
+
+Usage: meteor publish [--create]
+
+Pass --create to create a new package.
