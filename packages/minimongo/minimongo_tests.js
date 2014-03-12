@@ -268,30 +268,40 @@ Tinytest.add("minimongo - lookup", function (test) {
   test.equal(lookupAX({a: {x: [1]}}), [{value: [1]}]);
   test.equal(lookupAX({a: 5}), [{value: undefined}]);
   test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
-             [{value: 1, arrayIndex: 0},
-              {value: [2], arrayIndex: 1},
-              {value: undefined, arrayIndex: 2}]);
+             [{value: 1, arrayIndices: [0]},
+              {value: [2], arrayIndices: [1]},
+              {value: undefined, arrayIndices: [2]}]);
 
   var lookupA0X = MinimongoTest.makeLookupFunction('a.0.x');
   test.equal(lookupA0X({a: [{x: 1}]}), [
     // From interpreting '0' as "0th array element".
-    {value: 1, arrayIndex: 0},
+    {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
-    {value: undefined, arrayIndex: 0}]);
+    {value: undefined, arrayIndices: [0]}]);
   test.equal(lookupA0X({a: [{x: [1]}]}), [
-    {value: [1], arrayIndex: 0},
-    {value: undefined, arrayIndex: 0}]);
+    {value: [1], arrayIndices: [0, 'x']},
+    {value: undefined, arrayIndices: [0]}]);
   test.equal(lookupA0X({a: 5}), [{value: undefined}]);
   test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [
     // From interpreting '0' as "0th array element".
-    {value: 1, arrayIndex: 0},
+    {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
-    {value: undefined, arrayIndex: 0},
-    {value: undefined, arrayIndex: 1},
-    {value: undefined, arrayIndex: 2}
+    {value: undefined, arrayIndices: [0]},
+    {value: undefined, arrayIndices: [1]},
+    {value: undefined, arrayIndices: [2]}
   ]);
+
+  test.equal(
+    MinimongoTest.makeLookupFunction('w.x.0.z')({
+      w: [{x: [{z: 5}]}]}), [
+        // From interpreting '0' as "0th array element".
+        {value: 5, arrayIndices: [0, 0, 'x']},
+        // From interpreting '0' as "after branching in the array, look in the
+        // object {z:5} for a field named "0".
+        {value: undefined, arrayIndices: [0, 0]}
+      ]);
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
@@ -1683,7 +1693,13 @@ Tinytest.add("minimongo - ordering", function (test) {
     {a: [5, [3, 19], 18]}
   ]);
 
-
+  // (0,4) < (0,5), so they go in this order.  It's not correct to consider
+  // (0,3) as a sort key for the second document because they come from
+  // different a-branches.
+  verify({'a.x': 1, 'a.y': 1}, [
+    {a: [{x: 0, y: 4}]},
+    {a: [{x: 0, y: 5}, {x: 1, y: 3}]}
+  ]);
 });
 
 Tinytest.add("minimongo - sort", function (test) {
@@ -1772,6 +1788,69 @@ Tinytest.add("minimongo - array sort", function (test) {
   test.equal(
     _.pluck(c.find({}, {sort: {'a.x': -1}}).fetch(), 'down'),
     _.range(c.find().count()));
+});
+
+Tinytest.add("minimongo - sort keys", function (test) {
+  var keyListToObject = function (keyList) {
+    var obj = {};
+    _.each(keyList, function (key) {
+      obj[EJSON.stringify(key)] = true;
+    });
+    return obj;
+  };
+
+  var testKeys = function (sortSpec, doc, expectedKeyList) {
+    var expectedKeys = keyListToObject(expectedKeyList);
+    var sorter = new Minimongo.Sorter(sortSpec);
+
+    var actualKeyList = [];
+    sorter._generateKeysFromDoc(doc, function (key) {
+      actualKeyList.push(key);
+    });
+    var actualKeys = keyListToObject(actualKeyList);
+    test.equal(actualKeys, expectedKeys);
+  };
+
+  var testParallelError = function (sortSpec, doc) {
+    var sorter = new Minimongo.Sorter(sortSpec);
+    test.throws(function () {
+      sorter._generateKeysFromDoc(doc, function (){});
+    }, /parallel arrays/);
+  };
+
+  // Just non-array fields.
+  testKeys({'a.x': 1, 'a.y': 1},
+           {a: {x: 0, y: 5}},
+           [[0,5]]);
+
+  // Ensure that we don't get [0,3] and [1,5].
+  testKeys({'a.x': 1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}]},
+           [[0,5], [1,3]]);
+
+  // Ensure we can combine "array fields" with "non-array fields".
+  testKeys({'a.x': 1, 'a.y': 1, b: -1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[0,5,42], [1,3,42]]);
+  testKeys({b: -1, 'a.x': 1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[42,0,5], [42,1,3]]);
+  testKeys({'a.x': 1, b: -1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[0,42,5], [1,42,3]]);
+  testKeys({a: 1, b: 1},
+           {a: [1, 2, 3], b: 42},
+           [[1,42], [2,42], [3,42]]);
+
+  // Don't support multiple arrays at the same level.
+  testParallelError({a: 1, b: 1},
+                    {a: [1, 2, 3], b: [42]});
+
+  // We are MORE STRICT than Mongo here; Mongo supports this!
+  // XXX support this too  #NestedArraySort
+  testParallelError({'a.x': 1, 'a.y': 1},
+                    {a: [{x: 1, y: [2, 3]},
+                         {x: 2, y: [4, 5]}]});
 });
 
 Tinytest.add("minimongo - binary search", function (test) {

@@ -5,9 +5,9 @@
 //  - a "matcher" is its compiled form (whether a full Minimongo.Matcher
 //    object or one of the component lambdas that matches parts of it)
 //  - a "result object" is an object with a "result" field and maybe
-//    distance and arrayIndex.
+//    distance and arrayIndices.
 //  - a "branched value" is an object with a "value" field and maybe
-//    "dontIterate" and "arrayIndex".
+//    "dontIterate" and "arrayIndices".
 //  - a "document" is a top-level object that can be stored in a collection.
 //  - a "lookup function" is a function that takes in a document and returns
 //    an array of "branched values".
@@ -161,7 +161,7 @@ var compileValueSelector = function (valueSelector, matcher, isRoot) {
 
 // Given an element matcher (which evaluates a single value), returns a branched
 // value (which evaluates the element matcher on all the branches and returns a
-// more structured return value possibly including arrayIndex).
+// more structured return value possibly including arrayIndices).
 var convertElementMatcherToBranchedMatcher = function (
     elementMatcher, options) {
   options = options || {};
@@ -175,18 +175,21 @@ var convertElementMatcherToBranchedMatcher = function (
     ret.result = _.any(expanded, function (element) {
       var matched = elementMatcher(element.value);
 
-      // Special case for $elemMatch: it means "true, and use this arrayIndex if
-      // I didn't already have one".
+      // Special case for $elemMatch: it means "true, and use this as an array
+      // index if I didn't already have one".
       if (typeof matched === 'number') {
-        if (element.arrayIndex === undefined)
-          element.arrayIndex = matched;
+        // XXX This code dates from when we only stored a single array index
+        // (for the outermost array). Should we be also including deeper array
+        // indices from the $elemMatch match?
+        if (!element.arrayIndices)
+          element.arrayIndices = [matched];
         matched = true;
       }
 
-      // If some element matched, and it's tagged with an array index, include
-      // that index in our result object.
-      if (matched && element.arrayIndex !== undefined)
-        ret.arrayIndex = element.arrayIndex;
+      // If some element matched, and it's tagged with array indices, include
+      // those indices in our result object.
+      if (matched && element.arrayIndices)
+        ret.arrayIndices = element.arrayIndices;
 
       return matched;
     });
@@ -295,7 +298,7 @@ var LOGICAL_OPERATORS = {
       subSelector, matcher, inElemMatch);
 
     // Special case: if there is only one matcher, use it directly, *preserving*
-    // any arrayIndex it returns.
+    // any arrayIndices it returns.
     if (matchers.length === 1)
       return matchers[0];
 
@@ -303,7 +306,7 @@ var LOGICAL_OPERATORS = {
       var result = _.any(matchers, function (f) {
         return f(doc).result;
       });
-      // $or does NOT set arrayIndex when it has multiple
+      // $or does NOT set arrayIndices when it has multiple
       // sub-expressions. (Tested against MongoDB.)
       return {result: result};
     };
@@ -316,7 +319,7 @@ var LOGICAL_OPERATORS = {
       var result = _.all(matchers, function (f) {
         return !f(doc).result;
       });
-      // Never set arrayIndex, because we only match if nothing in particular
+      // Never set arrayIndices, because we only match if nothing in particular
       // "matched" (and because this is consistent with MongoDB).
       return {result: result};
     };
@@ -353,7 +356,7 @@ var LOGICAL_OPERATORS = {
 var invertBranchedMatcher = function (branchedMatcher) {
   return function (branchValues) {
     var invertMe = branchedMatcher(branchValues);
-    // We explicitly choose to strip arrayIndex here: it doesn't make sense to
+    // We explicitly choose to strip arrayIndices here: it doesn't make sense to
     // say "update the array element that does not match something", at least
     // in mongo-land.
     return {result: !invertMe.result};
@@ -473,10 +476,10 @@ var VALUE_OPERATORS = {
           return;
         result.result = true;
         result.distance = curDistance;
-        if (branch.arrayIndex === undefined)
-          delete result.arrayIndex;
+        if (!branch.arrayIndices)
+          delete result.arrayIndices;
         else
-          result.arrayIndex = branch.arrayIndex;
+          result.arrayIndices = branch.arrayIndices;
       });
       return result;
     };
@@ -504,6 +507,9 @@ var pointToArray = function (point) {
 var makeInequality = function (cmpValueComparator) {
   return function (operand) {
     // Arrays never compare false with non-arrays for any inequality.
+    // XXX This was behavior we observed in pre-release MongoDB 2.5, but
+    //     it seems to have been reverted.
+    //     See https://jira.mongodb.org/browse/SERVER-11444
     if (isArray(operand)) {
       return function () {
         return false;
@@ -686,7 +692,7 @@ var ELEMENT_OPERATORS = {
           }
           // XXX support $near in $elemMatch by propagating $distance?
           if (subMatcher(arg).result)
-            return i;   // specially understood to mean "use my arrayIndex"
+            return i;   // specially understood to mean "use as arrayIndices"
         }
         return false;
       };
@@ -718,16 +724,33 @@ var ELEMENT_OPERATORS = {
 //    when there is a numeric index in the key, and ensures the
 //    perhaps-surprising MongoDB behavior where {'a.0': 5} does NOT
 //    match {a: [[5]]}.
-//  - arrayIndex: if any array indexing was done during lookup (either
-//    due to explicit numeric indices or implicit branching), this will
-//    be the FIRST (outermost) array index used; it is undefined or absent
-//    if no array index is used. (Make sure to check its value vs undefined,
-//    not just for truth, since '0' is a legit array index!) This is used
-//    to implement the '$' modifier feature.
+//  - arrayIndices: if any array indexing was done during lookup (either due to
+//    explicit numeric indices or implicit branching), this will be an array of
+//    the array indices used, from outermost to innermost; it is falsey or
+//    absent if no array index is used. If an explicit numeric index is used,
+//    the index will be followed in arrayIndices by the string 'x'.
 //
-// At the top level, you may only pass in a plain object or arraym.
+//    Note: arrayIndices is used for two purposes. First, it is used to
+//    implement the '$' modifier feature, which only ever looks at its first
+//    element.
 //
-// See the text 'minimongo - lookup' for some examples of what lookup functions
+//    Second, it is used for sort key generation, which needs to be able to tell
+//    the difference between different paths. Moreover, it needs to
+//    differentiate between explicit and implicit branching, which is why
+//    there's the somewhat hacky 'x' entry: this means that explicit and
+//    implicit array lookups will have different full arrayIndices paths. (That
+//    code only requires that different paths have different arrayIndices; it
+//    doesn't actually "parse" arrayIndices. As an alternative, arrayIndices
+//    could contain objects with flags like "implicit", but I think that only
+//    makes the code surrounding them more complex.)
+//
+//    (By the way, this field ends up getting passed around a lot without
+//    cloning, so never mutate any arrayIndices field/var in this package!)
+//
+//
+// At the top level, you may only pass in a plain object or array.
+//
+// See the test 'minimongo - lookup' for some examples of what lookup functions
 // return.
 makeLookupFunction = function (key) {
   var parts = key.split('.');
@@ -741,14 +764,17 @@ makeLookupFunction = function (key) {
   var elideUnnecessaryFields = function (retVal) {
     if (!retVal.dontIterate)
       delete retVal.dontIterate;
-    if (retVal.arrayIndex === undefined)
-      delete retVal.arrayIndex;
+    if (retVal.arrayIndices && !retVal.arrayIndices.length)
+      delete retVal.arrayIndices;
     return retVal;
   };
 
   // Doc will always be a plain object or an array.
   // apply an explicit numeric index, an array.
-  return function (doc, firstArrayIndex) {
+  return function (doc, arrayIndices) {
+    if (!arrayIndices)
+      arrayIndices = [];
+
     if (isArray(doc)) {
       // If we're being asked to do an invalid lookup into an array (non-integer
       // or out-of-bounds), return no results (which is different from returning
@@ -756,10 +782,10 @@ makeLookupFunction = function (key) {
       if (!(firstPartIsNumeric && firstPart < doc.length))
         return [];
 
-      // If this is the first array index we've seen, remember the index.
-      // (Mongo doesn't support multiple uses of '$', at least not in 2.5.
-      if (firstArrayIndex === undefined)
-        firstArrayIndex = +firstPart;
+      // Remember that we used this array index. Include an 'x' to indicate that
+      // the previous index came from being considered as an explicit array
+      // index (not branching).
+      arrayIndices = arrayIndices.concat(+firstPart, 'x');
     }
 
     // Do our first lookup.
@@ -781,7 +807,7 @@ makeLookupFunction = function (key) {
       return [elideUnnecessaryFields({
         value: firstLevel,
         dontIterate: isArray(doc) && isArray(firstLevel),
-        arrayIndex: firstArrayIndex})];
+        arrayIndices: arrayIndices})];
     }
 
     // We need to dig deeper.  But if we can't, because what we've found is not
@@ -794,7 +820,7 @@ makeLookupFunction = function (key) {
       if (isArray(doc))
         return [];
       return [elideUnnecessaryFields({value: undefined,
-                                      arrayIndex: firstArrayIndex})];
+                                      arrayIndices: arrayIndices})];
     }
 
     var result = [];
@@ -805,11 +831,11 @@ makeLookupFunction = function (key) {
     // Dig deeper: look up the rest of the parts on whatever we've found.
     // (lookupRest is smart enough to not try to do invalid lookups into
     // firstLevel if it's an array.)
-    appendToResult(lookupRest(firstLevel, firstArrayIndex));
+    appendToResult(lookupRest(firstLevel, arrayIndices));
 
     // If we found an array, then in *addition* to potentially treating the next
-    // part as a literal integer lookup, we should also "branch": try to do look
-    // up the rest of the parts on each array element in parallel.
+    // part as a literal integer lookup, we should also "branch": try to look up
+    // the rest of the parts on each array element in parallel.
     //
     // In this case, we *only* dig deeper into array elements that are plain
     // objects. (Recall that we only got this far if we have further to dig.)
@@ -822,7 +848,7 @@ makeLookupFunction = function (key) {
         if (isPlainObject(branch)) {
           appendToResult(lookupRest(
             branch,
-            firstArrayIndex === undefined ? arrayIndex : firstArrayIndex));
+            arrayIndices.concat(arrayIndex)));
         }
       });
     }
@@ -843,17 +869,14 @@ expandArraysInBranches = function (branches, skipTheArrays) {
     if (!(skipTheArrays && thisIsArray && !branch.dontIterate)) {
       branchesOut.push({
         value: branch.value,
-        arrayIndex: branch.arrayIndex
+        arrayIndices: branch.arrayIndices
       });
     }
     if (thisIsArray && !branch.dontIterate) {
       _.each(branch.value, function (leaf, i) {
         branchesOut.push({
           value: leaf,
-          // arrayIndex always defaults to the outermost array, but if we didn't
-          // need to use an array to get to this branch, we mark the index we
-          // just used as the arrayIndex.
-          arrayIndex: branch.arrayIndex === undefined ? i : branch.arrayIndex
+          arrayIndices: (branch.arrayIndices || []).concat(i)
         });
       });
     }
@@ -881,7 +904,6 @@ var andSomeMatchers = function (subMatchers) {
     return subMatchers[0];
 
   return function (docOrBranches) {
-    // XXX arrayIndex!
     var ret = {};
     ret.result = _.all(subMatchers, function (f) {
       var subResult = f(docOrBranches);
@@ -893,11 +915,11 @@ var andSomeMatchers = function (subMatchers) {
           && ret.distance === undefined) {
         ret.distance = subResult.distance;
       }
-      // Similarly, propagate arrayIndex from sub-matchers... but to match
-      // MongoDB behavior, this time the *last* sub-matcher with an arrayIndex
+      // Similarly, propagate arrayIndices from sub-matchers... but to match
+      // MongoDB behavior, this time the *last* sub-matcher with arrayIndices
       // wins.
-      if (subResult.result && subResult.arrayIndex !== undefined) {
-        ret.arrayIndex = subResult.arrayIndex;
+      if (subResult.result && subResult.arrayIndices) {
+        ret.arrayIndices = subResult.arrayIndices;
       }
       return subResult.result;
     });
@@ -905,7 +927,7 @@ var andSomeMatchers = function (subMatchers) {
     // If we didn't actually match, forget any extra metadata we came up with.
     if (!ret.result) {
       delete ret.distance;
-      delete ret.arrayIndex;
+      delete ret.arrayIndices;
     }
     return ret;
   };
