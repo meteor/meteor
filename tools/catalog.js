@@ -4,14 +4,13 @@ var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
-
-var catalog = exports;
+var packageCache = require('./package-cache.js');
 
 // Use this class to query the metadata for all of the packages that
 // we know about (including packages on the package server that we
 // haven't actually download yet).
 //
-catalog.Catalog = function() {
+var Catalog = function () {
   var self = this;
 
   self.loaded = false; //#CatalogLazyLoading
@@ -32,22 +31,22 @@ catalog.Catalog = function() {
   self.effectiveLocalPackages = {}; // package name to package directory
 };
 
-_.extend(catalog.Catalog.prototype, {
+_.extend(Catalog.prototype, {
 
-  // The catalog needs a list of local package directories to check for presence of local
-  // packages. (Theoretically, we don't need this always nessessarily, since the catalog can still
-  // talk to the package server without these being initialized.) They are also dependent on the
-  // program.
-  // - localPackageDirs: paths on local disk, that contain
-  //   subdirectories, that each contain a package that should override
-  //   the packages on the package server. For example, if there is a
-  //   package 'foo' that we find through localPackageDirs, then we will
-  //   ignore all versions of 'foo' that we find through the package
-  //   server. Directories that don't exist (or paths that aren't
-  //   directories) will be silently ignored.
+  // Set the list of directories to scan for local pacakges. This will override
+  // any packages by the same name found in the package server catalog at any
+  // version.
+  //
+  // 'localPackageDirs' is an array of paths on local disk, that contain
+  // subdirectories, that each contain a package that should override the
+  // packages on the package server. For example, if there is a package 'foo'
+  // that we find through localPackageDirs, then we will ignore all versions of
+  // 'foo' that we find through the package server. Directories that don't exist
+  // (or paths that aren't directories) will be silently ignored.
   setLocalPackageDirs: function (localPackageDirs) {
     var self = this;
     self.localPackageDirs = _.filter(localPackageDirs, isDirectory);
+    self.refresh();
   },
 
   // #CatalogLazyLoading
@@ -116,7 +115,7 @@ _.extend(catalog.Catalog.prototype, {
     // the package server.
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
       // Load the package
-      var pkg = PackageCache.loadPackageAtPath(name, packageDir);
+      var pkg = packageCache.loadPackageAtPath(name, packageDir);
 
       // Hide any versions from the package server
       self.versions.find({ packageName: name }).forEach(function (versionInfo) {
@@ -181,7 +180,8 @@ _.extend(catalog.Catalog.prototype, {
   },
 
   // XXX implement removeLocalPackage
-  // XXX make callers of override/removeOverride call addLocalPackage/removeLocalPackage, and remember to call refresh()
+  // XXX make callers of override/removeOverride call
+  // addLocalPackage/removeLocalPackage, and remember to call refresh()
 
   // True if `name` is a local package (is to be loaded via
   // localPackageDirs or addLocalPackage rather than from the package
@@ -196,6 +196,10 @@ _.extend(catalog.Catalog.prototype, {
   // Register local package directories with a watchSet. We want to know if a
   // package is created or deleted, which includes both its top-level source
   // directory and its main package metadata file.
+  //
+  // This will watch the local package directories that are in effect when the
+  // function is called.  (As set by the most recent call to
+  // setLocalPackageDirs.)
   watchLocalPackageDirs: function (watchSet) {
     var self = this;
     _.each(self.localPackageDirs, function (packageDir) {
@@ -229,7 +233,7 @@ _.extend(catalog.Catalog.prototype, {
     //
     // Since we are reusing an existing PackageCache, we
     // have to call refresh() on it first.
-    PackageCache.refresh();
+    packageCache.refresh();
 
     // Delete any that are source packages with builds.
     var count = 0;
@@ -242,7 +246,7 @@ _.extend(catalog.Catalog.prototype, {
     // passes because otherwise we might end up rebuilding a package
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      PackageCache.loadPackageAtPath(name, loadPath, { throwOnError: false });
+      packageCache.loadPackageAtPath(name, loadPath, { throwOnError: false });
       count ++;
     });
 
@@ -393,4 +397,4 @@ var isDirectory = function (dir) {
   return stats.isDirectory();
 };
 
-Catalog = new catalog.Catalog();
+module.exports = new Catalog();

@@ -1,19 +1,17 @@
 var packageLoader = require("./package-loader.js");
 var _ = require('underscore');
 
-var packageCache = exports;
-
 // both map from package load path to:
 // - pkg: cached Package object
 // - packageDir: directory from which it was loaded
-packageCache.PackageCache = function () {
+var PackageCache = function () {
   var self = this;
 
   self.softReloadCache = {};
   self.loadedPackages = {};
 };
 
-_.extend(packageCache.PackageCache, {
+_.extend(PackageCache.prototype, {
   // Force reload of changed packages. See description at loadPackageAtPath().
   //
   // If soft is false, the default, the cache is totally flushed and
@@ -156,4 +154,4 @@ _.extend(packageCache.PackageCache, {
   }
 });
 
-PackageCache = new packageCache.PackageCache();
+module.exports = new PackageCache();

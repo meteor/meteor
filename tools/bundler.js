@@ -177,6 +177,7 @@ var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js').runLog;
 var PackageLoader = require('./package-loader.js').packageLoader;
+var packageCache = require('./package-cache.js')
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -1767,8 +1768,7 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
-      var app = packageLoader.getPackageCache().loadAppAtPath(appDir,
-                                                              ignoreFiles);
+      var app = packageCache.loadAppAtPath(appDir, ignoreFiles);
 
       // Client
       var client = makeClientTarget(app);
@@ -1879,7 +1879,7 @@ exports.bundle = function (options) {
       // Read this directory as a package and create a target from
       // it
 
-      var pkg = packageLoader.getPackageCache().
+      var pkg = packageCache.
         loadPackageAtPath(p.name, p.loadPath);
       var target;
       switch (p.type) {

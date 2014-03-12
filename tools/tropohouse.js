@@ -3,7 +3,6 @@ var fs = require("fs");
 var os = require("os");
 var Future = require("fibers/future");
 var _ = require("underscore");
-
 var files = require('./files.js');
 var packages = require('./packages.js');
 var utils = require('./utils.js');
@@ -12,6 +11,7 @@ var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
+var catalog = require('./catalog.js');
 
 var tropohouse = exports;
 
@@ -97,7 +97,7 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
   // If this package isn't coming from the package server (loaded from
   // a checkout, or from an app package directory), don't try to
   // download it (we already have it)
-  if (Catalog.isLocalPackage(packageName))
+  if (catalog.isLocalPackage(packageName))
     return true;
 
   // Figure out what arches (if any) we have downloaded for this package version
@@ -108,7 +108,7 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
   });
 
   if (archesToDownload.length) {
-    var buildsToDownload = Catalog.getBuildsForArches(
+    var buildsToDownload = catalog.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
       // XXX throw a special error instead?

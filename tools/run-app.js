@@ -11,6 +11,7 @@ var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var runLog = require('./run-log.js').runLog;
+var catalog = require('./catalog.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -425,7 +426,7 @@ _.extend(AppRunner.prototype, {
 
     // HACK: Also make sure we notice when somebody adds a package to
     // the app packages dir that may override a catalog package.
-    Catalog.watchLocalPackageDirs(watchSet);
+    catalog.watchLocalPackageDirs(watchSet);
 
     // Were there errors?
     if (bundleResult.errors) {

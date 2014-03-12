@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var packageCache = require('./package-cache.js');
+var catalog = require('./catalog.js');
 
 var packageLoader = exports;
 
@@ -39,7 +40,7 @@ _.extend(packageLoader.PackageLoader, {
     if (! _.has(self.versions, name))
       throw new Error("no version chosen for package?");
 
-    var loadPath = Catalog.getLoadPathForPackage(name,
+    var loadPath = catalog.getLoadPathForPackage(name,
                                                  self.versions[name]);
     if (! loadPath) {
       if (options.throwOnError === false)
@@ -51,7 +52,7 @@ _.extend(packageLoader.PackageLoader, {
       return pkg;
     }
 
-    return PackageCache.loadPackageAtPath(name, loadPath, {
+    return packageCache.loadPackageAtPath(name, loadPath, {
       forceRebuild: options.forceRebuild
     });
   },

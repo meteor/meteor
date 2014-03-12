@@ -10,7 +10,7 @@ var warehouse = require('./warehouse.js');
 var release = require('./release.js');
 var project = require('./project.js');
 var fs = require('fs');
-var cat = require('./catalog.js');
+var catalog = require('./catalog.js');
 var main = exports;
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -540,10 +540,6 @@ Fiber(function () {
     // PACKAGE_DIRS (colon-separated).
     packageDirs = packageDirs.concat(process.env.PACKAGE_DIRS.split(':'));
 
-  // We should push these directories into our catalog, so it knows where
-  // to find local packages.
-  Catalog.setLocalPackageDirs(packageDirs);
-
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
   // quit and run those tools instead.
@@ -679,6 +675,12 @@ Fiber(function () {
       release.current.getToolsVersion() !== files.getToolsVersion()) {
     springboard(release.current.getToolsVersion()); // does not return!
   }
+
+  // Set up the package search directories in our catalog, so it knows
+  // where to find local packages. We need to do this after we set
+  // release.current, so package loader can load unipackage, but before any code
+  // that uses the catalog.
+  catalog.setLocalPackageDirs(packageDirs);
 
   // Check for the '--help' option.
   var showHelp = false;

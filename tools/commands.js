@@ -20,7 +20,8 @@ var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var packages = require('./packages.js');
-var packageLoader = require('./package-loader.js');
+var packageLoader = require('./package-loader.js').packageLoader;
+var catalog = require('./catalog.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -57,9 +58,9 @@ var getPackages = function () {
   var ret = {};
 
   var messages = buildmessage.capture(function () {
-    var names = Catalog.getAllPackageNames();
+    var names = catalog.getAllPackageNames();
     _.each(names, function (name) {
-      ret[name] = Catalog.getLatestVersion(name);
+      ret[name] = catalog.getLatestVersion(name);
     });
   });
 
@@ -561,12 +562,12 @@ main.registerCommand({
 
     var constraint = project.processPackageConstraint(packageReq);
 
-    if (! Catalog.getPackage(constraint.packageName)) {
+    if (! catalog.getPackage(constraint.packageName)) {
       process.stderr.write(constraint.packageName + ": no such package\n");
       failed = true;
       return;
     }
-    var versionInfo = Catalog.getVersion(
+    var versionInfo = catalog.getVersion(
       constraint.packageName,
       getVersionFromVersionConstraint(constraint.versionConstraint));
 
@@ -599,7 +600,7 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
       })['constraint-solver'].ConstraintSolver;
 
       // XXX: Do packages access global variables?
-      var resolver = new ConstraintSolver.Resolver(Catalog);
+      var resolver = new ConstraintSolver.Resolver(catalog);
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
                                          { optionsGoHere : false });
@@ -616,7 +617,7 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
 
             // Find the build.
             // XXX: Find the one with the right architecture.
-            var versionInfo = Catalog.getVersion(packageName, version);
+            var versionInfo = catalog.getVersion(packageName, version);
 
             // Safety check, but this should not happen unless the
             // constraint solver is doing something it shouldn't.
@@ -1245,7 +1246,7 @@ main.registerCommand({
 
   var count = null;
   var messages = buildmessage.capture(function () {
-    count = Catalog.rebuildLocalPackages();
+    count = catalog.rebuildLocalPackages();
   });
   if (count)
     console.log("Built " + count + " packages.");
@@ -1522,8 +1523,8 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true
 }, function (options) {
-  _.each(Catalog.getAllPackageNames(), function (name) {
-    var versionInfo = Catalog.getLatestVersion(name);
+  _.each(catalog.getAllPackageNames(), function (name) {
+    var versionInfo = catalog.getLatestVersion(name);
     if (versionInfo) {
       console.log(name, versionInfo.description);
     }
@@ -1539,11 +1540,11 @@ main.registerCommand({
     name: { type: String, required: true }
   }
 }, function (options) {
-  if (! Catalog.getPackage(options.name)) {
+  if (! catalog.getPackage(options.name)) {
     process.stderr.write('No package named ' + options.name);
     return 1;
   }
-  var pkgVersion = Catalog.getVersion(options.name, options.versionString);
+  var pkgVersion = catalog.getVersion(options.name, options.versionString);
   if (! pkgVersion) {
     process.stderr.write('There is no version ' +
                          options.versionString + ' for package ' +
