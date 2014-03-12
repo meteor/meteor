@@ -73,12 +73,12 @@ var validateLogin = function (connection, attempt) {
     }
     catch (e) {
       attempt.allowed = false;
-      attempt.error = e
+      attempt.error = e;
       return true;
     }
     if (! ret) {
       attempt.allowed = false;
-      attempt.error = new Meteor.Error(403, "Login Forbidden");
+      attempt.error = new Meteor.Error(403, "Login forbidden");
     }
     return true;
   });
