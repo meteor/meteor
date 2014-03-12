@@ -5,6 +5,7 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 
+
 var catalog = exports;
 
 // Use this class to query the metadata for all of the packages that
@@ -20,29 +21,36 @@ var catalog = exports;
 //   server. Directories that don't exist (or paths that aren't
 //   directories) will be silently ignored.
 
-catalog.Catalog = function (options) {
-  var self = this;
-  options = options || {};
+// Catalog is a global singleton. We will initialize it in main.js
 
-  self.loaded = false; // #CatalogLazyLoading
+Catalog = {};
+Catalog.loaded = false; //#CatalogLazyLoading
 
   // Package server data
-  self.packages = null;
-  self.versions = null;
-  self.builds = null;
+Catalog.packages = null;
+Catalog.versions = null;
+Catalog.builds = null;
 
-  // Trim down localPackageDirs to just those that actually exist (and
-  // that are actually directories)
-  self.localPackageDirs = _.filter(options.localPackageDirs, isDirectory);
+// Trim down localPackageDirs to just those that actually exist (and
+// that are actually directories)
+Catalog.localPackageDirs = [];
 
-  // Packages specified by addLocalPackage
-  self.localPackages = {}; // package name to package directory
+// Packages specified by addLocalPackage
+Catalog.localPackages = {}; // package name to package directory
 
-  // All packages found either by localPackageDirs or localPackages
-  self.effectiveLocalPackages = {}; // package name to package directory
-};
+// All packages found either by localPackageDirs or localPackages
+Catalog.effectiveLocalPackages = {}; // package name to package directory
 
 _.extend(catalog.Catalog.prototype, {
+
+  // The catalog needs a list of local package directories to check for presence of local
+  // packages. (Note that we don't need this always nessessarily, since the catalog can still
+  // talk to the package server without these being initialized.
+  setLocalPackageDirs: function (options) {
+    options = options || {};
+    Catalog.localPackageDirs = _.filter(options.localPackageDirs, isDirectory);
+  };
+
   // #CatalogLazyLoading
   // Currently, packageClient.loadPackageData() talks to the network
   // (because it implicitly syncs). Since Catalog is part of the
