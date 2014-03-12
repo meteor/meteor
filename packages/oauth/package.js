@@ -6,6 +6,8 @@ Package.describe({
 Package.on_use(function (api) {
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
+  api.use('mongo-livedata', 'server');
+
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 
   api.export('Oauth');
@@ -13,4 +15,14 @@ Package.on_use(function (api) {
 
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
+  api.add_files('transient_results.js', 'server');
+});
+
+
+Package.on_test(function (api) {
+  api.use('tinytest');
+  api.use('random');
+  api.use('service-configuration', 'server');
+  api.use('oauth', 'server');
+  api.add_files("oauth_tests.js", 'server');
 });

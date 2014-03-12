@@ -1,4 +1,4 @@
-Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test) {
+Tinytest.add("oauth1 - transientResult is stored", function (test) {
   var http = Npm.require('http');
   var twitterfooId = Random.id();
   var twitterfooName = 'nickname' + Random.id();
@@ -54,19 +54,18 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
     };
     OauthTest.middleware(req, new http.ServerResponse(req));
 
-    // Test that right data is placed on the loginResult map
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, twitterfooId);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.screenName, twitterfooName);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessToken, twitterfooAccessToken);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].options.option1, twitterOption1);
+    // Test that the result for the token is available
+    var result = Oauth._retrieveTransientResult(credentialToken);
+    test.equal(result.serviceName, serviceName);
+    test.equal(result.serviceData.id, twitterfooId);
+    test.equal(result.serviceData.screenName, twitterfooName);
+    test.equal(result.serviceData.accessToken, twitterfooAccessToken);
+    test.equal(result.serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
+    test.equal(result.options.option1, twitterOption1);
+
+    // Test that login results are transient
+    result = Oauth._retrieveTransientResult(credentialToken);
+    test.isUndefined(result);
 
   } finally {
     OauthTest.unregisterService(serviceName);

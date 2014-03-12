@@ -22,7 +22,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
     // Keep track of request token so we can verify it on the next step
     requestTokens[query.state] = {
-      requestToken: oauthBinding.requestToken, 
+      requestToken: oauthBinding.requestToken,
       requestTokenSecret: oauthBinding.requestTokenSecret
     };
 
@@ -38,9 +38,8 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     res.writeHead(302, {'Location': redirectUrl});
     res.end();
   } else {
-    // step 2, redirected from provider login - complete the login
-    // process: if the user authorized permissions, get an access
-    // token and access token secret and log in as user
+    // step 2, redirected from provider login - store the result
+    // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
     var requestToken = requestTokens[query.state].requestToken;
@@ -60,12 +59,13 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);
 
-      // Add the login result to the result map
-      Oauth._loginResultForCredentialToken[query.state] = {
+      // Store the login result so it can be retrieved in another
+      // browser tab by the result handler
+      Oauth._storeTransientResult(query.state, {
         serviceName: service.serviceName,
         serviceData: oauthResult.serviceData,
         options: oauthResult.options
-      };
+      });
     }
 
     // Either close the window, redirect, or render nothing

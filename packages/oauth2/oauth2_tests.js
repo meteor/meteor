@@ -1,4 +1,4 @@
-Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test) {
+Tinytest.add("oauth2 - transientResult is stored", function (test) {
   var http = Npm.require('http');
   var foobookId = Random.id();
   var foobookOption1 = Random.id();
@@ -22,13 +22,15 @@ Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test)
                query: {state: credentialToken}};
     OauthTest.middleware(req, new http.ServerResponse(req));
 
-    // Test that the login result for that user is prepared
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, foobookId);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].options.option1, foobookOption1);
+    // Test that the result for the token is available
+    var result = Oauth._retrieveTransientResult(credentialToken);
+    test.equal(result.serviceName, serviceName);
+    test.equal(result.serviceData.id, foobookId);
+    test.equal(result.options.option1, foobookOption1);
+
+    // Test that login results are transient
+    result = Oauth._retrieveTransientResult(credentialToken);
+    test.isUndefined(result);
 
   } finally {
     OauthTest.unregisterService(serviceName);

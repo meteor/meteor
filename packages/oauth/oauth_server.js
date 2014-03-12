@@ -49,27 +49,10 @@ OauthTest.unregisterService = function (name) {
 };
 
 
-// When we get an incoming OAuth http request we complete the oauth
-// handshake, account and token setup before responding.  The
-// results are stored in this map which is then read when the login
-// method is called. Maps credentialToken --> return value of `login`
-//
-// NB: the oauth1 and oauth2 packages manipulate this directly. might
-// be nice for them to have a setter instead
-//
-// XXX we should periodically clear old entries
-//
-Oauth._loginResultForCredentialToken = {};
-
-Oauth.hasCredential = function(credentialToken) {
-  return _.has(Oauth._loginResultForCredentialToken, credentialToken);
-}
-
 Oauth.retrieveCredential = function(credentialToken) {
-  var result = Oauth._loginResultForCredentialToken[credentialToken];
-  delete Oauth._loginResultForCredentialToken[credentialToken];
-  return result;
-}
+  return Oauth._retrieveTransientResult(credentialToken);
+};
+
 
 // Listen to incoming OAuth http requests
 WebApp.connectHandlers.use(function(req, res, next) {
@@ -106,14 +89,14 @@ middleware = function (req, res, next) {
     handler(service, req.query, res);
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
-    // the approporiate login call (if any) and reported there.
+    // the appropriate login call (if any) and reported there.
     //
     // The other option would be to display it in the popup tab that
     // is still open at this point, ignoring the 'close' or 'redirect'
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
     if (req.query.state && err instanceof Error)
-      Oauth._loginResultForCredentialToken[req.query.state] = err;
+      Oauth._storeTransientResult(req.query.state, err);
 
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
