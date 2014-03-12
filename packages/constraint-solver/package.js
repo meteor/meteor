@@ -11,11 +11,13 @@ Npm.depends({
 Package.on_use(function (api) {
   api.export('ConstraintSolver');
   api.use(['underscore', 'ejson', 'check', 'package-version-parser']);
-  api.add_files([ 'constraint-solver.js' ], ['server', 'client']);
+  api.add_files([ 'constraint-solver.js' ], ['server']);
+  api.add_files([ 'resolver.js' ], ['server']);
 });
 
 Package.on_test(function (api) {
-  api.use('constraint-solver', ['client', 'server']);
+  api.use('constraint-solver', ['server']);
   api.use(['tinytest', 'minimongo']);
-  api.add_files('constraint-solver-tests.js', ['server', 'client']);
+  api.add_files('constraint-solver-tests.js', ['server']);
+  api.add_files('resolver-tests.js', ['server']);
 });
