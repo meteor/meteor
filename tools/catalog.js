@@ -5,47 +5,49 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 
+var catalog = exports;
+
 // Use this class to query the metadata for all of the packages that
 // we know about (including packages on the package server that we
 // haven't actually download yet).
 //
-// Options:
-// - localPackageDirs: paths on local disk, that contain
-//   subdirectories, that each contain a package that should override
-//   the packages on the package server. For example, if there is a
-//   package 'foo' that we find through localPackageDirs, then we will
-//   ignore all versions of 'foo' that we find through the package
-//   server. Directories that don't exist (or paths that aren't
-//   directories) will be silently ignored.
+catalog.Catalog = function() {
+  var self = this;
 
-// Catalog is a global singleton. We will initialize it in main.js
-
-Catalog = {};
-Catalog.loaded = false; //#CatalogLazyLoading
+  self.loaded = false; //#CatalogLazyLoading
 
   // Package server data
-Catalog.packages = null;
-Catalog.versions = null;
-Catalog.builds = null;
+  self.packages = null;
+  self.versions = null;
+  self.builds = null;
 
-// Trim down localPackageDirs to just those that actually exist (and
-// that are actually directories)
-Catalog.localPackageDirs = [];
+  // Trim down localPackageDirs to just those that actually exist (and
+  // that are actually directories)
+  self.localPackageDirs = [];
 
-// Packages specified by addLocalPackage
-Catalog.localPackages = {}; // package name to package directory
+  // Packages specified by addLocalPackage
+  self.localPackages = {}; // package name to package directory
 
-// All packages found either by localPackageDirs or localPackages
-Catalog.effectiveLocalPackages = {}; // package name to package directory
+  // All packages found either by localPackageDirs or localPackages
+  self.effectiveLocalPackages = {}; // package name to package directory
+};
 
-_.extend(Catalog, {
+_.extend(catalog.Catalog.prototype, {
 
   // The catalog needs a list of local package directories to check for presence of local
   // packages. (Theoretically, we don't need this always nessessarily, since the catalog can still
   // talk to the package server without these being initialized.) They are also dependent on the
   // program.
+  // - localPackageDirs: paths on local disk, that contain
+  //   subdirectories, that each contain a package that should override
+  //   the packages on the package server. For example, if there is a
+  //   package 'foo' that we find through localPackageDirs, then we will
+  //   ignore all versions of 'foo' that we find through the package
+  //   server. Directories that don't exist (or paths that aren't
+  //   directories) will be silently ignored.
   setLocalPackageDirs: function (localPackageDirs) {
-    Catalog.localPackageDirs = _.filter(localPackageDirs, isDirectory);
+    var self = this;
+    self.localPackageDirs = _.filter(localPackageDirs, isDirectory);
   },
 
   // #CatalogLazyLoading
@@ -390,3 +392,5 @@ var isDirectory = function (dir) {
   }
   return stats.isDirectory();
 };
+
+Catalog = new catalog.Catalog();
