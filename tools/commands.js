@@ -599,7 +599,6 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
 
-      // XXX: Do packages access global variables?
       var resolver = new ConstraintSolver.Resolver(catalog);
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
