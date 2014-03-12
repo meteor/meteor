@@ -532,15 +532,6 @@ main.registerCommand({
 // add
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand({
-  name: 'add',
-  minArgs: 1,
-  maxArgs: Infinity,
-  requiresApp: true
-}, function (options) {
-  throw new Error("XXX replace with add-package");
-});
-
 
 var getVersionFromVersionConstraint = function(constraint) {
   if (constraint[0] === "=") {
@@ -550,7 +541,7 @@ var getVersionFromVersionConstraint = function(constraint) {
 }
 
 main.registerCommand({
-  name: 'add-package',
+  name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true
@@ -612,54 +603,71 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
                                          { optionsGoHere : false });
+
+      var logMessage = "";
       _.forEach(newVersions, function(version, packageName) {
         if (failed)
           return;
 
-        // Find the build.
-        // XXX: Find the one with the right architecture.
-        var versionInfo = Catalog.getVersion(packageName, version);
+        // Check if it exists.
+        if (usingIndirectly[packageName] === version) {
+          // We are using this at this version, so do nothing.
+        } else {
 
-        // Safety check, but this should not happen unless the
-        // constraint solver is doing something it shouldn't.
-        if (! versionInfo) {
-          process.stderr.write("This package has no version at this version");
-          failed = true;
-          return;
+            // Find the build.
+            // XXX: Find the one with the right architecture.
+            var versionInfo = Catalog.getVersion(packageName, version);
+
+            // Safety check, but this should not happen unless the
+            // constraint solver is doing something it shouldn't.
+            if (! versionInfo) {
+                process.stderr.write("This package has no version at this version");
+                failed = true;
+                return;
+            }
+
+            // Make sure we have enough builds of the package downloaded such that
+            // we can load a browser slice and a slice that will run on this
+            // system. (Later we may also need to download more builds to be able to
+            // deploy to another architecture.)
+            var available = tropohouse.maybeDownloadPackageForArchitectures(
+                // XXX we also download the deploy arch now, because we don't run the
+                // constraint solver / downloader anywhere other than add-package yet.
+                versionInfo, ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
+            if (! available) {
+                // XXX maybe we shouldn't be letting the constraint solver choose
+                // things that don't have the right arches?
+                process.stderr.write("Package " + packageName +
+                                     " has no compatible build for version " +
+                                     version);
+                failed = true;
+                return;
+            }
+
+            if (_.has(usingIndirectly[packageName])) {
+                logMessage = logMessage + "Upgraded " + packageName + " from version " +
+                             usingIndirectly + " to version " + version + "\n";
+            } else {
+               logMessage = logMessage + "Added " + packageName + " at version " +
+                            version + "\n";
+               logMessage = logMessage + "(" + packageName + " : " + versionInfo.decription + ") \n";
+            }
         }
-
-        // Make sure we have enough builds of the package downloaded such that
-        // we can load a browser slice and a slice that will run on this
-        // system. (Later we may also need to download more builds to be able to
-        // deploy to another architecture.)
-        var available = tropohouse.maybeDownloadPackageForArchitectures(
-          // XXX we also download the deploy arch now, because we don't run the
-          // constraint solver / downloader anywhere other than add-package yet.
-          versionInfo, ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
-        if (! available) {
-          // XXX maybe we shouldn't be letting the constraint solver choose
-          // things that don't have the right arches?
-          process.stderr.write("Package " + packageName +
-                               " has no compatible build for version " +
-                               version);
-          failed = true;
-          return;
-        }
-
-        // XXX shouldn't log a message yet as we could still fail
-        process.stdout.write("Added: " + packageName + " at " + version + "\n");
       });
 
       if (failed)
         return;
 
+      // Add to the new direct dependencies file.
+      // XXX: Write the current version into packages file, rather than the requested version
+      project.addDirectDependency(options.appDir, packageReq);
+
       // Write the new indirect dependencies file.
       project.rewriteIndirectDependencies(options.appDir, newVersions);
 
-      // Add to the new direct dependencies file.
-      project.addDirectDependency(options.appDir, packageReq);
-
       // Log that this happened! Yay!
+      process.stdout.write(logMessage);
+      process.stdout.write("Finished adding: \n");
       var note = versionInfo.description;
       process.stdout.write(constraint.packageName + ": " + note + "\n");
     }
