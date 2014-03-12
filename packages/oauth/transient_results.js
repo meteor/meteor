@@ -12,8 +12,6 @@ if (typeof Oauth === 'undefined') {
 // result between the 2 tabs
 //
 
-// XXX we should periodically clear old entries
-
 
 // Collection containing transient result of oauth credential requests
 // Has token, result, at createdAt fields.
@@ -23,6 +21,17 @@ Oauth._transientResults = new Meteor.Collection(
   });
 
 Oauth._transientResults._ensureIndex('token', {unique: 1});
+
+
+
+// Periodically clear old entries that were never retrieved
+var _cleanStaleResults = function() {
+  // Remove results older than 1 minute
+  var timeCutoff = new Date();
+  timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
+  Oauth._transientResults.remove({createdAt:{$lt:timeCutoff}});
+};
+var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
 // Stores the token and result in the _transientResults collection
@@ -62,7 +71,7 @@ Oauth._retrieveTransientResult = function (credentialToken) {
 };
 
 
-
+// Convert an Error into an object that can be stored in mongo
 var _storableError = function(error) {
   var plainObject = {};
   Object.getOwnPropertyNames(error).forEach(function(key) {
@@ -71,6 +80,7 @@ var _storableError = function(error) {
   return { error: plainObject };
 };
 
+// Create an error from the error format stored in mongo
 var _recreateError = function(errorDoc) {
   var error = new Error();
   Object.getOwnPropertyNames(errorDoc).forEach(function(key) {
