@@ -12,12 +12,13 @@ Accounts.registerLoginHandler(function (options) {
     // the oauth provider didn't talk to our server correctly and closed the
     // popup somehow.
     //
-    // we assume it was user canceled, and report it as such, using a
-    // Meteor.Error which the client can recognize. this will mask failures
-    // where things are misconfigured such that the server doesn't see the
-    // request but does close the window. This seems unlikely.
-    throw new Meteor.Error(Accounts.LoginCancelledError.numericError,
-                           'No matching login attempt found');
+    // We assume it was user canceled, and report it as such.  This
+    // will mask failures where things are misconfigured such that the
+    // server doesn't see the request but does close the window. This
+    // seems unlikely.
+    //
+    // XXX we want `type` to be the service name such as "facebook"
+    return {type: "oauth", error: new Meteor.Error(400, "Login canceled")};
   }
   var result = Oauth.retrieveCredential(options.oauth.credentialToken);
   if (result instanceof Error)
@@ -27,4 +28,3 @@ Accounts.registerLoginHandler(function (options) {
   else
     return Accounts.updateOrCreateUserFromExternalService(result.serviceName, result.serviceData, result.options);
 });
-
