@@ -719,7 +719,7 @@ Accounts.registerLoginHandler("resume", function(options) {
     Meteor.users.update(user._id, {
       $pull: {
         "services.resume.loginTokens": { "token": options.resume }
-      },
+      }
     });
   }
 
