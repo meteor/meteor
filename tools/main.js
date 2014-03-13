@@ -684,11 +684,12 @@ Fiber(function () {
     localPackageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
   }
 
-  // Set up the package search directories in our catalog, so it knows
-  // where to find local packages. We need to do this after we set
-  // release.current, so package loader can load unipackage, but before any code
-  // that uses the catalog.
-  catalog.setLocalPackageDirs(localPackageDirs);
+  // Initialize the singleton Catalog. Only after this point is the
+  // Catalog (and therefore unipackage.load) usable.
+  //
+  // This will try to talk to the network to synchronize our package
+  // list with the package server.
+  catalog.initialize({ localPackageDirs: localPackageDirs });
 
   // Check for the '--help' option.
   var showHelp = false;

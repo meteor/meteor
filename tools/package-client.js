@@ -47,30 +47,32 @@ var loadRemotePackageData = function (syncToken) {
   return collectionData;
 };
 
-// Takes in two javascript objects of the form:
+// Takes in an array of javascript objects of the form:
 //  { collectionName : arrayOfRecords }
-// and converts them to a javascript object of the form
-//  { collectionName : miniMongoCollection }
-// where the miniMongo collection contains all of the records from
-// both objects and the updateCollection overrides the first.
-var createCollections = function (sources) {
-  var finalCollections = {};
-  // Start collections. Insert records.
-  var meteorServer = getLoadedPackages()['meteor'];
+// and converts them to a single javascript object of the form
+//  { collectionName : arrayOfRecords }
+// merging the collections by _id with the records in later
+// collections overriding the records in earlier collections.
+var mergeCollections = function (sources) {
+  var collections = {}; // map from collection to _id to object
 
   _.each(sources, function (source) {
-    _.each(source, function (records, key) {
-      if (!_.has(finalCollections, key)) {
-        finalCollections[key] = new (meteorServer.Meteor.Collection)(null);
-      }
+    _.each(source, function (records, collectionName) {
+      if (! _.has(collections, collectionName))
+        collections[collectionName] = {};
+
       _.each(records, function (record) {
-        finalCollections[key].remove(record._id);
-        finalCollections[key].insert(record);
+        collections[collectionName][record._id] = record;
       });
     });
   });
 
-  return finalCollections;
+  var ret = {};
+  _.each(collections, function (records, collectionName) {
+    ret[collectionName] = _.values(records);
+  });
+
+  return ret;
 };
 
 var writePackagesToDisk = function (syncToken, collectionData) {
@@ -99,7 +101,7 @@ exports.loadPackageData = function() {
   var remoteData = loadRemotePackageData(syncToken);
   sources.push(remoteData.collections);
 
-  var allPackageData = createCollections(sources);
+  var allPackageData = mergeCollections(sources);
   writePackagesToDisk(remoteData.syncToken, allPackageData);
   return allPackageData;
 };

@@ -14,16 +14,19 @@ var tropohouse = require('./tropohouse.js');
 var Catalog = function () {
   var self = this;
 
-  self.loaded = false; // #CatalogLazyLoading
+  // The catalog cannot be used until it is initialized by calling
+  // initialize(). We use this pattern, rather than expecting
+  // arguments to the constructor, to make it easier to use catalog as
+  // a singleton.
+  self.initialized = false;
 
-  // Package server data
+  // Package server data. Arrays of objects.
   self.packages = null;
   self.versions = null;
   self.builds = null;
 
-  // Trim down localPackageDirs to just those that actually exist (and
-  // that are actually directories)
-  self.localPackageDirs = [];
+  // Local directories to search for packages
+  self.localPackageDirs = null;
 
   // Packages specified by addLocalPackage
   self.localPackages = {}; // package name to package directory
@@ -33,23 +36,65 @@ var Catalog = function () {
 };
 
 _.extend(Catalog.prototype, {
-
-  // Set the list of directories to scan for local pacakges. This will override
-  // any packages by the same name found in the package server catalog at any
-  // version.
+  // Initialize the Catalog. This must be called before any other
+  // Catalog function.
   //
-  // 'localPackageDirs' is an array of paths on local disk, that contain
-  // subdirectories, that each contain a package that should override the
-  // packages on the package server. For example, if there is a package 'foo'
-  // that we find through localPackageDirs, then we will ignore all versions of
-  // 'foo' that we find through the package server. Directories that don't exist
-  // (or paths that aren't directories) will be silently ignored.
-  setLocalPackageDirs: function (localPackageDirs) {
+  // It will try to talk to the network to synchronize our package
+  // list with the package server.
+  //
+  // options:
+  //  - localPackageDirs: an array of paths on local disk, that
+  //    contain subdirectories, that each contain a package that
+  //    should override the packages on the package server. For
+  //    example, if there is a package 'foo' that we find through
+  //    localPackageDirs, then we will ignore all versions of 'foo'
+  //    that we find through the package server. Directories that
+  //    don't exist (or paths that aren't directories) will be
+  //    silently ignored.
+  initialize: function (options) {
     var self = this;
-    self.localPackageDirs = _.filter(localPackageDirs, isDirectory);
+
+    options = options || {};
+
+    // Trim down localPackageDirs to just those that actually exist
+    // (and that are actually directories)
+    self.localPackageDirs = _.filter(options.localPackageDirs || [],
+                                     isDirectory);
     self._recomputeEffectiveLocalPackages();
+
+    // First, initialize the catalog with just the local
+    // packages. This is just enough (at least if we're running from a
+    // checkout) that we're able to call unipackage.load to load the
+    // packages that we need to talk to the server.
+    self.packages = [];
+    self.versions = [];
+    self.builds = [];
+    self._addLocalPackageOverrides();
+    self.initialized = true;
+
+    // OK, now initialize the catalog for real, with both local and
+    // package server packages.
+    self._refresh(true);
   },
 
+  // Set sync to true to try to synchronize from the package server.
+  _refresh: function (sync) {
+    var self = this;
+    self._requireInitialized();
+
+    var serverPackageData = packageClient.loadPackageData(sync);
+
+    self.initialized = false;
+    self.packages = [];
+    self.versions = [];
+    self.builds = [];
+    self._insertServerPackages(serverPackageData);
+    self._addLocalPackageOverrides();
+    self.initialized = true;
+  },
+
+  // Compute self.effectiveLocalPackages from self.localPackageDirs
+  // and self.localPackageDirs.
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
 
@@ -84,58 +129,55 @@ _.extend(Catalog.prototype, {
     _.extend(self.effectiveLocalPackages, self.localPackages);
   },
 
-  // #CatalogLazyLoading
-  // Currently, packageClient.loadPackageData() talks to the network
-  // (because it implicitly syncs). Since Catalog is part of the
-  // release, we create it very early, before the release is set up
-  // and therefore before we can load unipackages, which is necessary
-  // to talk to the network. So defer actually calling loadPackageData
-  // until we actually begin using the catalog.
-  //
-  // In the future, a better solution might be to make syncing
-  // explicit rather than a side effect of loadPackageData?
-  _ensureLoaded: function () {
-    var self = this;
-    if (self.loaded)
-      return;
-    self.refresh();
-  },
-
-  // XXX refresh() needs to be called by at least some of the
-  // callsites that call library.refresh()
-  refresh: function () {
+  // Add all packages in self.effectiveLocalPackages to the catalog,
+  // first removing any existing packages that have the same name.
+  _addLocalPackageOverrides: function () {
     var self = this;
 
-    // Get packages from package server
-    // XXX this syncs with the network. probably should rethink that
-    // so that every time a file changes in development mode we don't resync
-    var collections = packageClient.loadPackageData();
-    self.packages = collections.packages;
-    self.versions = collections.versions;
-    self.builds = collections.builds;
+    // Remove all packages from the catalog that have the same name as
+    // a local package, along with all of their versions and builds.
+    var removedVersionIds = {};
+    self.versions = _.filter(self.versions, function (version) {
+      if (_.has(self.effectiveLocalPackages, version.packageName)) {
+        // Remove this one
+        removedVersionIds[version._id] = true;
+        return false;
+      }
+      return true;
+    });
 
-    // Construct metadata for the local packages and load them into
-    // the collections, shadowing any versions of those packages from
-    // the package server.
-    self._recomputeEffectiveLocalPackages();
+    self.builds = _.filter(self.builds, function (build) {
+      return ! _.has(removedVersionIds, build.versionId);
+    });
+
+    self.packages = _.filter(self.packages, function (pkg) {
+      return ! _.has(self.effectiveLocalPackages, pkg.name);
+    });
+
+    // Now add our local packages to the catalog.
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
-      // Load the package
+      // Load the package.
       var pkg = packageCache.loadPackageAtPath(name, packageDir);
 
-      // Hide any versions from the package server
-      self.versions.find({ packageName: name }).forEach(function (versionInfo) {
-        self.builds.remove({ versionId: versionInfo._id });
-      });
-      self.versions.remove({ packageName: name });
-      self.packages.remove({ name: name });
-
-      // Insert our local version
-      self.packages.insert({
+      // Synthesize records based on it and insert them in the
+      // catalog.
+      self.packages.push({
         name: name,
         maintainers: null,
         lastUpdated: null
       });
-      var versionId = self.versions.insert({
+
+      // This doesn't have great birthday-paradox properties, but we
+      // don't have Random.id() here (since it comes from a
+      // unipackage), and making an index so we can see if a value is
+      // already in use would complicated the code. Let's take the bet
+      // that by the time we have enough local packages that this is a
+      // problem, we either will have made tools into a star, or we'll
+      // have made Catalog be backed by a real database.
+      var versionId = "local-" + Math.floor(Math.random() * 1000000000);
+
+      self.versions.push({
+        _id: versionId,
         packageName: name,
         version: pkg.version,
         publishedBy: null,
@@ -147,7 +189,8 @@ _.extend(Catalog.prototype, {
         lastUpdated: null,
         published: null
       });
-      self.builds.insert({
+
+      self.builds.push({
         packageName: name,
         architecture: pkg.architectures().join('+'),
         builtBy: null,
@@ -157,9 +200,25 @@ _.extend(Catalog.prototype, {
         buildPublished: null
       });
     });
+  },
 
-    // Done!
-    self.loaded = true;
+  // serverPackageData is a description of the packages available from
+  // the package server, as returned by
+  // packageClient.loadPackageData. Add all of those packages to the
+  // catalog without checking for duplicates.
+  _insertServerPackages: function (serverPackageData) {
+    var self = this;
+
+    self.packages.push.apply(self.packages, serverPackageData.packages);
+    self.versions.push.apply(self.versions, serverPackageData.versions);
+    self.builds.push.apply(self.builds, serverPackageData.builds);
+  },
+
+  _requireInitialized: function () {
+    var self = this;
+
+    if (! self.initialized)
+      throw new Error("catalog not initialized yet?");
   },
 
   // Add a local package to the catalog. `name` is the name to use for
@@ -170,11 +229,9 @@ _.extend(Catalog.prototype, {
   // be overridden (it will be as if that package doesn't exist on the
   // package server at all). And for now, it's an error to call this
   // function twice with the same `name`.
-  //
-  // IMPORTANT: This will not take effect until the next call to
-  // refresh().
   addLocalPackage: function (name, directory) {
     var self = this;
+    self._requireInitialized();
 
     var resolvedPath = path.resolve(directory);
     if (_.has(self.localPackages, name) &&
@@ -182,18 +239,24 @@ _.extend(Catalog.prototype, {
       throw new Error("Duplicate override for package '" + name + "'");
     }
     self.localPackages[name] = resolvedPath;
+
+    // If we were making lots of calls to addLocalPackage, we would
+    // want to coalesce the calls to _refresh somehow, but I don't
+    // think we'll actually be doing that so this should be fine.
+    self._recomputeEffectiveLocalPackages();
+    self._refresh();
   },
 
   // XXX implement removeLocalPackage
   // XXX make callers of override/removeOverride call
-  // addLocalPackage/removeLocalPackage, and remember to call refresh()
+  // addLocalPackage/removeLocalPackage
 
   // True if `name` is a local package (is to be loaded via
   // localPackageDirs or addLocalPackage rather than from the package
   // server)
   isLocalPackage: function (name) {
     var self = this;
-    self._ensureLoaded();
+    self._requireInitialized();
 
     return _.has(self.effectiveLocalPackages, name);
   },
@@ -207,6 +270,8 @@ _.extend(Catalog.prototype, {
   // setLocalPackageDirs.)
   watchLocalPackageDirs: function (watchSet) {
     var self = this;
+    self._requireInitialized();
+
     _.each(self.localPackageDirs, function (packageDir) {
       var packages = watch.readAndWatchDirectory(watchSet, {
         absPath: packageDir,
@@ -228,6 +293,7 @@ _.extend(Catalog.prototype, {
   // Returns a count of packages rebuilt.
   rebuildLocalPackages: function () {
     var self = this;
+    self._requireInitialized();
 
     // Clear any cached builds in the package cache.
     packageCache.refresh();
@@ -265,6 +331,7 @@ _.extend(Catalog.prototype, {
   // manifest.
   getLoadPathForPackage: function (name, version) {
     var self = this;
+    self._requireInitialized();
 
     if (_.has(self.effectiveLocalPackages, name)) {
       return self.effectiveLocalPackages[name];
@@ -280,21 +347,17 @@ _.extend(Catalog.prototype, {
   // know about, in no particular order.
   getAllPackageNames: function () {
     var self = this;
-    self._ensureLoaded();
+    self._requireInitialized();
 
-    var ret = [];
-    self.packages.find().forEach(function (packageInfo) {
-      ret.push(packageInfo.name);
-    });
-    return ret;
+    return _.pluck(self.packages, 'name');
   },
 
   // Returns general (non-version-specific) information about a
   // package, or null if there is no such package.
   getPackage: function (name) {
     var self = this;
-    self._ensureLoaded();
-    return self.packages.findOne({ name: name });
+    self._requireInitialized();
+    return _.findWhere(self.packages, { name: name });
   },
 
   // Given a package, returns an array of the versions available for
@@ -304,11 +367,9 @@ _.extend(Catalog.prototype, {
   // exist or doesn't have any versions.
   getSortedVersions: function (name) {
     var self = this;
-    self._ensureLoaded();
+    self._requireInitialized();
 
-    var cursor = self.versions.find({ packageName: name },
-                                    { fields: { version: 1 }});
-    var ret = _.pluck(cursor.fetch(), 'version');
+    var ret = _.where(self.versions, { packageName: name }).pluck('version');
     ret.sort(semver.compare);
     return ret;
   },
@@ -318,15 +379,15 @@ _.extend(Catalog.prototype, {
   getVersion: function (name, version) {
     var self = this;
     self._ensureLoaded();
-    return self.versions.findOne({ packageName: name,
-                                   version: version });
+    return _.findWhere(self.versions, { packageName: name,
+                                        version: version });
   },
 
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
   getLatestVersion: function (name) {
     var self = this;
-    self._ensureLoaded();
+    self._requireInitialized();
 
     var versions = self.getSortedVersions(name);
     if (versions.length === 0)
@@ -339,7 +400,7 @@ _.extend(Catalog.prototype, {
   // cover them all (or if the version does not exist).
   getBuildsForArches: function (name, version, arches) {
     var self = this;
-    self._ensureLoaded();
+    self._requireInitialized();
 
     var versionInfo = self.getVersion(name, version);
     if (! versionInfo)
@@ -360,7 +421,7 @@ _.extend(Catalog.prototype, {
     });
 
     var buildsToUse = [];
-    var allBuilds = self.builds.find({ versionId: versionInfo._id }).fetch();
+    var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
     for (var i = 0; i < allBuilds.length && !_.isEmpty(neededArches); ++i) {
       var build = allBuilds[i];
       // XXX why isn't this a list in the DB?  I guess because of the unique
@@ -373,7 +434,7 @@ _.extend(Catalog.prototype, {
           // more. (It is safe to delete keys of something you are each'ing over
           // because _.each internally is doing an iteration over _.keys.)
           delete neededArches[neededArch];
-          if (!usingThisBuild) {
+          if (! usingThisBuild) {
             usingThisBuild = true;
             buildsToUse.push(build);
             // XXX this should probably be denormalized in the DB
