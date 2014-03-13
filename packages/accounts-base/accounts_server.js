@@ -401,9 +401,9 @@ Meteor.methods({
     // options, but we don't enforce it.
     check(options, Object);
 
-    var result = runLoginHandlers(this, options);
+    var result = runLoginHandlers(self, options);
 
-    return attemptLogin(this, "login", arguments, result);
+    return attemptLogin(self, "login", arguments, result);
   },
 
   logout: function() {
