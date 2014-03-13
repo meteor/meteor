@@ -268,14 +268,14 @@ XXX explain more
 
 To define your own block helper, simply declare a template, and then invoke it using `{{#someTemplate}}` (block) instead of `{{> someTemplate}}` (inclusion) syntax.
 
-When a template is invoked as a block helper, it can use `{{> content}}` and `{{> elseContent}}` to include the block content it was passed.
+When a template is invoked as a block helper, it can use `{{> UI.contentBlock}}` and `{{> UI.elseBlock}}` to include the block content it was passed.
 
 Here is a simple block helper that wraps its content in a div:
 
 ```
 <template name="note">
   <div class="note">
-    {{> content}}
+    {{> UI.contentBlock}}
   </div>
 </template>
 ```
@@ -293,9 +293,9 @@ Here is an example of implementing `#unless` in terms of `#if` (ignoring for the
 ```
 <template name="unless">
   {{#if this}}
-    {{> elseContent}}
+    {{> UI.elseBlock}}
   {{else}}
-    {{> content}}
+    {{> UI.contentBlock}}
   {{/if}}
 </template>
 ```
@@ -303,18 +303,18 @@ Here is an example of implementing `#unless` in terms of `#if` (ignoring for the
 Note that the argument to `#unless` (the condition) becomes the data
 context in the `unless` template and is accessed via `this`.  However,
 it would not work very well if this data context was visible to
-`content`, which is supplied by the user of `unless`.
+`UI.contentBlock`, which is supplied by the user of `unless`.
 
-Therefore, when you include `{{> content}}`, Spacebars hides the data
+Therefore, when you include `{{> UI.contentBlock}}`, Spacebars hides the data
 context of the calling template, and any data contexts established in
 the template by `#each` and `#with`.  They are not visible to the
 content block, even via `..`.  Put another way, it's as if the `{{>
-content}}` inclusion occurred at the location where `{{#unless}}` was
+UI.contentBlock}}` inclusion occurred at the location where `{{#unless}}` was
 invoked, as far as the data context stack is concerned.
 
-You can pass an argument to `{{> content}}` or `{{> elseContent}}` to
+You can pass an argument to `{{> UI.contentBlock}}` or `{{> UI.elseBlock}}` to
 invoke it with a data context of your choice.  You can also use `{{#if
-content}}` to see if the current template was invoked as a block
+UI.contentBlock}}` to see if the current template was invoked as a block
 helper rather than an inclusion.
 
 ## Comment Tags
