@@ -303,6 +303,9 @@ Accounts._reportLoginFailure = function (methodInvocation, methodName, methodArg
 /// LOGIN HANDLERS
 ///
 
+// list of all registered handlers.
+var loginHandlers = [];
+
 // The main entry point for auth packages to hook in to login.
 //
 // A login handler is a login method which can return `undefined` to
@@ -323,10 +326,6 @@ Accounts.registerLoginHandler = function(name, handler) {
   }
   loginHandlers.push({name: name, handler: handler});
 };
-
-
-// list of all registered handlers.
-loginHandlers = [];
 
 
 // Checks a user's credentials against all the registered login
