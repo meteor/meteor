@@ -2,6 +2,13 @@
 // Resolver
 ////////////////////////////////////////////////////////////////////////////////
 
+// XXX the whole resolver heavily relies on these statements to be true:
+// - every unit version ever used was added to the resolver with addUnitVersion
+// - every constraint ever used was instantiated with getConstraint
+// - every constraint was added exactly once
+// - every unit version was added exactly once
+// - if two unit versions are the same, their refs point at the same object
+// - if two constraints are the same, their refs point at the same object
 ConstraintSolver.Resolver2 = function () {
   var self = this;
 
@@ -39,6 +46,140 @@ ConstraintSolver.Resolver2.prototype.getConstraint =
 
   return self._constraints[idString] =
     new ConstraintSolver.Constraint(name, versionConstraint);
+};
+
+ConstraintSolver.Resolver2.prototype.resolve =
+  function (dependencies, constraints, choices) {
+  var self = this;
+
+  dependencies = _.uniq(dependencies);
+  constraints = _.uniq(constraints);
+
+  var exactDepsConstraints = _.filter(constraints, function (c) {
+    return c.exact && _.contains(dependencies, c.name);
+  });
+
+  var exactDepsVersions = _.map(exactDepsConstraints, function (c) {
+    return c.getSatisfyingUnitVersion(self);
+  });
+
+  var exactDepsNames = _.pluck(exactDepsVersions, "name");
+
+  // Pick these versions as we have no choice but take them.
+  choices = _.union(choices, exactDepsVersions);
+
+  // Remove them from dependencies.
+  dependencies = _.difference(dependencies, exactDepsNames);
+
+  // Take exact dependencies and propagate them.
+  _.each(exactDepsVersions, function (uv) {
+    var propagatedExactTransDeps = self._propagateExactTransDeps(uv);
+    dependencies = _.union(dependencies, propagatedExactTransDeps.dependencies);
+    constraints = _.union(constraints, propagatedExactTransDeps.constraints);
+    choices = _.union(choices, propagatedExactTransDeps.choices);
+  });
+
+  var result = self._resolve(dependencies, constraints, choices);
+
+  if (! result.success)
+    throw new Error(result.failureMsg);
+
+  return result.choices;
+};
+
+// dependencies: [String] - remaining dependencies
+// constraints: [ConstraintSolver.Constraint] - constraints to satisfy
+// choices: [ConstraintSolver.UnitVersion] - current fixed set of choices
+//
+// returns {
+//   success: Boolean,
+//   failureMsg: String,
+//   choices: [ConstraintSolver.UnitVersion]
+// }
+//
+// NOTE: assumes that exact dependencies are already propagated
+ConstraintSolver.Resolver2.prototype._resolve =
+  function (dependencies, constraints, choices) {
+  var self = this;
+
+  if (! choicesDontValidateConstraints(choices, constraints))
+    return { success: false,
+             failureMsg: "initial choices are validating constraints" };
+
+  if (_.isEmpty(dependencies))
+    return { success: true, choices: choices };
+
+  var candidateName = dependencies[0];
+  dependencies = dependencies.slice(1);
+
+  var candidateVersions =
+    _.filter(self.unitsVersions[candidateName], function (uv) {
+      return unitVersionDoesntValidateConstraints(uv, constraints);
+    });
+
+  if (_.isEmpty(candidateVersions))
+    return { success: false,
+             failureMsg: "package constraint cannot be satisfied -- "
+                         + candidateName };
+
+  var winningChoices = null;
+  _.each(candidateVersions, function (uv) {
+    var nDependencies = _.copy(dependencies);
+    var nConstraints = _.copy(constraints);
+    var nChoices = _.copy(choices);
+
+    nChoices.push(uv);
+    var propagatedExactTransDeps =
+      self._propagateExactTransDeps(uv);
+
+    nDependencies = _.union(nDependencies, propagatedExactTransDeps.dependencies);
+    nConstraints = _.union(nConstraints, propagatedExactTransDeps.constraints);
+    nChoices = _.union(nChoices, propagatedExactTransDeps.choices);
+
+    var result = self._resolve(nDependencies, nConstraints, nChoices);
+
+    if (result.success) {
+      winningChoices = result.choices;
+      return false;
+    }
+  });
+
+  if (winningChoices)
+    return { success: true, choices: winningChoices };
+  return { success: false,
+           failureMsg: "cannot find a satisfying version for package "
+                       + candidateName };
+};
+
+ConstraintSolver.Resolver2.prototype._propagateExactTransDeps = function (uv) {
+  var self = this;
+
+  var exactTransitiveDepsVersions = uv.exactTransitiveDependenciesVersions();
+  var inexactTransitiveDeps = uv.inexactTransitiveDependencies();
+  var transitiveContraints = _.chain(exactTransitiveDepsVersions)
+                              .map(function (uv) {
+                                return uv.constraints;
+                              }).flatten().uniq();
+
+  // Since exact transitive deps are put into choices, there is no need to keep
+  // them in dependencies. So only inexact deps are put to dependencies.
+  return {
+    dependencies: inexactTransitiveDeps,
+    constraints: transitiveContraints,
+    choices: exactTransitiveDependenciesVersions
+  };
+};
+
+var unitVersionDoesntValidateConstraints = function (uv, constraints) {
+  return _.all(constraints, function (c) {
+    return c.name !== uv.name || c.isSatisfied(uv);
+  });
+};
+
+var choicesDontValidateConstraints = function (choices, constraints) {
+  return _.all(choices, function (uv) {
+    return unitVersion(uv, constraints);
+  });
 };
 
 ////////////////////////////////////////////////////////////////////////////////
