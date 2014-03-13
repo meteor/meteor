@@ -9,12 +9,12 @@
 // - uses
 // - implies
 // - noExports
-// - declaredExports
 // - watchSet
 // - nodeModulesPath
+// - prelinkFiles
+// - packageVariables
+// - resources
 //
-// Do not include the source files in watchSet. They will be
-// added at compile time when the sources are actually read.
 var UnipackageSlice = function (unipackage, options) {
   var self = this;
   options = options || {};
@@ -26,8 +26,7 @@ var UnipackageSlice = function (unipackage, options) {
   self.id = pkg.id + "." + options.name + "@" + self.arch;
   self.uses = options.uses;
   self.implies = options.implies || [];
-  self.noExports = options.noExports || false;
-  self.declaredExports = options.declaredExports || null;
+  self.noExports = options.noExports;
   self.watchSet = options.watchSet || new watch.WatchSet();
   self.nodeModulesPath = options.nodeModulesPath;
 
@@ -44,8 +43,8 @@ var UnipackageSlice = function (unipackage, options) {
   // Both of these are saved into slices on disk, and are inputs into the final
   // link phase, which inserts the final JavaScript resources into
   // 'resources'.
-  self.prelinkFiles = null;
-  self.packageVariables = null;
+  self.prelinkFiles = options.prelinkFiles;
+  self.packageVariables = options.packageVariables;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
@@ -65,7 +64,8 @@ var UnipackageSlice = function (unipackage, options) {
   // honored for CSS but ignored if we are concatenating.
   //
   // sourceMap: Allowed only for "js". If present, a string.
-  self.resources = null;
+  self.resources = options.resources;
+
 };
 
 _.extend(UnipackageSlice.prototype, {
