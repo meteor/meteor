@@ -211,7 +211,10 @@ var toc = [
       "Accounts.config",
       "Accounts.ui.config",
       "Accounts.validateNewUser",
-      "Accounts.onCreateUser"
+      "Accounts.onCreateUser",
+      "Accounts.validateLoginAttempt",
+      "Accounts.onLogin",
+      "Accounts.onLoginFailure"
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [

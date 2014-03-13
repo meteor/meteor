@@ -1257,6 +1257,47 @@ Template.api.accounts_onCreateUser = {
 };
 
 
+Template.api.accounts_validateLoginAttempt = {
+  id: "accounts_validateloginattempt",
+  name: "Accounts.validateLoginAttempt(func)",
+  locus: "Server",
+  descr: ["Validate login attempts."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception."
+    }
+  ]
+};
+
+Template.api.accounts_onLogin = {
+  id: "accounts_onlogin",
+  name: "Accounts.onLogin(func)",
+  locus: "Server",
+  descr: ["Register a callback to be called after a login is successful."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "The callback to be called after a login is successful."
+    }
+  ]
+};
+
+Template.api.accounts_onLoginFailure = {
+  id: "accounts_onloginfailure",
+  name: "Accounts.onLoginFailure(func)",
+  locus: "Server",
+  descr: ["Register a callback to be called when a login is attempted and is unsuccessful. See [`Accounts.onLogin`](#accounts_onlogin) for details."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "The callback to be called after an unsuccessful login."
+    }
+  ]
+};
 
 Template.api.accounts_createUser = {
   id: "accounts_createuser",

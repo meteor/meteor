@@ -1781,6 +1781,78 @@ Example:
     });
 
 
+{{> api_box accounts_validateLoginAttempt}}
+
+Call `validateLoginAttempt` with a callback to be called on login
+attempts.  It returns an object with a single method, `stop`.  Calling
+`stop()` unregisters the callback.
+
+When a login attempt is made, the registered validate login callbacks
+are called with a single argument, the attempt info object:
+
+<dl class="objdesc">
+{{#dtdd name="type" type="String"}}
+  The service name, such as "password" or "twitter".
+{{/dtdd}}
+
+{{#dtdd name="allowed" type="Boolean"}}
+  Whether this login is allowed and will be successful (if not aborted
+  by any of the validateLoginAttempt callbacks).  False if the login
+  will not succeed (for example, an invalid password or the login was
+  aborted by a previous validateLoginAttempt callback).
+{{/dtdd}}
+
+{{#dtdd name="error" type="Exception"}}
+  When `allowed` is false, the exception describing why the login
+  failed.  It will be a `Meteor.Error` for failures reported to the
+  user (such as invalid password), and can be a another kind of
+  exception for internal errors.
+{{/dtdd}}
+
+{{#dtdd name="user" type="Object"}}
+  When it is known which user was attempting to login, the Meteor user
+  object.  This will always be present for successful logins.
+{{/dtdd}}
+
+{{#dtdd name="methodName" type="String"}}
+  The name of the Meteor method being used to login.
+{{/dtdd}}
+
+{{#dtdd name="methodArguments" type="Array"}}
+  An array of the arguments passed to the login method.
+{{/dtdd}}
+</dl>
+
+A validate login callback must return a truthy value for the login to
+proceed.  If the callback returns a falsy value or throws an
+exception, the login is aborted.  Throwing a `Meteor.Error` will
+report the error reason to the user.
+
+All registered validate login callbacks are called, even if one of the
+callbacks aborts the login.  The later callbacks will see the
+`allowed` field set to `false` since the login will now not be
+successful.
+
+
+{{> api_box accounts_onLogin}}
+
+Call `onLogin` or `onLoginFailure` with a callback to be called when a
+login is successful or is unsuccessful.  These functions return an
+object with a single method, `stop`.  Calling `stop()` unregisters the
+callback.
+
+Either the `onLogin` or the `onLoginFailure` callbacks will be called
+for each login attempt. The `onLogin` callbacks are called after the
+user has been logged in.
+
+The callbacks are called with a single argument, the same attempt info
+object as [`validateLoginAttempt`](#accounts_validateloginattempt).
+
+
+{{> api_box accounts_onLoginFailure}}
+
+
+
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
 
 The `accounts-password` package contains a full system for password-based
