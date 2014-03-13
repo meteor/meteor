@@ -330,6 +330,11 @@ var Sandbox = function (options) {
 
     // Build all packages and symlink them into the warehouse. Make up
     // random version names for each one.
+    throw new Error("XXX self-test warehouse creation is currently broken " +
+                    "and will presumably stay that way until we figure out " +
+                    "what it means in a post-package-server world");
+    // XXX (the following code isn't going to work, first of all
+    // because release.current.library doesn't exist anymore)
     var listResult = release.current.library.list();
     var pkgVersions = {};
     if (! listResult.packages)

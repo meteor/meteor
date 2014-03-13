@@ -3,7 +3,6 @@ var files = require('./files.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
 var path = require('path');
-var library = require('./library.js');
 
 var release = exports;
 
@@ -14,9 +13,6 @@ var Release = function (options) {
   // release, eg, "1.0". If not a proper release, null.
   self.name = options.name;
 
-  // A Library object that can be used to load packages.
-  self.library = null;
-
   if (self.name === null) {
     // Running from checkout.
     self._manifest = null;
@@ -24,10 +20,6 @@ var Release = function (options) {
     // Running a proper release
     self._manifest = options.manifest;
   }
-
-  self.library = new library.Library({
-    releaseManifest: self._manifest
-  });
 };
 
 _.extend(Release.prototype, {

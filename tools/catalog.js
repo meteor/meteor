@@ -7,6 +7,16 @@ var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
 var tropohouse = require('./tropohouse.js');
 
+var isDirectory = function (dir) {
+  try {
+    // use stat rather than lstat since symlink to dir is OK
+    var stats = fs.statSync(dir);
+  } catch (e) {
+    return false;
+  }
+  return stats.isDirectory();
+};
+
 // Use this class to query the metadata for all of the packages that
 // we know about (including packages on the package server that we
 // haven't actually download yet).
@@ -236,20 +246,31 @@ _.extend(Catalog.prototype, {
     var resolvedPath = path.resolve(directory);
     if (_.has(self.localPackages, name) &&
         self.localPackages[name] !== resolvedPath) {
-      throw new Error("Duplicate override for package '" + name + "'");
+      throw new Error("Duplicate local package '" + name + "'");
     }
     self.localPackages[name] = resolvedPath;
 
     // If we were making lots of calls to addLocalPackage, we would
     // want to coalesce the calls to _refresh somehow, but I don't
     // think we'll actually be doing that so this should be fine.
+    // #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
-    self._refresh();
+    self._refresh(false /* sync */);
   },
 
-  // XXX implement removeLocalPackage
-  // XXX make callers of override/removeOverride call
-  // addLocalPackage/removeLocalPackage
+  // Reverse the effect of addLocalPackage.
+  removeLocalPackage: function (name) {
+    var self = this;
+    self._requireInitialized();
+
+    if (! _.has(self.localPackages, name))
+      throw new Error("no such local package?");
+    delete self.localPackages[name];
+
+    // see #CallingRefreshEveryTimeLocalPackagesChange
+    self._recomputeEffectiveLocalPackages();
+    self._refresh(false /* sync */);
+  },
 
   // True if `name` is a local package (is to be loaded via
   // localPackageDirs or addLocalPackage rather than from the package
@@ -450,16 +471,5 @@ _.extend(Catalog.prototype, {
     return null;
   }
 });
-
-// XXX copied from library.js
-var isDirectory = function (dir) {
-  try {
-    // use stat rather than lstat since symlink to dir is OK
-    var stats = fs.statSync(dir);
-  } catch (e) {
-    return false;
-  }
-  return stats.isDirectory();
-};
 
 module.exports = new Catalog();

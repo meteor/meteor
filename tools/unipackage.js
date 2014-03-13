@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var library = require('./library.js');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
@@ -17,17 +16,22 @@ var packageCache = require("./package-cache.js");
 // loaded packages).
 //
 // Caching: There is a simple cache. If you call this function with
-// exactly the same library, release, and packages, we will attempt to
-// return the memoized return value from the previous load (rather
-// than creating a whole new copy of the packages in memory). The
-// caching logic is not particularly sophisticated. For example,
-// whenever you call load() with a different library the cache is
-// flushed.
+// exactly the same release and packages, we will attempt to return
+// the memoized return value from the previous load (rather than
+// creating a whole new copy of the packages in memory). The caching
+// logic is not particularly sophisticated. For example, the cache
+// will not be flushed if packages change on disk, even if it should
+// be, but using a different release name will flush the cache
+// completely.
 //
-// Library: This function used to take a library, but now it always
-// uses release.current.library. XXX this will need to be revisited
-// for the post-manifest world; we'll need to have something about
-// wrapper packages instead?
+// XXX XXX currently only local packages (eg, checkout packages) can
+// be loaded. This means that unipackage.load is completely
+// nonfunctional on release builds, breaking quite a lot of tool
+// functionality. We have several options here. We could make the tool
+// into a star and eliminate unipackage.load completely. Or we could
+// make a static list of versions when we build a release and put that
+// in the root of the tools directory and use that to create the
+// PackageLoader.
 //
 // Options:
 // - packages: The packages to load, as an array of strings. Each
@@ -39,25 +43,20 @@ var packageCache = require("./package-cache.js");
 //
 // Example usage:
 //   var DDP = require('./unipackage.js').load({
-//     library: release.current.library,
 //     packages: ['livedata'],
 //     release: release.current.name
 //   }).livedata.DDP;
 //   var reverse = DDP.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));
 
-var cacheLibrary = null;
 var cacheRelease = null;
 var cache = null; // map from package names (joined with ',') to return value
 
 var load = function (options) {
   options = options || {};
-  var library = release.current.library;
 
   // Check the cache first
-  if (cacheLibrary !== library ||
-      cacheRelease !== options.release) {
-    cacheLibrary = library;
+  if (cacheRelease !== options.release) {
     cacheRelease = options.release;
     cache = {};
   }

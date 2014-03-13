@@ -4,7 +4,6 @@ var _ = require('underscore');
 var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
-var library = require('./library.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
 var project = require('./project.js');
@@ -21,6 +20,7 @@ var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var packages = require('./packages.js');
 var packageLoader = require('./package-loader.js').packageLoader;
+var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -71,6 +71,33 @@ var getPackages = function () {
   } else {
     return ret;
   }
+};
+
+// Returns a pretty list suitable for showing to the user. Input is an
+// array of objects with keys 'name' and 'description'.
+var formatList = function (items) {
+  var longest = '';
+  _.each(items, function (item) {
+    if (item.name.length > longest.length)
+      longest = item.name;
+  });
+
+  var pad = longest.replace(/./g, ' ');
+  // it'd be nice to read the actual terminal width, but I tried
+  // several methods and none of them work (COLUMNS isn't set in
+  // node's environment; `tput cols` returns a constant 80). maybe
+  // node is doing something weird with ptys.
+  var width = 80;
+
+  var out = '';
+  _.each(items, function (item) {
+    var name = itemg.name + pad.substr(item.name.length);
+    var description = item.description || 'No description';
+    out += (name + "  " +
+            description.substr(0, width - 2 - pad.length) + "\n");
+  });
+
+  return out;
 };
 
 var XXX_DEPLOY_ARCH = 'os.linux.x86_64';
@@ -1144,6 +1171,7 @@ main.registerCommand({
   }
 }, function (options) {
   var testPackages;
+  var localPackageNames = [];
   if (options.args.length === 0) {
     var packageList = getPackages();
     if (! packageList) {
@@ -1162,9 +1190,18 @@ main.registerCommand({
       // Otherwise it's a directory; load it into a Package now. Use
       // path.resolve to strip trailing slashes, so that packageName doesn't
       // have a trailing slash.
+      //
+      // Why use addLocalPackage instead of just loading the packages
+      // and passing Package objects to the bundler? Because we
+      // actually need the Catalog to know about the package, so that
+      // we are able to resolve the test slice's dependency on the
+      // main slice. This is not ideal (I hate how this mutates global
+      // state) but it'll do for now. In the future maybe we could
+      // just have test slices implicitly depend on use slices.
       var packageDir = path.resolve(p);
       var packageName = path.basename(packageDir);
-      release.current.library.override(packageName, packageDir);
+      catalog.addLocalPackage(packageName, packageDir);
+      localPackageNames.push(packageName);
       return packageName;
     });
   }
@@ -1190,8 +1227,9 @@ main.registerCommand({
     minify: options.production
   };
 
+  var ret;
   if (options.deploy) {
-    return deploy.bundleAndDeploy({
+    ret = deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
       settingsFile: options.settings,
@@ -1199,7 +1237,7 @@ main.registerCommand({
     });
   } else {
     var runAll = require('./run-all.js');
-    return runAll.run(testRunnerAppDir, {
+    ret = runAll.run(testRunnerAppDir, {
       // if we're testing packages from an app, we still want to make
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
@@ -1215,6 +1253,12 @@ main.registerCommand({
       once: options.once
     });
   }
+
+  _.each(localPackageNames, function (name) {
+    catalog.removeLocalPackage(name);
+  });
+
+  return ret;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1266,8 +1310,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity
 }, function (options) {
-  var library = release.current.library;
-
   if (! fs.existsSync(options.args[0]) ||
       ! fs.statSync(options.args[0]).isDirectory()) {
     process.stderr.write(options.args[0] + ": not a directory\n");
@@ -1283,12 +1325,12 @@ main.registerCommand({
       // bail out if that creates a conflict.
       var packageDir = path.resolve(options.args[0]);
       packageName = path.basename(packageDir) + "-tool";
-      if (library.get(packageName, { throwOnError: false })) {
+      if (catalog.getPackage(packageName)) {
         buildmessage.error("'" + packageName +
                            "' conflicts with the name " +
-                           "of a package in the library");
+                           "of a package in the catalog");
       }
-      library.override(packageName, packageDir);
+      catalog.addLocalPackage(packageName, packageDir);
 
       world = unipackage.load({
         packages: [ packageName ],
@@ -1312,6 +1354,8 @@ main.registerCommand({
   if (typeof ret !== "number")
     ret = 1;
   ret = +ret; // cast to integer
+
+  catalog.removeLocalPackage(packageName);
   return ret;
 });
 
@@ -1439,18 +1483,17 @@ main.registerCommand({
 
   // XXX Prettify error messages
 
-  // We load the package with `forceRebuild` to avoid loading the
-  // package from a built unipackage. If we load from unipackage, then
-  // we can't go through the build process to retrieve the sources that
-  // we used to build the package, and we need the source list to
-  // compile the source tarball.
-  release.current.library.override(path.basename(options.packageDir), options.packageDir);
-
-  var pkg;
   var messages = buildmessage.capture(function () {
-    pkg = release.current.library.get(path.basename(
-      options.packageDir
-    ), {
+    // XXX would be nice to get the name out of the package (while
+    // still confirming that it matches the name of the directory)
+    var packageName = path.basename(options.packageDir);
+
+    // We load the package with `forceRebuild` to avoid loading the
+    // package from a built unipackage. If we load from unipackage,
+    // then we can't go through the build process to retrieve the
+    // sources that we used to build the package, and we need the
+    // source list to compile the source tarball.
+    pkg = packageCache.loadPackageAtPath(packageName, options.packageDir, {
       forceRebuild: true
     });
   });
@@ -1522,12 +1565,15 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true
 }, function (options) {
+  var items = [];
   _.each(catalog.getAllPackageNames(), function (name) {
     var versionInfo = catalog.getLatestVersion(name);
     if (versionInfo) {
-      console.log(name, versionInfo.description);
+      items.push({ name: name, description: versionInfo.description });
     }
   });
+
+  process.stdout.write(formatList(items));
 });
 
 main.registerCommand({

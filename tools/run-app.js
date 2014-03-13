@@ -12,6 +12,7 @@ var buildmessage = require('./buildmessage.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var runLog = require('./run-log.js').runLog;
 var catalog = require('./catalog.js');
+var packageCache = require('./package-cache.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -391,7 +392,7 @@ _.extend(AppRunner.prototype, {
 
     // Bundle up the app
     if (! self.firstRun)
-      release.current.library.refresh(true); // pick up changes to packages
+      packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     var bundleResult = bundler.bundle({
