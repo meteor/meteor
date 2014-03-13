@@ -1963,7 +1963,8 @@ exports.bundle = function (options) {
 // letting exceptions escape?
 //
 // options:
-// - packageLoader: required. the PackageLoader for resolving dependencies
+// - packageLoader: required. the PackageLoader for resolving
+//   bundle-time dependencies
 // - name: required. a name for this image (cosmetic, but will appear
 //   in, eg, error messages) -- technically speaking, this is the name
 //   of the package created to contain the sources and package
@@ -2001,7 +2002,7 @@ exports.buildJsImage = function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });
-  pkg.build(options.packageLoader);
+  pkg.build();
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,

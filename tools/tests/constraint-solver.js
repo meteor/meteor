@@ -1,4 +1,14 @@
-var semver = Npm.require('semver');
+var _ = require('underscore');
+var constraintSolver = require('../constraint-solver.js');
+var selftest = require('../selftest.js');
+var semver = require('semver');
+var fail = selftest.fail;
+
+var unipackage = require('./unipackage.js');
+var LocalCollection = unipackage.load({
+  packages: [ 'meteor', 'minimongo' ],
+  release: release.current.name
+}).minimongo.LocalCollection;
 
 // Setup mock data for tests
 var Packages = new LocalCollection;
@@ -57,9 +67,11 @@ insertBuild("jquery-widgets", "1.0.2", "1.0.0");
 insertBuild("jquery", "1.8.0", "1.0.0");
 insertBuild("jquery", "1.9.0", "1.0.0");
 
-// XXX Temporary hack: make a catalog stub to pass in to the constraint
-// solver. We'll soon move constraint-solver into tools and just run
-// tests with self-test, passing a real Catalog object.
+// XXX Temporary hack: make a catalog stub to pass in to the
+// constraint solver. We used to do this because constraint-solver was
+// in a package and the catalog was not. Now that they are together,
+// maybe we should add a function to catalog.js that lets us create a
+// stub Catalog.
 var catalogStub = {
   packages: Packages,
   versions: Versions,
@@ -86,28 +98,28 @@ var catalogStub = {
   }
 };
 
-var resolver = new ConstraintSolver.Resolver(catalogStub, Packages,
-                                             Versions, Builds);
+// XXX we have a problem, which is that constraintSolver no longer
+// takes a Catalog anymore -- it uses the singleton catalog. We need
+// to come up with a new way to stub the catalog.
+var resolver = new constraintSolver.Resolver(catalogStub);
 
-var currentTest = null;
 var t = function (deps, expected) {
   var resolvedDeps = resolver.resolve(deps);
-  currentTest.equal(resolvedDeps, expected);
+  selftest.expectEqual(resolvedDeps, expected);
 };
 
 var t_progagateExact = function (deps, expected) {
   var resolvedDeps = resolver.propagatedExactDeps(deps);
-  currentTest.equal(resolvedDeps, expected);
+  selftest.expectEqual(resolvedDeps, expected);
 };
 
 var FAIL = function (deps) {
-  currentTest.throws(function () {
-    var resolvedDeps = resolver.resolve(deps);
+  currentTest.expectThrows(function () {
+    resolver.resolve(deps);
   });
 };
 
 Tinytest.add("constraint solver - exact dependencies", function (test) {
-  currentTest = test;
   t_progagateExact({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
@@ -120,7 +132,6 @@ Tinytest.add("constraint solver - exact dependencies", function (test) {
 });
 
 Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
-  currentTest = test;
   t({ "sparky-forms": "=1.1.2" }, {
     "sparky-forms": "1.1.2",
     "forms": "1.0.1",
@@ -141,7 +152,6 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
 });
 
 Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
-  currentTest = test;
   // sparky-forms 1.0.0 won't be chosen because it depends on a very old
   // jquery, which is not compatible with the jquery that
   // awesome-dropdown uses.
@@ -157,7 +167,6 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
 });
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
-  currentTest = test;
   var versions = resolver.resolve({ "sparkle": "none" });
   test.isTrue(_.isString(versions.sparkle));
   versions = resolver.resolve({ "sparkle": null });
@@ -165,10 +174,8 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
 });
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
-  currentTest = test;
   var versions = resolver.resolve({ "sparkle": "none", "sparky-forms": "1.1.2" });
   test.equal(versions.sparkle, "2.1.1");
   var versions = resolver.resolve({ "sparkle": null, "sparky-forms": "1.1.2" });
   test.equal(versions.sparkle, "2.1.1");
 });
-

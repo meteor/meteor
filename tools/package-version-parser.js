@@ -1,4 +1,4 @@
-var semver = Npm.require('semver');
+var semver = require('semver');
 
 PackageVersion = {};
 

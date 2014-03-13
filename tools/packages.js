@@ -41,6 +41,7 @@ var rejectBadPath = function (p) {
     throw new Error("bad path: " + p);
 };
 
+// XXX should unify this with utils.parseConstraint
 var parseSpec = function (spec) {
   var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/)
   if (! m)
@@ -148,6 +149,8 @@ var Slice = function (pkg, options) {
   // that consumes this value will need to guard appropriately. Each
   // element in the array has keys:
   // - package: the package name
+  // - constraint: the constraint on the version of the package to use,
+  //   as a string (may be null)
   // - slice: the slice name (optional)
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
@@ -1172,19 +1175,54 @@ _.extend(Package.prototype, {
     self._pluginsInitialized = true;
   },
 
+
+  // Resolve build-time dependencies of this package and return a
+  // PackageLoader that can be used to load all of this package's
+  // build-time dependencies.
+  //
+  // XXX this is called from several places (eg, checkUpToDate and
+  // build) and each time it's called we recompute it. It should
+  // really be memoized.
+  _makeBuildTimePackageLoader: function () {
+    var self = this;
+
+    // #RunningTheConstraintSolverToBuildAPackage
+
+    var dependencyMetadata =
+      self._computeDependencyMetadata(true /* logError */);
+    if (! dependencyMetadata) {
+      // If _computeDependencyMetadata failed, I guess we can try to
+      // recover by returning a PackageLoader with no versions in
+      // it. This will cause a lot of 'package not found' errors, so a
+      // better approach would proabably be to actually have this
+      // function return null and make the caller do a better job of
+      // recovering.
+      return new packageLoader.PackageLoader({ });
+    }
+
+    var constraints = {};
+    _.each(dependencyMetadata, function (info, packageName) {
+      constraints[packageName] = info.constraint;
+    });
+
+    var constraintSolver = require('./constraint-solver.js');
+    var resolver = new constraintSolver.Resolver;
+    var versions = resolver.resolve(constraints);
+    console.log("YAAAAAAY", versions);
+
+    return new packageLoader.PackageLoader({ versions: versions });
+  },
+
   // Move a package to the built state (by running its source files
   // through the appropriate compiler plugins). Once build has
   // completed, any errors detected in the package will have been
   // emitted to buildmessage.
   //
-  // packageLoader is the PackageLoader to use for determining the
-  // package's build-time dependencies.
-  //
   // Since build() retrieves the package's dependencies from the
   // PackageLoader, it is illegal to call build() from
   // packageLoader.getPackage() (until the package has actually been
   // put in the PackageCache's cached package list.
-  build: function (packageLoader) {
+  build: function () {
     var self = this;
 
     if (self.pluginsBuilt || self.slicesBuilt)
@@ -1201,7 +1239,18 @@ _.extend(Package.prototype, {
       }, function () {
         var buildResult = bundler.buildJsImage({
           name: info.name,
-          packageLoader: packageLoader,
+          // XXX XXX How do we determine the versions to use for a
+          // plugin? These are bundle-time versions, not build-time
+          // versions, so it's like building an app. The main question
+          // here seems to be, what is the equivalent of a
+          // .meteor/versions file for a plugin? Does it get its own
+          // versions file in some hidden directory in the package? Is
+          // there a way to run 'meteor update' on it or do you have
+          // to do that stuff by hand?
+          //
+          // (obviously null is just a placeholder value until we
+          // figure this out)
+          packageLoader: null,
           use: info.use,
           sourceRoot: self.sourceRoot,
           sources: info.sources,
@@ -1233,6 +1282,8 @@ _.extend(Package.prototype, {
       });
     });
     self.pluginsBuilt = true;
+
+    var packageLoader = self._makeBuildTimePackageLoader();
 
     // Build slices. Might use our plugins, so needs to happen
     // second.
@@ -2082,10 +2133,11 @@ _.extend(Package.prototype, {
   // load the package's dependencies (it is not necessary).
   //
   // options:
-  // - onlyIfUpToDate: if true, then first check the unipackage's
-  //   dependencies (if present) to see if it's up to date. If not,
-  //   return false without loading the package. Otherwise return
-  //   true. (If onlyIfUpToDate is not passed, always return true.)
+  // - onlyIfUpToDate: if true, check the unipackage's dependencies
+  //   (if present) to see if it's up to date (using the PackageLoader
+  //   to determine which build plugins to use.) If not, return false
+  //   without loading the package. Otherwise return true. (If
+  //   onlyIfUpToDate is not passed, always return true.)
   // - buildOfPath: If present, the source directory (as an absolute
   //   path on local disk) of which we think this unipackage is a
   //   build. If it's not (it was copied from somewhere else), we
@@ -2297,9 +2349,11 @@ _.extend(Package.prototype, {
     return true;
   },
 
-  // Try to check if this package is up-to-date (that is, whether its source
-  // files have been modified). True if we have dependency info and it says that
-  // the package is up-to-date. False if a source file has changed.
+  // Try to check if this package is up-to-date (that is, whether its
+  // source files have been modified), using packageLoader to resolve
+  // build-time dependencies. True if we have dependency info and it
+  // says that the package is up-to-date. False if a source file or
+  // build-time dependency has changed.
   //
   // The arguments _watchSet and _pluginProviderPackageDirs are used when
   // reading from disk when there are no slices yet; don't pass them from
@@ -2320,12 +2374,23 @@ _.extend(Package.prototype, {
       _pluginProviderPackageDirs = self.pluginProviderPackageDirs;
     }
 
+    // XXX As things currently are, we need a PackageLoader just to
+    // check to see if a build of a package is up to date, because we
+    // need to know if we're still using the same version of plugins
+    // such as coffeescript. This means that we have to run the
+    // constraint solver.. This could result in running the constraint
+    // solver way more than we'd like to. If that's the case, we
+    // should find a way to avoid it, such as keying the up-to-date
+    // check on the inputs to the constraint solver rather than the
+    // outputs.
+    var packageLoader = self._makeBuildTimePackageLoader();
+
     // Are all of the packages we directly use (which can provide plugins which
     // affect compilation) resolving to the same directory? (eg, have we updated
     // our release version to something with a new version of a package?)
     var packageResolutionsSame = _.all(
       _pluginProviderPackageDirs, function (packageDir, name) {
-        return self.library.findPackageDirectory(name) === packageDir;
+        return packageLoader.getLoadPathForPackage(name) === packageDir;
       });
     if (!packageResolutionsSame)
       return false;

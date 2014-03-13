@@ -22,6 +22,35 @@ var markStack = function (f) {
   return parseStack.markTop(f);
 };
 
+// Call from a test to throw a TestFailure exception and bail out of the test
+var fail = markStack(function (reason) {
+  throw new TestFailure(reason);
+});
+
+// Call from a test to assert that 'actual' is equal to 'expected',
+// with 'actual' being the value that the test got and 'expected'
+// being the expected value
+var expectEqual = markStack(function (actual, expected) {
+  // XXX Super janky. Should use EJSON.equals for a deep equality test.
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new TestFailure("not-equal", {
+      expected: expected,
+      actual: actual
+    });
+  }
+});
+
+var expectThrows = markStack(function (f) {
+  var threw = false;
+  try {
+    f();
+  } catch (e) {
+    threw = true;
+  }
+
+  if (! threw)
+    throw new TestFailure("expected-exception")
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
@@ -1097,6 +1126,13 @@ var runTests = function (options) {
         process.stderr.write("  => Expected: " + s(failure.details.expected) +
                              "; actual: " + s(failure.details.actual) + "\n");
       }
+      if (failure.reason === 'expected-exception') {
+      }
+      if (failure.reason === 'not-equal') {
+        process.stderr.write(
+"  => Expected: " + JSON.stringify(failure.details.expected) +
+"; actual: " + JSON.stringify(failure.details.actual) + "\n");
+      }
 
       if (failure.details.run) {
         failure.details.run.outputLog.end();
@@ -1202,5 +1238,7 @@ _.extend(exports, {
   markStack: markStack,
   define: define,
   Sandbox: Sandbox,
-  Run: Run
+  Run: Run,
+  expectEqual: expectEqual,
+  expectThrows: expectThrows
 });

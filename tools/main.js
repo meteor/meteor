@@ -531,15 +531,6 @@ Fiber(function () {
   if (packageDir)
     packageDir = path.resolve(packageDir);
 
-  var packageDirs = [];
-  if (appDir)
-    packageDirs.push(path.join(appDir, 'packages'));
-
-  if (process.env.PACKAGE_DIRS)
-    // User can provide additional package directories to search in
-    // PACKAGE_DIRS (colon-separated).
-    packageDirs = packageDirs.concat(process.env.PACKAGE_DIRS.split(':'));
-
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
   // quit and run those tools instead.
@@ -625,9 +616,7 @@ Fiber(function () {
 
   if (releaseName !== undefined) {
     try {
-      var rel = release.load(releaseName, {
-        packageDirs: packageDirs
-      });
+      var rel = release.load(releaseName);
     } catch (e) {
       var name = releaseName;
       if (e instanceof files.OfflineError) {
@@ -676,11 +665,30 @@ Fiber(function () {
     springboard(release.current.getToolsVersion()); // does not return!
   }
 
+  // Figure out the directories that we should search for local
+  // packages (in addition to packages downloaded from the package
+  // server)
+  var localPackageDirs = [];
+  if (appDir)
+    localPackageDirs.push(path.join(appDir, 'packages'));
+
+  if (process.env.PACKAGE_DIRS)
+    // User can provide additional package directories to search in
+    // PACKAGE_DIRS (colon-separated).
+    localPackageDirs = localPackageDirs.concat(
+      process.env.PACKAGE_DIRS.split(':'));
+
+  if (releaseName === null) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
+  }
+
   // Set up the package search directories in our catalog, so it knows
   // where to find local packages. We need to do this after we set
   // release.current, so package loader can load unipackage, but before any code
   // that uses the catalog.
-  catalog.setLocalPackageDirs(packageDirs);
+  catalog.setLocalPackageDirs(localPackageDirs);
 
   // Check for the '--help' option.
   var showHelp = false;

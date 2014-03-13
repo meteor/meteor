@@ -1,23 +1,22 @@
-var semver = Npm.require('semver');
+var semver = require('semver');
+var _ = require('underscore');
+var catalog = require('./catalog.js');
 
-ConstraintSolver = {};
+var constraintSolver = exports;
 
-ConstraintSolver.Dependency = {
+// Comment this out until we have a way to get Match here
+/*
+var Dependency = {
   packageName: String,
   version: Match.OneOf(String, null), // XXX 'x.y.z' or 'x.y.z'
   exact: Match.Optional(Boolean),
   weak: Match.Optional(Boolean),
   unordered: Match.Optional(Boolean)
 };
+*/
 
 // main class
-
-// cat is a catalog.Catalog object. We have to pass this in because
-// we're in a package and can't require('release.js'). If this code
-// moves to the tool, or if all of the tool code moves to a star, we
-// should get cat from release.current.catalog rather than passing it
-// in.
-ConstraintSolver.Resolver = function (cat, options) {
+constraintSolver.Resolver = function (options) {
   var self = this;
 
   options = options || {};
@@ -33,15 +32,15 @@ ConstraintSolver.Resolver = function (cat, options) {
   // package, sorted in ascending semver order
   self.sortedVersionsForPackage = {};
 
-  _.each(cat.getAllPackageNames(), function (packageName) {
-    var packageDef = cat.getPackage(packageName);
+  _.each(catalog.getAllPackageNames(), function (packageName) {
+    var packageDef = catalog.getPackage(packageName);
     self.packageDeps[packageDef.name] = {};
 
-    var versions = cat.getSortedVersions(packageName);
+    var versions = catalog.getSortedVersions(packageName);
     self.sortedVersionsForPackage[packageDef.name] = versions;
 
     _.each(versions, function (version) {
-      var versionDef = cat.getVersion(packageName, version);
+      var versionDef = catalog.getVersion(packageName, version);
       // version is a string #version-name-conflict
       var packageDep = {};
       packageDep.earliestCompatibleVersion = versionDef.earliestCompatibleVersion;
@@ -59,7 +58,7 @@ ConstraintSolver.Resolver = function (cat, options) {
 // XXX empties the exactDepsStack
 // XXX extends the depsDict
 // XXX after this depsStack can contain duplicates
-ConstraintSolver.Resolver.prototype._propagateExactDeps =
+constraintSolver.Resolver.prototype._propagateExactDeps =
   function (depsDict, exactDepsStack) {
   var self = this;
   var picks = {};
@@ -102,8 +101,9 @@ ConstraintSolver.Resolver.prototype._propagateExactDeps =
   return picks;
 };
 
-ConstraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
-  check(dependencies, [ConstraintSolver.Dependency]);
+constraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
+  // Comment this out until we have a way to get check() here
+//  check(dependencies, [Dependency]); 
 
   state = state || {};
   state.picks = state.picks || {};
@@ -181,12 +181,12 @@ ConstraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
   throw new Error("Cannot pick a satisfying version of package " + candidatePackageName);
 };
 
-ConstraintSolver.Resolver.prototype.resolve = function (dependencies) {
+constraintSolver.Resolver.prototype.resolve = function (dependencies) {
   var self = this;
   return self._resolve(toStructuredDeps(dependencies));
 };
 
-ConstraintSolver.Resolver.prototype.propagatedExactDeps = function (dependencies) {
+constraintSolver.Resolver.prototype.propagatedExactDeps = function (dependencies) {
   var self = this;
 
   dependencies = toStructuredDeps(dependencies);
@@ -195,7 +195,7 @@ ConstraintSolver.Resolver.prototype.propagatedExactDeps = function (dependencies
   return self._propagateExactDeps(depsStack, exactDepsStack);
 };
 
-ConstraintSolver.Resolver.prototype.dependencyIsSatisfied =
+constraintSolver.Resolver.prototype.dependencyIsSatisfied =
   function (dep, version) {
   // XXX check for exact
   var self = this;

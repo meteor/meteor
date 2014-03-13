@@ -17,10 +17,8 @@ var Release = function (options) {
   // A Library object that can be used to load packages.
   self.library = null;
 
-  var packageDirs = _.clone(options.packageDirs || []);
   if (self.name === null) {
     // Running from checkout.
-    packageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
     self._manifest = null;
   } else {
     // Running a proper release
@@ -28,7 +26,6 @@ var Release = function (options) {
   }
 
   self.library = new library.Library({
-    localPackageDirs: packageDirs,
     releaseManifest: self._manifest
   });
 };
@@ -133,9 +130,6 @@ release.latestDownloaded = function () {
 // Arguments:
 // - name: release name to use. Or pass 'null' to use a checkout
 // - options:
-//   - packageDirs: array of extra paths to search when searching for
-//     packages. They are searched in order and take precedence over
-//     anything in the release.
 //   - quiet: if the release has to be downloaded, don't print
 //     progress messages.
 //
@@ -144,24 +138,11 @@ release.latestDownloaded = function () {
 //   release because it's not locally cached and we're not online.
 // - warehouse.NoSuchReleaseError if no release called 'name' exists
 //   in the world (confirmed with server).
-//
-// XXX packageDirs really should not be part of Release, and
-// override() really should not be a method on a global singleton
-// Library. Instead, there should be a thing like a "package resolver"
-// that can be created off of a release and then configured with
-// package name overrides and additional search paths. But this isn't
-// pressing so we'll do it later. (My actual hope is that by time we
-// get around to doing it we'll have found a less hacky way than
-// override() to load a package from a directory.)
-// #HandlePackageDirsDifferently
 release.load = function (name, options) {
   options = options || {};
 
   if (! name) {
-    return new Release({
-      name: null,
-      packageDirs: options.packageDirs
-    });
+    return new Release({ name: null });
   }
 
   // Go download the release if necessary.
@@ -171,7 +152,6 @@ release.load = function (name, options) {
 
   return new Release({
     name: name,
-    packageDirs: options.packageDirs,
     manifest: manifest
   });
 };
@@ -188,20 +168,6 @@ release.setCurrent = function (releaseObject, forced) {
 
   release.current = releaseObject;
   release.forced = !! forced;
-};
-
-// XXX XXX HACK: Change the packageDirs attribute on
-// release.current. This is terrible form, but we have a legacy test
-// (the bundler test) that needs it. The right way to fix this is to
-// #HandlePackageDirsDifferently
-release._resetPackageDirs = function (packageDirs) {
-  if (! release.current)
-    throw new Error("no release?");
-  release.current = new Release({
-    name: release.current.name,
-    packageDirs: packageDirs,
-    manifest: release.current._manifest
-  });
 };
 
 // XXX hack

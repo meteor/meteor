@@ -5,6 +5,7 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
+var tropohouse = require('./tropohouse.js');
 
 // Use this class to query the metadata for all of the packages that
 // we know about (including packages on the package server that we
@@ -13,7 +14,7 @@ var packageCache = require('./package-cache.js');
 var Catalog = function () {
   var self = this;
 
-  self.loaded = false; //#CatalogLazyLoading
+  self.loaded = false; // #CatalogLazyLoading
 
   // Package server data
   self.packages = null;
@@ -46,7 +47,41 @@ _.extend(Catalog.prototype, {
   setLocalPackageDirs: function (localPackageDirs) {
     var self = this;
     self.localPackageDirs = _.filter(localPackageDirs, isDirectory);
-    self.refresh();
+    self._recomputeEffectiveLocalPackages();
+  },
+
+  _recomputeEffectiveLocalPackages: function () {
+    var self = this;
+
+    self.effectiveLocalPackages = {};
+
+    _.each(self.localPackageDirs, function (localPackageDir) {
+      if (! isDirectory(localPackageDir))
+        return;
+      var contents = fs.readdirSync(localPackageDir);
+      _.each(contents, function (item) {
+        var packageDir = path.resolve(path.join(localPackageDir, item));
+        if (! isDirectory(packageDir))
+          return;
+
+        // Consider a directory to be a package source tree if it
+        // contains 'package.js'. (We used to support unipackages in
+        // localPackageDirs, but no longer.)
+        if (fs.existsSync(path.join(packageDir, 'package.js'))) {
+          // Let earlier package directories override later package
+          // directories.
+
+          // XXX XXX for now, get the package name from the
+          // directory. in a future refactor, should instead build the
+          // package right here and get the name from the (not yet
+          // added) 'name' attribute in package.js.
+          if (! _.has(self.effectiveLocalPackages, item))
+            self.effectiveLocalPackages[item] = packageDir;
+        }
+      });
+    });
+
+    _.extend(self.effectiveLocalPackages, self.localPackages);
   },
 
   // #CatalogLazyLoading
@@ -79,40 +114,10 @@ _.extend(Catalog.prototype, {
     self.versions = collections.versions;
     self.builds = collections.builds;
 
-    // Find local packages that override packages from the package server
-    self.effectiveLocalPackages = {};
-
-    _.each(self.localPackageDirs, function (localPackageDir) {
-      if (! isDirectory(localPackageDir))
-        return;
-      var contents = fs.readdirSync(localPackageDir);
-      _.each(contents, function (item) {
-        var packageDir = path.resolve(path.join(localPackageDir, item));
-        if (! isDirectory(packageDir))
-          return;
-
-        // Consider a directory to be a package source tree if it
-        // contains 'package.js'. (We used to support unipackages in
-        // localPackageDirs, but no longer.)
-        if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-          // Let earlier package directories override later package
-          // directories.
-
-          // XXX XXX for now, get the package name from the
-          // directory. in a future refactor, should instead build the
-          // package right here and get the name from the (not yet
-          // added) 'name' attribute in package.js.
-          if (! _.has(self.effectiveLocalPackages, item))
-            self.effectiveLocalPackages[item] = packageDir;
-        }
-      });
-    });
-
-    _.extend(self.effectiveLocalPackages, self.localPackages);
-
     // Construct metadata for the local packages and load them into
     // the collections, shadowing any versions of those packages from
     // the package server.
+    self._recomputeEffectiveLocalPackages();
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
       // Load the package
       var pkg = packageCache.loadPackageAtPath(name, packageDir);
@@ -264,6 +269,9 @@ _.extend(Catalog.prototype, {
     if (_.has(self.effectiveLocalPackages, name)) {
       return self.effectiveLocalPackages[name];
     }
+
+    if (! version)
+      throw new Error(name + " not a local package, and no version specified?");
 
     return tropohouse.packagePath(name, version);
   },

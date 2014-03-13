@@ -1574,15 +1574,9 @@ main.registerCommand({
     return 1;
   }
 
-  // #RunningTheConstraintSolverToBuildAPackage
-  var versions = { }; // XXX XXX actually run the constraint solver!
-  var loader = new packageLoader.PackageLoader({
-    versions: versions,
-  });
-
   var pkg = new packages.Package(packageDir);
   pkg.initFromPackageDir(options.name, packageDir);
-  pkg.build(loader);
+  pkg.build();
   pkg.saveAsUnipackage(path.join(packageDir, '.build'));
 
   var conn = packageClient.loggedInPackagesConnection();

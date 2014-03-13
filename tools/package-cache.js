@@ -1,4 +1,8 @@
+var fs = require("fs");
+var path = require("path");
 var packageLoader = require("./package-loader.js");
+var packages = require("./packages.js");
+var archinfo = require("./archinfo.js");
 var _ = require('underscore');
 
 // both map from package load path to:
@@ -106,13 +110,7 @@ _.extend(PackageCache.prototype, {
           // packages that we use.)
           pkg.initFromPackageDir(name, loadPath);
           self.loadedPackages[loadPath] = {pkg: pkg, packageDir: loadPath};
-
-          // #RunningTheConstraintSolverToBuildAPackage
-          var versions = { }; // XXX XXX actually run the constraint solver!
-          var loader = new packageLoader.PackageLoader({
-            versions: versions,
-          });
-          pkg.build(loader);
+          pkg.build();
 
           if (! buildmessage.jobHasMessages()) {
             // Save it, for a fast load next time
@@ -140,16 +138,9 @@ _.extend(PackageCache.prototype, {
   loadAppAtPath: function (appDir, ignoreFiles) {
     var self = this;
 
-    // #RunningTheConstraintSolverToBuildAPackage
-    var versions = { }; // XXX XXX actually run the constraint solver!
-    var loader = new packageLoader.PackageLoader({
-      versions: versions,
-    });
-    pkg.build(loader);
-
     var pkg = new packages.Package;
     pkg.initFromAppDir(appDir, ignoreFiles || []);
-    pkg.build(loader);
+    pkg.build();
     return pkg;
   }
 });

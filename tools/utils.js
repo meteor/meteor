@@ -3,6 +3,7 @@ var readline = require('readline');
 var _ = require('underscore');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
+var semver = require('semver');
 var os = require('os');
 
 var utils = exports;
@@ -137,6 +138,79 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
+// Given a version constraint string of the form "1.0.0" or "=1.2.3-rc0",
+// return an object with keys:
+// - version: the version part of the constraint, such as "1.0.0" or "1.2.3"
+// - exact: true if it was an exact constraint (started with '=')
+//
+// Throws an error if the input is not a valid version constaint.
+//
+// XXX probably shouldn't be throwing errors here -- need to recover
+// gracefully and print a reasonable error if the user typos their
+// version constraint in package or whatever
+exports.parseVersionConstraint = function (versionString) {
+  var versionDesc = { version: null, exact: false };
+
+  // XXX #noconstraint #geoff #changed
+  // XXX remove none when it is no longer used
+  if (versionString === "none" || versionString === null) {
+    return versionDesc;
+  }
+
+  if (versionString.charAt(0) === '=') {
+    versionDesc.exact = true;
+    versionString = versionString.substr(1);
+  }
+
+  // XXX check for a dash in the version in case of foo@1.2.3-rc0
+
+  if (! semver.valid(versionString))
+    throw new Error("Version string must look like semver (1.2.3) -- " + versionString);
+
+  versionDesc.version = versionString;
+
+  return versionDesc;
+};
+
+// Given a dependency specification of the form "foo", "bar@1.0.0" or
+// "baz@=1.2.3-rc0", return an object with keys:
+// - name: the name of the package specified, such as "foo" or "bar"
+// - version, exact: as in parseVersionConstraint. Present only if a
+//   version constraint was present in the input.
+//
+// Throws an error if the input is not a valid version constaint.
+//
+// XXX as with parseVersionConstraint, probably shouldn't throw
+//
+// XXX probably should rename to parsePackageSpec or something like
+// that, since it definitely contains a package name but may not
+// actually contain a constraint
+//
+// XXX should unify this with packages.parseSpec
+exports.parseConstraint = function (constraintString) {
+  if (typeof constraintString !== "string")
+    throw new TypeError("constraintString must be a string");
+
+  var splitted = constraintString.split('@');
+
+  var constraint = { name: "", version: null, exact: false };
+  var name = splitted[0];
+  var versionString = splitted[1];
+
+  if (! /^[a-z0-9-]+$/.test(name) || splitted.length > 2)
+    throw new Error("Package name must contain lowercase latin letters, digits or dashes");
+
+  constraint.name = name;
+
+  if (splitted.length === 2 && !versionString)
+    throw new Error("semver version cannot be empty");
+
+  if (versionString)
+    _.extend(constraint, utils.parseVersionConstraint(versionString));
+
+  return constraint;
+};
+
 // True if this looks like a valid email address. We deliberately
 // don't support
 // - quoted usernames (eg, "foo"@bar.com, " "@bar.com, "@"@bar.com)
@@ -144,5 +218,4 @@ exports.randomPort = function () {
 // because they're weird and we don't want them in our database.
 exports.validEmail = function (address) {
   return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
-}
-
+};

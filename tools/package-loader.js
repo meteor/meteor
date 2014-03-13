@@ -12,7 +12,7 @@ packageLoader.PackageLoader = function (options) {
   self.versions = options.versions;
 };
 
-_.extend(packageLoader.PackageLoader, {
+_.extend(packageLoader.PackageLoader.prototype, {
   // Given the name of a package, return a Package object, or throw an
   // error if the package wasn't included in the 'versions' passed on
   // initalization or isn't available (for example, hasn't been
@@ -38,17 +38,8 @@ _.extend(packageLoader.PackageLoader, {
       options.throwOnError = true;
     }
 
-    if (! self.versions && ! _.has(self.versions, name))
-      throw new Error("no version chosen for package?");
+    var loadPath = self.getLoadPathForPackage(name);
 
-    var version;
-    if (self.versions) {
-      version = self.versions[name];
-    } else {
-      version = null;
-    }
-
-    var loadPath = catalog.getLoadPathForPackage(name, version);
     if (! loadPath) {
       if (options.throwOnError === false)
         return null;
@@ -62,6 +53,31 @@ _.extend(packageLoader.PackageLoader, {
     return packageCache.loadPackageAtPath(name, loadPath, {
       forceRebuild: options.forceRebuild
     });
+  },
+
+  // As getPackage, but returns the path of the package that would be
+  // loaded rather than loading the package, and does not take any
+  // options. Returns null if the package is not available.
+  //
+  // XXX it's a little unfortunate that we have two functions called
+  // getLoadPathForPackage, one on this object (which does not take a
+  // version) and one on Catalog (which does). Maybe rename them to
+  // getPackageLoadPath / getPackageVersionLoadPath?
+  getLoadPathForPackage: function (name) {
+    var self = this;
+
+    console.log(name, self.versions);
+    if (self.versions && ! _.has(self.versions, name))
+      throw new Error("no version chosen for package?");
+
+    var version;
+    if (self.versions) {
+      version = self.versions[name];
+    } else {
+      version = null;
+    }
+
+    return catalog.getLoadPathForPackage(name, version);
   },
 
   // Given a slice set spec -- either a package name like "ddp", or a particular
