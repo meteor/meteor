@@ -4,6 +4,8 @@
   attempts, logging an audit trail, account lockout flags, etc. See:
   http://docs.meteor.com/#accounts_validLoginAttempt  #1815
 
+* Add support for HTML email in `Accounts.emailTemplates`.  #1785
+
 * Use "faye-websocket" (0.7.2) npm module instead of "websocket" (1.0.8) for
   server-to-server DDP.
 
