@@ -13,21 +13,18 @@ UI.body.rendered = function () {
 
       var newRank;
       if (!before) { // moving to the top of the list
-        newRank = SimpleRationalRanks.beforeFirst(
-          after.$ui.component.data().rank);
+        newRank = SimpleRationalRanks.beforeFirst(UI.getElementData(after).rank);
 
       } else if (!after) { // moving to the bottom of the list
-        newRank = SimpleRationalRanks.afterLast(
-          before.$ui.component.data().rank);
+        newRank = SimpleRationalRanks.afterLast(UI.getElementData(before).rank);
 
       } else {
         newRank = SimpleRationalRanks.between(
-          before.$ui.component.data().rank,
-          after.$ui.component.data().rank);
-
+          UI.getElementData(before).rank,
+          UI.getElementData(after).rank);
       }
 
-      Items.update(el.$ui.component.data()._id, {$set: {rank: newRank}});
+      Items.update(UI.getElementData(el)._id, {$set: {rank: newRank}});
     }
   });
 };

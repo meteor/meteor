@@ -329,3 +329,11 @@ UI.Component.notifyParented = function () {
 UI.Component.preserve = function () {
   Meteor._debug("The 'preserve' method on templates is now unnecessary and deprecated.");
 };
+
+// Gets the data context of the enclosing component that rendered a
+// given element
+UI.getElementData = function (el) {
+  var comp = UI.DomRange.getContainingComponent(el);
+  return comp && getComponentData(comp);
+};
+
