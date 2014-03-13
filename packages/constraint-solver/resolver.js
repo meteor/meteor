@@ -52,6 +52,9 @@ ConstraintSolver.Resolver2.prototype.resolve =
   function (dependencies, constraints, choices) {
   var self = this;
 
+  constraints = constraints || [];
+  choices = choices || [];
+
   dependencies = _.uniq(dependencies);
   constraints = _.uniq(constraints);
 
@@ -124,9 +127,9 @@ ConstraintSolver.Resolver2.prototype._resolve =
 
   var winningChoices = null;
   _.each(candidateVersions, function (uv) {
-    var nDependencies = _.copy(dependencies);
-    var nConstraints = _.copy(constraints);
-    var nChoices = _.copy(choices);
+    var nDependencies = _.clone(dependencies);
+    var nConstraints = _.clone(constraints);
+    var nChoices = _.clone(choices);
 
     nChoices.push(uv);
     var propagatedExactTransDeps =
@@ -154,8 +157,8 @@ ConstraintSolver.Resolver2.prototype._resolve =
 ConstraintSolver.Resolver2.prototype._propagateExactTransDeps = function (uv) {
   var self = this;
 
-  var exactTransitiveDepsVersions = uv.exactTransitiveDependenciesVersions();
-  var inexactTransitiveDeps = uv.inexactTransitiveDependencies();
+  var exactTransitiveDepsVersions = uv.exactTransitiveDependenciesVersions(self);
+  var inexactTransitiveDeps = uv.inexactTransitiveDependencies(self);
   var transitiveContraints = _.chain(exactTransitiveDepsVersions)
                               .map(function (uv) {
                                 return uv.constraints;
@@ -166,7 +169,7 @@ ConstraintSolver.Resolver2.prototype._propagateExactTransDeps = function (uv) {
   return {
     dependencies: inexactTransitiveDeps,
     constraints: transitiveContraints,
-    choices: exactTransitiveDependenciesVersions
+    choices: exactTransitiveDepsVersions
   };
 };
 
@@ -178,7 +181,7 @@ var unitVersionDoesntValidateConstraints = function (uv, constraints) {
 
 var choicesDontValidateConstraints = function (choices, constraints) {
   return _.all(choices, function (uv) {
-    return unitVersion(uv, constraints);
+    return unitVersionDoesntValidateConstraints(uv, constraints);
   });
 };
 
