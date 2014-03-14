@@ -5,7 +5,7 @@ var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
@@ -622,7 +622,7 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
       var usingIndirectly = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
 
       // Call the constraint solver.
-      var ConstraintSolver = unipackage.load({
+      var ConstraintSolver = uniload.load({
         packages: ['constraint-solver'],
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
@@ -1333,7 +1333,7 @@ main.registerCommand({
       }
       catalog.addLocalPackage(packageName, packageDir);
 
-      world = unipackage.load({
+      world = uniload.load({
         packages: [ packageName ],
         release: release.current.name
       });

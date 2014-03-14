@@ -15,8 +15,8 @@ var Future = require('fibers/future');
 var auth = exports;
 
 var getLoadedPackages = _.once(function () {
-  var unipackage = require('./unipackage.js');
-  return unipackage.load({
+  var uniload = require('./uniload.js');
+  return uniload.load({
     packages: [ 'meteor', 'livedata' ],
     release: release.current.name
   });

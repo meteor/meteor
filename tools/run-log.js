@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var release = require('./release.js');
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
@@ -18,7 +18,7 @@ var release = require('./release.js');
 
 
 var getLoggingPackage = _.once(function () {
-  var Log = unipackage.load({
+  var Log = uniload.load({
     packages: ['logging']
   }).logging.Log;
 

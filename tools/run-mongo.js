@@ -9,7 +9,7 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 var runLog = require('./run-log.js').runLog;
 
 var _ = require('underscore');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 
@@ -233,7 +233,7 @@ var launchMongo = function (options) {
       });
 
       // Load mongo-livedata so we'll be able to talk to it.
-      var mongoNpmModule = unipackage.load({
+      var mongoNpmModule = uniload.load({
         packages: [ 'mongo-livedata' ],
         release: release.current.name
       })['mongo-livedata'].MongoInternals.NpmModule;

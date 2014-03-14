@@ -168,7 +168,7 @@ var fs = require('fs');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
 var builder = require(path.join(__dirname, 'builder.js'));
-var unipackage = require(path.join(__dirname, 'unipackage.js'));
+var uniload = require(path.join(__dirname, 'uniload.js'));
 var watch = require('./watch.js');
 var release = require('./release.js');
 var Fiber = require('fibers');
@@ -467,7 +467,7 @@ _.extend(Target.prototype, {
 
     // Minify, if requested
     if (options.minify) {
-      var minifiers = unipackage.load({
+      var minifiers = uniload.load({
         packages: ['minifiers']
       }).minifiers;
       self.minifyJs(minifiers);
@@ -788,7 +788,7 @@ _.extend(ClientTarget.prototype, {
   // allow them to appear in the middle of a file.
   mergeCss: function () {
     var self = this;
-    var minifiers = unipackage.load({
+    var minifiers = uniload.load({
       packages: ['minifiers']
     }).minifiers;
     var CssTools = minifiers.CssTools;
@@ -881,7 +881,7 @@ _.extend(ClientTarget.prototype, {
   // template should be part of WebApp, and we should make sure that all
   // information that it needs is in the manifest (ie, make sure to include head
   // and body).  Then it will just need to do one level of templating instead
-  // of two.  Alternatively, use spacebars with unipackage.load here.
+  // of two.  Alternatively, use spacebars with uniload.load here.
   generateHtmlBoilerplate: function () {
     var self = this;
 
@@ -1201,7 +1201,7 @@ _.extend(JsImage.prototype, {
 
       if (item.sourceMap) {
         // Write the source map.
-        // XXX this code is very similar to saveAsUnipackage.
+        // XXX this code is very similar to unipackage.saveToPath.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
           item.targetPath + '.map',
           { data: new Buffer(item.sourceMap, 'utf8') }
@@ -1299,7 +1299,7 @@ JsImage.readFromDisk = function (controlFilePath) {
     };
 
     if (item.sourceMap) {
-      // XXX this is the same code as initFromUnipackage
+      // XXX this is the same code as unipackage.initFromPath
       rejectBadPath(item.sourceMap);
       loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
@@ -1441,7 +1441,7 @@ _.extend(ServerTarget.prototype, {
         path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
-    var script = unipackage.load({
+    var script = uniload.load({
       packages: ['dev-bundle-fetcher']
     })["dev-bundle-fetcher"].DevBundleFetcher.script();
     script = script.replace(/##PLATFORM##/g, platform);

@@ -110,7 +110,7 @@ var load = function (options) {
   return ret;
 };
 
-var unipackage = exports;
+var uniload = exports;
 _.extend(exports, {
   load: load
 });

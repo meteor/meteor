@@ -5,7 +5,7 @@ var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var Unipackage = require('./unipackage-class.js').Unipackage;
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 
 var compiler = exports;
@@ -519,7 +519,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // default slice is not allowed to depend on anything!)
   var jsAnalyze = null;
   if (! _.isEmpty(js) && inputSlice.pkg.name !== "js-analyze") {
-    jsAnalyze = unipackage.load({
+    jsAnalyze = uniload.load({
       packages: ["js-analyze"]
     })["js-analyze"].JSAnalyze;
   }

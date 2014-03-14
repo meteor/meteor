@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var release = require('./release.js');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var config = require('./config.js');
 
 var randomString = function (charsCount) {
@@ -162,7 +162,7 @@ exports.deployWithNewEmail = function (s, email, appName) {
 };
 
 var getLoadedPackages = _.once(function () {
-  return unipackage.load({
+  return uniload.load({
     packages: ['meteor', 'livedata'],
     release: release.current.name
   });

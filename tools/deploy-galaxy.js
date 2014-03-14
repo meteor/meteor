@@ -3,7 +3,7 @@ var files = require('./files.js');
 var config = require('./config.js');
 var path = require('path');
 var fs = require('fs');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Fiber = require('fibers');
 var httpHelpers = require('./http-helpers.js');
@@ -15,7 +15,7 @@ var buildmessage = require('./buildmessage.js');
 
 // a bit of a hack
 var getPackage = _.once(function () {
-  return unipackage.load({
+  return uniload.load({
     packages: [ 'meteor', 'livedata' ],
     release: release.current.name
   });
@@ -440,7 +440,7 @@ exports.logs = function (options) {
 
   try {
     var lastLogId = null;
-    var Log = unipackage.load({
+    var Log = uniload.load({
       packages: [ 'logging' ],
       release: release.current.name
     }).logging.Log;

@@ -5,7 +5,7 @@ var assert = require('assert');
 var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
-var unipackage = require('../../unipackage.js');
+var uniload = require('../../uniload.js');
 var release = require('../../release.js');
 
 var appWithPublic = path.join(__dirname, 'app-with-public');
@@ -120,7 +120,7 @@ var runTest = function () {
   console.log("Use Assets API from unipackage");
   assert.doesNotThrow(function () {
     release._resetPackageDirs([ path.join(appWithPrivate, "packages") ]);
-    var testPackage = unipackage.load({
+    var testPackage = uniload.load({
       library: release.current.library,
       packages: ['test-package']
     })['test-package'].TestAsset;

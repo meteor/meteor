@@ -9,8 +9,8 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 
 var getLoadedPackages = _.once(function () {
-  var unipackage = require('./unipackage.js');
-  return unipackage.load({
+  var uniload = require('./uniload.js');
+  return uniload.load({
     packages: [ 'meteor', 'livedata', 'minimongo', 'mongo-livedata' ],
     release: release.current.name
   });

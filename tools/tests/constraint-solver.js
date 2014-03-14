@@ -4,8 +4,8 @@ var selftest = require('../selftest.js');
 var semver = require('semver');
 var fail = selftest.fail;
 
-var unipackage = require('./unipackage.js');
-var LocalCollection = unipackage.load({
+var uniload = require('./uniload.js');
+var LocalCollection = uniload.load({
   packages: [ 'meteor', 'minimongo' ],
   release: release.current.name
 }).minimongo.LocalCollection;
