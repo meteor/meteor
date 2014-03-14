@@ -84,6 +84,8 @@ _.extend(PackageCache.prototype, {
     } else {
       // It's a source tree. Does it have a built unipackage inside it?
       var buildDir = path.join(loadPath, '.build');
+      // XXX XXX onlyIfUpToDate flag was removed. call
+      // compiler.checkUpToDate instead
       if (! options.forceRebuild &&
           fs.existsSync(buildDir) &&
           pkg.initFromUnipackage(name, buildDir,

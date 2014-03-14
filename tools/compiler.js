@@ -8,6 +8,20 @@ var Unipackage = require('./unipackage-class.js').Unipackage;
 
 var compiler = exports;
 
+// Whenever you change anything about the code that generates unipackages, bump
+// this version number. The idea is that the "format" field of the unipackage
+// JSON file only changes when the actual specified structure of the
+// unipackage/slice changes, but this version (which is build-tool-specific) can
+// change when the the contents (not structure) of the built output changes. So
+// eg, if we improve the linker's static analysis, this should be bumped.
+//
+// You should also update this whenever you update any of the packages used
+// directly by the unipackage creation process (eg js-analyze) since they do not
+// end up as watched dependencies. (At least for now, packages only used in
+// target creation (eg minifiers and dev-bundle-fetcher) don't require you to
+// update BUILT_BY, though you will need to quit and rerun "meteor run".)
+compiler.BUILT_BY = 'meteor/10';
+
 // XXX where should this go? I'll make it a random utility function
 // for now
 //
@@ -191,9 +205,6 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = path.resolve(inputSlice.pkg.sourceRoot, relPath);
     var filename = path.basename(relPath);
-    // XXX: _getSourceHandler
-    var handler = ! fileOptions.isAsset &&
-                  self._getSourceHandler(filename, packageLoader);
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
 
@@ -203,6 +214,19 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
       buildmessage.error("File not found: " + source.relPath);
       // recover by ignoring
       return;
+    }
+
+    // Find the handler for source files with this extension.
+    var handler = null;
+    if (! fileOptions.isAsset) {
+      var parts = filename.split('.');
+      for (var i = 0; i < parts.length; i++) {
+        var extension = parts.slice(i).join('.');
+        if (_.has(allHandlers, extension)) {
+          handler = allHandlers[extension];
+          break;
+        }
+      }
     }
 
     if (! handler) {
@@ -591,4 +615,59 @@ complier.compile = function (sourcePackage) {
     sources: _.uniq(self.sources),
     unipackage: unipackage
   };
+};
+
+// Check to see if a particular build of a package is up to date (that
+// is, if the source files haven't changed and the build-time
+// dependencies haven't changed, and if we're a sufficiently similar
+// version of Meteor to what built it that we believe we'd generate
+// identical code). True if we have dependency info and it
+// says that the package is up-to-date. False if a source file or
+// build-time dependency has changed.
+//
+// 'what' identifies the build to check for up-to-dateness and is an
+// object with exactly one of the following keys:
+// - path: a path on disk to a unipackage
+// - unipackage: a Unipackage object
+compiler.checkUpToDate = function (sourcePackage, unipackage) {
+  if (unipackage.forceNotUpToDate)
+    return false;
+
+  // Do we think we'd generate different contents than the tool that
+  // built this package?
+  if (unipackage.builtBy !== complier.BUILT_BY)
+    return false;
+
+  // XXX XXX XXX
+  var pluginProviderPackageDirs = unipackage.pluginProviderPackageDirs;
+
+  /*
+  // XXX XXX this shouldn't work this way at all. instead it should
+  // just get the resolved build-time dependencies from sourcePackage
+  // and make sure they match the versions that were used for the
+  // build.
+  var packageLoader = XXX;
+
+  // Are all of the packages we directly use (which can provide
+  // plugins which affect compilation) resolving to the same
+  // directory? (eg, have we updated our release version to something
+  // with a new version of a package?)
+  var packageResolutionsSame = _.all(
+    _pluginProviderPackageDirs, function (packageDir, name) {
+      return packageLoader.getLoadPathForPackage(name) === packageDir;
+    });
+  if (! packageResolutionsSame)
+    return false;
+  */
+
+  var watchSet = new watch.WatchSet();
+  watchSet.merge(unipackage.pluginWatchSet);
+  _.each(unipackage.slices, function (slice) {
+    watchSet.merge(slice.watchSet);
+  });
+
+  if (! watch.isUpToDate(watchSet))
+    return false;
+
+  return true;
 };

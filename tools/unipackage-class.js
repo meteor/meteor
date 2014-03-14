@@ -181,7 +181,16 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
   self.plugins = {};
 
-  // XXX this is likely to go away once we have build versions
+  // -- Information for up-to-date checks --
+
+  // Version number of the tool that built this unipackage
+  // (complier.BUILT_BY) or null if unknown
+  self.builtBy = null;
+
+  // If true, force the checkUpToDate to return false for this unipackage.
+  self.forceNotUpToDate = false;
+
+  // XXX this is likely to change once we have build versions
   //
   // A WatchSet for the full transitive dependencies for all plugins in this
   // package, as well as this package's package.js. If any of these dependencies
@@ -242,7 +251,7 @@ _.extend(Unipackage.prototype, {
   // constructor.
   addSlice: function (options) {
     var self = this;
-    self.slices.push(new UnipackageSlice(self, optinons));
+    self.slices.push(new UnipackageSlice(self, options));
   },
 
   architectures: function () {
@@ -388,15 +397,10 @@ _.extend(Unipackage.prototype, {
   // Load a Unipackage on disk.
   //
   // options:
-  // - onlyIfUpToDate: if true, check the unipackage's dependencies
-  //   (if present) to see if it's up to date (using the PackageLoader
-  //   to determine which build plugins to use.) If not, return false
-  //   without loading the package. Otherwise return true. (If
-  //   onlyIfUpToDate is not passed, always return true.)
   // - buildOfPath: If present, the source directory (as an absolute
   //   path on local disk) of which we think this unipackage is a
   //   build. If it's not (it was copied from somewhere else), we
-  //   consider it not up to date (in the sense of onlyIfUpToDate) so
+  //   consider it not up to date (in the sense of checkUpToDate) so
   //   that we can rebuild it and correct the absolute paths in the
   //   dependency information.
   initFromPath: function (name, dir, options) {
@@ -432,6 +436,21 @@ _.extend(Unipackage.prototype, {
     // XXX should comprehensively sanitize (eg, typecheck) everything
     // read from json files
 
+    // Read basic buildinfo.json info
+
+    self.builtBy = buildInfoJson.builtBy || null;
+
+    if (options.buildOfPath &&
+        (buildInfoJson.source !== options.buildOfPath)) {
+      // This catches the case where you copy a source tree that had a
+      // .build directory and then modify a file. Without this check
+      // you won't see a rebuild (even if you stop and restart
+      // meteor), at least not until you modify the *original* copies
+      // of the source files, because that is still where all of the
+      // dependency info points.
+      self.forceNotUpToDate = true;
+    }
+
     // Read the watch sets for each slice; keep them separate (for passing to
     // the Slice constructor below) as well as merging them into one big
     // WatchSet.
@@ -443,36 +462,16 @@ _.extend(Unipackage.prototype, {
       sliceWatchSets[sliceTag] = watchSet;
     });
 
-    // We do NOT put this (or anything!) onto self until we've passed the
-    // onlyIfUpToDate check.
-    var pluginWatchSet = watch.WatchSet.fromJSON(
+    // Read pluginWatchSet and pluginProviderPackageDirs. (In the
+    // multi-sub-unipackage case, these are guaranteed to be trivial
+    // (since we check that there's no buildinfo.json), so no need to
+    // merge.)
+    self.pluginWatchSet = watch.WatchSet.fromJSON(
       buildInfoJson.pluginDependencies);
     // This might be redundant (since pluginWatchSet was probably merged into
     // each slice watchSet when it was built) but shouldn't hurt.
-    mergedWatchSet.merge(pluginWatchSet);
-    var pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
-
-    // If we're supposed to check the dependencies, go ahead and do so
-    if (options.onlyIfUpToDate) {
-      // Do we think we'll generate different contents than the tool that built
-      // this package?
-      if (buildInfoJson.builtBy !== exports.BUILT_BY)
-        return false;
-
-      if (options.buildOfPath &&
-          (buildInfoJson.source !== options.buildOfPath)) {
-        // This catches the case where you copy a source tree that had
-        // a .build directory and then modify a file. Without this
-        // check you won't see a rebuild (even if you stop and restart
-        // meteor), at least not until you modify the *original*
-        // copies of the source files, because that is still where all
-        // of the dependency info points.
-        return false;
-      }
-
-      if (! self.checkUpToDate(mergedWatchSet, pluginProviderPackageDirs))
-        return false;
-    }
+    mergedWatchSet.merge(self.pluginWatchSet);
+    self.pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
 
     // If we are loading multiple unipackages, only take this stuff from the
     // first one.
@@ -491,10 +490,6 @@ _.extend(Unipackage.prototype, {
                                   self.defaultSlices || {});
     self.testSlices = _.extend(mainJson.testSlices,
                                self.testSlices || {});
-    // In the multi-sub-unipackage case, these are guaranteed to be trivial
-    // (since we check that there's no buildinfo.json), so no need to merge.
-    self.pluginWatchSet = pluginWatchSet;
-    self.pluginProviderPackageDirs = pluginProviderPackageDirs;
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -602,63 +597,6 @@ _.extend(Unipackage.prototype, {
     return true;
   },
 
-  // Try to check if this package is up-to-date (that is, whether its
-  // source files have been modified), using packageLoader to resolve
-  // build-time dependencies. True if we have dependency info and it
-  // says that the package is up-to-date. False if a source file or
-  // build-time dependency has changed.
-  //
-  // The arguments _watchSet and _pluginProviderPackageDirs are used when
-  // reading from disk when there are no slices yet; don't pass them from
-  // outside this file.
-  //
-  // XXX should this move to compiler?
-  checkUpToDate: function (_watchSet, _pluginProviderPackageDirs) {
-    var self = this;
-
-    if (! _watchSet) {
-      // This call was on an already-fully-loaded Package and we just want to
-      // see if it's changed. So we have some watchSets inside ourselves.
-      _watchSet = new watch.WatchSet();
-      _watchSet.merge(self.pluginWatchSet);
-      _.each(self.slices, function (slice) {
-        _watchSet.merge(slice.watchSet);
-      });
-    }
-    if (! _pluginProviderPackageDirs) {
-      _pluginProviderPackageDirs = self.pluginProviderPackageDirs;
-    }
-
-    // XXX As things currently are, we need a PackageLoader just to
-    // check to see if a build of a package is up to date, because we
-    // need to know if we're still using the same version of plugins
-    // such as coffeescript. This means that we have to run the
-    // constraint solver.. This could result in running the constraint
-    // solver way more than we'd like to. If that's the case, we
-    // should find a way to avoid it, such as keying the up-to-date
-    // check on the inputs to the constraint solver rather than the
-    // outputs.
-    //
-    // XXX XXX this is not the way this is supposed to work at all
-    // (and _makeBuildTimePackageLoader is not defined on this object,
-    // because it shouldn't be). checkUpToDate should actually be
-    // taking a PackageSource (with determined build time
-    // dependencies) as input.
-    var packageLoader = self._makeBuildTimePackageLoader();
-
-    // Are all of the packages we directly use (which can provide plugins which
-    // affect compilation) resolving to the same directory? (eg, have we updated
-    // our release version to something with a new version of a package?)
-    var packageResolutionsSame = _.all(
-      _pluginProviderPackageDirs, function (packageDir, name) {
-        return packageLoader.getLoadPathForPackage(name) === packageDir;
-      });
-    if (! packageResolutionsSame)
-      return false;
-
-    return watch.isUpToDate(_watchSet);
-  },
-
   // options:
   //
   // - buildOfPath: Optional. The absolute path on local disk of the
@@ -699,7 +637,7 @@ _.extend(Unipackage.prototype, {
       // platform-dependent data and should contain all sources of change to the
       // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
       var buildInfoJson = {
-        builtBy: exports.BUILT_BY,
+        builtBy: compiler.BUILT_BY,
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
         pluginProviderPackages: self.pluginProviderPackageDirs,
