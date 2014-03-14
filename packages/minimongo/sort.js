@@ -44,6 +44,17 @@ Minimongo.Sorter = function (spec) {
     throw Error("Bad sort specification: " + JSON.stringify(spec));
   }
 
+  // To implement affectedByModifier, we piggy-back on top of Matcher's
+  // affectedByModifier code; we create a selector that is affected by the same
+  // modifiers as this sort order. This is only implemented on the server.
+  if (self.affectedByModifier) {
+    var selector = {};
+    _.each(self._sortSpecParts, function (spec) {
+      selector[spec.path] = 1;
+    });
+    self._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
+  }
+
   self._keyComparator = composeComparators(
     _.map(self._sortSpecParts, function (spec, i) {
       return self._keyFieldComparator(i);
