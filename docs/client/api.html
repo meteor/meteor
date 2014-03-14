@@ -110,6 +110,11 @@ Example:
       check(roomId, String);
       var count = 0;
       var initializing = true;
+      
+      // Observe only returns after the initial `added` callbacks
+      // have run. Until then, we don't want to send a lot of
+      // `self.changed()` messages - hence tracking the
+      // `initializing` state.
       var handle = Messages.find({roomId: roomId}).observeChanges({
         added: function (id) {
           count++;
@@ -123,9 +128,9 @@ Example:
         // don't care about changed
       });
 
-      // Observe only returns after the initial added callbacks have
-      // run.  Now return an initial value and mark the subscription
-      // as ready.
+      // Instead, we'll send one `self.added()` message right
+      // after observe(Changes) has returned, and mark the 
+      // subscription as ready.
       initializing = false;
       self.added("counts", roomId, {count: count});
       self.ready();
@@ -182,8 +187,9 @@ publish handler, this is the place to stop the observes.
 When you subscribe to a record set, it tells the server to send records to the
 client.  The client stores these records in local [Minimongo
 collections](#meteor_collection), with the same name as the `collection`
-argument used in the publish handler's `added`, `changed`, and `removed`
-callbacks.  Meteor will queue incoming attributes until you declare the
+argument used in the publish handler's [`added`](#publish_added),
+[`changed`](#publish_changed), and [`removed`](#publish_removed)
+callbacks.  Meteor will queue incoming records until you declare the
 [`Meteor.Collection`](#meteor_collection) on the client with the matching
 collection name.
 
