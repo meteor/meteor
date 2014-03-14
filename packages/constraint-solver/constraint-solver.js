@@ -65,7 +65,11 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       _.each(slices, function (other, otherSliceName) {
         if (slice === other)
           return;
-        var constraint = self.resolver.getConstraint(otherSliceName, version);
+
+        // Constraint is the exact same version of a slice
+        var constraintStr = "=" + version;
+        var constraint =
+          self.resolver.getConstraint(otherSliceName, constraintStr);
         slice.addConstraint(constraint);
       });
     });
