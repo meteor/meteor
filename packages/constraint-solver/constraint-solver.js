@@ -58,6 +58,17 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
         }
       });
     });
+
+    // Every slice implies that if it is picked, other slices are constrained to
+    // the same version.
+    _.each(slices, function (slice, sliceName) {
+      _.each(slices, function (other, otherSliceName) {
+        if (slice === other)
+          return;
+        var constraint = self.resolver.getConstraint(otherSliceName, version);
+        slice.addConstraint(constraint);
+      });
+    });
   });
 };
 
