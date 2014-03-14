@@ -49,11 +49,12 @@ ConstraintSolver.Resolver.prototype.getConstraint =
 };
 
 ConstraintSolver.Resolver.prototype.resolve =
-  function (dependencies, constraints, choices) {
+  function (dependencies, constraints, choices, options) {
   var self = this;
 
   constraints = constraints || [];
   choices = choices || [];
+  options = options || {};
 
   dependencies = _.uniq(dependencies);
   constraints = _.uniq(constraints);
@@ -82,7 +83,7 @@ ConstraintSolver.Resolver.prototype.resolve =
     choices = _.union(choices, propagatedExactTransDeps.choices);
   });
 
-  var result = self._resolve(dependencies, constraints, choices);
+  var result = self._resolve(dependencies, constraints, choices, options);
 
   if (! result.success)
     throw new Error(result.failureMsg);
@@ -102,14 +103,14 @@ ConstraintSolver.Resolver.prototype.resolve =
 //
 // NOTE: assumes that exact dependencies are already propagated
 ConstraintSolver.Resolver.prototype._resolve =
-  function (dependencies, constraints, choices) {
+  function (dependencies, constraints, choices, options) {
   var self = this;
 
   if (! choicesDontValidateConstraints(choices, constraints))
     return { success: false,
              failureMsg: "initial choices are validating constraints" };
 
-  if (_.isEmpty(dependencies))
+  if (_.isEmpty(dependencies) || options.stopAfterFirstPropagation)
     return { success: true, choices: choices };
 
   var candidateName = dependencies[0];
@@ -139,7 +140,7 @@ ConstraintSolver.Resolver.prototype._resolve =
     nConstraints = _.union(nConstraints, propagatedExactTransDeps.constraints);
     nChoices = _.union(nChoices, propagatedExactTransDeps.choices);
 
-    var result = self._resolve(nDependencies, nConstraints, nChoices);
+    var result = self._resolve(nDependencies, nConstraints, nChoices, options);
 
     if (result.success) {
       winningChoices = result.choices;

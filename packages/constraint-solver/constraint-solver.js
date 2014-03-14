@@ -78,10 +78,69 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 
 ConstraintSolver.PackagesResolver.prototype.resolve = function (dependencies) {
   var self = this;
+  var dc = self._splitDepsToConstraints(dependencies);
+
+  // XXX resolver.resolve can throw an error, should have error handling with
+  // proper error translation.
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints);
+
+  var resultChoices = {};
+  _.each(res, function (uv) {
+    resultChoices[uv.name.split(':')[0]] = uv.version;
+  });
+
+  return resultChoices;
 };
 
 ConstraintSolver.PackagesResolver.prototype.propagatedExactDeps =
   function (dependencies) {
   var self = this;
+  var dc = self._splitDepsToConstraints(dependencies);
+
+  // XXX resolver.resolve can throw an error, should have error handling with
+  // proper error translation.
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints, null,
+                                  { stopAfterFirstPropagation: true });
+
+  var resultChoices = {};
+  _.each(res, function (uv) {
+    resultChoices[uv.name.split(':')[0]] = uv.version;
+  });
+
+  return resultChoices;
+};
+
+// takes deps of form {'foo': '1.2.3', 'bar': null, 'quz': '=1.2.5'} and splits
+// them into dependencies ['foo:main.os', 'bar:main.browser',
+// 'quz:main.browser'] + constraints
+// XXX right now creates a dependency for every 'main' slice it can find
+ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
+  function (deps) {
+  var self = this;
+  var dependencies = [];
+  var constraints = [];
+  var slicesNames = _.keys(self.resolver.unitsVersions);
+
+  _.each(deps, function (constraint, packageName) {
+    var slicesForPackage = _.filter(slicesNames, function (slice) {
+      // we pick everything that starts with 'foo:main.'
+      var slicePrefix = packageName + ":main.";
+      return slice.substr(0, slicePrefix.length) === slicePrefix;
+    });
+
+    if (_.isEmpty(slicesForPackage))
+      throw new Error("Resolver has no knowldge about package: " + packageName);
+
+    _.each(slicesForPackage, function (sliceName) {
+      dependencies.push(sliceName);
+
+      // add the constraint if such exists
+      if (constraint) {
+        constraints.push(self.resolver.getConstraint(sliceName, constraint));
+      }
+    });
+  });
+
+  return { dependencies: dependencies, constraints: constraints };
 };
 
