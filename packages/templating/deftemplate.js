@@ -125,6 +125,10 @@ Template.__define__ = function (name, raw_func) {
     throw new Error("Sorry, '__define__' is a special name and " +
                     "cannot be used as the name of a template");
 
+  if (name && Template.hasOwnProperty(templateName))
+    throw new Error("There are multiple templates named '" + name +
+                    "'. Each template needs a unique name.");
+
   // Define the function assigned to Template.<name>.
 
   var partial = function (data) {
@@ -207,10 +211,6 @@ Template.__define__ = function (name, raw_func) {
 
 
   if (name) {
-    if (Template[name])
-      throw new Error("There are multiple templates named '" + name +
-                      "'. Each template needs a unique name.");
-
     Template[name] = partial;
     _.extend(partial, templateBase);
     partial._tmpl_data = {};
