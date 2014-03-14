@@ -94,7 +94,7 @@ var loadOrderSort = function (a, b) {
 //
 // Do not include the source files in watchSet. They will be
 // added at compile time when the sources are actually read.
-var Slice = function (pkg, options) {
+var SourceSlice = function (pkg, options) {
   var self = this;
   options = options || {};
   self.pkg = pkg;
@@ -106,10 +106,6 @@ var Slice = function (pkg, options) {
   // The architecture (fully or partially qualified) that can use this
   // slice.
   self.arch = options.arch;
-
-  // Unique ID for this slice. Unique across all slices of all
-  // packages, but constant across reloads of this slice.
-  self.id = pkg.id + "." + options.name + "@" + self.arch;
 
   // Packages used. The ordering is significant only for determining
   // import symbol priority (it doesn't affect load order), and a
@@ -130,22 +126,23 @@ var Slice = function (pkg, options) {
   // It is an error for both unordered and weak to be true, because
   // such a dependency would have no effect.
   //
-  // In most places, you want to use slice.eachUsedSlice() instead of
-  // slice.uses, which also takes into account implied packages.
-  self.uses = options.uses;
+  // In most places, instead of using 'uses' directly, you want to use
+  // something like compiler.eachUsedSlice so you also take into
+  // account implied packages.
 
-  // Packages which are "implied" by using this package. If a slice X uses this
-  // slice Y, and Y implies Z, then X will effectively use Z as well (and get
-  // its imports and plugins).  An array of objects of the same type as the
-  // elements of self.uses (although for now unordered and weak are not
-  // allowed).
+  // Packages which are "implied" by using this package. If a slice X
+  // uses this slice Y, and Y implies Z, then X will effectively use Z
+  // as well (and get its imports and plugins).  An array of objects
+  // of the same type as the elements of self.uses (although for now
+  // unordered and weak are not allowed).
   self.implies = options.implies || [];
 
-  // A function that returns the source files for this slice. Array of objects
-  // with keys "relPath" and "fileOptions". Null if loaded from unipackage.
+  // A function that returns the source files for this slice. Array of
+  // objects with keys "relPath" and "fileOptions". Null if loaded
+  // from unipackage.
   //
-  // fileOptions is optional and represents arbitrary options passed to
-  // "api.add_files"; they are made available on to the plugin as
+  // fileOptions is optional and represents arbitrary options passed
+  // to "api.add_files"; they are made available on to the plugin as
   // compileStep.fileOptions.
   //
   // This is a function rather than a literal array because for an
@@ -155,17 +152,17 @@ var Slice = function (pkg, options) {
   // local plugins in this package) to compute this.
   self.getSourcesFunc = options.getSourcesFunc || null;
 
-  // True if this slice is not permitted to have any exports, and in fact should
-  // not even define `Package.name` (ie, test slices).
+  // True if this slice is not permitted to have any exports, and in
+  // fact should not even define `Package.name` (ie, test slices).
   self.noExports = options.noExports || false;
 
-  // Symbols that this slice should export. List of symbols (as strings). Null
-  // on built packages (see packageVariables instead), or in packages where
-  // noExports is set.
+  // Symbols that this slice should export. List of symbols (as
+  // strings). Null on packages where noExports is set.
   self.declaredExports = options.declaredExports || null;
 
   // Files and directories that we want to monitor for changes in
-  // development mode, such as source files and package.js, as a watch.WatchSet.
+  // development mode, such as source files and package.js, as a
+  // watch.WatchSet.
   self.watchSet = options.watchSet || new watch.WatchSet();
 
   // Absolute path to the node_modules directory to use at runtime to
@@ -178,26 +175,8 @@ var Slice = function (pkg, options) {
 // PackageSource
 ///////////////////////////////////////////////////////////////////////////////
 
-// XXX This object conflates two things that now seem to be almost
-// totally separate: source code for a package, and an actual built
-// package that is ready to be used. In fact it contains a list of
-// Slice objects about which the same thing can be said. To see the
-// distinction, ask yourself, what fields are set when the package is
-// initialized via initFromUnipackage?
-//
-// Package and Slice should each be split into two objects, eg
-// PackageSource and SliceSource versus BuiltPackage and BuiltSlice
-// (find better names, though).
-
-var nextPackageId = 1;
-var Package = function (packageDirectoryForBuildInfo) {
+var PackageSource = function (packageDirectoryForBuildInfo) {
   var self = this;
-
-  // A unique ID (guaranteed to not be reused in this process -- if
-  // the package is reloaded, it will get a different id the second
-  // time)
-  // XXX: We need a unique ID to put packages in maps. Does it belong here?
-  self.id = nextPackageId++;
 
   // The name of the package, or null for an app pseudo-package or
   // collection. The package's exports will reside in Package.<name>.
@@ -261,7 +240,7 @@ var Package = function (packageDirectoryForBuildInfo) {
   self.pluginInfo = {};
 };
 
-_.extend(Package.prototype, {
+_.extend(PackageSource.prototype, {
   // Make a dummy (empty) packageSource that contains nothing of interest.
   // XXX: Do we need this
   initEmpty: function (name) {
@@ -269,122 +248,6 @@ _.extend(Package.prototype, {
     self.name = name;
     self.defaultSlices = {'': []};
     self.testSlices = {'': []};
-  },
-
-  // Return dependency metadata for all slices, in the format needed
-  // by the package catalog.
-  getDependencyMetadata: function () {
-    var self = this;
-    var ret = self._computeDependencyMetadata();
-    if (! ret)
-      throw new Error("inconsistent dependency constraint across slices?");
-    return ret;
-  },
-
-  // If dependencies aren't consistent across slices, return false and
-  // also log a buildmessage error if inside a buildmessage job. Else
-  // return true.
-  // XXX: Check that this is used when refactoring is done.
-  _checkCrossSliceVersionConstraints: function () {
-    var self = this;
-    return !! self._computeDependencyMetadata(true);
-  },
-
-  // Compute the return value for getDependencyMetadata, or return
-  // null if there is a dependency that doesn't have the same
-  // constraint across all slices (and, if logError is true, log a
-  // buildmessage error).
-  _computeDependencyMetadata: function (logError) {
-    var self = this;
-    var dependencies = {};
-    var allConstraints = {}; // for error reporting. package name to array
-    var failed = false;
-
-    _.each(self.slices, function (slice) {
-      // XXX also iterate over "implies"
-      _.each(slice.uses, function (use) {
-        if (!_.has(dependencies, use.package)) {
-          dependencies[use.package] = {
-            constraint: null,
-            references: []
-          };
-          allConstraints[use.package] = [];
-        }
-        var d = dependencies[use.package];
-
-        if (use.constraint) {
-          allConstraints[use.package].push(use.constraint);
-
-          if (d.constraint === null) {
-            d.constraint = use.constraint;
-          } else if (d.constraint !== use.constraint) {
-            failed = true;
-          }
-        }
-
-        d.references.push({
-          slice: slice.sliceName,
-          arch: archinfo.withoutSpecificOs(slice.arch),
-          targetSlice: use.slice,  // usually undefined, for "default slices"
-          weak: use.weak,
-          unordered: use.unordered
-        });
-      });
-    });
-
-    if (failed && logError) {
-      _.each(allConstraints, function (constraints, name) {
-        constraints = _.uniq(constraints);
-        if (constraints.length > 1) {
-          buildmessage.error(
-            "The version constraint for a dependency must be the same " +
-              "at every place it is mentioned in a package. " +
-              "'" + name + "' is constrained both as "  +
-              constraints.join(' and ') + ". Change them to match.");
-          // recover by returning false (the caller had better detect
-          // this and use its own recovery logic)
-        }
-      });
-    }
-
-    return failed ? null : dependencies;
-  },
-
-  // Compute build-time dependencies for this package and return a
-  // PackageLoader that can be used to load all of this package's
-  // build-time dependencies.
-  //
-  // XXX this is called from several places (eg, checkUpToDate and
-  // build) and each time it's called we recompute it. It should
-  // really be memoized.
-  _makeBuildTimePackageLoader: function () {
-    var self = this;
-
-    // #RunningTheConstraintSolverToBuildAPackage
-
-    var dependencyMetadata =
-      self._computeDependencyMetadata(true /* logError */);
-    if (! dependencyMetadata) {
-      // If _computeDependencyMetadata failed, I guess we can try to
-      // recover by returning a PackageLoader with no versions in
-      // it. This will cause a lot of 'package not found' errors, so a
-      // better approach would proabably be to actually have this
-      // function return null and make the caller do a better job of
-      // recovering.
-      return new packageLoader.PackageLoader({ });
-    }
-
-    var constraints = {};
-    _.each(dependencyMetadata, function (info, packageName) {
-      constraints[packageName] = info.constraint;
-    });
-
-    var constraintSolver = require('./constraint-solver.js');
-    var resolver = new constraintSolver.Resolver;
-    var versions = resolver.resolve(constraints);
-    console.log("YAAAAAAY", versions);
-
-    return new packageLoader.PackageLoader({ versions: versions });
   },
 
   // Programmatically initialize a PackageSource from scratch.
@@ -1051,8 +914,6 @@ _.extend(Package.prototype, {
               });
 
       // Determine source files
-      // XXX: extensions used to be slice._registeredExtensions(packageLoader).
-      // XXX: watchSet used to be slice.watchSet
       slice.getSourcesFunc = function (extensions, watchSet) {
         var sourceInclude = _.map(
           extensions,
@@ -1213,6 +1074,122 @@ _.extend(Package.prototype, {
     }
 
     self.defaultSlices = { browser: ['client'], 'os': ['server'] };
+  },
+
+  // Return dependency metadata for all slices, in the format needed
+  // by the package catalog.
+  getDependencyMetadata: function () {
+    var self = this;
+    var ret = self._computeDependencyMetadata();
+    if (! ret)
+      throw new Error("inconsistent dependency constraint across slices?");
+    return ret;
+  },
+
+  // If dependencies aren't consistent across slices, return false and
+  // also log a buildmessage error if inside a buildmessage job. Else
+  // return true.
+  // XXX: Check that this is used when refactoring is done.
+  _checkCrossSliceVersionConstraints: function () {
+    var self = this;
+    return !! self._computeDependencyMetadata(true);
+  },
+
+  // Compute the return value for getDependencyMetadata, or return
+  // null if there is a dependency that doesn't have the same
+  // constraint across all slices (and, if logError is true, log a
+  // buildmessage error).
+  _computeDependencyMetadata: function (logError) {
+    var self = this;
+    var dependencies = {};
+    var allConstraints = {}; // for error reporting. package name to array
+    var failed = false;
+
+    _.each(self.slices, function (slice) {
+      // XXX also iterate over "implies"
+      _.each(slice.uses, function (use) {
+        if (!_.has(dependencies, use.package)) {
+          dependencies[use.package] = {
+            constraint: null,
+            references: []
+          };
+          allConstraints[use.package] = [];
+        }
+        var d = dependencies[use.package];
+
+        if (use.constraint) {
+          allConstraints[use.package].push(use.constraint);
+
+          if (d.constraint === null) {
+            d.constraint = use.constraint;
+          } else if (d.constraint !== use.constraint) {
+            failed = true;
+          }
+        }
+
+        d.references.push({
+          slice: slice.sliceName,
+          arch: archinfo.withoutSpecificOs(slice.arch),
+          targetSlice: use.slice,  // usually undefined, for "default slices"
+          weak: use.weak,
+          unordered: use.unordered
+        });
+      });
+    });
+
+    if (failed && logError) {
+      _.each(allConstraints, function (constraints, name) {
+        constraints = _.uniq(constraints);
+        if (constraints.length > 1) {
+          buildmessage.error(
+            "The version constraint for a dependency must be the same " +
+              "at every place it is mentioned in a package. " +
+              "'" + name + "' is constrained both as "  +
+              constraints.join(' and ') + ". Change them to match.");
+          // recover by returning false (the caller had better detect
+          // this and use its own recovery logic)
+        }
+      });
+    }
+
+    return failed ? null : dependencies;
+  },
+
+  // Compute build-time dependencies for this package and return a
+  // PackageLoader that can be used to load all of this package's
+  // build-time dependencies.
+  //
+  // XXX this is called from several places (eg, checkUpToDate and
+  // build) and each time it's called we recompute it. It should
+  // really be memoized.
+  _makeBuildTimePackageLoader: function () {
+    var self = this;
+
+    // #RunningTheConstraintSolverToBuildAPackage
+
+    var dependencyMetadata =
+      self._computeDependencyMetadata(true /* logError */);
+    if (! dependencyMetadata) {
+      // If _computeDependencyMetadata failed, I guess we can try to
+      // recover by returning a PackageLoader with no versions in
+      // it. This will cause a lot of 'package not found' errors, so a
+      // better approach would proabably be to actually have this
+      // function return null and make the caller do a better job of
+      // recovering.
+      return new packageLoader.PackageLoader({ });
+    }
+
+    var constraints = {};
+    _.each(dependencyMetadata, function (info, packageName) {
+      constraints[packageName] = info.constraint;
+    });
+
+    var constraintSolver = require('./constraint-solver.js');
+    var resolver = new constraintSolver.Resolver;
+    var versions = resolver.resolve(constraints);
+    console.log("YAAAAAAY", versions);
+
+    return new packageLoader.PackageLoader({ versions: versions });
   }
 });
 

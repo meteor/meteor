@@ -4,19 +4,71 @@ var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
-var UnipackageSlice = require('./unipackage-class.js').UnipackageSlice;
 var Unipackage = require('./unipackage-class.js').Unipackage;
 
-// Process all source files through the appropriate handlers and run the prelink
-// phase on any resulting JavaScript. Return a compiled UnipackageSlice object.
+var compiler = exports;
+
+// XXX where should this go? I'll make it a random utility function
+// for now
 //
-// inputSlice is a SourceSlice containing the source information for the
-// final compiled slice.
+// 'dependencies' is the 'uses' attribute from a UnipackageSlice. Call
+// 'callback' with each slice (of architecture matching `arch`)
+// referenced by that dependency list. This includes directly used
+// slices, and slices that are transitively "implied" by used
+// slices. (But not slices that are used by slices that we use!)
+// Options are skipWeak and skipUnordered, meaning to ignore direct
+// "uses" that are weak or unordered.
+//
+// packageLoader is the PackageLoader that should be used to resolve
+// the dependencies.
+compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
+                                   callback) {
+  if (typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+
+  var processedSliceId = {};
+  var usesToProcess = [];
+  _.each(uses, function (use) {
+    if (options.skipUnordered && use.unordered)
+      return;
+    if (options.skipWeak && use.weak)
+      return;
+    usesToProcess.push(use);
+  });
+
+  while (!_.isEmpty(usesToProcess)) {
+    var use = usesToProcess.shift();
+
+    var slices =
+      packageLoader.getSlices(_.pick(use, 'package', 'spec'),
+                                    arch);
+    _.each(slices, function (slice) {
+      if (_.has(processedSliceId, slice.id))
+        return;
+      processedSliceId[slice.id] = true;
+      callback(slice, {
+        unordered: !!use.unordered,
+        weak: !!use.weak
+      });
+
+      _.each(slice.implies, function (implied) {
+        usesToProcess.push(implied);
+      });
+    });
+  }
+};
+
+// inputSlice is a SourceSlice to compile. Process all source files
+// through the appropriate handlers and run the prelink phase on any
+// resulting JavaScript. Create a new UnipackageSlice and add it to
+// 'unipackage'.
 //
 // packageLoader is the PackageLoader to use to validate that the
-// slice's dependencies actually exist (for cleaner error
-// messages).
+// slice's dependencies actually exist (for cleaner error messages).
 //
+// Returns a list of source files that were used in the compilation.
 var compileSlice = function (unipackage, inputSlice, packageLoader) {
   var isApp = ! inputSlice.pkg.name;
   var resources = [];
@@ -25,7 +77,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // XXX: Provide a clone method on watchset.
   var watchSet = watch.WatchSet.fromJSON(inputSlice.watchSet.toJSON());
 
-  // Preemptively check to make sure that each of the packages we
+  // (1) Preemptively check to make sure that each of the packages we
   // reference actually exist. If we find a package that doesn't
   // exist, emit an error and remove it from the package list. That
   // way we get one error about it instead of a new error at each
@@ -41,10 +93,83 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     }
     return true;
   };
+
   var uses = _.filter(inputSlice.uses, checkDependency);
   var implies = _.filter(inputSlice.implies, checkDependency);
 
+  // (2) Determine and load active plugins
 
+  // XXX we used to include our own extensions only if we were the
+  // "use" role. now we include them everywhere because we don't have
+  // a special "use" role anymore. it's not totally clear to me what
+  // the correct behavior should be -- we need to resolve whether we
+  // think about extensions as being global to a package or particular
+  // to a slice.
+
+  // (there's also some weirdness here with handling implies, because
+  // the implies field is on the target slice, but we really only care
+  // about packages.)
+  var activePluginPackages = [unipackage];
+
+  // We don't use plugins from weak dependencies, because the ability
+  // to compile a certain type of file shouldn't depend on whether or
+  // not some unrelated package in the target has a dependency.
+  //
+  // We pass archinfo.host here, not self.arch, because it may be more
+  // specific, and because plugins always have to run on the host
+  // architecture.
+  compiler.eachUsedSlice(
+    uses, archinfo.host(), packageLoader, { skipWeak: true },
+    function (usedSlice) {
+      activePluginPackages.push(usedSlice.pkg);
+    }
+  );
+
+  activePluginPackages = _.uniq(activePluginPackages);
+
+  // (3) Assemble the list of source file handlers from the plugins
+  var allHandlers = {};
+
+  allHandlers['js'] = function (compileStep) {
+    // This is a hardcoded handler for *.js files. Since plugins
+    // are written in JavaScript we have to start somewhere.
+    compileStep.addJavaScript({
+      data: compileStep.read().toString('utf8'),
+      path: compileStep.inputPath,
+      sourcePath: compileStep.inputPath,
+      // XXX eventually get rid of backward-compatibility "raw" name
+      // XXX COMPAT WITH 0.6.4
+      bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
+    });
+  };
+
+  _.each(activePluginPackages, function (otherPkg) {
+    _.each(otherPkg.sourceHandlers, function (handler, ext) {
+      if (ext in allHandlers && allHandlers[ext] !== handler) {
+        buildmessage.error(
+          "conflict: two packages included in " +
+            (self.pkg.name || "the app") + ", " +
+            (allHandlers[ext].pkg.name || "the app") + " and " +
+            (otherPkg.name || "the app") + ", " +
+            "are both trying to handle ." + ext);
+        // Recover by just going with the first handler we saw
+      } else {
+        allHandlers[ext] = handler;
+      }
+    });
+  });
+
+  // (4) Determine source files
+  // Note: sourceExtensions does not include leading dots
+  // Note: the getSourcesFunc function isn't expected to add its
+  // source files to watchSet; rather, the watchSet is for other
+  // things that the getSourcesFunc consulted (such as directory
+  // listings or, in some hypothetical universe, control files) to
+  // determine its source files.
+  var sourceExtensions = _.keys(allHandlers);
+  var sourceItems = inputSlice.getSourcesFunc(sourceExtensions, watchSet);
+
+  // (5) Process each source file
   var addAsset = function (contents, relPath, hash) {
     // XXX hack
     if (! inputSlice.pkg.name)
@@ -61,7 +186,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     sources.push(relPath);
   };
 
-  _.each(inputSlice.getSourcesFunc(), function (source) {
+  _.each(sourceItems, function (source) {
     var relPath = source.relPath;
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = path.resolve(inputSlice.pkg.sourceRoot, relPath);
@@ -288,7 +413,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     }
   });
 
-  // Phase 1 link
+  // (6) Run Phase 1 link
 
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
@@ -332,6 +457,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   });
   */
 
+  // (7) Determine captured variables
   var packageVariables = [];
   var packageVariableNames = {};
   _.each(self.declaredExports, function (symbol) {
@@ -352,9 +478,10 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     packageVariableNames[name] = true;
   });
 
-  var retSlice = new UnipackageSlice(unipackage, {
+  // (8) Output slice object
+  unipackage.addSlice({
     sliceName: inputSlice.sliceName,
-    arch: inputSlice.arch, //XXX: arch?
+    arch: inputSlice.arch, // XXX: arch?
     uses: uses,
     implies: implies,
     watchSet: watchSet,
@@ -365,17 +492,19 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     resources: resources
   });
 
-  return {
-    slice: retSlice,
-    sources: sources
-  };
-
+  return sources;
 };
 
 // Build a PackageSource into a Unipackage by running its source files through
 // the appropriate compiler plugins. Once build has completed, any errors
 // detected in the package will have been emitted to buildmessage.
-compile = function (sourcePackage) {
+//
+// Returns an object with keys:
+// - unipackage: the build Unipackage
+// - sources: array of source files (identified by their path on local
+//   disk) that were used by the build (the source files you'd have to
+//   ship to a different machine to replicate the build there)
+complier.compile = function (sourcePackage) {
   var sources = [];
   var pluginWatchSet = new watch.WatchSet();
   var plugins = {};
@@ -421,10 +550,12 @@ compile = function (sourcePackage) {
       pluginWatchSet.merge(buildResult.watchSet);
 
       // XXX: Record build-time dependencies
-      /*// Remember the versions of all of the build-time dependencies
+      /*
+      // Remember the versions of all of the build-time dependencies
       // that were used.
       _.extend(self.pluginProviderPackageDirs,
-               buildResult.pluginProviderPackageDirs);*/
+               buildResult.pluginProviderPackageDirs);
+      */
 
       // Register the built plugin's code.
       if (!_.has(plugins, info.name))
@@ -433,18 +564,27 @@ compile = function (sourcePackage) {
     });
   });
 
-  // XXX: what to do this should probably be passed in.
-  //var packageLoader = self._makeBuildTimePackageLoader();
-
-  // XXX: Now we just need a unipackage!
   var unipackage = new Unipackage();
+  unipackage.initFromOptions({
+    name: sourcePackage.name,
+    metadata: sourcePackage.metadata,
+    version: sourcePackage.version,
+    earliestCompatibleVersion: sourcePackage.earliestCompatibleVersion,
+    defaultSlices: sourcePackage.defaultSlices,
+    testSlices: sourcePackage.testSlices,
+    packageDirectoryForBuildInfo: sourcePackage.packageDirectoryForBuildInfo,
+    plugins: plugins,
+    pluginWatchSet: pluginWatchSet
+  });
+
+  // XXX: what to do? this should probably be passed in.
+  // var packageLoader = self._makeBuildTimePackageLoader();
 
   // Build slices. Might use our plugins, so needs to happen
   // second.
   _.each(sourcePackage.slices, function (slice) {
-    var result = compileSlice(unipackage, slice, packageLoader);
+    var sources = compileSlice(unipackage, slice, packageLoader);
     sources.push.apply(sources, result.sources);
-    unipackage.addSlice(result.slice);
   });
 
   return {

@@ -1,3 +1,7 @@
+var rejectBadPath = function (p) {
+  if (p.match(/\.\./))
+    throw new Error("bad path: " + p);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // UnipackageSlice
@@ -14,7 +18,8 @@
 // - prelinkFiles
 // - packageVariables
 // - resources
-//
+
+var nextUniqueSliceId = 1;
 var UnipackageSlice = function (unipackage, options) {
   var self = this;
   options = options || {};
@@ -23,12 +28,19 @@ var UnipackageSlice = function (unipackage, options) {
   // These have the same meaning as they do in SourceSlice.
   self.sliceName = options.name;
   self.arch = options.arch;
-  self.id = pkg.id + "." + options.name + "@" + self.arch;
   self.uses = options.uses;
   self.implies = options.implies || [];
   self.noExports = options.noExports;
   self.watchSet = options.watchSet || new watch.WatchSet();
   self.nodeModulesPath = options.nodeModulesPath;
+
+  // Each UnipackageSlice is given a unique id when it's loaded (it is
+  // not saved to disk). This is just a convenience to make it easier
+  // to keep track of UnipackageSlices in a map; it's used by bundler
+  // and compiler. We put some human readable info in here too to make
+  // debugging easier.
+  self.id = unipackage.name + "." + self.sliceName + "@" + self.arch + "#" +
+    (nextUniqueSliceId ++);
 
   // Prelink output.
   //
@@ -36,9 +48,10 @@ var UnipackageSlice = function (unipackage, options) {
   // array of objects with keys 'source' and 'servePath', both strings -- see
   // prelink() in linker.js)
   //
-  // 'packageVariables' are are variables that are syntactically globals in our
-  // input files and which we capture with a package-scope closure. A list of
-  // objects with keys 'name' (required) and 'export' (true, 'tests', or falsy).
+  // 'packageVariables' are variables that are syntactically globals
+  // in our input files and which we capture with a package-scope
+  // closure. A list of objects with keys 'name' (required) and
+  // 'export' (true, 'tests', or falsy).
   //
   // Both of these are saved into slices on disk, and are inputs into the final
   // link phase, which inserts the final JavaScript resources into
@@ -65,11 +78,9 @@ var UnipackageSlice = function (unipackage, options) {
   //
   // sourceMap: Allowed only for "js". If present, a string.
   self.resources = options.resources;
-
 };
 
 _.extend(UnipackageSlice.prototype, {
-
   // Get the resources that this function contributes to a bundle, in
   // the same format as self.resources as documented above. This
   // includes static assets and fully linked JavaScript.
@@ -89,9 +100,6 @@ _.extend(UnipackageSlice.prototype, {
   getResources: function (bundleArch, packageLoader) {
     var self = this;
 
-    if (! self.isBuilt)
-      throw new Error("getting resources of unbuilt slice?" + self.pkg.name + " " + self.sliceName + " " + self.arch);
-
     if (! archinfo.matches(bundleArch, self.arch))
       throw new Error("slice of arch '" + self.arch + "' does not support '" +
                       bundleArch + "'?");
@@ -105,7 +113,8 @@ _.extend(UnipackageSlice.prototype, {
     // shouldn't be affected by the non-local decision of whether or not an
     // unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
-    self.eachUsedSlice(
+    compiler.eachUsedSlice(
+      self.uses,
       bundleArch, packageLoader,
       {skipWeak: true, skipUnordered: true}, function (otherSlice) {
         if (! otherSlice.isBuilt)
@@ -143,156 +152,752 @@ _.extend(UnipackageSlice.prototype, {
     });
 
     return _.union(self.resources, jsResources); // union preserves order
-  },
-
-  // Calls `callback` with each slice (of architecture matching `arch`) that is
-  // "used" by this slice. This includes directly used slices, and slices that
-  // are transitively "implied" by used slices. (But not slices that are used by
-  // slices that we use!)  Options are skipWeak and skipUnordered, meaning to
-  // ignore direct "uses" that are weak or unordered.
-  //
-  // packageLoader is the PackageLoader that should be used to resolve
-  // the package's bundle-time dependencies.
-  eachUsedSlice: function (arch, packageLoader, options, callback) {
-    var self = this;
-    if (typeof options === "function") {
-      callback = options;
-      options = {};
-    }
-
-    var processedSliceId = {};
-    var usesToProcess = [];
-    _.each(self.uses, function (use) {
-      if (options.skipUnordered && use.unordered)
-        return;
-      if (options.skipWeak && use.weak)
-        return;
-      usesToProcess.push(use);
-    });
-
-    while (!_.isEmpty(usesToProcess)) {
-      var use = usesToProcess.shift();
-
-      var slices =
-            packageLoader.getSlices(_.pick(use, 'package', 'spec'),
-                                    arch);
-      _.each(slices, function (slice) {
-        if (_.has(processedSliceId, slice.id))
-          return;
-        processedSliceId[slice.id] = true;
-        callback(slice, {
-          unordered: !!use.unordered,
-          weak: !!use.weak
-        });
-
-        _.each(slice.implies, function (implied) {
-          usesToProcess.push(implied);
-        });
-      });
-    }
-  },
-
-  // Return an array of all plugins that are active in this slice, as
-  // a list of Packages.
-  _activePluginPackages: function (packageLoader) {
-    var self = this;
-
-    // XXX we used to include our own extensions only if we were the
-    // "use" role. now we include them everywhere because we don't
-    // have a special "use" role anymore. it's not totally clear to me
-    // what the correct behavior should be -- we need to resolve
-    // whether we think about extensions as being global to a package
-    // or particular to a slice.
-    // (there's also some weirdness here with handling implies, because
-    // the implies field is on the target slice, but we really only care
-    // about packages.)
-    var ret = [self.pkg];
-
-    // We don't use plugins from weak dependencies, because the ability to
-    // compile a certain type of file shouldn't depend on whether or not some
-    // unrelated package in the target has a dependency.
-    //
-    // We pass archinfo.host here, not self.arch, because it may be more
-    // specific, and because plugins always have to run on the host
-    // architecture.
-    self.eachUsedSlice(
-      archinfo.host(), packageLoader, {skipWeak: true},
-      function (usedSlice) {
-        ret.push(usedSlice.pkg);
-      }
-    );
-
-    // Only need one copy of each package.
-    ret = _.uniq(ret);
-
-    _.each(ret, function (pkg) {
-      pkg._ensurePluginsInitialized();
-    });
-
-    return ret;
-  },
-
-  // Get all extensions handlers registered in this slice, as a map
-  // from extension (no leading dot) to handler function. Throws an
-  // exception if two packages are registered for the same extension.
-  _allHandlers: function (packageLoader) {
-    var self = this;
-    var ret = {};
-
-    // We provide a hardcoded handler for *.js files.. since plugins
-    // are written in JavaScript we have to start somewhere.
-    _.extend(ret, {
-      js: function (compileStep) {
-        compileStep.addJavaScript({
-          data: compileStep.read().toString('utf8'),
-          path: compileStep.inputPath,
-          sourcePath: compileStep.inputPath,
-          // XXX eventually get rid of backward-compatibility "raw" name
-          // XXX COMPAT WITH 0.6.4
-          bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
-        });
-      }
-    });
-
-    _.each(self._activePluginPackages(packageLoader), function (otherPkg) {
-      _.each(otherPkg.sourceHandlers, function (handler, ext) {
-        if (ext in ret && ret[ext] !== handler) {
-          buildmessage.error(
-            "conflict: two packages included in " +
-              (self.pkg.name || "the app") + ", " +
-              (ret[ext].pkg.name || "the app") + " and " +
-              (otherPkg.name || "the app") + ", " +
-              "are both trying to handle ." + ext);
-          // Recover by just going with the first handler we saw
-        } else {
-          ret[ext] = handler;
-        }
-      });
-    });
-
-    return ret;
-  },
-
-  // Return a list of all of the extension that indicate source files
-  // for this slice, not including leading dots. Computed based on
-  // this.uses, so should only be called once that has been set.
-  _registeredExtensions: function (packageLoader) {
-    var self = this;
-    return _.keys(self._allHandlers(packageLoader));
-  },
-
-  // Find the function that should be used to handle a source file for
-  // this slice, or return null if there isn't one. We'll use handlers
-  // that are defined in this package and in its immediate dependencies.
-  _getSourceHandler: function (filename, packageLoader) {
-    var self = this;
-    var handlers = self._allHandlers(packageLoader);
-    var parts = filename.split('.');
-    for (var i = 0; i < parts.length; i++) {
-      var extension = parts.slice(i).join('.');
-      if (_.has(handlers, extension))
-        return handlers[extension];
-    }
-    return null;
   }
 });
+
+///////////////////////////////////////////////////////////////////////////////
+// Unipackage
+///////////////////////////////////////////////////////////////////////////////
+
+// XXX document
+var Unipackage = function (packageDirectoryForBuildInfo) {
+  var self = this;
+
+  // These have the same meaning as in PackageSource.
+  self.name = null;
+  self.metadata = {};
+  self.version = null;
+  self.earliestCompatibleVersion = null;
+  self.defaultSlices = {};
+  self.testSlices = {};
+
+  // XXX this is likely to go away once we have build versions
+  // (also in PackageSource)
+  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
+
+  // Build slices. Array of UnipackageSlice.
+  self.slices = [];
+
+  // Plugins in this package. Map from plugin name to {arch -> JsImage}.
+  self.plugins = {};
+
+  // XXX this is likely to go away once we have build versions
+  //
+  // A WatchSet for the full transitive dependencies for all plugins in this
+  // package, as well as this package's package.js. If any of these dependencies
+  // change, our plugins need to be rebuilt... but also, any package that
+  // directly uses this package needs to be rebuilt in case the change to
+  // plugins affected compilation.
+  self.pluginWatchSet = new watch.WatchSet();
+
+  // XXX record build-time dependencies
+  /*
+  // Map from package name to packageDirectoryForBuildInfo of packages that are
+  // directly used by this package. We use this to figure out that we need to
+  // rebuild if the resolution of the package changes (eg, an app package is
+  // added that overshadows a warehouse package, or the release changes).
+  self.pluginProviderPackageDirs = {};
+  */
+
+  // -- Loaded plugin state --
+
+  // True if plugins have been initialized (if _ensurePluginsInitialized has
+  // been called)
+  self._pluginsInitialized = false;
+
+  // Source file handlers registered by plugins. Map from extension
+  // (without a dot) to a handler function that takes a
+  // CompileStep. Valid only when _pluginsInitialized is true.
+  self.sourceHandlers = null;
+};
+
+_.extend(Unipackage.prototype, {
+  // Make a dummy (empty) package that contains nothing of interest.
+  // XXX used?
+  initEmpty: function (name) {
+    var self = this;
+    self.name = name;
+    self.defaultSlices = {'': []};
+    self.testSlices = {'': []};
+  },
+
+  // This is primarily intended to be used by the compiler. After
+  // calling this, call addSlice to add the slices.
+  initFromOptions: function (options) {
+    var self = this;
+    self.name = options.name;
+    self.metadata = options.metadata;
+    self.version = options.version;
+    self.earliestCompatibleVersion = options.earliestCompatibleVersion;
+    self.defaultSlices = options.defaultSlices;
+    self.testSlices = options.testSlices;
+    self.packageDirectoryForBuildInfo = options.packageDirectoryForBuildInfo;
+    self.plugins = options.plugins;
+    self.pluginWatchSet = options.pluginWatchSet;
+  },
+
+  // Programmatically add a slice to this Unipackage. Should only be
+  // called as part of building up a new Unipackage using
+  // initFromOptions. 'options' are the options to the UnipackageSlice
+  // constructor.
+  addSlice: function (options) {
+    var self = this;
+    self.slices.push(new UnipackageSlice(self, optinons));
+  },
+
+  architectures: function () {
+    var self = this;
+    return _.uniq(_.pluck(self.slices, 'arch')).sort();
+  },
+
+  // Return the slice of the package to use for a given slice name
+  // (eg, 'main' or 'test') and target architecture (eg,
+  // 'os.linux.x86_64' or 'browser'), or throw an exception if
+  // that packages can't be loaded under these circumstances.
+  getSingleSlice: function (name, arch) {
+    var self = this;
+
+    var chosenArch = archinfo.mostSpecificMatch(
+      arch, _.pluck(_.where(self.slices, { sliceName: name }), 'arch'));
+
+    if (! chosenArch) {
+      // XXX need improvement. The user should get a graceful error
+      // message, not an exception, and all of this talk of slices an
+      // architectures is likely to be confusing/overkill in many
+      // contexts.
+      throw new Error((self.name || "this app") +
+                      " does not have a slice named '" + name +
+                      "' that runs on architecture '" + arch + "'");
+    }
+
+    return _.where(self.slices, { sliceName: name, arch: chosenArch })[0];
+  },
+
+  // Return the slices that should be used on a given arch if the
+  // package is named without any qualifiers (eg, 'ddp' rather than
+  // 'ddp.client').
+  //
+  // On error, throw an exception, or if inside
+  // buildmessage.capture(), log a build error and return [].
+  getDefaultSlices: function (arch) {
+    var self = this;
+
+    var chosenArch = archinfo.mostSpecificMatch(arch,
+                                                _.keys(self.defaultSlices));
+
+    if (! chosenArch) {
+      buildmessage.error(
+        (self.name || "this app") +
+          " is not compatible with architecture '" + arch + "'",
+        { secondary: true });
+      // recover by returning by no slices
+      return [];
+    }
+
+    return _.map(self.defaultSlices[chosenArch], function (name) {
+      return self.getSingleSlice(name, arch);
+    });
+  },
+
+  // Return the slices that should be used to test the package on a
+  // given arch.
+  getTestSlices: function (arch) {
+    var self = this;
+
+    var chosenArch = archinfo.mostSpecificMatch(arch,
+                                                _.keys(self.testSlices));
+    if (! chosenArch) {
+      buildmessage.error(
+        (self.name || "this app") +
+          " does not have tests for architecture " + arch + "'",
+        { secondary: true });
+      // recover by returning by no slices
+      return [];
+    }
+
+    return _.map(self.testSlices[chosenArch], function (name) {
+      return self.getSingleSlice(name, arch);
+    });
+  },
+
+  // Load this package's plugins into memory, if they haven't already
+  // been loaded, and return the list of source file handlers
+  // registered by the plugins: a map from extension (without a dot)
+  // to a handler function that takes a CompileStep.
+  getSourceHandlers: function () {
+    var self = this;
+    self._ensurePluginsInitialized();
+    return self.sourceHandlers;
+  },
+
+  // If this package has plugins, initialize them (run the startup
+  // code in them so that they register their extensions). Idempotent.
+  _ensurePluginsInitialized: function () {
+    var self = this;
+
+    if (self._pluginsInitialized)
+      return;
+
+    var Plugin = {
+      // 'extension' is a file extension without the separation dot
+      // (eg 'js', 'coffee', 'coffee.md')
+      //
+      // 'handler' is a function that takes a single argument, a
+      // CompileStep (#CompileStep)
+      registerSourceHandler: function (extension, handler) {
+        if (_.has(self.sourceHandlers, extension)) {
+          buildmessage.error("duplicate handler for '*." +
+                             extension + "'; may only have one per Plugin",
+                             { useMyCaller: true });
+          // recover by ignoring all but the first
+          return;
+        }
+
+        self.sourceHandlers[extension] = handler;
+      }
+    };
+
+    self.sourceHandlers = {};
+    _.each(self.plugins, function (pluginsByArch, name) {
+      var arch = archinfo.mostSpecificMatch(
+        archinfo.host(), _.keys(pluginsByArch));
+      if (! arch) {
+        buildmessage.error("package `" + name + "` is built for incompatible " +
+                           "architecture");
+        // Recover by ignoring plugin
+        // XXX does this recovery work?
+        return;
+      }
+
+      var plugin = pluginsByArch[arch];
+      buildmessage.enterJob({
+        title: "loading plugin `" + name +
+          "` from package `" + self.name + "`"
+        // don't necessarily have rootPath anymore
+        // (XXX we do, if the unipackage was locally built, which is
+        // the important case for debugging. it'd be nice to get this
+        // case right.)
+      }, function () {
+        plugin.load({ Plugin: Plugin });
+      });
+    });
+
+    self._pluginsInitialized = true;
+  },
+
+  // Load a Unipackage on disk.
+  //
+  // options:
+  // - onlyIfUpToDate: if true, check the unipackage's dependencies
+  //   (if present) to see if it's up to date (using the PackageLoader
+  //   to determine which build plugins to use.) If not, return false
+  //   without loading the package. Otherwise return true. (If
+  //   onlyIfUpToDate is not passed, always return true.)
+  // - buildOfPath: If present, the source directory (as an absolute
+  //   path on local disk) of which we think this unipackage is a
+  //   build. If it's not (it was copied from somewhere else), we
+  //   consider it not up to date (in the sense of onlyIfUpToDate) so
+  //   that we can rebuild it and correct the absolute paths in the
+  //   dependency information.
+  initFromPath: function (name, dir, options) {
+    var self = this;
+    options = _.clone(options || {});
+    options.firstUnipackage = true;
+
+    return self._loadSlicesFromUnipackage(name, dir, options);
+  },
+
+  _loadSlicesFromUnipackage: function (name, dir, options) {
+    var self = this;
+    options = options || {};
+
+    var mainJson =
+      JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
+
+    if (mainJson.format !== "unipackage-pre1")
+      throw new Error("Unsupported unipackage format: " +
+                      JSON.stringify(mainJson.format));
+
+    var buildInfoPath = path.join(dir, 'buildinfo.json');
+    var buildInfoJson = fs.existsSync(buildInfoPath) &&
+      JSON.parse(fs.readFileSync(buildInfoPath));
+    if (buildInfoJson) {
+      if (!options.firstUnipackage) {
+        throw Error("can't merge unipackages with buildinfo");
+      }
+    } else {
+      buildInfoJson = {};
+    }
+
+    // XXX should comprehensively sanitize (eg, typecheck) everything
+    // read from json files
+
+    // Read the watch sets for each slice; keep them separate (for passing to
+    // the Slice constructor below) as well as merging them into one big
+    // WatchSet.
+    var mergedWatchSet = new watch.WatchSet();
+    var sliceWatchSets = {};
+    _.each(buildInfoJson.sliceDependencies, function (watchSetJSON, sliceTag) {
+      var watchSet = watch.WatchSet.fromJSON(watchSetJSON);
+      mergedWatchSet.merge(watchSet);
+      sliceWatchSets[sliceTag] = watchSet;
+    });
+
+    // We do NOT put this (or anything!) onto self until we've passed the
+    // onlyIfUpToDate check.
+    var pluginWatchSet = watch.WatchSet.fromJSON(
+      buildInfoJson.pluginDependencies);
+    // This might be redundant (since pluginWatchSet was probably merged into
+    // each slice watchSet when it was built) but shouldn't hurt.
+    mergedWatchSet.merge(pluginWatchSet);
+    var pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
+
+    // If we're supposed to check the dependencies, go ahead and do so
+    if (options.onlyIfUpToDate) {
+      // Do we think we'll generate different contents than the tool that built
+      // this package?
+      if (buildInfoJson.builtBy !== exports.BUILT_BY)
+        return false;
+
+      if (options.buildOfPath &&
+          (buildInfoJson.source !== options.buildOfPath)) {
+        // This catches the case where you copy a source tree that had
+        // a .build directory and then modify a file. Without this
+        // check you won't see a rebuild (even if you stop and restart
+        // meteor), at least not until you modify the *original*
+        // copies of the source files, because that is still where all
+        // of the dependency info points.
+        return false;
+      }
+
+      if (! self.checkUpToDate(mergedWatchSet, pluginProviderPackageDirs))
+        return false;
+    }
+
+    // If we are loading multiple unipackages, only take this stuff from the
+    // first one.
+    if (options.firstUnipackage) {
+      self.name = name;
+      self.metadata = {
+        summary: mainJson.summary,
+        internal: mainJson.internal
+      };
+      self.version = mainJson.version;
+      self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
+    }
+    // If multiple sub-unipackages specify defaultSlices or testSlices for the
+    // same arch, just take the answer from the first sub-unipackage.
+    self.defaultSlices = _.extend(mainJson.defaultSlices,
+                                  self.defaultSlices || {});
+    self.testSlices = _.extend(mainJson.testSlices,
+                               self.testSlices || {});
+    // In the multi-sub-unipackage case, these are guaranteed to be trivial
+    // (since we check that there's no buildinfo.json), so no need to merge.
+    self.pluginWatchSet = pluginWatchSet;
+    self.pluginProviderPackageDirs = pluginProviderPackageDirs;
+
+    _.each(mainJson.plugins, function (pluginMeta) {
+      rejectBadPath(pluginMeta.path);
+
+      var plugin = bundler.readJsImage(path.join(dir, pluginMeta.path));
+
+      if (!_.has(self.plugins, pluginMeta.name)) {
+        self.plugins[pluginMeta.name] = {};
+      }
+      // If we already loaded a plugin of this name/arch, just ignore this one.
+      if (!_.has(self.plugins[pluginMeta.name], plugin.arch)) {
+        self.plugins[pluginMeta.name][plugin.arch] = plugin;
+      }
+    });
+    self.pluginsBuilt = true;
+
+    _.each(mainJson.slices, function (sliceMeta) {
+      // aggressively sanitize path (don't let it escape to parent
+      // directory)
+      rejectBadPath(sliceMeta.path);
+
+      // Skip slices we already have.
+      var alreadyHaveSlice = _.find(self.slices, function (slice) {
+        return slice.sliceName === sliceMeta.name &&
+          slice.arch === sliceMeta.arch;
+      });
+      if (alreadyHaveSlice)
+        return;
+
+      var sliceJson = JSON.parse(
+        fs.readFileSync(path.join(dir, sliceMeta.path)));
+      var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
+
+      if (sliceJson.format!== "unipackage-slice-pre1")
+        throw new Error("Unsupported unipackage slice format: " +
+                        JSON.stringify(sliceJson.format));
+
+      var nodeModulesPath = null;
+      if (sliceJson.node_modules) {
+        rejectBadPath(sliceJson.node_modules);
+        nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
+      }
+
+      var prelinkFiles = [];
+      var resources = [];
+
+      _.each(sliceJson.resources, function (resource) {
+        rejectBadPath(resource.file);
+
+        var data = new Buffer(resource.length);
+        // Read the data from disk, if it is non-empty. Avoid doing IO for empty
+        // files, because (a) unnecessary and (b) fs.readSync with length 0
+        // throws instead of acting like POSIX read:
+        // https://github.com/joyent/node/issues/5685
+        if (resource.length > 0) {
+          var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
+          try {
+            var count = fs.readSync(
+              fd, data, 0, resource.length, resource.offset);
+          } finally {
+            fs.closeSync(fd);
+          }
+          if (count !== resource.length)
+            throw new Error("couldn't read entire resource");
+        }
+
+        if (resource.type === "prelink") {
+          var prelinkFile = {
+            source: data.toString('utf8'),
+            servePath: resource.servePath
+          };
+          if (resource.sourceMap) {
+            rejectBadPath(resource.sourceMap);
+            prelinkFile.sourceMap = fs.readFileSync(
+              path.join(sliceBasePath, resource.sourceMap), 'utf8');
+          }
+          prelinkFiles.push(prelinkFile);
+        } else if (_.contains(["head", "body", "css", "js", "asset"],
+                              resource.type)) {
+          resources.push({
+            type: resource.type,
+            data: data,
+            servePath: resource.servePath || undefined,
+            path: resource.path || undefined
+          });
+        } else
+          throw new Error("bad resource type in unipackage: " +
+                          JSON.stringify(resource.type));
+      });
+
+      self.slices.push(new UnipackageSlice(self, {
+        name: sliceMeta.name,
+        arch: sliceMeta.arch,
+        uses: sliceJson.uses,
+        implies: sliceJson.implies,
+        noExports: !! sliceJson.noExports,
+        watchSet: sliceWatchSets[sliceMeta.path],
+        nodeModulesPath: nodeModulesPath,
+        prelinkFiles: prelinkFiles,
+        packageVariables: sliceJson.packageVariables || [],
+        resources: resources
+      }));
+    });
+
+    return true;
+  },
+
+  // Try to check if this package is up-to-date (that is, whether its
+  // source files have been modified), using packageLoader to resolve
+  // build-time dependencies. True if we have dependency info and it
+  // says that the package is up-to-date. False if a source file or
+  // build-time dependency has changed.
+  //
+  // The arguments _watchSet and _pluginProviderPackageDirs are used when
+  // reading from disk when there are no slices yet; don't pass them from
+  // outside this file.
+  //
+  // XXX should this move to compiler?
+  checkUpToDate: function (_watchSet, _pluginProviderPackageDirs) {
+    var self = this;
+
+    if (! _watchSet) {
+      // This call was on an already-fully-loaded Package and we just want to
+      // see if it's changed. So we have some watchSets inside ourselves.
+      _watchSet = new watch.WatchSet();
+      _watchSet.merge(self.pluginWatchSet);
+      _.each(self.slices, function (slice) {
+        _watchSet.merge(slice.watchSet);
+      });
+    }
+    if (! _pluginProviderPackageDirs) {
+      _pluginProviderPackageDirs = self.pluginProviderPackageDirs;
+    }
+
+    // XXX As things currently are, we need a PackageLoader just to
+    // check to see if a build of a package is up to date, because we
+    // need to know if we're still using the same version of plugins
+    // such as coffeescript. This means that we have to run the
+    // constraint solver.. This could result in running the constraint
+    // solver way more than we'd like to. If that's the case, we
+    // should find a way to avoid it, such as keying the up-to-date
+    // check on the inputs to the constraint solver rather than the
+    // outputs.
+    //
+    // XXX XXX this is not the way this is supposed to work at all
+    // (and _makeBuildTimePackageLoader is not defined on this object,
+    // because it shouldn't be). checkUpToDate should actually be
+    // taking a PackageSource (with determined build time
+    // dependencies) as input.
+    var packageLoader = self._makeBuildTimePackageLoader();
+
+    // Are all of the packages we directly use (which can provide plugins which
+    // affect compilation) resolving to the same directory? (eg, have we updated
+    // our release version to something with a new version of a package?)
+    var packageResolutionsSame = _.all(
+      _pluginProviderPackageDirs, function (packageDir, name) {
+        return packageLoader.getLoadPathForPackage(name) === packageDir;
+      });
+    if (! packageResolutionsSame)
+      return false;
+
+    return watch.isUpToDate(_watchSet);
+  },
+
+  // options:
+  //
+  // - buildOfPath: Optional. The absolute path on local disk of the
+  //   directory that was built to produce this package. Used as part
+  //   of the dependency info to detect builds that were moved and
+  //   then modified.
+  saveToPath: function (outputPath, options) {
+    var self = this;
+    options = options || {};
+
+    if (! self.version) {
+      // XXX is this going to work? may need to relax it for apps?
+      // that seems reasonable/useful. I guess the basic rules then
+      // becomes that you can't depend on something if it doesn't have
+      // a name and a version
+      throw new Error("Packages without versions cannot be saved");
+    }
+
+    var builder = new Builder({ outputPath: outputPath });
+
+    try {
+
+      var mainJson = {
+        format: "unipackage-pre1",
+        summary: self.metadata.summary,
+        internal: self.metadata.internal,
+        version: self.version,
+        earliestCompatibleVersion: self.earliestCompatibleVersion,
+        slices: [],
+        defaultSlices: self.defaultSlices,
+        testSlices: self.testSlices,
+        plugins: []
+      };
+
+      // Note: The contents of buildInfoJson (with the root directory of the
+      // Meteor checkout naively deleted) gets its SHA taken to determine the
+      // built package's warehouse version. So it should not contain
+      // platform-dependent data and should contain all sources of change to the
+      // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
+      var buildInfoJson = {
+        builtBy: exports.BUILT_BY,
+        sliceDependencies: { },
+        pluginDependencies: self.pluginWatchSet.toJSON(),
+        pluginProviderPackages: self.pluginProviderPackageDirs,
+        source: options.buildOfPath || undefined
+      };
+
+      builder.reserve("unipackage.json");
+      builder.reserve("buildinfo.json");
+      builder.reserve("head");
+      builder.reserve("body");
+
+      // Map from absolute path to npm directory in the slice, to the generated
+      // filename in the unipackage we're writing.  Multiple slices can use the
+      // same npm modules (eg, for now, main and tests slices), but also there
+      // can be different sets of directories as well (eg, for a unipackage
+      // merged with from multiple unipackages with _loadSlicesFromUnipackage).
+      var npmDirectories = {};
+
+      // Pre-linker versions of Meteor expect all packages in the warehouse to
+      // contain a file called "package.js"; they use this as part of deciding
+      // whether or not they need to download a new package. Because packages
+      // are downloaded by the *existing* version of the tools, we need to
+      // include this file until we're comfortable breaking "meteor update" from
+      // 0.6.4.  (Specifically, warehouse.packageExistsInWarehouse used to check
+      // to see if package.js exists instead of just looking for the package
+      // directory.)
+      // XXX Remove this once we can.
+      builder.write("package.js", {
+        data: new Buffer(
+          ("// This file is included for compatibility with the Meteor " +
+           "0.6.4 package downloader.\n"),
+          "utf8")
+      });
+
+      // Slices
+      _.each(self.slices, function (slice) {
+        // Make up a filename for this slice
+        var baseSliceName =
+          (slice.sliceName === "main" ? "" : (slice.sliceName + ".")) +
+          slice.arch;
+        var sliceDir =
+          builder.generateFilename(baseSliceName, { directory: true });
+        var sliceJsonFile =
+          builder.generateFilename(baseSliceName + ".json");
+
+        mainJson.slices.push({
+          name: slice.sliceName,
+          arch: slice.arch,
+          path: sliceJsonFile
+        });
+
+        // Save slice dependencies. Keyed by the json path rather than thinking
+        // too hard about how to encode pair (name, arch).
+        buildInfoJson.sliceDependencies[sliceJsonFile] =
+          slice.watchSet.toJSON();
+
+        // Figure out where the npm dependencies go.
+        var nodeModulesPath = undefined;
+        var needToCopyNodeModules = false;
+        if (slice.nodeModulesPath) {
+          if (_.has(npmDirectories, slice.nodeModulesPath)) {
+            // We already have this npm directory from another slice.
+            nodeModulesPath = npmDirectories[slice.nodeModulesPath];
+          } else {
+            // It's important not to put node_modules at the top level of the
+            // unipackage, so that it is not visible from within plugins.
+            nodeModulesPath = npmDirectories[slice.nodeModulesPath] =
+              builder.generateFilename("npm/node_modules", {directory: true});
+            needToCopyNodeModules = true;
+          }
+        }
+
+        // Construct slice metadata
+        var sliceJson = {
+          format: "unipackage-slice-pre1",
+          noExports: slice.noExports || undefined,
+          packageVariables: slice.packageVariables,
+          uses: _.map(slice.uses, function (u) {
+            return {
+              'package': u.package,
+              // For cosmetic value, leave false values for these options out of
+              // the JSON file.
+              constraint: u.constraint || undefined,
+              slice: u.slice || undefined,
+              unordered: u.unordered || undefined,
+              weak: u.weak || undefined
+            };
+          }),
+          implies: (_.isEmpty(slice.implies) ? undefined : slice.implies),
+          node_modules: nodeModulesPath,
+          resources: []
+        };
+
+        // Output 'head', 'body' resources nicely
+        var concat = { head: [], body: [] };
+        var offset = { head: 0, body: 0 };
+        _.each(slice.resources, function (resource) {
+          if (_.contains(["head", "body"], resource.type)) {
+            if (concat[resource.type].length) {
+              concat[resource.type].push(new Buffer("\n", "utf8"));
+              offset[resource.type]++;
+            }
+            if (! (resource.data instanceof Buffer))
+              throw new Error("Resource data must be a Buffer");
+            sliceJson.resources.push({
+              type: resource.type,
+              file: path.join(sliceDir, resource.type),
+              length: resource.data.length,
+              offset: offset[resource.type]
+            });
+            concat[resource.type].push(resource.data);
+            offset[resource.type] += resource.data.length;
+          }
+        });
+        _.each(concat, function (parts, type) {
+          if (parts.length) {
+            builder.write(path.join(sliceDir, type), {
+              data: Buffer.concat(concat[type], offset[type])
+            });
+          }
+        });
+
+        // Output other resources each to their own file
+        _.each(slice.resources, function (resource) {
+          if (_.contains(["head", "body"], resource.type))
+            return; // already did this one
+
+          sliceJson.resources.push({
+            type: resource.type,
+            file: builder.writeToGeneratedFilename(
+              path.join(sliceDir, resource.servePath),
+              { data: resource.data }),
+            length: resource.data.length,
+            offset: 0,
+            servePath: resource.servePath || undefined,
+            path: resource.path || undefined
+          });
+        });
+
+        // Output prelink resources
+        _.each(slice.prelinkFiles, function (file) {
+          var data = new Buffer(file.source, 'utf8');
+          var resource = {
+            type: 'prelink',
+            file: builder.writeToGeneratedFilename(
+              path.join(sliceDir, file.servePath),
+              { data: data }),
+            length: data.length,
+            offset: 0,
+            servePath: file.servePath || undefined
+          };
+
+          if (file.sourceMap) {
+            // Write the source map.
+            resource.sourceMap = builder.writeToGeneratedFilename(
+              path.join(sliceDir, file.servePath + '.map'),
+              { data: new Buffer(file.sourceMap, 'utf8') }
+            );
+          }
+
+          sliceJson.resources.push(resource);
+        });
+
+        // If slice has included node_modules, copy them in
+        if (needToCopyNodeModules) {
+          builder.copyDirectory({
+            from: slice.nodeModulesPath,
+            to: nodeModulesPath
+          });
+        }
+
+        // Control file for slice
+        builder.writeJson(sliceJsonFile, sliceJson);
+      });
+
+      // Plugins
+      _.each(self.plugins, function (pluginsByArch, name) {
+        _.each(pluginsByArch, function (plugin) {
+          var pluginDir =
+                builder.generateFilename('plugin.' + name + '.' + plugin.arch,
+                                         { directory: true });
+          var relPath = plugin.write(builder.enter(pluginDir));
+          mainJson.plugins.push({
+            name: name,
+            arch: plugin.arch,
+            path: path.join(pluginDir, relPath)
+          });
+        });
+      });
+
+      builder.writeJson("unipackage.json", mainJson);
+      builder.writeJson("buildinfo.json", buildInfoJson);
+      builder.complete();
+    } catch (e) {
+      builder.abort();
+      throw e;
+    }
+  }
+});
+
+module.exports = Unipackage;
