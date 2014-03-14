@@ -42,6 +42,9 @@ Minimongo.Matcher = function (selector) {
 
 _.extend(Minimongo.Matcher.prototype, {
   documentMatches: function (doc) {
+    if (!doc || typeof doc !== "object") {
+      throw Error("documentMatches needs a document");
+    }
     return this._docMatcher(doc);
   },
   hasGeoQuery: function () {
