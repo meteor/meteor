@@ -5,6 +5,19 @@ Meteor.Collection = function (name, options) {
   var self = this;
   if (! (self instanceof Meteor.Collection))
     throw new Error('use "new" to construct a Meteor.Collection');
+
+  if (!name && (name !== null)) {
+    Meteor._debug("Warning: creating anonymous collection. It will not be " +
+                  "saved or synchronized over the network. (Pass null for " +
+                  "the collection name to turn off this warning.)");
+    name = null;
+  }
+
+  if (name !== null && typeof name !== "string") {
+    throw new Error(
+      "First argument to new Meteor.Collection must be a string or null");
+  }
+
   if (options && options.methods) {
     // Backwards compatibility hack with original signature (which passed
     // "connection" directly instead of in options. (Connections must have a "methods"
@@ -39,12 +52,6 @@ Meteor.Collection = function (name, options) {
   }
 
   self._transform = LocalCollection.wrapTransform(options.transform);
-
-  if (!name && (name !== null)) {
-    Meteor._debug("Warning: creating anonymous collection. It will not be " +
-                  "saved or synchronized over the network. (Pass null for " +
-                  "the collection name to turn off this warning.)");
-  }
 
   if (! name || options.connection === null)
     // note: nameless collections never have a connection
