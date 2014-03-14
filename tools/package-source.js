@@ -9,7 +9,8 @@ var watch = require('./watch.js');
 var project = require('./project.js');
 var buildmessage = require('./buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
-var archinfo = require(path.join(__dirname, 'archinfo.js'));
+var Builder = require('./builder.js');
+var archinfo = require('./archinfo.js');
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -126,6 +127,7 @@ var SourceSlice = function (pkg, options) {
   // In most places, instead of using 'uses' directly, you want to use
   // something like compiler.eachUsedSlice so you also take into
   // account implied packages.
+  self.uses = options.uses || [];
 
   // Packages which are "implied" by using this package. If a slice X
   // uses this slice Y, and Y implies Z, then X will effectively use Z
@@ -162,7 +164,7 @@ var SourceSlice = function (pkg, options) {
   // of the code, this does not include source files or directories,
   // but only control files such as package.js and .meteor/packages,
   // since the rest are not determined until compile time.
-  self.watchSet = options.watchSet || new watch.WatchSet();
+  self.watchSet = options.watchSet || new watch.WatchSet;
 
   // Absolute path to the node_modules directory to use at runtime to
   // resolve Npm.require() calls in this slice. null if this slice
@@ -238,6 +240,10 @@ var PackageSource = function (packageDirectoryForBuildInfo) {
   // package. Map from plugin name to object with keys 'name', 'use',
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
+
+  // Analogous to watchSet in SourceSlice but for plugins. At this
+  // stage will typically contain just 'package.js'.
+  self.pluginWatchSet = new watch.WatchSet;
 };
 
 
@@ -322,10 +328,9 @@ _.extend(PackageSource.prototype, {
 
   // Initialize a PackageSource from a package.js-style package
   // directory.
-  initFromPackageDir: function (name, dir, options) {
+  initFromPackageDir: function (name, dir) {
     var self = this;
     var isPortable = true;
-    options = options || {};
     self.name = name;
     self.sourceRoot = dir;
     self.serveRoot = path.join(path.sep, 'packages', name);
@@ -361,7 +366,8 @@ _.extend(PackageSource.prototype, {
           if (key === "summary" || key === "internal")
             self.metadata[key] = value;
           else if (key === "version")
-            // XXX validate that version parses
+            // XXX validate that version parses -- and that it doesn't
+            // contain a +!
             self.version = value;
           else if (key === "earliestCompatibleVersion")
             self.earliestCompatibleVersion = value;
@@ -885,9 +891,7 @@ _.extend(PackageSource.prototype, {
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
-  //
-  // XXX XXX make dependencies provide packageLoader
-  initFromAppDir: function (appDir, packageLoader, ignoreFiles) {
+  initFromAppDir: function (appDir, ignoreFiles) {
     var self = this;
     appDir = path.resolve(appDir);
     self.name = null;
@@ -1114,6 +1118,8 @@ _.extend(PackageSource.prototype, {
   // For options, see getDependencyMetadata.
   _computeDependencyMetadata: function (options) {
     var self = this;
+    options = options || {};
+
     var dependencies = {};
     var allConstraints = {}; // for error reporting. package name to array
     var failed = false;

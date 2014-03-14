@@ -541,6 +541,8 @@ _.extend(Target.prototype, {
     // depends on (uses) Y, and that relationship is not marked as unordered, Y
     // appears before X in the ordering. Raises an exception iff there is no
     // such ordering (due to circular dependency).
+    //
+    // XXX The topological sort code here is duplicated in catalog.js.
 
     // What slices have not yet been added to self.slices?
     var needed = _.clone(getsUsed);  // Map from slice.id to Slice.
@@ -2004,7 +2006,7 @@ exports.buildJsImage = function (options) {
     npmDir: options.npmDir
   });
 
-  var unipackage = complier.compile(packageSource).unipackage;
+  var unipackage = compiler.compile(packageSource).unipackage;
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,

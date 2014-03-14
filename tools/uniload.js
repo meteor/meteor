@@ -2,7 +2,7 @@ var _ = require('underscore');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
-var PackageLoader = require("./package-loader.js").PackageLoader;
+var PackageLoader = require("./package-loader.js");
 var packageCache = require("./package-cache.js");
 
 // Load unipackages into the currently running node.js process. Use
@@ -49,7 +49,7 @@ var packageCache = require("./package-cache.js");
 //   var reverse = DDP.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));
 
-var cacheRelease = null;
+var cacheRelease = undefined;
 var cache = null; // map from package names (joined with ',') to return value
 
 var load = function (options) {

@@ -4,6 +4,7 @@ var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
+var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
@@ -200,7 +201,7 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
   // -- Information for up-to-date checks --
 
   // Version number of the tool that built this unipackage
-  // (complier.BUILT_BY) or null if unknown
+  // (compiler.BUILT_BY) or null if unknown
   self.builtBy = null;
 
   // If true, force the checkUpToDate to return false for this unipackage.

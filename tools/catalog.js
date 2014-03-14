@@ -5,6 +5,10 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
+var PackageSource = require('./package-source.js');
+var Unipackage = require('./unipackage.js');
+var compiler = require('./compiler.js');
+var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 
 var isDirectory = function (dir) {
@@ -35,14 +39,14 @@ var Catalog = function () {
   self.versions = null;
   self.builds = null;
 
-  // Local directories to search for packages
+  // Local directories to search for package source trees
   self.localPackageDirs = null;
 
   // Packages specified by addLocalPackage
-  self.localPackages = {}; // package name to package directory
+  self.localPackages = {}; // package name to source directory
 
   // All packages found either by localPackageDirs or localPackages
-  self.effectiveLocalPackages = {}; // package name to package directory
+  self.effectiveLocalPackages = {}; // package name to source directory
 };
 
 _.extend(Catalog.prototype, {
@@ -54,12 +58,12 @@ _.extend(Catalog.prototype, {
   //
   // options:
   //  - localPackageDirs: an array of paths on local disk, that
-  //    contain subdirectories, that each contain a package that
-  //    should override the packages on the package server. For
-  //    example, if there is a package 'foo' that we find through
-  //    localPackageDirs, then we will ignore all versions of 'foo'
-  //    that we find through the package server. Directories that
-  //    don't exist (or paths that aren't directories) will be
+  //    contain subdirectories, that each contain a source tree for a
+  //    package that should override the packages on the package
+  //    server. For example, if there is a package 'foo' that we find
+  //    through localPackageDirs, then we will ignore all versions of
+  //    'foo' that we find through the package server. Directories
+  //    that don't exist (or paths that aren't directories) will be
   //    silently ignored.
   initialize: function (options) {
     var self = this;
@@ -79,8 +83,7 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
-    self._addLocalPackageOverrides();
-    self.initialized = true;
+    self._addLocalPackageOverrides(true /* setInitialized */);
 
     // OK, now initialize the catalog for real, with both local and
     // package server packages.
@@ -99,8 +102,7 @@ _.extend(Catalog.prototype, {
     self.versions = [];
     self.builds = [];
     self._insertServerPackages(serverPackageData);
-    self._addLocalPackageOverrides();
-    self.initialized = true;
+    self._addLocalPackageOverrides(true /* setInitialized */);
   },
 
   // Compute self.effectiveLocalPackages from self.localPackageDirs
@@ -141,7 +143,13 @@ _.extend(Catalog.prototype, {
 
   // Add all packages in self.effectiveLocalPackages to the catalog,
   // first removing any existing packages that have the same name.
-  _addLocalPackageOverrides: function () {
+  //
+  // If _setInitialized is provided and true, then as soon as the
+  // metadata for the local packages has been loaded into the catalog,
+  // mark the catalog as initialized. This is a bit of a hack.
+  //
+  // XXX emits buildmessages. are callers expecting that?
+  _addLocalPackageOverrides: function (_setInitialized) {
     var self = this;
 
     // Remove all packages from the catalog that have the same name as
@@ -164,13 +172,16 @@ _.extend(Catalog.prototype, {
       return ! _.has(self.effectiveLocalPackages, pkg.name);
     });
 
-    // Now add our local packages to the catalog.
+    // Phase 1: Load the source code and create Package and Version
+    // entries from them. We have to do this before we can run the
+    // constraint solver.
+    var packageSources = {}; // name to PackageSource
+    var versionIds = {}; // name to _id of the created Version record
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
-      // Load the package.
-      var pkg = packageCache.loadPackageAtPath(name, packageDir);
+      var packageSource = new PackageSource(packageDir);
+      packageSource.initFromPackageDir(name, packageDir);
+      packageSources[name] = packageSource;
 
-      // Synthesize records based on it and insert them in the
-      // catalog.
       self.packages.push({
         name: name,
         maintainers: null,
@@ -185,31 +196,179 @@ _.extend(Catalog.prototype, {
       // problem, we either will have made tools into a star, or we'll
       // have made Catalog be backed by a real database.
       var versionId = "local-" + Math.floor(Math.random() * 1000000000);
+      versionIds[name] = versionId;
+
+      // Accurate version numbers are of supreme importance, because
+      // we use version numbers (of build-time dependencies such as
+      // the coffeescript plugin), together with source file hashes
+      // and the notion of a repeatable build, to decide when a
+      // package build is out of date and trigger a rebuild of the
+      // package.
+      //
+      // The package we have just loaded may declare its version to be
+      // 1.2.3, but that doesn't mean it's really the official version
+      // 1.2.3 of the package. It only gets that version number
+      // officially when it's published to the package server. So what
+      // we'd like to do here is give it a version number like
+      // '1.2.3+<buildid>', where <buildid> is a hash of everything
+      // that's necessary to repeat the build exactly: all of the
+      // package's source files, all of the package's build-time
+      // dependencies, and the version of the Meteor build tool used
+      // to build it.
+      //
+      // Unfortunately we can't actually compute such a buildid yet
+      // since it depends on knowing the build-time dependencies of
+      // the package, which requires that we run the constraint
+      // solver, which can only be done once we've populated the
+      // catalog, which is what we're trying to do right now.
+      //
+      // So we have a workaround. For local packages we will fake the
+      // version in the catalog by setting the buildid to 'local', as
+      // in '1.2.3+local'. This is enough for the constraint solver to
+      // run, but any code that actually relies on accurate versions
+      // (for example, code that checks if a build is up to date)
+      // needs to be careful to get the versions not from the catalog
+      // but from the actual built Unipackage objects, which will have
+      // accurate versions (with precise buildids) even for local
+      // packages.
+      var version = packageSource.version;
+      if (version.indexOf('+') !== -1)
+        throw new Error("version already has a buildid?");
+      version = version + "+local";
 
       self.versions.push({
         _id: versionId,
         packageName: name,
-        version: pkg.version,
+        version: version,
         publishedBy: null,
-        earliestCompatibleVersion: pkg.earliestCompatibleVersion,
+        earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
         changelog: null, // XXX get actual changelog when we have it?
-        description: pkg.metadata.summary,
-        dependencies: pkg.getDependencyMetadata(),
+        description: packageSource.metadata.summary,
+        dependencies: packageSource.getDependencyMetadata(),
         source: null,
         lastUpdated: null,
         published: null
       });
+    });
 
+    if (_setInitialized)
+      self.initialized = true;
+
+    // XXX XXX in the next version, don't go build all local packages
+    // at startup just because! instead, do the following on an
+    // ongoing, as-needed basis: when we want to load a build of
+    // package X, and it's a local package, work out its dependencies
+    // (and, lazily, the dependencies of its dependencies) and build
+    // only what is needed. (XXX does this mean that we have to create
+    // build records lazily too, or is there a way that we can create
+    // them upfront?)
+
+    // Phase 2: Figure out which local packages need to be built
+    // before which other local packages because of build-time
+    // dependencies.
+    var packageBuildDeps = {}; // map from name to array of name
+    _.each(self.effectiveLocalPackages, function (packageDir, name) {
+      packageBuildDeps[name] = [];
+      var deps = compiler.getBuildTimeDependencies(packageSources[name]);
+      _.each(deps, function (d) {
+        if (! _.has(self.effectiveLocalPackages, d.name))
+          return; // not a local package -- may assume it's already built
+        if (d.version !== packageSources[d.name].version + "+local")
+          throw new Error("unknown version for local package?");
+        packageBuildDeps[name].push(d.name);
+      });
+    });
+
+    // Phase 3: Do a topological sort and build the local packages in
+    // an order that respects their build-time dependencies.
+    //
+    // XXX topological sort duplicated from bundler.js.
+    var remaining = _.clone(self.effectiveLocalPackages);
+    var onStack = {}; // map from name to true
+
+    var build = function (name) {
+      if (! _.has(remaining, name))
+        return;
+
+      // First build things that have to build before us (if not built yet)
+      _.each(packageBuildDeps[name], function (otherName) {
+        if (_.has(onStack, otherName)) {
+          buildmessage.error("circular dependency between packages " +
+                             name + " and " + otherName);
+          // recover by not enforcing one of the depedencies
+          return;
+        }
+
+        onStack[otherName] = true;
+        build(otherName);
+        delete onStack[otherName];
+      });
+
+      // Now build this package if it needs building
+      var unipackage = null;
+      var sourcePath = self.effectiveLocalPackages[name];
+      var buildDir = path.join(sourcePath, '.build');
+
+      if (fs.existsSync(buildDir)) {
+        // Looks like we have an existing build. See if it's up to date.
+        unipackage = new Unipackage(sourcePath);
+        unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
+
+        if (! compiler.checkUpToDate(packageSources[name], unipackage))
+          unipackage = null;
+      }
+
+      if (! unipackage) {
+        // Didn't have a build or it wasn't up to date. Build it.
+        buildmessage.enterJob({
+          title: "building package `" + name + "`",
+          rootPath: sourcePath
+        }, function () {
+          unipackage = compiler.compile(packageSources[name]).unipackage;
+
+          if (! buildmessage.jobHasMessages()) {
+            // Save the build, for a fast load next time
+            try {
+              files.addToGitignore(sourcePath, '.build*');
+              unipackage.saveToPath(buildDir, { buildOfPath: sourcePath });
+            } catch (e) {
+              // If we can't write to this directory, we don't get to cache our
+              // output, but otherwise life is good.
+              if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
+                throw e;
+            }
+          }
+        });
+      }
+
+      // And put a build record for it in the catalog
       self.builds.push({
         packageName: name,
-        architecture: pkg.architectures().join('+'),
+        architecture: unipackage.architectures().join('+'),
         builtBy: null,
         build: null, // this would be the URL and hash
-        versionId: versionId,
+        versionId: versionIds[name],
         lastUpdated: null,
         buildPublished: null
       });
-    });
+
+      // XXX XXX maybe you actually want to, like, save the unipackage
+      // in memory into a cache? rather than leaving packageCache to
+      // reload it? or maybe packageCache is unified into catalog
+      // somehow? sleep on it
+
+      // Done
+      delete remaining[name];
+    };
+
+    while (true) {
+      // Go build an arbitrary local package from among those remaining.
+      var first = null;
+      for (first in remaining) break;
+      if (! first)
+        break;
+      build(first);
+    }
   },
 
   // serverPackageData is a description of the packages available from
@@ -232,8 +391,8 @@ _.extend(Catalog.prototype, {
   },
 
   // Add a local package to the catalog. `name` is the name to use for
-  // the package and `directory` is the directory that contains either
-  // its source or an unpacked unipackage.
+  // the package and `directory` is the directory that contains the
+  // source tree for the package.
   //
   // If a package named `name` exists on the package server, it will
   // be overridden (it will be as if that package doesn't exist on the
@@ -390,7 +549,8 @@ _.extend(Catalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    var ret = _.where(self.versions, { packageName: name }).pluck('version');
+    var ret = _.pluck(_.where(self.versions, { packageName: name }),
+                      'version');
     ret.sort(semver.compare);
     return ret;
   },
@@ -399,7 +559,7 @@ _.extend(Catalog.prototype, {
   // null if there is no such package or version.
   getVersion: function (name, version) {
     var self = this;
-    self._ensureLoaded();
+    self._requireInitialized();
     return _.findWhere(self.versions, { packageName: name,
                                         version: version });
   },

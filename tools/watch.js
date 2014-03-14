@@ -143,9 +143,21 @@ _.extend(WatchSet.prototype, {
 //    });
     _.each(other.directories, function (dir) {
       // XXX this doesn't deep-clone the directory, but I think these objects
-      // are never mutated
+      // are never mutated #WatchSetShallowClone
       self.directories.push(dir);
     });
+  },
+
+  clone: function () {
+    var self = this;
+    var ret = new WatchSet;
+
+    // XXX doesn't bother to deep-clone the directory info
+    // #WatchSetShallowClone
+    ret.alwaysFire = self.alwaysFire;
+    ret.files = _.clone(self.files);
+    ret.directories = _.clone(self.directories);
+    return ret;
   },
 
   toJSON: function () {

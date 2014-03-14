@@ -28,3 +28,9 @@ Package.on_use(function (api) {
   // objects, not as arrays.  Search for looksLikeArray.
   api.add_files(['pre.js', 'underscore.js', 'post.js']);
 });
+
+
+Package.on_test(function (api) {
+  // Also turn off the strong 'meteor' dependency in the test slice
+  api.use('meteor', {unordered: true});
+});

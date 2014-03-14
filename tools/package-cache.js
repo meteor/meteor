@@ -1,8 +1,8 @@
 var fs = require("fs");
 var path = require("path");
-var packageLoader = require("./package-loader.js");
-var packages = require("./packages.js");
 var archinfo = require("./archinfo.js");
+var compiler = require("./compiler.js");
+var PackageSource = require("./package-source.js");
 var _ = require('underscore');
 
 // both map from package load path to:
@@ -73,78 +73,81 @@ _.extend(PackageCache.prototype, {
     }
 
     // Load package from disk
-    var pkg = new packages.Package(loadPath);
+
+    // Does loadPath point directly at a unipackage (rather than a
+    // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      // It's an already-built package
       if (options.forceRebuild) {
         throw new Error('Cannot rebuild from a unipackage directory.');
       }
-      pkg.initFromUnipackage(name, loadPath);
-      self.loadedPackages[loadPath] = {pkg: pkg, packageDir: loadPath};
-    } else {
-      // It's a source tree. Does it have a built unipackage inside it?
-      var buildDir = path.join(loadPath, '.build');
-      // XXX XXX onlyIfUpToDate flag was removed. call
-      // compiler.checkUpToDate instead
-      if (! options.forceRebuild &&
-          fs.existsSync(buildDir) &&
-          pkg.initFromUnipackage(name, buildDir,
-                                 { onlyIfUpToDate: true,
-                                   buildOfPath: loadPath })) {
-        // We already had a build and it was up to date.
-        self.loadedPackages[loadPath] = {pkg: pkg, packageDir: loadPath};
-      } else {
-        // Either we didn't have a build, or it was out of date, or the
-        // caller wanted us to rebuild no matter what. Build the
-        // package.
-        buildmessage.enterJob({
-          title: "building package `" + name + "`",
-          rootPath: loadPath
-        }, function () {
-          // This has to be done in the right sequence: initialize
-          // (which loads the dependency list but does not get() those
-          // packages), then put the package into the package list,
-          // then call build() to get() the dependencies and finish
-          // the build. If you called build() before putting the
-          // package in the package list then you'd recurse
-          // forever. (build() needs the dependencies because it needs
-          // to look at the handlers registered by any plugins in the
-          // packages that we use.)
-          pkg.initFromPackageDir(name, loadPath);
-          self.loadedPackages[loadPath] = {pkg: pkg, packageDir: loadPath};
-          pkg.build();
+      var unipackage = new Unipackage(loadPath);
+      unipackage.initFromPath(name, loadPath);
+      self.loadedPackages[loadPath] = { pkg: unipackage, packageDir: loadPath };
+      return unipackage;
+    };
 
-          if (! buildmessage.jobHasMessages()) {
-            // Save it, for a fast load next time
-            try {
-              files.addToGitignore(loadPath, '.build*');
-              pkg.saveAsUnipackage(buildDir, { buildOfPath: loadPath });
-            } catch (e) {
-              // If we can't write to this directory, we don't get to cache our
-              // output, but otherwise life is good.
-              if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
-                throw e;
-            }
-          }
-        });
+    // It's a source tree. Load it.
+    var packageSource = new PackageSource(loadPath);
+    packageSource.initFromPackageDir(name, loadPath);
+
+    // Does it have an up-to-date build?
+    var buildDir = path.join(loadPath, '.build');
+    if (! options.forceRebuild && fs.existsSync(buildDir)) {
+      var unipackage = new Unipackage(loadPath);
+      unipackage.initFromPath(name, buildDir);
+      if (compiler.checkUpToDate(packageSource, unipackage)) {
+        self.loadedPackages[loadPath] = { pkg: unipackage,
+                                          packageDir: loadPath };
+        return unipackage;
       }
     }
 
-    return pkg;
+    // Either we didn't have a build, or it was out of date, or the
+    // caller wanted us to rebuild no matter what. Build the package.
+    return buildmessage.enterJob({
+      title: "building package `" + name + "`",
+      rootPath: loadPath
+    }, function () {
+      // We used to take great care to first put a
+      // loaded-but-not-built package object (the equivalent of a
+      // PackageSource) into self.loadedPackages before calling
+      // build() as a hacky way of dealing with build-time
+      // dependencies.
+      //
+      // We don't do that anymore and ..
+      // XXX at the moment, rely on catalog to initalize ahead of us
+      // and swoop in and build all of the local packages informed by
+      // a topological sort
+      var unipackage = compiler.compile(packageSource).unipackage;
+      self.loadedPackages[loadPath] = { pkg: unipackage, packageDir: loadPath };
+
+      if (! buildmessage.jobHasMessages()) {
+        // Save it, for a fast load next time
+        try {
+          files.addToGitignore(loadPath, '.build*');
+          unipackage.saveToPath(buildDir, { buildOfPath: loadPath });
+        } catch (e) {
+          // If we can't write to this directory, we don't get to cache our
+          // output, but otherwise life is good.
+          if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
+            throw e;
+        }
+      }
+
+      return unipackage;
+    });
   },
 
   // Get a package that represents an app. (ignoreFiles is optional
   // and if given, it should be an array of regexps for filenames to
   // ignore when scanning for source files.)
-  // XXX formerly called getForApp
   loadAppAtPath: function (appDir, ignoreFiles) {
     var self = this;
 
-    var pkg = new packages.Package;
-    pkg.initFromAppDir(appDir, ignoreFiles || []);
-    pkg.build();
-    return pkg;
+    var packageSource = new PackageSource;
+    packageSource.initFromAppDir(appDir, ignoreFiles);
+    return compiler.compile(packageSource).unipackage;
   }
 });
 
-module.exports = new PackageCache();
+module.exports = new PackageCache;

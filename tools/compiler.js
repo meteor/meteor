@@ -5,6 +5,7 @@ var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var Unipackage = require('./unipackage.js');
+var PackageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 
@@ -92,6 +93,14 @@ compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
 // 'meteor update' for package build-time dependencies?
 //
 // XXX deal with _makeBuildTimePackageLoader callsites
+//
+// XXX this function is probably going to get called a huge number of
+// times. For example, the Catalog calls it on every local package
+// every time the local package list changes. We could memoize the
+// result on packageSource (and presumably make this a method on
+// PackgeSource), or we could have some kind of cache (the ideal place
+// for such a cache might be inside the constraint solver, since it
+// will know how/when to invalidate it).
 var determineBuildTimeDependencies = function (packageSource) {
   var ret = {};
 
@@ -136,6 +145,7 @@ var determineBuildTimeDependencies = function (packageSource) {
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
 
+  ret.directDependencies = {};
   _.each(resolver.resolve(constraints), function (version, packageName) {
     // Take only direct dependencies
     if (_.has(constraints, packageName))
@@ -180,8 +190,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   var resources = [];
   var js = [];
   var sources = [];
-  // XXX: Provide a clone method on watchset.
-  var watchSet = watch.WatchSet.fromJSON(inputSlice.watchSet.toJSON());
+  var watchSet = inputSlice.watchSet.clone();
 
   // *** Determine and load active plugins
 
@@ -203,7 +212,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
   //
-  // We pass archinfo.host here, not self.arch, because it may be more
+  // We pass archinfo.host here, not inputSlice.arch, because it may be more
   // specific, and because plugins always have to run on the host
   // architecture.
   compiler.eachUsedSlice(
@@ -237,7 +246,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
       if (ext in allHandlers && allHandlers[ext] !== handler) {
         buildmessage.error(
           "conflict: two packages included in " +
-            (self.pkg.name || "the app") + ", " +
+            (inputSlice.pkg.name || "the app") + ", " +
             (allHandlers[ext].pkg.name || "the app") + " and " +
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
@@ -268,7 +277,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: path.join(self.pkg.serveRoot, relPath),
+      servePath: path.join(inputSlice.pkg.serveRoot, relPath),
       hash: hash
     });
 
@@ -538,7 +547,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // *** Determine captured variables
   var packageVariables = [];
   var packageVariableNames = {};
-  _.each(self.declaredExports, function (symbol) {
+  _.each(inputSlice.declaredExports, function (symbol) {
     if (_.has(packageVariableNames, symbol.name))
       return;
     packageVariables.push({
@@ -582,9 +591,9 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the build (the source files you'd have to
 //   ship to a different machine to replicate the build there)
-complier.compile = function (packageSource) {
+compiler.compile = function (packageSource) {
   var sources = [];
-  var pluginWatchSet = new watch.WatchSet();
+  var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
 
   // Determine versions of build-time dependencies
@@ -675,14 +684,45 @@ complier.compile = function (packageSource) {
   });
 
   _.each(packageSource.slices, function (slice) {
-    var sources = compileSlice(unipackage, slice, packageLoader);
-    sources.push.apply(sources, result.sources);
+    var sliceSources = compileSlice(unipackage, slice, packageLoader);
+    sources.push.apply(sources, sliceSources);
   });
 
   return {
-    sources: _.uniq(self.sources),
+    sources: _.uniq(sources),
     unipackage: unipackage
   };
+};
+
+// Figure out what packages have to be compiled and available in the
+// catalog before 'packageSource' can be compiled. Returns an array of
+// objects with keys 'name', 'version' (the latter a version
+// string). Yes, it is possible that multiple versions of some other
+// package might be build-time dependencies (because of plugins).
+compiler.getBuildTimeDependencies = function (packageSource) {
+  var versions = {}; // map from package name to version to true
+  var addVersion = function (version, name) {
+    if (! _.has(versions, name))
+      versions[name] = {};
+    versions[name][version] = true;
+  };
+
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  _.each(buildTimeDeps.directDependencies, addVersion);
+  _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
+    _.each(versions, addVersion);
+  });
+
+  delete versions[packageSource.name];
+
+  var ret = [];
+  _.each(versions, function (versionArray, name) {
+    _.each(_.keys(versionArray), function (version) {
+      ret.push({ name: name, version: version });
+    });
+  });
+
+  return ret;
 };
 
 // Check to see if a particular build of a package is up to date (that
@@ -703,7 +743,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
-  if (unipackage.builtBy !== complier.BUILT_BY)
+  if (unipackage.builtBy !== compiler.BUILT_BY)
     return false;
 
   // XXX XXX XXX

@@ -2,17 +2,15 @@ var _ = require('underscore');
 var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
 
-var packageLoader = exports;
-
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
 //    use local packages and ignore the package versions.
-packageLoader.PackageLoader = function (options) {
+var PackageLoader = function (options) {
   var self = this;
   self.versions = options.versions;
 };
 
-_.extend(packageLoader.PackageLoader.prototype, {
+_.extend(PackageLoader.prototype, {
   // Given the name of a package, return a Package object, or throw an
   // error if the package wasn't included in the 'versions' passed on
   // initalization or isn't available (for example, hasn't been
@@ -97,3 +95,5 @@ _.extend(packageLoader.PackageLoader.prototype, {
       return pkg.getDefaultSlices(arch);
   }
 });
+
+module.exports = PackageLoader;

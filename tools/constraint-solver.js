@@ -1,6 +1,7 @@
 var semver = require('semver');
 var _ = require('underscore');
 var catalog = require('./catalog.js');
+var utils = require('./utils.js');
 
 var constraintSolver = exports;
 
@@ -14,6 +15,32 @@ var Dependency = {
   unordered: Match.Optional(Boolean)
 };
 */
+
+// XXX copied (with simplifications) from EJSON.clone
+var deepClone = function (v) {
+  var ret;
+  if (typeof v !== "object")
+    return v;
+  if (v === null)
+    return null; // null has typeof "object"
+  // XXX: Use something better than underscore's isArray
+  if (_.isArray(v) || _.isArguments(v)) {
+    // For some reason, _.map doesn't work in this context on Opera (weird test
+    // failures).
+    ret = [];
+    for (i = 0; i < v.length; i++)
+      ret[i] = deepClone(v[i]);
+    return ret;
+  }
+  // handle other objects
+  ret = {};
+  _.each(v, function (value, key) {
+    ret[key] = deepClone(value);
+  });
+  return ret;
+};
+
+
 
 // main class
 constraintSolver.Resolver = function (options) {
@@ -46,7 +73,7 @@ constraintSolver.Resolver = function (options) {
       packageDep.earliestCompatibleVersion = versionDef.earliestCompatibleVersion;
       packageDep.dependencies = _.map(versionDef.dependencies, function (dep, packageName) {
         return _.extend({packageName: packageName},
-                        PackageVersion.parseVersionConstraint(dep.constraint));
+                        utils.parseVersionConstraint(dep.constraint));
       });
 
       self.packageDeps[packageDef.name][versionDef.version] = packageDep;
@@ -162,7 +189,7 @@ constraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
 
   for (var i = 0; i < satisfyingVersions.length; i++) {
     var version = satisfyingVersions[i];
-    var newState = EJSON.clone(state);
+    var newState = deepClone(state);
     newState.picks[candidatePackageName] = version;
     newState.exactDepsStack.push({
       packageName: candidatePackageName,
@@ -222,7 +249,7 @@ var toStructuredDeps = function (dependencies) {
     if (typeof details === "string" || details === null) {
       structuredDeps.push(_.extend(
         { packageName: packageName },
-        PackageVersion.parseVersionConstraint(details)));
+        utils.parseVersionConstraint(details)));
     } else {
       structuredDeps.push(_.extend({ packageName: packageName }, details));
     }
