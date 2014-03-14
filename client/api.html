@@ -678,6 +678,9 @@ your collection should be published to which users.
       Scratchpad.insert({number: i * 2});
     assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
 
+Generally, you'll assign `Meteor.Collection` objects in your app to global
+variables.  You can only create one `Meteor.Collection` object for each
+underlying Mongo collection.
 
 If you specify a `transform` option to the `Collection` or any of its retrieval
 methods, documents are passed through the `transform` function before being
