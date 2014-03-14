@@ -182,21 +182,16 @@ var width = (typeof window !== 'undefined' && window.innerWidth) ||
 
 var agent = (typeof navigator !== 'undefined' && navigator.userAgent) || "";
 
-function createRandomGenerator() {
-  if (nodeCrypto ||
-      (typeof window !== "undefined" &&
-       window.crypto && window.crypto.getRandomValues))
-    return new RandomGenerator();
-  else
-    return new RandomGenerator([new Date(), height, width, agent, Math.random()]);
-};
-
-Random = createRandomGenerator();
+if (nodeCrypto ||
+    (typeof window !== "undefined" &&
+     window.crypto && window.crypto.getRandomValues))
+  Random = new RandomGenerator();
+else
+  Random = new RandomGenerator([new Date(), height, width, agent, Math.random()]);
 
 Random.createWithSeeds = function () {
   if (arguments.length === 0) {
     throw new Error('No seeds were provided');
-  } else {
-    return new RandomGenerator(arguments);
   }
+  return new RandomGenerator(arguments);
 };
