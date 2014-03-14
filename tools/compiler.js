@@ -4,7 +4,7 @@ var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
-var Unipackage = require('./unipackage-class.js').Unipackage;
+var Unipackage = require('./unipackage.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 
