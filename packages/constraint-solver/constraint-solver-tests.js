@@ -19,9 +19,9 @@ var insertVersion = function (name, version, ecv, deps) {
     constructedDeps[name] = {
       constraint: constraint,
       references: [
-        { slice: "os", arch: "all", targetSlice: "os", weak: false,
+        { slice: "main", arch: "os", targetSlice: "main", weak: false,
           implied: false, unordered: false },
-        { slice: "browser", arch: "all", targetSlice: "browser", weak: false,
+        { slice: "main", arch: "browser", targetSlice: "main", weak: false,
           implied: false, unordered: false }]
     };
   });
