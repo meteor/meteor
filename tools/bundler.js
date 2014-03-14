@@ -161,7 +161,6 @@
 var path = require('path');
 var util = require('util');
 var files = require(path.join(__dirname, 'files.js'));
-var packages = require(path.join(__dirname, 'packages.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var buildmessage = require('./buildmessage.js');
@@ -177,6 +176,8 @@ var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js').runLog;
 var packageCache = require('./package-cache.js');
+var PackageSource = require('./package-source.js');
+var compiler = require('./compiler.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 var ignoreFiles = [
@@ -641,7 +642,7 @@ _.extend(Target.prototype, {
         if (_.contains(["js", "css"], resource.type)) {
           if (resource.type === "css" && ! isBrowser)
             // XXX might be nice to throw an error here, but then we'd
-            // have to make it so that packages.js ignores css files
+            // have to make it so that package.js ignores css files
             // that appear in the server directories in an app tree
 
             // XXX XXX can't we easily do that in the css handler in
@@ -1991,9 +1992,9 @@ exports.buildJsImage = function (options) {
   if (! options.name)
     throw new Error("Must provide a name");
 
-  var pkg = new packages.Package;
+  var packageSource = new PackageSource;
 
-  pkg.initFromOptions(options.name, {
+  packageSource.initFromOptions(options.name, {
     sliceName: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
@@ -2002,7 +2003,8 @@ exports.buildJsImage = function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });
-  pkg.build();
+
+  var unipackage = complier.compile(packageSource).unipackage;
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
@@ -2013,7 +2015,7 @@ exports.buildJsImage = function (options) {
     // (which always wants to build for the current host).
     arch: archinfo.host()
   });
-  target.make({ packages: [pkg] });
+  target.make({ packages: [unipackage] });
 
   return {
     image: target.toJsImage(),

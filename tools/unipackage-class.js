@@ -1,3 +1,13 @@
+var compiler = require('./compiler.js');
+var archinfo = require('./archinfo.js');
+var _ = require('underscore');
+var linker = require('./linker.js');
+var buildmessage = require('./buildmessage.js');
+var fs = require('fs');
+var Builder = require('./builder.js');
+var bundler = require('./bundler.js');
+var watch = require('./watch.js');
+
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
     throw new Error("bad path: " + p);
@@ -419,10 +429,10 @@ _.extend(Unipackage.prototype, {
     options = _.clone(options || {});
     options.firstUnipackage = true;
 
-    return self._loadSlicesFromUnipackage(name, dir, options);
+    return self._loadSlicesFromPath(name, dir, options);
   },
 
-  _loadSlicesFromUnipackage: function (name, dir, options) {
+  _loadSlicesFromPath: function (name, dir, options) {
     var self = this;
     options = options || {};
 
@@ -656,7 +666,7 @@ _.extend(Unipackage.prototype, {
       // filename in the unipackage we're writing.  Multiple slices can use the
       // same npm modules (eg, for now, main and tests slices), but also there
       // can be different sets of directories as well (eg, for a unipackage
-      // merged with from multiple unipackages with _loadSlicesFromUnipackage).
+      // merged with from multiple unipackages with _loadSlicesFromPath).
       var npmDirectories = {};
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to

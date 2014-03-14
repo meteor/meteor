@@ -4,7 +4,6 @@ var os = require("os");
 var Future = require("fibers/future");
 var _ = require("underscore");
 var files = require('./files.js');
-var packages = require('./packages.js');
 var utils = require('./utils.js');
 var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
@@ -12,6 +11,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
+var Unipackage = require('./unipackage-class.js');
 
 var tropohouse = exports;
 
@@ -129,16 +129,16 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
     // will work once implemented?
   } else {
     // We need to turn our builds into a unipackage.
-    var pkg = new packages.Package;
+    var unipackage = new Unipackage;
     var builds = tropohouse.downloadedBuilds(packageName, version);
     _.each(builds, function (build, i) {
-      pkg._loadSlicesFromUnipackage(
+      unipackage._loadSlicesFromPath(
         packageName,
         tropohouse.downloadedBuildPath(packageName, version, build),
         {firstUnipackage: i === 0});
     });
     // XXX save new buildinfo stuff so it auto-rebuilds
-    pkg.saveAsUnipackage(packageDir);
+    unipackage.saveToPath(packageDir);
   }
 
   return true;

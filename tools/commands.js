@@ -18,9 +18,10 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packages = require('./packages.js');
 var packageLoader = require('./package-loader.js').packageLoader;
 var packageCache = require('./package-cache.js');
+var PackageSource = require('./package-source.js');
+var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -1620,10 +1621,10 @@ main.registerCommand({
     return 1;
   }
 
-  var pkg = new packages.Package(packageDir);
-  pkg.initFromPackageDir(options.name, packageDir);
-  pkg.build();
-  pkg.saveAsUnipackage(path.join(packageDir, '.build'));
+  var packageSource = new PackageSource(packageDir);
+  packageSource.initFromPackageDir(options.name, packageDir);
+  var unipackage = compiler.compile(packageSource).unipackage;
+  unipackage.saveToPath(path.join(packageDir, '.build'));
 
   var conn = packageClient.loggedInPackagesConnection();
   packageClient.createAndPublishBuiltPackage(conn, pkg, packageDir);

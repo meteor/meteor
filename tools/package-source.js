@@ -1,6 +1,15 @@
 var fs = require('fs');
+var path = require('path');
+var _ = require('underscore');
 var sourcemap = require('source-map');
+
+var files = require('./files.js');
 var utils = require('./utils.js');
+var watch = require('./watch.js');
+var project = require('./project.js');
+var buildmessage = require('./buildmessage.js');
+var meteorNpm = require('./meteor-npm.js');
+var archinfo = require(path.join(__dirname, 'archinfo.js'));
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -193,6 +202,7 @@ var PackageSource = function (packageDirectoryForBuildInfo) {
   // read files or anything else. Notably, it should be the same if a package is
   // read from a source tree or read from the .build unipackage inside that
   // source tree.
+  // XXX can this go away now?
   self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Package metadata. Keys are 'summary' and 'internal'. Currently

@@ -5,6 +5,8 @@ var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var Unipackage = require('./unipackage-class.js').Unipackage;
+var unipackage = require('./unipackage.js');
+var bundler = require('./bundler.js');
 
 var compiler = exports;
 
@@ -580,20 +582,20 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the build (the source files you'd have to
 //   ship to a different machine to replicate the build there)
-complier.compile = function (sourcePackage) {
+complier.compile = function (packageSource) {
   var sources = [];
   var pluginWatchSet = new watch.WatchSet();
   var plugins = {};
 
   // Determine versions of build-time dependencies
-  var buildTimeDeps = determineBuildTimeDependencies(sourcePackage);
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
 
   // Build plugins
-  _.each(sourcePackage.pluginInfo, function (info) {
+  _.each(packageSource.pluginInfo, function (info) {
     buildmessage.enterJob({
       title: "building plugin `" + info.name +
-        "` in package `" + sourcePackage.name + "`",
-      rootPath: sourcePackage.sourceRoot
+        "` in package `" + packageSource.name + "`",
+      rootPath: packageSource.sourceRoot
     }, function () {
       var packageLoader = new PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name]
@@ -603,13 +605,13 @@ complier.compile = function (sourcePackage) {
         name: info.name,
         packageLoader: packageLoader,
         use: info.use,
-        sourceRoot: sourcePackage.sourceRoot,
+        sourceRoot: packageSource.sourceRoot,
         sources: info.sources,
         npmDependencies: info.npmDependencies,
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
-        npmDir: path.resolve(path.join(sourcePackage.sourceRoot, '.npm',
+        npmDir: path.resolve(path.join(packageSource.sourceRoot, '.npm',
                                        'plugin', info.name))
       });
 
@@ -653,13 +655,13 @@ complier.compile = function (sourcePackage) {
 
   var unipackage = new Unipackage();
   unipackage.initFromOptions({
-    name: sourcePackage.name,
-    metadata: sourcePackage.metadata,
-    version: sourcePackage.version,
-    earliestCompatibleVersion: sourcePackage.earliestCompatibleVersion,
-    defaultSlices: sourcePackage.defaultSlices,
-    testSlices: sourcePackage.testSlices,
-    packageDirectoryForBuildInfo: sourcePackage.packageDirectoryForBuildInfo,
+    name: packageSource.name,
+    metadata: packageSource.metadata,
+    version: packageSource.version,
+    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+    defaultSlices: packageSource.defaultSlices,
+    testSlices: packageSource.testSlices,
+    packageDirectoryForBuildInfo: packageSource.packageDirectoryForBuildInfo,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
@@ -672,7 +674,7 @@ complier.compile = function (sourcePackage) {
     versions: buildTimeDeps.directDependencies
   });
 
-  _.each(sourcePackage.slices, function (slice) {
+  _.each(packageSource.slices, function (slice) {
     var sources = compileSlice(unipackage, slice, packageLoader);
     sources.push.apply(sources, result.sources);
   });
@@ -695,7 +697,7 @@ complier.compile = function (sourcePackage) {
 // object with exactly one of the following keys:
 // - path: a path on disk to a unipackage
 // - unipackage: a Unipackage object
-compiler.checkUpToDate = function (sourcePackage, unipackage) {
+compiler.checkUpToDate = function (packageSource, unipackage) {
   if (unipackage.forceNotUpToDate)
     return false;
 
@@ -709,7 +711,7 @@ compiler.checkUpToDate = function (sourcePackage, unipackage) {
 
   /*
   // XXX XXX this shouldn't work this way at all. instead it should
-  // just get the resolved build-time dependencies from sourcePackage
+  // just get the resolved build-time dependencies from packageSource
   // and make sure they match the versions that were used for the
   // build.
   var packageLoader = XXX;
@@ -728,7 +730,7 @@ compiler.checkUpToDate = function (sourcePackage, unipackage) {
 
   // XXX as we're checking build-time dependency freshness in the
   // future, remember to not rely on
-  // sourcePackage.directBuildTimeDependencies, which may contain
+  // packageSource.directBuildTimeDependencies, which may contain
   // versions like 1.2.3+local, but instead get versions with real
   // build ids through the catalog
 
