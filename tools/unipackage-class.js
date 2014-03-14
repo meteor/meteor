@@ -31,8 +31,14 @@ var UnipackageSlice = function (unipackage, options) {
   self.uses = options.uses;
   self.implies = options.implies || [];
   self.noExports = options.noExports;
-  self.watchSet = options.watchSet || new watch.WatchSet();
   self.nodeModulesPath = options.nodeModulesPath;
+
+  // This WatchSet will end up having the watch items from the
+  // SourceSlice (such as package.js or .meteor/packages), plus all of
+  // the actual source files for the slice (including items that we
+  // looked at to find the source files, such as directories we
+  // scanned).
+  self.watchSet = options.watchSet || new watch.WatchSet();
 
   // Each UnipackageSlice is given a unique id when it's loaded (it is
   // not saved to disk). This is just a convenience to make it easier
@@ -190,6 +196,18 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
   // If true, force the checkUpToDate to return false for this unipackage.
   self.forceNotUpToDate = false;
 
+  // The versions that we used at build time for each of our direct
+  // dependencies. Map from package name to version string.
+  // XXX save to disk
+  self.buildTimeDirectDependencies = null;
+
+  // The complete list of versions (including transitive dependencies)
+  // that we used at build time to build each of our plugins. Map from
+  // plugin name to package name to version string. Note that two
+  // plugins might not use the same version for the same transitive
+  // dependency.
+  self.buildTimePluginDependencies = null;
+
   // XXX this is likely to change once we have build versions
   //
   // A WatchSet for the full transitive dependencies for all plugins in this
@@ -198,15 +216,6 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
   // directly uses this package needs to be rebuilt in case the change to
   // plugins affected compilation.
   self.pluginWatchSet = new watch.WatchSet();
-
-  // XXX record build-time dependencies
-  /*
-  // Map from package name to packageDirectoryForBuildInfo of packages that are
-  // directly used by this package. We use this to figure out that we need to
-  // rebuild if the resolution of the package changes (eg, an app package is
-  // added that overshadows a warehouse package, or the release changes).
-  self.pluginProviderPackageDirs = {};
-  */
 
   // -- Loaded plugin state --
 
@@ -243,6 +252,8 @@ _.extend(Unipackage.prototype, {
     self.packageDirectoryForBuildInfo = options.packageDirectoryForBuildInfo;
     self.plugins = options.plugins;
     self.pluginWatchSet = options.pluginWatchSet;
+    self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
+    self.buildTimePluginDependencies = options.buildTimePluginDependencies;
   },
 
   // Programmatically add a slice to this Unipackage. Should only be
@@ -451,15 +462,10 @@ _.extend(Unipackage.prototype, {
       self.forceNotUpToDate = true;
     }
 
-    // Read the watch sets for each slice; keep them separate (for passing to
-    // the Slice constructor below) as well as merging them into one big
-    // WatchSet.
-    var mergedWatchSet = new watch.WatchSet();
+    // Read the watch sets for each slice
     var sliceWatchSets = {};
     _.each(buildInfoJson.sliceDependencies, function (watchSetJSON, sliceTag) {
-      var watchSet = watch.WatchSet.fromJSON(watchSetJSON);
-      mergedWatchSet.merge(watchSet);
-      sliceWatchSets[sliceTag] = watchSet;
+      sliceWatchSets[sliceTag] = watch.WatchSet.fromJSON(watchSetJSON);
     });
 
     // Read pluginWatchSet and pluginProviderPackageDirs. (In the
@@ -468,9 +474,6 @@ _.extend(Unipackage.prototype, {
     // merge.)
     self.pluginWatchSet = watch.WatchSet.fromJSON(
       buildInfoJson.pluginDependencies);
-    // This might be redundant (since pluginWatchSet was probably merged into
-    // each slice watchSet when it was built) but shouldn't hurt.
-    mergedWatchSet.merge(self.pluginWatchSet);
     self.pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
 
     // If we are loading multiple unipackages, only take this stuff from the

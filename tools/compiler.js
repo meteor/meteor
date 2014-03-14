@@ -44,7 +44,7 @@ compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
 
   var processedSliceId = {};
   var usesToProcess = [];
-  _.each(uses, function (use) {
+  _.each(dependencies, function (use) {
     if (options.skipUnordered && use.unordered)
       return;
     if (options.skipWeak && use.weak)
@@ -74,13 +74,103 @@ compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
   }
 };
 
+// Pick a set of versions to use to satisfy a package's build-time
+// dependencies. Emits buildmessages if this is impossible.
+//
+// Output is an object with keys:
+// - directDependencies: map from package name to version string, for
+//   the package's direct, ordered, strong, non-implied dependencies
+// - pluginDependencies: map from plugin name to complete (transitive)
+//   version information for all packages used to build the plugin, as
+//   a map from package name to version string.
+//
+// XXX You may get different results from this function depending on
+// when you call it (if, for example, the packages in the catalog
+// change). Should we have some kind of analog to .meteor/versions and
+// 'meteor update' for package build-time dependencies?
+//
+// XXX deal with _makeBuildTimePackageLoader callsites
+var determineBuildTimeDependencies = function (packageSource) {
+  var ret = {};
+
+  // XXX If in any of these cases the constraint solver fails to find
+  // a solution, we should emit a nice buildmessage and maybe find a
+  // way to continue. For example, the pre-constraint-solver version
+  // of this code had logic to detect if the user asked for a package
+  // that just doesn't exist, and emit a message about that and then
+  // continue with the build ignoring that dependency. It also had
+  // code to do this for implies.
+
+  // -- Direct dependencies --
+
+  // XXX it looks like when we load plugins in compileSlice, we honor
+  // implied plugins, but here where we're determining dependencies,
+  // we don't include them. we should probably straighten this out.
+  var dependencyMetadata =
+    packageSource.getDependencyMetadata({
+      logError: true,
+      skipWeak: true,
+      skipUnordered: true
+    });
+
+  if (! dependencyMetadata) {
+    // If _computeDependencyMetadata failed, I guess we can try to
+    // recover by returning a PackageLoader with no versions in
+    // it. This will cause a lot of 'package not found' errors, so a
+    // better approach would proabably be to actually have this
+    // function return null and make the caller do a better job of
+    // recovering.
+    return new packageLoader.PackageLoader({ });
+  }
+
+  var constraints = {};
+  _.each(dependencyMetadata, function (info, packageName) {
+    constraints[packageName] = info.constraint;
+  });
+
+  // XXX once we implement targets(), this is where we will add the
+  // targeted packages!
+
+  var constraintSolver = require('./constraint-solver.js');
+  var resolver = new constraintSolver.Resolver;
+
+  _.each(resolver.resolve(constraints), function (version, packageName) {
+    // Take only direct dependencies
+    if (_.has(constraints, packageName))
+      ret.directDependencies[packageName] = version;
+  });
+
+  // -- Plugins --
+
+  ret.pluginDependencies = {};
+  _.each(packageSource.pluginInfo, function (info) {
+    var constraints = {};
+
+    // info.uses is currently just an array of strings, and there's
+    // no way to specify weak/unordered. Much like an app.
+    _.each(info.uses, function (spec) {
+      var parsedSpec = utils.parseSpec(spec);
+      if (parsedspec.slice)
+        throw new Error("can't deal with slice specs here yet");
+      constraints[parsedSpec.package] = parsedSpec.constraint;
+    });
+
+    var resolver = new constraintSolver.Resolver;
+    ret.pluginDependencies[info.name] = resolver.resolve(constraints);
+  });
+
+  return ret;
+};
+
 // inputSlice is a SourceSlice to compile. Process all source files
 // through the appropriate handlers and run the prelink phase on any
 // resulting JavaScript. Create a new UnipackageSlice and add it to
 // 'unipackage'.
 //
-// packageLoader is the PackageLoader to use to validate that the
-// slice's dependencies actually exist (for cleaner error messages).
+// packageLoader is a PackageLoader that can load our build-time
+// direct dependencies at the correct versions. It is only used to
+// load plugins so it does not need to be able to (and arguably should
+// not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
 var compileSlice = function (unipackage, inputSlice, packageLoader) {
@@ -91,27 +181,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // XXX: Provide a clone method on watchset.
   var watchSet = watch.WatchSet.fromJSON(inputSlice.watchSet.toJSON());
 
-  // (1) Preemptively check to make sure that each of the packages we
-  // reference actually exist. If we find a package that doesn't
-  // exist, emit an error and remove it from the package list. That
-  // way we get one error about it instead of a new error at each
-  // stage in the build process in which we try to retrieve the
-  // package.
-  var checkDependency = function (dependency) {
-    var pkg = packageLoader.getPackage(dependency.package,
-                                        { throwOnError: false });
-    if (! pkg) {
-      buildmessage.error("no such package: '" + dependency.package + "'");
-      // recover by omitting this package from the field
-      return false;
-    }
-    return true;
-  };
-
-  var uses = _.filter(inputSlice.uses, checkDependency);
-  var implies = _.filter(inputSlice.implies, checkDependency);
-
-  // (2) Determine and load active plugins
+  // *** Determine and load active plugins
 
   // XXX we used to include our own extensions only if we were the
   // "use" role. now we include them everywhere because we don't have
@@ -127,13 +197,16 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
-  // not some unrelated package in the target has a dependency.
+  // not some unrelated package in the target has a dependency. And we
+  // skip unordered dependencies, because it's not going to work to
+  // have circular build-time dependencies.
   //
   // We pass archinfo.host here, not self.arch, because it may be more
   // specific, and because plugins always have to run on the host
   // architecture.
   compiler.eachUsedSlice(
-    uses, archinfo.host(), packageLoader, { skipWeak: true },
+    inputSlice.uses, archinfo.host(), packageLoader,
+    { skipWeak: true, skipUnordered: true },
     function (usedSlice) {
       activePluginPackages.push(usedSlice.pkg);
     }
@@ -141,7 +214,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
 
   activePluginPackages = _.uniq(activePluginPackages);
 
-  // (3) Assemble the list of source file handlers from the plugins
+  // *** Assemble the list of source file handlers from the plugins
   var allHandlers = {};
 
   allHandlers['js'] = function (compileStep) {
@@ -173,7 +246,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     });
   });
 
-  // (4) Determine source files
+  // *** Determine source files
   // Note: sourceExtensions does not include leading dots
   // Note: the getSourcesFunc function isn't expected to add its
   // source files to watchSet; rather, the watchSet is for other
@@ -183,7 +256,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   var sourceExtensions = _.keys(allHandlers);
   var sourceItems = inputSlice.getSourcesFunc(sourceExtensions, watchSet);
 
-  // (5) Process each source file
+  // *** Process each source file
   var addAsset = function (contents, relPath, hash) {
     // XXX hack
     if (! inputSlice.pkg.name)
@@ -437,7 +510,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     }
   });
 
-  // (6) Run Phase 1 link
+  // *** Run Phase 1 link
 
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
@@ -460,28 +533,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     jsAnalyze: jsAnalyze
   });
 
-
-  // XXX: record build time dependencies
-  /*
-  // Add dependencies on the source code to any plugins that we could have
-  // used. We need to depend even on plugins that we didn't use, because if
-  // they were changed they might become relevant to us. This means that we
-  // end up depending on every source file contributing to all plugins in the
-  // packages we use (including source files from other packages that the
-  // plugin program itself uses), as well as the package.js file from every
-  // package we directly use (since changing the package.js may add or remove
-  // a plugin).
-  //
-  // XXX: activePluginPackages is going to move here?
-  _.each(self._activePluginPackages(packageLoader), function (otherPkg) {
-      watchSet.merge(otherPkg.pluginWatchSet);
-      // XXX this assumes this is not overwriting something different
-      pluginProviderPackageDirs[otherPkg.name] =
-        otherPkg.packageDirectoryForBuildInfo;
-  });
-  */
-
-  // (7) Determine captured variables
+  // *** Determine captured variables
   var packageVariables = [];
   var packageVariableNames = {};
   _.each(self.declaredExports, function (symbol) {
@@ -502,12 +554,12 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     packageVariableNames[name] = true;
   });
 
-  // (8) Output slice object
+  // *** Output slice object
   unipackage.addSlice({
     sliceName: inputSlice.sliceName,
     arch: inputSlice.arch, // XXX: arch?
-    uses: uses,
-    implies: implies,
+    uses: inputSlice.uses,
+    implies: inputSlice.implies,
     watchSet: watchSet,
     nodeModulesPath: inputSlice.nodeModulesPath,
     prelinkFiles: results.files,
@@ -533,6 +585,9 @@ complier.compile = function (sourcePackage) {
   var pluginWatchSet = new watch.WatchSet();
   var plugins = {};
 
+  // Determine versions of build-time dependencies
+  var buildTimeDeps = determineBuildTimeDependencies(sourcePackage);
+
   // Build plugins
   _.each(sourcePackage.pluginInfo, function (info) {
     buildmessage.enterJob({
@@ -540,20 +595,13 @@ complier.compile = function (sourcePackage) {
         "` in package `" + sourcePackage.name + "`",
       rootPath: sourcePackage.sourceRoot
     }, function () {
+      var packageLoader = new PackageLoader({
+        versions: buildTimeDeps.pluginDependencies[info.name]
+      });
+
       var buildResult = bundler.buildJsImage({
         name: info.name,
-        // XXX XXX How do we determine the versions to use for a
-        // plugin? These are bundle-time versions, not build-time
-        // versions, so it's like building an app. The main question
-        // here seems to be, what is the equivalent of a
-        // .meteor/versions file for a plugin? Does it get its own
-        // versions file in some hidden directory in the package? Is
-        // there a way to run 'meteor update' on it or do you have
-        // to do that stuff by hand?
-        //
-        // (obviously null is just a placeholder value until we
-        // figure this out)
-        packageLoader: null,
+        packageLoader: packageLoader,
         use: info.use,
         sourceRoot: sourcePackage.sourceRoot,
         sources: info.sources,
@@ -570,16 +618,12 @@ complier.compile = function (sourcePackage) {
         sources.push(source);
       });
 
-      // Add this plugin's dependencies to our "plugin dependency" WatchSet.
+      // Add this plugin's dependencies to our "plugin dependency"
+      // WatchSet. buildResult.watchSet will end up being the merged
+      // watchSets of all of the slices of the plugin -- plugins have
+      // only one slice and this should end up essentially being just
+      // the source files of the plugin.
       pluginWatchSet.merge(buildResult.watchSet);
-
-      // XXX: Record build-time dependencies
-      /*
-      // Remember the versions of all of the build-time dependencies
-      // that were used.
-      _.extend(self.pluginProviderPackageDirs,
-               buildResult.pluginProviderPackageDirs);
-      */
 
       // Register the built plugin's code.
       if (!_.has(plugins, info.name))
@@ -587,6 +631,25 @@ complier.compile = function (sourcePackage) {
       plugins[info.name][buildResult.image.arch] = buildResult.image;
     });
   });
+
+
+
+  // XXX XXX HERE HERE
+  //
+  // Unless the 'officalBuild' option was set, compute a build
+  // identifier by finding the versions of all of our package
+  // dependencies (direct and plugin dependencies) -- real versions,
+  // not +local version, which means a lookup in the catalog -- and
+  // hashing them together (in a structured way with what they go
+  // with, canoncialized as well as possible) with the contents of the
+  // merged watchsets of our slices and our plugins, with paths
+  // relativized somehow (that last bit may be tricky!)
+  //
+  // Then -- again, unless 'officialBuild' was set -- modify version
+  // by adding +<buildid> to the version (it's an error if you already
+  // had one, I guess).
+
+
 
   var unipackage = new Unipackage();
   unipackage.initFromOptions({
@@ -598,14 +661,17 @@ complier.compile = function (sourcePackage) {
     testSlices: sourcePackage.testSlices,
     packageDirectoryForBuildInfo: sourcePackage.packageDirectoryForBuildInfo,
     plugins: plugins,
-    pluginWatchSet: pluginWatchSet
+    pluginWatchSet: pluginWatchSet,
+    buildTimeDirectDependencies: buildTimeDeps.directDependencies,
+    buildTimePluginDependencies: buildTimeDeps.pluginDependencies
   });
-
-  // XXX: what to do? this should probably be passed in.
-  // var packageLoader = self._makeBuildTimePackageLoader();
 
   // Build slices. Might use our plugins, so needs to happen
   // second.
+  var packageLoader = new PackageLoader({
+    versions: buildTimeDeps.directDependencies
+  });
+
   _.each(sourcePackage.slices, function (slice) {
     var sources = compileSlice(unipackage, slice, packageLoader);
     sources.push.apply(sources, result.sources);
@@ -659,6 +725,12 @@ compiler.checkUpToDate = function (sourcePackage, unipackage) {
   if (! packageResolutionsSame)
     return false;
   */
+
+  // XXX as we're checking build-time dependency freshness in the
+  // future, remember to not rely on
+  // sourcePackage.directBuildTimeDependencies, which may contain
+  // versions like 1.2.3+local, but instead get versions with real
+  // build ids through the catalog
 
   var watchSet = new watch.WatchSet();
   watchSet.merge(unipackage.pluginWatchSet);

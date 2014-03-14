@@ -1,23 +1,11 @@
 var fs = require('fs');
 var sourcemap = require('source-map');
+var utils = require('./utils.js');
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
 var quotemeta = function (str) {
   return String(str).replace(/(\W)/g, '\\$1');
-};
-
-// XXX should unify this with utils.parseConstraint
-var parseSpec = function (spec) {
-  var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/)
-  if (! m)
-    throw new Error("Bad package spec: " + spec);
-  var ret = { package: m[1] };
-  if (m[3])
-    ret.slice = m[3];
-  if (m[5])
-    ret.constraint = m[5];
-  return ret;
 };
 
 // Given a semver version string, return the earliest semver for which
@@ -161,8 +149,10 @@ var SourceSlice = function (pkg, options) {
   self.declaredExports = options.declaredExports || null;
 
   // Files and directories that we want to monitor for changes in
-  // development mode, such as source files and package.js, as a
-  // watch.WatchSet.
+  // development mode, as a watch.WatchSet. In the latest refactoring
+  // of the code, this does not include source files or directories,
+  // but only control files such as package.js and .meteor/packages,
+  // since the rest are not determined until compile time.
   self.watchSet = options.watchSet || new watch.WatchSet();
 
   // Absolute path to the node_modules directory to use at runtime to
@@ -240,6 +230,7 @@ var PackageSource = function (packageDirectoryForBuildInfo) {
   self.pluginInfo = {};
 };
 
+
 _.extend(PackageSource.prototype, {
   // Make a dummy (empty) packageSource that contains nothing of interest.
   // XXX: Do we need this
@@ -307,7 +298,7 @@ _.extend(PackageSource.prototype, {
     var slice = new SourceSlice(self, {
       name: options.sliceName,
       arch: arch,
-      uses: _.map(options.use, parseSpec),
+      uses: _.map(options.use, utils.parseSpec),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
@@ -667,7 +658,7 @@ _.extend(PackageSource.prototype, {
               _.each(where, function (w) {
                 if (options.role && options.role !== "use")
                   throw new Error("Role override is no longer supported");
-                uses[role][w].push(_.extend(parseSpec(name), {
+                uses[role][w].push(_.extend(utils.parseSpec(name), {
                   unordered: options.unordered || false,
                   weak: options.weak || false
                 }));
@@ -694,7 +685,7 @@ _.extend(PackageSource.prototype, {
               _.each(where, function (w) {
                 // We don't allow weak or unordered implies, since the main
                 // purpose of imply is to provide imports and plugins.
-                implies[w].push(parseSpec(name));
+                implies[w].push(utils.parseSpec(name));
               });
             });
           },
@@ -902,7 +893,7 @@ _.extend(PackageSource.prototype, {
       var slice = new SourceSlice(self, {
         name: sliceName,
         arch: arch,
-        uses: _.map(names, parseSpec)
+        uses: _.map(names, utils.parseSpec)
       });
       self.slices.push(slice);
 
@@ -1078,11 +1069,21 @@ _.extend(PackageSource.prototype, {
 
   // Return dependency metadata for all slices, in the format needed
   // by the package catalog.
-  getDependencyMetadata: function () {
+  //
+  // Options:
+  // - logError: if true, if something goes wrong, log a buildmessage
+  //   and return null rather than throwing an exception.
+  // - skipWeak: omit weak dependencies
+  // - skipUnordered: omit unordered dependencies
+  getDependencyMetadata: function (options) {
     var self = this;
-    var ret = self._computeDependencyMetadata();
-    if (! ret)
-      throw new Error("inconsistent dependency constraint across slices?");
+    var ret = self._computeDependencyMetadata(options);
+    if (! ret) {
+      if (options.logError)
+        return null;
+      else
+        throw new Error("inconsistent dependency constraint across slices?");
+    }
     return ret;
   },
 
@@ -1092,14 +1093,16 @@ _.extend(PackageSource.prototype, {
   // XXX: Check that this is used when refactoring is done.
   _checkCrossSliceVersionConstraints: function () {
     var self = this;
-    return !! self._computeDependencyMetadata(true);
+    return !! self._computeDependencyMetadata({ logError: true });
   },
 
   // Compute the return value for getDependencyMetadata, or return
   // null if there is a dependency that doesn't have the same
   // constraint across all slices (and, if logError is true, log a
   // buildmessage error).
-  _computeDependencyMetadata: function (logError) {
+  //
+  // For options, see getDependencyMetadata.
+  _computeDependencyMetadata: function (options) {
     var self = this;
     var dependencies = {};
     var allConstraints = {}; // for error reporting. package name to array
@@ -1108,6 +1111,10 @@ _.extend(PackageSource.prototype, {
     _.each(self.slices, function (slice) {
       // XXX also iterate over "implies"
       _.each(slice.uses, function (use) {
+        if ((use.weak && options.skipWeak) ||
+            (use.unordered && options.skipUnordered))
+          return;
+
         if (!_.has(dependencies, use.package)) {
           dependencies[use.package] = {
             constraint: null,
@@ -1137,7 +1144,7 @@ _.extend(PackageSource.prototype, {
       });
     });
 
-    if (failed && logError) {
+    if (failed && options.logError) {
       _.each(allConstraints, function (constraints, name) {
         constraints = _.uniq(constraints);
         if (constraints.length > 1) {
@@ -1153,43 +1160,6 @@ _.extend(PackageSource.prototype, {
     }
 
     return failed ? null : dependencies;
-  },
-
-  // Compute build-time dependencies for this package and return a
-  // PackageLoader that can be used to load all of this package's
-  // build-time dependencies.
-  //
-  // XXX this is called from several places (eg, checkUpToDate and
-  // build) and each time it's called we recompute it. It should
-  // really be memoized.
-  _makeBuildTimePackageLoader: function () {
-    var self = this;
-
-    // #RunningTheConstraintSolverToBuildAPackage
-
-    var dependencyMetadata =
-      self._computeDependencyMetadata(true /* logError */);
-    if (! dependencyMetadata) {
-      // If _computeDependencyMetadata failed, I guess we can try to
-      // recover by returning a PackageLoader with no versions in
-      // it. This will cause a lot of 'package not found' errors, so a
-      // better approach would proabably be to actually have this
-      // function return null and make the caller do a better job of
-      // recovering.
-      return new packageLoader.PackageLoader({ });
-    }
-
-    var constraints = {};
-    _.each(dependencyMetadata, function (info, packageName) {
-      constraints[packageName] = info.constraint;
-    });
-
-    var constraintSolver = require('./constraint-solver.js');
-    var resolver = new constraintSolver.Resolver;
-    var versions = resolver.resolve(constraints);
-    console.log("YAAAAAAY", versions);
-
-    return new packageLoader.PackageLoader({ versions: versions });
   }
 });
 

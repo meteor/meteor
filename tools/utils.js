@@ -211,6 +211,19 @@ exports.parseConstraint = function (constraintString) {
   return constraint;
 };
 
+// XXX should unify this with utils.parseConstraint
+exports.parseSpec = function (spec) {
+  var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/)
+  if (! m)
+    throw new Error("Bad package spec: " + spec);
+  var ret = { package: m[1] };
+  if (m[3])
+    ret.slice = m[3];
+  if (m[5])
+    ret.constraint = m[5];
+  return ret;
+};
+
 // True if this looks like a valid email address. We deliberately
 // don't support
 // - quoted usernames (eg, "foo"@bar.com, " "@bar.com, "@"@bar.com)
