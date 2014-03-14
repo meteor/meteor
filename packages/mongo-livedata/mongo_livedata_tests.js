@@ -1009,6 +1009,16 @@ if (Meteor.isServer) {
     testOplogBufferIds([docId13, docId14, docId15]);
     testSafeAppendToBufferFlag(false);
 
+    // Update something that's outside the buffer to be in the buffer, writing
+    // only to the sort key.
+    upd(docId16, {$set: {bar: 10}});
+    // State: [ 10:16 24:6 33.5:11 | 43.5:12 50:13 51:14 ] 52:15
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId12}, {added: docId16}]));
+    clearOutput(o);
+    testOplogBufferIds([docId12, docId13, docId14]);
+    testSafeAppendToBufferFlag(false);
+
     o.handle.stop();
     onComplete();
   });
