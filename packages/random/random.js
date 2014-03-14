@@ -193,9 +193,9 @@ function createRandomGenerator() {
 
 Random = createRandomGenerator();
 
-Random.create = function () {
-  if (arguments.length == 0) {
-    return createRandomGenerator();
+Random.createWithSeeds = function () {
+  if (arguments.length === 0) {
+    throw new Error('No seeds were provided');
   } else {
     return new RandomGenerator(arguments);
   }
