@@ -4,7 +4,7 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   // A => B => C
   //  \    \-> D => E
   //   \->  \-> F
-  var resolver = new ConstraintSolver.Resolver2();
+  var resolver = new ConstraintSolver.Resolver();
   var A100 = new ConstraintSolver.UnitVersion("A", "1.0.0", "1.0.0");
   var B100 = new ConstraintSolver.UnitVersion("B", "1.0.0", "1.0.0");
   var C100 = new ConstraintSolver.UnitVersion("C", "1.0.0", "1.0.0");

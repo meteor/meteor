@@ -86,8 +86,7 @@ var catalogStub = {
   }
 };
 
-var resolver = new ConstraintSolver.Resolver(catalogStub, Packages,
-                                             Versions, Builds);
+var resolver = new ConstraintSolver.PackagesResolver(catalogStub);
 
 var currentTest = null;
 var t = function (deps, expected) {

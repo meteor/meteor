@@ -9,7 +9,7 @@
 // - every unit version was added exactly once
 // - if two unit versions are the same, their refs point at the same object
 // - if two constraints are the same, their refs point at the same object
-ConstraintSolver.Resolver2 = function () {
+ConstraintSolver.Resolver = function () {
   var self = this;
 
   // Maps unit name string to an array of version definitions
@@ -19,7 +19,7 @@ ConstraintSolver.Resolver2 = function () {
   self._constraints = {};
 };
 
-ConstraintSolver.Resolver2.prototype.addUnitVersion = function (unitVersion) {
+ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
   var self = this;
 
   check(unitVersion, ConstraintSolver.UnitVersion);
@@ -32,7 +32,7 @@ ConstraintSolver.Resolver2.prototype.addUnitVersion = function (unitVersion) {
 
 // name - String - "someUnit"
 // versionConstraint - String - "=1.2.3" or "2.1.0"
-ConstraintSolver.Resolver2.prototype.getConstraint =
+ConstraintSolver.Resolver.prototype.getConstraint =
   function (name, versionConstraint) {
   var self = this;
 
@@ -48,7 +48,7 @@ ConstraintSolver.Resolver2.prototype.getConstraint =
     new ConstraintSolver.Constraint(name, versionConstraint);
 };
 
-ConstraintSolver.Resolver2.prototype.resolve =
+ConstraintSolver.Resolver.prototype.resolve =
   function (dependencies, constraints, choices) {
   var self = this;
 
@@ -101,7 +101,7 @@ ConstraintSolver.Resolver2.prototype.resolve =
 // }
 //
 // NOTE: assumes that exact dependencies are already propagated
-ConstraintSolver.Resolver2.prototype._resolve =
+ConstraintSolver.Resolver.prototype._resolve =
   function (dependencies, constraints, choices) {
   var self = this;
 
@@ -154,7 +154,7 @@ ConstraintSolver.Resolver2.prototype._resolve =
                        + candidateName };
 };
 
-ConstraintSolver.Resolver2.prototype._propagateExactTransDeps = function (uv) {
+ConstraintSolver.Resolver.prototype._propagateExactTransDeps = function (uv) {
   var self = this;
 
   var exactTransitiveDepsVersions = uv.exactTransitiveDependenciesVersions(self);
