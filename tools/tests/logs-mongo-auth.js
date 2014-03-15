@@ -171,9 +171,10 @@ _.each([false, true], function (loggedIn) {
                             authorized: true
                           });
 
-        if (loggedIn) {
-          testUtils.logout(s);
-        }
+        // Again, we logged in as a result of running the previous
+        // command if we weren't logged in already, so log out now to
+        // clean up our token.
+        testUtils.logout(s);
       });
   });
 });
