@@ -11,6 +11,8 @@ var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 
+var catalog = exports;
+
 var isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK
@@ -247,7 +249,8 @@ _.extend(Catalog.prototype, {
         dependencies: packageSource.getDependencyMetadata(),
         source: null,
         lastUpdated: null,
-        published: null
+        published: null,
+        containsPlugins: packageSource.containsPlugins()
       });
     });
 
@@ -269,7 +272,8 @@ _.extend(Catalog.prototype, {
     var packageBuildDeps = {}; // map from name to array of name
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
       packageBuildDeps[name] = [];
-      var deps = compiler.getBuildTimeDependencies(packageSources[name]);
+      var deps = compiler.getBuildOrderConstraints(packageSources[name]);
+      console.log("XXX deps", name, deps);
       _.each(deps, function (d) {
         if (! _.has(self.effectiveLocalPackages, d.name))
           return; // not a local package -- may assume it's already built
@@ -278,7 +282,7 @@ _.extend(Catalog.prototype, {
         packageBuildDeps[name].push(d.name);
       });
     });
-
+    console.log("XXX", packageBuildDeps);
     // Phase 3: Do a topological sort and build the local packages in
     // an order that respects their build-time dependencies.
     //
@@ -476,7 +480,7 @@ _.extend(Catalog.prototype, {
     self._requireInitialized();
 
     // Clear any cached builds in the package cache.
-    packageCache.refresh();
+    packageCache.packageCache.refresh();
 
     // Delete any that are source packages with builds.
     var count = 0;
@@ -489,7 +493,8 @@ _.extend(Catalog.prototype, {
     // passes because otherwise we might end up rebuilding a package
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      packageCache.loadPackageAtPath(name, loadPath, { throwOnError: false });
+      packageCache.packageCache.
+        loadPackageAtPath(name, loadPath, { throwOnError: false });
       count ++;
     });
 
@@ -632,4 +637,4 @@ _.extend(Catalog.prototype, {
   }
 });
 
-module.exports = new Catalog();
+catalog.catalog = new Catalog();

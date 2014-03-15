@@ -529,7 +529,7 @@ _.extend(Target.prototype, {
       if (_.has(getsUsed, slice.id))
         return;
       getsUsed[slice.id] = slice;
-      slice.eachUsedSlice(self.arch, packageLoader,
+      compiler.eachUsedSlice(slice.uses, self.arch, packageLoader,
                           {skipWeak: true}, addToGetsUsed);
     };
     _.each(rootSlices, addToGetsUsed);
@@ -562,8 +562,8 @@ _.extend(Target.prototype, {
       // will depend on `slice` and need to be added after it. So we ignore
       // those edge. Because we did follow those edges in Phase 1, any unordered
       // slices were at some point in `needed` and will not be left out).
-      slice.eachUsedSlice(
-        self.arch, packageLoader, {skipUnordered: true},
+      compiler.eachUsedSlice(
+        slice.uses, self.arch, packageLoader, {skipUnordered: true},
         function (usedSlice, useOptions) {
           // If this is a weak dependency, and nothing else in the target had a
           // strong dependency on it, then ignore this edge.
@@ -1770,7 +1770,7 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
-      var app = packageCache.loadAppAtPath(appDir, ignoreFiles);
+      var app = packageCache.packageCache.loadAppAtPath(appDir, ignoreFiles);
 
       // Client
       var client = makeClientTarget(app);
@@ -1881,7 +1881,7 @@ exports.bundle = function (options) {
       // Read this directory as a package and create a target from
       // it
 
-      var pkg = packageCache.
+      var pkg = packageCache.packageCache.
         loadPackageAtPath(p.name, p.loadPath);
       var target;
       switch (p.type) {

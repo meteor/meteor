@@ -1081,6 +1081,12 @@ _.extend(PackageSource.prototype, {
     self.defaultSlices = { browser: ['client'], 'os': ['server'] };
   },
 
+  // True if the package defines any plugins.
+  containsPlugins: function () {
+    var self = this;
+    return ! _.isEmpty(self.pluginInfo);
+  },
+
   // Return dependency metadata for all slices, in the format needed
   // by the package catalog.
   //

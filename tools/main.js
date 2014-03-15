@@ -10,7 +10,7 @@ var warehouse = require('./warehouse.js');
 var release = require('./release.js');
 var project = require('./project.js');
 var fs = require('fs');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog.js').catalog;
 var main = exports;
 
 // node (v8) defaults to only recording 10 lines of stack trace. This

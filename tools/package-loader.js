@@ -48,9 +48,25 @@ _.extend(PackageLoader.prototype, {
       return pkg;
     }
 
-    return packageCache.loadPackageAtPath(name, loadPath, {
+    return packageCache.packageCache.loadPackageAtPath(name, loadPath, {
       forceRebuild: options.forceRebuild
     });
+  },
+
+  containsPlugins: function (name) {
+    var self = this;
+
+    var versionRecord;
+    if (self.versions === null) {
+      versionRecord = catalog.catalog.getLatestVersion(name);
+    } else if (_.has(self.versions, name)) {
+      versionRecord = catalog.catalog.getVersion(name, self.versions[name]);
+    } else {
+      console.log("Plugins:", self.versions);
+      throw new Error("no version specified for package " + name);
+    }
+
+    return versionRecord.containsPlugins;
   },
 
   // As getPackage, but returns the path of the package that would be
@@ -65,8 +81,10 @@ _.extend(PackageLoader.prototype, {
     var self = this;
 
     console.log(name, self.versions);
-    if (self.versions && ! _.has(self.versions, name))
-      throw new Error("no version chosen for package?");
+    if (self.versions && ! _.has(self.versions, name)) {
+      console.log("VERSIONS:", self.versions);
+      throw new Error("no version chosen for package " + name + "?");
+   }
 
     var version;
     if (self.versions) {
@@ -75,7 +93,7 @@ _.extend(PackageLoader.prototype, {
       version = null;
     }
 
-    return catalog.getLoadPathForPackage(name, version);
+    return catalog.catalog.getLoadPathForPackage(name, version);
   },
 
   // Given a slice set spec -- either a package name like "ddp", or a particular

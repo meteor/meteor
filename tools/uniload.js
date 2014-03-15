@@ -3,7 +3,6 @@ var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
 var PackageLoader = require("./package-loader.js");
-var packageCache = require("./package-cache.js");
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line

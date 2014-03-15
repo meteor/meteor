@@ -10,7 +10,7 @@ var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog.js').catalog;
 var Unipackage = require('./unipackage.js');
 
 var tropohouse = exports;

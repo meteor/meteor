@@ -4,6 +4,9 @@ var archinfo = require("./archinfo.js");
 var compiler = require("./compiler.js");
 var PackageSource = require("./package-source.js");
 var _ = require('underscore');
+var Unipackage = require("./unipackage.js");
+
+var packageCache = exports;
 
 // both map from package load path to:
 // - pkg: cached Package object
@@ -150,4 +153,4 @@ _.extend(PackageCache.prototype, {
   }
 });
 
-module.exports = new PackageCache;
+packageCache.packageCache = new PackageCache;

@@ -22,7 +22,7 @@ var packageCache = require('./package-cache.js');
 var PackageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog.js').catalog;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1494,7 +1494,8 @@ main.registerCommand({
     // then we can't go through the build process to retrieve the
     // sources that we used to build the package, and we need the
     // source list to compile the source tarball.
-    pkg = packageCache.loadPackageAtPath(packageName, options.packageDir, {
+    pkg = packageCache.packageCache.
+      loadPackageAtPath(packageName, options.packageDir, {
       forceRebuild: true
     });
   });

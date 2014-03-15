@@ -1,6 +1,6 @@
 var semver = require('semver');
 var _ = require('underscore');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog.js').catalog;
 var utils = require('./utils.js');
 
 var constraintSolver = exports;
@@ -130,7 +130,7 @@ constraintSolver.Resolver.prototype._propagateExactDeps =
 
 constraintSolver.Resolver.prototype._resolve = function (dependencies, state) {
   // Comment this out until we have a way to get check() here
-//  check(dependencies, [Dependency]); 
+//  check(dependencies, [Dependency]);
 
   state = state || {};
   state.picks = state.picks || {};

@@ -8,6 +8,7 @@ var Unipackage = require('./unipackage.js');
 var PackageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
+var catalog = require('./catalog.js');
 
 var compiler = exports;
 
@@ -81,8 +82,8 @@ compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
 // dependencies. Emits buildmessages if this is impossible.
 //
 // Output is an object with keys:
-// - directDependencies: map from package name to version string, for
-//   the package's direct, ordered, strong, non-implied dependencies
+// - directDependencies: map from package name to version string, for the
+//   package's direct, ordered, strong, non-implied dependencies.
 // - pluginDependencies: map from plugin name to complete (transitive)
 //   version information for all packages used to build the plugin, as
 //   a map from package name to version string.
@@ -147,9 +148,10 @@ var determineBuildTimeDependencies = function (packageSource) {
 
   ret.directDependencies = {};
   _.each(resolver.resolve(constraints), function (version, packageName) {
-    // Take only direct dependencies
-    if (_.has(constraints, packageName))
+    // Take only direct dependencies.
+    if (_.has(constraints, packageName)) {
       ret.directDependencies[packageName] = version;
+    }
   });
 
   // -- Plugins --
@@ -211,17 +213,14 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // not some unrelated package in the target has a dependency. And we
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
-  //
-  // We pass archinfo.host here, not inputSlice.arch, because it may be more
-  // specific, and because plugins always have to run on the host
-  // architecture.
-  compiler.eachUsedSlice(
-    inputSlice.uses, archinfo.host(), packageLoader,
-    { skipWeak: true, skipUnordered: true },
-    function (usedSlice) {
-      activePluginPackages.push(usedSlice.pkg);
+  _.each(inputSlice.uses, function (dependency) {
+    console.log(dependency);
+    if (! dependency.weak && ! dependency.unordered &&
+        packageLoader.containsPlugins(dependency.package)) {
+      activePluginPackages.push(
+        packageLoader.getPackage(dependency.package));
     }
-  );
+  });
 
   activePluginPackages = _.uniq(activePluginPackages);
 
@@ -567,7 +566,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
 
   // *** Output slice object
   unipackage.addSlice({
-    sliceName: inputSlice.sliceName,
+    name: inputSlice.sliceName,
     arch: inputSlice.arch, // XXX: arch?
     uses: inputSlice.uses,
     implies: inputSlice.implies,
@@ -699,7 +698,7 @@ compiler.compile = function (packageSource) {
 // objects with keys 'name', 'version' (the latter a version
 // string). Yes, it is possible that multiple versions of some other
 // package might be build-time dependencies (because of plugins).
-compiler.getBuildTimeDependencies = function (packageSource) {
+compiler.getBuildOrderConstraints = function (packageSource) {
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {
     if (! _.has(versions, name))
@@ -708,7 +707,13 @@ compiler.getBuildTimeDependencies = function (packageSource) {
   };
 
   var buildTimeDeps = determineBuildTimeDependencies(packageSource);
-  _.each(buildTimeDeps.directDependencies, addVersion);
+  _.each(buildTimeDeps.directDependencies, function (version, name) {
+    // Direct dependencies only create a build-order constraint if they contain
+    // a plugin.
+    if( catalog.catalog.getVersion(name, version).containsPlugins) {
+      addVersion(version, name);
+    }
+  });
   _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
     _.each(versions, addVersion);
   });
