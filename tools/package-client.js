@@ -23,6 +23,7 @@ var openPackageServerConnection = function () {
   });
 };
 
+
 var loadLocalPackageData = function () {
   // XXX pretty error handling
   try {
@@ -81,7 +82,7 @@ var writePackagesToDisk = function (syncToken, collectionData) {
   finalWrite.formatVersion = "1.0";
   finalWrite.collections = {};
   _.forEach(collectionData, function(coll, name) {
-    finalWrite.collections[name] = coll.find().fetch();
+    finalWrite.collections[name] = coll;
   });
   var filename = config.getPackageStorage();
   // XXX think about permissions?

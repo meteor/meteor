@@ -134,8 +134,6 @@ _.extend(UnipackageSlice.prototype, {
       self.uses,
       bundleArch, packageLoader,
       {skipWeak: true, skipUnordered: true}, function (otherSlice) {
-        if (! otherSlice.isBuilt)
-          throw new Error("dependency wasn't built?");
         _.each(otherSlice.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||

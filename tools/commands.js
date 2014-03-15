@@ -92,7 +92,7 @@ var formatList = function (items) {
 
   var out = '';
   _.each(items, function (item) {
-    var name = itemg.name + pad.substr(item.name.length);
+    var name = item.name + pad.substr(item.name.length);
     var description = item.description || 'No description';
     out += (name + "  " +
             description.substr(0, width - 2 - pad.length) + "\n");
