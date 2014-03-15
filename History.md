@@ -57,7 +57,7 @@
 * Upgraded dependencies
   - amplify: 1.1.2 (from 1.1.0)
 
-XXX list contributors
+Patches contributed by GitHub users awwx, dandv, queso, rgould, timhaines, zol
 
 
 ## v0.7.1.2
