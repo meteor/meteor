@@ -16,30 +16,30 @@ Minimongo.Sorter = function (spec) {
 
   self._sortSpecParts = [];
 
+  var addSpecPart = function (path, ascending) {
+    if (!path)
+      throw Error("sort keys must be non-empty");
+    if (path.charAt(0) === '$')
+      throw Error("unsupported sort key: " + path);
+    self._sortSpecParts.push({
+      path: path,
+      lookup: makeLookupFunction(path),
+      ascending: ascending
+    });
+  };
+
   if (spec instanceof Array) {
     for (var i = 0; i < spec.length; i++) {
       if (typeof spec[i] === "string") {
-        self._sortSpecParts.push({
-          path: spec[i],
-          lookup: makeLookupFunction(spec[i]),
-          ascending: true
-        });
+        addSpecPart(spec[i], true);
       } else {
-        self._sortSpecParts.push({
-          path: spec[i][0],
-          lookup: makeLookupFunction(spec[i][0]),
-          ascending: spec[i][1] !== "desc"
-        });
+        addSpecPart(spec[i][0], spec[i][1] !== "desc");
       }
     }
   } else if (typeof spec === "object") {
-    for (var key in spec) {
-      self._sortSpecParts.push({
-        path: key,
-        lookup: makeLookupFunction(key),
-        ascending: spec[key] >= 0
-      });
-    }
+    _.each(spec, function (value, key) {
+      addSpecPart(key, value >= 0);
+    });
   } else {
     throw Error("Bad sort specification: " + JSON.stringify(spec));
   }

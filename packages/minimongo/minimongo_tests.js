@@ -1613,6 +1613,12 @@ Tinytest.add("minimongo - ordering", function (test) {
     new Minimongo.Sorter(123);
   });
 
+  // We don't support $natural:1 (since we don't actually have Mongo's on-disk
+  // ordering available!)
+  test.throws(function () {
+    new Minimongo.Sorter({$natural: 1});
+  });
+
   // No sort spec implies everything equal.
   test.equal(new Minimongo.Sorter({}).getComparator()({a:1}, {a:2}), 0);
 
