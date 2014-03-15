@@ -57,12 +57,14 @@ OplogObserveDriver = function (options) {
     var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
     self._comparator = comparator;
+    self._sorter = sorter;
     self._unpublishedBuffer = new MinMaxHeap(comparator, heapOptions);
     // We need something that can find Max value in addition to IdMap interface
     self._published = new MaxHeap(comparator, heapOptions);
   } else {
     self._limit = 0;
     self._comparator = null;
+    self._sorter = null;
     self._unpublishedBuffer = null;
     self._published = new LocalCollection._IdMap;
   }
@@ -536,7 +538,8 @@ _.extend(OplogObserveDriver.prototype, {
         LocalCollection._modify(newDoc, op.o);
         self._handleDoc(id, self._sharedProjectionFn(newDoc));
       } else if (!canDirectlyModifyDoc ||
-                 self._matcher.canBecomeTrueByModifier(op.o)) {
+                 self._matcher.canBecomeTrueByModifier(op.o) ||
+                 (self._sorter && self._sorter.affectedByModifier(op.o))) {
         self._needToFetch.set(id, op.ts.toString());
         if (self._phase === PHASE.STEADY)
           self._fetchModifiedDocuments();
