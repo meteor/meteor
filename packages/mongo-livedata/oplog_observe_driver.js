@@ -38,8 +38,7 @@ OplogObserveDriver = function (options) {
     throw Error("OplogObserveDriver only supports unordered observeChanges");
   }
 
-  var sortSpec = options.cursorDescription.options.sort;
-  var sorter = sortSpec && new Minimongo.Sorter(sortSpec);
+  var sorter = options.sorter;
   // We don't support $near and other geo-queries so it's OK to initialize the
   // comparator only once in the constructor.
   var comparator = sorter && sorter.getComparator();
