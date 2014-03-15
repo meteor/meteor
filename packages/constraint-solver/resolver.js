@@ -139,6 +139,7 @@ ConstraintSolver.Resolver.prototype._resolve =
     nDependencies = _.union(nDependencies, propagatedExactTransDeps.dependencies);
     nConstraints = _.union(nConstraints, propagatedExactTransDeps.constraints);
     nChoices = _.union(nChoices, propagatedExactTransDeps.choices);
+    nDependencies = _.difference(nDependencies, _.pluck(nChoices, 'name'));
 
     var result = self._resolve(nDependencies, nConstraints, nChoices, options);
 
@@ -163,7 +164,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps = function (uv) {
   var transitiveContraints = _.chain(exactTransitiveDepsVersions)
                               .map(function (uv) {
                                 return uv.constraints;
-                              }).flatten().uniq();
+                              }).flatten().uniq().value();
 
   // Since exact transitive deps are put into choices, there is no need to keep
   // them in dependencies. So only inexact deps are put to dependencies.
