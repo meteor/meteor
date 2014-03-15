@@ -159,6 +159,8 @@ ConstraintSolver.Resolver.prototype._resolve =
 ConstraintSolver.Resolver.prototype._propagateExactTransDeps = function (uv) {
   var self = this;
 
+  // TODO: look at other dependencies (not of uv)
+  // TODO: look at other constraints (not of uv)
   var exactTransitiveDepsVersions = uv.exactTransitiveDependenciesVersions(self);
   var inexactTransitiveDeps = uv.inexactTransitiveDependencies(self);
   var transitiveContraints = _.chain(exactTransitiveDepsVersions)
