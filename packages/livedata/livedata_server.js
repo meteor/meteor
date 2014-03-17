@@ -1099,7 +1099,9 @@ Server = function () {
             sendError("Already connected", msg);
             return;
           }
-          self._handleConnect(socket, msg);
+          Fiber(function () {
+            self._handleConnect(socket, msg);
+          }).run();
           return;
         }
 
