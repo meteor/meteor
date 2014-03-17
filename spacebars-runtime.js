@@ -23,8 +23,9 @@ Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock
 
   var func = templateOrFunction;
 
+  var emboxedFunc = UI.emboxValue(func);
   return function () {
-    var tmpl = Deps.isolateValue(func);
+    var tmpl = emboxedFunc();
 
     if (tmpl === null)
       return null;
