@@ -1791,17 +1791,22 @@ Tinytest.add("minimongo - array sort", function (test) {
   c.insert({up: 3, down: 3, selected: 1, a: {x: 2.5}});
   c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
 
-  test.equal(
-    _.pluck(c.find({}, {sort: {'a.x': 1}}).fetch(), 'up'),
-    _.range(5));
+  // Test that the the documents in "cursor" contain values with the name
+  // "field" running from 0 to the max value of that name in the collection.
+  var testCursorMatchesField = function (cursor, field) {
+    var fieldValues = [];
+    c.find().forEach(function (doc) {
+      if (_.has(doc, field))
+        fieldValues.push(doc[field]);
+    });
+    test.equal(_.pluck(cursor.fetch(), field),
+               _.range(_.max(fieldValues) + 1));
+  };
 
-  test.equal(
-    _.pluck(c.find({}, {sort: {'a.x': -1}}).fetch(), 'down'),
-    _.range(5));
-
-  test.equal(
-    _.pluck(c.find({'a.x': {$gt: 1}}, {sort: {'a.x': 1}}).fetch(), 'selected'),
-    _.range(4));
+  testCursorMatchesField(c.find({}, {sort: {'a.x': 1}}), 'up');
+  testCursorMatchesField(c.find({}, {sort: {'a.x': -1}}), 'down');
+  testCursorMatchesField(c.find({'a.x': {$gt: 1}}, {sort: {'a.x': 1}}),
+                         'selected');
 });
 
 Tinytest.add("minimongo - sort keys", function (test) {
