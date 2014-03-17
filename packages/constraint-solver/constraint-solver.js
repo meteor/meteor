@@ -59,6 +59,32 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       });
     });
 
+    if (_.isEmpty(versionDef.dependencies)) {
+      // XXX this is a hack to temporary solve the problem with packages w/o
+      // dependencies. Right now in order to understand what are slices of
+      // package, we look into its dependencies slice-wise. W/o dependencies we
+      // would need to do something else, like see what slices other slices
+      // depend on. Also if depending slices of other packages don't specify the
+      // version, there is no way we can resolve what slices different versions
+      // have as different versions of the same package can in theory have
+      // diverging sets of slices.
+      //
+      // But in practive we always have main/test + os/browser slices. So we
+      // will just hardcode two most improtant slices at the moment. Fix it
+      // later.
+      _.each(["os", "browser"], function (arch) {
+        var slice = "main";
+        var unitName = packageName + ":" + slice + "." + arch;
+        var unitVersion = slices[unitName];
+        if (! unitVersion) {
+          slices[unitName] = new ConstraintSolver.UnitVersion(
+            unitName, version, versionDef.earliestCompatibleVersion);
+          unitVersion = slices[unitName];
+          self.resolver.addUnitVersion(unitVersion);
+        }
+      });
+    }
+
     // Every slice implies that if it is picked, other slices are constrained to
     // the same version.
     _.each(slices, function (slice, sliceName) {
