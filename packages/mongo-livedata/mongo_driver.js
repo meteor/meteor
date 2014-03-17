@@ -1023,7 +1023,8 @@ MongoConnection.prototype._observeChanges = function (
         if (!cursorDescription.options.sort)
           return true;
         try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
+                                        {matcher: matcher});
           return true;
         } catch (e) {
           // XXX make all compilation errors MinimongoError or something
@@ -1031,10 +1032,6 @@ MongoConnection.prototype._observeChanges = function (
           return false;
         }
       }], function (f) { return f(); });  // invoke each function
-
-    if (matcher && sorter) {
-      sorter.useWithMatcher(matcher);
-    }
 
     var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
     observeDriver = new driverClass({
