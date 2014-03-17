@@ -44,6 +44,8 @@
 * Fix crash caused by empty HTTP host header in `meteor run` development
   server.  #1871
 
+* Fix hot code reload in private browsing mode in Safari.
+
 * Fix appcache size calculation to avoid erronious warnings. #1847
 
 * Remove unused `Deps._makeNonReactive` wrapper function. Call
