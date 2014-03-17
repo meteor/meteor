@@ -35,7 +35,10 @@ Minimongo.Matcher = function (selector) {
   // Set to a dummy document which always matches this Matcher. Or set to null
   // if such document is too hard to find.
   self._matchingDocument = undefined;
-  // A clone of the original selector. Used by canBecomeTrueByModifier.
+  // A clone of the original selector. It may just be a function if the user
+  // passed in a function; otherwise is definitely an object (eg, IDs are
+  // translated into {_id: ID} first. Used by canBecomeTrueByModifier and
+  // Sorter._useWithMatcher.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
 };
@@ -201,7 +204,7 @@ var convertElementMatcherToBranchedMatcher = function (
 };
 
 // Takes a RegExp object and returns an element matcher.
-var regexpElementMatcher = function (regexp) {
+regexpElementMatcher = function (regexp) {
   return function (value) {
     if (value instanceof RegExp) {
       // Comparing two regexps means seeing if the regexps are identical
@@ -217,7 +220,7 @@ var regexpElementMatcher = function (regexp) {
 
 // Takes something that is not an operator object and returns an element matcher
 // for equality with that thing.
-var equalityElementMatcher = function (elementSelector) {
+equalityElementMatcher = function (elementSelector) {
   if (isOperatorObject(elementSelector))
     throw Error("Can't create equalityValueSelector for operator object");
 
@@ -261,8 +264,6 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
         VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
       var options = ELEMENT_OPERATORS[operator];
-      if (typeof options === 'function')
-        options = {compileElementSelector: options};
       operatorMatchers.push(
         convertElementMatcherToBranchedMatcher(
           options.compileElementSelector(
@@ -380,7 +381,7 @@ var VALUE_OPERATORS = {
   },
   $nin: function (operand) {
     return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
-      ELEMENT_OPERATORS.$in(operand)));
+      ELEMENT_OPERATORS.$in.compileElementSelector(operand)));
   },
   $exists: function (operand) {
     var exists = convertElementMatcherToBranchedMatcher(function (value) {
@@ -508,47 +509,51 @@ var pointToArray = function (point) {
 
 // Helper for $lt/$gt/$lte/$gte.
 var makeInequality = function (cmpValueComparator) {
-  return function (operand) {
-    // Arrays never compare false with non-arrays for any inequality.
-    // XXX This was behavior we observed in pre-release MongoDB 2.5, but
-    //     it seems to have been reverted.
-    //     See https://jira.mongodb.org/browse/SERVER-11444
-    if (isArray(operand)) {
-      return function () {
-        return false;
+  return {
+    compileElementSelector: function (operand) {
+      // Arrays never compare false with non-arrays for any inequality.
+      // XXX This was behavior we observed in pre-release MongoDB 2.5, but
+      //     it seems to have been reverted.
+      //     See https://jira.mongodb.org/browse/SERVER-11444
+      if (isArray(operand)) {
+        return function () {
+          return false;
+        };
+      }
+
+      // Special case: consider undefined and null the same (so true with
+      // $gte/$lte).
+      if (operand === undefined)
+        operand = null;
+
+      var operandType = LocalCollection._f._type(operand);
+
+      return function (value) {
+        if (value === undefined)
+          value = null;
+        // Comparisons are never true among things of different type (except
+        // null vs undefined).
+        if (LocalCollection._f._type(value) !== operandType)
+          return false;
+        return cmpValueComparator(LocalCollection._f._cmp(value, operand));
       };
     }
-
-    // Special case: consider undefined and null the same (so true with
-    // $gte/$lte).
-    if (operand === undefined)
-      operand = null;
-
-    var operandType = LocalCollection._f._type(operand);
-
-    return function (value) {
-      if (value === undefined)
-        value = null;
-      // Comparisons are never true among things of different type (except null
-      // vs undefined).
-      if (LocalCollection._f._type(value) !== operandType)
-        return false;
-      return cmpValueComparator(LocalCollection._f._cmp(value, operand));
-    };
   };
 };
 
-// Each element selector is a function with args:
-//  - operand - the "right hand side" of the operator
-//  - valueSelector - the "context" for the operator (so that $regex can find
-//    $options)
-// Or is an object with an compileElementSelector field (the above) and optional
-// flags dontExpandLeafArrays and dontIncludeLeafArrays which control if
-// expandArraysInBranches is called and if it takes an optional argument.
-//
-// An element selector compiler returns a function mapping a single value to
-// bool.
-var ELEMENT_OPERATORS = {
+// Each element selector contains:
+//  - compileElementSelector, a function with args:
+//    - operand - the "right hand side" of the operator
+//    - valueSelector - the "context" for the operator (so that $regex can find
+//      $options)
+//    - matcher - the Matcher this is going into (so that $elemMatch can compile
+//      more things)
+//    returning a function mapping a single value to bool.
+//  - dontExpandLeafArrays, a bool which prevents expandArraysInBranches from
+//    being called
+//  - dontIncludeLeafArrays, a bool which causes an argument to be passed to
+//    expandArraysInBranches if it is called
+ELEMENT_OPERATORS = {
   $lt: makeInequality(function (cmpValue) {
     return cmpValue < 0;
   }),
@@ -561,41 +566,45 @@ var ELEMENT_OPERATORS = {
   $gte: makeInequality(function (cmpValue) {
     return cmpValue >= 0;
   }),
-  $mod: function (operand) {
-    if (!(isArray(operand) && operand.length === 2
-          && typeof(operand[0]) === 'number'
-          && typeof(operand[1]) === 'number')) {
-      throw Error("argument to $mod must be an array of two numbers");
+  $mod: {
+    compileElementSelector: function (operand) {
+      if (!(isArray(operand) && operand.length === 2
+            && typeof(operand[0]) === 'number'
+            && typeof(operand[1]) === 'number')) {
+        throw Error("argument to $mod must be an array of two numbers");
+      }
+      // XXX could require to be ints or round or something
+      var divisor = operand[0];
+      var remainder = operand[1];
+      return function (value) {
+        return typeof value === 'number' && value % divisor === remainder;
+      };
     }
-    // XXX could require to be ints or round or something
-    var divisor = operand[0];
-    var remainder = operand[1];
-    return function (value) {
-      return typeof value === 'number' && value % divisor === remainder;
-    };
   },
-  $in: function (operand) {
-    if (!isArray(operand))
-      throw Error("$in needs an array");
+  $in: {
+    compileElementSelector: function (operand) {
+      if (!isArray(operand))
+        throw Error("$in needs an array");
 
-    var elementMatchers = [];
-    _.each(operand, function (option) {
-      if (option instanceof RegExp)
-        elementMatchers.push(regexpElementMatcher(option));
-      else if (isOperatorObject(option))
-        throw Error("cannot nest $ under $in");
-      else
-        elementMatchers.push(equalityElementMatcher(option));
-    });
-
-    return function (value) {
-      // Allow {a: {$in: [null]}} to match when 'a' does not exist.
-      if (value === undefined)
-        value = null;
-      return _.any(elementMatchers, function (e) {
-        return e(value);
+      var elementMatchers = [];
+      _.each(operand, function (option) {
+        if (option instanceof RegExp)
+          elementMatchers.push(regexpElementMatcher(option));
+        else if (isOperatorObject(option))
+          throw Error("cannot nest $ under $in");
+        else
+          elementMatchers.push(equalityElementMatcher(option));
       });
-    };
+
+      return function (value) {
+        // Allow {a: {$in: [null]}} to match when 'a' does not exist.
+        if (value === undefined)
+          value = null;
+        return _.any(elementMatchers, function (e) {
+          return e(value);
+        });
+      };
+    }
   },
   $size: {
     // {a: [[5, 5]]} must match {a: {$size: 1}} but not {a: {$size: 2}}, so we
@@ -630,30 +639,32 @@ var ELEMENT_OPERATORS = {
       };
     }
   },
-  $regex: function (operand, valueSelector) {
-    if (!(typeof operand === 'string' || operand instanceof RegExp))
-      throw Error("$regex has to be a string or RegExp");
+  $regex: {
+    compileElementSelector: function (operand, valueSelector) {
+      if (!(typeof operand === 'string' || operand instanceof RegExp))
+        throw Error("$regex has to be a string or RegExp");
 
-    var regexp;
-    if (valueSelector.$options !== undefined) {
-      // Options passed in $options (even the empty string) always overrides
-      // options in the RegExp object itself. (See also
-      // Meteor.Collection._rewriteSelector.)
+      var regexp;
+      if (valueSelector.$options !== undefined) {
+        // Options passed in $options (even the empty string) always overrides
+        // options in the RegExp object itself. (See also
+        // Meteor.Collection._rewriteSelector.)
 
-      // Be clear that we only support the JS-supported options, not extended
-      // ones (eg, Mongo supports x and s). Ideally we would implement x and s
-      // by transforming the regexp, but not today...
-      if (/[^gim]/.test(valueSelector.$options))
-        throw new Error("Only the i, m, and g regexp options are supported");
+        // Be clear that we only support the JS-supported options, not extended
+        // ones (eg, Mongo supports x and s). Ideally we would implement x and s
+        // by transforming the regexp, but not today...
+        if (/[^gim]/.test(valueSelector.$options))
+          throw new Error("Only the i, m, and g regexp options are supported");
 
-      var regexSource = operand instanceof RegExp ? operand.source : operand;
-      regexp = new RegExp(regexSource, valueSelector.$options);
-    } else if (operand instanceof RegExp) {
-      regexp = operand;
-    } else {
-      regexp = new RegExp(operand);
+        var regexSource = operand instanceof RegExp ? operand.source : operand;
+        regexp = new RegExp(regexSource, valueSelector.$options);
+      } else if (operand instanceof RegExp) {
+        regexp = operand;
+      } else {
+        regexp = new RegExp(operand);
+      }
+      return regexpElementMatcher(regexp);
     }
-    return regexpElementMatcher(regexp);
   },
   $elemMatch: {
     dontExpandLeafArrays: true,
