@@ -8,14 +8,28 @@ var path = require('path');
 var Future = require('fibers/future');
 var _ = require('underscore');
 
+
+// Use uniload to load the packages that we need to open a connection to the
+// current package server and use minimongo in memory. We need the following
+// packages.
+//
+// meteor: base package and prerequsite for all others.
+// livedata: DDP client interface to make a connection to the package server.
+//
+// Like all tools, this uses the current release to find the right versions.
+// XXX: Does it really?
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'minimongo', 'mongo-livedata' ],
+    packages: [ 'meteor', 'livedata'],
     release: release.current.name
   });
 });
 
+
+// Opens a DDP connection to a package server. Loads the packages needed for a
+// DDP connection, then calls DDP connect to the package server URL in config,
+// using a current user-agent header composed by http-helpers.js.
 var openPackageServerConnection = function () {
   var DDP = getLoadedPackages().livedata.DDP;
   return DDP.connect(config.getPackageServerUrl(), {
@@ -24,23 +38,57 @@ var openPackageServerConnection = function () {
 };
 
 
-var loadLocalPackageData = function () {
-  // XXX pretty error handling
+// Load the package data that was saved in the local data.json collection from
+// the last time we did a sync to the server. This return object consists of
+//
+//  - collections: an object keyed by the name of server collections, with the
+//    records as an array of javascript objects.
+//  - syncToken: a syncToken object representing the last time that we talked to
+//    the server, to pass into the getRemotePackageData to get the latest
+//    updates.
+// If there is no data.json file, or the file cannot be parsed, return null for
+// the collections and a default syncToken to ask the server for all the data
+// from the beginning of time.
+var loadCachedServerData = function () {
+  var noDataToken =  {
+    // XXX have a better sync token for "all"
+    syncToken: {time: 'Sun, 01 Jan 2012 00:00:00 GMT'},
+    collections: null
+  };;
+
   try {
     var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
   } catch (e) {
-    if (e.code !== 'ENOENT')
-      throw e;
-    // Default: no data, send us everything.
-    return {
-      // XXX have a better sync token for "all"
-      syncToken: {time: 'Sun, 01 Jan 2012 00:00:00 GMT'},
-      collections: null
-    };
+    if (e.code == 'ENOENT') {
+      console.log("No cached server data found on disk.");
+      return noDataToken;
+    }
+    console.log(e.message);
+    exit(1);
   }
-  return JSON.parse(data);
+  var ret = JSON.parse(data);
+  if (!ret) {
+    console.log("Could not parse JSON in data.json.");
+    return noDataToken;
+  }
+  return ret;
 };
 
+
+// Opens a connection to the server, requests and returns new package data that
+// we haven't cached on disk. We assume that data is cached chronologically, so
+// essentially, we are asking for a diff from the last time that we did this.
+// Takes in:
+// - syncToken: a syncToken object to be sent to the server that
+//   represents the last time that we talked to the server.
+//
+// Returns an object, containing the following fields:
+//  - syncToken: a new syncToken object, that we can pass to the server in the future.
+//  - collections: an object keyed by the name of server collections, with the
+//    records as an array of javascript objects.
+//
+// If we cannot contact the server, does
+// XXX: ... does something better than hang indefinitely and be sad.
 var loadRemotePackageData = function (syncToken) {
   var conn = openPackageServerConnection();
   var collectionData = conn.call('syncNewPackageData', syncToken);
@@ -48,12 +96,14 @@ var loadRemotePackageData = function (syncToken) {
   return collectionData;
 };
 
-// Takes in an array of javascript objects of the form:
-//  { collectionName : arrayOfRecords }
-// and converts them to a single javascript object of the form
-//  { collectionName : arrayOfRecords }
-// merging the collections by _id with the records in later
-// collections overriding the records in earlier collections.
+
+// Take in an ordered list of javascript objects representing collections of
+// package data. In each object, the server-side names of collections are keys
+// and the values are the mongo records for that collection stored as an
+// array. Goes through the the list in order and merges it into the single
+// object, with collection names as keys and the arrays of records as
+// corresponding values. The inputs list is ordered and records in the later
+// collections will override the records in the earlier collections.
 var mergeCollections = function (sources) {
   var collections = {}; // map from collection to _id to object
 
@@ -76,7 +126,18 @@ var mergeCollections = function (sources) {
   return ret;
 };
 
-var writePackagesToDisk = function (syncToken, collectionData) {
+
+// Writes the cached package data to the on-disk cache. Takes in the following
+// arguments:
+// - syncToken : the token representing our conversation with the server, that
+//   we can later use to get a diff of this cache and the new server-side data.
+// - collectionData : a javascript object representing the data we have about
+//   packages on the server, with collection names as keys and arrays of those
+//   collection records as values.
+//
+// Returns nothing, but
+// XXXX: Does what on errors?
+var writePackageDataToDisk = function (syncToken, collectionData) {
   var finalWrite = {};
   finalWrite.syncToken = syncToken;
   finalWrite.formatVersion = "1.0";
@@ -90,6 +151,8 @@ var writePackagesToDisk = function (syncToken, collectionData) {
   files.writeFileAtomically(filename, JSON.stringify(finalWrite, null, 2));
 };
 
+// Returns the package data.
+//
 exports.loadPackageData = function() {
   //XXX: We can consider optimizing this with concurrency or something.
   var sources = [];
@@ -99,11 +162,11 @@ exports.loadPackageData = function() {
     sources.push(localData.collections);
   var syncToken = localData.syncToken;
   // XXX support offline use too
-  var remoteData = loadRemotePackageData(syncToken);
-  sources.push(remoteData.collections);
+//  var remoteData = loadRemotePackageData(syncToken);
+//  sources.push(remoteData.collections);
 
   var allPackageData = mergeCollections(sources);
-  writePackagesToDisk(remoteData.syncToken, allPackageData);
+//  writePackagesToDisk(remoteData.syncToken, allPackageData);
   return allPackageData;
 };
 

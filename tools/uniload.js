@@ -3,6 +3,8 @@ var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
 var PackageLoader = require("./package-loader.js");
+var packageCache = require("./package-cache.js");
+
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
@@ -53,6 +55,7 @@ var cache = null; // map from package names (joined with ',') to return value
 
 var load = function (options) {
   options = options || {};
+  var cache;
 
   // Check the cache first
   if (cacheRelease !== options.release) {
@@ -60,6 +63,12 @@ var load = function (options) {
     cache = {};
   }
   var cacheKey = (options.packages || []).join(',');
+
+  if (!cache) {
+    cache = {};
+  };
+
+  console.log("Cache:", cache, cacheKey);
   if (_.has(cache, cacheKey)) {
     return cache[cacheKey];
   }
