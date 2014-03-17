@@ -2,8 +2,9 @@
 UI.If = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('If', argFunc, contentBlock, elseContentBlock);
 
+  var emboxedCondition = emboxCondition(argFunc);
   return function () {
-    if (getCondition(argFunc))
+    if (emboxedCondition())
       return contentBlock;
     else
       return elseContentBlock || null;
@@ -14,8 +15,9 @@ UI.If = function (argFunc, contentBlock, elseContentBlock) {
 UI.Unless = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('Unless', argFunc, contentBlock, elseContentBlock);
 
+  var emboxedCondition = emboxCondition(argFunc);
   return function () {
-    if (! getCondition(argFunc))
+    if (! emboxedCondition())
       return contentBlock;
     else
       return elseContentBlock || null;
@@ -73,13 +75,13 @@ var checkBlockHelperArguments = function (which, argFunc, contentBlock, elseCont
     throw new Error('Third argument to ' + which + ' must be a template or UI.block if present');
 };
 
-// Acts like `!! conditionFunc()` except:
+// Returns a function that computes `!! conditionFunc()` except:
 //
 // - Empty array is considered falsy
-// - The result is Deps.isolated (doesn't trigger invalidation
-//   as long as the condition stays truthy or stays falsy
-var getCondition = function (conditionFunc) {
-  return Deps.isolateValue(function () {
+// - The result is UI.emboxValue'd (doesn't trigger invalidation
+//   as long as the condition stays truthy or stays falsy)
+var emboxCondition = function (conditionFunc) {
+  return UI.emboxValue(function () {
     // `condition` is emboxed; it is always a function,
     // and it only triggers invalidation if its return
     // value actually changes.  We still need to isolate
