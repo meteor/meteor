@@ -517,3 +517,16 @@ Hi there!
 <template name="spacebars_test_nonexistent_template">
   {{> this_template_lives_in_outer_space}}
 </template>
+
+<template name="spacebars_test_if_helper">
+  {{#if foo}}
+    true
+  {{else}}
+    false
+  {{/if}}
+</template>
+
+<template name="spacebars_test_block_helper_function">
+  {{#foo}}
+  {{/foo}}
+</template>
