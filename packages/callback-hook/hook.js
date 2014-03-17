@@ -57,7 +57,10 @@ _.extend(Hook.prototype, {
     callback = Meteor.bindEnvironment(
       callback,
       self.exceptionHandler || function (exception) {
-        self.exception = exception;
+        // Note: this relies on the undocumented fact that if bindEnvironment's
+        // onException throws, and you are invoking the callback either in the
+        // browser or from within a Fiber in Node, the exception is propagated.
+        throw exception;
       }
     );
 
@@ -83,26 +86,18 @@ _.extend(Hook.prototype, {
   //
   each: function (iterator) {
     var self = this;
+
+    // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't
+    // run them to completion (and exceptions thrown from onException are not
+    // propagated), so we need to be in a Fiber.
+    Meteor._nodeCodeMustBeInFiber();
+
     var ids = _.keys(self.callbacks);
     for (var i = 0;  i < ids.length;  ++i) {
       var id = ids[i];
       // check to see if the callback was removed during iteration
       if (_.has(self.callbacks, id)) {
         var callback = self.callbacks[id];
-
-        if (! self.exceptionHandler) {
-          var originalCallback = callback;
-          callback = function (/*arguments*/) {
-            self.exception = null;
-            var ret = originalCallback.apply(null, arguments);
-            if (self.exception) {
-              var exception = self.exception;
-              self.exception = null;
-              throw exception;
-            }
-            return ret;
-          };
-        }
 
         if (! iterator(callback))
           break;
