@@ -1612,3 +1612,47 @@ Tinytest.add('spacebars - template - unfound template', function (test) {
     renderToDiv(Template.spacebars_test_nonexistent_template);
   }, /Can't find template/);
 });
+
+Tinytest.add('spacebars - template - helper passed to #if called exactly once when invalidated', function (test) {
+  var tmpl = Template.spacebars_test_if_helper;
+
+  var count = 0;
+  var d = new Deps.Dependency;
+  tmpl.foo = function () {
+    d.depend();
+    count++;
+    return foo;
+  };
+
+  foo = false;
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, "false");
+  test.equal(count, 1);
+
+  foo = true;
+  d.changed();
+  divRendersTo(test, div, "true");
+  test.equal(count, 2);
+});
+
+Tinytest.add('spacebars - template - custom block helper functions called exactly once when invalidated', function (test) {
+  var tmpl = Template.spacebars_test_block_helper_function;
+
+  var count = 0;
+  var d = new Deps.Dependency;
+  tmpl.foo = function () {
+    d.depend();
+    count++;
+    return UI.block(function () { return []; });
+  };
+
+  foo = false;
+  renderToDiv(tmpl);
+  Deps.flush();
+  test.equal(count, 1);
+
+  foo = true;
+  d.changed();
+  Deps.flush();
+  test.equal(count, 2);
+});
