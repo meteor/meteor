@@ -339,9 +339,22 @@ _.extend(Minimongo.Sorter.prototype, {
       if (key !== firstSortField)
         return;
 
-      // XXX support RegExp constraints
-      if (subSelector instanceof RegExp)
+      // XXX it looks like the real MongoDB implementation isn't "does the
+      // regexp match" but "does the value fall into a range named by the
+      // literal prefix of the regexp", ie "foo" in /^foo(bar|baz)+/  But
+      // "does the regexp match" is a good approximation.
+      if (subSelector instanceof RegExp) {
+        // As far as we can tell, using either of the options that both we and
+        // MongoDB support ('i' and 'm') disables use of the key filter. This
+        // makes sense: MongoDB mostly appears to be calculating ranges of an
+        // index to use, which means it only cares about regexps that match
+        // one range (with a literal prefix), and both 'i' and 'm' prevent the
+        // literal prefix of the regexp from actually meaning one range.
+        if (subSelector.ignoreCase || subSelector.multiline)
+          return;
+        constraints[0].push(regexpElementMatcher(subSelector));
         return;
+      }
 
       if (isOperatorObject(subSelector)) {
         _.each(subSelector, function (operand, operator) {
@@ -351,7 +364,15 @@ _.extend(Minimongo.Sorter.prototype, {
             constraints[0].push(
               ELEMENT_OPERATORS[operator].compileElementSelector(operand));
           }
-          // XXX support $regex/RegExp, {$exists: true}, $mod, $type, $in
+
+          // See comments in the RegExp block above.
+          if (operator === '$regex' && !subSelector.$options) {
+            constraints[0].push(
+              ELEMENT_OPERATORS.$regex.compileElementSelector(
+                operand, subSelector));
+          }
+
+          // XXX support {$exists: true}, $mod, $type, $in
         });
         return;
       }

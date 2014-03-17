@@ -1917,6 +1917,25 @@ Tinytest.add("minimongo - sort key filter", function (test) {
   keyCompatible({'a.x': 1}, {a: {x: 5}}, [1], true);
   keyCompatible({'a.x': 1}, {'a.x': 5}, [5], true);
   keyCompatible({'a.x': 1}, {'a.x': 5}, [1], false);
+
+  // Regex key check.
+  keyCompatible({a: 1}, {a: /^foo+/}, ['foo'], true);
+  keyCompatible({a: 1}, {a: /^foo+/}, ['foooo'], true);
+  keyCompatible({a: 1}, {a: /^foo+/}, ['foooobar'], true);
+  keyCompatible({a: 1}, {a: /^foo+/}, ['afoooo'], false);
+  keyCompatible({a: 1}, {a: /^foo+/}, [''], false);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['foo'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['foooo'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['foooobar'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['afoooo'], false);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, [''], false);
+
+  keyCompatible({a: 1}, {a: /^foo+/i}, ['foo'], true);
+  // Key compatibility check appears to be turned off for regexps with flags.
+  keyCompatible({a: 1}, {a: /^foo+/i}, ['bar'], true);
+  keyCompatible({a: 1}, {a: /^foo+/m}, ['bar'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+", $options: "i"}}, ['bar'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+", $options: "m"}}, ['bar'], true);
 });
 
 Tinytest.add("minimongo - binary search", function (test) {
