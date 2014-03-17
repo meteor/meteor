@@ -27,6 +27,14 @@
   `{a: [{x: 0, y: 5}, {x: 1, y: 3}]}`, because the 3 should not be used as a
   tie-breaker because it is not "next to" the tied 0s.
 
+* minimongo: Fix sort implementation when selector and sort key share a field,
+  that field matches an array in the document, and only some values of the array
+  match the selector. eg, ensure that with sort key `{a: 1}` and selector
+  `{a: {$gt: 3}}`, the document `{a: [4, 6]}` sorts before `{a: [1, 5]}`,
+  because the 1 should not be used as a sort key because it does not match the
+  selector. (We only approximate the MongoDB behavior here by only supporting
+  relatively selectors.)
+
 * Use `faye-websocket` (0.7.2) npm module instead of `websocket` (1.0.8) for
   server-to-server DDP.
 
@@ -43,6 +51,8 @@
 
 * Fix crash caused by empty HTTP host header in `meteor run` development
   server.  #1871
+
+* Fix hot code reload in private browsing mode in Safari.
 
 * Fix appcache size calculation to avoid erronious warnings. #1847
 
