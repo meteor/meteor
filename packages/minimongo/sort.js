@@ -318,25 +318,16 @@ _.extend(Minimongo.Sorter.prototype, {
     if (selector instanceof Function)
       return;
 
-    // It appears that the first sort field is treated differently from the
-    // others; we shouldn't create a key filter unless the first sort field is
-    // restricted, though after that point we can restrict the other sort fields
-    // or not as we wish.
-    var firstSortField = self._sortSpecParts[0].path;
-    var otherSortFields = {};
-    _.each(self._sortSpecParts, function (path, i) {
-      if (i !== 0)
-        otherSortFields[path] = true;
-    });
-
-    var constraints = [];
-    _.each(self._sortSpecParts, function () {
-      constraints.push([]);
+    var constraintsByPath = {};
+    _.each(self._sortSpecParts, function (spec, i) {
+      constraintsByPath[spec.path] = [];
     });
 
     _.each(selector, function (subSelector, key) {
-      // XXX support constraints on non-first sort fields, $and, $or, etc.
-      if (key !== firstSortField)
+      // XXX support $and and $or
+
+      var constraints = constraintsByPath[key];
+      if (!constraints)
         return;
 
       // XXX it looks like the real MongoDB implementation isn't "does the
@@ -352,7 +343,7 @@ _.extend(Minimongo.Sorter.prototype, {
         // literal prefix of the regexp from actually meaning one range.
         if (subSelector.ignoreCase || subSelector.multiline)
           return;
-        constraints[0].push(regexpElementMatcher(subSelector));
+        constraints.push(regexpElementMatcher(subSelector));
         return;
       }
 
@@ -361,33 +352,40 @@ _.extend(Minimongo.Sorter.prototype, {
           if (_.contains(['$lt', '$lte', '$gt', '$gte'], operator)) {
             // XXX this depends on us knowing that these operators don't use any
             // of the arguments to compileElementSelector other than operand.
-            constraints[0].push(
+            constraints.push(
               ELEMENT_OPERATORS[operator].compileElementSelector(operand));
           }
 
           // See comments in the RegExp block above.
           if (operator === '$regex' && !subSelector.$options) {
-            constraints[0].push(
+            constraints.push(
               ELEMENT_OPERATORS.$regex.compileElementSelector(
                 operand, subSelector));
           }
 
-          // XXX support {$exists: true}, $mod, $type, $in
+          // XXX support {$exists: true}, $mod, $type, $in, $elemMatch
         });
         return;
       }
 
       // OK, it's an equality thing.
-      constraints[0].push(equalityElementMatcher(subSelector));
+      constraints.push(equalityElementMatcher(subSelector));
     });
 
-    if (!_.isEmpty(constraints[0])) {
-      self._keyFilter = function (key) {
-        return _.all(constraints[0], function (f) {
-          return f(key[0]);
+    // It appears that the first sort field is treated differently from the
+    // others; we shouldn't create a key filter unless the first sort field is
+    // restricted, though after that point we can restrict the other sort fields
+    // or not as we wish.
+    if (_.isEmpty(constraintsByPath[self._sortSpecParts[0].path]))
+      return;
+
+    self._keyFilter = function (key) {
+      return _.all(self._sortSpecParts, function (specPart, index) {
+        return _.all(constraintsByPath[specPart.path], function (f) {
+          return f(key[index]);
         });
-      };
-    }
+      });
+    };
   }
 });
 
