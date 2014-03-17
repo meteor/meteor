@@ -145,7 +145,12 @@ Reload._reload = function () {
     }
 
     if (typeof sessionStorage !== "undefined" && sessionStorage) {
-      sessionStorage.setItem(KEY_NAME, json);
+      try {
+        sessionStorage.setItem(KEY_NAME, json);
+      } catch (err) {
+        // happens in safari with private browsing
+        Meteor._debug("Couldn't save data for migration to sessionStorage", err);
+      }
     } else {
       Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
     }

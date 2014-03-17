@@ -209,7 +209,7 @@ Template.api.publish = {
   args: [
     {name: "name",
      type: "String",
-     descr: "Name of the attribute set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients."},
+     descr: "Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients."},
     {name: "func",
      type: "Function",
      descr: "Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments."}
@@ -334,7 +334,7 @@ Template.api.subscribe = {
   args: [
     {name: "name",
      type: "String",
-     descr: "Name of the subscription.  Matches name of server's publish() call."},
+     descr: "Name of the subscription.  Matches the name of the server's `publish()` call."},
     {name: "arg1, arg2, ...",
      type: "Any",
      descr: "Optional arguments passed to publisher function on server."},
@@ -1226,6 +1226,47 @@ Template.api.accounts_onCreateUser = {
 };
 
 
+Template.api.accounts_validateLoginAttempt = {
+  id: "accounts_validateloginattempt",
+  name: "Accounts.validateLoginAttempt(func)",
+  locus: "Server",
+  descr: ["Validate login attempts."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception."
+    }
+  ]
+};
+
+Template.api.accounts_onLogin = {
+  id: "accounts_onlogin",
+  name: "Accounts.onLogin(func)",
+  locus: "Server",
+  descr: ["Register a callback to be called after a login is successful."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "The callback to be called after a login is successful."
+    }
+  ]
+};
+
+Template.api.accounts_onLoginFailure = {
+  id: "accounts_onloginfailure",
+  name: "Accounts.onLoginFailure(func)",
+  locus: "Server",
+  descr: ["Register a callback to be called when a login is attempted and is unsuccessful. See [`Accounts.onLogin`](#accounts_onlogin) for details."],
+  args: [
+    {
+      name: "func",
+      type: "Function",
+      descr: "The callback to be called after an unsuccessful login."
+    }
+  ]
+};
 
 Template.api.accounts_createUser = {
   id: "accounts_createuser",
