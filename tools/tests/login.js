@@ -136,4 +136,5 @@ selftest.define('whoami - no username', ['net', 'slow'], function () {
   run.expectExit(0);
 
   testUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
 });

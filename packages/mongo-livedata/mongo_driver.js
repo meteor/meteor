@@ -995,28 +995,52 @@ MongoConnection.prototype._observeChanges = function (
   var observeHandle = new ObserveHandle(multiplexer, callbacks);
 
   if (firstHandle) {
-    var driverClass = PollingObserveDriver;
-    var matcher;
-    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback) {
-      try {
-        matcher = new Minimongo.Matcher(cursorDescription.selector);
-      } catch (e) {
-        // Ignore and avoid oplog driver. eg, maybe we're trying to compile some
-        // newfangled $selector that minimongo doesn't support yet.
-        // XXX make all compilation errors MinimongoError or something
-        //     so that this doesn't ignore unrelated exceptions
-      }
-      if (matcher
-          && OplogObserveDriver.cursorSupported(cursorDescription, matcher)) {
-        driverClass = OplogObserveDriver;
-      }
-    }
+    var matcher, sorter;
+    var canUseOplog = _.all([
+      function () {
+        // At a bare minimum, using the oplog requires us to have an oplog, to
+        // want unordered callbacks, and to not want a callback on the polls
+        // that won't happen.
+        return self._oplogHandle && !ordered &&
+          !callbacks._testOnlyPollCallback;
+      }, function () {
+        // We need to be able to compile the selector. Fall back to polling for
+        // some newfangled $selector that minimongo doesn't support yet.
+        try {
+          matcher = new Minimongo.Matcher(cursorDescription.selector);
+          return true;
+        } catch (e) {
+          // XXX make all compilation errors MinimongoError or something
+          //     so that this doesn't ignore unrelated exceptions
+          return false;
+        }
+      }, function () {
+        // ... and the selector itself needs to support oplog.
+        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+      }, function () {
+        // And we need to be able to compile the sort, if any.  eg, can't be
+        // {$natural: 1}.
+        if (!cursorDescription.options.sort)
+          return true;
+        try {
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
+                                        { matcher: matcher });
+          return true;
+        } catch (e) {
+          // XXX make all compilation errors MinimongoError or something
+          //     so that this doesn't ignore unrelated exceptions
+          return false;
+        }
+      }], function (f) { return f(); });  // invoke each function
+
+    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,
       multiplexer: multiplexer,
       ordered: ordered,
       matcher: matcher,  // ignored by polling
+      sorter: sorter,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 

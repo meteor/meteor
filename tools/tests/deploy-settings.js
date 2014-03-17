@@ -79,4 +79,5 @@ selftest.define('deploy - with settings', ['net', 'slow'], function () {
   checkForSettings(appName, settings, 10);
 
   testUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
 });

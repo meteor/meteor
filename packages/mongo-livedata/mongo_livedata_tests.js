@@ -745,6 +745,472 @@ if (Meteor.isServer) {
     });
     x++;
   });
+
+  // compares arrays a and b w/o looking at order
+  var setsEqual = function (a, b) {
+    a = _.map(a, EJSON.stringify);
+    b = _.map(b, EJSON.stringify);
+    return _.isEmpty(_.difference(a, b)) && _.isEmpty(_.difference(b, a));
+  };
+
+  // This test mainly checks the correctness of oplog code dealing with limited
+  // queries. Compitablity with poll-diff is added as well.
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+
+    var observer = function () {
+      var state = {};
+      var output = [];
+      var callbacks = {
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        added: function (newDoc) {
+          output.push({added: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        removed: function (oldDoc) {
+          output.push({removed: oldDoc._id});
+          delete state[oldDoc._id];
+        }
+      };
+      var handle = coll.find({foo: 22},
+                             {sort: {bar: 1}, limit: 3}).observe(callbacks);
+
+      return {output: output, handle: handle, state: state};
+    };
+    var clearOutput = function (o) { o.output.splice(0, o.output.length); };
+
+    var ins = function (doc) {
+      var id; runInFence(function () { id = coll.insert(doc); });
+      return id;
+    };
+    var rem = function (sel) { runInFence(function () { coll.remove(sel); }); };
+    var upd = function (sel, mod, opt) {
+      runInFence(function () {
+        coll.update(sel, mod, opt);
+      });
+    };
+    // tests '_id' subfields for all documents in oplog buffer
+    var testOplogBufferIds = function (ids) {
+      if (!usesOplog)
+        return;
+      var bufferIds = [];
+      o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(function (x, id) {
+        bufferIds.push(id);
+      });
+
+      test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
+    };
+    var testSafeAppendToBufferFlag = function (expected) {
+      if (!usesOplog)
+        return;
+      test.equal(o.handle._multiplexer._observeDriver._safeAppendToBuffer,
+                 expected);
+    };
+
+    // We'll describe our state as follows.  5:1 means "the document with
+    // _id=docId1 and bar=5".  We list documents as
+    //   [ currently published | in the buffer ] outside the buffer
+    // If safeToAppendToBuffer is true, we'll say ]! instead.
+
+    // Insert a doc and start observing.
+    var docId1 = ins({foo: 22, bar: 5});
+    waitUntilOplogCaughtUp();
+
+    // State: [ 5:1 | ]!
+    var o = observer();
+    var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
+    // Initial add.
+    test.length(o.output, 1);
+    test.equal(o.output.shift(), {added: docId1});
+    testSafeAppendToBufferFlag(true);
+
+    // Insert another doc (blocking until observes have fired).
+    // State: [ 5:1 6:2 | ]!
+    var docId2 = ins({foo: 22, bar: 6});
+    // Observed add.
+    test.length(o.output, 1);
+    test.equal(o.output.shift(), {added: docId2});
+    testSafeAppendToBufferFlag(true);
+
+    var docId3 = ins({ foo: 22, bar: 3 });
+    // State: [ 3:3 5:1 6:2 | ]!
+    test.length(o.output, 1);
+    test.equal(o.output.shift(), {added: docId3});
+    testSafeAppendToBufferFlag(true);
+
+    // Add a non-matching document
+    ins({ foo: 13 });
+    // It shouldn't be added
+    test.length(o.output, 0);
+
+    // Add something that matches but is too big to fit in
+    var docId4 = ins({ foo: 22, bar: 7 });
+    // State: [ 3:3 5:1 6:2 | 7:4 ]!
+    // It shouldn't be added but should end up in the buffer.
+    test.length(o.output, 0);
+    testOplogBufferIds([docId4]);
+    testSafeAppendToBufferFlag(true);
+
+    // Let's add something small enough to fit in
+    var docId5 = ins({ foo: 22, bar: -1 });
+    // State: [ -1:5 3:3 5:1 | 6:2 7:4 ]!
+    // We should get an added and a removed events
+    test.length(o.output, 2);
+    // doc 2 was removed from the published set as it is too big to be in
+    test.isTrue(setsEqual(o.output, [{added: docId5}, {removed: docId2}]));
+    clearOutput(o);
+    testOplogBufferIds([docId2, docId4]);
+    testSafeAppendToBufferFlag(true);
+
+    // Now remove something and that doc 2 should be right back
+    rem(docId5);
+    // State: [ 3:3 5:1 6:2 | 7:4 ]!
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId5}, {added: docId2}]));
+    clearOutput(o);
+    testOplogBufferIds([docId4]);
+    testSafeAppendToBufferFlag(true);
+
+    // Add some negative numbers overflowing the buffer.
+    // New documents will take the published place, [3 5 6] will take the buffer
+    // and 7 will be outside of the buffer in MongoDB.
+    var docId6 = ins({ foo: 22, bar: -1 });
+    var docId7 = ins({ foo: 22, bar: -2 });
+    var docId8 = ins({ foo: 22, bar: -3 });
+    // State: [ -3:8 -2:7 -1:6 | 3:3 5:1 6:2 ] 7:4
+    test.length(o.output, 6);
+    var expected = [{added: docId6}, {removed: docId2},
+                    {added: docId7}, {removed: docId1},
+                    {added: docId8}, {removed: docId3}];
+    test.isTrue(setsEqual(o.output, expected));
+    clearOutput(o);
+    testOplogBufferIds([docId1, docId2, docId3]);
+    testSafeAppendToBufferFlag(false);
+
+    // If we update first 3 docs (increment them by 20), it would be
+    // interesting.
+    upd({ bar: { $lt: 0 }}, { $inc: { bar: 20 } }, { multi: true });
+    // State: [ 3:3 5:1 6:2 | ] 7:4 17:8 18:7 19:6
+    //   which triggers re-poll leaving us at
+    // State: [ 3:3 5:1 6:2 | 7:4 17:8 18:7 ] 19:6
+
+    // The updated documents can't find their place in published and they can't
+    // be buffered as we are not aware of the situation outside of the buffer.
+    // But since our buffer becomes empty, it will be refilled partially with
+    // updated documents.
+    test.length(o.output, 6);
+    var expectedRemoves = [{removed: docId6},
+                           {removed: docId7},
+                           {removed: docId8}];
+    var expectedAdds = [{added: docId3},
+                        {added: docId1},
+                        {added: docId2}];
+
+    test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
+    clearOutput(o);
+    testOplogBufferIds([docId4, docId7, docId8]);
+    testSafeAppendToBufferFlag(false);
+
+    // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
+    // schedule a repoll.
+    rem({ bar: { $lt: 10 } });
+    // State: [ 17:8 18:7 19:6 | ]!
+
+    // XXX the oplog code analyzes the events one by one: one remove after
+    // another. Poll-n-diff code, on the other side, analyzes the batch action
+    // of multiple remove. Because of that difference, expected outputs differ.
+    if (usesOplog) {
+      var expectedRemoves = [{removed: docId3}, {removed: docId1},
+                             {removed: docId2}, {removed: docId4}];
+      var expectedAdds = [{added: docId4}, {added: docId8},
+                          {added: docId7}, {added: docId6}];
+
+      test.length(o.output, 8);
+    } else {
+      var expectedRemoves = [{removed: docId3}, {removed: docId1},
+                             {removed: docId2}];
+      var expectedAdds = [{added: docId8}, {added: docId7}, {added: docId6}];
+
+      test.length(o.output, 6);
+    }
+
+    test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
+    clearOutput(o);
+    testOplogBufferIds([]);
+    testSafeAppendToBufferFlag(true);
+
+    var docId9 = ins({ foo: 22, bar: 21 });
+    var docId10 = ins({ foo: 22, bar: 31 });
+    var docId11 = ins({ foo: 22, bar: 41 });
+    var docId12 = ins({ foo: 22, bar: 51 });
+    // State: [ 17:8 18:7 19:6 | 21:9 31:10 41:11 ] 51:12
+
+    testOplogBufferIds([docId9, docId10, docId11]);
+    testSafeAppendToBufferFlag(false);
+    test.length(o.output, 0);
+    upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
+    // State: [ 21:9 22:8 23:7 | 24:6 31:10 41:11 ] 51:12
+    test.length(o.output, 4);
+    test.isTrue(setsEqual(o.output, [{removed: docId6},
+                                     {added: docId9},
+                                     {changed: docId7},
+                                     {changed: docId8}]));
+    clearOutput(o);
+    testOplogBufferIds([docId6, docId10, docId11]);
+    testSafeAppendToBufferFlag(false);
+
+    rem(docId9);
+    // State: [ 22:8 23:7 24:6 | 31:10 41:11 ] 51:12
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId9}, {added: docId6}]));
+    clearOutput(o);
+    testOplogBufferIds([docId10, docId11]);
+    testSafeAppendToBufferFlag(false);
+
+    upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
+    // State: [ 22:8 23:7 23.5:10 | 24:6 ] 33.5:11 43.5:12
+    // 33.5 doesn't update in-place in buffer, because it the driver is not sure
+    // it can do it: because the buffer does not have the safe append flag set,
+    // for all it knows there is a different doc which is less than 33.5.
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId6}, {added: docId10}]));
+    clearOutput(o);
+    testOplogBufferIds([docId6]);
+    testSafeAppendToBufferFlag(false);
+
+    // Force buffer objects to be moved into published set so we can check them
+    rem(docId7);
+    rem(docId8);
+    rem(docId10);
+    // State: [ 24:6 | ] 33.5:11 43.5:12
+    //    triggers repoll
+    // State: [ 24:6 33.5:11 43.5:12 | ]!
+    test.length(o.output, 6);
+    test.isTrue(setsEqual(o.output, [{removed: docId7}, {removed: docId8},
+                                     {removed: docId10}, {added: docId6},
+                                     {added: docId11}, {added: docId12}]));
+
+    test.length(_.keys(o.state), 3);
+    test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
+    test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
+    test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
+    clearOutput(o);
+    testOplogBufferIds([]);
+    testSafeAppendToBufferFlag(true);
+
+    var docId13 = ins({ foo: 22, bar: 50 });
+    var docId14 = ins({ foo: 22, bar: 51 });
+    var docId15 = ins({ foo: 22, bar: 52 });
+    var docId16 = ins({ foo: 22, bar: 53 });
+    // State: [ 24:6 33.5:11 43.5:12 | 50:13 51:14 52:15 ] 53:16
+    test.length(o.output, 0);
+    testOplogBufferIds([docId13, docId14, docId15]);
+    testSafeAppendToBufferFlag(false);
+
+    // Update something that's outside the buffer to be in the buffer, writing
+    // only to the sort key.
+    upd(docId16, {$set: {bar: 10}});
+    // State: [ 10:16 24:6 33.5:11 | 43.5:12 50:13 51:14 ] 52:15
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId12}, {added: docId16}]));
+    clearOutput(o);
+    testOplogBufferIds([docId12, docId13, docId14]);
+    testSafeAppendToBufferFlag(false);
+
+    o.handle.stop();
+    onComplete();
+  });
+
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+
+    var observer = function () {
+      var state = {};
+      var output = [];
+      var callbacks = {
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        added: function (newDoc) {
+          output.push({added: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        removed: function (oldDoc) {
+          output.push({removed: oldDoc._id});
+          delete state[oldDoc._id];
+        }
+      };
+      var handle = coll.find({}, {sort: {x: 1},
+                                  limit: 2,
+                                  fields: {y: 1}}).observe(callbacks);
+
+      return {output: output, handle: handle, state: state};
+    };
+    var clearOutput = function (o) { o.output.splice(0, o.output.length); };
+    var ins = function (doc) {
+      var id; runInFence(function () { id = coll.insert(doc); });
+      return id;
+    };
+    var rem = function (id) {
+      runInFence(function () { coll.remove(id); });
+    };
+
+    var o = observer();
+
+    var docId1 = ins({ x: 1, y: 1222 });
+    var docId2 = ins({ x: 5, y: 5222 });
+
+    test.length(o.output, 2);
+    test.equal(o.output, [{added: docId1}, {added: docId2}]);
+    clearOutput(o);
+
+    var docId3 = ins({ x: 7, y: 7222 });
+    test.length(o.output, 0);
+
+    var docId4 = ins({ x: -1, y: -1222 });
+
+    // Becomes [docId4 docId1 | docId2 docId3]
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{added: docId4}, {removed: docId2}]));
+
+    test.equal(_.size(o.state), 2);
+    test.equal(o.state[docId4], {_id: docId4, y: -1222});
+    test.equal(o.state[docId1], {_id: docId1, y: 1222});
+    clearOutput(o);
+
+    rem(docId2);
+    // Becomes [docId4 docId1 | docId3]
+    test.length(o.output, 0);
+
+    rem(docId4);
+    // Becomes [docId1 docId3]
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{added: docId3}, {removed: docId4}]));
+
+    test.equal(_.size(o.state), 2);
+    test.equal(o.state[docId3], {_id: docId3, y: 7222});
+    test.equal(o.state[docId1], {_id: docId1, y: 1222});
+    clearOutput(o);
+
+    onComplete();
+  });
+
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test, onComplete) {
+    var run = test.runId();
+    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+
+    var observer = function () {
+      var state = {};
+      var output = [];
+      var callbacks = {
+        changed: function (newDoc) {
+          output.push({changed: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        added: function (newDoc) {
+          output.push({added: newDoc._id});
+          state[newDoc._id] = newDoc;
+        },
+        removed: function (oldDoc) {
+          output.push({removed: oldDoc._id});
+          delete state[oldDoc._id];
+        }
+      };
+      var handle = coll.find({}, {sort: {x: 1, y: 1}, limit: 3})
+                    .observe(callbacks);
+
+      return {output: output, handle: handle, state: state};
+    };
+    var clearOutput = function (o) { o.output.splice(0, o.output.length); };
+    var ins = function (doc) {
+      var id; runInFence(function () { id = coll.insert(doc); });
+      return id;
+    };
+    var rem = function (id) {
+      runInFence(function () { coll.remove(id); });
+    };
+    // tests '_id' subfields for all documents in oplog buffer
+    var testOplogBufferIds = function (ids) {
+      var bufferIds = [];
+      o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(function (x, id) {
+        bufferIds.push(id);
+      });
+
+      test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
+    };
+    var testSafeAppendToBufferFlag = function (expected) {
+      if (expected)
+        test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+      else
+        test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+    };
+
+    var ids = {};
+    _.each([2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5], function (x, i) {
+      ids[i] = ins({ x: x, y: i });
+    });
+
+    // Ensure that we are past all the 'i' entries before we run the query, so
+    // that we get the expected phase transitions.
+    waitUntilOplogCaughtUp();
+
+    var o = observer();
+    var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
+    //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
+    // id: [2 7 0 | 9 3 8] 1 4 5 10 6
+
+    test.length(o.output, 3);
+    test.isTrue(setsEqual([{added: ids[2]}, {added: ids[7]}, {added: ids[0]}], o.output));
+    usesOplog && testOplogBufferIds([ids[9], ids[3], ids[8]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem(ids[0]);
+    //  x: [1 1 2 | 3 3] 4 5 5 5  9
+    // id: [2 7 9 | 3 8] 1 4 5 10 6
+    test.length(o.output, 2);
+    test.isTrue(setsEqual([{removed: ids[0]}, {added: ids[9]}], o.output));
+    usesOplog && testOplogBufferIds([ids[3], ids[8]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem(ids[7]);
+    //  x: [1 2 3 | 3] 4 5 5 5  9
+    // id: [2 9 3 | 8] 1 4 5 10 6
+    test.length(o.output, 2);
+    test.isTrue(setsEqual([{removed: ids[7]}, {added: ids[3]}], o.output));
+    usesOplog && testOplogBufferIds([ids[8]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem(ids[3]);
+    //  x: [1 2 3 | 4 5 5] 5  9
+    // id: [2 9 8 | 1 4 5] 10 6
+    test.length(o.output, 2);
+    test.isTrue(setsEqual([{removed: ids[3]}, {added: ids[8]}], o.output));
+    usesOplog && testOplogBufferIds([ids[1], ids[4], ids[5]]);
+    usesOplog && testSafeAppendToBufferFlag(false);
+    clearOutput(o);
+
+    rem({ x: {$lt: 4} });
+    //  x: [4 5 5 | 5  9]
+    // id: [1 4 5 | 10 6]
+    test.length(o.output, 6);
+    test.isTrue(setsEqual([{removed: ids[2]}, {removed: ids[9]}, {removed: ids[8]},
+                           {added: ids[5]}, {added: ids[4]}, {added: ids[1]}], o.output));
+    usesOplog && testOplogBufferIds([ids[10], ids[6]]);
+    usesOplog && testSafeAppendToBufferFlag(true);
+    clearOutput(o);
+
+
+    onComplete();
+  });
 }
 
 
@@ -1947,8 +2413,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var output = [];
   var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
@@ -1990,8 +2455,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var cursor = coll.find({}, {transform: function (doc) {
     return doc.x;
@@ -2053,8 +2517,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
 
   // Wait until we've processed the insert oplog entry, so that we are in a
   // steady state (and we don't see the dropped docs because we are FETCHING).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   // Drop the collection. Should remove all docs.
   runInFence(function () {
@@ -2204,3 +2667,12 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
     self.handle.stop();
   }
 ]);
+
+
+var waitUntilOplogCaughtUp = function () {
+  var oplogHandle =
+        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  if (oplogHandle)
+    oplogHandle.waitUntilCaughtUp();
+};
+

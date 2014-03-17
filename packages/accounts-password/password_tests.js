@@ -32,6 +32,16 @@ if (Meteor.isClient) (function () {
       return Meteor.userId() === null;
     }, 10 * 1000, 100);
   };
+  var invalidateLoginsStep = function (test, expect) {
+    Meteor.call("testInvalidateLogins", true, expect(function (error) {
+      test.isFalse(error);
+    }));
+  };
+  var validateLoginsStep = function (test, expect) {
+    Meteor.call("testInvalidateLogins", false, expect(function (error) {
+      test.isFalse(error);
+    }));
+  };
 
   testAsyncMulti("passwords - basic login with password", [
     function (test, expect) {
@@ -530,6 +540,117 @@ if (Meteor.isClient) (function () {
     },
     waitForLoggedOutStep
   ]);
+
+  testAsyncMulti("passwords - validateLoginAttempt", [
+    function (test, expect) {
+      this.username = Random.id();
+      this.password = "password";
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    invalidateLoginsStep,
+    function (test, expect) {
+      Meteor.loginWithPassword(
+        this.username,
+        this.password,
+        expect(function (error) {
+          test.isTrue(error);
+          test.equal(error.reason, "Login forbidden");
+        })
+      );
+    },
+    validateLoginsStep
+  ]);
+
+  testAsyncMulti("passwords - onLogin hook", [
+    function (test, expect) {
+      Meteor.call("testCaptureLogins", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      this.username = Random.id();
+      this.password = "password";
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call("testFetchCapturedLogins", expect(function (error, logins) {
+        test.isFalse(error);
+        test.equal(logins.length, 1);
+        var login = logins[0];
+        test.isTrue(login.successful);
+        var attempt = login.attempt;
+        test.equal(attempt.type, "password");
+        test.isTrue(attempt.allowed);
+        test.equal(attempt.methodName, "createUser");
+        test.equal(attempt.methodArguments[0].username, self.username);
+      }));
+    }
+  ]);
+
+  testAsyncMulti("passwords - onLoginFailed hook", [
+    function (test, expect) {
+      this.username = Random.id();
+      this.password = "password";
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    function (test, expect) {
+      Meteor.call("testCaptureLogins", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.loginWithPassword(this.username, "incorrect", expect(function (error) {
+        test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.call("testFetchCapturedLogins", expect(function (error, logins) {
+        test.isFalse(error);
+        test.equal(logins.length, 1);
+        var login = logins[0];
+        test.isFalse(login.successful);
+        var attempt = login.attempt;
+        test.equal(attempt.type, "password");
+        test.isFalse(attempt.allowed);
+        test.equal(attempt.error.reason, "Incorrect password");
+      }));
+    },
+    function (test, expect) {
+      Meteor.call("testCaptureLogins", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.loginWithPassword("no such user", "incorrect", expect(function (error) {
+        test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.call("testFetchCapturedLogins", expect(function (error, logins) {
+        test.isFalse(error);
+        test.equal(logins.length, 1);
+        var login = logins[0];
+        test.isFalse(login.successful);
+        var attempt = login.attempt;
+        test.equal(attempt.type, "password");
+        test.isFalse(attempt.allowed);
+        test.equal(attempt.error.reason, "User not found");
+      }));
+    }
+  ]);
+
 }) ();
 
 
