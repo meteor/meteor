@@ -59,6 +59,11 @@ Minimongo.Sorter = function (spec) {
     _.map(self._sortSpecParts, function (spec, i) {
       return self._keyFieldComparator(i);
     }));
+
+  // If you call useWithMatcher on this Sorter, this may be set to a function
+  // which selects whether or not a given "sort key" (tuple of values for the
+  // different sort spec fields) is compatible with the selector.
+  self._keyFilter = null;
 };
 
 // In addition to these methods, sorter_project.js defines combineIntoProjection
@@ -106,23 +111,8 @@ _.extend(Minimongo.Sorter.prototype, {
     var minKey = null;
 
     self._generateKeysFromDoc(doc, function (key) {
-      // XXX This is actually wrong! In fact, the whole attempt to compile sort
-      //     functions independently of selectors is wrong. In MongoDB, if you
-      //     have documents {_id: 'x', a: [1, 10]} and {_id: 'y', a: [5, 15]},
-      //     then C.find({}, {sort: {a: 1}}) puts x before y (1 comes before 5).
-      //     But C.find({a: {$gt: 3}}, {sort: {a: 1}}) puts y before x (1 does
-      //     not match the selector, and 5 comes before 10).
-      //
-      //     The way this works is pretty subtle!  For example, if the documents
-      //     are instead {_id: 'x', a: [{x: 1}, {x: 10}]}) and
-      //                 {_id: 'y', a: [{x: 5}, {x: 15}]}),
-      //     then C.find({'a.x': {$gt: 3}}, {sort: {'a.x': 1}}) and
-      //          C.find({a: {$elemMatch: {x: {$gt: 3}}}}, {sort: {'a.x': 1}})
-      //     both follow this rule (y before x).  (ie, you do have to apply this
-      //     through $elemMatch.)
-      //
-      //     So we ought to skip keys here that don't work for the selector, but
-      //     we don't do that yet.
+      if (self._keyFilter && !self._keyFilter(key))
+        return;
 
       if (minKey === null) {
         minKey = key;
@@ -133,6 +123,8 @@ _.extend(Minimongo.Sorter.prototype, {
       }
     });
 
+    // This could happen if our key filter somehow filters out all the keys even
+    // though somehow the selector matches.
     if (minKey === null)
       throw Error("sort selector found no keys in doc?");
     return minKey;
@@ -281,6 +273,96 @@ _.extend(Minimongo.Sorter.prototype, {
       var key2 = self._getMinKeyFromDoc(doc2);
       return self._compareKeys(key1, key2);
     };
+  },
+
+  // In MongoDB, if you have documents
+  //    {_id: 'x', a: [1, 10]} and
+  //    {_id: 'y', a: [5, 15]},
+  // then C.find({}, {sort: {a: 1}}) puts x before y (1 comes before 5).
+  // But  C.find({a: {$gt: 3}}, {sort: {a: 1}}) puts y before x (1 does not
+  // match the selector, and 5 comes before 10).
+  //
+  // The way this works is pretty subtle!  For example, if the documents
+  // are instead {_id: 'x', a: [{x: 1}, {x: 10}]}) and
+  //             {_id: 'y', a: [{x: 5}, {x: 15}]}),
+  // then C.find({'a.x': {$gt: 3}}, {sort: {'a.x': 1}}) and
+  //      C.find({a: {$elemMatch: {x: {$gt: 3}}}}, {sort: {'a.x': 1}})
+  // both follow this rule (y before x).  (ie, you do have to apply this
+  // through $elemMatch.)
+  //
+  // So if you call `useWithMatcher(matcher)` with the Matcher that goes with
+  // this Sorter, we will attempt to skip sort keys that don't match the
+  // selector. The logic here is pretty subtle and undocumented; we've gotten as
+  // close as we can figure out based on our understanding of Mongo's behavior.
+  useWithMatcher: function (matcher) {
+    var self = this;
+
+    if (self._keyFilter)
+      throw Error("called useWithMatcher twice?");
+
+    // If we are only sorting by distance, then we're not going to bother to
+    // build a key filter.
+    // XXX figure out how geoqueries interact with this stuff
+    if (_.isEmpty(self._sortSpecParts))
+      return;
+
+    var selector = matcher._selector;
+
+    // If the user just passed a literal function to find(), then we can't get a
+    // key filter from it.
+    if (selector instanceof Function)
+      return;
+
+    // It appears that the first sort field is treated differently from the
+    // others; we shouldn't create a key filter unless the first sort field is
+    // restricted, though after that point we can restrict the other sort fields
+    // or not as we wish.
+    var firstSortField = self._sortSpecParts[0].path;
+    var otherSortFields = {};
+    _.each(self._sortSpecParts, function (path, i) {
+      if (i !== 0)
+        otherSortFields[path] = true;
+    });
+
+    var constraints = [];
+    _.each(self._sortSpecParts, function () {
+      constraints.push([]);
+    });
+
+    _.each(selector, function (subSelector, key) {
+      // XXX support constraints on non-first sort fields, $and, $or, etc.
+      if (key !== firstSortField)
+        return;
+
+      // XXX support RegExp constraints
+      if (subSelector instanceof RegExp)
+        return;
+
+      if (isOperatorObject(subSelector)) {
+        _.each(subSelector, function (operand, operator) {
+          if (_.contains(['$lt', '$lte', '$gt', '$gte'], operator)) {
+            // XXX this depends on us knowing that these operators don't use any
+            // of the arguments to compileElementSelector other than operand.
+            constraints[0].push(
+              ELEMENT_OPERATORS[operator].compileElementSelector(operand));
+          }
+          // XXX support $regex/RegExp, {$exists: true}, $mod, $type, $in
+        });
+      }
+
+      // OK, it's an equality thing.
+      if (subSelector == null) {
+        constraints[0].push(equalityElementMatcher(subSelector));
+      }
+    });
+
+    if (!_.isEmpty(constraints[0])) {
+      self._keyFilter = function (key) {
+        return _.all(constraints[0], function (f) {
+          return f(key[0]);
+        });
+      };
+    }
   }
 });
 
