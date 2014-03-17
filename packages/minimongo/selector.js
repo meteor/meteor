@@ -204,7 +204,7 @@ var convertElementMatcherToBranchedMatcher = function (
 };
 
 // Takes a RegExp object and returns an element matcher.
-var regexpElementMatcher = function (regexp) {
+regexpElementMatcher = function (regexp) {
   return function (value) {
     if (value instanceof RegExp) {
       // Comparing two regexps means seeing if the regexps are identical
