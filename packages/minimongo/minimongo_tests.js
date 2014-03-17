@@ -1867,6 +1867,58 @@ Tinytest.add("minimongo - sort keys", function (test) {
                          {x: 2, y: [4, 5]}]});
 });
 
+Tinytest.add("minimongo - sort key filter", function (test) {
+  var testOrder = function (sortSpec, selector, doc1, doc2) {
+    var matcher = new Minimongo.Matcher(selector);
+    var sorter = new Minimongo.Sorter(sortSpec);
+    sorter.useWithMatcher(matcher);
+    var comparator = sorter.getComparator();
+    var comparison = comparator(doc1, doc2);
+    test.isTrue(comparison < 0);
+  };
+
+  testOrder({'a.x': 1}, {'a.x': {$gt: 1}},
+            {a: {x: 3}},
+            {a: {x: [1, 4]}});
+  testOrder({'a.x': 1}, {'a.x': {$gt: 0}},
+            {a: {x: [1, 4]}},
+            {a: {x: 3}});
+
+  var keyCompatible = function (sortSpec, selector, key, compatible) {
+    var matcher = new Minimongo.Matcher(selector);
+    var sorter = new Minimongo.Sorter(sortSpec);
+    sorter.useWithMatcher(matcher);
+    var actual = sorter._keyCompatibleWithSelector(key);
+    test.equal(actual, compatible);
+  };
+
+  keyCompatible({a: 1}, {a: 5}, [5], true);
+  keyCompatible({a: 1}, {a: 5}, [8], false);
+  keyCompatible({a: 1}, {a: {x: 5}}, [{x: 5}], true);
+  keyCompatible({a: 1}, {a: {x: 5}}, [{x: 5, y: 9}], false);
+  keyCompatible({'a.x': 1}, {a: {x: 5}}, [5], true);
+  // To confirm this:
+  //   > db.x.insert({_id: "q", a: [{x:1}, {x:5}], b: 2})
+  //   > db.x.insert({_id: "w", a: [{x:5}, {x:10}], b: 1})
+  //   > db.x.find({}).sort({'a.x': 1, b: 1})
+  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
+  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
+  //   > db.x.find({a: {x:5}}).sort({'a.x': 1, b: 1})
+  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
+  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
+  //   > db.x.find({'a.x': 5}).sort({'a.x': 1, b: 1})
+  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
+  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
+  // ie, only the last one manages to trigger the key compatibility code,
+  // not the previous one.  (The "b" sort is necessary because when the key
+  // compatibility code *does* kick in, both documents only end up with "5"
+  // for the first field as their only sort key, and we need to differentiate
+  // somehow...)
+  keyCompatible({'a.x': 1}, {a: {x: 5}}, [1], true);
+  keyCompatible({'a.x': 1}, {'a.x': 5}, [5], true);
+  keyCompatible({'a.x': 1}, {'a.x': 5}, [1], false);
+});
+
 Tinytest.add("minimongo - binary search", function (test) {
   var forwardCmp = function (a, b) {
     return a - b;

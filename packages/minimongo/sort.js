@@ -111,7 +111,7 @@ _.extend(Minimongo.Sorter.prototype, {
     var minKey = null;
 
     self._generateKeysFromDoc(doc, function (key) {
-      if (self._keyFilter && !self._keyFilter(key))
+      if (!self._keyCompatibleWithSelector(key))
         return;
 
       if (minKey === null) {
@@ -128,6 +128,11 @@ _.extend(Minimongo.Sorter.prototype, {
     if (minKey === null)
       throw Error("sort selector found no keys in doc?");
     return minKey;
+  },
+
+  _keyCompatibleWithSelector: function (key) {
+    var self = this;
+    return !self._keyFilter || self._keyFilter(key);
   },
 
   // Iterates over each possible "key" from doc (ie, over each branch), calling
@@ -348,12 +353,11 @@ _.extend(Minimongo.Sorter.prototype, {
           }
           // XXX support $regex/RegExp, {$exists: true}, $mod, $type, $in
         });
+        return;
       }
 
       // OK, it's an equality thing.
-      if (subSelector == null) {
-        constraints[0].push(equalityElementMatcher(subSelector));
-      }
+      constraints[0].push(equalityElementMatcher(subSelector));
     });
 
     if (!_.isEmpty(constraints[0])) {
