@@ -1032,6 +1032,10 @@ MongoConnection.prototype._observeChanges = function (
         }
       }], function (f) { return f(); });  // invoke each function
 
+    if (matcher && sorter) {
+      sorter.useWithMatcher(matcher);
+    }
+
     var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,

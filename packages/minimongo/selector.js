@@ -35,7 +35,10 @@ Minimongo.Matcher = function (selector) {
   // Set to a dummy document which always matches this Matcher. Or set to null
   // if such document is too hard to find.
   self._matchingDocument = undefined;
-  // A clone of the original selector. Used by canBecomeTrueByModifier.
+  // A clone of the original selector. It may just be a function if the user
+  // passed in a function; otherwise is definitely an object (eg, IDs are
+  // translated into {_id: ID} first. Used by canBecomeTrueByModifier and
+  // Sorter.useWithMatcher.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
 };
@@ -217,7 +220,7 @@ var regexpElementMatcher = function (regexp) {
 
 // Takes something that is not an operator object and returns an element matcher
 // for equality with that thing.
-var equalityElementMatcher = function (elementSelector) {
+equalityElementMatcher = function (elementSelector) {
   if (isOperatorObject(elementSelector))
     throw Error("Can't create equalityValueSelector for operator object");
 
@@ -261,8 +264,6 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
         VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot));
     } else if (_.has(ELEMENT_OPERATORS, operator)) {
       var options = ELEMENT_OPERATORS[operator];
-      if (typeof options === 'function')
-        options = {compileElementSelector: options};
       operatorMatchers.push(
         convertElementMatcherToBranchedMatcher(
           options.compileElementSelector(
@@ -380,7 +381,7 @@ var VALUE_OPERATORS = {
   },
   $nin: function (operand) {
     return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
-      ELEMENT_OPERATORS.$in(operand)));
+      ELEMENT_OPERATORS.$in.compileElementSelector(operand)));
   },
   $exists: function (operand) {
     var exists = convertElementMatcherToBranchedMatcher(function (value) {
@@ -548,7 +549,7 @@ var makeInequality = function (cmpValueComparator) {
 //
 // An element selector compiler returns a function mapping a single value to
 // bool.
-var ELEMENT_OPERATORS = {
+ELEMENT_OPERATORS = {
   $lt: makeInequality(function (cmpValue) {
     return cmpValue < 0;
   }),
@@ -702,6 +703,12 @@ var ELEMENT_OPERATORS = {
     }
   }
 };
+_.each(ELEMENT_OPERATORS, function (options, operator) {
+  if (typeof options === 'function') {
+    // XXX safe to modify while iterating?
+    ELEMENT_OPERATORS[operator] = {compileElementSelector: options};
+  }
+});
 
 // makeLookupFunction(key) returns a lookup function.
 //
