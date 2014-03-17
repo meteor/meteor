@@ -280,6 +280,10 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
       return unitVersion.dependencies;
     }).flatten().uniq()
       .difference(_.pluck(exactTransitiveConstraints, "name")).value();
+  },
+  toString: function () {
+    var self = this;
+    return self.name + "@" + self.version;
   }
 });
 
