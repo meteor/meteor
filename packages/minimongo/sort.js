@@ -11,8 +11,9 @@
 // first object comes first in order, 1 if the second object comes
 // first, or 0 if neither object comes before the other.
 
-Minimongo.Sorter = function (spec) {
+Minimongo.Sorter = function (spec, options) {
   var self = this;
+  options = options || {};
 
   self._sortSpecParts = [];
 
@@ -60,10 +61,11 @@ Minimongo.Sorter = function (spec) {
       return self._keyFieldComparator(i);
     }));
 
-  // If you call useWithMatcher on this Sorter, this may be set to a function
-  // which selects whether or not a given "sort key" (tuple of values for the
-  // different sort spec fields) is compatible with the selector.
+  // If you specify a matcher for this Sorter, _keyFilter may be set to a
+  // function which selects whether or not a given "sort key" (tuple of values
+  // for the different sort spec fields) is compatible with the selector.
   self._keyFilter = null;
+  options.matcher && self._useWithMatcher(options.matcher);
 };
 
 // In addition to these methods, sorter_project.js defines combineIntoProjection
@@ -295,15 +297,15 @@ _.extend(Minimongo.Sorter.prototype, {
   // both follow this rule (y before x).  (ie, you do have to apply this
   // through $elemMatch.)
   //
-  // So if you call `useWithMatcher(matcher)` with the Matcher that goes with
-  // this Sorter, we will attempt to skip sort keys that don't match the
-  // selector. The logic here is pretty subtle and undocumented; we've gotten as
-  // close as we can figure out based on our understanding of Mongo's behavior.
-  useWithMatcher: function (matcher) {
+  // So if you pass a matcher to this sorter's constructor, we will attempt to
+  // skip sort keys that don't match the selector. The logic here is pretty
+  // subtle and undocumented; we've gotten as close as we can figure out based
+  // on our understanding of Mongo's behavior.
+  _useWithMatcher: function (matcher) {
     var self = this;
 
     if (self._keyFilter)
-      throw Error("called useWithMatcher twice?");
+      throw Error("called _useWithMatcher twice?");
 
     // If we are only sorting by distance, then we're not going to bother to
     // build a key filter.

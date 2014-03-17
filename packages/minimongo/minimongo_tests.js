@@ -1875,8 +1875,7 @@ Tinytest.add("minimongo - sort keys", function (test) {
 Tinytest.add("minimongo - sort key filter", function (test) {
   var testOrder = function (sortSpec, selector, doc1, doc2) {
     var matcher = new Minimongo.Matcher(selector);
-    var sorter = new Minimongo.Sorter(sortSpec);
-    sorter.useWithMatcher(matcher);
+    var sorter = new Minimongo.Sorter(sortSpec, {matcher: matcher});
     var comparator = sorter.getComparator();
     var comparison = comparator(doc1, doc2);
     test.isTrue(comparison < 0);
@@ -1891,8 +1890,7 @@ Tinytest.add("minimongo - sort key filter", function (test) {
 
   var keyCompatible = function (sortSpec, selector, key, compatible) {
     var matcher = new Minimongo.Matcher(selector);
-    var sorter = new Minimongo.Sorter(sortSpec);
-    sorter.useWithMatcher(matcher);
+    var sorter = new Minimongo.Sorter(sortSpec, {matcher: matcher});
     var actual = sorter._keyCompatibleWithSelector(key);
     test.equal(actual, compatible);
   };

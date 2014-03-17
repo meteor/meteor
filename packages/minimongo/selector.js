@@ -38,7 +38,7 @@ Minimongo.Matcher = function (selector) {
   // A clone of the original selector. It may just be a function if the user
   // passed in a function; otherwise is definitely an object (eg, IDs are
   // translated into {_id: ID} first. Used by canBecomeTrueByModifier and
-  // Sorter.useWithMatcher.
+  // Sorter._useWithMatcher.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
 };
