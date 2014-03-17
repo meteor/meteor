@@ -1936,6 +1936,18 @@ Tinytest.add("minimongo - sort key filter", function (test) {
   keyCompatible({a: 1}, {a: /^foo+/m}, ['bar'], true);
   keyCompatible({a: 1}, {a: {$regex: "^foo+", $options: "i"}}, ['bar'], true);
   keyCompatible({a: 1}, {a: {$regex: "^foo+", $options: "m"}}, ['bar'], true);
+
+  // Multiple keys!
+  keyCompatible({a: 1, b: 1, c: 1},
+                {a: {$gt: 5}, c: {$lt: 3}}, [6, "bla", 2], true);
+  keyCompatible({a: 1, b: 1, c: 1},
+                {a: {$gt: 5}, c: {$lt: 3}}, [6, "bla", 4], false);
+  keyCompatible({a: 1, b: 1, c: 1},
+                {a: {$gt: 5}, c: {$lt: 3}}, [3, "bla", 1], false);
+  // No filtering is done (ie, all keys are compatible) if the first key isn't
+  // constrained.
+  keyCompatible({a: 1, b: 1, c: 1},
+                {c: {$lt: 3}}, [3, "bla", 4], true);
 });
 
 Tinytest.add("minimongo - binary search", function (test) {
