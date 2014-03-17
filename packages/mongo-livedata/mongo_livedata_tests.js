@@ -818,6 +818,8 @@ if (Meteor.isServer) {
 
     // Insert a doc and start observing.
     var docId1 = ins({foo: 22, bar: 5});
+    waitUntilOplogCaughtUp();
+
     // State: [ 5:1 | ]!
     var o = observer();
     var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
@@ -1153,6 +1155,10 @@ if (Meteor.isServer) {
     _.each([2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5], function (x, i) {
       ids[i] = ins({ x: x, y: i });
     });
+
+    // Ensure that we are past all the 'i' entries before we run the query, so
+    // that we get the expected phase transitions.
+    waitUntilOplogCaughtUp();
 
     var o = observer();
     var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
@@ -2407,8 +2413,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var output = [];
   var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
@@ -2450,8 +2455,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var cursor = coll.find({}, {transform: function (doc) {
     return doc.x;
@@ -2513,8 +2517,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
 
   // Wait until we've processed the insert oplog entry, so that we are in a
   // steady state (and we don't see the dropped docs because we are FETCHING).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   // Drop the collection. Should remove all docs.
   runInFence(function () {
@@ -2664,3 +2667,12 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
     self.handle.stop();
   }
 ]);
+
+
+var waitUntilOplogCaughtUp = function () {
+  var oplogHandle =
+        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  if (oplogHandle)
+    oplogHandle.waitUntilCaughtUp();
+};
+
