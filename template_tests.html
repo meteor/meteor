@@ -530,3 +530,47 @@ Hi there!
   {{#foo}}
   {{/foo}}
 </template>
+
+<template name="spacebars_test_helpers_stop_onetwo">
+  {{#if showOne}}
+    {{> one}}
+  {{else}}
+    {{> two}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with1">
+  {{#with options}}
+    one
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with2">
+  {{#with options}}
+    two
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_each1">
+  {{#each options}}
+    one
+  {{/each}}
+</template>
+
+<template name="spacebars_test_helpers_stop_each2">
+  {{#each options}}
+    two
+  {{/each}}
+</template>
+
+<template name="spacebars_test_helpers_stop_if1">
+  {{#if options}}
+    one
+  {{/if}}
+</template>
+
+<template name="spacebars_test_helpers_stop_if2">
+  {{#if options}}
+    two
+  {{/if}}
+</template>
