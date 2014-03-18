@@ -214,7 +214,6 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
   _.each(inputSlice.uses, function (dependency) {
-    console.log(dependency);
     if (! dependency.weak && ! dependency.unordered &&
         packageLoader.containsPlugins(dependency.package)) {
       activePluginPackages.push(
@@ -241,7 +240,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
   };
 
   _.each(activePluginPackages, function (otherPkg) {
-    _.each(otherPkg.sourceHandlers, function (handler, ext) {
+    _.each(otherPkg.getSourceHandlers(), function (handler, ext) {
       if (ext in allHandlers && allHandlers[ext] !== handler) {
         buildmessage.error(
           "conflict: two packages included in " +

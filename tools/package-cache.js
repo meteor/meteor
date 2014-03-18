@@ -10,7 +10,8 @@ var packageCache = exports;
 
 // both map from package load path to:
 // - pkg: cached Package object
-// - packageDir: directory from which it was loaded
+// - sourceDir: directory that contained its source code, or null
+// - buildDir: directory from which the built package was loaded
 var PackageCache = function () {
   var self = this;
 
@@ -60,6 +61,7 @@ _.extend(PackageCache.prototype, {
 
     // See if we can reuse a package that we have cached from before
     // the last soft refresh.
+    // XXX XXX this is not very efficient. refactor
     if (! options.forceRebuild && _.has(self.softReloadCache, loadPath)) {
       var entry = self.softReloadCache[loadPath];
 
@@ -68,9 +70,22 @@ _.extend(PackageCache.prototype, {
       // softReloadCache any more.
       delete self.softReloadCache[loadPath];
 
-      if (entry.pkg.checkUpToDate()) {
+      var isUpToDate;
+      if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
+        // We don't even have the source to this package, so it must
+        // be up to date.
+        isUpToDate = true;
+      } else {
+        var packageSource = new PackageSource(loadPath);
+        packageSource.initFromPackageDir(name, loadPath);
+        var unipackage = new Unipackage(loadPath);
+        unipackage.initFromPath(name, entry.buildDir);
+        isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
+      }
+
+      if (isUpToDate) {
         // Cache hit
-        self.loadedPackages[loadedPackages] = entry;
+        self.loadedPackages[loadPath] = entry;
         return entry.pkg;
       }
     }
@@ -85,7 +100,11 @@ _.extend(PackageCache.prototype, {
       }
       var unipackage = new Unipackage(loadPath);
       unipackage.initFromPath(name, loadPath);
-      self.loadedPackages[loadPath] = { pkg: unipackage, packageDir: loadPath };
+      self.loadedPackages[loadPath] = {
+        pkg: unipackage,
+        sourceDir: null,
+        buildDir: loadPath
+      };
       return unipackage;
     };
 
@@ -100,7 +119,9 @@ _.extend(PackageCache.prototype, {
       unipackage.initFromPath(name, buildDir);
       if (compiler.checkUpToDate(packageSource, unipackage)) {
         self.loadedPackages[loadPath] = { pkg: unipackage,
-                                          packageDir: loadPath };
+                                          sourceDir: loadPath,
+                                          buildDir: buildDir
+                                        };
         return unipackage;
       }
     }
@@ -122,7 +143,11 @@ _.extend(PackageCache.prototype, {
       // and swoop in and build all of the local packages informed by
       // a topological sort
       var unipackage = compiler.compile(packageSource).unipackage;
-      self.loadedPackages[loadPath] = { pkg: unipackage, packageDir: loadPath };
+      self.loadedPackages[loadPath] = {
+        pkg: unipackage,
+        sourceDir: null,
+        buildDir: loadPath
+      };
 
       if (! buildmessage.jobHasMessages()) {
         // Save it, for a fast load next time

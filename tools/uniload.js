@@ -64,7 +64,6 @@ var load = function (options) {
   }
   var cacheKey = (options.packages || []).join(',');
 
-  console.log("Cache:", cache, cacheKey);
   if (_.has(cache, cacheKey)) {
     return cache[cacheKey];
   }

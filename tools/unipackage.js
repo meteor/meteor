@@ -294,7 +294,6 @@ _.extend(Unipackage.prototype, {
       // message, not an exception, and all of this talk of slices an
       // architectures is likely to be confusing/overkill in many
       // contexts.
-console.log("SLICES:", self.slices);
       throw new Error((self.name || "this app") +
                       " does not have a slice named '" + name +
                       "' that runs on architecture '" + arch + "'");

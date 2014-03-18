@@ -65,7 +65,6 @@ _.extend(PackageLoader.prototype, {
     } else if (_.has(self.versions, name)) {
       versionRecord = catalog.catalog.getVersion(name, self.versions[name]);
     } else {
-      console.log("Plugins:", self.versions);
       throw new Error("no version specified for package " + name);
     }
 
@@ -83,9 +82,7 @@ _.extend(PackageLoader.prototype, {
   getLoadPathForPackage: function (name) {
     var self = this;
 
-    console.log(name, self.versions);
     if (self.versions && ! _.has(self.versions, name)) {
-      console.log("VERSIONS:", self.versions);
       throw new Error("no version chosen for package " + name + "?");
    }
 

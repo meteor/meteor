@@ -411,7 +411,6 @@ _.extend(AppRunner.prototype, {
     // XXX: constraint solver currently ignores versions, but it should not.
     var newVersions = resolver.resolve(packages);
     if ( ! newVersions) {
-      console.log("Incompatible package versions.");
       return { outcome: 'conflicting-versions' };
     }
     // Write the new versions file.

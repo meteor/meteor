@@ -86,10 +86,12 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
+    console.log("XXX Loading local packages for bootstrapping");
     self._addLocalPackageOverrides(true /* setInitialized */);
 
     // OK, now initialize the catalog for real, with both local and
     // package server packages.
+    console.log("XXX Loading catalog for real");
     self._refresh(true);
   },
 
@@ -274,7 +276,6 @@ _.extend(Catalog.prototype, {
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
       packageBuildDeps[name] = [];
       var deps = compiler.getBuildOrderConstraints(packageSources[name]);
-      console.log("XXX deps", name, deps);
       _.each(deps, function (d) {
         if (! _.has(self.effectiveLocalPackages, d.name))
           return; // not a local package -- may assume it's already built
@@ -283,7 +284,6 @@ _.extend(Catalog.prototype, {
         packageBuildDeps[name].push(d.name);
       });
     });
-    console.log("XXX", packageBuildDeps);
     // Phase 3: Do a topological sort and build the local packages in
     // an order that respects their build-time dependencies.
     //
