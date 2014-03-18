@@ -102,13 +102,14 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   });
 };
 
-ConstraintSolver.PackagesResolver.prototype.resolve = function (dependencies) {
+ConstraintSolver.PackagesResolver.prototype.resolve =
+  function (dependencies, options) {
   var self = this;
   var dc = self._splitDepsToConstraints(dependencies);
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints);
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints, [], options);
 
   var resultChoices = {};
   _.each(res, function (uv) {
