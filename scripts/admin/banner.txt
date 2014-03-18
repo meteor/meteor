@@ -1,5 +1,5 @@
-=> Meteor 0.7.2: Support the limit option in the oplog tailing driver.
-   Add hooks to customize the login process.
+=> Meteor 0.7.2: Support limit queries in the oplog tailing driver. Add
+   hooks to customize the login process.
 
    This release is being downloaded in the background. Update your
    project to Meteor 0.7.2 by running 'meteor update'.
