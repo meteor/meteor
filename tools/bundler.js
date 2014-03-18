@@ -59,11 +59,6 @@
 //
 //  - format: "browser-program-pre1" for this version
 //
-//  - page: path to the template for the HTML to serve when a browser
-//    loads a page that is part of the application. In the file,
-//    some strings of the format ##FOO## will be replaced with
-//    appropriate values at runtime by the webapp package.
-//
 //  - manifest: array of resources to serve with HTTP, each an object:
 //    - path: path of file relative to program.json
 //    - where: "client"
@@ -74,15 +69,11 @@
 //    - size: size of file in bytes
 //    - hash: sha1 hash of the file contents
 //    - sourceMap: optional path to source map file (relative to program.json)
-//    Additionally there will be an entry with where equal to
-//    "internal", path equal to page (above), and hash equal to the
-//    sha1 of page (before replacements). Currently this is used to
-//    trigger HTML5 appcache reloads at the right time (if the
-//    'appcache' package is being used).
 //
-// Convention:
-//
-// page is 'app.html'.
+//    Additionally there may be a manifest entry with where equal to
+//    "internal", type "head" or "body", and a path and hash. These contain
+//    chunks of HTML which should be inserted in the boilerplate HTML page's
+//    <head> or <body> respectively.
 //
 //
 // == Format of a program when arch is "os.*" ==
@@ -876,42 +867,6 @@ _.extend(ClientTarget.prototype, {
     self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
   },
 
-  // XXX Instead of packaging the boilerplate in the client program, the
-  // template should be part of WebApp, and we should make sure that all
-  // information that it needs is in the manifest (ie, make sure to include head
-  // and body).  Then it will just need to do one level of templating instead
-  // of two.  Alternatively, use spacebars with unipackage.load here.
-  generateHtmlBoilerplate: function () {
-    var self = this;
-
-    var html = [];
-    html.push('<!DOCTYPE html>\n' +
-              '<html##HTML_ATTRIBUTES##>\n' +
-              '<head>\n');
-    _.each(self.css, function (css) {
-      html.push('  <link rel="stylesheet" href="##BUNDLED_JS_CSS_PREFIX##');
-      html.push(_.escape(css.url));
-      html.push('">\n');
-    });
-    html.push('\n\n##RUNTIME_CONFIG##\n\n');
-    _.each(self.js, function (js) {
-      html.push('  <script type="text/javascript" src="##BUNDLED_JS_CSS_PREFIX##');
-      html.push(_.escape(js.url));
-      html.push('"></script>\n');
-    });
-    html.push('\n\n##RELOAD_SAFETYBELT##');
-    html.push('\n\n');
-    html.push(self.head.join('\n'));  // unescaped!
-    html.push('\n' +
-              '</head>\n' +
-              '<body>\n');
-    html.push(self.body.join('\n'));  // unescaped!
-    html.push('\n' +
-              '</body>\n' +
-              '</html>\n');
-    return new Buffer(html.join(''), 'utf8');
-  },
-
   // Output the finished target to disk
   //
   // Returns the path (relative to 'builder') of the control file for
@@ -920,7 +875,6 @@ _.extend(ClientTarget.prototype, {
     var self = this;
 
     builder.reserve("program.json");
-    builder.reserve("app.html");
 
     // Helper to iterate over all resources that we serve over HTTP.
     var eachResource = function (f) {
@@ -988,20 +942,24 @@ _.extend(ClientTarget.prototype, {
       manifest.push(manifestItem);
     });
 
-    // HTML boilerplate (the HTML served to make the client load the
-    // JS and CSS files and start the app)
-    var htmlBoilerplate = self.generateHtmlBoilerplate();
-    builder.write('app.html', { data: htmlBoilerplate });
-    manifest.push({
-      path: 'app.html',
-      where: 'internal',
-      hash: Builder.sha1(htmlBoilerplate)
+    _.each(['head', 'body'], function (type) {
+      var data = self[type].join('\n');
+      if (data) {
+        var dataBuffer = new Buffer(data, 'utf8');
+        var dataFile = builder.writeToGeneratedFilename(
+          type + '.html', { data: dataBuffer });
+        manifest.push({
+          path: dataFile,
+          where: 'internal',
+          type: type,
+          hash: Builder.sha1(dataBuffer)
+        });
+      }
     });
 
     // Control file
     builder.writeJson('program.json', {
       format: "browser-program-pre1",
-      page: 'app.html',
       manifest: manifest
     });
     return "program.json";

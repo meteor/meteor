@@ -57,7 +57,7 @@ var browserEnabled = function(request) {
 
 WebApp.addHtmlAttributeHook(function (request) {
   if (browserEnabled(request))
-    return 'manifest="/app.manifest"';
+    return { manifest: "/app.manifest" };
   else
     return null;
 });

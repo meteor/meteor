@@ -2,6 +2,14 @@
 
 * Log out a user's other sessions when they change their password.
 
+* Move boilerplate HTML from tools to webapp. Changes internal
+  Webapp.addHtmlAttributeHook API incompatibly.
+
+
+## v0.8.0
+
+(Currently being stabilized. Features Blaze.)
+
 
 ## v0.7.2
 
