@@ -54,7 +54,9 @@ ConstraintSolver.Resolver.prototype.resolve =
 
   constraints = constraints || [];
   choices = choices || [];
-  options = options || {};
+  options = _.defaults(_.clone(options || {}), {
+    costFunction: function (choices) { return 0; }
+  });
 
   dependencies = _.uniq(dependencies);
   constraints = _.uniq(constraints);
@@ -127,10 +129,8 @@ ConstraintSolver.Resolver.prototype._resolve =
                          + candidateName };
 
   var winningChoices = null;
+  var winningCost = Infinity;
   _.each(candidateVersions, function (uv) {
-    if (winningChoices)
-      return;
-
     var nDependencies = _.clone(dependencies);
     var nConstraints = _.clone(constraints);
     var nChoices = _.clone(choices);
@@ -146,7 +146,11 @@ ConstraintSolver.Resolver.prototype._resolve =
     var result = self._resolve(nDependencies, nConstraints, nChoices, options);
 
     if (result.success) {
-      winningChoices = result.choices;
+      var cost = options.costFunction(result.choices);
+      if (cost < winningCost) {
+        winningChoices = result.choices;
+        winningCost = cost;
+      }
     }
   });
 

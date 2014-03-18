@@ -63,7 +63,7 @@ Tinytest.add("constraint solver - resolver, cost function", function (test) {
   var AOnlySolution = resolver.resolve(["A"]);
   test.equal(AOnlySolution, [A100, C100]);
 
-  var AnBSoultion = resolver.resolve(["A", "B"], [], [], {
+  var AnBSolution = resolver.resolve(["A", "B"], [], [], {
     costFunction: function (choices) {
       var C = _.find(choices, function (uv) { return uv.name === "C"; });
       var A = _.find(choices, function (uv) { return uv.name === "A"; });
@@ -71,7 +71,7 @@ Tinytest.add("constraint solver - resolver, cost function", function (test) {
     }
   });
 
-  test.equal(AnBSoultion, [A100, B100, C120]);
+  test.equal(AnBSolution, [A100, B100, C120]);
 });
 
 function semver2number (semverStr) {
