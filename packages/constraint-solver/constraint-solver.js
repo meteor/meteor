@@ -112,6 +112,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (dependencies) {
 
   var resultChoices = {};
   _.each(res, function (uv) {
+    // Since we don't yet define the interface for a an app to depend only on
+    // certain slices of the packages (like only browser slices) and we know
+    // that each slice weakly depends on other sibling slices of the same
+    // version, we can safely output the whole package for each slice in the
+    // result.
     resultChoices[uv.name.split(':')[0]] = uv.version;
   });
 
