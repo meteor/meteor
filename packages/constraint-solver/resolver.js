@@ -197,6 +197,11 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
     // keep them in dependencies.
     dependencies = _.difference(dependencies, _.pluck(choices, "name"));
 
+    // There could be new combination of exact constraint/dependency outgoing
+    // from existing state and the new node.
+    // XXX we don't need to look for all previously considered combinations.
+    // Looking for newNode.dependencies+exact constraints and
+    // newNode.exactConstraints+dependencies is enough.
     var exactDeps = _.chain(dependencies).map(function (dep) {
       return _.find(constraints, function (c) {
         return c.name === dep && c.exact; });
