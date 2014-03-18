@@ -205,16 +205,7 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       var self = this;
 
-      // copied from livedata/client_convenience.js
-      var ddpUrl = '/';
-      if (typeof __meteor_runtime_config__ !== "undefined") {
-        if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
-          ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
-      }
-      // XXX can we get the url from the existing connection somehow
-      // instead?
-
-      self.secondConn = DDP.connect(ddpUrl);
+      self.secondConn = DDP.connect(Meteor.absoluteUrl());
       self.secondConn.call('login',
                 { user: { username: self.username }, password: self.password },
                 expect(function (err, result) {
@@ -480,20 +471,11 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       var self = this;
 
-      // copied from livedata/client_convenience.js
-      self.ddpUrl = '/';
-      if (typeof __meteor_runtime_config__ !== "undefined") {
-        if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
-          self.ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
-      }
-      // XXX can we get the url from the existing connection somehow
-      // instead?
-
       // Test that Meteor.logoutOtherClients logs out a second authenticated
       // connection while leaving Accounts.connection logged in.
       var token;
       var userId;
-      self.secondConn = DDP.connect(self.ddpUrl);
+      self.secondConn = DDP.connect(Meteor.absoluteUrl());
 
       var expectLoginError = expect(function (err) {
         test.isTrue(err);
