@@ -1656,3 +1656,52 @@ Tinytest.add('spacebars - template - custom block helper functions called exactl
   Deps.flush();
   test.equal(count, 2);
 });
+
+var runOneTwoTest = function (test, subTemplateName) {
+  var tmpl = Template.spacebars_test_helpers_stop_onetwo;
+  tmpl.one = Template[subTemplateName + '1'];
+  tmpl.two = Template[subTemplateName + '2'];
+
+  var buf = '';
+
+  var showOne = ReactiveVar(true);
+  var dummy = ReactiveVar(1);
+
+  tmpl.showOne = function () { return showOne.get(); };
+  tmpl.one.options = function () {
+    dummy.get();
+    buf += '1';
+    return ['something'];
+  };
+  tmpl.two.options = function () {
+    dummy.get();
+    buf += '2';
+    return ['something'];
+  };
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, "one");
+  test.equal(buf, '1');
+
+  showOne.set(false);
+  dummy.set(2);
+  divRendersTo(test, div, "two");
+  test.equal(buf, '12');
+
+  showOne.set(true);
+  dummy.set(3);
+  divRendersTo(test, div, "one");
+  test.equal(buf, '121');
+};
+
+Tinytest.add('spacebars - template - with stops without re-running helper', function (test) {
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_with');
+});
+
+Tinytest.add('spacebars - template - each stops without re-running helper', function (test) {
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_each');
+});
+
+Tinytest.add('spacebars - template - if stops without re-running helper', function (test) {
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_if');
+});
