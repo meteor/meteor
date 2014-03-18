@@ -128,6 +128,9 @@ ConstraintSolver.Resolver.prototype._resolve =
 
   var winningChoices = null;
   _.each(candidateVersions, function (uv) {
+    if (winningChoices)
+      return;
+
     var nDependencies = _.clone(dependencies);
     var nConstraints = _.clone(constraints);
     var nChoices = _.clone(choices);
@@ -144,7 +147,6 @@ ConstraintSolver.Resolver.prototype._resolve =
 
     if (result.success) {
       winningChoices = result.choices;
-      return false;
     }
   });
 
