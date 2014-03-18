@@ -468,13 +468,53 @@ if (Meteor.isClient) (function () {
         test.equal(Meteor.userId(), null);
       }));
     },
+    logoutStep,
+    function (test, expect) {
+      var self = this;
+      // Test that Meteor.logoutOtherClients logs out a second
+      // authentcated connection while leaving Accounts.connection
+      // logged in.
+      var secondConn = DDP.connect(Meteor.absoluteUrl());
+      var token;
+
+      var expectSecondConnLoggedOut = expect(function (err, result) {
+        test.isTrue(err);
+      });
+
+      var expectAccountsConnLoggedIn = expect(function (err, result) {
+        test.isFalse(err);
+      });
+
+      var expectSecondConnLoggedIn = expect(function (err, result) {
+        test.equal(result.token, token);
+        test.isFalse(err);
+        Meteor.logoutOtherClients(function (err) {
+          test.isFalse(err);
+          secondConn.call('login', { resume: token }, expectSecondConnLoggedOut);
+          Accounts.connection.call('login', {
+            resume: Accounts._storedLoginToken()
+          }, expectAccountsConnLoggedIn);
+        });
+      });
+
+      Meteor.loginWithPassword(this.username, this.password, expect(function (err) {
+        test.isFalse(err);
+        token = Accounts._storedLoginToken();
+        test.isTrue(token);
+        secondConn.call('login', { resume: token }, expectSecondConnLoggedIn);
+      }));
+    },
+    logoutStep,
+
+    // The tests below this point are for the deprecated
+    // `logoutOtherClients` method.
+
     function (test, expect) {
       var self = this;
 
       // Test that Meteor.logoutOtherClients logs out a second authenticated
       // connection while leaving Accounts.connection logged in.
       var token;
-      var userId;
       self.secondConn = DDP.connect(Meteor.absoluteUrl());
 
       var expectLoginError = expect(function (err) {
@@ -502,7 +542,6 @@ if (Meteor.isClient) (function () {
         token = Accounts._storedLoginToken();
         self.beforeLogoutOthersToken = token;
         test.isTrue(token);
-        userId = Meteor.userId();
         self.secondConn.call("login", { resume: token },
                              expectSecondConnLoggedIn);
       }));
@@ -536,41 +575,9 @@ if (Meteor.isClient) (function () {
       );
     },
     logoutStep,
-    function (test, expect) {
-      var self = this;
-      // Test that, when we call logoutOtherClients, if the server disconnects
-      // us before the logoutOtherClients callback runs, then we still end up
-      // logged in.
-      var expectServerLoggedIn = expect(function (err, result) {
-        test.isFalse(err);
-        test.isTrue(Meteor.userId());
-        test.equal(result, Meteor.userId());
-      });
 
-      Meteor.loginWithPassword(
-        self.username,
-        self.password,
-        expect(function (err) {
-          test.isFalse(err);
-          test.isTrue(Meteor.userId());
 
-          // The test is only useful if things interleave in the following order:
-          // - logoutOtherClients runs on the server
-          // - onReconnect fires and sends a login method with the old token,
-          //   which results in an error
-          // - logoutOtherClients callback runs and stores the new token and
-          //   logs in with it
-          // In practice they seem to interleave this way, but I'm not sure how
-          // to make sure that they do.
 
-          Meteor.logoutOtherClients(function (err) {
-            test.isFalse(err);
-            Meteor.call("getUserId", expectServerLoggedIn);
-          });
-        })
-      );
-    },
-    logoutStep,
     function (test, expect) {
       var self = this;
       // Test that deleting a user logs out that user's connections.

@@ -424,6 +424,17 @@ Meteor.methods({
   // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
   // immediately instead of using a delay.
   //
+  // XXX COMPAT WITH 0.7.2
+  // This single `logoutOtherClients` method has been replaced with two
+  // methods, one that you call to get a new token, and another that you
+  // call to remove all tokens except your own. The new design allows
+  // clients to know when other clients have actually been logged
+  // out. (The `logoutOtherClients` method guarantees the caller that
+  // the other clients will be logged out at some point, but makes no
+  // guarantees about when.) This method is left in for backwards
+  // compatibility, especially since application code might be calling
+  // this method directly.
+  //
   // @returns {Object} Object with token and tokenExpires keys.
   logoutOtherClients: function () {
     var self = this;
@@ -441,7 +452,7 @@ Meteor.methods({
       var tokens = user.services.resume.loginTokens;
       var newToken = Accounts._generateStampedLoginToken();
       var userId = self.userId;
-      Meteor.users.update(self.userId, {
+      Meteor.users.update(userId, {
         $set: {
           "services.resume.loginTokensToDelete": tokens,
           "services.resume.haveLoginTokensToDelete": true
@@ -462,8 +473,49 @@ Meteor.methods({
         tokenExpires: Accounts._tokenExpiration(newToken.when)
       };
     } else {
-      throw new Error("You are not logged in.");
+      throw new Meteor.Error("You are not logged in.");
     }
+  },
+
+  getNewToken: function () {
+    var self = this;
+    var user = Meteor.users.findOne(self.userId, {
+      fields: { "services.resume.loginTokens": 1 }
+    });
+    if (! self.userId || ! user) {
+      throw new Meteor.Error("You are not logged in.");
+    }
+    // Be careful not to generate a new token that has a later
+    // expiration than the curren token. Otherwise, a bad guy with a
+    // stolen token could use this method to stop his stolen token from
+    // ever expiring.
+    var currentHashedToken = Accounts._getLoginToken(self.connection.id);
+    var currentStampedToken = _.find(
+      user.services.resume.loginTokens,
+      function (stampedToken) {
+        return stampedToken.hashedToken === currentHashedToken;
+      }
+    );
+    if (! currentStampedToken) { // safety belt: this should never happen
+      throw new Meteor.Error("Invalid login token");
+    }
+    var newStampedToken = Accounts._generateStampedLoginToken();
+    newStampedToken.when = currentStampedToken.when;
+    Accounts._insertLoginToken(self.userId, newStampedToken);
+    return loginUser(self, self.userId, newStampedToken);
+  },
+
+  removeOtherTokens: function () {
+    var self = this;
+    if (! self.userId) {
+      throw new Meteor.Error("You are not logged in.");
+    }
+    var currentToken = Accounts._getLoginToken(self.connection.id);
+    Meteor.users.update(self.userId, {
+      $pull: {
+        "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
+      }
+    });
   }
 });
 
