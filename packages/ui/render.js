@@ -46,6 +46,103 @@ UI.Component.render = function () {
   return null;
 };
 
+var Box = function (func, equals) {
+  this.func = func;
+  this.equals = equals;
+
+  this.hasCurResult = false;
+  this.curResult = null;
+
+  this.hasOldResult = false;
+  this.oldResult = null;
+
+  this.dep = new Deps.Dependency;
+  this.resultComputation = null; // only present when valid (uninvalidated)
+
+  // Dead boxes have no `resultComputation` and so can be GCed
+  this.alive = true;
+};
+
+Box.prototype._depend = function () {
+  var self = this;
+
+  if (! self.dep)
+    self.dep = new Deps.Dependency;
+
+  var isNew = self.dep.depend();
+  if (isNew) {
+    // For the new dependent, schedule a task for after that dependent's
+    // invalidation time.  The task kills this Box if it ever has no
+    // dependencies after afterFlush.
+    Deps.onInvalidate(function () {
+      if (self.alive && ! self.dep.hasDependents()) {
+        Deps.afterFlush(function () {
+          // use a second afterFlush to bump ourselves to the END of the
+          // flush, after computation re-runs have had a chance to
+          // re-establish their dependencies on our computation.
+          Deps.afterFlush(function () {
+            if (self.alive && ! self.dep.hasDependents()) {
+              // die
+              if (self.resultComputation)
+                self.resultComputation.stop();
+
+              self.alive = false;
+            }
+          });
+        });
+      }
+    });
+  }
+};
+
+Box.prototype._calc = function () {
+  // Precondition: (! self.resultComputation) && (! self.hasCurResult)
+  // Postcondition: self.resultComputation && self.hasCurResult
+  var self = this;
+  self.resultComputation = Deps.nonreactive(function () {
+    // Use an autorun that only runs once to capture dependencies
+    // of running `func()`.
+    return Deps.autorun(function (c) {
+      if (c.firstRun) {
+        var func = self.func;
+        self.curResult = func(); // NOT `self.func()` (which binds `this`)
+        self.hasCurResult = true;
+      } else {
+        // second run
+        if (self.hasCurResult) {
+          self.oldResult = self.curResult;
+          self.hasOldResult = true;
+        }
+        self.hasCurResult = false;
+        self.resultComputation = null;
+        c.stop();
+        if (self.dep.hasDependents()) {
+          if (! self.hasOldResult) {
+            self.dep.changed();
+          } else {
+            // We have dependents and an old value to compare against,
+            // so we have to re-evaluate immediately.
+            self._calc();
+            var equals = self.equals;
+            if (! (equals ? equals(self.curResult, self.oldResult) :
+                   self.curResult === self.oldResult)) {
+              self.dep.changed();
+            }
+          }
+        }
+      }
+    });
+  });
+};
+
+Box.prototype.get = function () {
+  this._depend();
+
+  if (! this.hasCurResult)
+    this._calc();
+
+  return this.curResult;
+};
 
 // Takes a reactive function (call it `inner`) and returns a reactive function
 // `outer` which is equivalent except in its reactive behavior.  Specifically,
@@ -82,68 +179,19 @@ UI.Component.render = function () {
 //
 UI.emboxValue = function (funcOrValue, equals) {
   if (typeof funcOrValue === 'function') {
-    var func = funcOrValue;
 
-    var curResult = null;
-    // There's one shared Dependency and Computation for all callers of
-    // our box function.  It gets kicked off if necessary, and when
-    // there are no more dependents, it gets stopped to avoid leaking
-    // memory.
-    var resultDep = null;
-    var computation = null;
+    var func = funcOrValue;
+    var box = null;
 
     return function () {
-      if (! computation) {
-        if (! Deps.active) {
-          // Not in a reactive context.  Just call func, and don't start a
-          // computation if there isn't one running already.
+      if (! (box && box.alive)) {
+        if (! Deps.active)
           return func();
-        }
 
-        // No running computation, so kick one off.  Since this computation
-        // will be shared, avoid any association with the current computation
-        // by using `Deps.nonreactive`.
-        resultDep = new Deps.Dependency;
-
-        computation = Deps.nonreactive(function () {
-          return Deps.autorun(function (c) {
-            var oldResult = curResult;
-            curResult = func();
-            if (! c.firstRun) {
-              if (! (equals ? equals(curResult, oldResult) :
-                     curResult === oldResult))
-                resultDep.changed();
-            }
-          });
-        });
+        box = new Box(func, equals);
       }
 
-      if (Deps.active) {
-        var isNew = resultDep.depend();
-        if (isNew) {
-          // For each new dependent, schedule a task for after that dependent's
-          // invalidation time and the subsequent flush. The task checks
-          // whether the computation should be torn down.
-          Deps.onInvalidate(function () {
-            if (resultDep && ! resultDep.hasDependents()) {
-              Deps.afterFlush(function () {
-                // use a second afterFlush to bump ourselves to the END of the
-                // flush, after computation re-runs have had a chance to
-                // re-establish their connections to our computation.
-                Deps.afterFlush(function () {
-                  if (resultDep && ! resultDep.hasDependents()) {
-                    computation.stop();
-                    computation = null;
-                    resultDep = null;
-                  }
-                });
-              });
-            }
-          });
-        }
-      }
-
-      return curResult;
+      return box.get();
     };
 
   } else {

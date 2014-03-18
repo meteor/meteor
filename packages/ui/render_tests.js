@@ -699,3 +699,40 @@ Tinytest.add("ui - UI.getDataContext", function (test) {
   test.isTrue(span);
   test.equal(UI.getElementData(span), {foo: "bar"});
 });
+
+
+Tinytest.add("ui - render - emboxed function doesn't rerun if no dependents", function (test) {
+  var d = new Deps.Dependency;
+  var numCalls = 0;
+  var emboxed = UI.emboxValue(function () {
+    d.depend();
+    numCalls++;
+    return null;
+  });
+
+  test.equal(numCalls, 0);
+  var c = Deps.autorun(function () {
+    emboxed();
+  });
+  test.equal(numCalls, 1);
+
+  d.changed();
+  Deps.flush();
+  test.equal(numCalls, 2);
+
+  c.stop();
+  d.changed(); // No computation depends on `d` now, so `numCalls` shouldn't grow
+  Deps.flush();
+  test.equal(numCalls, 2);
+
+  var c2 = Deps.autorun(function () {
+    emboxed();
+  });
+  test.equal(numCalls, 3);
+
+  d.changed(); // A new computation depends on `d` now, so `numCalls` should grow again
+  Deps.flush();
+  test.equal(numCalls, 4);
+
+  c2.stop();
+});
