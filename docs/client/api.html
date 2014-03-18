@@ -1850,21 +1850,16 @@ successful.
 
 {{> api_box accounts_onLogin}}
 
-Call `onLogin` or `onLoginFailure` with a callback to be called when a
-login is successful or is unsuccessful.  These functions return an
-object with a single method, `stop`.  Calling `stop()` unregisters the
-callback.
-
 Either the `onLogin` or the `onLoginFailure` callbacks will be called
 for each login attempt. The `onLogin` callbacks are called after the
-user has been logged in.
+user has been successfully logged in. The `onLoginFailure` callbacks are
+called after a login attempt is denied.
+
+These functions return an object with a single method, `stop`.  Calling
+`stop()` unregisters the callback.
 
 The callbacks are called with a single argument, the same attempt info
 object as [`validateLoginAttempt`](#accounts_validateloginattempt).
-
-
-{{> api_box accounts_onLoginFailure}}
-
 
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
