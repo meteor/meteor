@@ -1,8 +1,6 @@
 ## v.NEXT
 
-* When a user changes their password, all login tokens except the one
-  being used to change the password now get deleted, which results in
-  other clients being logged out.
+* Log out a users other sessions when they change their password.
 
 
 ## v0.7.2
