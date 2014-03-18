@@ -1273,28 +1273,14 @@ Template.api.accounts_validateLoginAttempt = {
 
 Template.api.accounts_onLogin = {
   id: "accounts_onlogin",
-  name: "Accounts.onLogin(func)",
+  name: "Accounts.onLogin(func) and Accounts.onLoginFailure(func)",
   locus: "Server",
-  descr: ["Register a callback to be called after a login is successful."],
+  descr: ["Register a callback to be called after a login attempt."],
   args: [
     {
       name: "func",
       type: "Function",
-      descr: "The callback to be called after a login is successful."
-    }
-  ]
-};
-
-Template.api.accounts_onLoginFailure = {
-  id: "accounts_onloginfailure",
-  name: "Accounts.onLoginFailure(func)",
-  locus: "Server",
-  descr: ["Register a callback to be called when a login is attempted and is unsuccessful. See [`Accounts.onLogin`](#accounts_onlogin) for details."],
-  args: [
-    {
-      name: "func",
-      type: "Function",
-      descr: "The callback to be called after an unsuccessful login."
+      descr: "The callback to be called after the login attempt"
     }
   ]
 };
