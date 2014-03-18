@@ -218,6 +218,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
   // have circular build-time dependencies.
   _.each(inputSlice.uses, function (dependency) {
     if (! dependency.weak && ! dependency.unordered &&
+        dependency.package !== unipackage.name &&
         packageLoader.containsPlugins(dependency.package)) {
       activePluginPackages.push(
         packageLoader.getPackage(dependency.package));
