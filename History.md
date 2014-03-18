@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* When a user changes their password, all login tokens except the one
+  being used to change the password now get deleted, which results in
+  other clients being logged out.
+
 * Support oplog tailing on queries with the `limit` option. All queries
   except those containing `$near` or `$where` selectors or the `skip`
   option can now be used with the oplog driver.
