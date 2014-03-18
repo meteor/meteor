@@ -494,8 +494,7 @@ _.extend(Catalog.prototype, {
     // passes because otherwise we might end up rebuilding a package
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      packageCache.packageCache.
-        loadPackageAtPath(name, loadPath, { throwOnError: false });
+      packageCache.packageCache.loadPackageAtPath(name, loadPath);
       count ++;
     });
 

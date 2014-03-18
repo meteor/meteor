@@ -1484,29 +1484,29 @@ main.registerCommand({
 
   // XXX Prettify error messages
 
-  var messages = buildmessage.capture(function () {
-    // XXX would be nice to get the name out of the package (while
-    // still confirming that it matches the name of the directory)
-    var packageName = path.basename(options.packageDir);
+  var packageSource, compileResult;
+  var messages = buildmessage.capture(
+    { title: "building the package" },
+    function () {
+      // XXX would be nice to get the name out of the package (while
+      // still confirming that it matches the name of the directory)
+      var packageName = path.basename(options.packageDir);
 
-    // We load the package with `forceRebuild` to avoid loading the
-    // package from a built unipackage. If we load from unipackage,
-    // then we can't go through the build process to retrieve the
-    // sources that we used to build the package, and we need the
-    // source list to compile the source tarball.
-    pkg = packageCache.packageCache.
-      loadPackageAtPath(packageName, options.packageDir, {
-      forceRebuild: true
+      packageSource = new PackageSource(options.packageDir);
+      packageSource.initFromPackageDir(packageName, options.packageDir);
+      if (buildmessage.jobHasMessages())
+        return; // already have errors, so skip the build
+
+      compileResult = compiler.compile(packageSource);
     });
-  });
 
   if (messages.hasMessages()) {
     process.stdout.write(messages.formatMessages());
     return 1;
   }
 
-  var name = pkg.name;
-  var version = pkg.version;
+  var name = packageSource.name;
+  var version = packageSource.version;
 
   if (! version) {
     process.stderr.write(
@@ -1525,17 +1525,17 @@ main.registerCommand({
   if (options.create) {
     process.stdout.write('Creating package...\n');
     var packageId = conn.call('createPackage', {
-      name: pkg.name
+      name: packageSource.name
     });
   }
 
   process.stdout.write('Creating package version...\n');
   var uploadInfo = conn.call('createPackageVersion', {
-    packageName: pkg.name,
+    packageName: packageSource.name,
     version: version,
-    description: pkg.metadata.summary,
-    earliestCompatibleVersion: pkg.earliestCompatibleVersion,
-    dependencies: pkg.getDependencyMetadata()
+    description: packageSource.metadata.summary,
+    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+    dependencies: packageSource.getDependencyMetadata()
   });
 
   // XXX If package version already exists, print a nice error message
@@ -1543,7 +1543,9 @@ main.registerCommand({
   // publish a new build.
 
   process.stdout.write('Bundling source...\n');
-  var bundleResult = packageClient.bundleSource(pkg, options.packageDir);
+  var bundleResult = packageClient.bundleSource(compileResult.unipackage,
+                                                compileResult.sources,
+                                                options.packageDir);
 
   process.stdout.write('Uploading source...\n');
   packageClient.uploadTarball(uploadInfo.uploadUrl,
@@ -1553,7 +1555,7 @@ main.registerCommand({
   conn.call('publishPackageVersion',
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
-  packageClient.createAndPublishBuiltPackage(conn, pkg,
+  packageClient.createAndPublishBuiltPackage(conn, compileResult.unipackage,
                                              options.packageDir);
 
   return 0;
@@ -1628,7 +1630,7 @@ main.registerCommand({
   unipackage.saveToPath(path.join(packageDir, '.build'));
 
   var conn = packageClient.loggedInPackagesConnection();
-  packageClient.createAndPublishBuiltPackage(conn, pkg, packageDir);
+  packageClient.createAndPublishBuiltPackage(conn, unipackage, packageDir);
 
   return 0;
 });

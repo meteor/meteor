@@ -26,10 +26,6 @@ _.extend(PackageLoader.prototype, {
   //    inside buildmessage.enterJob, however, instead of throwing an
   //    error it will record a build error and return a dummy (empty)
   //    package.
-  //  - forceRebuild: defaults to false. If true, we will initialize the
-  //    package from the source and ignore a built unipackage if it
-  //    exists. This option is ignored if you pass `name` as a Package.
-  //
   //    XXX rename to throwOnNotFound
   getPackage: function (name, options) {
     var self = this;
@@ -51,9 +47,7 @@ _.extend(PackageLoader.prototype, {
       return pkg;
     }
 
-    return packageCache.packageCache.loadPackageAtPath(name, loadPath, {
-      forceRebuild: options.forceRebuild
-    });
+    return packageCache.packageCache.loadPackageAtPath(name, loadPath);
   },
 
   containsPlugins: function (name) {

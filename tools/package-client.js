@@ -21,7 +21,7 @@ var _ = require('underscore');
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'meteor', 'livedata'],
+    packages: [ 'meteor', 'livedata', 'mongo-livedata'],
     release: release.current.name
   });
 });
@@ -278,11 +278,11 @@ var hashTarball = function (tarball) {
 // In retrospect a better approach here might be to actually make "save source
 // somewhere else" or perhaps "add source to tarball" be part of the package
 // build itself...
-exports.bundleSource = function (pkg, packageDir) {
-  var name = pkg.name;
+exports.bundleSource = function (unipackage, includeSources, packageDir) {
+  var name = unipackage.name;
 
   var tempDir = files.mkdtemp('build-source-package-');
-  var packageTarName = name + '-' + pkg.version + '-source';
+  var packageTarName = name + '-' + unipackage.version + '-source';
   var dirToTar = path.join(tempDir, 'source', packageTarName);
   var sourcePackageDir = path.join(
     dirToTar,
@@ -294,12 +294,11 @@ exports.bundleSource = function (pkg, packageDir) {
     return null;
   }
 
-  var includeSources = _.clone(pkg.sources);
   includeSources.push('package.js');
   if (fs.existsSync('.npm/package/npm-shrinkwrap.json')) {
     includeSources.push('.npm/package/npm-shrinkwrap.json');
   }
-  _.each(pkg.plugins, function (plugin, pluginName) {
+  _.each(unipackage.plugins, function (plugin, pluginName) {
     var pluginShrinkwrap = path.join('.npm/plugin/', pluginName,
                                      'npm-shrinkwrap.json');
     if (fs.existsSync(pluginShrinkwrap)) {
@@ -349,10 +348,10 @@ var uploadTarball = function (putUrl, tarball) {
 
 exports.uploadTarball = uploadTarball;
 
-var bundleBuild = function (pkg, packageDir) {
+var bundleBuild = function (unipackage, packageDir) {
   var tempDir = files.mkdtemp('build-package-');
-  var packageTarName = pkg.name + '-' + pkg.version + '-' +
-        pkg.architectures().join('+');
+  var packageTarName = unipackage.name + '-' + unipackage.version + '-' +
+        unipackage.architectures().join('+');
   var tarInputDir = path.join(tempDir, packageTarName);
 
   files.cp_r(path.join(packageDir, '.build'), tarInputDir);
@@ -376,15 +375,15 @@ var bundleBuild = function (pkg, packageDir) {
 
 exports.bundleBuild = bundleBuild;
 
-exports.createAndPublishBuiltPackage = function (conn, pkg, packageDir) {
+exports.createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
-    packageName: pkg.name,
-    version: pkg.version,
-    architecture: pkg.architectures().join('+')
+    packageName: unipackage.name,
+    version: unipackage.version,
+    architecture: unipackage.architectures().join('+')
   });
 
-  var bundleResult = bundleBuild(pkg, packageDir);
+  var bundleResult = bundleBuild(unipackage, packageDir);
 
   process.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,
@@ -395,8 +394,8 @@ exports.createAndPublishBuiltPackage = function (conn, pkg, packageDir) {
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
   conn.close();
-  process.stdout.write('Published ' + pkg.name +
-                       ', version ' + pkg.version);
+  process.stdout.write('Published ' + unipackage.name +
+                       ', version ' + unipackage.version);
 
   process.stdout.write('\nDone!\n');
 };

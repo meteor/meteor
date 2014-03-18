@@ -1,7 +1,9 @@
 var fs = require("fs");
 var path = require("path");
+var files = require("./files.js");
 var archinfo = require("./archinfo.js");
 var compiler = require("./compiler.js");
+var buildmessage = require("./buildmessage.js");
 var PackageSource = require("./package-source.js");
 var _ = require('underscore');
 var Unipackage = require("./unipackage.js");
@@ -41,28 +43,25 @@ _.extend(PackageCache.prototype, {
   },
 
   // Given a path to a package on disk, retrieve a Package
-  // object. Options are:
-  //  - forceRebuild: see documentation in PackageLoader.getPackage
+  // object.
   //
   // loadPackageAtPath() caches the packages it returns, meaning if
   // you call loadPackageAtPath('/foo/bar') and later /foo/bar changes
   // on disk, you won't see the changes. To flush the package cache
   // and force all of the packages to be reloaded the next time
   // loadPackageAtPath() is called for them, see refresh().
-  loadPackageAtPath: function (name, loadPath, options) {
+  loadPackageAtPath: function (name, loadPath) {
     var self = this;
 
-    options = options || {};
-
     // Packages cached from previous calls
-    if (! options.forceRebuild && _.has(self.loadedPackages, loadPath)) {
+    if (_.has(self.loadedPackages, loadPath)) {
       return self.loadedPackages[loadPath].pkg;
     }
 
     // See if we can reuse a package that we have cached from before
     // the last soft refresh.
     // XXX XXX this is not very efficient. refactor
-    if (! options.forceRebuild && _.has(self.softReloadCache, loadPath)) {
+    if (_.has(self.softReloadCache, loadPath)) {
       var entry = self.softReloadCache[loadPath];
 
       // Either we will decide that the cache is invalid, or we will "upgrade"
@@ -95,9 +94,6 @@ _.extend(PackageCache.prototype, {
     // Does loadPath point directly at a unipackage (rather than a
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      if (options.forceRebuild) {
-        throw new Error('Cannot rebuild from a unipackage directory.');
-      }
       var unipackage = new Unipackage(loadPath);
       unipackage.initFromPath(name, loadPath);
       self.loadedPackages[loadPath] = {
@@ -114,7 +110,7 @@ _.extend(PackageCache.prototype, {
 
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build');
-    if (! options.forceRebuild && fs.existsSync(buildDir)) {
+    if (fs.existsSync(buildDir)) {
       var unipackage = new Unipackage(loadPath);
       unipackage.initFromPath(name, buildDir);
       if (compiler.checkUpToDate(packageSource, unipackage)) {
