@@ -687,9 +687,16 @@ Fiber(function () {
   // Initialize the singleton Catalog. Only after this point is the
   // Catalog (and therefore unipackage.load) usable.
   //
-  // This will try to talk to the network to synchronize our package
-  // list with the package server.
-  catalog.initialize({ localPackageDirs: localPackageDirs });
+  // If the --no-net option is set, the catalog will be offline and will never
+  // attempt to contact the server for more recent data. Otherwise, the catalog
+  // will attempt to synchronize with the remote package server.
+  catalog.initialize({
+      localPackageDirs: localPackageDirs,
+      offline: _.has(rawOptions, '--no-net')
+  });
+  // We need to delete the option or we will throw an error.
+  // XXX: This seems like a hack?
+  delete rawOptions['--no-net'];
 
   // Check for the '--help' option.
   var showHelp = false;

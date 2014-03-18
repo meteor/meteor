@@ -131,21 +131,26 @@ project.rewriteIndirectDependencies = function (appDir, deps) {
                    lines.join(''), 'utf8');
 };
 
+project.rewriteDirectDependencies = function (appDir, deps) {
+
+  var lines = [];
+
+  //XXX: constraints, old stuff.
+  _.each(deps, function (version, name) {
+    lines.push(name + "@" + version + "\n");
+  });
+  lines.sort();
+
+  fs.writeFileSync(path.join(appDir, '.meteor', 'meteor'),
+                   lines.join(''), 'utf8');
+};
+
 
 var meteorReleaseFilePath = function (appDir) {
   return path.join(appDir, '.meteor', 'release');
 };
 
 
-// Add a direct dependency
-project.addDirectDependency = function (appDir, constraintString) {
-  var lines = getPackagesLines(appDir);
-
-  // XXX: Remove previous instance of constraint if one existed.
-
-  lines.push(constraintString);
-  writePackages(appDir, lines);
-};
 
 
 

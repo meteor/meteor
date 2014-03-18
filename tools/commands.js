@@ -579,129 +579,160 @@ main.registerCommand({
   var failed = false;
 
   // Read in existing package dependencies.
-  var usingDirectly = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
+  var packages = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
 
-  // For every package name specified, run it through the constraint
-  // solver and add the right stuff to .meteor/package and
-  // .meteor/versions files.
+  // For every package name specified, add it to our list of package
+  // constraints. Don't run the constraint solver until you have added all of
+  // them -- add should be an atomic operation regardless of the package
+  // order. Even though the package file should specify versions of its inputs,
+  // we don't specify these constraints until we get them back from the
+  // constraint solver.
   _.each(options.args, function (packageReq) {
-    if (failed)
-      return;
-
+    // XXX: Use a util function.
     var constraint = project.processPackageConstraint(packageReq);
 
+    // Check that the package exists.
     if (! catalog.getPackage(constraint.packageName)) {
       process.stderr.write(constraint.packageName + ": no such package\n");
       failed = true;
       return;
     }
+    // Check that the version exists.
     var versionInfo = catalog.getVersion(
       constraint.packageName,
+      // XXX: Use a util function.
       getVersionFromVersionConstraint(constraint.versionConstraint));
-
     if (! versionInfo) {
       process.stderr.write(
-constraint.packageName + "@" + constraint.versionConstraint  + ": no such version\n");
+        constraint.packageName + "@" + constraint.versionConstraint  + ": no such version\n");
       failed = true;
       return;
     }
 
-    if (_.has(usingDirectly, constraint.packageName)) {
-      if (usingDirectly[constraint.packageName] === constraint.versionConstraint) {
-        process.stderr.write(constraint.packageName + "@" + constraint.versionConstraint   + ": already added\n");
-        failed = true;
+    // Check that the constraint is new. If we are already using the package at
+    // the same constraint, return from this function.
+    if (_.has(packages, constraint.packageName)) {
+      if (packages[constraint.packageName] === constraint.versionConstraint) {
+        process.stderr.write(
+          constraint.packageName + "@" + constraint.versionConstraint   + ": already added\n");
         return;
-      } else if (!constraint.versionConstraint && (usingDirectly[constraint.packageName] === "none")) {
+      } else if (!constraint.versionConstraint && (packages[constraint.packageName] === "none")) {
+        // XXX: In the brand new world where we have versioning in .meteor/packages, this will not happen.
         process.stderr.write(constraint.packageName + ": already added\n");
-        failed = true;
         return;
       }
+    }
+
+    // Add the package to our direct dependency constraints that we get from .meteor/packages.
+    packages[constraint.packageName] = constraint.versionConstraint;
+  });
+
+  // If the user asked for invalid packages, then the user probably expects a
+  // different result than what they are going to get. We have already logged an
+  // error, so we should exit.
+  if ( failed ) {
+    return 1;
+  }
+
+  // Get the contents of our versions file. We need to pass them to the
+  // constraint solver, because our contract with the user says that we will
+  // never downgrade a dependency.
+  var versions = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+
+  // Call the constraint solver.
+  var constraintSolver = require('./constraint-solver.js');
+  var resolver = new constraintSolver.Resolver;
+  // XXX: constraint solver currently ignores versions, but it should not.
+  // XXX: this would also be the place to add no-update options.
+  var newVersions = resolver.resolve(packages);
+  if ( ! newVersions) {
+    // XXX: Better error handling.
+    process.stderr.write("Cannot resolve package dependencies.");
+  }
+
+  // Don't tell the user what all the operations were until we finish -- we
+  // don't want to give a false sense of completeness until everything is
+  // written to disk.
+  var messageLog = [];
+
+  // Remove the versions that don't exist
+  var removed = _.difference(_.keys(versions), _.keys(newVersions));
+  _.each(removed, function(packageName) {
+    messageLog.push("removed dependency on " + packageName);
+  });
+
+  // Install the new versions.
+  _.each(newVersions, function(version, packageName) {
+    if ( failed )
+      return;
+    if (_.has(versions, packageName) &&
+         versions[packageName] == version ) {
+      // Nothing changed. Skip this.
+      return;
+     }
+
+    // Make sure we have enough builds of the package downloaded such that
+    // we can load a browser slice and a slice that will run on this
+    // system. (Later we may also need to download more builds to be able to
+    // deploy to another architecture.)
+    var available = tropohouse.maybeDownloadPackageForArchitectures(
+      catalog.getVersion(packageName, version),
+      // XXX we also download the deploy arch now, because we don't run the
+      // constraint solver / downloader anywhere other than add-package yet.
+      ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
+    if (! available) {
+      // XXX maybe we shouldn't be letting the constraint solver choose
+      // things that don't have the right arches?
+      process.stderr.write("Package " + packageName +
+                           " has no compatible build for version " +
+                           version);
+      failed = true;
+      return;
+    }
+
+    // Add a message to the update logs to show the user what we have done.
+    if ( _.contains(options.args, packageName)) {
+      // If we asked for this, we will log it later in more detail.
+      return;
+    }
+
+    // If the previous versions file had this, then we are upgrading, if it did
+    // not, then we must be adding this package anew.
+    if ( _.has(versions, packageName )) {
+      messageLog.push("upgraded " + packageName + " from version " +
+                      versions[packageName] +
+                      " to version " + newVersions[packageName]);
     } else {
-      // Add the package to the list of packages that we use directly.
-      usingDirectly[constraint.packageName] = constraint.versionConstraint;
-      var usingIndirectly = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+      messageLog.push("added " + packageName + " from " +
+                      " at version " + newVersions[packageName]);
+    };
+  });
 
-      // Call the constraint solver.
-      var ConstraintSolver = uniload.load({
-        packages: ['constraint-solver'],
-        release: release.current.name
-      })['constraint-solver'].ConstraintSolver;
+  if (failed)
+    return 1;
 
-      var resolver = new ConstraintSolver.Resolver(catalog);
-      var newVersions = resolver.resolve(usingDirectly,
-                                         usingIndirectly,
-                                         { optionsGoHere : false });
+  // Write the .meteor/packages file with the right versions
+  var oldPackages = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
+  project.rewriteDirectDependencies(options.appDir, packages);
 
-      var logMessage = "";
-      _.forEach(newVersions, function(version, packageName) {
-        if (failed)
-          return;
+  // Write the .meteor/versions file with the new dependencies.
+  project.rewriteIndirectDependencies(options.appDir, newVersions);
 
-        // Check if it exists.
-        if (usingIndirectly[packageName] === version) {
-          // We are using this at this version, so do nothing.
-        } else {
+  // Show the user the messageLog of packages we added.
+  _.each(messageLog, function (msg) {
+    process.stdout.write(msg + "\n");
+  });
 
-            // Find the build.
-            // XXX: Find the one with the right architecture.
-            var versionInfo = catalog.getVersion(packageName, version);
-
-            // Safety check, but this should not happen unless the
-            // constraint solver is doing something it shouldn't.
-            if (! versionInfo) {
-                process.stderr.write("This package has no version at this version");
-                failed = true;
-                return;
-            }
-
-            // Make sure we have enough builds of the package downloaded such that
-            // we can load a browser slice and a slice that will run on this
-            // system. (Later we may also need to download more builds to be able to
-            // deploy to another architecture.)
-            var available = tropohouse.maybeDownloadPackageForArchitectures(
-                // XXX we also download the deploy arch now, because we don't run the
-                // constraint solver / downloader anywhere other than add-package yet.
-                versionInfo, ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
-            if (! available) {
-                // XXX maybe we shouldn't be letting the constraint solver choose
-                // things that don't have the right arches?
-                process.stderr.write("Package " + packageName +
-                                     " has no compatible build for version " +
-                                     version);
-                failed = true;
-                return;
-            }
-
-            if (_.has(usingIndirectly[packageName])) {
-                logMessage = logMessage + "Upgraded " + packageName + " from version " +
-                             usingIndirectly + " to version " + version + "\n";
-            } else {
-               logMessage = logMessage + "Added " + packageName + " at version " +
-                            version + "\n";
-               logMessage = logMessage + "(" + packageName + " : " + versionInfo.decription + ") \n";
-            }
-        }
-      });
-
-      if (failed)
-        return;
-
-      // Add to the new direct dependencies file.
-      // XXX: Write the current version into packages file, rather than the requested version
-      project.addDirectDependency(options.appDir, packageReq);
-
-      // Write the new indirect dependencies file.
-      project.rewriteIndirectDependencies(options.appDir, newVersions);
-
-      // Log that this happened! Yay!
-      process.stdout.write(logMessage);
-      process.stdout.write("Finished adding: \n");
-      var note = versionInfo.description;
-      process.stdout.write(constraint.packageName + ": " + note + "\n");
+  // Show the user the messageLog of the packages that they installed.
+  process.stdout.write("Successfully added the following packages. \n");
+  _.each(packages, function (version, name) {
+    if ( ! _.has(oldPackages, name) ) {
+      var versionRecord = catalog.getVersion(name, version);
+      process.stdout.write(name + " : " + versionRecord.description + "\n");
     }
   });
 
-  return failed ? 1 : 0;
+  return 0;
 });
 
 
@@ -709,25 +740,73 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
 // remove
 ///////////////////////////////////////////////////////////////////////////////
 
+
 main.registerCommand({
   name: 'remove',
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  var using = {};
-  _.each(project.getPackages(options.appDir), function (name) {
-    using[name] = true;
+
+  // Read in existing package dependencies.
+  var packages = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
+
+  // For every package name specified, add it to our list of package
+  // constraints. Don't run the constraint solver until you have added all of
+  // them -- add should be an atomic operation regardless of the package
+  // order. Even though the package file should specify versions of its inputs,
+  // we don't specify these constraints until we get them back from the
+  // constraint solver.
+  _.each(options.args, function (packageName) {
+    // Check that we are using the package. We don't check if the package
+    // exists. You should be able to remove non-existent packages.
+    if (! _.has(packages, packageName)) {
+      process.stderr.write( packageName  + " is not in this project \n");
+    }
+
+    // Remove the package from our dependency list.
+    delete packages[packageName];
   });
 
-  _.each(options.args, function (name) {
-    if (! _.has(using, name)) {
-      process.stderr.write(name + ": not in project\n");
-    } else {
-      project.removePackage(options.appDir, name);
-      process.stderr.write(name + ": removed\n");
-    }
+  // Get the contents of our versions file. We need to pass them to the
+  // constraint solver, because our contract with the user says that we will
+  // never downgrade a dependency.
+  var versions = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+
+  // Call the constraint solver.
+  var constraintSolver = require('./constraint-solver.js');
+  var resolver = new constraintSolver.Resolver;
+  // XXX: constraint solver currently ignores versions, but it should not.
+  // XXX: this would also be the place to add no-update options.
+  var newVersions = resolver.resolve(packages);
+  if ( ! newVersions) {
+    // This should never really happen.
+    process.stderr.write("Cannot resolve package dependencies.");
+  }
+
+  // Don't tell the user what all the operations were until we finish -- we
+  // don't want to give a false sense of completeness until everything is
+  // written to disk.
+  var messageLog = [];
+
+  // Remove the versions that don't exist
+  var removed = _.difference(_.keys(versions), _.keys(newVersions));
+  _.each(removed, function(packageName) {
+    messageLog.push("removed dependency on " + packageName);
   });
+
+  // Write the .meteor/packages file with the right versions
+  project.rewriteDirectDependencies(options.appDir, packages);
+
+  // Write the .meteor/versions file with the new dependencies.
+  project.rewriteIndirectDependencies(options.appDir, newVersions);
+
+  // Show the user the messageLog of everything we removed.
+  _.each(messageLog, function (msg) {
+    process.stdout.write(msg + "\n");
+  });
+
+  return 0;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -743,25 +822,15 @@ main.registerCommand({
     using: { type: Boolean }
   }
 }, function (options) {
-  if (options.using) {
-    var using = project.getPackages(options.appDir);
-
-    if (using.length) {
-      _.each(using, function (name) {
-        process.stdout.write(name + "\n");
-      });
-    } else {
-      process.stderr.write(
-"This project doesn't use any packages yet. To add some packages:\n" +
-"  meteor add <package> <package> ...\n" +
-"\n" +
-"To see available packages:\n" +
-"  meteor list\n");
+  var items = [];
+  _.each(catalog.getAllPackageNames(), function (name) {
+    var versionInfo = catalog.getLatestVersion(name);
+    if (versionInfo) {
+      items.push({ name: name, description: versionInfo.description });
     }
-    return;
-  }
+  });
 
-  throw new Error("XXX replace with list-all or remove completely");
+  process.stdout.write(formatList(items));
 });
 
 
@@ -1559,25 +1628,6 @@ main.registerCommand({
                                              options.packageDir);
 
   return 0;
-});
-
-// This command will list all packages in existence.
-// This command may go away after testing is done.
-main.registerCommand({
-  name: 'list-all',
-  options: {},
-  maxArgs: 0,
-  hidden: true
-}, function (options) {
-  var items = [];
-  _.each(catalog.getAllPackageNames(), function (name) {
-    var versionInfo = catalog.getLatestVersion(name);
-    if (versionInfo) {
-      items.push({ name: name, description: versionInfo.description });
-    }
-  });
-
-  process.stdout.write(formatList(items));
 });
 
 main.registerCommand({

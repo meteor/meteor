@@ -49,7 +49,7 @@ var openPackageServerConnection = function () {
 // If there is no data.json file, or the file cannot be parsed, return null for
 // the collections and a default syncToken to ask the server for all the data
 // from the beginning of time.
-var loadCachedServerData = function () {
+exports.loadCachedServerData = function () {
   var noDataToken =  {
     // XXX have a better sync token for "all"
     syncToken: {time: 'Sun, 01 Jan 2012 00:00:00 GMT'},
@@ -74,7 +74,6 @@ var loadCachedServerData = function () {
   return ret;
 };
 
-
 // Opens a connection to the server, requests and returns new package data that
 // we haven't cached on disk. We assume that data is cached chronologically, so
 // essentially, we are asking for a diff from the last time that we did this.
@@ -95,7 +94,6 @@ var loadRemotePackageData = function (syncToken) {
   conn.close();
   return collectionData;
 };
-
 
 // Take in an ordered list of javascript objects representing collections of
 // package data. In each object, the server-side names of collections are keys
@@ -126,7 +124,6 @@ var mergeCollections = function (sources) {
   return ret;
 };
 
-
 // Writes the cached package data to the on-disk cache. Takes in the following
 // arguments:
 // - syncToken : the token representing our conversation with the server, that
@@ -151,22 +148,24 @@ var writePackageDataToDisk = function (syncToken, collectionData) {
   files.writeFileAtomically(filename, JSON.stringify(finalWrite, null, 2));
 };
 
-// Returns the package data.
+// Contacts the package server to get the latest diff and writes changes to
+// disk.
 //
-exports.loadPackageData = function() {
-  //XXX: We can consider optimizing this with concurrency or something.
+// Takes in cachedServerData, which is the processed contents of data.json. Uses
+// those to talk to the server and get the latest updates. Applies the diff from
+// the server to the in-memory version of the on-disk data, then writes the new
+// file to disk as the new data.json.
+exports.updateServerPackageData = function (cachedServerData) {
   var sources = [];
-
-  var localData = loadCachedServerData();
-  if (localData.collections)
-    sources.push(localData.collections);
-  var syncToken = localData.syncToken;
-  // XXX support offline use too
-//  var remoteData = loadRemotePackageData(syncToken);
-//  sources.push(remoteData.collections);
+  if (cachedServerData.collections) {
+    sources.push(cachedServerData.collections);
+  }
+  var syncToken = cachedServerData.syncToken;
+  var remoteData = loadRemotePackageData(syncToken);
+  sources.push(remoteData.collections);
 
   var allPackageData = mergeCollections(sources);
-//  writePackagesToDisk(remoteData.syncToken, allPackageData);
+  writePackageDataToDisk(remoteData.syncToken, allPackageData);
   return allPackageData;
 };
 

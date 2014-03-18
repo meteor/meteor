@@ -51,6 +51,12 @@ var Catalog = function () {
 
   // All packages found either by localPackageDirs or localPackages
   self.effectiveLocalPackages = {}; // package name to source directory
+
+  // Set this to true if we are not going to connect to the remote package
+  // server, and will only use the cached data.json file for our package
+  // information. This means that the catalog might be out of date on the latest
+  // developments.
+  self.offline = null;
 };
 
 _.extend(Catalog.prototype, {
@@ -93,15 +99,28 @@ _.extend(Catalog.prototype, {
     // OK, now initialize the catalog for real, with both local and
     // package server packages.
     console.log("XXX Loading catalog for real");
-    self._refresh(true);
+
+    // We should to figure out if we are intending to connect to the package
+    // server.
+    self.offline = options.offline ? options.offline : false;
+    self._refresh(true /* load server packages */);
   },
 
-  // Set sync to true to try to synchronize from the package server.
+  // If sync is false, this will not synchronize with the remote server, even if
+  // the catalog is not in offline mode. This is an optimization for loading
+  // local packages. (An offline catalog will not sync with the server even if
+  // sync is true.)
   _refresh: function (sync) {
     var self = this;
     self._requireInitialized();
 
-    var serverPackageData = packageClient.loadPackageData(sync);
+    var localData = packageClient.loadCachedServerData();
+    var serverPackageData;
+    if (! self.offline && sync) {
+      serverPackageData = packageClient.updateServerPackageData(localData);
+    } else {
+      serverPackageData = localData.collections;
+    }
 
     self.initialized = false;
     self.packages = [];
