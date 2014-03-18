@@ -63,6 +63,13 @@ var Box = function (func, equals) {
   this.alive = true;
 };
 
+Box.prototype.kill = function () {
+  if (this.resultComputation)
+    this.resultComputation.stop();
+
+  this.alive = false;
+};
+
 Box.prototype._depend = function () {
   var self = this;
 
@@ -81,13 +88,8 @@ Box.prototype._depend = function () {
           // flush, after computation re-runs have had a chance to
           // re-establish their dependencies on our computation.
           Deps.afterFlush(function () {
-            if (self.alive && ! self.dep.hasDependents()) {
-              // die
-              if (self.resultComputation)
-                self.resultComputation.stop();
-
-              self.alive = false;
-            }
+            if (self.alive && ! self.dep.hasDependents())
+              self.kill();
           });
         });
       }
@@ -183,7 +185,7 @@ UI.emboxValue = function (funcOrValue, equals) {
     var func = funcOrValue;
     var box = null;
 
-    return function () {
+    var f = function () {
       if (! (box && box.alive)) {
         if (! Deps.active)
           return func();
@@ -193,6 +195,13 @@ UI.emboxValue = function (funcOrValue, equals) {
 
       return box.get();
     };
+
+    f.stop = function () {
+      if (box && box.alive)
+        box.kill();
+    };
+
+    return f;
 
   } else {
     var value = funcOrValue;
@@ -454,6 +463,14 @@ var materialize = function (node, parent, before, parentComponent) {
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = UI.render(node, parentComponent);
+
+    // XXXX HACK
+    if (Deps.active &&
+        typeof instance.data === 'function' && instance.data.stop) {
+      Deps.onInvalidate(function () {
+        instance.data.stop();
+      });
+    }
 
     insert(instance.dom, parent, before);
   } else if (node instanceof HTML.CharRef) {
