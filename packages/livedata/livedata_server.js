@@ -280,8 +280,7 @@ var Session = function (server, version, socket, options) {
       }
     },
     clientAddress: self._clientAddress(),
-    httpHeaders: self.socket.headers,
-    _internal: self
+    httpHeaders: self.socket.headers
   };
 
   socket.send(stringifyDDP({msg: 'connected',
@@ -291,16 +290,16 @@ var Session = function (server, version, socket, options) {
     self.startUniversalSubs();
   }).run();
 
-  if (version === 'pre2') {
+  if (version !== 'pre1') {
     self.heartbeat = new Heartbeat({
       heartbeatInterval: options.heartbeatInterval,
       heartbeatTimeout: options.heartbeatTimeout,
       onTimeout: function () {
-        if (!self._disableHeartbeat)
+        if (self.heartbeatInterval !== 0)
           self.destroy();
       },
       sendPing: function () {
-        if (!self._disableHeartbeat) {
+        if (self.heartbeatInterval !== 0) {
           self.send({msg: 'ping'});
         }
       }
@@ -415,8 +414,10 @@ _.extend(Session.prototype, {
     if (!self.inQueue)
       return;
 
-    if (self.heartbeat)
+    if (self.heartbeat) {
       self.heartbeat.stop();
+      self.heartbeat = null;
+    }
 
     if (self.socket) {
       self.socket.close();
@@ -501,21 +502,23 @@ _.extend(Session.prototype, {
     // If the negotiated DDP version is "pre1" which didn't support
     // pings, preserve the "pre1" behavior of responding with a "bad
     // request" for the unknown messages.
-    if (self.version === 'pre2' && msg_in.msg === 'ping') {
+    if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       // For testing the heartbeat can be disabled so that we don't
       // respond to pings, but we don't send a "bad request" either.
-      if (!self._disableHeartbeat) {
+      if (self.heartbeatInterval !== 0) {
         self.send({msg: "pong", id: msg_in.id});
         Fiber(function () {
-          self.heartbeat.pingReceived();
+          if (self.heartbeat)
+            self.heartbeat.pingReceived();
         }).run();
       }
       return;
     }
-    if (self.version === 'pre2' && msg_in.msg === 'pong') {
-      if (!self._disableHeartbeat)
+    if (self.version !== 'pre1' && msg_in.msg === 'pong') {
+      if (self.heartbeatInterval !== 0)
         Fiber(function () {
-          self.heartbeat.pongReceived();
+          if (self.heartbeat)
+            self.heartbeat.pongReceived();
         }).run();
       return;
     }
@@ -1113,7 +1116,11 @@ _.extend(Subscription.prototype, {
 Server = function (options) {
   var self = this;
 
-  self.options = _.defaults({} || options, {
+  // The default heartbeat interval is 30 seconds on the server and 35
+  // seconds on the client.  Since the client doesn't need to send a
+  // ping as long as it is receiving pings, this means that pings
+  // normally go from the server to the client.
+  self.options = _.defaults(options || {}, {
     heartbeatInterval: 30000,
     heartbeatTimeout: 15000
   });

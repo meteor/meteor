@@ -230,14 +230,14 @@ var Connection = function (url, options) {
       }
     }
     else if (msg.msg === 'ping') {
-      if (!self._disableHeartbeat) {
+      if (self._heartbeatInterval !== 0) {
         self._send({msg: "pong", id: msg.id});
         if (self._heartbeat)
           self._heartbeat.pingReceived();
       }
     }
     else if (msg.msg === 'pong') {
-      if (!self._disableHeartbeat && self._heartbeat) {
+      if (self._heartbeatInterval !== 0 && self._heartbeat) {
         self._heartbeat.pongReceived();
       }
     }
@@ -308,12 +308,21 @@ var Connection = function (url, options) {
     });
   };
 
+  var onDisconnect = function () {
+    if (self._heartbeat) {
+      self._heartbeat.stop()
+      self._heartbeat = null;
+    }
+  };
+
   if (Meteor.isServer) {
     self._stream.on('message', Meteor.bindEnvironment(onMessage, Meteor._debug));
     self._stream.on('reset', Meteor.bindEnvironment(onReset, Meteor._debug));
+    self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, Meteor._debug));
   } else {
     self._stream.on('message', onMessage);
     self._stream.on('reset', onReset);
+    self._stream.on('disconnect', onDisconnect);
   }
 };
 
@@ -918,7 +927,7 @@ _.extend(Connection.prototype, {
   _livedata_connected: function (msg) {
     var self = this;
 
-    if (self._version === 'pre2' && !self._disableHeartbeat && !self._stream.disableHeartbeat) {
+    if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
       self._heartbeat = new Heartbeat({
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
