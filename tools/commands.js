@@ -864,8 +864,10 @@ main.registerCommand({
   var outputPath = path.resolve(options.args[0]); // get absolute path
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
+  var loader = project.generatePackageLoader(options.appDir);
   var bundleResult = bundler.bundle({
     appDir: options.appDir,
+    packageLoader: loader,
     outputPath: bundlePath,
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     buildOptions: {

@@ -397,32 +397,12 @@ _.extend(AppRunner.prototype, {
                project.getMeteorReleaseVersion(self.appDirForVersionCheck) };
     }
 
-    // Run the constraint solver to determine the package versions to use.
-    //
-    // We let the user manually edit the .meteor/packages and .meteor/versions
-    // files, and we use local packages that can change dependencies in
-    // development, so we need to rerun the constraint solver.
-    var versions = project.getDepsAsObj(
-      project.getIndirectDependencies(self.appDir));
-    var packages = project.getDepsAsObj(
-      project.getDirectDependencies(self.appDir));
-    var constraintSolver = require('./constraint-solver.js');
-    var resolver = new constraintSolver.Resolver;
-    // XXX: constraint solver currently ignores versions, but it should not.
-    var newVersions = resolver.resolve(packages);
-    if ( ! newVersions) {
-      return { outcome: 'conflicting-versions' };
-    }
-    // Write the new versions file.
-    project.rewriteIndirectDependencies(self.appDir, newVersions);
-
-    var loader = new PackageLoader(newVersions);
-
     // Bundle up the app
     if (! self.firstRun)
       packageCache.packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
+    var loader = project.generatePackageLoader(self.appDir);
 
     var bundleResult = bundler.bundle({
       appDir: self.appDir,

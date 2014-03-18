@@ -15,6 +15,7 @@ var utils = require('./utils.js');
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var Future = require('fibers/future');
+var project = require('./project.js');
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
@@ -372,8 +373,11 @@ var bundleAndDeploy = function (options) {
 
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
+
+    var loader = project.generatePackageLoader(options.appDir);
     var bundleResult = bundler.bundle({
       appDir: options.appDir,
+      packageLoader: loader,
       outputPath: bundlePath,
       nodeModulesMode: "skip",
       buildOptions: options.buildOptions

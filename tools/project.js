@@ -141,7 +141,7 @@ project.rewriteDirectDependencies = function (appDir, deps) {
   });
   lines.sort();
 
-  fs.writeFileSync(path.join(appDir, '.meteor', 'meteor'),
+  fs.writeFileSync(path.join(appDir, '.meteor', 'packages'),
                    lines.join(''), 'utf8');
 };
 
@@ -151,7 +151,38 @@ var meteorReleaseFilePath = function (appDir) {
 };
 
 
+// Run the constraint solver to determine the package versions to use.
+//
+// We let the user manually edit the .meteor/packages and .meteor/versions
+// files, and we use local packages that can change dependencies in
+// development, so we need to rerun the constraint solver before running and
+// deploying the app.
+project.generatePackageLoader = function (appDir) {
+  var versions = project.getDepsAsObj(
+    project.getIndirectDependencies(appDir));
+  var packages = project.getDepsAsObj(
+    project.getDirectDependencies(appDir));
 
+  // XXX: We are manually adding ctl here, but we should do this in a more
+  // principled manner.
+  packages['ctl'] = "none";
+  var constraintSolver = require('./constraint-solver.js');
+  var resolver = new constraintSolver.Resolver;
+  // XXX: constraint solver currently ignores versions, but it should not.
+  var newVersions = resolver.resolve(packages);
+  if ( ! newVersions) {
+    return { outcome: 'conflicting-versions' };
+  }
+
+  // Write out the new versions file.
+  project.rewriteIndirectDependencies(appDir, newVersions);
+
+  var PackageLoader = require('./package-loader.js');
+  var loader = new PackageLoader({
+    versions: newVersions
+  });
+  return loader;
+};
 
 
 // This will return "none" if the project is not pinned to a release
