@@ -203,13 +203,15 @@ Meteor.methods({changePassword: function (options) {
   // be tricky, so we'll settle for just replacing all tokens other than
   // the one for the current connection.
   var currentToken = Accounts._getLoginToken(this.connection.id);
-  Meteor.users.update({_id: this.userId},
-                      {
-                        $set: { 'services.password.srp': verifier },
-                        $pull: {
-                          'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
-                        }
-                      });
+  Meteor.users.update(
+    { _id: this.userId },
+    {
+      $set: { 'services.password.srp': verifier },
+      $pull: {
+        'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
+      }
+    }
+  );
 
   var ret = {passwordChanged: true};
   if (serialized)
@@ -321,14 +323,14 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   }});
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-  
+
   var options = {
     to: email,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.enrollAccount.subject(user),
     text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
   };
-  
+
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
@@ -441,14 +443,14 @@ Accounts.sendVerificationEmail = function (userId, address) {
     {$push: {'services.email.verificationTokens': tokenRecord}});
 
   var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
-  
+
   var options = {
     to: address,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.verifyEmail.subject(user),
     text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
   };
-  
+
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
       Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);
