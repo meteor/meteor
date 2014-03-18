@@ -1657,7 +1657,7 @@ Tinytest.add('spacebars - template - custom block helper functions called exactl
   test.equal(count, 2);
 });
 
-var runOneTwoTest = function (test, subTemplateName) {
+var runOneTwoTest = function (test, subTemplateName, optionsData) {
   var tmpl = Template.spacebars_test_helpers_stop_onetwo;
   tmpl.one = Template[subTemplateName + '1'];
   tmpl.two = Template[subTemplateName + '2'];
@@ -1665,32 +1665,38 @@ var runOneTwoTest = function (test, subTemplateName) {
   var buf = '';
 
   var showOne = ReactiveVar(true);
-  var dummy = ReactiveVar(1);
+  var dummy = ReactiveVar(0);
 
   tmpl.showOne = function () { return showOne.get(); };
   tmpl.one.options = function () {
-    dummy.get();
+    var x = dummy.get();
     buf += '1';
-    return ['something'];
+    if (optionsData)
+      return optionsData[x];
+    else
+      return ['something'];
   };
   tmpl.two.options = function () {
-    dummy.get();
+    var x = dummy.get();
     buf += '2';
-    return ['something'];
+    if (optionsData)
+      return optionsData[x];
+    else
+      return ['something'];
   };
 
   var div = renderToDiv(tmpl);
-  divRendersTo(test, div, "one");
+  Deps.flush();
   test.equal(buf, '1');
 
   showOne.set(false);
-  dummy.set(2);
-  divRendersTo(test, div, "two");
+  dummy.set(1);
+  Deps.flush();
   test.equal(buf, '12');
 
   showOne.set(true);
-  dummy.set(3);
-  divRendersTo(test, div, "one");
+  dummy.set(2);
+  Deps.flush();
   test.equal(buf, '121');
 };
 
@@ -1703,5 +1709,5 @@ Tinytest.add('spacebars - template - each stops without re-running helper', func
 });
 
 Tinytest.add('spacebars - template - if stops without re-running helper', function (test) {
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_if');
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_if', ['a', 'b', 'a']);
 });
