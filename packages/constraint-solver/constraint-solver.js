@@ -161,7 +161,7 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
       dependencies.push(sliceName);
 
       // add the constraint if such exists
-      if (constraint) {
+      if (constraint !== null && constraint !== "none") {
         constraints.push(self.resolver.getConstraint(sliceName, constraint));
       }
     });
