@@ -41,7 +41,7 @@ var waitForClientConnectionStatus = function (connection, status) {
 var serverOverride = {};
 
 Meteor.onConnection(function (serverConnection) {
-  _.extend(serverConnection._internal, serverOverride);
+  _.extend(Meteor.server.sessions[serverConnection.id], serverOverride);
 });
 
 
@@ -63,7 +63,7 @@ var testClientTimeout = function () {
   console.log("Test client timeout");
 
   serverOverride = {
-    _disableHeartbeat: true
+    heartbeatInterval: 0
   };
 
   var clientConnection = DDP.connect(Meteor.absoluteUrl());
@@ -81,7 +81,7 @@ var testServerTimeout = function () {
   serverOverride = {};
 
   var clientConnection = DDP.connect(Meteor.absoluteUrl());
-  clientConnection._disableHeartbeat = true;
+  clientConnection._heartbeatInterval = 0;
 
   expectConnectAndReconnect(clientConnection);
 

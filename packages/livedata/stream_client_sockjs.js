@@ -88,6 +88,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.socket.close();
       self.socket = null;
     }
+
+    _.each(self.eventCallbacks.disconnect, function (callback) { callback(); });
   },
 
   _clearConnectionAndHeartbeatTimers: function () {
