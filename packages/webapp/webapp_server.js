@@ -25,10 +25,10 @@ var bundledJsCssPrefix;
 // CSS.  This prevents you from displaying the page in that case, and instead
 // reloads it, presumably all on the new version now.
 var RELOAD_SAFETYBELT = "\n" +
-      "if (typeof Package === 'undefined' || \n" +
-      "    ! Package.webapp || \n" +
-      "    ! Package.webapp.WebApp || \n" +
-      "    ! Package.webapp.WebApp._isCssLoaded()) \n" +
+      "if (typeof Package === 'undefined' ||\n" +
+      "    ! Package.webapp ||\n" +
+      "    ! Package.webapp.WebApp ||\n" +
+      "    ! Package.webapp.WebApp._isCssLoaded())\n" +
       "  document.location.reload(); \n";
 
 // Keepalives so that when the outer server dies unceremoniously and
@@ -131,14 +131,17 @@ WebApp.categorizeRequest = function (req) {
 // be added to the '<html>' tag. Each function is passed a 'request' object (see
 // #BrowserIdentification) and should return a string,
 var htmlAttributeHooks = [];
-var htmlAttributes = function (template, request) {
-  var attributes = '';
+var getHtmlAttributes = function (request) {
+  var combinedAttributes  = {};
   _.each(htmlAttributeHooks || [], function (hook) {
-    var attribute = hook(request);
-    if (attribute !== null && attribute !== undefined && attribute !== '')
-      attributes += ' ' + attribute;
+    var attributes = hook(request);
+    if (attributes === null)
+      return;
+    if (typeof attributes !== 'object')
+      throw Error("HTML attribute hook must return null or object");
+    _.extend(combinedAttributes, attributes);
   });
-  return template.replace('##HTML_ATTRIBUTES##', attributes);
+  return combinedAttributes;
 };
 WebApp.addHtmlAttributeHook = function (hook) {
   htmlAttributeHooks.push(hook);
@@ -432,13 +435,16 @@ var runWebAppServer = function () {
   });
 
   // Will be updated by main before we listen.
-  var boilerplateHtml = null;
+  var boilerplateTemplate = null;
+  var boilerplateBaseData = null;
   app.use(function (req, res, next) {
     if (! appUrl(req.url))
       return next();
 
-    if (!boilerplateHtml)
+    if (!boilerplateTemplate)
       throw new Error("boilerplateHtml should be set before listening!");
+    if (!boilerplateBaseData)
+      throw new Error("boilerplateBaseData should be set before listening!");
 
 
     var headers = {
@@ -459,9 +465,25 @@ var runWebAppServer = function () {
       res.end();
       return undefined;
     }
+
+    try {
+      var htmlAttributes = getHtmlAttributes(request);
+      var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
+                                     boilerplateBaseData);
+      var boilerplateInstance = boilerplateTemplate.extend({
+        data: boilerplateData
+      });
+      var boilerplateHtmlJs = boilerplateInstance.render();
+      var boilerplateHtml = "<!DOCTYPE html>\n" +
+            HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+    } catch (e) {
+      res.writeHead(500, headers);
+      res.end();
+      return undefined;
+    }
+
     res.writeHead(200, headers);
-    var requestSpecificHtml = htmlAttributes(boilerplateHtml, request);
-    res.write(requestSpecificHtml);
+    res.write(boilerplateHtml);
     res.end();
     return undefined;
   });
@@ -559,37 +581,44 @@ var runWebAppServer = function () {
     // '--keepalive' is a use of the option.
     var expectKeepalives = _.contains(argv, '--keepalive');
 
-    var boilerplateHtmlPath = path.join(clientDir, clientJson.page);
-    boilerplateHtml = fs.readFileSync(boilerplateHtmlPath, 'utf8');
+    boilerplateBaseData = {
+      css: [],
+      js: [],
+      head: '',
+      body: '',
+      inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
+      meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
+      reloadSafetyBelt: RELOAD_SAFETYBELT,
+      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+      bundledJsCssPrefix: bundledJsCssPrefix ||
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
+    };
 
-    // Include __meteor_runtime_config__ in the app html, as an inline script if
-    // it's not forbidden by CSP.
-    if (WebAppInternals.inlineScriptsAllowed()) {
-      boilerplateHtml = boilerplateHtml.replace(
-          /##RUNTIME_CONFIG##/,
-        "<script type='text/javascript'>__meteor_runtime_config__ = " +
-          JSON.stringify(__meteor_runtime_config__) + ";</script>");
-      boilerplateHtml = boilerplateHtml.replace(
-          /##RELOAD_SAFETYBELT##/,
-        "<script type='text/javascript'>"+RELOAD_SAFETYBELT+"</script>");
-    } else {
-      boilerplateHtml = boilerplateHtml.replace(
-        /##RUNTIME_CONFIG##/,
-        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_runtime_config.js'></script>"
-      );
-      boilerplateHtml = boilerplateHtml.replace(
-          /##RELOAD_SAFETYBELT##/,
-        "<script type='text/javascript' src='##ROOT_URL_PATH_PREFIX##/meteor_reload_safetybelt.js'></script>");
+    _.each(clientJson.manifest, function (item) {
+      if (item.type === 'css' && item.where === 'client') {
+        boilerplateBaseData.css.push({url: item.url});
+      }
+      if (item.type === 'js' && item.where === 'client') {
+        boilerplateBaseData.js.push({url: item.url});
+      }
+      if (item.type === 'head') {
+        boilerplateBaseData.head = fs.readFileSync(
+          path.join(clientDir, item.path), 'utf8');
+      }
+      if (item.type === 'body') {
+        boilerplateBaseData.body = fs.readFileSync(
+          path.join(clientDir, item.path), 'utf8');
+      }
+    });
 
-    }
-    boilerplateHtml = boilerplateHtml.replace(
-        /##ROOT_URL_PATH_PREFIX##/g,
-      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
-
-    boilerplateHtml = boilerplateHtml.replace(
-        /##BUNDLED_JS_CSS_PREFIX##/g,
-      bundledJsCssPrefix ||
-        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "");
+    var boilerplateTemplateSource = Assets.getText("boilerplate.html");
+    var boilerplateRenderCode = Spacebars.compile(
+      boilerplateTemplateSource, { isBody: true });
+    var boilerplateRender = eval(boilerplateRenderCode);
+    boilerplateTemplate = UI.Component.extend({
+      kind: "MainPage",
+      render: boilerplateRender
+    });
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
