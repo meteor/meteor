@@ -132,7 +132,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     // better approach would proabably be to actually have this
     // function return null and make the caller do a better job of
     // recovering.
-    return new packageLoader.PackageLoader({ });
+    return new PackageLoader({ });
   }
 
   var constraints = {};

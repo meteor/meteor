@@ -157,7 +157,7 @@ exports.loadPackageData = function() {
   //XXX: We can consider optimizing this with concurrency or something.
   var sources = [];
 
-  var localData = loadLocalPackageData();
+  var localData = loadCachedServerData();
   if (localData.collections)
     sources.push(localData.collections);
   var syncToken = localData.syncToken;

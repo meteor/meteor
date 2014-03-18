@@ -55,18 +55,14 @@ var cache = null; // map from package names (joined with ',') to return value
 
 var load = function (options) {
   options = options || {};
-  var cache;
 
   // Check the cache first
-  if (cacheRelease !== options.release) {
+  if (! cache ||
+      cacheRelease !== options.release) {
     cacheRelease = options.release;
     cache = {};
   }
   var cacheKey = (options.packages || []).join(',');
-
-  if (!cache) {
-    cache = {};
-  };
 
   console.log("Cache:", cache, cacheKey);
   if (_.has(cache, cacheKey)) {

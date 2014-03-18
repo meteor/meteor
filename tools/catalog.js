@@ -10,6 +10,7 @@ var Unipackage = require('./unipackage.js');
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
+var watch = require('./watch.js');
 
 var catalog = exports;
 

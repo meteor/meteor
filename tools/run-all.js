@@ -239,6 +239,7 @@ exports.run = function (appDir, options) {
     },
     onRunEnd: function (result) {
       if (once ||
+          result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
           (result.outcome === "terminated" &&
            result.signal === undefined && result.code === undefined)) {
@@ -257,6 +258,15 @@ exports.run = function (appDir, options) {
   runner.start();
   var result = fut.wait();
   runner.stop();
+
+  if (result.outcome === "conflicting-versions") {
+    process.stderr.write(
+"The constraint solver could not find a set of package versions to use that would\n" +
+"satisfy the constraints of .meteor/versions and .meteor/packages. This could be\n" +
+"caused by conflicts in .meteor/versions, conflicts in .meteor/packages, and/or\n" +
+"inconsistent changes to the dependencies in local packages.");
+    return 254;
+  }
 
   if (result.outcome === "wrong-release") {
     if (once)

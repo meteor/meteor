@@ -13,6 +13,8 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 var runLog = require('./run-log.js').runLog;
 var catalog = require('./catalog.js').catalog;
 var packageCache = require('./package-cache.js');
+var PackageLoader = require('./package-loader.js');
+
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -296,13 +298,18 @@ _.extend(AppProcess.prototype, {
 //     typed 'meteor update' in another window). An 'releaseNeeded'
 //     attribute will be present giving the app's release name.
 //
+//   - 'conflicting-versions': the constraint solver could not find a set of
+//     package versions to use that would satisfy the constraints of
+//     .meteor/versions and .meteor/packages. This could be caused by conflicts
+//     in .meteor/versions, conflicts in .meteor/packages, and/or inconsistent
+//     changes to the dependencies in local packages.
+//
 //   - 'stopped': stop() was called while a run was in progress.
 //
 // - bundleResult: for runs in which bundling happened (all except
-//   'wrong-release' and possibly 'stopped'), the return value from
-//   bundler.bundle(), which contains such interesting things as the
-//   build errors and a watchset describing the source files of the
-//   app.
+//   'wrong-release', 'conflicting-versions' and possibly 'stopped'), the return
+//   value from bundler.bundle(), which contains such interesting things as the
+//   build errors and a watchset describing the source files of the app.
 var AppRunner = function (appDir, options) {
   var self = this;
 
@@ -390,16 +397,40 @@ _.extend(AppRunner.prototype, {
                project.getMeteorReleaseVersion(self.appDirForVersionCheck) };
     }
 
+    // Run the constraint solver to determine the package versions to use.
+    //
+    // We let the user manually edit the .meteor/packages and .meteor/versions
+    // files, and we use local packages that can change dependencies in
+    // development, so we need to rerun the constraint solver.
+    var versions = project.getDepsAsObj(
+      project.getIndirectDependencies(self.appDir));
+    var packages = project.getDepsAsObj(
+      project.getDirectDependencies(self.appDir));
+    var constraintSolver = require('./constraint-solver.js');
+    var resolver = new constraintSolver.Resolver;
+    // XXX: constraint solver currently ignores versions, but it should not.
+    var newVersions = resolver.resolve(packages);
+    if ( ! newVersions) {
+      console.log("Incompatible package versions.");
+      return { outcome: 'conflicting-versions' };
+    }
+    // Write the new versions file.
+    project.rewriteIndirectDependencies(self.appDir, newVersions);
+
+    var loader = new PackageLoader(newVersions);
+
     // Bundle up the app
     if (! self.firstRun)
       packageCache.packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
+
     var bundleResult = bundler.bundle({
       appDir: self.appDir,
       outputPath: bundlePath,
       nodeModulesMode: "symlink",
-      buildOptions: self.buildOptions
+      buildOptions: self.buildOptions,
+      packageLoader: loader
     });
     var watchSet = bundleResult.watchSet;
 
@@ -538,12 +569,14 @@ _.extend(AppRunner.prototype, {
       if (wantExit || self.exitFuture || runResult.outcome === "stopped")
         break;
 
-      if (runResult.outcome === "wrong-release") {
-        // Note that this code is currently dead, since the only onRunEnd
-        // implementation always stops on wrong-release.
-        runLog.log("=> Incompatible Meteor release.");
-        if (self.watchForChanges)
-          runLog.log("=> Waiting for file change.");
+      if (runResult.outcome === "wrong-release" ||
+          runResult.outcome === "conflicting-versions") {
+        // Since the only implementation of onRunEnd sets wantExit on these
+        // outcomes, we will never get here currently. Moreover, it's not
+        // actually possible for us to handle these cases correctly, because our
+        // contract says that we should wait for changes, but runResult doesn't
+        // actually contain a watchset. Oops. Just throw an exception for now.
+        throw new Error("can't handle outcome " + runResult.outcome);
       }
 
       else if (runResult.outcome === "bundle-fail") {

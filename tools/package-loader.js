@@ -1,6 +1,9 @@
 var _ = require('underscore');
 var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
+var utils = require('./utils.js');
+var buildmessage = require('./buildmessage.js');
+var Unipackage = require('./unipackage.js');
 
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
@@ -43,7 +46,7 @@ _.extend(PackageLoader.prototype, {
         return null;
       buildmessage.error("package not available: " + name);
       // recover by returning a dummy (empty) package
-      var pkg = new packages.Package;
+      var pkg = new Unipackage;
       pkg.initEmpty(name);
       return pkg;
     }
@@ -104,7 +107,7 @@ _.extend(PackageLoader.prototype, {
     var self = this;
 
     if (typeof spec === "string")
-      spec = packages.parseSpec(spec);
+      spec = utils.parseSpec(spec);
 
     var pkg = self.getPackage(spec.package, { throwOnError: true });
     if (spec.slice)
