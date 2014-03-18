@@ -170,7 +170,12 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   // XXX representing a queue as an array with push/shift operations is not
   // efficient as Array.shift is O(N). Replace if it becomes a problem.
   var queue = [];
+  // Boolean map to avoid adding the same stuff to queue over and over again.
+  // Keeps the time complexity the same but can save some memory.
+  var isEnqueued = {};
+
   queue.push(uv);
+  isEnqueued[uv.name] = true;
 
   while (queue.length > 0) {
     uv = queue[0];
@@ -199,7 +204,13 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
       return c.getSatisfyingUnitVersion(self);
     }).difference(choices).value();
 
-    [].push.apply(queue, exactDeps);
+    // Enqueue all new exact dependencies.
+    _.each(exactDeps, function (dep) {
+      if (_.has(isEnqueued, dep.name))
+        return;
+      queue.push(dep);
+      isEnqueued[dep.name] = true;
+    });
   }
 
   return {
