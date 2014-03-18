@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Log out a users other sessions when they change their password.
+* Log out a user's other sessions when they change their password.
 
 
 ## v0.7.2
