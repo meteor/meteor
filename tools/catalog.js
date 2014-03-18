@@ -11,6 +11,7 @@ var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var watch = require('./watch.js');
+var files = require('./files.js');
 
 var catalog = exports;
 
@@ -487,7 +488,7 @@ _.extend(Catalog.prototype, {
     var count = 0;
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
       var buildDir = path.join(loadPath, '.build');
-      files.rm_recursive(loadPath);
+      files.rm_recursive(buildDir);
     });
 
     // Now reload them, forcing a rebuild. We have to do this in two
