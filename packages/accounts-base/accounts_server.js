@@ -498,7 +498,7 @@ Accounts._setAccountData = function (connectionId, field, value) {
 Meteor.server.onConnection(function (connection) {
   accountData[connection.id] = {connection: connection};
   connection.onClose(function () {
-    removeConnectionFromToken(connection.id);
+    removeTokenFromConnection(connection.id);
     delete accountData[connection.id];
   });
 });
@@ -569,11 +569,11 @@ Accounts._getUserObserve = function (connectionId) {
 // Clean up this connection's association with the token: that is, stop
 // the observe that we started when we associated the connection with
 // this token.
-var removeConnectionFromToken = function (connectionId) {
+var removeTokenFromConnection = function (connectionId) {
   var observe = userObservesForConnections[connectionId];
   if (observe) {
-    observe.stop();
     delete userObservesForConnections[connectionId];
+    observe.stop();
   }
 };
 
@@ -583,7 +583,7 @@ Accounts._getLoginToken = function (connectionId) {
 
 // newToken is a hashed token.
 Accounts._setLoginToken = function (userId, connection, newToken) {
-  removeConnectionFromToken(connection.id);
+  removeTokenFromConnection(connection.id);
   Accounts._setAccountData(connection.id, 'loginToken', newToken);
 
   if (newToken) {
@@ -594,10 +594,13 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
     // the token gets deleted.
     Meteor.defer(function () {
       var foundMatchingUser;
+      // Because we upgrade unhashed login tokens to hashed tokens at
+      // login time, sessions will only be logged in with a hashed
+      // token. Thus we only need to observe hashed tokens here.
       userObservesForConnections[connection.id] = Meteor.users.find({
         _id: userId,
         'services.resume.loginTokens.hashedToken': newToken
-      }, { fields: { 'services.resume': 1 } }).observe({
+      }, { fields: { _id: 1 } }).observeChanges({
         added: function () {
           foundMatchingUser = true;
         },
@@ -614,7 +617,7 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
         // the connection. But the token might have already been deleted
         // before we set up the observe, which wouldn't have closed the
         // connection because the observe wasn't running yet.
-        removeConnectionFromToken(connection.id);
+        removeTokenFromConnection(connection.id);
         connection.close();
       }
     });
