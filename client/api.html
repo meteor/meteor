@@ -1823,6 +1823,11 @@ are called with a single argument, the attempt info object:
   object.  This will always be present for successful logins.
 {{/dtdd}}
 
+{{#dtdd name="connection" type="Object"}}
+  The `connection` object the request came in on. See
+  [`Meteor.onConnection`](#meteor_onconnection) for details.
+{{/dtdd}}
+
 {{#dtdd name="methodName" type="String"}}
   The name of the Meteor method being used to login.
 {{/dtdd}}
