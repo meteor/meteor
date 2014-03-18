@@ -42,7 +42,6 @@ var UnipackageSlice = function (unipackage, options) {
   self.uses = options.uses;
   self.implies = options.implies || [];
   self.noExports = options.noExports;
-  self.nodeModulesPath = options.nodeModulesPath;
 
   // This WatchSet will end up having the watch items from the
   // SourceSlice (such as package.js or .meteor/packages), plus all of
@@ -95,6 +94,11 @@ var UnipackageSlice = function (unipackage, options) {
   //
   // sourceMap: Allowed only for "js". If present, a string.
   self.resources = options.resources;
+
+  // Absolute path to the node_modules directory to use at runtime to
+  // resolve Npm.require() calls in this slice. null if this slice
+  // does not have a node_modules.
+  self.nodeModulesPath = options.nodeModulesPath;
 };
 
 _.extend(UnipackageSlice.prototype, {

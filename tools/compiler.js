@@ -9,6 +9,8 @@ var PackageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');
+var archinfo = require('./archinfo.js');
+var meteorNpm = require('./meteor-npm.js');
 
 var compiler = exports;
 
@@ -187,7 +189,8 @@ var determineBuildTimeDependencies = function (packageSource) {
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileSlice = function (unipackage, inputSlice, packageLoader) {
+var compileSlice = function (unipackage, inputSlice, packageLoader,
+                             nodeModulesPath, isPortable) {
   var isApp = ! inputSlice.pkg.name;
   var resources = [];
   var js = [];
@@ -563,6 +566,17 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     packageVariableNames[name] = true;
   });
 
+  // *** Consider npm dependencies and portability
+  var arch = inputSlice.arch;
+  if (arch === "os" && ! isPortable) {
+    // Contains non-portable npm module builds, so set arch correctly
+    arch = archinfo.host();
+  }
+  if (! archinfo.matches(arch, "os")) {
+    // npm models only work on server architectures
+    nodeModulesPath = undefined;
+  }
+
   // *** Output slice object
   unipackage.addSlice({
     name: inputSlice.sliceName,
@@ -570,7 +584,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader) {
     uses: inputSlice.uses,
     implies: inputSlice.implies,
     watchSet: watchSet,
-    nodeModulesPath: inputSlice.nodeModulesPath,
+    nodeModulesPath: nodeModulesPath,
     prelinkFiles: results.files,
     noExports: inputSlice.noExports,
     packageVariables: packageVariables,
@@ -641,7 +655,30 @@ compiler.compile = function (packageSource) {
     });
   });
 
-
+  // Grab any npm dependencies. Keep them in a cache in the package
+  // source directory so we don't have to do this from scratch on
+  // every build.
+  //
+  // Go through a specialized npm dependencies update process,
+  // ensuring we don't get new versions of any (sub)dependencies. This
+  // process also runs mostly safely multiple times in parallel (which
+  // could happen if you have two apps running locally using the same
+  // package).
+  //
+  // We run this even if we have no dependencies, because we might
+  // need to delete dependencies we used to have.
+  var isPortable = true;
+  var nodeModulesPath = null;
+  if (packageSource.npmCacheDirectory) {
+    if (meteorNpm.updateDependencies(packageSource.name,
+                                     packageSource.npmCacheDirectory,
+                                     packageSource.npmDependencies)) {
+      nodeModulesPath = path.join(packageSource.npmCacheDirectory,
+                                  'node_modules');
+      if (! meteorNpm.dependenciesArePortable(packageSource.npmCacheDirectory))
+        isPortable = false;
+    }
+  }
 
   // XXX XXX HERE HERE
   //
@@ -657,8 +694,6 @@ compiler.compile = function (packageSource) {
   // Then -- again, unless 'officialBuild' was set -- modify version
   // by adding +<buildid> to the version (it's an error if you already
   // had one, I guess).
-
-
 
   var unipackage = new Unipackage();
   unipackage.initFromOptions({
@@ -682,7 +717,8 @@ compiler.compile = function (packageSource) {
   });
 
   _.each(packageSource.slices, function (slice) {
-    var sliceSources = compileSlice(unipackage, slice, packageLoader);
+    var sliceSources = compileSlice(unipackage, slice, packageLoader,
+                                    nodeModulesPath, isPortable);
     sources.push.apply(sources, sliceSources);
   });
 

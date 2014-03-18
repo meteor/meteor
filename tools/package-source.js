@@ -165,11 +165,6 @@ var SourceSlice = function (pkg, options) {
   // but only control files such as package.js and .meteor/packages,
   // since the rest are not determined until compile time.
   self.watchSet = options.watchSet || new watch.WatchSet;
-
-  // Absolute path to the node_modules directory to use at runtime to
-  // resolve Npm.require() calls in this slice. null if this slice
-  // does not have a node_modules.
-  self.nodeModulesPath = options.nodeModulesPath;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -244,6 +239,17 @@ var PackageSource = function (packageDirectoryForBuildInfo) {
   // Analogous to watchSet in SourceSlice but for plugins. At this
   // stage will typically contain just 'package.js'.
   self.pluginWatchSet = new watch.WatchSet;
+
+  // npm packages used by this package (on os.* architectures only).
+  // Map from npm package name to the required version of the package
+  // as a string.
+  self.npmDependencies = {};
+
+  // Absolute path to a directory on disk that serves as a cache for
+  // the npm dependencies, so we don't have to fetch them on every
+  // build. Required not just if we have npmDependencies, but if we
+  // ever could have had them in the past.
+  self.npmCacheDirectory = null;
 };
 
 
@@ -268,6 +274,8 @@ _.extend(PackageSource.prototype, {
   // go wrong. Be sure to call jobHasMessages to see if it actually
   // succeeded.
   //
+  // The architecture is hardcoded to be "os".
+  //
   // Note that this does not set a version on the package!
   //
   // Options:
@@ -289,20 +297,10 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = options.sourceRoot || path.sep;
     self.serveRoot = options.serveRoot || path.sep;
 
-    var isPortable = true;
     var nodeModulesPath = null;
     meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
-    if (options.npmDir) {
-      // Always run updateDependencies, even if there are no dependencies: there
-      // may be a .npm directory on disk to delete.
-      if (meteorNpm.updateDependencies(name, options.npmDir,
-                                       options.npmDependencies)) {
-        // At least one dependency was installed, and there were no errors.
-        if (!meteorNpm.dependenciesArePortable(options.npmDir))
-          isPortable = false;
-        nodeModulesPath = path.join(options.npmDir, 'node_modules');
-      }
-    }
+    self.npmDependencies = options.npmDependencies;
+    self.npmCacheDirectory = options.npmDir;
 
     var sources = _.map(options.sources, function (source) {
       if (typeof source === "string")
@@ -310,10 +308,9 @@ _.extend(PackageSource.prototype, {
       return source;
     });
 
-    var arch = isPortable ? "os" : archinfo.host();
     var slice = new SourceSlice(self, {
       name: options.sliceName,
-      arch: arch,
+      arch: "os",
       uses: _.map(options.use, utils.parseSpec),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
@@ -528,7 +525,6 @@ _.extend(PackageSource.prototype, {
       self.pluginInfo = {};
       npmDependencies = null;
     }
-
 
     if (! self.version) {
       if (! buildmessage.jobHasMessages()) {
@@ -796,7 +792,6 @@ _.extend(PackageSource.prototype, {
       }
     });
 
-
     // Make sure that if a dependency was specified in multiple
     // slices, the constraint is exactly the same.
     if (! self._checkCrossSliceVersionConstraints()) {
@@ -804,45 +799,35 @@ _.extend(PackageSource.prototype, {
       // fact that we have differing constraints.
     }
 
-    // Grab any npm dependencies. Keep them in a cache in the package
-    // source directory so we don't have to do this from scratch on
-    // every build.
+    // Save information about npm dependencies. To keep metadata
+    // loading inexpensive, we won't actually fetch them until build
+    // time.
 
-    // We used to put this directly in .npm, but in linker-land, the package's
-    // own NPM dependencies go in .npm/package and build plugin X's goes in
-    // .npm/plugin/X. Notably, the former is NOT an ancestor of the latter, so
-    // that a build plugin does NOT see the package's node_modules.
-    // XXX maybe there should be separate NPM dirs for use vs test?
-    var packageNpmDir =
-          path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
+    // We used to put the cache directly in .npm, but in linker-land,
+    // the package's own NPM dependencies go in .npm/package and build
+    // plugin X's goes in .npm/plugin/X. Notably, the former is NOT an
+    // ancestor of the latter, so that a build plugin does NOT see the
+    // package's node_modules.  XXX maybe there should be separate NPM
+    // dirs for use vs test?
+    self.npmCacheDirectory =
+      path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
+    self.npmDependencies = npmDependencies;
 
-    // If this package was previously built with pre-linker versions, it may
-    // have files directly inside `.npm` instead of nested inside
-    // `.npm/package`. Clean them up if they are there.
+    // If this package was previously built with pre-linker versions,
+    // it may have files directly inside `.npm` instead of nested
+    // inside `.npm/package`. Clean them up if they are there. (Kind
+    // of grody to do this here but it'll be fine for now, especially
+    // since this is only for compatibility with very old versions of
+    // Meteor.)
     var preLinkerFiles = [
       'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
     _.each(preLinkerFiles, function (f) {
       files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
     });
 
-    // go through a specialized npm dependencies update process,
-    // ensuring we don't get new versions of any
-    // (sub)dependencies. this process also runs mostly safely
-    // multiple times in parallel (which could happen if you have
-    // two apps running locally using the same package)
-    // We run this even if we have no dependencies, because we might
-    // need to delete dependencies we used to have.
-    var nodeModulesPath = null;
-    if (meteorNpm.updateDependencies(name, packageNpmDir, npmDependencies)) {
-      nodeModulesPath = path.join(packageNpmDir, 'node_modules');
-      if (! meteorNpm.dependenciesArePortable(packageNpmDir))
-        isPortable = false;
-    }
-
     // Create slices
-    var osArch = isPortable ? "os" : archinfo.host();
     _.each(["use", "test"], function (role) {
-      _.each(["browser", osArch], function (arch) {
+      _.each(["browser", "os"], function (arch) {
         var where = (arch === "browser") ? "client" : "server";
 
         // Everything depends on the package 'meteor', which sets up
@@ -879,8 +864,7 @@ _.extend(PackageSource.prototype, {
           getSourcesFunc: function () { return sources[role][where]; },
           noExports: role === "test",
           declaredExports: role === "use" ? exports[where] : null,
-          watchSet: watchSet,
-          nodeModulesPath: arch === osArch && nodeModulesPath || undefined
+          watchSet: watchSet
         }));
       });
     });
