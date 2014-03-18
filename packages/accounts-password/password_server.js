@@ -198,10 +198,18 @@ Meteor.methods({changePassword: function (options) {
   if (!verifier)
     throw new Meteor.Error(400, "Invalid verifier");
 
-  // XXX this should invalidate all login tokens other than the current one
-  // (or it should assign a new login token, replacing existing ones)
+  // It would be better if this removed ALL existing tokens and replaced
+  // the token for the current connection with a new one, but that would
+  // be tricky, so we'll settle for just replacing all tokens other than
+  // the one for the current connection.
+  var currentToken = Accounts._getLoginToken(this.connection.id);
   Meteor.users.update({_id: this.userId},
-                      {$set: {'services.password.srp': verifier}});
+                      {
+                        $set: { 'services.password.srp': verifier },
+                        $pull: {
+                          'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
+                        }
+                      });
 
   var ret = {passwordChanged: true};
   if (serialized)
