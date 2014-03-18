@@ -683,9 +683,10 @@ if (Meteor.isServer) {
   testAsyncMulti("livedata - connect fails to unknown place", [
     function (test, expect) {
       var self = this;
-      self.conn = DDP.connect("example.com");
+      self.conn = DDP.connect("example.com", {_dontPrintErrors: true});
       Meteor.setTimeout(expect(function () {
         test.isFalse(self.conn.status().connected, "Not connected");
+        self.conn.close();
       }), 500);
     }
   ]);

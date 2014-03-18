@@ -92,6 +92,8 @@ Tinytest.add("minimongo - modifier affects selector", function (test) {
   affected({ 'foo.bar.baz': 0 }, { $unset: { 'foo.3.bar': 1 } }, "delicate work with numeric fields in selector");
 
   affected({ 'foo.0.bar': 0 }, { $set: { 'foo.0.0.bar': 1 } }, "delicate work with nested arrays and selectors by indecies");
+
+  affected({foo: {$elemMatch: {bar: 5}}}, {$set: {'foo.4.bar': 5}}, "$elemMatch");
 });
 
 Tinytest.add("minimongo - selector and projection combination", function (test) {
@@ -331,6 +333,31 @@ Tinytest.add("minimongo - selector and projection combination", function (test) 
   }, {}, "$where in the selector - excl");
 
 });
+
+Tinytest.add("minimongo - sorter and projection combination", function (test) {
+  function testSorterProjectionComb (sortSpec, proj, expected, desc) {
+    var sorter = new Minimongo.Sorter(sortSpec);
+    test.equal(sorter.combineIntoProjection(proj), expected, desc);
+  }
+
+  // Test with inclusive projection
+  testSorterProjectionComb({ a: 1, b: 1 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true }, "simplest incl");
+  testSorterProjectionComb({ a: 1, b: -1 }, { b: 1, c: 1, d: 1 }, { a: true, b: true, c: true, d: true }, "simplest incl");
+  testSorterProjectionComb({ 'a.c': 1 }, { b: 1 }, { 'a.c': true, b: true }, "dot path incl");
+  testSorterProjectionComb({ 'a.1.c': 1 }, { b: 1 }, { 'a.c': true, b: true }, "dot num path incl");
+  testSorterProjectionComb({ 'a.1.c': 1 }, { b: 1, a: 1 }, { a: true, b: true }, "dot num path incl overlap");
+  testSorterProjectionComb({ 'a.1.c': 1, 'a.2.b': -1 }, { b: 1 }, { 'a.c': true, 'a.b': true, b: true }, "dot num path incl");
+  testSorterProjectionComb({ 'a.1.c': 1, 'a.2.b': -1 }, {}, {}, "dot num path with empty incl");
+
+  // Test with exclusive projection
+  testSorterProjectionComb({ a: 1, b: 1 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl");
+  testSorterProjectionComb({ a: 1, b: -1 }, { b: 0, c: 0, d: 0 }, { c: false, d: false }, "simplest excl");
+  testSorterProjectionComb({ 'a.c': 1 }, { b: 0 }, { b: false }, "dot path excl");
+  testSorterProjectionComb({ 'a.1.c': 1 }, { b: 0 }, { b: false }, "dot num path excl");
+  testSorterProjectionComb({ 'a.1.c': 1 }, { b: 0, a: 0 }, { b: false }, "dot num path excl overlap");
+  testSorterProjectionComb({ 'a.1.c': 1, 'a.2.b': -1 }, { b: 0 }, { b: false }, "dot num path excl");
+});
+
 
 (function () {
   // TODO: Tests for "can selector become true by modifier" are incomplete,

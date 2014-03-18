@@ -110,6 +110,7 @@ selftest.define("claim", ['net', 'slow'], function () {
   waitAndError(run, "There isn't a site deployed at that address.");
 
   testUtils.cleanUpApp(s, legacyApp);
+  testUtils.logout(s);
 });
 
 selftest.define('claim - no username', ['net', 'slow'], function () {
@@ -155,4 +156,5 @@ selftest.define('claim - no username', ['net', 'slow'], function () {
   run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
   testUtils.cleanUpApp(s, legacyAppName);
+  testUtils.logout(s);
 });

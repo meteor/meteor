@@ -3,7 +3,14 @@
 // the string "intercept", storing them in an array that can then
 // be retrieved using the getInterceptedEmails method
 //
-var interceptedEmails = {}; // (email address) -> (array of contents)
+var interceptedEmails = {}; // (email address) -> (array of options)
+
+// add html email templates that just contain the url
+Accounts.emailTemplates.resetPassword.html = 
+  Accounts.emailTemplates.enrollAccount.html =
+  Accounts.emailTemplates.verifyEmail.html = function (user, url) {
+    return url;
+  };
 
 EmailTest.hookSend(function (options) {
   var to = options.to;
@@ -13,7 +20,7 @@ EmailTest.hookSend(function (options) {
     if (!interceptedEmails[to])
       interceptedEmails[to] = [];
 
-    interceptedEmails[to].push(options.text);
+    interceptedEmails[to].push(options);
     return false; // skip sending
   }
 });

@@ -289,7 +289,7 @@ var Sandbox = function (options) {
   fs.mkdirSync(self.home, 0755);
   self.cwd = self.home;
   self.env = {};
-  self.fakeMongo = options.fakeMongo
+  self.fakeMongo = options.fakeMongo;
 
   if (_.has(options, 'warehouse')) {
     // Make a directory to hold our new warehouse

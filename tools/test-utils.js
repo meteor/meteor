@@ -26,12 +26,24 @@ exports.randomUserEmail = function () {
   return 'selftest-user-' + randomString(15) + '@guerrillamail.com';
 };
 
+var ensureLegacyReleaseDownloaded = function (sandbox) {
+  // Ensure we have 0.7.0.1 downloaded.  This version didn't actually support
+  // --get-ready for a built release, but it's an easy way to verify we're
+  // actually running an old version.
+  var run = sandbox.run('--release', '0.7.0.1', '--get-ready');
+  run.waitSecs(75);
+  run.matchErr('only works in a checkout\n');
+  run.expectExit(1);
+};
+
 // Creates an app and deploys it with an old release. 'password' is
 // optional. Returns the name of the deployed app.
 exports.createAndDeployLegacyApp = function (sandbox, password) {
   var name = randomAppName();
   sandbox.createApp(name, 'empty');
   sandbox.cd(name);
+
+  ensureLegacyReleaseDownloaded(sandbox);
 
   var runArgs = ['deploy', '--release', '0.7.0.1', name];
   if (password)
@@ -40,8 +52,7 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
   var run = sandbox.run.apply(sandbox, runArgs);
 
   if (password) {
-    // Give it time to download and install a new release, if necessary.
-    run.waitSecs(30);
+    run.waitSecs(10);
     run.match('New Password:');
     run.write(password + '\n');
     run.match('New Password (again):');
@@ -56,6 +67,8 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
 };
 
 exports.cleanUpLegacyApp = function (sandbox, name, password) {
+  ensureLegacyReleaseDownloaded(sandbox);
+
   var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
   if (password) {
     run.waitSecs(10);

@@ -58,6 +58,7 @@ selftest.define('deploy - expired credentials', ['net', 'slow'], function () {
   run.expectExit(0);
 
   testUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
 });
 
 selftest.define('deploy - bad arguments', [], function () {
@@ -159,6 +160,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
   // Delete our deployed app.
   testUtils.cleanUpApp(sandbox, appName);
+  testUtils.logout(sandbox);
 });
 
 

@@ -110,6 +110,11 @@ Example:
       check(roomId, String);
       var count = 0;
       var initializing = true;
+
+      // observeChanges only returns after the initial `added` callbacks
+      // have run. Until then, we don't want to send a lot of
+      // `self.changed()` messages - hence tracking the
+      // `initializing` state.
       var handle = Messages.find({roomId: roomId}).observeChanges({
         added: function (id) {
           count++;
@@ -123,9 +128,9 @@ Example:
         // don't care about changed
       });
 
-      // Observe only returns after the initial added callbacks have
-      // run.  Now return an initial value and mark the subscription
-      // as ready.
+      // Instead, we'll send one `self.added()` message right after
+      // observeChanges has returned, and mark the subscription as
+      // ready.
       initializing = false;
       self.added("counts", roomId, {count: count});
       self.ready();
@@ -182,8 +187,9 @@ publish handler, this is the place to stop the observes.
 When you subscribe to a record set, it tells the server to send records to the
 client.  The client stores these records in local [Minimongo
 collections](#meteor_collection), with the same name as the `collection`
-argument used in the publish handler's `added`, `changed`, and `removed`
-callbacks.  Meteor will queue incoming attributes until you declare the
+argument used in the publish handler's [`added`](#publish_added),
+[`changed`](#publish_changed), and [`removed`](#publish_removed)
+callbacks.  Meteor will queue incoming records until you declare the
 [`Meteor.Collection`](#meteor_collection) on the client with the matching
 collection name.
 
@@ -672,6 +678,9 @@ your collection should be published to which users.
       Scratchpad.insert({number: i * 2});
     assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
 
+Generally, you'll assign `Meteor.Collection` objects in your app to global
+variables.  You can only create one `Meteor.Collection` object for each
+underlying Mongo collection.
 
 If you specify a `transform` option to the `Collection` or any of its retrieval
 methods, documents are passed through the `transform` function before being
@@ -1585,10 +1594,18 @@ By default, the current user's `username`, `emails` and `profile` are
 published to the client. You can publish additional fields for the
 current user with:
 
+    // server
     Meteor.publish("userData", function () {
-      return Meteor.users.find({_id: this.userId},
-                               {fields: {'other': 1, 'things': 1}});
+      if (this.userId) {
+        return Meteor.users.find({_id: this.userId},
+                                 {fields: {'other': 1, 'things': 1}});
+      } else {
+        this.ready();
+      }
     });
+
+    // client
+    Meteor.subscribe("userData");
 
 If the autopublish package is installed, information about all users
 on the system is published to all clients. This includes `username`,
@@ -1735,6 +1752,14 @@ Example:
       return user.username !== "root";
     });
 
+If the user is being created as part of a login attempt from a client (eg,
+calling [`Accounts.createUser`](#accounts_createuser) from the client, or
+[logging in for the first time with an external
+service](#meteor_loginwithexternalservice)), these callbacks are called *before*
+the [`Accounts.validateLoginAttempt`](#accounts_validateloginattempt)
+callbacks. If these callbacks succeed but those fail, the user will still be
+created but the connection will not be logged in as that user.
+
 {{> api_box accounts_onCreateUser}}
 
 Use this when you need to do more than simply accept or reject new user
@@ -1771,6 +1796,78 @@ Example:
         user.profile = options.profile;
       return user;
     });
+
+
+{{> api_box accounts_validateLoginAttempt}}
+
+Call `validateLoginAttempt` with a callback to be called on login
+attempts.  It returns an object with a single method, `stop`.  Calling
+`stop()` unregisters the callback.
+
+When a login attempt is made, the registered validate login callbacks
+are called with a single argument, the attempt info object:
+
+<dl class="objdesc">
+{{#dtdd name="type" type="String"}}
+  The service name, such as "password" or "twitter".
+{{/dtdd}}
+
+{{#dtdd name="allowed" type="Boolean"}}
+  Whether this login is allowed and will be successful (if not aborted
+  by any of the validateLoginAttempt callbacks).  False if the login
+  will not succeed (for example, an invalid password or the login was
+  aborted by a previous validateLoginAttempt callback).
+{{/dtdd}}
+
+{{#dtdd name="error" type="Exception"}}
+  When `allowed` is false, the exception describing why the login
+  failed.  It will be a `Meteor.Error` for failures reported to the
+  user (such as invalid password), and can be a another kind of
+  exception for internal errors.
+{{/dtdd}}
+
+{{#dtdd name="user" type="Object"}}
+  When it is known which user was attempting to login, the Meteor user
+  object.  This will always be present for successful logins.
+{{/dtdd}}
+
+{{#dtdd name="connection" type="Object"}}
+  The `connection` object the request came in on. See
+  [`Meteor.onConnection`](#meteor_onconnection) for details.
+{{/dtdd}}
+
+{{#dtdd name="methodName" type="String"}}
+  The name of the Meteor method being used to login.
+{{/dtdd}}
+
+{{#dtdd name="methodArguments" type="Array"}}
+  An array of the arguments passed to the login method.
+{{/dtdd}}
+</dl>
+
+A validate login callback must return a truthy value for the login to
+proceed.  If the callback returns a falsy value or throws an
+exception, the login is aborted.  Throwing a `Meteor.Error` will
+report the error reason to the user.
+
+All registered validate login callbacks are called, even if one of the
+callbacks aborts the login.  The later callbacks will see the
+`allowed` field set to `false` since the login will now not be
+successful.
+
+
+{{> api_box accounts_onLogin}}
+
+Either the `onLogin` or the `onLoginFailure` callbacks will be called
+for each login attempt. The `onLogin` callbacks are called after the
+user has been successfully logged in. The `onLoginFailure` callbacks are
+called after a login attempt is denied.
+
+These functions return an object with a single method, `stop`.  Calling
+`stop()` unregisters the callback.
+
+The callbacks are called with a single argument, the same attempt info
+object as [`validateLoginAttempt`](#accounts_validateloginattempt).
 
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
@@ -1873,7 +1970,7 @@ To customize the contents of the email, see
 
 {{> api_box accounts_emailTemplates}}
 
-This is an `Object` with several fields that are used to generate text
+This is an `Object` with several fields that are used to generate text/html
 for the emails sent by `sendResetPasswordEmail`, `sendEnrollmentEmail`,
 and `sendVerificationEmail`.
 
@@ -1890,6 +1987,8 @@ Override fields of the object by assigning to them:
    a `String` for the subject line of a reset password email.
  - `resetPassword.text`: A `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
+ - `resetPassword.html`: An optional `Function` that takes a user object and a 
+   url, and returns the body html for a reset password email.
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
    new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email

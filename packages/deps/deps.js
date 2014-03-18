@@ -22,6 +22,15 @@ var _debugFunc = function () {
            function () {}));
 };
 
+var _throwOrLog = function (from, e) {
+  if (throwFirstError) {
+    throw e;
+  } else {
+    _debugFunc()("Exception from Deps " + from + " function:",
+                 e.stack || e.message);
+  }
+};
+
 var nextId = 1;
 // computations whose callbacks we should call at flush time
 var pendingComputations = [];
@@ -34,6 +43,12 @@ var inFlush = false;
 // Deps.nonreactive, which nullfies currentComputation even though
 // an enclosing computation may still be running.
 var inCompute = false;
+// `true` if the `_throwFirstError` option was passed in to the call
+// to Deps.flush that we are in. When set, throw rather than log the
+// first error encountered while flushing. Before throwing the error,
+// finish flushing (from a catch block), logging any subsequent
+// errors.
+var throwFirstError = false;
 
 var afterFlushCallbacks = [];
 
@@ -159,20 +174,23 @@ _.extend(Deps.Computation.prototype, {
     var self = this;
 
     self._recomputing = true;
-    while (self.invalidated && ! self.stopped) {
-      try {
-        self._compute();
-      } catch (e) {
-        _debugFunc()("Exception from Deps recompute:", e.stack || e.message);
+    try {
+      while (self.invalidated && ! self.stopped) {
+        try {
+          self._compute();
+        } catch (e) {
+          _throwOrLog("recompute", e);
+        }
+        // If _compute() invalidated us, we run again immediately.
+        // A computation that invalidates itself indefinitely is an
+        // infinite loop, of course.
+        //
+        // We could put an iteration counter here and catch run-away
+        // loops.
       }
-      // If _compute() invalidated us, we run again immediately.
-      // A computation that invalidates itself indefinitely is an
-      // infinite loop, of course.
-      //
-      // We could put an iteration counter here and catch run-away
-      // loops.
+    } finally {
+      self._recomputing = false;
     }
-    self._recomputing = false;
   }
 });
 
@@ -227,7 +245,7 @@ _.extend(Deps.Dependency.prototype, {
 
 _.extend(Deps, {
   // http://docs.meteor.com/#deps_flush
-  flush: function () {
+  flush: function (_opts) {
     // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
     // app event handler that calls Deps.flush.  At the moment
@@ -244,32 +262,37 @@ _.extend(Deps, {
 
     inFlush = true;
     willFlush = true;
+    throwFirstError = !! (_opts && _opts._throwFirstError);
 
-    while (pendingComputations.length ||
-           afterFlushCallbacks.length) {
+    try {
+      while (pendingComputations.length ||
+             afterFlushCallbacks.length) {
 
-      // recompute all pending computations
-      var comps = pendingComputations;
-      pendingComputations = [];
+        // recompute all pending computations
+        while (pendingComputations.length) {
+          var comp = pendingComputations.shift();
+          comp._recompute();
+        }
 
-      for (var i = 0, comp; comp = comps[i]; i++)
-        comp._recompute();
-
-      if (afterFlushCallbacks.length) {
-        // call one afterFlush callback, which may
-        // invalidate more computations
-        var func = afterFlushCallbacks.shift();
-        try {
-          func();
-        } catch (e) {
-          _debugFunc()("Exception from Deps afterFlush function:",
-                       e.stack || e.message);
+        if (afterFlushCallbacks.length) {
+          // call one afterFlush callback, which may
+          // invalidate more computations
+          var func = afterFlushCallbacks.shift();
+          try {
+            func();
+          } catch (e) {
+            _throwOrLog("afterFlush function", e);
+          }
         }
       }
+    } catch (e) {
+      inFlush = false; // needed before calling `Deps.flush()` again
+      Deps.flush({_throwFirstError: false}); // finish flushing
+      throw e;
+    } finally {
+      willFlush = false;
+      inFlush = false;
     }
-
-    inFlush = false;
-    willFlush = false;
   },
 
   // http://docs.meteor.com/#deps_autorun
@@ -287,7 +310,7 @@ _.extend(Deps, {
 
     constructingComputation = true;
     var c = new Deps.Computation(function (c) {
-      Meteor._noYieldsAllowed(_.bind(f, this, c));
+      Meteor._noYieldsAllowed(function () { f(c); });
     }, Deps.currentComputation);
 
     if (Deps.active)
@@ -312,23 +335,6 @@ _.extend(Deps, {
     } finally {
       setCurrentComputation(previous);
     }
-  },
-
-  // Wrap `f` so that it is always run nonreactively.
-  _makeNonreactive: function (f) {
-    if (f.$isNonreactive) // avoid multiple layers of wrapping.
-      return f;
-    var nonreactiveVersion = function (/*arguments*/) {
-      var self = this;
-      var args = _.toArray(arguments);
-      var ret;
-      Deps.nonreactive(function () {
-        ret = f.apply(self, args);
-      });
-      return ret;
-    };
-    nonreactiveVersion.$isNonreactive = true;
-    return nonreactiveVersion;
   },
 
   // http://docs.meteor.com/#deps_oninvalidate

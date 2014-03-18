@@ -1,5 +1,79 @@
 ## v.NEXT
 
+## v0.7.2
+
+* Support oplog tailing on queries with the `limit` option. All queries
+  except those containing `$near` or `$where` selectors or the `skip`
+  option can now be used with the oplog driver.
+
+* Add hooks to login process: `Accounts.onLogin`,
+  `Accounts.onLoginFailure`, and `Accounts.validateLoginAttempt`. These
+  functions allow for rate limiting login attempts, logging an audit
+  trail, account lockout flags, and more. See:
+  http://docs.meteor.com/#accounts_validateloginattempt #1815
+
+* Change the `Accounts.registerLoginHandler` API for custom login
+  methods. Login handlers now require a name and no longer have to deal
+  with generating resume tokens. See
+  https://github.com/meteor/meteor/blob/devel/packages/accounts-base/accounts_server.js
+  for details. OAuth based login handlers using the
+  `Oauth.registerService` packages are not affected.
+
+* Add support for HTML email in `Accounts.emailTemplates`.  #1785
+
+* minimongo: Support `{a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}}`  #1875
+
+* minimongo: Support `{a: {$regex: '', $options: 'i'}}`  #1874
+
+* minimongo: Fix sort implementation with multiple sort fields which each look
+  inside an array. eg, ensure that with sort key `{'a.x': 1, 'a.y': 1}`, the
+  document `{a: [{x: 0, y: 4}]}` sorts before
+  `{a: [{x: 0, y: 5}, {x: 1, y: 3}]}`, because the 3 should not be used as a
+  tie-breaker because it is not "next to" the tied 0s.
+
+* minimongo: Fix sort implementation when selector and sort key share a field,
+  that field matches an array in the document, and only some values of the array
+  match the selector. eg, ensure that with sort key `{a: 1}` and selector
+  `{a: {$gt: 3}}`, the document `{a: [4, 6]}` sorts before `{a: [1, 5]}`,
+  because the 1 should not be used as a sort key because it does not match the
+  selector. (We only approximate the MongoDB behavior here by only supporting
+  relatively selectors.)
+
+* Use `faye-websocket` (0.7.2) npm module instead of `websocket` (1.0.8) for
+  server-to-server DDP.
+
+* Update Google OAuth package to use new `profile` and `email` scopes
+  instead of deprecated URL-based scopes.  #1887
+
+* Add `_throwFirstError` option to `Deps.flush`.
+
+* Make `facts` package data available on the server as
+  `Facts._factsByPackage`.
+
+* Fix issue where `LESS` compilation error could crash the `meteor run`
+  process.  #1877
+
+* Fix crash caused by empty HTTP host header in `meteor run` development
+  server.  #1871
+
+* Fix hot code reload in private browsing mode in Safari.
+
+* Fix appcache size calculation to avoid erronious warnings. #1847
+
+* Remove unused `Deps._makeNonReactive` wrapper function. Call
+  `Deps.nonreactive` directly instead.
+
+* Avoid setting the `oplogReplay` on non-oplog collections. Doing so
+  caused mongod to crash.
+
+* Add startup message to `test-in-console` to ease automation. #1884
+
+* Upgraded dependencies
+  - amplify: 1.1.2 (from 1.1.0)
+
+Patches contributed by GitHub users awwx, dandv, queso, rgould, timhaines, zol
+
+
 ## v0.7.1.2
 
 * Fix bug in tool error handling that caused `meteor` to crash on Mac
@@ -38,7 +112,7 @@
 * Add and improve support for minimongo operators.
   - Support `$comment`.
   - Support `obj` name in `$where`.
-  - `$regexp` matches actual regexps properly.
+  - `$regex` matches actual regexps properly.
   - Improve support for `$nin`, `$ne`, `$not`.
   - Support using `{ $in: [/foo/, /bar/] }`. #1707
   - Support `{$exists: false}`.
@@ -312,8 +386,6 @@ apply the patch and will instead disable websockets.
 
 * Increase the maximum size spiderable will return for a page from 200kB
   to 5MB.
-
-* New 'facts' package publishes internal statistics about Meteor.
 
 * Upgraded dependencies:
   * SockJS server from 0.3.7 to 0.3.8, including new faye-websocket module.

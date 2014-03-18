@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');
+  api.use('callback-hook', 'server');
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)

@@ -268,30 +268,40 @@ Tinytest.add("minimongo - lookup", function (test) {
   test.equal(lookupAX({a: {x: [1]}}), [{value: [1]}]);
   test.equal(lookupAX({a: 5}), [{value: undefined}]);
   test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
-             [{value: 1, arrayIndex: 0},
-              {value: [2], arrayIndex: 1},
-              {value: undefined, arrayIndex: 2}]);
+             [{value: 1, arrayIndices: [0]},
+              {value: [2], arrayIndices: [1]},
+              {value: undefined, arrayIndices: [2]}]);
 
   var lookupA0X = MinimongoTest.makeLookupFunction('a.0.x');
   test.equal(lookupA0X({a: [{x: 1}]}), [
     // From interpreting '0' as "0th array element".
-    {value: 1, arrayIndex: 0},
+    {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
-    {value: undefined, arrayIndex: 0}]);
+    {value: undefined, arrayIndices: [0]}]);
   test.equal(lookupA0X({a: [{x: [1]}]}), [
-    {value: [1], arrayIndex: 0},
-    {value: undefined, arrayIndex: 0}]);
+    {value: [1], arrayIndices: [0, 'x']},
+    {value: undefined, arrayIndices: [0]}]);
   test.equal(lookupA0X({a: 5}), [{value: undefined}]);
   test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [
     // From interpreting '0' as "0th array element".
-    {value: 1, arrayIndex: 0},
+    {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
-    {value: undefined, arrayIndex: 0},
-    {value: undefined, arrayIndex: 1},
-    {value: undefined, arrayIndex: 2}
+    {value: undefined, arrayIndices: [0]},
+    {value: undefined, arrayIndices: [1]},
+    {value: undefined, arrayIndices: [2]}
   ]);
+
+  test.equal(
+    MinimongoTest.makeLookupFunction('w.x.0.z')({
+      w: [{x: [{z: 5}]}]}), [
+        // From interpreting '0' as "0th array element".
+        {value: 5, arrayIndices: [0, 0, 'x']},
+        // From interpreting '0' as "after branching in the array, look in the
+        // object {z:5} for a field named "0".
+        {value: undefined, arrayIndices: [0, 0]}
+      ]);
 });
 
 Tinytest.add("minimongo - selector_compiler", function (test) {
@@ -678,6 +688,9 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$regex: 'a'}}, {a: 'cut'});
   nomatch({a: {$regex: 'a'}}, {a: 'CAT'});
   match({a: {$regex: 'a', $options: 'i'}}, {a: 'CAT'});
+  match({a: {$regex: '', $options: 'i'}}, {a: 'foo'});
+  nomatch({a: {$regex: '', $options: 'i'}}, {});
+  nomatch({a: {$regex: '', $options: 'i'}}, {a: 5});
   nomatch({a: /undefined/}, {});
   nomatch({a: {$regex: 'undefined'}}, {});
   nomatch({a: /xxx/}, {});
@@ -816,6 +829,12 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({$or: [{a: 1}, {a: 2}], b: 2}, {a: 1, b: 2});
   nomatch({$or: [{a: 2}, {a: 3}], b: 2}, {a: 1, b: 2});
   nomatch({$or: [{a: 1}, {a: 2}], b: 3}, {a: 1, b: 2});
+
+  // Combining $or with equality
+  match({x: 1, $or: [{a: 1}, {b: 1}]}, {x: 1, b: 1});
+  match({$or: [{a: 1}, {b: 1}], x: 1}, {x: 1, b: 1});
+  nomatch({x: 1, $or: [{a: 1}, {b: 1}]}, {b: 1});
+  nomatch({x: 1, $or: [{a: 1}, {b: 1}]}, {x: 1});
 
   // $or and $lt, $lte, $gt, $gte
   match({$or: [{a: {$lte: 1}}, {a: 2}]}, {a: 1});
@@ -1100,6 +1119,16 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: {$elemMatch: {x: 5}}}, {a: {x: 5}});
   match({a: {$elemMatch: {0: {$gt: 5, $lt: 9}}}}, {a: [[6]]});
   match({a: {$elemMatch: {'0.b': {$gt: 5, $lt: 9}}}}, {a: [[{b:6}]]});
+  match({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}], x: 1}}},
+        {a: [{x: 1, b: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{b: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1}]});
+  nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1}, {b: 1}]});
 
   // $comment
   match({a: 5, $comment: "asdf"}, {a: 5});
@@ -1549,7 +1578,7 @@ Tinytest.add("minimongo - ordering", function (test) {
   // document ordering under a sort specification
   var verify = function (sorts, docs) {
     _.each(_.isArray(sorts) ? sorts : [sorts], function (sort) {
-      var sorter = new MinimongoTest.Sorter(sort);
+      var sorter = new Minimongo.Sorter(sort);
       assert_ordering(test, sorter.getComparator(), docs);
     });
   };
@@ -1577,15 +1606,21 @@ Tinytest.add("minimongo - ordering", function (test) {
          [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
   test.throws(function () {
-    new MinimongoTest.Sorter("a");
+    new Minimongo.Sorter("a");
   });
 
   test.throws(function () {
-    new MinimongoTest.Sorter(123);
+    new Minimongo.Sorter(123);
+  });
+
+  // We don't support $natural:1 (since we don't actually have Mongo's on-disk
+  // ordering available!)
+  test.throws(function () {
+    new Minimongo.Sorter({$natural: 1});
   });
 
   // No sort spec implies everything equal.
-  test.equal(new MinimongoTest.Sorter({}).getComparator()({a:1}, {a:2}), 0);
+  test.equal(new Minimongo.Sorter({}).getComparator()({a:1}, {a:2}), 0);
 
   // All sorts of array edge cases!
   // Increasing sort sorts by the smallest element it finds; 1 < 2.
@@ -1664,7 +1699,13 @@ Tinytest.add("minimongo - ordering", function (test) {
     {a: [5, [3, 19], 18]}
   ]);
 
-
+  // (0,4) < (0,5), so they go in this order.  It's not correct to consider
+  // (0,3) as a sort key for the second document because they come from
+  // different a-branches.
+  verify({'a.x': 1, 'a.y': 1}, [
+    {a: [{x: 0, y: 4}]},
+    {a: [{x: 0, y: 5}, {x: 1, y: 3}]}
+  ]);
 });
 
 Tinytest.add("minimongo - sort", function (test) {
@@ -1740,19 +1781,176 @@ Tinytest.add("minimongo - array sort", function (test) {
   // in the document, and when sorting descending, you use the maximum value you
   // can find. So [1, 4] shows up in the 1 slot when sorting ascending and the 4
   // slot when sorting descending.
-  c.insert({up: 1, down: 1, a: {x: [1, 4]}});
-  c.insert({up: 2, down: 2, a: [{x: [2]}, {x: 3}]});
-  c.insert({up: 0, down: 4, a: {x: 0}});
-  c.insert({up: 3, down: 3, a: {x: 2.5}});
-  c.insert({up: 4, down: 0, a: {x: 5}});
+  //
+  // Similarly, "selected" is the index that the doc should have in the query
+  // that sorts ascending on "a.x" and selects {'a.x': {$gt: 1}}. In this case,
+  // the 1 in [1, 4] may not be used as a sort key.
+  c.insert({up: 1, down: 1, selected: 2, a: {x: [1, 4]}});
+  c.insert({up: 2, down: 2, selected: 0, a: [{x: [2]}, {x: 3}]});
+  c.insert({up: 0, down: 4,              a: {x: 0}});
+  c.insert({up: 3, down: 3, selected: 1, a: {x: 2.5}});
+  c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
 
-  test.equal(
-    _.pluck(c.find({}, {sort: {'a.x': 1}}).fetch(), 'up'),
-    _.range(c.find().count()));
+  // Test that the the documents in "cursor" contain values with the name
+  // "field" running from 0 to the max value of that name in the collection.
+  var testCursorMatchesField = function (cursor, field) {
+    var fieldValues = [];
+    c.find().forEach(function (doc) {
+      if (_.has(doc, field))
+        fieldValues.push(doc[field]);
+    });
+    test.equal(_.pluck(cursor.fetch(), field),
+               _.range(_.max(fieldValues) + 1));
+  };
 
-  test.equal(
-    _.pluck(c.find({}, {sort: {'a.x': -1}}).fetch(), 'down'),
-    _.range(c.find().count()));
+  testCursorMatchesField(c.find({}, {sort: {'a.x': 1}}), 'up');
+  testCursorMatchesField(c.find({}, {sort: {'a.x': -1}}), 'down');
+  testCursorMatchesField(c.find({'a.x': {$gt: 1}}, {sort: {'a.x': 1}}),
+                         'selected');
+});
+
+Tinytest.add("minimongo - sort keys", function (test) {
+  var keyListToObject = function (keyList) {
+    var obj = {};
+    _.each(keyList, function (key) {
+      obj[EJSON.stringify(key)] = true;
+    });
+    return obj;
+  };
+
+  var testKeys = function (sortSpec, doc, expectedKeyList) {
+    var expectedKeys = keyListToObject(expectedKeyList);
+    var sorter = new Minimongo.Sorter(sortSpec);
+
+    var actualKeyList = [];
+    sorter._generateKeysFromDoc(doc, function (key) {
+      actualKeyList.push(key);
+    });
+    var actualKeys = keyListToObject(actualKeyList);
+    test.equal(actualKeys, expectedKeys);
+  };
+
+  var testParallelError = function (sortSpec, doc) {
+    var sorter = new Minimongo.Sorter(sortSpec);
+    test.throws(function () {
+      sorter._generateKeysFromDoc(doc, function (){});
+    }, /parallel arrays/);
+  };
+
+  // Just non-array fields.
+  testKeys({'a.x': 1, 'a.y': 1},
+           {a: {x: 0, y: 5}},
+           [[0,5]]);
+
+  // Ensure that we don't get [0,3] and [1,5].
+  testKeys({'a.x': 1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}]},
+           [[0,5], [1,3]]);
+
+  // Ensure we can combine "array fields" with "non-array fields".
+  testKeys({'a.x': 1, 'a.y': 1, b: -1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[0,5,42], [1,3,42]]);
+  testKeys({b: -1, 'a.x': 1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[42,0,5], [42,1,3]]);
+  testKeys({'a.x': 1, b: -1, 'a.y': 1},
+           {a: [{x: 0, y: 5}, {x: 1, y: 3}], b: 42},
+           [[0,42,5], [1,42,3]]);
+  testKeys({a: 1, b: 1},
+           {a: [1, 2, 3], b: 42},
+           [[1,42], [2,42], [3,42]]);
+
+  // Don't support multiple arrays at the same level.
+  testParallelError({a: 1, b: 1},
+                    {a: [1, 2, 3], b: [42]});
+
+  // We are MORE STRICT than Mongo here; Mongo supports this!
+  // XXX support this too  #NestedArraySort
+  testParallelError({'a.x': 1, 'a.y': 1},
+                    {a: [{x: 1, y: [2, 3]},
+                         {x: 2, y: [4, 5]}]});
+});
+
+Tinytest.add("minimongo - sort key filter", function (test) {
+  var testOrder = function (sortSpec, selector, doc1, doc2) {
+    var matcher = new Minimongo.Matcher(selector);
+    var sorter = new Minimongo.Sorter(sortSpec, {matcher: matcher});
+    var comparator = sorter.getComparator();
+    var comparison = comparator(doc1, doc2);
+    test.isTrue(comparison < 0);
+  };
+
+  testOrder({'a.x': 1}, {'a.x': {$gt: 1}},
+            {a: {x: 3}},
+            {a: {x: [1, 4]}});
+  testOrder({'a.x': 1}, {'a.x': {$gt: 0}},
+            {a: {x: [1, 4]}},
+            {a: {x: 3}});
+
+  var keyCompatible = function (sortSpec, selector, key, compatible) {
+    var matcher = new Minimongo.Matcher(selector);
+    var sorter = new Minimongo.Sorter(sortSpec, {matcher: matcher});
+    var actual = sorter._keyCompatibleWithSelector(key);
+    test.equal(actual, compatible);
+  };
+
+  keyCompatible({a: 1}, {a: 5}, [5], true);
+  keyCompatible({a: 1}, {a: 5}, [8], false);
+  keyCompatible({a: 1}, {a: {x: 5}}, [{x: 5}], true);
+  keyCompatible({a: 1}, {a: {x: 5}}, [{x: 5, y: 9}], false);
+  keyCompatible({'a.x': 1}, {a: {x: 5}}, [5], true);
+  // To confirm this:
+  //   > db.x.insert({_id: "q", a: [{x:1}, {x:5}], b: 2})
+  //   > db.x.insert({_id: "w", a: [{x:5}, {x:10}], b: 1})
+  //   > db.x.find({}).sort({'a.x': 1, b: 1})
+  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
+  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
+  //   > db.x.find({a: {x:5}}).sort({'a.x': 1, b: 1})
+  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
+  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
+  //   > db.x.find({'a.x': 5}).sort({'a.x': 1, b: 1})
+  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
+  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
+  // ie, only the last one manages to trigger the key compatibility code,
+  // not the previous one.  (The "b" sort is necessary because when the key
+  // compatibility code *does* kick in, both documents only end up with "5"
+  // for the first field as their only sort key, and we need to differentiate
+  // somehow...)
+  keyCompatible({'a.x': 1}, {a: {x: 5}}, [1], true);
+  keyCompatible({'a.x': 1}, {'a.x': 5}, [5], true);
+  keyCompatible({'a.x': 1}, {'a.x': 5}, [1], false);
+
+  // Regex key check.
+  keyCompatible({a: 1}, {a: /^foo+/}, ['foo'], true);
+  keyCompatible({a: 1}, {a: /^foo+/}, ['foooo'], true);
+  keyCompatible({a: 1}, {a: /^foo+/}, ['foooobar'], true);
+  keyCompatible({a: 1}, {a: /^foo+/}, ['afoooo'], false);
+  keyCompatible({a: 1}, {a: /^foo+/}, [''], false);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['foo'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['foooo'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['foooobar'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, ['afoooo'], false);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+"}}, [''], false);
+
+  keyCompatible({a: 1}, {a: /^foo+/i}, ['foo'], true);
+  // Key compatibility check appears to be turned off for regexps with flags.
+  keyCompatible({a: 1}, {a: /^foo+/i}, ['bar'], true);
+  keyCompatible({a: 1}, {a: /^foo+/m}, ['bar'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+", $options: "i"}}, ['bar'], true);
+  keyCompatible({a: 1}, {a: {$regex: "^foo+", $options: "m"}}, ['bar'], true);
+
+  // Multiple keys!
+  keyCompatible({a: 1, b: 1, c: 1},
+                {a: {$gt: 5}, c: {$lt: 3}}, [6, "bla", 2], true);
+  keyCompatible({a: 1, b: 1, c: 1},
+                {a: {$gt: 5}, c: {$lt: 3}}, [6, "bla", 4], false);
+  keyCompatible({a: 1, b: 1, c: 1},
+                {a: {$gt: 5}, c: {$lt: 3}}, [3, "bla", 1], false);
+  // No filtering is done (ie, all keys are compatible) if the first key isn't
+  // constrained.
+  keyCompatible({a: 1, b: 1, c: 1},
+                {c: {$lt: 3}}, [3, "bla", 4], true);
 });
 
 Tinytest.add("minimongo - binary search", function (test) {
