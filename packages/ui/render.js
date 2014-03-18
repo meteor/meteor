@@ -464,13 +464,10 @@ var materialize = function (node, parent, before, parentComponent) {
     // component
     var instance = UI.render(node, parentComponent);
 
-    // XXXX HACK
-    if (Deps.active &&
-        typeof instance.data === 'function' && instance.data.stop) {
-      Deps.onInvalidate(function () {
-        instance.data.stop();
-      });
-    }
+    // Call internal callback, which may take advantage of the current
+    // Deps computation.
+    if (instance.materialized)
+      instance.materialized();
 
     insert(instance.dom, parent, before);
   } else if (node instanceof HTML.CharRef) {

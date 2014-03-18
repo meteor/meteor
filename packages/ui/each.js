@@ -10,7 +10,7 @@ UI.EachImpl = Component.extend({
       // value we return will be static (in HTML or text)
       // or dynamic (materialized DOM).  The dynamic path
       // returns `null` and then we populate the DOM from
-      // the `parented` callback.
+      // the `materialized` callback.
       //
       // It would be much cleaner to always return the same
       // value here, and to have that value be some special
@@ -38,8 +38,8 @@ UI.EachImpl = Component.extend({
       return null;
     }
   },
-  parented: function () {
-    var self = this.__component__;
+  materialized: function () {
+    var self = this;
 
     var range = self.dom;
 
@@ -113,7 +113,7 @@ UI.EachImpl = Component.extend({
     addToCount(0);
   },
   destroyed: function () {
-    if (this.observeHandle)
-      this.observeHandle.stop();
+    if (this.__component__.observeHandle)
+      this.__component__.observeHandle.stop();
   }
 });

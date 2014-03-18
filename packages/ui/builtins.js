@@ -53,6 +53,14 @@ UI.With = function (argFunc, contentBlock) {
   }
   block.data = UI.emboxValue(argFunc, safeEquals);
 
+  block.materialized = function () {
+    if (Deps.active) {
+      Deps.onInvalidate(function () {
+        block.data.stop();
+      });
+    }
+  };
+
   return block;
 };
 

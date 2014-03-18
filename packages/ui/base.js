@@ -306,14 +306,6 @@ UI.Component.notifyParented = function () {
     });
   }
 
-  // XXX this is an undocumented callback
-  if (self.parented) {
-    Deps.nonreactive(function () {
-      updateTemplateInstance(self);
-      self.parented.call(self.templateInstance);
-    });
-  }
-
   if (self.rendered) {
     // Defer rendered callback until flush time.
     Deps.afterFlush(function () {
@@ -336,4 +328,3 @@ UI.getElementData = function (el) {
   var comp = UI.DomRange.getContainingComponent(el);
   return comp && getComponentData(comp);
 };
-
