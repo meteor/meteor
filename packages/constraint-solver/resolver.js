@@ -147,7 +147,10 @@ ConstraintSolver.Resolver.prototype._resolve =
 
     if (result.success) {
       var cost = options.costFunction(result.choices);
-      if (cost < winningCost) {
+      if (! _.isNumber(cost) || _.isNaN(cost))
+        throw new Error("Cost function must return a non-NaN number");
+
+      if (! winningChoices || cost < winningCost) {
         winningChoices = result.choices;
         winningCost = cost;
       }
