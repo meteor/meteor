@@ -207,6 +207,13 @@ _.extend(Meteor.Collection.prototype, {
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
+      check(args[1], Match.ObjectIncluding({
+        fields: Match.Optional(Object),
+        sort: Match.Optional(Match.OneOf(Object, Array)),
+        limit: Match.Optional(Number),
+        skip: Match.Optional(Number)
+      }));
+
       return _.extend({
         transform: self._transform
       }, args[1]);
