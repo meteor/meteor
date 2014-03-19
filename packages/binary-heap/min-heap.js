@@ -7,3 +7,13 @@ MinHeap = function (comparator, options) {
 
 Meteor._inherits(MinHeap, MaxHeap);
 
+_.extend(MinHeap.prototype, {
+  maxElementId: function () {
+    throw new Error("Cannot call maxElementId on MinHeap");
+  },
+  minElementId: function () {
+    var self = this;
+    return MaxHeap.prototype.maxElementId.call(self);
+  }
+});
+

@@ -47,7 +47,7 @@ _.extend(MinMaxHeap.prototype, {
   },
   minElementId: function () {
     var self = this;
-    return self._minHeap.maxElementId();
+    return self._minHeap.minElementId();
   }
 });
 
