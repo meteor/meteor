@@ -14,9 +14,7 @@ MinMaxHeap = function (comparator, options) {
   var self = this;
 
   MaxHeap.call(self, comparator, options);
-  self._minHeap = new MaxHeap(function (a, b) {
-    return -comparator(a, b);
-  }, options);
+  self._minHeap = new MinHeap(comparator, options);
 };
 
 Meteor._inherits(MinMaxHeap, MaxHeap);
