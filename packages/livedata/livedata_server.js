@@ -262,6 +262,9 @@ var Session = function (server, version, socket, options) {
   // temporary and will go away in the near future.
   self._socketUrl = socket.url;
 
+  // Allow tests to disable responding to pings.
+  self._respondToPings = options.respondToPings;
+
   // This object is the public interface to the session. In the public
   // API, it is called the `connection` object.  Internally we call it
   // a `connectionHandle` to avoid ambiguity.
@@ -290,23 +293,18 @@ var Session = function (server, version, socket, options) {
     self.startUniversalSubs();
   }).run();
 
-  if (version !== 'pre1') {
+  if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     self.heartbeat = new Heartbeat({
       heartbeatInterval: options.heartbeatInterval,
       heartbeatTimeout: options.heartbeatTimeout,
       onTimeout: function () {
-        if (self.heartbeatInterval !== 0)
-          self.destroy();
+        self.destroy();
       },
       sendPing: function () {
-        if (self.heartbeatInterval !== 0) {
-          self.send({msg: 'ping'});
-        }
+        self.send({msg: 'ping'});
       }
     });
-    Fiber(function () {
-      self.heartbeat.start();
-    }).run();
+    self.heartbeat.start();
   }
 
   Package.facts && Package.facts.Facts.incrementServerFact(
@@ -503,22 +501,18 @@ _.extend(Session.prototype, {
     // pings, preserve the "pre1" behavior of responding with a "bad
     // request" for the unknown messages.
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
-      // For testing the heartbeat can be disabled so that we don't
-      // respond to pings, but we don't send a "bad request" either.
-      if (self.heartbeatInterval !== 0) {
+      if (self._respondToPings)
         self.send({msg: "pong", id: msg_in.id});
+      if (self.heartbeat)
         Fiber(function () {
-          if (self.heartbeat)
-            self.heartbeat.pingReceived();
+          self.heartbeat.pingReceived();
         }).run();
-      }
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
-      if (self.heartbeatInterval !== 0)
+      if (self.heartbeat)
         Fiber(function () {
-          if (self.heartbeat)
-            self.heartbeat.pongReceived();
+          self.heartbeat.pongReceived();
         }).run();
       return;
     }
@@ -1122,7 +1116,9 @@ Server = function (options) {
   // normally go from the server to the client.
   self.options = _.defaults(options || {}, {
     heartbeatInterval: 30000,
-    heartbeatTimeout: 15000
+    heartbeatTimeout: 15000,
+    // For testing, allow responding to pings to be disabled.
+    respondToPings: true
   });
 
   // Map of callbacks to call when a new connection comes in to the
