@@ -36,41 +36,36 @@ var waitForClientConnectionStatus = function (connection, status) {
   });
 };
 
-// Override the server heartbeat for an incoming connection.
-
-var serverOverride = {};
-
-Meteor.onConnection(function (serverConnection) {
-  _.extend(Meteor.server.sessions[serverConnection.id], serverOverride);
-});
-
 
 // Expect to connect, and then to reconnect (presumably because of a
 // timeout).
 
 var expectConnectAndReconnect = function (clientConnection) {
-  console.log(". client is connecting");
+  console.log("client is connecting");
   waitForClientConnectionStatus(clientConnection, "connected");
 
-  console.log(". client is connected, expecting ping timeout and reconnect");
+  console.log("client is connected, expecting ping timeout and reconnect");
   waitForClientConnectionStatus(clientConnection, "connecting");
 
-  console.log(". client is reconnecting");
+  console.log("client is reconnecting");
 };
 
 
 var testClientTimeout = function () {
   console.log("Test client timeout");
 
-  serverOverride = {
-    heartbeatInterval: 0
-  };
+  var savedServerOptions = _.clone(Meteor.server.options);
+  Meteor.server.options.heartbeatInterval = 0;
+  Meteor.server.options.respondToPings = false;
 
   var clientConnection = DDP.connect(Meteor.absoluteUrl());
 
   expectConnectAndReconnect(clientConnection);
 
   clientConnection.close();
+
+  Meteor.server.options = savedServerOptions;
+
   console.log("test successful\n");
 };
 
@@ -78,10 +73,13 @@ var testClientTimeout = function () {
 var testServerTimeout = function () {
   console.log("Test server timeout");
 
-  serverOverride = {};
-
-  var clientConnection = DDP.connect(Meteor.absoluteUrl());
-  clientConnection._heartbeatInterval = 0;
+  var clientConnection = DDP.connect(
+    Meteor.absoluteUrl(),
+    {
+      heartbeatInterval: 0,
+      respondToPings: false
+    }
+  );
 
   expectConnectAndReconnect(clientConnection);
 
@@ -90,6 +88,8 @@ var testServerTimeout = function () {
 };
 
 Fiber(function () {
+  Meteor._printReceivedDDP = true;
+  Meteor._printSentDDP = true;
   testClientTimeout();
   testServerTimeout();
   process.exit(0);

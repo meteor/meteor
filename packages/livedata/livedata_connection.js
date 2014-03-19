@@ -36,7 +36,8 @@ var Connection = function (url, options) {
     // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
-    retry: true
+    retry: true,
+    respondToPings: true
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -230,14 +231,13 @@ var Connection = function (url, options) {
       }
     }
     else if (msg.msg === 'ping') {
-      if (self._heartbeatInterval !== 0) {
+      if (options.respondToPings)
         self._send({msg: "pong", id: msg.id});
-        if (self._heartbeat)
-          self._heartbeat.pingReceived();
-      }
+      if (self._heartbeat)
+        self._heartbeat.pingReceived();
     }
     else if (msg.msg === 'pong') {
-      if (self._heartbeatInterval !== 0 && self._heartbeat) {
+      if (self._heartbeat) {
         self._heartbeat.pongReceived();
       }
     }

@@ -23,7 +23,7 @@ _.extend(Heartbeat.prototype, {
     self._clearHeartbeatTimeoutTimer();
   },
 
-  start: function (ddpVersion) {
+  start: function () {
     var self = this;
     self.stop();
     self._startHeartbeatIntervalTimer();
