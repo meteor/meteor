@@ -875,7 +875,6 @@ _.extend(ClientTarget.prototype, {
     var self = this;
 
     builder.reserve("program.json");
-    builder.reserve("app.html");
 
     // Helper to iterate over all resources that we serve over HTTP.
     var eachResource = function (f) {
