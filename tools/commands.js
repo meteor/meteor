@@ -579,7 +579,7 @@ main.registerCommand({
   var failed = false;
 
   // Read in existing package dependencies.
-  var packages = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
+  var packages = project.getDirectDependencies(options.appDir);
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -587,44 +587,42 @@ main.registerCommand({
   // order. Even though the package file should specify versions of its inputs,
   // we don't specify these constraints until we get them back from the
   // constraint solver.
-  _.each(options.args, function (packageReq) {
-    // XXX: Use a util function.
-    var constraint = project.processPackageConstraint(packageReq);
+  var constraints = _.map(options.args, function (packageReq) {
+    return utils.splitConstraint(packageReq.toLowerCase());
+  });
 
+  _.each(constraints, function (constraint) {
     // Check that the package exists.
-    if (! catalog.getPackage(constraint.packageName)) {
-      process.stderr.write(constraint.packageName + ": no such package\n");
+    if (! catalog.getPackage(constraint.name)) {
+      process.stderr.write(constraint.name + ": no such package\n");
       failed = true;
       return;
     }
-    // Check that the version exists.
-    var versionInfo = catalog.getVersion(
-      constraint.packageName,
-      // XXX: Use a util function.
-      getVersionFromVersionConstraint(constraint.versionConstraint));
-    if (! versionInfo) {
-      process.stderr.write(
-        constraint.packageName + "@" + constraint.versionConstraint  + ": no such version\n");
-      failed = true;
-      return;
-    }
+    console.log(constraint);
 
-    // Check that the constraint is new. If we are already using the package at
-    // the same constraint, return from this function.
-    if (_.has(packages, constraint.packageName)) {
-      if (packages[constraint.packageName] === constraint.versionConstraint) {
+    // If the version was specified, check that the version exists.
+    if ( constraint.versionConstraint !== "none") {
+      var versionInfo = catalog.getVersion(
+        constraint.name,
+        constraint.version);
+      if (! versionInfo) {
         process.stderr.write(
-          constraint.packageName + "@" + constraint.versionConstraint   + ": already added\n");
-        return;
-      } else if (!constraint.versionConstraint && (packages[constraint.packageName] === "none")) {
-        // XXX: In the brand new world where we have versioning in .meteor/packages, this will not happen.
-        process.stderr.write(constraint.packageName + ": already added\n");
+          constraint.name + "@" + constraint.version  + ": no such version\n");
+        failed = true;
         return;
       }
     }
+    // Check that the constraint is new. If we are already using the package at
+    // the same constraint, return from this function.
+    if (_.has(packages, constraint.name) &&
+        constraint.versionConstraint === packages[constraint.name] ) {
+      process.stderr.write(constraint.name + " with version constraint " +
+                           constraint.versionConstraint + " has already been added.\n");
+      failed = true;
+    }
 
     // Add the package to our direct dependency constraints that we get from .meteor/packages.
-    packages[constraint.packageName] = constraint.versionConstraint;
+    packages[constraint.name] = constraint.versionConstraint;
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -637,7 +635,7 @@ main.registerCommand({
   // Get the contents of our versions file. We need to pass them to the
   // constraint solver, because our contract with the user says that we will
   // never downgrade a dependency.
-  var versions = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+  var versions = project.getIndirectDependencies(options.appDir);
 
   // Call the constraint solver.
   var constraintSolver = require('./constraint-solver.js');
@@ -703,7 +701,7 @@ main.registerCommand({
                       versions[packageName] +
                       " to version " + newVersions[packageName]);
     } else {
-      messageLog.push("added " + packageName + " from " +
+      messageLog.push("added " + packageName +
                       " at version " + newVersions[packageName]);
     };
   });
@@ -711,12 +709,8 @@ main.registerCommand({
   if (failed)
     return 1;
 
-  // Write the .meteor/packages file with the right versions
-  var oldPackages = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
-  project.rewriteDirectDependencies(options.appDir, packages);
-
-  // Write the .meteor/versions file with the new dependencies.
-  project.rewriteIndirectDependencies(options.appDir, newVersions);
+  // Record dependency changes.
+  project.rewriteDependencies(options.appDir, packages, newVersions);
 
   // Show the user the messageLog of packages we added.
   _.each(messageLog, function (msg) {
@@ -725,11 +719,15 @@ main.registerCommand({
 
   // Show the user the messageLog of the packages that they installed.
   process.stdout.write("Successfully added the following packages. \n");
-  _.each(packages, function (version, name) {
-    if ( ! _.has(oldPackages, name) ) {
-      var versionRecord = catalog.getVersion(name, version);
-      process.stdout.write(name + " : " + versionRecord.description + "\n");
+  _.each(constraints, function (constraint) {
+    var version = newVersions[constraint.name];
+    var versionRecord = catalog.getVersion(constraint.name, version);
+    if (constraint.versionConstraint !== "none" &&
+        version !== constraint.versionConstraint) {
+      process.stdout.write("Added " + constraint.name + " at version " + version +
+                           " to avoid conflicting dependencies.");
     }
+    process.stdout.write(constraint.name + " : " + versionRecord.description + "\n");
   });
 
   return 0;
@@ -749,7 +747,7 @@ main.registerCommand({
 }, function (options) {
 
   // Read in existing package dependencies.
-  var packages = project.getDepsAsObj(project.getDirectDependencies(options.appDir));
+  var packages = project.getDirectDependencies(options.appDir);
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -771,7 +769,7 @@ main.registerCommand({
   // Get the contents of our versions file. We need to pass them to the
   // constraint solver, because our contract with the user says that we will
   // never downgrade a dependency.
-  var versions = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+  var versions = project.getIndirectDependencies(options.appDir);
 
   // Call the constraint solver.
   var constraintSolver = require('./constraint-solver.js');
@@ -795,15 +793,19 @@ main.registerCommand({
     messageLog.push("removed dependency on " + packageName);
   });
 
-  // Write the .meteor/packages file with the right versions
-  project.rewriteDirectDependencies(options.appDir, packages);
-
-  // Write the .meteor/versions file with the new dependencies.
-  project.rewriteIndirectDependencies(options.appDir, newVersions);
+  // Write the dependency files with the right versions
+  project.rewriteDependencies(options.appDir, packages, newVersions);
 
   // Show the user the messageLog of everything we removed.
   _.each(messageLog, function (msg) {
     process.stdout.write(msg + "\n");
+  });
+
+  // Log that we removed everything. It is possible to remove a project
+  // dependency that is still in .meteor/versions because other packages depend
+  // on it, so overlap with removed is not guaranteed.
+  _.each(options.args, function (packageName) {
+      process.stdout.write("Removed " + packageName + " from project \n");
   });
 
   return 0;
@@ -1561,7 +1563,7 @@ main.registerCommand({
     function () {
       // XXX would be nice to get the name out of the package (while
       // still confirming that it matches the name of the directory)
-      var packageName = path.basename(options.packageDir);
+      var packageName = path.basename(options.packageDir.toLowerCase());
 
       packageSource = new PackageSource(options.packageDir);
       packageSource.initFromPackageDir(packageName, options.packageDir);

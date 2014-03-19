@@ -82,7 +82,7 @@ _.extend(PackageLoader.prototype, {
 
     var version;
     if (self.versions) {
-      version = self.versions[name];
+      version = self.versions[name].version;
     } else {
       version = null;
     }

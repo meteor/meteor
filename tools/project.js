@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
+var utils = require('./utils.js');
 
 var project = exports;
 
@@ -57,27 +58,16 @@ project.getPackages = function (appDir) {
   return ret;
 };
 
-
-// Convert foo@1.0 into an object.
-project.processPackageConstraint = function(constraint) {
-  var constArray = constraint.split("@");
-  var constObj  = {};
-  constObj.packageName = constArray[0];
-  if (constArray.length > 1) {
-   constObj.versionConstraint = constArray[1];
- }
- return constObj;
-};
-
 // Return an array of form [{packageName: foo, versionConstraint: 1.0}]
 project.processPerConstraintLines = function(lines) {
-  var ret = [];
+  var ret = {};
 
   // read from .meteor/packages
   _.each(lines, function (line) {
     line = trimLine(line);
     if (line !== '') {
-      ret.push(project.processPackageConstraint(line));
+      var constraint = utils.splitConstraint(line);
+      ret[constraint.name] = constraint.versionConstraint;
      }
   });
   return ret;
@@ -89,62 +79,38 @@ project.getDirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getPackagesLines(appDir));
 };
 
-// Given a list of dep constraints:
-//  foo@1.0 or just foo
-// return an object.
-project.getDepsAsObj = function(deps) {
-  var using = {};
-
-  _.each(deps, function (constraint) {
-    if (!_.has(constraint, "versionConstraint")) {
-      using[constraint.packageName] = "none";
-    } else {
-      using[constraint.packageName] = constraint.versionConstraint;
-    }
-  });
-  return using;
-};
-
-
 // Get a list of constraints from the .meteor/versions file.
 project.getIndirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getVersionsLines(appDir));
 };
 
-project.getAllDependencies = function(appDir) {
-  // Aha! Actually, it turns out that indirect dependenceis include all dependencies.
-  // Maybe I should clean up this code later.
-  return project.getIndirectDependencies(appDir);
-};
-
 // Write the .meteor/versions file after running the constraint solver.
-project.rewriteIndirectDependencies = function (appDir, deps) {
+project.rewriteDependencies = function (appDir, deps, versions) {
 
+  // Rewrite the packages file. Do this first, since the versions file is
+  // derived from the packages file.
   var lines = [];
-
-  _.each(deps, function (version, name) {
-    lines.push(name + "@" + version + "\n");
-  });
-  lines.sort();
-
-  fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
-                   lines.join(''), 'utf8');
-};
-
-project.rewriteDirectDependencies = function (appDir, deps) {
-
-  var lines = [];
-
-  //XXX: constraints, old stuff.
-  _.each(deps, function (version, name) {
-    lines.push(name + "@" + version + "\n");
+  _.each(deps, function (versionConstraint, name) {
+    if (versionConstraint[0] === "=") { /* exact version required */
+      lines.push(name + "@" + versionConstraint + "\n");
+    } else {
+      lines.push(name + "@" + versions[name] + "\n");
+    }
   });
   lines.sort();
 
   fs.writeFileSync(path.join(appDir, '.meteor', 'packages'),
                    lines.join(''), 'utf8');
-};
 
+  // Rewrite the versions file.
+  lines = [];
+  _.each(versions, function (version, name) {
+    lines.push(name + "@" + version + "\n");
+  });
+  lines.sort();
+  fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
+                   lines.join(''), 'utf8');
+};
 
 var meteorReleaseFilePath = function (appDir) {
   return path.join(appDir, '.meteor', 'release');
@@ -158,24 +124,23 @@ var meteorReleaseFilePath = function (appDir) {
 // development, so we need to rerun the constraint solver before running and
 // deploying the app.
 project.generatePackageLoader = function (appDir) {
-  var versions = project.getDepsAsObj(
-    project.getIndirectDependencies(appDir));
-  var packages = project.getDepsAsObj(
-    project.getDirectDependencies(appDir));
+  var versions = project.getIndirectDependencies(appDir);
+  var packages = project.getDirectDependencies(appDir);
 
   // XXX: We are manually adding ctl here, but we should do this in a more
   // principled manner.
-  packages['ctl'] = "none";
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
   // XXX: constraint solver currently ignores versions, but it should not.
-  var newVersions = resolver.resolve(packages);
+  var newVersions = resolver.resolve(
+    _.extend(packages, { "ctl" : "none" }));
   if ( ! newVersions) {
     return { outcome: 'conflicting-versions' };
   }
 
   // Write out the new versions file.
-  project.rewriteIndirectDependencies(appDir, newVersions);
+  delete packages["ctl"];
+  project.rewriteDependencies(appDir, packages, newVersions);
 
   var PackageLoader = require('./package-loader.js');
   var loader = new PackageLoader({

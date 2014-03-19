@@ -254,6 +254,5 @@ var toStructuredDeps = function (dependencies) {
       structuredDeps.push(_.extend({ packageName: packageName }, details));
     }
   });
-
   return structuredDeps;
 };

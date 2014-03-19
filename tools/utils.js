@@ -198,7 +198,8 @@ exports.parseConstraint = function (constraintString) {
   var versionString = splitted[1];
 
   if (! /^[a-z0-9-]+$/.test(name) || splitted.length > 2)
-    throw new Error("Package name must contain lowercase latin letters, digits or dashes");
+    throw new Error(
+      "Package name must contain lowercase latin letters, digits or dashes: " + name);
 
   constraint.name = name;
 
@@ -223,6 +224,22 @@ exports.parseSpec = function (spec) {
     ret.constraint = m[5];
   return ret;
 };
+
+
+// XXX should unify this with utils.parseConstraint
+exports.splitConstraint = function (constraint) {
+  var m = constraint.split("@");
+  if (! m)
+    throw new Error("Bad package spec: " + spec);
+  var ret = { name: m[0] };
+  if (m.length > 1) {
+    ret.versionConstraint = m[1];
+  } else {
+    ret.versionConstraint = "none";
+  }
+  return ret;
+};
+
 
 // True if this looks like a valid email address. We deliberately
 // don't support
