@@ -67,7 +67,7 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
     costFunction: function (choices) {
       var C = _.find(choices, function (uv) { return uv.name === "C"; });
       var A = _.find(choices, function (uv) { return uv.name === "A"; });
-      return -semver2number(C.version) - semver2number(A.version);
+      return 1000000000 - semver2number(C.version) - semver2number(A.version);
     }
   });
 
