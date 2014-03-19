@@ -490,19 +490,25 @@ if (Meteor.isClient) (function () {
         test.isFalse(err);
         Meteor.logoutOtherClients(function (err) {
           test.isFalse(err);
-          secondConn.call('login', { resume: token }, expectSecondConnLoggedOut);
+          secondConn.call('login', { resume: token },
+                          expectSecondConnLoggedOut);
           Accounts.connection.call('login', {
             resume: Accounts._storedLoginToken()
           }, expectAccountsConnLoggedIn);
         });
       });
 
-      Meteor.loginWithPassword(this.username, this.password, expect(function (err) {
-        test.isFalse(err);
-        token = Accounts._storedLoginToken();
-        test.isTrue(token);
-        secondConn.call('login', { resume: token }, expectSecondConnLoggedIn);
-      }));
+      Meteor.loginWithPassword(
+        self.username,
+        self.password,
+        expect(function (err) {
+          test.isFalse(err);
+          token = Accounts._storedLoginToken();
+          test.isTrue(token);
+          secondConn.call('login', { resume: token },
+                          expectSecondConnLoggedIn);
+        })
+      );
     },
     logoutStep,
 
