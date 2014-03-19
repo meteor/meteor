@@ -563,6 +563,23 @@ Hi there!
   {{/each}}
 </template>
 
+<template name="spacebars_test_helpers_stop_with_each1">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_each3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_each2">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_each3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_each3">
+  {{#each this}}
+  {{/each}}
+</template>
+
 <template name="spacebars_test_helpers_stop_if1">
   {{#if options}}
     one
