@@ -227,6 +227,9 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   if (!result)
     throw new Error("result is required");
 
+  // XXX A programming error in a login handler can lead to this occuring, and
+  // then we don't call onLogin or onLoginFailure callbacks. Should
+  // tryLoginMethod catch this case and turn it into an error?
   if (!result.userId && !result.error)
     throw new Error("A login method must specify a userId or an error");
 
@@ -245,6 +248,9 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   if (user)
     attempt.user = user;
 
+  // validateLogin may mutate `attempt` by adding an error and changing allowed
+  // to false, but that's the only change it can make (and the user's callbacks
+  // only get a clone of `attempt`).
   validateLogin(methodInvocation.connection, attempt);
 
   if (attempt.allowed) {

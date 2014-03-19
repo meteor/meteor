@@ -198,10 +198,20 @@ Meteor.methods({changePassword: function (options) {
   if (!verifier)
     throw new Meteor.Error(400, "Invalid verifier");
 
-  // XXX this should invalidate all login tokens other than the current one
-  // (or it should assign a new login token, replacing existing ones)
-  Meteor.users.update({_id: this.userId},
-                      {$set: {'services.password.srp': verifier}});
+  // It would be better if this removed ALL existing tokens and replaced
+  // the token for the current connection with a new one, but that would
+  // be tricky, so we'll settle for just replacing all tokens other than
+  // the one for the current connection.
+  var currentToken = Accounts._getLoginToken(this.connection.id);
+  Meteor.users.update(
+    { _id: this.userId },
+    {
+      $set: { 'services.password.srp': verifier },
+      $pull: {
+        'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
+      }
+    }
+  );
 
   var ret = {passwordChanged: true};
   if (serialized)
@@ -313,14 +323,14 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   }});
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-  
+
   var options = {
     to: email,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.enrollAccount.subject(user),
     text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
   };
-  
+
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
@@ -433,14 +443,14 @@ Accounts.sendVerificationEmail = function (userId, address) {
     {$push: {'services.email.verificationTokens': tokenRecord}});
 
   var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
-  
+
   var options = {
     to: address,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.verifyEmail.subject(user),
     text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
   };
-  
+
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
       Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);

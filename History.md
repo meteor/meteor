@@ -1,12 +1,19 @@
 ## v.NEXT
 
+* Log out a user's other sessions when they change their password.
+
+
+## v0.7.2
+
 * Support oplog tailing on queries with the `limit` option. All queries
   except those containing `$near` or `$where` selectors or the `skip`
   option can now be used with the oplog driver.
 
-* Add hooks to login process. This allows for rate limiting login
-  attempts, logging an audit trail, account lockout flags, etc. See:
-  http://docs.meteor.com/#accounts_validLoginAttempt  #1815
+* Add hooks to login process: `Accounts.onLogin`,
+  `Accounts.onLoginFailure`, and `Accounts.validateLoginAttempt`. These
+  functions allow for rate limiting login attempts, logging an audit
+  trail, account lockout flags, and more. See:
+  http://docs.meteor.com/#accounts_validateloginattempt #1815
 
 * Change the `Accounts.registerLoginHandler` API for custom login
   methods. Login handlers now require a name and no longer have to deal

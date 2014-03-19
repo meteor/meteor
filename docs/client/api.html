@@ -1752,6 +1752,14 @@ Example:
       return user.username !== "root";
     });
 
+If the user is being created as part of a login attempt from a client (eg,
+calling [`Accounts.createUser`](#accounts_createuser) from the client, or
+[logging in for the first time with an external
+service](#meteor_loginwithexternalservice)), these callbacks are called *before*
+the [`Accounts.validateLoginAttempt`](#accounts_validateloginattempt)
+callbacks. If these callbacks succeed but those fail, the user will still be
+created but the connection will not be logged in as that user.
+
 {{> api_box accounts_onCreateUser}}
 
 Use this when you need to do more than simply accept or reject new user
@@ -1823,6 +1831,11 @@ are called with a single argument, the attempt info object:
   object.  This will always be present for successful logins.
 {{/dtdd}}
 
+{{#dtdd name="connection" type="Object"}}
+  The `connection` object the request came in on. See
+  [`Meteor.onConnection`](#meteor_onconnection) for details.
+{{/dtdd}}
+
 {{#dtdd name="methodName" type="String"}}
   The name of the Meteor method being used to login.
 {{/dtdd}}
@@ -1845,21 +1858,16 @@ successful.
 
 {{> api_box accounts_onLogin}}
 
-Call `onLogin` or `onLoginFailure` with a callback to be called when a
-login is successful or is unsuccessful.  These functions return an
-object with a single method, `stop`.  Calling `stop()` unregisters the
-callback.
-
 Either the `onLogin` or the `onLoginFailure` callbacks will be called
 for each login attempt. The `onLogin` callbacks are called after the
-user has been logged in.
+user has been successfully logged in. The `onLoginFailure` callbacks are
+called after a login attempt is denied.
+
+These functions return an object with a single method, `stop`.  Calling
+`stop()` unregisters the callback.
 
 The callbacks are called with a single argument, the same attempt info
 object as [`validateLoginAttempt`](#accounts_validateloginattempt).
-
-
-{{> api_box accounts_onLoginFailure}}
-
 
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
