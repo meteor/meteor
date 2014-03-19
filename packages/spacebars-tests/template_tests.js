@@ -1708,6 +1708,10 @@ Tinytest.add('spacebars - template - each stops without re-running helper', func
   runOneTwoTest(test, 'spacebars_test_helpers_stop_each');
 });
 
+Tinytest.add('spacebars - template - each inside with stops without re-running helper', function (test) {
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_with_each');
+});
+
 Tinytest.add('spacebars - template - if stops without re-running helper', function (test) {
   runOneTwoTest(test, 'spacebars_test_helpers_stop_if', ['a', 'b', 'a']);
 });
