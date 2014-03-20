@@ -617,7 +617,6 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
         // the connection. But the token might have already been deleted
         // before we set up the observe, which wouldn't have closed the
         // connection because the observe wasn't running yet.
-        removeTokenFromConnection(connection.id);
         connection.close();
       }
     });
