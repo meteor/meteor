@@ -50,8 +50,8 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
-// Get all packages available. Returns a map from the package name to
-// a Package object -- for the latest version of the package.
+// Get all packages available. Returns a map from the package name the latest
+// version of the package.
 //
 // If problems happen while generating the list, print appropriate
 // messages to stderr and return null.
@@ -65,9 +65,9 @@ var getPackages = function () {
     });
   });
 
-  if (message.hasMessages()) {
+  if (messages.hasMessages()) {
     process.stderr.write("=> Errors while scanning packages:\n\n");
-    process.stderr.write(result.messages.formatMessages());
+    process.stderr.write(messages.formatMessages());
     return null;
   } else {
     return ret;
@@ -120,6 +120,7 @@ main.registerCommand({
 // actually a specific release, we print to stderr and exit non-zero,
 // while if there is a release we print to stdout and exit zero
 // (making this useful to scripts).
+// XXX: What does this mean in our new release-free world?
 main.registerCommand({
   name: '--version',
   requiresRelease: false
@@ -161,36 +162,47 @@ main.registerCommand({
   }
 });
 
-// Internal use only. Makes sure that your Meteor install is totally
-// good to go (is "airplane safe" and won't do any lengthy building on
-// first run).
+// Internal use only. Makes sure that your Meteor install is totally good to go
+// (is "airplane safe"). Specifically, make sure that you have built and/or
+// downloaded any packages that you need to run your app (ie: ran the constraint
+// solver on the .meteor/packages file and then downloaded/built everything in
+// the resulting .meteor/versions).
 //
-// In a checkout, this makes sure that the checkout is "complete" (dev
-// bundle downloaded and all NPM modules installed). Otherwise, this
-// runs one full update cycle, to make sure that you have the latest
-// manifest and all of the packages in it.
+// In a checkout, this makes sure that the checkout is "complete" (dev bundle
+// downloaded and all NPM modules installed). The use case is, for example,
+// cloning an app from github, running this command, then getting on an
+// airplane.
+//
+// XXX: What happens if you run from checkout and want to build all local
+// packages, is this a thing right now? Unclear.
 main.registerCommand({
   name: '--get-ready',
-  requiresRelease: false
+  requiresApp: true
 }, function (options) {
-  if (files.usesWarehouse()) {
-    var updater = require('./updater.js');
-    updater.tryToDownloadUpdate();
-  } else {
-    // dev bundle is downloaded by the wrapper script. We just need
-    // to install NPM dependencies.
-    if (! release.current)
-      // This is a weird case. Fail silently.
-      return 0;
 
-    var packages = getPackages();
-    if (! packages)
-      return 1; // build failed
+  // First, generate a package loader. This will also have the side effect of
+  // processing our dependencies and rewriting the versions file, but
+  // regardless, we are going to need it to compile packages.
+  var loader = project.generatePackageLoader(options.appDir);
 
-    // XXX we rely on the fact that loading a package, even to get its
-    // metadata, forces it to be built if it's a source
-    // package. #ListingPackagesImpliesBuildingThem
-  }
+  // Then get the list of packages that we need to get and build.
+  var allPackages = project.getIndirectDependencies(options.appDir);
+
+  var messages = buildmessage.capture(function () {
+    _.forEach(allPackages, function (version, name) {
+      // Calling getPackage on the loader will return a unipackage object, which
+      // means that the package will be compiled/downloaded. That we throw the
+      // package variable away afterwards is immaterial.
+      loader.getPackage(name);
+    });
+  });
+
+  if (messages.hasMessages()) {
+    process.stdout.write("\n" + messages.formatMessages());
+    return 1;
+  };
+
+  return 0;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -561,14 +573,6 @@ main.registerCommand({
 // add
 ///////////////////////////////////////////////////////////////////////////////
 
-
-var getVersionFromVersionConstraint = function(constraint) {
-  if (constraint[0] === "=") {
-    return constraint.split("=")[1];
-  }
-  return constraint;
-}
-
 main.registerCommand({
   name: 'add',
   minArgs: 1,
@@ -604,10 +608,10 @@ main.registerCommand({
     if ( constraint.versionConstraint !== "none") {
       var versionInfo = catalog.getVersion(
         constraint.name,
-        constraint.version);
+        constraint.versionConstraint);
       if (! versionInfo) {
         process.stderr.write(
-          constraint.name + "@" + constraint.version  + ": no such version\n");
+          constraint.name + "@" + constraint.versionConstraint  + ": no such version\n");
         failed = true;
         return;
       }
@@ -825,13 +829,24 @@ main.registerCommand({
   }
 }, function (options) {
   var items = [];
-  _.each(catalog.getAllPackageNames(), function (name) {
-    var versionInfo = catalog.getLatestVersion(name);
-    if (versionInfo) {
+  if (options.using) {
+    var packages = project.getDirectDependencies(options.appDir);
+    _.each(packages, function (version, name) {
+      var versionInfo = catalog.getVersion(name, version);
+      if (!versionInfo) {
+        process.stderr.write("Cannot process package list. Unknown: " + name +
+                             " at version " + version);
+      }
       items.push({ name: name, description: versionInfo.description });
-    }
-  });
-
+    });
+  } else {
+    _.each(catalog.getAllPackageNames(), function (name) {
+      var versionInfo = catalog.getLatestVersion(name);
+      if (versionInfo) {
+        items.push({ name: name, description: versionInfo.description });
+      }
+    });
+  }
   process.stdout.write(formatList(items));
 });
 

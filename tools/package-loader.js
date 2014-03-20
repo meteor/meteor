@@ -87,7 +87,7 @@ _.extend(PackageLoader.prototype, {
       version = null;
     }
 
-    return catalog.catalog.getLoadPathForPackage(name, version);
+   return catalog.catalog.getLoadPathForPackage(name, version);
   },
 
   // Given a slice set spec -- either a package name like "ddp", or a particular

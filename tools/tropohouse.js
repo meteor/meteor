@@ -54,7 +54,7 @@ tropohouse.downloadedBuilds = function (packageName, version) {
     tropohouse.downloadedBuildsDirectory(packageName, version));
 };
 
-// Returns null if the package isn't in the tropohouse.
+// Returns the load path where one can expect to find the package.
 tropohouse.packagePath = function (packageName, version) {
   // Check for invalid package names. Currently package names can only
   // contain ASCII alphanumerics, dash, and dot, and must contain at
@@ -70,8 +70,6 @@ tropohouse.packagePath = function (packageName, version) {
 
   var loadPath = path.join(tropohouse.getWarehouseDir(), "packages",
                            packageName, version);
-  if (! fs.existsSync(loadPath))
-    return null;
   return loadPath;
 };
 

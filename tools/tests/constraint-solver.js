@@ -4,10 +4,9 @@ var selftest = require('../selftest.js');
 var semver = require('semver');
 var fail = selftest.fail;
 
-var uniload = require('./uniload.js');
+var uniload = require('../uniload.js');
 var LocalCollection = uniload.load({
-  packages: [ 'meteor', 'minimongo' ],
-  release: release.current.name
+  packages: [ 'meteor', 'minimongo' ]
 }).minimongo.LocalCollection;
 
 // Setup mock data for tests
@@ -17,6 +16,7 @@ var Builds = new LocalCollection;
 
 Packages.insert({ name: "sparky-forms" });
 Packages.insert({ name: "forms" });
+/*
 Packages.insert({ name: "sparkle" });
 Packages.insert({ name: "awesome-dropdown" });
 Packages.insert({ name: "dropdown" });
@@ -119,7 +119,6 @@ var FAIL = function (deps) {
   });
 };
 
-Tinytest.add("constraint solver - exact dependencies", function (test) {
   t_progagateExact({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
@@ -129,9 +128,7 @@ Tinytest.add("constraint solver - exact dependencies", function (test) {
   // something that isn't available for your architecture
   FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=2.0.0" });
   FAIL({ "sparky-forms": "=0.0.1" });
-});
 
-Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
   t({ "sparky-forms": "=1.1.2" }, {
     "sparky-forms": "1.1.2",
     "forms": "1.0.1",
@@ -149,9 +146,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
   });
-});
 
-Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
   // sparky-forms 1.0.0 won't be chosen because it depends on a very old
   // jquery, which is not compatible with the jquery that
   // awesome-dropdown uses.
@@ -164,18 +159,14 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
   });
-});
 
-Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   var versions = resolver.resolve({ "sparkle": "none" });
   test.isTrue(_.isString(versions.sparkle));
   versions = resolver.resolve({ "sparkle": null });
   test.isTrue(_.isString(versions.sparkle));
-});
 
-Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = resolver.resolve({ "sparkle": "none", "sparky-forms": "1.1.2" });
   test.equal(versions.sparkle, "2.1.1");
   var versions = resolver.resolve({ "sparkle": null, "sparky-forms": "1.1.2" });
   test.equal(versions.sparkle, "2.1.1");
-});
+*/

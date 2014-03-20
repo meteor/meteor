@@ -318,9 +318,9 @@ var Sandbox = function (options) {
   fs.mkdirSync(self.home, 0755);
   self.cwd = self.home;
   self.env = {};
-  self.fakeMongo = options.fakeMongo
+  self.fakeMongo = options.fakeMongo;
 
-  if (_.has(options, 'warehouse')) {
+  if (_.has(options, 'warehouse') && false) {
     // Make a directory to hold our new warehouse
     self.warehouse = path.join(self.root, 'warehouse');
     fs.mkdirSync(self.warehouse, 0755);
@@ -330,11 +330,15 @@ var Sandbox = function (options) {
 
     // Build all packages and symlink them into the warehouse. Make up
     // random version names for each one.
-    throw new Error("XXX self-test warehouse creation is currently broken " +
+     throw new Error("XXX self-test warehouse creation is currently broken " +
                     "and will presumably stay that way until we figure out " +
                     "what it means in a post-package-server world");
     // XXX (the following code isn't going to work, first of all
-    // because release.current.library doesn't exist anymore)
+    // because release.current.library doesn't exist anymore) */
+
+    // Build all packages here.
+    // XXX: Which packages?
+
     var listResult = release.current.library.list();
     var pkgVersions = {};
     if (! listResult.packages)
@@ -409,6 +413,7 @@ var Sandbox = function (options) {
     self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
   else
     self.execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
+  self.execPath = "~/meteor/meteor/meteor";
 };
 
 _.extend(Sandbox.prototype, {
@@ -418,6 +423,8 @@ _.extend(Sandbox.prototype, {
 
     var env = _.clone(self.env);
     env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
+    console.log("SE", self);
+
     if (self.warehouse)
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
     // By default (ie, with no mock warehouse and no --release arg) we should be

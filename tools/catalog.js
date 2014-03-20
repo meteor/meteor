@@ -93,12 +93,12 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
-    console.log("XXX Loading local packages for bootstrapping");
+//    console.log("XXX Loading local packages for bootstrapping");
     self._addLocalPackageOverrides(true /* setInitialized */);
 
     // OK, now initialize the catalog for real, with both local and
     // package server packages.
-    console.log("XXX Loading catalog for real");
+//    console.log("XXX Loading catalog for real");
 
     // We should to figure out if we are intending to connect to the package
     // server.
@@ -545,7 +545,11 @@ _.extend(Catalog.prototype, {
     if (! version)
       throw new Error(name + " not a local package, and no version specified?");
 
-    return tropohouse.packagePath(name, version);
+    var packageDir = tropohouse.packagePath(name, version);
+    if (fs.existsSync(packageDir)) {
+      return packageDir;
+    }
+     return null;
   },
 
   // Return an array with the names of all of the packages that we
