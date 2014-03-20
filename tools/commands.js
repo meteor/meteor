@@ -1266,7 +1266,7 @@ main.registerCommand({
       // have a trailing slash.
       //
       // Why use addLocalPackage instead of just loading the packages
-      // and passing Package objects to the bundler? Because we
+      // and passing Unipackage objects to the bundler? Because we
       // actually need the Catalog to know about the package, so that
       // we are able to resolve the test slice's dependency on the
       // main slice. This is not ideal (I hate how this mutates global

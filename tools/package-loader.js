@@ -14,7 +14,7 @@ var PackageLoader = function (options) {
 };
 
 _.extend(PackageLoader.prototype, {
-  // Given the name of a package, return a Package object, or throw an
+  // Given the name of a package, return a Unipackage object, or throw an
   // error if the package wasn't included in the 'versions' passed on
   // initalization or isn't available (for example, hasn't been
   // downloaded yet).

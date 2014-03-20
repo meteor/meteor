@@ -441,9 +441,9 @@ _.extend(Target.prototype, {
   // target-type-dependent function such as write() or toJsImage().
   //
   // options
-  // - packages: packages to include (Package or 'foo' or 'foo.slice'),
+  // - packages: packages to include (Unipackage or 'foo' or 'foo.slice'),
   //   per _determineLoadOrder
-  // - test: packages to test (Package or 'foo'), per _determineLoadOrder
+  // - test: packages to test (Unipackage or 'foo'), per _determineLoadOrder
   // - minify: true to minify
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
@@ -491,11 +491,11 @@ _.extend(Target.prototype, {
   //
   // options include:
   // - packages: an array of packages (or, properly speaking, slices)
-  //   to include. Each element should either be a Package object or a
+  //   to include. Each element should either be a Unipackage object or a
   //   package name as a string (to include that package's default
   //   slices for this arch, or a string of the form 'package.slice'
   //   to include a particular named slice from a particular package.
-  // - test: an array of packages (as Package objects or as name
+  // - test: an array of packages (as Unipackage objects or as name
   //   strings) whose test slices should be included
   _determineLoadOrder: function (options) {
     var self = this;
@@ -1769,7 +1769,7 @@ exports.bundle = function (options) {
       watchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
-      // Create a Package object that represents the app
+      // Create a Unipackage object that represents the app
       var app = packageCache.packageCache.loadAppAtPath(appDir, ignoreFiles);
 
       // Client

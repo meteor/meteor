@@ -10,13 +10,13 @@ var Unipackage = require("./unipackage.js");
 
 var packageCache = exports;
 
-// both map from package load path to:
-// - pkg: cached Package object
-// - sourceDir: directory that contained its source code, or null
-// - buildDir: directory from which the built package was loaded
 var PackageCache = function () {
   var self = this;
 
+  // both map from package load path to:
+  // - pkg: cached Unipackage object
+  // - sourceDir: directory that contained its source code, or null
+  // - buildDir: directory from which the built package was loaded
   self.softReloadCache = {};
   self.loadedPackages = {};
 };

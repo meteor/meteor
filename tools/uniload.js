@@ -13,7 +13,7 @@ var packageCache = require("./package-cache.js");
 // this function you load another, distinct copy of all of the
 // packages (except see note about caching below). The return value is
 // an object that maps package name to package exports (that is, it is
-// the Package object from inside the sandbox created for the newly
+// the Unipackage object from inside the sandbox created for the newly
 // loaded packages).
 //
 // Caching: There is a simple cache. If you call this function with
