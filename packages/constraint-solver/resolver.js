@@ -110,7 +110,7 @@ ConstraintSolver.Resolver.prototype.resolve =
     var currentState = pq.pop();
 
     if (_.isEmpty(currentState.dependencies))
-      return choices;
+      return currentState.choices;
 
     var currentCost = options.costFunction(currentState.choices);
     var neighborsObj = self._stateNeighbors(currentState);
@@ -126,6 +126,10 @@ ConstraintSolver.Resolver.prototype.resolve =
       });
     }
   }
+
+  // XXX should be much much better
+  if (someError)
+    throw new Error(someError);
 
   throw new Error("Couldn't resolve, I am sorry");
 };
@@ -157,6 +161,11 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       return unitVersionDoesntValidateConstraints(uv, constraints);
     });
 
+  if (_.isEmpty(candidateVersions))
+    return { success: false,
+             failureMsg: "Cannot choose satisfying versions of package -- "
+                         + candidateName };
+
   var neighbors = _.chain(candidateVersions).map(function (uv) {
     var nDependencies = _.clone(dependencies);
     var nConstraints = _.clone(constraints);
@@ -179,10 +188,6 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     return choicesDontValidateConstraints(state.choices, state.constraints);
   }).value();
 
-  if (_.isEmpty(candidateVersions))
-    return { success: false,
-             failureMsg: "Cannot choose satisfying versions of package -- "
-                         + candidateName };
   return { success: true, neighbors: neighbors };
 };
 

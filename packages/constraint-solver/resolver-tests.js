@@ -55,19 +55,30 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
   resolver.addUnitVersion(C120);
 
   A100.addDependency("C");
+  A110.addDependency("C");
   B100.addDependency("A");
   B100.addConstraint(resolver.getConstraint("A", "=1.0.0"));
   B100.addDependency("C");
   B100.addConstraint(resolver.getConstraint("C", "1.1.0"));
 
-  var AOnlySolution = resolver.resolve(["A"]);
+  // Run looking for a conservative solution for A
+  var AOnlySolution = resolver.resolve(["A"], [], [], {
+    costFunction: function (choices) {
+      var A = _.find(choices, function (uv) { return uv.name === "A"; });
+      var distanceA = A ? semver2number(A.version) : 0;
+      return distanceA - 100;
+    }
+  });
+
   test.equal(AOnlySolution, [A100, C100]);
 
   var AnBSolution = resolver.resolve(["A", "B"], [], [], {
     costFunction: function (choices) {
       var C = _.find(choices, function (uv) { return uv.name === "C"; });
       var A = _.find(choices, function (uv) { return uv.name === "A"; });
-      return 1000000000 - semver2number(C.version) - semver2number(A.version);
+      var distanceC = C ? semver2number(C.version) : 0;
+      var distanceA = A ? semver2number(A.version) : 0;
+      return 1000000000 - distanceC - distanceA;
     }
   });
 
