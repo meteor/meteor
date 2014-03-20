@@ -54,9 +54,12 @@ ConstraintSolver.Resolver.prototype.resolve =
 
   constraints = constraints || [];
   choices = choices || [];
-  options = _.defaults(_.clone(options || {}), {
-    costFunction: function (choices) { return 0; }
-  });
+  options = _.extend({
+    costFunction: function (choices) { return 0; },
+    estimateCostFunction: function (dependencies, constraints, choices) {
+      return 0;
+    }
+  }, options);
 
   dependencies = _.uniq(dependencies);
   constraints = _.uniq(constraints);
@@ -85,12 +88,46 @@ ConstraintSolver.Resolver.prototype.resolve =
     choices = propagatedExactTransDeps.choices;
   });
 
-  var result = self._resolve(dependencies, constraints, choices, options);
+  if (options.stopAfterFirstPropagation)
+    return choices;
 
-  if (! result.success)
-    throw new Error(result.failureMsg);
+  var pq = new PriorityQueue();
 
-  return result.choices;
+  // XXX put it somewhere
+  //if (! _.isNumber(cost) || _.isNaN(cost))
+  //  throw new Error("Cost function must return a non-NaN number");
+
+  var startState = {
+    dependencies: dependencies,
+    constraints: constraints,
+    choices: choices
+  };
+
+  pq.push(startState, options.estimateCostFunction(startState));
+
+  var someError = null;
+  while (! pq.empty()) {
+    var currentState = pq.pop();
+
+    if (_.isEmpty(currentState.dependencies))
+      return choices;
+
+    var currentCost = options.costFunction(currentState.choices);
+    var neighborsObj = self._stateNeighbors(currentState);
+
+    if (! neighborsObj.success)
+      someError = someError || neighborsObj.failureMsg;
+    else {
+      _.each(neighborsObj.neighbors, function (state) {
+        var tentativeCost = options.costFunction(state.choices) +
+          options.estimateCostFunction(state);
+
+        pq.push(state, tentativeCost);
+      });
+    }
+  }
+
+  throw new Error("Couldn't resolve, I am sorry");
 };
 
 // dependencies: [String] - remaining dependencies
@@ -104,16 +141,13 @@ ConstraintSolver.Resolver.prototype.resolve =
 // }
 //
 // NOTE: assumes that exact dependencies are already propagated
-ConstraintSolver.Resolver.prototype._resolve =
-  function (dependencies, constraints, choices, options) {
+ConstraintSolver.Resolver.prototype._stateNeighbors =
+  function (state) {
   var self = this;
 
-  if (! choicesDontValidateConstraints(choices, constraints))
-    return { success: false,
-             failureMsg: "initial choices are validating constraints" };
-
-  if (_.isEmpty(dependencies) || options.stopAfterFirstPropagation)
-    return { success: true, choices: choices };
+  var dependencies = state.dependencies;
+  var constraints = state.constraints;
+  var choices = state.choices;
 
   var candidateName = dependencies[0];
   dependencies = dependencies.slice(1);
@@ -123,14 +157,7 @@ ConstraintSolver.Resolver.prototype._resolve =
       return unitVersionDoesntValidateConstraints(uv, constraints);
     });
 
-  if (_.isEmpty(candidateVersions))
-    return { success: false,
-             failureMsg: "package constraint cannot be satisfied -- "
-                         + candidateName };
-
-  var winningChoices = null;
-  var winningCost = Infinity;
-  _.each(candidateVersions, function (uv) {
+  var neighbors = _.chain(candidateVersions).map(function (uv) {
     var nDependencies = _.clone(dependencies);
     var nConstraints = _.clone(constraints);
     var nChoices = _.clone(choices);
@@ -143,25 +170,20 @@ ConstraintSolver.Resolver.prototype._resolve =
     nConstraints = propagatedExactTransDeps.constraints;
     nChoices = propagatedExactTransDeps.choices;
 
-    var result = self._resolve(nDependencies, nConstraints, nChoices, options);
+    return {
+      dependencies: nDependencies,
+      constraints: nConstraints,
+      choices: nChoices
+    };
+  }).filter(function (state) {
+    return choicesDontValidateConstraints(state.choices, state.constraints);
+  }).value();
 
-    if (result.success) {
-      var cost = options.costFunction(result.choices);
-      if (! _.isNumber(cost) || _.isNaN(cost))
-        throw new Error("Cost function must return a non-NaN number");
-
-      if (! winningChoices || cost < winningCost) {
-        winningChoices = result.choices;
-        winningCost = cost;
-      }
-    }
-  });
-
-  if (winningChoices)
-    return { success: true, choices: winningChoices };
-  return { success: false,
-           failureMsg: "cannot find a satisfying version for package "
-                       + candidateName };
+  if (_.isEmpty(candidateVersions))
+    return { success: false,
+             failureMsg: "Cannot choose satisfying versions of package -- "
+                         + candidateName };
+  return { success: true, neighbors: neighbors };
 };
 
 // Propagates exact dependencies (depencies which have exact constraints) from

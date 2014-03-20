@@ -10,9 +10,10 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.export('ConstraintSolver');
-  api.use(['underscore', 'ejson', 'check', 'package-version-parser']);
-  api.add_files([ 'constraint-solver.js' ], ['server']);
-  api.add_files([ 'resolver.js' ], ['server']);
+  api.use(['underscore', 'ejson', 'check', 'package-version-parser',
+           'binary-heap', 'random'], 'server');
+  api.add_files(['constraint-solver.js', 'resolver.js', 'priority-queue.js'],
+                ['server']);
 });
 
 Package.on_test(function (api) {
