@@ -591,3 +591,31 @@ Hi there!
     two
   {{/if}}
 </template>
+
+<template name="spacebars_test_helpers_stop_inclusion1">
+  {{> options}}
+</template>
+
+<template name="spacebars_test_helpers_stop_inclusion2">
+  {{> options}}
+</template>
+
+<template name="spacebars_test_helpers_stop_inclusion3">
+  blah
+</template>
+
+<template name="spacebars_test_helpers_stop_with_callbacks1">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_callbacks3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_callbacks2">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_callbacks3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_callbacks3">
+  blah
+</template>
