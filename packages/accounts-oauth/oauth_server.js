@@ -23,7 +23,8 @@ Accounts.registerLoginHandler(function (options) {
     // XXX we want `type` to be the service name such as "facebook"
     return { type: "oauth",
              error: new Meteor.Error(
-               Accounts.LoginCancelledError.numericError, "Login canceled") };
+               Accounts.LoginCancelledError.numericError,
+               "No matching login attempt found") };
   }
   var result = Oauth.retrieveCredential(options.oauth.credentialToken);
   if (result instanceof Error)
