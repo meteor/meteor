@@ -181,27 +181,30 @@ TemplateTag.parse = function (scannerOrString) {
   // keyword name.
   var scanArg = function () {
     var keyword = scanArgKeyword(); // null if not parsing a kwarg
-    var withKeyword = function (type, value) {
-      return keyword ? [type, value, keyword] : [type, value];
-    };
+    var value = scanArgValue();
+    return keyword ? value.concat(keyword) : value;
+  };
 
+  // scan an argument value (for keyword or positional arguments);
+  // succeeds or errors.  Result is an array of type, value.
+  var scanArgValue = function () {
     var startPos = scanner.pos;
     var result;
     if ((result = parseNumber(scanner))) {
-      return withKeyword('NUMBER', result.value);
+      return ['NUMBER', result.value];
     } else if ((result = parseStringLiteral(scanner))) {
-      return withKeyword('STRING', result.value);
+      return ['STRING', result.value];
     } else if (/^[\.\[]/.test(scanner.peek())) {
-      return withKeyword('PATH', scanPath());
+      return ['PATH', scanPath()];
     } else if ((result = parseIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
-        return withKeyword('NULL', null);
+        return ['NULL', null];
       } else if (id === 'true' || id === 'false') {
-        return withKeyword('BOOLEAN', id === 'true');
+        return ['BOOLEAN', id === 'true'];
       } else {
         scanner.pos = startPos; // unconsume `id`
-        return withKeyword('PATH', scanPath());
+        return ['PATH', scanPath()];
       }
     } else {
       expected('identifier, number, string, boolean, or null');
