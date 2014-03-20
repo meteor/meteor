@@ -93,12 +93,12 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
-//    console.log("XXX Loading local packages for bootstrapping");
+    console.log("XXX Loading local packages for bootstrapping");
     self._addLocalPackageOverrides(true /* setInitialized */);
 
     // OK, now initialize the catalog for real, with both local and
     // package server packages.
-//    console.log("XXX Loading catalog for real");
+    console.log("XXX Loading catalog for real");
 
     // We should to figure out if we are intending to connect to the package
     // server.

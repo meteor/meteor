@@ -320,6 +320,7 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
+  console.log("\n XXX warehouse is commented out");
   if (_.has(options, 'warehouse') && false) {
     // Make a directory to hold our new warehouse
     self.warehouse = path.join(self.root, 'warehouse');
@@ -413,7 +414,6 @@ var Sandbox = function (options) {
     self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
   else
     self.execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
-  self.execPath = "~/meteor/meteor/meteor";
 };
 
 _.extend(Sandbox.prototype, {
@@ -423,7 +423,6 @@ _.extend(Sandbox.prototype, {
 
     var env = _.clone(self.env);
     env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
-    console.log("SE", self);
 
     if (self.warehouse)
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
@@ -622,7 +621,8 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  self.baseTimeout = 1;
+  console.log("XXX: we have increased base timeout to deal with catalog speed");
+  self.baseTimeout = 5;
   self.extraTime = 0;
 
   self.stdoutMatcher = new Matcher(self);
