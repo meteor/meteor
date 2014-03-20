@@ -1715,3 +1715,16 @@ Tinytest.add('spacebars - template - each inside with stops without re-running h
 Tinytest.add('spacebars - template - if stops without re-running helper', function (test) {
   runOneTwoTest(test, 'spacebars_test_helpers_stop_if', ['a', 'b', 'a']);
 });
+
+Tinytest.add('spacebars - template - inclusion stops without re-running function', function (test) {
+  var t = Template.spacebars_test_helpers_stop_inclusion3;
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_inclusion', [t, t, t]);
+});
+
+Tinytest.add('spacebars - template - template with callbacks inside with stops without recalculating data', function (test) {
+  var tmpl = Template.spacebars_test_helpers_stop_with_callbacks3;
+  tmpl.created = function () {};
+  tmpl.rendered = function () {};
+  tmpl.destroyed = function () {};
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_with_callbacks');
+});
