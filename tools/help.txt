@@ -308,29 +308,6 @@ This command is for temporary, internal use, until we have a more mature
 system for building standalone command-line programs with Meteor.
 
 
->>> login
-Log in to your Meteor account
-Usage: meteor login [--email] [--galaxy <galaxy.example.com>]
-
-Prompts for your username and password and logs you in to your
-Meteor account. Pass --email to log in by email address instead of
-username. Pass --galaxy to specify a galaxy to log in to.
-
-Builds the provided directory as a package, then loads the package and
-calls the main() function inside the package. The function will receive
-any remaining arguments. The exit status will be the return value of
-main() (which is called inside a fiber).
-
-The arguments will be parsed by Meteor's option parser, which means that
---release will be effective (but not passed to the command), and that it will be
-an error to pass any unknown options. If you want to pass options to your tool,
-place them after a '--' argument (which turns off option parsing for the rest of
-the arguments).
-
-This command is for temporary, internal use, until we have a more mature
-system for building standalone command-line programs with Meteor.
-
-
 >>> self-test
 Run tests of the 'meteor' tool.
 Usage: meteor self-test [pattern] [--changed] [--slow]
