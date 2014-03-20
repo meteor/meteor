@@ -3,12 +3,17 @@ UI.If = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('If', argFunc, contentBlock, elseContentBlock);
 
   var emboxedCondition = emboxCondition(argFunc);
-  return function () {
+  var f = function () {
     if (emboxedCondition())
       return contentBlock;
     else
       return elseContentBlock || null;
   };
+  f.stop = function () {
+    emboxedCondition.stop();
+  };
+
+  return f;
 };
 
 

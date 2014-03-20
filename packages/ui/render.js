@@ -47,101 +47,45 @@ UI.Component.render = function () {
 };
 
 var Box = function (func, equals) {
-  this.func = func;
-  this.equals = equals;
-
-  this.hasCurResult = false;
-  this.curResult = null;
-
-  this.hasOldResult = false;
-  this.oldResult = null;
-
-  this.dep = new Deps.Dependency;
-  this.resultComputation = null; // only present when valid (uninvalidated)
-
-  // Dead boxes have no `resultComputation` and so can be GCed
-  this.alive = true;
-};
-
-Box.prototype.kill = function () {
-  if (this.resultComputation)
-    this.resultComputation.stop();
-
-  this.alive = false;
-};
-
-Box.prototype._depend = function () {
   var self = this;
 
-  if (! self.dep)
-    self.dep = new Deps.Dependency;
+  self.func = func;
+  self.equals = equals;
 
-  var isNew = self.dep.depend();
-  if (isNew) {
-    // For the new dependent, schedule a task for after that dependent's
-    // invalidation time.  The task kills this Box if it ever has no
-    // dependencies after afterFlush.
-    Deps.onInvalidate(function () {
-      if (self.alive && ! self.dep.hasDependents()) {
-        Deps.afterFlush(function () {
-          // use a second afterFlush to bump ourselves to the END of the
-          // flush, after computation re-runs have had a chance to
-          // re-establish their dependencies on our computation.
-          Deps.afterFlush(function () {
-            if (self.alive && ! self.dep.hasDependents())
-              self.kill();
-          });
-        });
-      }
-    });
-  }
-};
+  self.curResult = null;
 
-Box.prototype._calc = function () {
-  // Precondition: (! self.resultComputation) && (! self.hasCurResult)
-  // Postcondition: self.resultComputation && self.hasCurResult
-  var self = this;
+  self.dep = new Deps.Dependency;
+
   self.resultComputation = Deps.nonreactive(function () {
-    // Use an autorun that only runs once to capture dependencies
-    // of running `func()`.
     return Deps.autorun(function (c) {
-      if (c.firstRun) {
-        var func = self.func;
-        self.curResult = func(); // NOT `self.func()` (which binds `this`)
-        self.hasCurResult = true;
-      } else {
-        // second run
-        if (self.hasCurResult) {
-          self.oldResult = self.curResult;
-          self.hasOldResult = true;
-        }
-        self.hasCurResult = false;
-        self.resultComputation = null;
-        c.stop();
-        if (self.dep.hasDependents()) {
-          if (! self.hasOldResult) {
-            self.dep.changed();
-          } else {
-            // We have dependents and an old value to compare against,
-            // so we have to re-evaluate immediately.
-            self._calc();
-            var equals = self.equals;
-            if (! (equals ? equals(self.curResult, self.oldResult) :
-                   self.curResult === self.oldResult)) {
-              self.dep.changed();
-            }
-          }
+      var func = self.func;
+
+      var newResult = func();
+
+      if (! c.firstRun) {
+        var equals = self.equals;
+        var oldResult = self.curResult;
+
+        if (equals ? equals(newResult, oldResult) :
+            newResult === oldResult) {
+          // same as last time
+          return;
         }
       }
+
+      self.curResult = newResult;
+      self.dep.changed();
     });
   });
 };
 
-Box.prototype.get = function () {
-  this._depend();
+Box.prototype.stop = function () {
+  this.resultComputation.stop();
+};
 
-  if (! this.hasCurResult)
-    this._calc();
+Box.prototype.get = function () {
+  if (Deps.active && ! this.resultComputation.stopped)
+    this.dep.depend();
 
   return this.curResult;
 };
@@ -183,22 +127,14 @@ UI.emboxValue = function (funcOrValue, equals) {
   if (typeof funcOrValue === 'function') {
 
     var func = funcOrValue;
-    var box = null;
+    var box = new Box(func, equals);
 
     var f = function () {
-      if (! (box && box.alive)) {
-        if (! Deps.active)
-          return func();
-
-        box = new Box(func, equals);
-      }
-
       return box.get();
     };
 
     f.stop = function () {
-      if (box && box.alive)
-        box.kill();
+      box.stop();
     };
 
     return f;
@@ -416,6 +352,12 @@ var materialize = function (node, parent, before, parentComponent) {
     range.removed = function () {
       rangeUpdater.stop();
     };
+    // XXXX HACK
+    if (Deps.active && node.stop) {
+      Deps.onInvalidate(function () {
+        node.stop();
+      });
+    }
     insert(range, parent, before);
   } else if (node instanceof HTML.Tag) {
     var tagName = node.tagName;

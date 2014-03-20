@@ -24,7 +24,7 @@ Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock
   var func = templateOrFunction;
 
   var emboxedFunc = UI.emboxValue(func);
-  return function () {
+  var f = function () {
     var tmpl = emboxedFunc();
 
     if (tmpl === null)
@@ -34,6 +34,12 @@ Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock
 
     return tmpl.extend(props);
   };
+
+  f.stop = function () {
+    emboxedFunc.stop();
+  };
+
+  return f;
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
