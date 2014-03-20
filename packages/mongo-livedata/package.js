@@ -13,9 +13,7 @@ Package.describe({
 });
 
 Npm.depends({
-  // 1.3.19, plus a patch to add oplogReplay flag:
-  // https://github.com/mongodb/node-mongodb-native/pull/1108
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/779bbac916a751f305d84c727a6cc7dfddab7924"
+  mongodb: "1.4.0-rc9"
 });
 
 Package.on_use(function (api) {
