@@ -788,8 +788,25 @@ if (Meteor.isServer) (function () {
           test.isTrue(result);
           var token = Accounts._getAccountData(serverConn.id, 'loginToken');
           test.isTrue(token);
-          test.isTrue(Accounts._getUserObserve(serverConn.id));
-          clientConn.disconnect();
+
+          // We poll here, instead of just checking `_getUserObserve`
+          // once, because the login method defers the creation of the
+          // observe, and setting up the observe yields, so we could end
+          // up here before the observe has been set up.
+          simplePoll(
+            function () {
+              return !! Accounts._getUserObserve(serverConn.id);
+            },
+            function () {
+              test.isTrue(Accounts._getUserObserve(serverConn.id));
+              clientConn.disconnect();
+            },
+            function () {
+              test.fail("timed out waiting for user observe for connection " +
+                        serverConn.id);
+              onComplete();
+            }
+          );
         },
         onComplete
       );
