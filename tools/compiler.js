@@ -9,7 +9,7 @@ var PackageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');
-var archinfo = require('./archinfo.js');
+var utils = require('./utils.js');
 var meteorNpm = require('./meteor-npm.js');
 
 var compiler = exports;
@@ -166,7 +166,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     // no way to specify weak/unordered. Much like an app.
     _.each(info.uses, function (spec) {
       var parsedSpec = utils.parseSpec(spec);
-      if (parsedspec.slice)
+      if (parsedSpec.slice)
         throw new Error("can't deal with slice specs here yet");
       constraints[parsedSpec.package] = parsedSpec.constraint;
     });

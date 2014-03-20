@@ -131,7 +131,7 @@ _.extend(Catalog.prototype, {
   },
 
   // Compute self.effectiveLocalPackages from self.localPackageDirs
-  // and self.localPackageDirs.
+  // and self.localPackages.
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
 

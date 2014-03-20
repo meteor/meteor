@@ -214,7 +214,7 @@ exports.parseConstraint = function (constraintString) {
 
 // XXX should unify this with utils.parseConstraint
 exports.parseSpec = function (spec) {
-  var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/)
+  var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/);
   if (! m)
     throw new Error("Bad package spec: " + spec);
   var ret = { package: m[1] };
