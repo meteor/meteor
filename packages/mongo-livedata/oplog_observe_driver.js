@@ -846,4 +846,4 @@ var modifierCanBeDirectlyApplied = function (modifier) {
   });
 };
 
-MongoTest.OplogObserveDriver = OplogObserveDriver;
+MongoInternals.OplogObserveDriver = OplogObserveDriver;
