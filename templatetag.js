@@ -161,38 +161,47 @@ TemplateTag.parse = function (scannerOrString) {
     return segments;
   };
 
+  // scan the keyword portion of a keyword argument
+  // (the "foo" portion in "foo=bar").
+  // Result is either the keyword matched, or null
+  // if we're not at a keyword argument position.
+  var scanArgKeyword = function () {
+    var match = /^([^\{\}\(\)\>#=\s]+)\s*=\s*/.exec(scanner.rest());
+    if (match) {
+      scanner.pos += match[0].length;
+      return match[1];
+    } else {
+      return null;
+    }
+  };
+
   // scan an argument; succeeds or errors.
   // Result is an array of two or three items:
   // type , value, and (indicating a keyword argument)
   // keyword name.
-  var scanArg = function (notKeyword) {
+  var scanArg = function () {
+    var keyword = scanArgKeyword(); // null if not parsing a kwarg
+    var withKeyword = function (type, value) {
+      return keyword ? [type, value, keyword] : [type, value];
+    };
+
     var startPos = scanner.pos;
     var result;
     if ((result = parseNumber(scanner))) {
-      return ['NUMBER', result.value];
+      return withKeyword('NUMBER', result.value);
     } else if ((result = parseStringLiteral(scanner))) {
-      return ['STRING', result.value];
+      return withKeyword('STRING', result.value);
     } else if (/^[\.\[]/.test(scanner.peek())) {
-      return ['PATH', scanPath()];
+      return withKeyword('PATH', scanPath());
     } else if ((result = parseIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
-        return ['NULL', null];
+        return withKeyword('NULL', null);
       } else if (id === 'true' || id === 'false') {
-        return ['BOOLEAN', id === 'true'];
+        return withKeyword('BOOLEAN', id === 'true');
       } else {
-        if ((! notKeyword) &&
-            /^\s*=/.test(scanner.rest())) {
-          // it's a keyword argument!
-          run(/^\s*=\s*/);
-          // recurse to scan value, disallowing a second `=`.
-          var arg = scanArg(true);
-          arg.push(id); // add third element for key
-          return arg;
-        } else {
-          scanner.pos = startPos; // unconsume `id`
-          return ['PATH', scanPath()];
-        }
+        scanner.pos = startPos; // unconsume `id`
+        return withKeyword('PATH', scanPath());
       }
     } else {
       expected('identifier, number, string, boolean, or null');
