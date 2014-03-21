@@ -621,7 +621,9 @@ var runWebAppServer = function () {
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = Spacebars.compile(
       boilerplateTemplateSource, { isBody: true });
-    var boilerplateRender = eval(boilerplateRenderCode);
+    // Use 'new Function' instead of eval to avoid capturing local variables of
+    // this context.
+    var boilerplateRender = new Function("return " + boilerplateRenderCode)();
     boilerplateTemplate = UI.Component.extend({
       kind: "MainPage",
       render: boilerplateRender
