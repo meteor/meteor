@@ -2,7 +2,8 @@ Package.describe({
   // These tests can't be directly in the underscore packages since
   // Tinytest depends on underscore
   summary: "Tests for the underscore package",
-  version: '1.0.0'
+  version: '1.0.0',
+  internal: true
 });
 
 Package.on_test(function (api) {

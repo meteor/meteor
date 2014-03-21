@@ -4,9 +4,13 @@ var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
 
-var noFiberMessage = "Meteor code must always run within a Fiber. " +
-                     "Try wrapping callbacks that you pass to non-Meteor " +
-                     "libraries with Meteor.bindEnvironment.";
+Meteor._nodeCodeMustBeInFiber = function () {
+  if (!Fiber.current) {
+    throw new Error("Meteor code must always run within a Fiber. " +
+                    "Try wrapping callbacks that you pass to non-Meteor " +
+                    "libraries with Meteor.bindEnvironment.");
+  }
+};
 
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
@@ -14,16 +18,14 @@ Meteor.EnvironmentVariable = function () {
 
 _.extend(Meteor.EnvironmentVariable.prototype, {
   get: function () {
-    if (!Fiber.current)
-      throw new Error(noFiberMessage);
+    Meteor._nodeCodeMustBeInFiber();
 
     return Fiber.current._meteor_dynamics &&
       Fiber.current._meteor_dynamics[this.slot];
   },
 
   withValue: function (value, func) {
-    if (!Fiber.current)
-      throw new Error(noFiberMessage);
+    Meteor._nodeCodeMustBeInFiber();
 
     if (!Fiber.current._meteor_dynamics)
       Fiber.current._meteor_dynamics = [];
@@ -61,8 +63,7 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
 Meteor.bindEnvironment = function (func, onException, _this) {
-  if (!Fiber.current)
-    throw new Error(noFiberMessage);
+  Meteor._nodeCodeMustBeInFiber();
 
   var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 
@@ -87,6 +88,9 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         Fiber.current._meteor_dynamics = _.clone(boundValues);
         var ret = func.apply(_this, args);
       } catch (e) {
+        // note: callback-hook currently relies on the fact that if onException
+        // throws and you were originally calling the wrapped callback from
+        // within a Fiber, the wrapped call throws.
         onException(e);
       } finally {
         Fiber.current._meteor_dynamics = savedValues;

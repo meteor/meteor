@@ -118,7 +118,7 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   testUtils.registerWithToken(token, username, 'testtest', email);
 
   // Success! 'meteor whoami' should now know who we are.
-  run = s.run('whoami');
+  var run = s.run('whoami');
   run.waitSecs(testUtils.accountsCommandTimeoutSecs);
   run.read(username + '\n');
   run.expectExit(0);
@@ -134,6 +134,8 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   // All the tokens we got should now be invalid.
   expectInvalidToken(token);
   expectInvalidToken(apiToken);
+
+  testUtils.logout(s);
 
   // XXX Test that registration URLs get printed when they should
 });
@@ -212,6 +214,8 @@ selftest.define(
       throw new Error('No registration token in email');
     }
     expectInvalidToken(emailToken[1]);
+
+    testUtils.logout(s);
   }
 );
 
@@ -267,5 +271,6 @@ selftest.define(
     run.expectExit(0);
 
     testUtils.cleanUpApp(s, appName);
+    testUtils.logout(s);
   }
 );
