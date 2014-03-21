@@ -539,6 +539,15 @@ Hi there!
   {{/if}}
 </template>
 
+<template name="spacebars_test_helpers_stop_onetwo_attribute">
+  <br data-stuff=
+  {{#if showOne}}
+    {{> one}}
+  {{else}}
+    {{> two}}
+  {{/if}}>
+</template>
+
 <template name="spacebars_test_helpers_stop_with1">
   {{#with options}}
     one
