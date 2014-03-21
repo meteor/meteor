@@ -378,6 +378,8 @@ var getUnquotedAttributeValue = function (scanner) {
 };
 
 getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
+  lastStartPos = scanner.pos;
+
   if (! (scanner.peek() === '<' && scanner.rest().charAt(1) !== '!'))
     return null;
   scanner.pos++;

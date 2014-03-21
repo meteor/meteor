@@ -41,7 +41,6 @@ Tinytest.add("html-tools - parser getContent", function (test) {
 
 
   succeed('', null);
-  succeed('^^^</', null);
   succeed('abc', 'abc');
   succeed('abc^^^</x>', 'abc');
   succeed('a&lt;b', ['a', CharRef({html: '&lt;', str: '<'}), 'b']);
@@ -346,6 +345,8 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
   succeed('x{{!foo}}{{!bar}}y', 'xy');
   succeed('x{{!foo}}{{bar}}y', ['x', Special({stuff: 'bar'}), 'y']);
   succeed('x{{foo}}{{!bar}}y', ['x', Special({stuff: 'foo'}), 'y']);
+  succeed('<div>{{!foo}}{{!bar}}</div>', DIV());
+  succeed('{{!<div></div>}}', null);
 
   succeed('', null);
   succeed('{{!foo}}', null);

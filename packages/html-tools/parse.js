@@ -99,11 +99,6 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
   var items = [];
 
   while (! scanner.isEOF()) {
-    // Stop at any top-level end tag.  We could use the tokenizer
-    // but these two characters are a giveaway.
-    if (scanner.rest().slice(0, 2) === '</')
-      break;
-
     if (shouldStopFunc && shouldStopFunc(scanner))
       break;
 
@@ -125,10 +120,10 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
       // token.v is an object `{ ... }`
       items.push(HTMLTools.Special(token.v));
     } else if (token.t === 'Tag') {
-      if (token.isEnd)
-        // we've already screened for `</` so this shouldn't be
-        // possible.
-        scanner.fatal("Assertion failed: didn't expect end tag");
+      if (token.isEnd) {
+        scanner.pos = lastStartPos;
+        break;
+      }
 
       var tagName = token.n;
       // is this an element with no close tag (a BR, HR, IMG, etc.) based
