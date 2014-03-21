@@ -154,13 +154,44 @@ for (var i = 0; i < HTML.knownElementNames.length; i++)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+callReactiveFunction = function (func) {
+  var result;
+  var cc = Deps.currentComputation;
+  var h = Deps.autorun(function (c) {
+    result = func();
+  });
+  h.onInvalidate(function () {
+    if (cc)
+      cc.invalidate();
+  });
+  if (Deps.active) {
+    Deps.onInvalidate(function () {
+      h.stop();
+      func.stop && func.stop();
+    });
+  } else {
+    h.stop();
+    func.stop && func.stop();
+  }
+  return result;
+};
+
+stopWithLater = function (instance) {
+  if (instance.materialized && instance.materialized.isWith) {
+    if (Deps.active)
+      instance.materialized();
+    else
+      instance.data.stop();
+  }
+};
+
 // Call all functions and instantiate all components, when fine-grained
 // reactivity is not needed (for example, in attributes).
 HTML.evaluate = function (node, parentComponent) {
   if (node == null) {
     return node;
   } else if (typeof node === 'function') {
-    return HTML.evaluate(node(), parentComponent);
+    return HTML.evaluate(callReactiveFunction(node), parentComponent);
   } else if (node instanceof Array) {
     var result = [];
     for (var i = 0; i < node.length; i++)
@@ -170,6 +201,7 @@ HTML.evaluate = function (node, parentComponent) {
     // component
     var instance = node.instantiate(parentComponent || null);
     var content = instance.render('STATIC');
+    stopWithLater(instance);
     return HTML.evaluate(content, instance);
   }  else if (node instanceof HTML.Tag) {
     var newChildren = [];

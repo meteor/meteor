@@ -16,10 +16,11 @@ HTML.toHTML = function (node, parentComponent) {
     // component
     var instance = node.instantiate(parentComponent || null);
     var content = instance.render('STATIC');
+    stopWithLater(instance);
     // recurse with a new value for parentComponent
     return HTML.toHTML(content, instance);
   } else if (typeof node === 'function') {
-    return HTML.toHTML(node(), parentComponent);
+    return HTML.toHTML(callReactiveFunction(node), parentComponent);
   } else if (node.toHTML) {
     // Tag or something else
     return node.toHTML(parentComponent);
@@ -115,12 +116,14 @@ HTML.toText = function (node, textMode, parentComponent) {
       parts.push(HTML.toText(node[i], textMode, parentComponent));
     return parts.join('');
   } else if (typeof node === 'function') {
-    return HTML.toText(node(), textMode, parentComponent);
+    return HTML.toText(callReactiveFunction(node), textMode, parentComponent);
   } else if (typeof node.instantiate === 'function') {
     // component
     var instance = node.instantiate(parentComponent || null);
     var content = instance.render('STATIC');
-    return HTML.toText(content, textMode, instance);
+    var result = HTML.toText(content, textMode, instance);
+    stopWithLater(instance);
+    return result;
   } else if (node.toText) {
     // Something else
     return node.toText(textMode, parentComponent);
