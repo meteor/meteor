@@ -46,10 +46,16 @@ Meteor.bindEnvironment = function (func, onException, _this) {
       currentValues = boundValues;
       var ret = func.apply(_this, _.toArray(arguments));
     } catch (e) {
+      // note: callback-hook currently relies on the fact that if onException
+      // throws in the browser, the wrapped call throws.
       onException(e);
     } finally {
       currentValues = savedValues;
     }
     return ret;
   };
+};
+
+Meteor._nodeCodeMustBeInFiber = function () {
+  // no-op on browser
 };

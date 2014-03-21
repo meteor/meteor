@@ -89,18 +89,20 @@ LocalCollection.Cursor = function (collection, selector, options) {
   var self = this;
   if (!options) options = {};
 
-  this.collection = collection;
+  self.collection = collection;
+  self.sorter = null;
 
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self._selectorId = selector;
     self.matcher = new Minimongo.Matcher(selector, self);
-    self.sorter = undefined;
   } else {
     self._selectorId = undefined;
     self.matcher = new Minimongo.Matcher(selector, self);
-    self.sorter = (self.matcher.hasGeoQuery() || options.sort) ?
-      new Sorter(options.sort || []) : null;
+    if (self.matcher.hasGeoQuery() || options.sort) {
+      self.sorter = new Minimongo.Sorter(options.sort || [],
+                                         { matcher: self.matcher });
+    }
   }
   self.skip = options.skip;
   self.limit = options.limit;
@@ -672,7 +674,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     if (queryResult.result) {
       // XXX Should we save the original even if mod ends up being a no-op?
       self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndex);
+      self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndices);
       ++updateCount;
       if (!options.multi)
         return false;  // break
@@ -738,7 +740,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
 };
 
 LocalCollection.prototype._modifyAndNotify = function (
-    doc, mod, recomputeQids, arrayIndex) {
+    doc, mod, recomputeQids, arrayIndices) {
   var self = this;
 
   var matched_before = {};
@@ -755,7 +757,7 @@ LocalCollection.prototype._modifyAndNotify = function (
 
   var old_doc = EJSON.clone(doc);
 
-  LocalCollection._modify(doc, mod, {arrayIndex: arrayIndex});
+  LocalCollection._modify(doc, mod, {arrayIndices: arrayIndices});
 
   for (qid in self.queries) {
     query = self.queries[qid];

@@ -118,6 +118,7 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.expectExit(1);
 
   testUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
 });
 
 selftest.define('authorized - no username', ['net', 'slow'], function () {
@@ -141,4 +142,5 @@ selftest.define('authorized - no username', ['net', 'slow'], function () {
   run.match(': added test');
   run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
 });

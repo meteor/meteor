@@ -1598,7 +1598,7 @@ main.registerCommand({
 
   if (! version) {
     process.stderr.write(
-"That package cannot be published because it doesn't have a version.\n");
+     "That package cannot be published because it doesn't have a version.\n");
     return 1;
   }
 
