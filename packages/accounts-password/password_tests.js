@@ -766,7 +766,7 @@ if (Meteor.isServer) (function () {
   // XXX would be nice to test Accounts.config({forbidClientAccountCreation: true})
 
   Tinytest.addAsync(
-    'passwords - login tokens cleaned up',
+    'passwords - login token observes get cleaned up',
     function (test, onComplete) {
       var username = Random.id();
       Accounts.createUser({
@@ -778,8 +778,7 @@ if (Meteor.isServer) (function () {
         test,
         function (clientConn, serverConn) {
           serverConn.onClose(function () {
-            test.isFalse(_.contains(
-              Accounts._getTokenConnections(token), serverConn.id));
+            test.isFalse(Accounts._getUserObserve(serverConn.id));
             onComplete();
           });
           var result = clientConn.call('login', {
@@ -789,9 +788,25 @@ if (Meteor.isServer) (function () {
           test.isTrue(result);
           var token = Accounts._getAccountData(serverConn.id, 'loginToken');
           test.isTrue(token);
-          test.isTrue(_.contains(
-            Accounts._getTokenConnections(token), serverConn.id));
-          clientConn.disconnect();
+
+          // We poll here, instead of just checking `_getUserObserve`
+          // once, because the login method defers the creation of the
+          // observe, and setting up the observe yields, so we could end
+          // up here before the observe has been set up.
+          simplePoll(
+            function () {
+              return !! Accounts._getUserObserve(serverConn.id);
+            },
+            function () {
+              test.isTrue(Accounts._getUserObserve(serverConn.id));
+              clientConn.disconnect();
+            },
+            function () {
+              test.fail("timed out waiting for user observe for connection " +
+                        serverConn.id);
+              onComplete();
+            }
+          );
         },
         onComplete
       );

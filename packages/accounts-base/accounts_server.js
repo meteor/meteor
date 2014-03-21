@@ -498,7 +498,7 @@ Accounts._setAccountData = function (connectionId, field, value) {
 Meteor.server.onConnection(function (connection) {
   accountData[connection.id] = {connection: connection};
   connection.onClose(function () {
-    removeConnectionFromToken(connection.id);
+    removeTokenFromConnection(connection.id);
     delete accountData[connection.id];
   });
 });
@@ -557,26 +557,32 @@ Accounts._clearAllLoginTokens = function (userId) {
   );
 };
 
-
-// hashed token -> list of connection ids
-var connectionsByLoginToken = {};
+// connection id -> observe handle for the login token that this
+// connection is currently associated with, or null. Null indicates that
+// we are in the process of setting up the observe.
+var userObservesForConnections = {};
 
 // test hook
-Accounts._getTokenConnections = function (token) {
-  return connectionsByLoginToken[token];
+Accounts._getUserObserve = function (connectionId) {
+  return userObservesForConnections[connectionId];
 };
 
-// Remove the connection from the list of open connections for the connection's
-// token.
-var removeConnectionFromToken = function (connectionId) {
-  var token = Accounts._getLoginToken(connectionId);
-  if (token) {
-    connectionsByLoginToken[token] = _.without(
-      connectionsByLoginToken[token],
-      connectionId
-    );
-    if (_.isEmpty(connectionsByLoginToken[token]))
-      delete connectionsByLoginToken[token];
+// Clean up this connection's association with the token: that is, stop
+// the observe that we started when we associated the connection with
+// this token.
+var removeTokenFromConnection = function (connectionId) {
+  var observe = userObservesForConnections[connectionId];
+  if (observe !== undefined) {
+    if (observe === null) {
+      // We're in the process of setting up an observe for this
+      // connection. We can't clean up that observe yet, but if we
+      // delete the null placeholder for this connection, then the
+      // observe will get cleaned up as soon as it has been set up.
+      delete userObservesForConnections[connectionId];
+    } else {
+      delete userObservesForConnections[connectionId];
+      observe.stop();
+    }
   }
 };
 
@@ -586,61 +592,67 @@ Accounts._getLoginToken = function (connectionId) {
 
 // newToken is a hashed token.
 Accounts._setLoginToken = function (userId, connection, newToken) {
-  removeConnectionFromToken(connection.id);
+  removeTokenFromConnection(connection.id);
   Accounts._setAccountData(connection.id, 'loginToken', newToken);
 
   if (newToken) {
-    if (! _.has(connectionsByLoginToken, newToken))
-      connectionsByLoginToken[newToken] = [];
-    connectionsByLoginToken[newToken].push(connection.id);
-
-    // Now that we've added the connection to the
-    // connectionsByLoginToken map for the token, the connection will
-    // be closed if the token is removed from the database.  However
-    // at this point the token might have already been deleted, which
-    // wouldn't have closed the connection because it wasn't in the
-    // map yet.
+    // Set up an observe for this token. If the token goes away, we need
+    // to close the connection.  We defer the observe because there's
+    // no need for it to be on the critical path for login; we just need
+    // to ensure that the connection will get closed at some point if
+    // the token gets deleted.
     //
-    // We also did need to first add the connection to the map above
-    // (and now remove it here if the token was deleted), because we
-    // could be getting a response from the database that the token
-    // still exists, but then it could be deleted in another fiber
-    // before our `findOne` call returns... and then that other fiber
-    // would need for the connection to be in the map for it to close
-    // the connection.
-    //
-    // We defer this check because there's no need for it to be on the critical
-    // path for login; we just need to ensure that the connection will get
-    // closed at some point if the token has been deleted.
+    // Initially, we set the observe for this connection to null; this
+    // signifies to other code (which might run while we yield) that we
+    // are in the process of setting up an observe for this
+    // connection. Once the observe is ready to go, we replace null with
+    // the real observe handle (unless the placeholder has been deleted,
+    // signifying that the connection was closed already -- in this case
+    // we just clean up the observe that we started).
+    userObservesForConnections[connection.id] = null;
     Meteor.defer(function () {
-      if (! Meteor.users.findOne({
+      var foundMatchingUser;
+      // Because we upgrade unhashed login tokens to hashed tokens at
+      // login time, sessions will only be logged in with a hashed
+      // token. Thus we only need to observe hashed tokens here.
+      var observe = Meteor.users.find({
         _id: userId,
-        "services.resume.loginTokens.hashedToken": newToken
-      })) {
-        removeConnectionFromToken(connection.id);
+        'services.resume.loginTokens.hashedToken': newToken
+      }, { fields: { _id: 1 } }).observeChanges({
+        added: function () {
+          foundMatchingUser = true;
+        },
+        removed: function () {
+          connection.close();
+          // The onClose callback for the connection takes care of
+          // cleaning up the observe handle and any other state we have
+          // lying around.
+        }
+      });
+
+      if (_.has(userObservesForConnections, connection.id)) {
+        if (userObservesForConnections[connection.id] !== null) {
+          throw new Error("Non-null user observe for connection " +
+                          connection.id + " while observe was being set up?");
+        }
+        userObservesForConnections[connection.id] = observe;
+      } else {
+        // Oops, this connection was closed while we were setting up the
+        // observe. Clean it up now.
+        observe.stop();
+      }
+
+      if (! foundMatchingUser) {
+        // We've set up an observe on the user associated with `newToken`,
+        // so if the new token is removed from the database, we'll close
+        // the connection. But the token might have already been deleted
+        // before we set up the observe, which wouldn't have closed the
+        // connection because the observe wasn't running yet.
         connection.close();
       }
     });
   }
 };
-
-// Close all open connections associated with any of the tokens in
-// `tokens`.
-var closeConnectionsForTokens = function (tokens) {
-  _.each(tokens, function (token) {
-    if (_.has(connectionsByLoginToken, token)) {
-      // safety belt. close should defer potentially yielding callbacks.
-      Meteor._noYieldsAllowed(function () {
-        _.each(connectionsByLoginToken[token], function (connectionId) {
-          var connection = Accounts._getAccountData(connectionId, 'connection');
-          if (connection)
-            connection.close();
-        });
-      });
-    }
-  });
-};
-
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler("resume", function(options) {
@@ -1185,45 +1197,4 @@ Meteor.startup(function () {
   users.forEach(function (user) {
     deleteSavedTokens(user._id, user.services.resume.loginTokensToDelete);
   });
-});
-
-///
-/// LOGGING OUT DELETED USERS
-///
-
-// When login tokens are removed from the database, close any sessions
-// logged in with those tokens.
-//
-// Because we upgrade unhashed login tokens to hashed tokens at login
-// time, sessions will only be logged in with a hashed token.  Thus we
-// only need to pull out hashed tokens here.
-var closeTokensForUser = function (userTokens) {
-  closeConnectionsForTokens(_.compact(_.pluck(userTokens, "hashedToken")));
-};
-
-// Like _.difference, but uses EJSON.equals to compute which values to return.
-var differenceObj = function (array1, array2) {
-  return _.filter(array1, function (array1Value) {
-    return ! _.some(array2, function (array2Value) {
-      return EJSON.equals(array1Value, array2Value);
-    });
-  });
-};
-
-Meteor.users.find({}, { fields: { "services.resume": 1 }}).observe({
-  changed: function (newUser, oldUser) {
-    var removedTokens = [];
-    if (newUser.services && newUser.services.resume &&
-        oldUser.services && oldUser.services.resume) {
-      removedTokens = differenceObj(oldUser.services.resume.loginTokens || [],
-                                    newUser.services.resume.loginTokens || []);
-    } else if (oldUser.services && oldUser.services.resume) {
-      removedTokens = oldUser.services.resume.loginTokens || [];
-    }
-    closeTokensForUser(removedTokens);
-  },
-  removed: function (oldUser) {
-    if (oldUser.services && oldUser.services.resume)
-      closeTokensForUser(oldUser.services.resume.loginTokens || []);
-  }
 });
