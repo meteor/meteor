@@ -163,7 +163,14 @@ _.extend(Deps.Computation.prototype, {
     var previousInCompute = inCompute;
     inCompute = true;
     try {
-      self._func(self);
+      var func = self._func;
+      if (Meteor.isClient) {
+        func(self);
+      } else {
+        Meteor._noYieldsAllowed(function () {
+          func(self);
+        });
+      }
     } finally {
       setCurrentComputation(previous);
       inCompute = false;
@@ -309,9 +316,7 @@ _.extend(Deps, {
       throw new Error('Deps.autorun requires a function argument');
 
     constructingComputation = true;
-    var c = new Deps.Computation(function (c) {
-      Meteor._noYieldsAllowed(function () { f(c); });
-    }, Deps.currentComputation);
+    var c = new Deps.Computation(f, Deps.currentComputation);
 
     if (Deps.active)
       Deps.onInvalidate(function () {
