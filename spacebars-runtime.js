@@ -23,8 +23,11 @@ Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock
 
   var func = templateOrFunction;
 
-  var emboxedFunc = UI.emboxValue(func);
   var f = function () {
+    var emboxedFunc = UI.namedEmboxValue('Spacebars.include', func);
+    f.stop = function () {
+      emboxedFunc.stop();
+    };
     var tmpl = emboxedFunc();
 
     if (tmpl === null)
@@ -33,10 +36,6 @@ Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock
       throw new Error("Expected null or template in return value from inclusion function, found: " + tmpl);
 
     return tmpl.extend(props);
-  };
-
-  f.stop = function () {
-    emboxedFunc.stop();
   };
 
   return f;
