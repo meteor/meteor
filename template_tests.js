@@ -1716,6 +1716,10 @@ Tinytest.add('spacebars - template - if stops without re-running helper', functi
   runOneTwoTest(test, 'spacebars_test_helpers_stop_if', ['a', 'b', 'a']);
 });
 
+Tinytest.add('spacebars - template - unless stops without re-running helper', function (test) {
+  runOneTwoTest(test, 'spacebars_test_helpers_stop_unless', ['a', 'b', 'a']);
+});
+
 Tinytest.add('spacebars - template - inclusion stops without re-running function', function (test) {
   var t = Template.spacebars_test_helpers_stop_inclusion3;
   runOneTwoTest(test, 'spacebars_test_helpers_stop_inclusion', [t, t, t]);
