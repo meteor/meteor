@@ -2,15 +2,15 @@
 UI.If = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('If', argFunc, contentBlock, elseContentBlock);
 
-  var emboxedCondition = emboxCondition(argFunc);
   var f = function () {
+    var emboxedCondition = emboxCondition(argFunc);
+    f.stop = function () {
+      emboxedCondition.stop();
+    };
     if (emboxedCondition())
       return contentBlock;
     else
       return elseContentBlock || null;
-  };
-  f.stop = function () {
-    emboxedCondition.stop();
   };
 
   return f;
@@ -20,15 +20,15 @@ UI.If = function (argFunc, contentBlock, elseContentBlock) {
 UI.Unless = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('Unless', argFunc, contentBlock, elseContentBlock);
 
-  var emboxedCondition = emboxCondition(argFunc);
   var f = function () {
+    var emboxedCondition = emboxCondition(argFunc);
+    f.stop = function () {
+      emboxedCondition.stop();
+    };
     if (! emboxedCondition())
       return contentBlock;
     else
       return elseContentBlock || null;
-  };
-  f.stop = function () {
-    emboxedCondition.stop();
   };
 
   return f;
@@ -70,6 +70,7 @@ UI.With = function (argFunc, contentBlock) {
       });
     }
   };
+  block.materialized.isWith = true;
 
   return block;
 };
@@ -99,7 +100,7 @@ var checkBlockHelperArguments = function (which, argFunc, contentBlock, elseCont
 // - The result is UI.emboxValue'd (doesn't trigger invalidation
 //   as long as the condition stays truthy or stays falsy)
 var emboxCondition = function (conditionFunc) {
-  return UI.emboxValue(function () {
+  return UI.namedEmboxValue('if/unless', function () {
     // `condition` is emboxed; it is always a function,
     // and it only triggers invalidation if its return
     // value actually changes.  We still need to isolate

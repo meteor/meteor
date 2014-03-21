@@ -150,6 +150,20 @@ UI.emboxValue = function (funcOrValue, equals) {
 };
 
 
+UI.namedEmboxValue = function (name, funcOrValue, equals) {
+  if (! Deps.active) {
+    var f = UI.emboxValue(funcOrValue, equals);
+    f.stop();
+    return f;
+  }
+
+  var c = Deps.currentComputation;
+  if (! c[name])
+    c[name] = UI.emboxValue(funcOrValue, equals);
+
+  return c[name];
+};
+
 ////////////////////////////////////////
 
 UI.insert = function (renderedTemplate, parentElement, nextNode) {
