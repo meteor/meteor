@@ -31,6 +31,20 @@ var _throwOrLog = function (from, e) {
   }
 };
 
+// Like `Meteor._noYieldsAllowed(function () { f(comp); })` but shorter,
+// and doesn't clutter the stack with an extra frame on the client,
+// where `_noYieldsAllowed` is a no-op.  `f` may be a computation
+// function or an onInvalidate callback.
+var callWithNoYieldsAllowed = function (f, comp) {
+  if (Meteor.isClient) {
+    f(comp);
+  } else {
+    Meteor._noYieldsAllowed(function () {
+      f(comp);
+    });
+  }
+};
+
 var nextId = 1;
 // computations whose callbacks we should call at flush time
 var pendingComputations = [];
@@ -111,22 +125,13 @@ _.extend(Deps.Computation.prototype, {
     if (typeof f !== 'function')
       throw new Error("onInvalidate requires a function");
 
-    var g = function () {
+    if (self.invalidated) {
       Deps.nonreactive(function () {
-        if (Meteor.isClient) {
-          f(self);
-        } else {
-          Meteor._noYieldsAllowed(function () {
-            f(self);
-          });
-        }
+        callWithNoYieldsAllowed(f, self);
       });
-    };
-
-    if (self.invalidated)
-      g();
-    else
-      self._onInvalidateCallbacks.push(g);
+    } else {
+      self._onInvalidateCallbacks.push(f);
+    }
   },
 
   // http://docs.meteor.com/#computation_invalidate
@@ -144,8 +149,11 @@ _.extend(Deps.Computation.prototype, {
 
       // callbacks can't add callbacks, because
       // self.invalidated === true.
-      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++)
-        f(); // already bound with self as argument
+      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++) {
+        Deps.nonreactive(function () {
+          callWithNoYieldsAllowed(f, self);
+        });
+      }
       self._onInvalidateCallbacks = [];
     }
   },
@@ -167,14 +175,7 @@ _.extend(Deps.Computation.prototype, {
     var previousInCompute = inCompute;
     inCompute = true;
     try {
-      var func = self._func;
-      if (Meteor.isClient) {
-        func(self);
-      } else {
-        Meteor._noYieldsAllowed(function () {
-          func(self);
-        });
-      }
+      callWithNoYieldsAllowed(self._func, self);
     } finally {
       setCurrentComputation(previous);
       inCompute = false;
