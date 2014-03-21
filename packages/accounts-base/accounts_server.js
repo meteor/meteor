@@ -562,12 +562,6 @@ Accounts._clearAllLoginTokens = function (userId) {
 // we are in the process of setting up the observe.
 var userObservesForConnections = {};
 
-// connection id -> boolean. Keeps track of connections that were closed
-// before we had a chance to set up the observe on the user associated
-// with this connection. To avoid leaking observes, we'll look in here
-// immediately after setting up an observe.
-var connectionsClosedBeforeObserve = {};
-
 // test hook
 Accounts._getUserObserve = function (connectionId) {
   return userObservesForConnections[connectionId];
@@ -581,10 +575,10 @@ var removeTokenFromConnection = function (connectionId) {
   if (observe !== undefined) {
     if (observe === null) {
       // We're in the process of setting up an observe for this
-      // connection. We can't clean up that observe yet, but we can make
-      // note of it in `connectionsClosedBeforeObserve`, so that the
-      // observe will get torn down immediately after being set up.
-      connectionsClosedBeforeObserve[connectionId] = true;
+      // connection. We can't clean up that observe yet, but if we
+      // delete the null placeholder for this connection, then the
+      // observe will get cleaned up as soon as it has been set up.
+      delete userObservesForConnections[connectionId];
     } else {
       delete userObservesForConnections[connectionId];
       observe.stop();
@@ -610,14 +604,18 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
     //
     // Initially, we set the observe for this connection to null; this
     // signifies to other code (which might run while we yield) that we
-    // are in the process of setting up an observe for this connection.
+    // are in the process of setting up an observe for this
+    // connection. Once the observe is ready to go, we replace null with
+    // the real observe handle (unless the placeholder has been deleted,
+    // signifying that the connection was closed already -- in this case
+    // we just clean up the observe that we started).
     userObservesForConnections[connection.id] = null;
     Meteor.defer(function () {
       var foundMatchingUser;
       // Because we upgrade unhashed login tokens to hashed tokens at
       // login time, sessions will only be logged in with a hashed
       // token. Thus we only need to observe hashed tokens here.
-      userObservesForConnections[connection.id] = Meteor.users.find({
+      var observe = Meteor.users.find({
         _id: userId,
         'services.resume.loginTokens.hashedToken': newToken
       }, { fields: { _id: 1 } }).observeChanges({
@@ -631,12 +629,19 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
           // lying around.
         }
       });
-      if (connectionsClosedBeforeObserve[connection.id]) {
+
+      if (_.has(userObservesForConnections, connection.id)) {
+        if (userObservesForConnections[connection.id] !== null) {
+          throw new Error("Non-null user observe for connection " +
+                          connection.id + " while observe was being set up?");
+        }
+        userObservesForConnections[connection.id] = observe;
+      } else {
         // Oops, this connection was closed while we were setting up the
         // observe. Clean it up now.
-        delete connectionsClosedBeforeObserve[connection.id];
-        removeTokenFromConnection(connection.id);
+        observe.stop();
       }
+
       if (! foundMatchingUser) {
         // We've set up an observe on the user associated with `newToken`,
         // so if the new token is removed from the database, we'll close
