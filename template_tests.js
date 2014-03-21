@@ -1658,51 +1658,55 @@ Tinytest.add('spacebars - template - custom block helper functions called exactl
 });
 
 var runOneTwoTest = function (test, subTemplateName, optionsData) {
-  var tmpl = Template.spacebars_test_helpers_stop_onetwo;
-  tmpl.one = Template[subTemplateName + '1'];
-  tmpl.two = Template[subTemplateName + '2'];
+  _.each([Template.spacebars_test_helpers_stop_onetwo,
+          Template.spacebars_test_helpers_stop_onetwo_attribute],
+         function (tmpl) {
 
-  var buf = '';
+           tmpl.one = Template[subTemplateName + '1'];
+           tmpl.two = Template[subTemplateName + '2'];
 
-  var showOne = ReactiveVar(true);
-  var dummy = ReactiveVar(0);
+           var buf = '';
 
-  tmpl.showOne = function () { return showOne.get(); };
-  tmpl.one.options = function () {
-    var x = dummy.get();
-    buf += '1';
-    if (optionsData)
-      return optionsData[x];
-    else
-      return ['something'];
-  };
-  tmpl.two.options = function () {
-    var x = dummy.get();
-    buf += '2';
-    if (optionsData)
-      return optionsData[x];
-    else
-      return ['something'];
-  };
+           var showOne = ReactiveVar(true);
+           var dummy = ReactiveVar(0);
 
-  var div = renderToDiv(tmpl);
-  Deps.flush();
-  test.equal(buf, '1');
+           tmpl.showOne = function () { return showOne.get(); };
+           tmpl.one.options = function () {
+             var x = dummy.get();
+             buf += '1';
+             if (optionsData)
+               return optionsData[x];
+             else
+               return ['something'];
+           };
+           tmpl.two.options = function () {
+             var x = dummy.get();
+             buf += '2';
+             if (optionsData)
+               return optionsData[x];
+             else
+               return ['something'];
+           };
 
-  showOne.set(false);
-  dummy.set(1);
-  Deps.flush();
-  test.equal(buf, '12');
+           var div = renderToDiv(tmpl);
+           Deps.flush();
+           test.equal(buf, '1');
 
-  showOne.set(true);
-  dummy.set(2);
-  Deps.flush();
-  test.equal(buf, '121');
+           showOne.set(false);
+           dummy.set(1);
+           Deps.flush();
+           test.equal(buf, '12');
 
-  // clean up the div
-  $(div).remove();
-  test.equal(showOne.numListeners(), 0);
-  test.equal(dummy.numListeners(), 0);
+           showOne.set(true);
+           dummy.set(2);
+           Deps.flush();
+           test.equal(buf, '121');
+
+           // clean up the div
+           $(div).remove();
+           test.equal(showOne.numListeners(), 0);
+           test.equal(dummy.numListeners(), 0);
+         });
 };
 
 Tinytest.add('spacebars - template - with stops without re-running helper', function (test) {
