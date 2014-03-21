@@ -437,12 +437,13 @@ var runWebAppServer = function () {
   // Will be updated by main before we listen.
   var boilerplateTemplate = null;
   var boilerplateBaseData = null;
+  var boilerplateByAttributes = {};
   app.use(function (req, res, next) {
     if (! appUrl(req.url))
       return next();
 
     if (!boilerplateTemplate)
-      throw new Error("boilerplateHtml should be set before listening!");
+      throw new Error("boilerplateTemplate should be set before listening!");
     if (!boilerplateBaseData)
       throw new Error("boilerplateBaseData should be set before listening!");
 
@@ -466,24 +467,30 @@ var runWebAppServer = function () {
       return undefined;
     }
 
-    try {
-      var htmlAttributes = getHtmlAttributes(request);
-      var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
-                                     boilerplateBaseData);
-      var boilerplateInstance = boilerplateTemplate.extend({
-        data: boilerplateData
-      });
-      var boilerplateHtmlJs = boilerplateInstance.render();
-      var boilerplateHtml = "<!DOCTYPE html>\n" +
-            HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
-    } catch (e) {
-      res.writeHead(500, headers);
-      res.end();
-      return undefined;
+    var htmlAttributes = getHtmlAttributes(request);
+
+    // The only thing that changes from request to request (for now) are the
+    // HTML attributes (used by, eg, appcache), so we can memoize based on that.
+    var attributeKey = JSON.stringify(htmlAttributes);
+    if (!_.has(boilerplateByAttributes, attributeKey)) {
+      try {
+        var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
+                                       boilerplateBaseData);
+        var boilerplateInstance = boilerplateTemplate.extend({
+          data: boilerplateData
+        });
+        var boilerplateHtmlJs = boilerplateInstance.render();
+        boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
+              HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+      } catch (e) {
+        res.writeHead(500, headers);
+        res.end();
+        return undefined;
+      }
     }
 
     res.writeHead(200, headers);
-    res.write(boilerplateHtml);
+    res.write(boilerplateByAttributes[attributeKey]);
     res.end();
     return undefined;
   });
