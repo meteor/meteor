@@ -109,6 +109,8 @@ RandomGenerator.prototype.fraction = function () {
     var array = new Uint32Array(1);
     window.crypto.getRandomValues(array);
     return array[0] * 2.3283064365386963e-10; // 2^-32
+  } else {
+    throw new Error('No random generator available');
   }
 };
 
@@ -187,6 +189,9 @@ if (nodeCrypto ||
 else
   Random = new RandomGenerator([new Date(), height, width, agent, Math.random()]);
 
-Random.create = function () {
+Random.createWithSeeds = function () {
+  if (arguments.length === 0) {
+    throw new Error('No seeds were provided');
+  }
   return new RandomGenerator(arguments);
 };
