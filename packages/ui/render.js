@@ -351,6 +351,8 @@ var materialize = function (node, parent, before, parentComponent) {
     });
     range.removed = function () {
       rangeUpdater.stop();
+      if (node.stop)
+        node.stop();
     };
     // XXXX HACK
     if (Deps.active && node.stop) {

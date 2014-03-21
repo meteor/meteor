@@ -1698,6 +1698,11 @@ var runOneTwoTest = function (test, subTemplateName, optionsData) {
   dummy.set(2);
   Deps.flush();
   test.equal(buf, '121');
+
+  // clean up the div
+  $(div).remove();
+  test.equal(showOne.numListeners(), 0);
+  test.equal(dummy.numListeners(), 0);
 };
 
 Tinytest.add('spacebars - template - with stops without re-running helper', function (test) {
