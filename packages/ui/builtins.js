@@ -21,12 +21,17 @@ UI.Unless = function (argFunc, contentBlock, elseContentBlock) {
   checkBlockHelperArguments('Unless', argFunc, contentBlock, elseContentBlock);
 
   var emboxedCondition = emboxCondition(argFunc);
-  return function () {
+  var f = function () {
     if (! emboxedCondition())
       return contentBlock;
     else
       return elseContentBlock || null;
   };
+  f.stop = function () {
+    emboxedCondition.stop();
+  };
+
+  return f;
 };
 
 // Returns true if `a` and `b` are `===`, unless they are of a mutable type.
