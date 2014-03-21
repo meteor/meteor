@@ -601,7 +601,7 @@ var runWebAppServer = function () {
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
     };
 
-    _.each(clientJson.manifest, function (item) {
+    _.each(WebApp.clientProgram.manifest, function (item) {
       if (item.type === 'css' && item.where === 'client') {
         boilerplateBaseData.css.push({url: item.url});
       }

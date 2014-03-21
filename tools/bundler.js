@@ -69,11 +69,11 @@
 //    - size: size of file in bytes
 //    - hash: sha1 hash of the file contents
 //    - sourceMap: optional path to source map file (relative to program.json)
-//    Additionally there will be an entry with where equal to
-//    "internal", path equal to page (above), and hash equal to the
-//    sha1 of page (before replacements). Currently this is used to
-//    trigger HTML5 appcache reloads at the right time (if the
-//    'appcache' package is being used).
+//
+//    Additionally there may be a manifest entry with where equal to
+//    "internal", type "head" or "body", and a path and hash. These contain
+//    chunks of HTML which should be inserted in the boilerplate HTML page's
+//    <head> or <body> respectively.
 //
 //
 // == Format of a program when arch is "os.*" ==
