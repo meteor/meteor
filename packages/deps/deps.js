@@ -113,9 +113,13 @@ _.extend(Deps.Computation.prototype, {
 
     var g = function () {
       Deps.nonreactive(function () {
-        return Meteor._noYieldsAllowed(function () {
+        if (Meteor.isClient) {
           f(self);
-        });
+        } else {
+          Meteor._noYieldsAllowed(function () {
+            f(self);
+          });
+        }
       });
     };
 
