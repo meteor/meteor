@@ -507,7 +507,7 @@ Template.event.helpers({
               }
             });
             html += '</pre>';
-            val = new Handlebars.SafeString(html);
+            val = new Spacebars.SafeString(html);
           }
 
           // You can end up with a an undefined value, e.g. using

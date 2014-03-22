@@ -1139,7 +1139,7 @@ Tinytest.add('spacebars - templates - simple helpers are isolated', function (te
     helper: function () { return "foo"; },
     nodeValue: "foo"
   }, {
-    helper: function () { return new Handlebars.SafeString("bar"); },
+    helper: function () { return new Spacebars.SafeString("bar"); },
     nodeValue: "bar"
   }];
 

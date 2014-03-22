@@ -181,11 +181,11 @@ Tinytest.add("templating - safestring", function(test) {
     return "<br>";
   };
   Template.test_safestring_a.bar = function() {
-    return new Handlebars.SafeString("<hr>");
+    return new Spacebars.SafeString("<hr>");
   };
 
   var obj = {fooprop: "<br>",
-             barprop: new Handlebars.SafeString("<hr>")};
+             barprop: new Spacebars.SafeString("<hr>")};
   var html = canonicalizeHtml(
     renderToDiv(Template.test_safestring_a.extend({data: obj})).innerHTML);
 

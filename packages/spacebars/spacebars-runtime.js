@@ -77,7 +77,7 @@ Spacebars.mustacheImpl = function (value/*, args*/) {
 Spacebars.mustache = function (value/*, args*/) {
   var result = Spacebars.mustacheImpl.apply(null, arguments);
 
-  if (result instanceof Handlebars.SafeString)
+  if (result instanceof Spacebars.SafeString)
     return HTML.Raw(result.toString());
   else
     // map `null`, `undefined`, and `false` to null, which is important
