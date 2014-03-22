@@ -3,7 +3,8 @@
 // LocalCollection: a set of documents that supports queries and modifiers.
 
 // Cursor: a specification for a particular subset of documents, w/
-// a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
+// a defined order, limit, and offset.
+// Creating a query with LocalCollection.find() would return a Cursor.
 
 // ObserveHandle: the return value of a live query.
 
@@ -113,9 +114,10 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
-  // db_objects is an array of the objects that match the cursor. (It's always
-  // an array, never an IdMap: LocalCollection.Cursor is always ordered.)
-  self.db_objects = null;
+  // dbObjects is a SqrtSkipList of the objects that match the cursor. (It's
+  // always a SqrtSkipList, never an IdMap: LocalCollection.Cursor is always
+  // ordered.)
+  self.dbObjects = null;
   self.cursor_pos = 0;
 
   // by default, queries register w/ Deps when it is available.
@@ -125,7 +127,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
 LocalCollection.Cursor.prototype.rewind = function () {
   var self = this;
-  self.db_objects = null;
+  self.dbObjects = null;
   self.cursor_pos = 0;
 };
 
@@ -150,8 +152,8 @@ LocalCollection.prototype.findOne = function (selector, options) {
 LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects({ordered: true});
+  if (self.dbObjects === null)
+    self.dbObjects = self._getRawObjects({ordered: true});
 
   if (self.reactive)
     self._depend({
@@ -160,8 +162,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
       changed: true,
       movedBefore: true});
 
-  while (self.cursor_pos < self.db_objects.length) {
-    var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
+  while (self.cursor_pos < self.dbObjects.length) {
+    var elt = EJSON.clone(self.dbObjects.get(self.cursor_pos));
     if (self.projectionFn)
       elt = self.projectionFn(elt);
     if (self._transform)
@@ -200,10 +202,10 @@ LocalCollection.Cursor.prototype.count = function () {
     self._depend({added: true, removed: true},
                  true /* allow the observe to be unordered */);
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects({ordered: true});
+  if (self.dbObjects === null)
+    self.dbObjects = self._getRawObjects({ordered: true});
 
-  return self.db_objects.length;
+  return self.dbObjects.length;
 };
 
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {
@@ -261,7 +263,6 @@ LocalCollection.ObserveHandle = function () {};
 //
 // initial results delivered through added callback
 // XXX maybe callbacks should take a list of objects, to expose transactions?
-// XXX maybe support field limiting (to limit what you're notified on)
 
 _.extend(LocalCollection.Cursor.prototype, {
   observe: function (options) {
@@ -343,10 +344,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
-      // XXX unify ordered and unordered interface
-      var each = ordered
-            ? _.bind(_.each, null, query.results)
-            : _.bind(query.results.forEach, query.results);
+      var each = _.bind(query.results.forEach, query.results);
       each(function (doc) {
         var fields = EJSON.clone(doc);
 
@@ -403,9 +401,9 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
   var self = this;
   options = options || {};
 
-  // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
-  // compatible
-  var results = options.ordered ? [] : new LocalCollection._IdMap;
+  // XXX use some common interface for SqrtSkipList and _IdMap to keep code
+  // compatible for both.
+  var results = options.ordered ? new SqrtSkipList : new LocalCollection._IdMap;
 
   // fast path for single ID value
   if (self._selectorId !== undefined) {
@@ -459,17 +457,26 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
     return true;  // continue
   });
 
-  if (!options.ordered)
+  // The results are not effected by sorter or skip/limit options.
+  if (!options.ordered || !(self.sorter || self.skip || self.limit))
     return results;
 
+  var rawArray = results.toArray();
   if (self.sorter) {
     var comparator = self.sorter.getComparator({distances: distances});
-    results.sort(comparator);
+    rawArray.sort(comparator);
   }
 
-  var idx_start = self.skip || 0;
-  var idx_end = self.limit ? (self.limit + idx_start) : results.length;
-  return results.slice(idx_start, idx_end);
+  var idxStart = self.skip || 0;
+  var idxEnd = self.limit ? (self.limit + idxStart) : results.length;
+  rawArray = rawArray.slice(idxStart, idxEnd);
+
+  // XXX not the best idea to rebuild the whole data structure from scratch but
+  // it will do for now.
+  results = new SqrtSkipList;
+  _.each(rawArray, function (doc) { results.push(doc); });
+
+  return results;
 };
 
 // XXX Maybe we need a version of observe that just calls a callback if
@@ -582,7 +589,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     self._docs.clear();
     _.each(self.queries, function (query) {
       if (query.ordered) {
-        query.results = [];
+        query.results = new SqrtSkipList;
       } else {
         query.results.clear();
       }
@@ -661,9 +668,9 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var qidToOriginalResults = {};
   _.each(self.queries, function (query, qid) {
     // XXX for now, skip/limit implies ordered observe, so query.results is
-    // always an array
+    // always a SqrtSkipList. Keep only an array representation.
     if ((query.cursor.skip || query.cursor.limit) && !query.paused)
-      qidToOriginalResults[qid] = EJSON.clone(query.results);
+      qidToOriginalResults[qid] = EJSON.clone(query.results.toArray());
   });
   var recomputeQids = {};
 
@@ -743,25 +750,25 @@ LocalCollection.prototype._modifyAndNotify = function (
     doc, mod, recomputeQids, arrayIndices) {
   var self = this;
 
-  var matched_before = {};
+  var matchedBefore = {};
   for (var qid in self.queries) {
     var query = self.queries[qid];
     if (query.ordered) {
-      matched_before[qid] = query.matcher.documentMatches(doc).result;
+      matchedBefore[qid] = query.matcher.documentMatches(doc).result;
     } else {
       // Because we don't support skip or limit (yet) in unordered queries, we
       // can just do a direct lookup.
-      matched_before[qid] = query.results.has(doc._id);
+      matchedBefore[qid] = query.results.has(doc._id);
     }
   }
 
-  var old_doc = EJSON.clone(doc);
+  var oldDoc = EJSON.clone(doc);
 
   LocalCollection._modify(doc, mod, {arrayIndices: arrayIndices});
 
   for (qid in self.queries) {
     query = self.queries[qid];
-    var before = matched_before[qid];
+    var before = matchedBefore[qid];
     var afterMatch = query.matcher.documentMatches(doc);
     var after = afterMatch.result;
     if (after && query.distances && afterMatch.distance !== undefined)
@@ -782,7 +789,7 @@ LocalCollection.prototype._modifyAndNotify = function (
     } else if (!before && after) {
       LocalCollection._insertInResults(query, doc);
     } else if (before && after) {
-      LocalCollection._updateInResults(query, doc, old_doc);
+      LocalCollection._updateInResults(query, doc, oldDoc);
     }
   }
 };
@@ -804,7 +811,7 @@ LocalCollection._insertInResults = function (query, doc) {
       var i = LocalCollection._insertInSortedList(
         query.sorter.getComparator({distances: query.distances}),
         query.results, doc);
-      var next = query.results[i+1];
+      var next = query.results.get(i + 1);
       if (next)
         next = next._id;
       else
@@ -822,7 +829,7 @@ LocalCollection._removeFromResults = function (query, doc) {
   if (query.ordered) {
     var i = LocalCollection._findInOrderedResults(query, doc);
     query.removed(doc._id);
-    query.results.splice(i, 1);
+    query.results.remove(i);
   } else {
     var id = doc._id;  // in case callback mutates doc
     query.removed(doc._id);
@@ -830,10 +837,10 @@ LocalCollection._removeFromResults = function (query, doc) {
   }
 };
 
-LocalCollection._updateInResults = function (query, doc, old_doc) {
-  if (!EJSON.equals(doc._id, old_doc._id))
+LocalCollection._updateInResults = function (query, doc, oldDoc) {
+  if (!EJSON.equals(doc._id, oldDoc._id))
     throw new Error("Can't change a doc's _id while updating");
-  var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
+  var changedFields = LocalCollection._makeChangedFields(doc, oldDoc);
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {
       query.changed(doc._id, changedFields);
@@ -842,7 +849,10 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
     return;
   }
 
-  var orig_idx = LocalCollection._findInOrderedResults(query, doc);
+  // XXX This is really wrong! Why are we calling "find in ordered" when it is
+  // clear that the position could have changed! That's not right. This call
+  // prevents us from doing _findInOrderedResults optimally fast.
+  var origIdx = LocalCollection._findInOrderedResults(query, doc);
 
   if (!_.isEmpty(changedFields))
     query.changed(doc._id, changedFields);
@@ -851,12 +861,12 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 
   // just take it out and put it back in again, and see if the index
   // changes
-  query.results.splice(orig_idx, 1);
-  var new_idx = LocalCollection._insertInSortedList(
+  query.results.remove(origIdx);
+  var newIdx = LocalCollection._insertInSortedList(
     query.sorter.getComparator({distances: query.distances}),
     query.results, doc);
-  if (orig_idx !== new_idx) {
-    var next = query.results[new_idx+1];
+  if (origIdx !== newIdx) {
+    var next = query.results.get(newIdx + 1);
     if (next)
       next = next._id;
     else
@@ -878,12 +888,18 @@ LocalCollection._recomputeResults = function (query, oldResults) {
     oldResults = query.results;
   if (query.distances)
     query.distances.clear();
-  query.results = query.cursor._getRawObjects({
+
+  var newResults = query.results = query.cursor._getRawObjects({
     ordered: query.ordered, distances: query.distances});
+
+  if (oldResults instanceof SqrtSkipList)
+    oldResults = oldResults.toArray();
+  if (newResults instanceof SqrtSkipList)
+    newResults = newResults.toArray();
 
   if (!query.paused) {
     LocalCollection._diffQueryChanges(
-      query.ordered, oldResults, query.results, query);
+      query.ordered, oldResults, newResults, query);
   }
 };
 
@@ -891,37 +907,41 @@ LocalCollection._recomputeResults = function (query, oldResults) {
 LocalCollection._findInOrderedResults = function (query, doc) {
   if (!query.ordered)
     throw new Error("Can't call _findInOrderedResults on unordered query");
-  for (var i = 0; i < query.results.length; i++)
-    if (query.results[i] === doc)
-      return i;
-  throw Error("object missing from query");
-};
 
-// This binary search puts a value between any equal values, and the first
-// lesser value.
-LocalCollection._binarySearch = function (cmp, array, value) {
-  var first = 0, rangeLength = array.length;
+  // XXX assumes query.results is a SqrtSkipList
+  var cmp, bound;
 
-  while (rangeLength > 0) {
-    var halfRange = Math.floor(rangeLength/2);
-    if (cmp(value, array[first + halfRange]) >= 0) {
-      first += halfRange + 1;
-      rangeLength -= halfRange + 1;
-    } else {
-      rangeLength = halfRange;
-    }
+  // XXX undo the false hack as soon as _updateInResults learns how not to call
+  // this method and then we can start making things faster.
+  if (query.sorter && 0) {
+    cmp = query.sorter.getComparator({distances: query.distances});
+    bound = query.results.lowerBound(doc, cmp);
+  } else {
+    cmp = function () { return 0; };
+    bound = {position: 0, node: query.results.getNode(0)};
   }
-  return first;
+
+  // iterate over everything comparator returns "equal" for
+  while (bound.node !== null && cmp(doc, bound.node.data) === 0) {
+    if (bound.node.data === doc)
+      return bound.position;
+
+    bound.position++;
+    bound.node = bound.node.next;
+  }
+
+  throw new Error("object missing from query");
 };
 
-LocalCollection._insertInSortedList = function (cmp, array, value) {
-  if (array.length === 0) {
-    array.push(value);
+// list - SqrtSkipList
+LocalCollection._insertInSortedList = function (cmp, list, value) {
+  if (list.length === 0) {
+    list.push(value);
     return 0;
   }
 
-  var idx = LocalCollection._binarySearch(cmp, array, value);
-  array.splice(idx, 0, value);
+  var idx = list.lowerBoundPosition(value, cmp);
+  list.insert(value, idx);
   return idx;
 };
 
@@ -975,7 +995,8 @@ LocalCollection.prototype.pauseObservers = function () {
   for (var qid in this.queries) {
     var query = this.queries[qid];
 
-    query.resultsSnapshot = EJSON.clone(query.results);
+    query.resultsSnapshot =
+      EJSON.clone(query.ordered ? query.results.toArray() : query.results);
   }
 };
 
@@ -995,10 +1016,13 @@ LocalCollection.prototype.resumeObservers = function () {
 
   for (var qid in this.queries) {
     var query = self.queries[qid];
+    var newResults = query.results;
+    if (newResults instanceof SqrtSkipList)
+      newResults = newResults.toArray();
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
     LocalCollection._diffQueryChanges(
-      query.ordered, query.resultsSnapshot, query.results, query);
+      query.ordered, query.resultsSnapshot, newResults, query);
     query.resultsSnapshot = null;
   }
   self._observeQueue.drain();
