@@ -113,7 +113,7 @@ _extend(UI.Component, {
       // Don't do this if the function is really just an emboxed constant.
       return function (/*arguments*/) {
         var data = getComponentData(self);
-        return result.apply(data, arguments);
+        return result.apply(data === null ? {} : data, arguments);
       };
     } else {
       return result;

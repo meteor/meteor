@@ -1741,3 +1741,45 @@ Tinytest.add('spacebars - template - template with callbacks inside with stops w
   tmpl.destroyed = function () {};
   runOneTwoTest(test, 'spacebars_test_helpers_stop_with_callbacks');
 });
+
+Tinytest.add('spacebars - template - no data context is seen as an empty object', function (test) {
+  var tmpl = Template.spacebars_test_no_data_context;
+
+  var dataInHelper = 'UNSET';
+  var dataInRendered = 'UNSET';
+  var dataInCreated = 'UNSET';
+  var dataInDestroyed = 'UNSET';
+  var dataInEvent = 'UNSET';
+
+  tmpl.foo = function () {
+    dataInHelper = this;
+  };
+  tmpl.created = function () {
+    dataInCreated = this.data;
+  };
+  tmpl.rendered = function () {
+    dataInRendered = this.data;
+  };
+  tmpl.destroyed = function () {
+    dataInDestroyed = this.data;
+  };
+  tmpl.events({
+    'click': function () {
+      dataInEvent = this;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  document.body.appendChild(div);
+  clickElement(div.querySelector('button'));
+  Deps.flush(); // rendered gets called afterFlush
+  $(div).remove();
+
+  test.isFalse(dataInHelper === window);
+  test.equal(dataInHelper, {});
+  test.equal(dataInCreated, null);
+  test.equal(dataInRendered, null);
+  test.equal(dataInDestroyed, null);
+  test.isFalse(dataInEvent === window);
+  test.equal(dataInEvent, {});
+});

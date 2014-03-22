@@ -298,7 +298,7 @@ UI.Component.notifyParented = function () {
           // XXX we should probably do what Spark did and block all
           // event handling during our DOM manip.  Many apps had weird
           // unanticipated bugs until we did that.
-          esh.handler.call(data, event, self.templateInstance);
+          esh.handler.call(data === null ? {} : data, event, self.templateInstance);
         });
       };
 
