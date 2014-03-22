@@ -50,16 +50,27 @@ HTMLTools.parseFragment = function (input, options) {
     result = getContent(scanner, shouldStop);
   }
   if (! scanner.isEOF()) {
+    var posBefore = scanner.pos;
+
+    try {
+      var endTag = getHTMLToken(scanner);
+    } catch (e) {
+      // ignore errors from getSpecialTag
+    }
+
     // XXX we make some assumptions about shouldStop here, like that it
     // won't tell us to stop at an HTML end tag.  Should refactor
     // `shouldStop` into something more suitable.
-    if (scanner.rest().slice(0, 2) === '</') {
-      var closeTag = scanner.rest().slice(2).match(/^[a-z]*/i)[0];
+    if (endTag && endTag.t === 'Tag' && endTag.isEnd) {
+      var closeTag = endTag.n;
       var isVoidElement = HTML.isVoidElement(closeTag);
       scanner.fatal("Unexpected HTML close tag" +
                     (isVoidElement ?
-                     '.  <' + closeTag + '> should have no close tag.' : ''));
+                     '.  <' + endTag.n + '> should have no close tag.' : ''));
     }
+
+    scanner.pos = posBefore; // rewind, we'll continue parsing as usual
+
     if (! shouldStop)
       scanner.fatal("Expected EOF");
   }
@@ -99,14 +110,10 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
   var items = [];
 
   while (! scanner.isEOF()) {
-    // Stop at any top-level end tag.  We could use the tokenizer
-    // but these two characters are a giveaway.
-    if (scanner.rest().slice(0, 2) === '</')
-      break;
-
     if (shouldStopFunc && shouldStopFunc(scanner))
       break;
 
+    var posBefore = scanner.pos;
     var token = getHTMLToken(scanner);
     if (! token)
       // tokenizer reached EOF on its own, e.g. while scanning
@@ -125,10 +132,11 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
       // token.v is an object `{ ... }`
       items.push(HTMLTools.Special(token.v));
     } else if (token.t === 'Tag') {
-      if (token.isEnd)
-        // we've already screened for `</` so this shouldn't be
-        // possible.
-        scanner.fatal("Assertion failed: didn't expect end tag");
+      if (token.isEnd) {
+        // rewind; we'll parse the end token later
+        scanner.pos = posBefore;
+        break;
+      }
 
       var tagName = token.n;
       // is this an element with no close tag (a BR, HR, IMG, etc.) based
@@ -146,7 +154,7 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
       if (isVoid || token.isSelfClosing) {
         items.push(attrs ? tagFunc(attrs) : tagFunc());
       } else {
-        // parse HTMl tag contents.
+        // parse HTML tag contents.
 
         // HTML treats a final `/` in a tag as part of an attribute, as in `<a href=/foo/>`, but the template author who writes `<circle r={{r}}/>`, say, may not be thinking about that, so generate a good error message in the "looks like self-close" case.
         var looksLikeSelfClose = (scanner.input.substr(scanner.pos - 2, 2) === '/>');
@@ -160,21 +168,12 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
           content = getContent(scanner, shouldStopFunc);
         }
 
-        if (scanner.rest().slice(0, 2) !== '</') {
+        var endTag = getHTMLToken(scanner);
+
+        if (! (endTag && endTag.t === 'Tag' && endTag.isEnd && endTag.n === tagName))
           scanner.fatal('Expected "' + tagName + '" end tag' + (looksLikeSelfClose ? ' -- if the "<' + token.n + ' />" tag was supposed to self-close, try adding a space before the "/"' : ''));
-        }
-
-        var endTag = getTagToken(scanner);
-
-        if (! (endTag.t === 'Tag' && endTag.isEnd))
-          // we've already seen `</` so this shouldn't be possible
-          // without erroring.
-          scanner.fatal("Assertion failed: expected end tag");
 
         // XXX support implied end tags in cases allowed by the spec
-        if (endTag.n !== tagName) {
-          scanner.fatal('Expected "' + tagName + '" end tag, found "' + endTag.n + '"' + (looksLikeSelfClose ? ' -- if the "<' + token.n + ' />" tag was supposed to self-close, try adding a space before the "/"' : ''));
-        }
 
         // make `content` into an array suitable for applying tag constructor
         // as in `FOO.apply(null, content)`.
