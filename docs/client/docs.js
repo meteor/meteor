@@ -408,15 +408,15 @@ Template.nav_section.depthIs = function (n) {
   return this.depth === n;
 };
 
-Handlebars.registerHelper('dstache', function() {
+UI.registerHelper('dstache', function() {
   return '{{';
 });
 
-Handlebars.registerHelper('tstache', function() {
+UI.registerHelper('tstache', function() {
   return '{{{';
 });
 
-Handlebars.registerHelper('lt', function () {
+UI.registerHelper('lt', function () {
   return '<';
 });
 

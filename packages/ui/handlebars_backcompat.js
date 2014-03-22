@@ -1,10 +1,17 @@
-Handlebars = {
-  _globalHelpers: {},
+// XXX this file no longer makes sense in isolation.  take it apart as
+// part file reorg on the 'ui' package
+var globalHelpers = {};
 
-  registerHelper: function (name, func) {
-    this._globalHelpers[name] = func;
-  }
+UI.registerHelper = function (name, func) {
+  globalHelpers[name] = func;
 };
+
+UI._globalHelper = function (name) {
+  return globalHelpers[name];
+};
+
+Handlebars = {};
+Handlebars.registerHelper = UI.registerHelper;
 
 // Utility to HTML-escape a string.
 UI._escape = Handlebars._escape = (function() {

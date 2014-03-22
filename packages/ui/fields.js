@@ -85,12 +85,7 @@ _extend(UI.Component, {
     } else if (template && _.has(Template, id)) {
       return Template[id];
 
-    } else if (Handlebars._globalHelpers[id]) {
-      // Backwards compatibility for helpers defined with
-      // `Handlebars.registerHelper`. XXX what is the future pattern
-      // for this? We should definitely not put it on the Handlebars
-      // namespace.
-      result = Handlebars._globalHelpers[id];
+    } else if ((result = UI._globalHelper(id))) {
 
     } else {
       // Resolve id `foo` as `data.foo` (with a "soft dot").
