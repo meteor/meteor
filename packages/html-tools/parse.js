@@ -15,6 +15,8 @@ HTMLTools.Special.prototype.toJS = function (options) {
                                       options);
 };
 
+// Parse a "fragment" of HTML, up to the end of the input or a particular
+// template tag (using the "shouldStop" option).
 HTMLTools.parseFragment = function (input, options) {
   var scanner;
   if (typeof input === 'string')
@@ -50,6 +52,11 @@ HTMLTools.parseFragment = function (input, options) {
     result = getContent(scanner, shouldStop);
   }
   if (! scanner.isEOF()) {
+    // If we aren't at the end of the input, we either stopped at an unmatched
+    // HTML end tag or at a template tag (like `{{else}}` or `{{/if}}`).
+    // Detect the former case (stopped at an HTML end tag) and throw a good
+    // error.
+
     var posBefore = scanner.pos;
 
     try {
@@ -71,6 +78,8 @@ HTMLTools.parseFragment = function (input, options) {
 
     scanner.pos = posBefore; // rewind, we'll continue parsing as usual
 
+    // If no "shouldStop" option was provided, we should have consumed the whole
+    // input.
     if (! shouldStop)
       scanner.fatal("Expected EOF");
   }
@@ -133,7 +142,8 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
       items.push(HTMLTools.Special(token.v));
     } else if (token.t === 'Tag') {
       if (token.isEnd) {
-        // rewind; we'll parse the end token later
+        // Stop when we encounter an end tag at the top level.
+        // Rewind; we'll re-parse the end tag later.
         scanner.pos = posBefore;
         break;
       }
