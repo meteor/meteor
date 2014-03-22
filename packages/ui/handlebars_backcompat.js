@@ -7,7 +7,7 @@ Handlebars = {
 };
 
 // Utility to HTML-escape a string.
-Handlebars._escape = (function() {
+UI._escape = Handlebars._escape = (function() {
   var escape_map = {
     "<": "&lt;",
     ">": "&gt;",

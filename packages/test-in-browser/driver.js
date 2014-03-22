@@ -499,7 +499,7 @@ Template.event.helpers({
               var text = piece[1];
               if (which === 0 ||
                   which === (key === 'actual' ? -1 : 1)) {
-                var htmlBit = Handlebars._escape(text).replace(
+                var htmlBit = UI._escape(text).replace(
                     /\n/g, '<br>');
                 if (which !== 0)
                   htmlBit = '<ins>' + htmlBit + '</ins>';
