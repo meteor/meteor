@@ -23,18 +23,41 @@
 </body>
 
 <template name="nav">
-<div id="nav-inner">
-  {{#each sections}}
-  {{#if type "spacer"}}
-    <div class="spacer"> </div>
+  <div id="nav-inner">
+    {{#each sections}}
+      {{#if type "spacer"}}
+        <div class="spacer"> </div>
+      {{/if}}
+      {{#if type "section"}}
+        {{#nav_section}}
+          <a href="#{{id}}" class="{{maybe_current}} {{style}}">
+            {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
+          </a>
+        {{/nav_section}}
+      {{/if}}
+    {{/each}}
+  </div>
+</template>
+
+<template name="nav_section">
+  {{#if depthIs 1}}
+    <h1>{{> UI.contentBlock}}</h1>
   {{/if}}
-  {{#if type "section"}}
-    <h{{depth}}><a href="#{{id}}" class="{{maybe_current}} {{style}}">
-        {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
-    </a></h{{depth}}>
+  {{#if depthIs 2}}
+    <h2>{{> UI.contentBlock}}</h2>
   {{/if}}
-  {{/each}}
-</div>
+  {{#if depthIs 3}}
+    <h3>{{> UI.contentBlock}}</h3>
+  {{/if}}
+  {{#if depthIs 4}}
+    <h4>{{> UI.contentBlock}}</h4>
+  {{/if}}
+  {{#if depthIs 5}}
+    <h5>{{> UI.contentBlock}}</h5>
+  {{/if}}
+  {{#if depthIs 6}}
+    <h6>{{> UI.contentBlock}}</h6>
+  {{/if}}
 </template>
 
 <!-- This only is displayed on narrow displays (eg phone) -->
@@ -43,24 +66,35 @@
 </template>
 
 
-<template name="dtdd_helper">
-<dt><span class="name">{{{name}}}</span>
-  {{#if type}}<span class="type">{{type}}</span>{{/if}}
-</dt>
-<dd>{{#better_markdown}}{{{descr}}}{{/better_markdown}}</dd>
+<template name="dtdd">
+  {{! can be used with either one argument (which ends up in the data
+      context, or with both name and type }}
+
+  {{#if name}}
+    <dt><span class="name">{{{name}}}</span>
+      {{#if type}}<span class="type">{{type}}</span>{{/if}}
+    </dt>
+  {{else}}
+    <dt><span class="name">{{{.}}}</span></dt>
+  {{/if}}
+  <dd>{{#markdown}}{{> UI.contentBlock}}{{/markdown}}</dd>
 </template>
 
 
 
-<template name="warning_helper">
-  <div class="warning">
-    {{#better_markdown}}{{{this}}}{{/better_markdown}}
-  </div>
+<!-- this is used within {{#markdown}}. <div> must be unindented.
+     http://daringfireball.net/projects/markdown/syntax#html -->
+<template name="warning">
+<div class="warning">
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
+</div>
 </template>
 
-<template name="note_helper">
-  <div class="note">
-    {{#better_markdown}}{{{this}}}{{/better_markdown}}
-  </div>
+<!-- this is used within {{#markdown}}. <div> must be unindented.
+     http://daringfireball.net/projects/markdown/syntax#html -->
+<template name="note">
+<div class="note">
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
+</div>
 </template>
 
