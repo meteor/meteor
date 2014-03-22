@@ -196,19 +196,19 @@ Tinytest.add("templating - safestring", function(test) {
 });
 
 Tinytest.add("templating - helpers and dots", function(test) {
-  Handlebars.registerHelper("platypus", function() {
+  UI.registerHelper("platypus", function() {
     return "eggs";
   });
-  Handlebars.registerHelper("watermelon", function() {
+  UI.registerHelper("watermelon", function() {
     return "seeds";
   });
 
-  Handlebars.registerHelper("daisygetter", function() {
+  UI.registerHelper("daisygetter", function() {
     return this.daisy;
   });
 
   // XXX for debugging
-  Handlebars.registerHelper("debugger", function() {
+  UI.registerHelper("debugger", function() {
     debugger;
   });
 
@@ -234,7 +234,7 @@ Tinytest.add("templating - helpers and dots", function(test) {
     };
   };
 
-  Handlebars.registerHelper("fancyhelper", getFancyObject);
+  UI.registerHelper("fancyhelper", getFancyObject);
 
   Template.test_helpers_a.platypus = 'bill';
   Template.test_helpers_a.warthog = function() {
@@ -568,7 +568,7 @@ Tinytest.add("templating - events", function (test) {
 
 Tinytest.add('templating - helper typecast Issue #617', function (test) {
 
-  Handlebars.registerHelper('testTypeCasting', function (/*arguments*/) {
+  UI.registerHelper('testTypeCasting', function (/*arguments*/) {
     // Return a string representing the arguments passed to this
     // function, including types. eg:
     // (1, true) -> "[number,1][boolean,true]"
