@@ -41,7 +41,6 @@ Tinytest.add("html-tools - parser getContent", function (test) {
 
 
   succeed('', null);
-  succeed('^^^</', null);
   succeed('abc', 'abc');
   succeed('abc^^^</x>', 'abc');
   succeed('a&lt;b', ['a', CharRef({html: '&lt;', str: '<'}), 'b']);
@@ -152,9 +151,12 @@ Tinytest.add("html-tools - parseFragment", function (test) {
   test.equal(HTML.toJS(HTMLTools.parseFragment("<div><p id=foo>Hello</p></div>")),
              HTML.toJS(DIV(P({id:'foo'}, 'Hello'))));
 
-  test.throws(function() {
-    HTMLTools.parseFragment('asdf</a>');
-  });
+  _.each(['asdf</br>', '{{!foo}}</br>', '{{!foo}} </br>',
+          'asdf</a>', '{{!foo}}</a>', '{{!foo}} </a>'], function (badFrag) {
+            test.throws(function() {
+              HTMLTools.parseFragment(badFrag);
+            }, /Unexpected HTML close tag/);
+          });
 
   (function () {
     var p = HTMLTools.parseFragment('<p></p>');
@@ -218,8 +220,8 @@ Tinytest.add("html-tools - parseFragment", function (test) {
 Tinytest.add("html-tools - getSpecialTag", function (test) {
 
   // match a simple tag consisting of `{{`, an optional `!`, one
-  // or more ASCII letters or spaces, and a closing `}}`.
-  var mustache = /^\{\{(!?[a-zA-Z 0-9]+)\}\}/;
+  // or more ASCII letters, spaces or html tags, and a closing `}}`.
+  var mustache = /^\{\{(!?[a-zA-Z 0-9</>]+)\}\}/;
 
   // This implementation of `getSpecialTag` looks for "{{" and if it
   // finds it, it will match the regex above or fail fatally trying.
@@ -346,6 +348,12 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
   succeed('x{{!foo}}{{!bar}}y', 'xy');
   succeed('x{{!foo}}{{bar}}y', ['x', Special({stuff: 'bar'}), 'y']);
   succeed('x{{foo}}{{!bar}}y', ['x', Special({stuff: 'foo'}), 'y']);
+  succeed('<div>{{!foo}}{{!bar}}</div>', DIV());
+  succeed('<div>{{!foo}}<br />{{!bar}}</div>', DIV(BR()));
+  succeed('<div> {{!foo}} {{!bar}} </div>', DIV("   "));
+  succeed('<div> {{!foo}} <br /> {{!bar}}</div>', DIV("  ", BR(), " "));
+  succeed('{{! <div></div> }}', null);
+  succeed('{{!<div></div>}}', null);
 
   succeed('', null);
   succeed('{{!foo}}', null);
