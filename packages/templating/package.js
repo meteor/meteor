@@ -10,7 +10,7 @@ Package.describe({
 
 Package._transitional_registerBuildPlugin({
   name: "compileTemplates",
-  use: ['handlebars'],
+  use: ['spacebars-compiler'],
   sources: [
     'plugin/html_scanner.js',
     'plugin/compile-templates.js'
@@ -22,31 +22,25 @@ Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
   // is encountered
 
-  api.use(['underscore', 'spark', 'handlebars'], 'client');
-
+  api.add_files('global_template_object.js', 'client');
   api.export('Template', 'client');
 
-
-  // If we have minimongo available, use its idStringify function.
-  api.use('minimongo', 'client', {weak: true});
-  // provides the runtime logic to instantiate our templates
-  api.add_files('deftemplate.js', 'client');
-
   // html_scanner.js emits client code that calls Meteor.startup and
-  // Spark.render, so anybody using templating (eg apps) need to implicitly use
-  // 'meteor' and 'spark'.
-  api.imply(['meteor', 'spark'], 'client');
+  // UI, so anybody using templating (eg apps) need to implicitly use
+  // 'meteor' and 'ui'.
+  api.use('ui');
+  api.imply(['meteor', 'ui'], 'client');
 });
 
 Package.on_test(function (api) {
   api.use('tinytest');
   api.use('htmljs');
   api.use('templating');
-  api.use('handlebars');
   api.use('underscore');
-  api.use(['test-helpers', 'domutils', 'session', 'deps',
-           'spark', 'minimongo'], 'client');
-  api.use('handlebars', 'server');
+  api.use(['test-helpers', 'session', 'deps',
+           'minimongo'], 'client');
+  api.use('spacebars-compiler');
+
   api.add_files([
     'templating_tests.js',
     'templating_tests.html'

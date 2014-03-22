@@ -21,7 +21,7 @@ when writing those apps.
 
 <template name="whatismeteor">
 
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="whatismeteor">What is Meteor?</h2>
 
@@ -69,11 +69,11 @@ In Meteor 1.0, the `meteor` build tool will have full support for
 Atmosphere.
 {{/note}}
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="structure">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="structuringyourapp">Structuring your application</h2>
 
@@ -167,11 +167,11 @@ application are loaded according to these rules:
 * Finally, all files that match `main.*` are moved after everything else
   (preserving their order).
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="data">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="dataandsecurity">Data and security</h2>
 
@@ -347,11 +347,11 @@ and publish functions validate all of their arguments. Just run
 method or publish function which skips `check`ing any of its arguments will fail
 with an exception.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="reactivity">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="reactivity">Reactivity</h2>
 
@@ -414,11 +414,11 @@ Meteor's
 is a package called [`Deps`](#deps) that is fairly short and straightforward.
 You can use it yourself to implement new reactive data sources.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="livehtml">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="livehtml">Live HTML</h2>
 
@@ -485,11 +485,11 @@ preserve these elements even when their enclosing template is
 rerendered, but will still update their children and copy over any
 attribute changes.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="templates">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="templates">Templates</h2>
 
@@ -518,7 +518,7 @@ function `Template.hello`, passing any data for the template:
     <!-- in myapp.html -->
     <template name="hello">
       <div class="greeting">Hello there, {{dstache}}first}} {{dstache}}last}}!</div>
-    </{{! }}template>
+    {{lt}}/template>
 
     // in the JavaScript console
     > Template.hello({first: "Alyssa", last: "Hacker"});
@@ -541,7 +541,7 @@ functions in JavaScript. Just add the helper functions directly on the
       {{dstache}}#each topScorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
 instead of passing in `topScorers` as data when we call the
 template function, we could define a function on `Template.players`:
@@ -574,7 +574,7 @@ in `this`. Note that some block helpers change the current context (notably
           <div>Senior: {{dstache}}name}}</div>
         {{dstache}}/if}}
       {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
 {{#note}}
 Handlebars note: `{{dstache}}#if leagueIs "junior"}}` is
@@ -599,13 +599,13 @@ the data context of the element that triggered the event.
       {{dstache}}#each player}}
         {{dstache}}> playerScore}}
       {{dstache}}/each}}
-    </{{! }}template>
+    {{lt}}/template>
 
     <template name="playerScore">
       <div>{{dstache}}name}}: {{dstache}}score}}
         <span class="givePoints">Give points</span>
       </div>
-    </{{! }}template>
+    {{lt}}/template>
 
     <!-- myapp.js -->
     Template.playerScore.events({
@@ -622,7 +622,7 @@ discussion.
     <!-- in myapp.html -->
     <template name="forecast">
       <div>It'll be {{dstache}}prediction}} tonight</div>
-    </{{! }}template>
+    {{lt}}/template>
 
     <!-- in myapp.js -->
     // JavaScript: reactive helper function
@@ -638,11 +638,11 @@ discussion.
     > Session.set("weather", "cool and dry");
     In DOM:  <div>It'll be cool and dry tonight</div>
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 <template name="packages_concept">
-{{#better_markdown}}
+{{#markdown}}
 
   <h2 id="usingpackages">Using packages</h2>
 
@@ -679,12 +679,12 @@ are willing to brave the fact that the Meteor package format is not
 documented yet and will change significantly before Meteor 1.0. See
 [Writing Packages](#writingpackages).
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 
 <template name="namespacing">
-{{#better_markdown}}
+{{#markdown}}
 
   <h2 id="namespacing">Namespacing</h2>
 
@@ -773,12 +773,12 @@ certainly shouldn't depend on this quirk, and in the future Meteor may
 check for it and throw an error if you do.
 {{/note}}
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 
 <template name="deploying">
-{{#better_markdown}}
+{{#markdown}}
 
 <h2 id="deploying">Deploying</h2>
 
@@ -845,12 +845,12 @@ have `npm` available, and run the following:
     $ npm install fibers@1.0.1
 {{/warning}}
 
-{{/better_markdown}}
+{{/markdown}}
 </template>
 
 
 <template name="packages_writing">
-{{#better_markdown}}
+{{#markdown}}
 
   <h2 id="writingpackages">Writing packages</h2>
 
@@ -949,5 +949,5 @@ quick tips:
   machine architecture, but if not your built Meteor package will be
   portable.
 
-{{/better_markdown}}
+{{/markdown}}
 </template>

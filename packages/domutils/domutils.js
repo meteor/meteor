@@ -457,18 +457,23 @@ DomUtils.compareElementIndex = function (a, b) {
 //
 // `frag` is a DocumentFragment and will be modified in
 // place. `container` is a DOM element.
+//
+// Returns the number of levels of wrapping applied, which is
+// 0 if no wrapping was performed.
 DomUtils.wrapFragmentForContainer = function (frag, container) {
   if (container && container.nodeName === "TABLE" &&
       _.any(frag.childNodes,
             function (n) { return n.nodeName === "TR"; })) {
     // Avoid putting a TR directly in a TABLE without an
-    // intervening TBODY, because it doesn't work in IE.  We do
-    // the same thing on all browsers for ease of testing
+    // intervening TBODY, because it doesn't work in (old?) IE.
+    // We do the same thing on all browsers for ease of testing
     // and debugging.
     var tbody = document.createElement("TBODY");
     tbody.appendChild(frag);
     frag.appendChild(tbody);
+    return 1;
   }
+  return 0;
 };
 
 // Return true if `node` is part of the global DOM document. Like
@@ -550,5 +555,19 @@ DomUtils.getElementValue = function (node) {
     return DomUtils.getElementValue(node.options[node.selectedIndex]);
   } else {
     return node.value;
+  }
+};
+
+DomUtils.extractRange = function (start, end, optContainer) {
+  var parent = start.parentNode;
+  var before = start.previousSibling;
+  var after = end.nextSibling;
+  var n;
+  while ((n = (before ? before.nextSibling : parent.firstChild)) &&
+         (n !== after)) {
+    if (optContainer)
+      optContainer.appendChild(n);
+    else
+      parent.removeChild(n);
   }
 };

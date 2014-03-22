@@ -231,7 +231,7 @@ Template._configureLoginServiceDialog.visible = function () {
 
 Template._configureLoginServiceDialog.configurationSteps = function () {
   // renders the appropriate template
-  return configureLoginServiceDialogTemplateForService()();
+  return configureLoginServiceDialogTemplateForService();
 };
 
 Template._configureLoginServiceDialog.saveDisabled = function () {

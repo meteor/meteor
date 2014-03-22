@@ -4,7 +4,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-
   // XXX this should go away, and there should be a clean interface
   // that tinytest and the driver both implement?
   api.use('tinytest');
@@ -14,7 +13,10 @@ Package.on_use(function (api) {
   api.use('session');
   api.use('reload');
 
-  api.use(['spark', 'livedata', 'templating', 'deps'], 'client');
+  api.use(['ui', 'templating', 'spacebars',
+           'livedata', 'deps'], 'client');
+
+  api.add_files('diff_match_patch_uncompressed.js', 'client');
 
   api.add_files('diff_match_patch_uncompressed.js', 'client');
 
