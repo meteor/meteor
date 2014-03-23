@@ -61,12 +61,20 @@ UI.With = function (argFunc, contentBlock) {
       return contentBlock;
     });
   }
-  block.data = UI.emboxValue(argFunc, safeEquals);
+
+  block.data = function () {
+    throw new Error("Can't get data for component kind");
+  };
+
+  block.init = function () {
+    this.data = UI.emboxValue(argFunc, safeEquals);
+  };
 
   block.materialized = function () {
+    var self = this;
     if (Deps.active) {
       Deps.onInvalidate(function () {
-        block.data.stop();
+        self.data.stop();
       });
     }
   };
