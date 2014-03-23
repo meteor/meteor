@@ -762,9 +762,13 @@ LocalCollection.prototype._modifyAndNotify = function (
     }
   }
 
-  var oldDoc = EJSON.clone(doc);
+  var oldDoc = doc;
+  doc = EJSON.clone(doc);
 
   LocalCollection._modify(doc, mod, {arrayIndices: arrayIndices});
+
+  var toInsertQueries = [];
+  var toMoveQueries = [];
 
   for (qid in self.queries) {
     query = self.queries[qid];
@@ -785,13 +789,33 @@ LocalCollection.prototype._modifyAndNotify = function (
       if (before || after)
         recomputeQids[qid] = true;
     } else if (before && !after) {
-      LocalCollection._removeFromResults(query, doc);
+      // the query results still contain the old version
+      LocalCollection._removeFromResults(query, oldDoc);
     } else if (!before && after) {
-      LocalCollection._insertInResults(query, doc);
+      toInsertQueries.push(query);
     } else if (before && after) {
-      LocalCollection._updateInResults(query, doc, oldDoc);
+      var move = LocalCollection._updateInResults(query, doc, oldDoc);
+      toMoveQueries.push(_.extend({ query: query }, move || {}));
     }
   }
+
+  doc = oldDoc;
+  LocalCollection._modify(doc, mod, {arrayIndices: arrayIndices});
+  _.each(toInsertQueries, function (query) {
+    LocalCollection._insertInResults(query, doc);
+  });
+  _.each(toMoveQueries, function (o) {
+    var query = o.query;
+
+    if (query.ordered && !query.sorter)
+      return;
+
+    LocalCollection._insertInResults(query, doc, true);
+
+    if (o.idx !== undefined && query.movedBefore) {
+      query.movedBefore(doc._id, o.next);
+    }
+  });
 };
 
 // XXX the sorted-query logic below is laughably inefficient. we'll
@@ -800,12 +824,13 @@ LocalCollection.prototype._modifyAndNotify = function (
 // XXX the logic for observing with a skip or a limit is even more
 // laughably inefficient. we recompute the whole results every time!
 
-LocalCollection._insertInResults = function (query, doc) {
+LocalCollection._insertInResults = function (query, doc, suppressNotifies) {
   var fields = EJSON.clone(doc);
   delete fields._id;
   if (query.ordered) {
     if (!query.sorter) {
-      query.addedBefore(doc._id, fields, null);
+      if (! suppressNotifies)
+        query.addedBefore(doc._id, fields, null);
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
@@ -816,11 +841,14 @@ LocalCollection._insertInResults = function (query, doc) {
         next = next._id;
       else
         next = null;
-      query.addedBefore(doc._id, fields, next);
+      if (! suppressNotifies)
+        query.addedBefore(doc._id, fields, next);
     }
-    query.added(doc._id, fields);
+    if (! suppressNotifies)
+      query.added(doc._id, fields);
   } else {
-    query.added(doc._id, fields);
+    if (! suppressNotifies)
+      query.added(doc._id, fields);
     query.results.set(doc._id, doc);
   }
 };
@@ -846,33 +874,31 @@ LocalCollection._updateInResults = function (query, doc, oldDoc) {
       query.changed(doc._id, changedFields);
       query.results.set(doc._id, doc);
     }
-    return;
+    return null;
   }
-
-  // XXX This is really wrong! Why are we calling "find in ordered" when it is
-  // clear that the position could have changed! That's not right. This call
-  // prevents us from doing _findInOrderedResults optimally fast.
-  var origIdx = LocalCollection._findInOrderedResults(query, doc);
 
   if (!_.isEmpty(changedFields))
     query.changed(doc._id, changedFields);
   if (!query.sorter)
-    return;
+    return null;
+
+  // The query results still contain the old version
+  var origIdx = LocalCollection._findInOrderedResults(query, oldDoc);
 
   // just take it out and put it back in again, and see if the index
   // changes
   query.results.remove(origIdx);
-  var newIdx = LocalCollection._insertInSortedList(
-    query.sorter.getComparator({distances: query.distances}),
-    query.results, doc);
+
+  var lowerBoundResult = query.results.lowerBound(doc,
+    query.sorter.getComparator({distances: query.distances}));
+  var newIdx = lowerBoundResult.position;
+
   if (origIdx !== newIdx) {
-    var next = query.results.get(newIdx + 1);
-    if (next)
-      next = next._id;
-    else
-      next = null;
-    query.movedBefore && query.movedBefore(doc._id, next);
+    var next = lowerBoundResult.node && lowerBoundResult.node.data._id;
+    return { idx: newIdx, next: next };
   }
+
+  return null;
 };
 
 // Recomputes the results of a query and runs observe callbacks for the
@@ -911,9 +937,7 @@ LocalCollection._findInOrderedResults = function (query, doc) {
   // XXX assumes query.results is a SqrtSkipList
   var cmp, bound;
 
-  // XXX undo the false hack as soon as _updateInResults learns how not to call
-  // this method and then we can start making things faster.
-  if (query.sorter && 0) {
+  if (query.sorter) {
     cmp = query.sorter.getComparator({distances: query.distances});
     bound = query.results.lowerBound(doc, cmp);
   } else {
