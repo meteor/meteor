@@ -214,10 +214,26 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
 // Implement Spacebars's #with, which renders its else case (or nothing)
 // if the argument is falsy.
 Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
-  // UI.With emboxes argFunc, and then we want to be sure to only call
-  // argFunc that way so we don't call it any extra times.
-  var w = UI.With(argFunc, contentBlock);
-  return UI.If(w.data, w, elseContentBlock);
+  return UI.Component.extend({
+    init: function () {
+      this.v = UI.emboxValue(argFunc);
+    },
+    render: function () {
+      return UI.If(this.v, UI.With(this.v, contentBlock), elseContentBlock);
+    },
+    materialized: (function () {
+      var f = function () {
+        var self = this;
+        if (Deps.active) {
+          Deps.onInvalidate(function () {
+            self.v.stop();
+          });
+        }
+      };
+      f.isWith = true;
+      return f;
+    })()
+  });
 };
 
 Spacebars.TemplateWith = function (argFunc, contentBlock) {
