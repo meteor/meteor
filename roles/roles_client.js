@@ -79,7 +79,7 @@ if ('undefined' !== typeof UI) {
     Handlebars.registerHelper(name, func)
   })
 } else {
-  console.log('WARNING: Roles template helpers not registered. Handlebars or UI not defined')
+  console.log && console.log('WARNING: Roles template helpers not registered. Handlebars or UI not defined')
 }
 
 }());
