@@ -1783,3 +1783,21 @@ Tinytest.add('spacebars - template - no data context is seen as an empty object'
   test.isFalse(dataInEvent === window);
   test.equal(dataInEvent, {});
 });
+
+Tinytest.add('spacebars - template - falsy with', function (test) {
+  var tmpl = Template.spacebars_test_falsy_with;
+  var R = ReactiveVar(null);
+  tmpl.obj = function () { return R.get(); };
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, "");
+
+  R.set({greekLetter: 'alpha'});
+  divRendersTo(test, div, "alpha");
+
+  R.set(null);
+  divRendersTo(test, div, "");
+
+  R.set({greekLetter: 'alpha'});
+  divRendersTo(test, div, "alpha");
+});
