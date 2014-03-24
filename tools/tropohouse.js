@@ -15,9 +15,9 @@ var Unipackage = require('./unipackage.js');
 
 var tropohouse = exports;
 
-// Return our loaded collection of tools, releases and
-// packages. If we're running an installed version, found at
-// $HOME/.meteor.
+// Return the directory containing our loaded collection of tools, releases and
+// packages. If we're running an installed version, found at $HOME/.meteor, if
+// we are running form a checkout, probably at $CHECKOUT_DIR/.meteor.
 tropohouse.getWarehouseDir = function () {
   // a hook for tests, or i guess for users.
   if (process.env.METEOR_WAREHOUSE_DIR)
@@ -28,51 +28,67 @@ tropohouse.getWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor");
 };
 
+// Return the directory within the warehouse that would contain downloaded
+// builds for a given package and version, if we have such builds cached on
+// disk. Takes in a package name and a version, and returns the [warehouse
+// path]/downloaded-builds/[packageName]/[version].
+//
+// This does NOT check that the directory exists or contains content.
 tropohouse.downloadedBuildsDirectory = function(packageName, version) {
   return path.join(tropohouse.getWarehouseDir(), "downloaded-builds",
                    packageName, version);
 };
 
+// Return a path to a location that would contain a specified build of the
+// package at the specified version, if we have this build cached on disk.
 tropohouse.downloadedBuildPath = function(packageName, version, buildArches) {
   return path.join(tropohouse.downloadedBuildsDirectory(packageName, version),
                    buildArches);
 };
 
-tropohouse.downloadedArches = function (packageName, version) {
-  var downloadedBuilds = tropohouse.downloadedBuilds(packageName, version);
-  var downloadedArches = {};
-  _.each(downloadedBuilds, function (build) {
-    _.each(build.split('+'), function (arch) {
-      downloadedArches[arch] = true;
-    });
-  });
-  return _.keys(downloadedArches);
-};
-
+// Returns a list of builds that we have downloaded for a package&version by
+// reading the contents of that package & version's build directory. Does not
+// check that the directory exists.
 tropohouse.downloadedBuilds = function (packageName, version) {
   return files.readdirNoDots(
     tropohouse.downloadedBuildsDirectory(packageName, version));
 };
 
-// Returns the load path where one can expect to find the package.
+
+// Returns a list of architectures that we have downloaded for a given package
+// at a version: gets a list of builds from downloadedBuilds and then splits up
+// each build into its component architectures, and returns a union of all
+// contained architectures.
+tropohouse.downloadedArches = function (packageName, version) {
+  var downloadedBuilds = tropohouse.downloadedBuilds(packageName, version);
+  var downloadedArches = _.reduce(
+    downloadedBuilds,
+    function(init, build) {
+      return _.union(build.split('+'), init);
+    },
+    []);
+  return downloadedArches;
+};
+
+// Returns the load path where one can expect to find the package, at a given
+// version, if we have already downloaded from the package server. Does not
+// check for contents.
+//
+// Returns null if the package name is lexographically invalid.
 tropohouse.packagePath = function (packageName, version) {
-  // Check for invalid package names. Currently package names can only
-  // contain ASCII alphanumerics, dash, and dot, and must contain at
-  // least one letter.
-  //
-  // XXX we should factor this out somewhere else, but it's nice to
-  // make sure that package names that we get here are sanitized to
-  // make sure that we don't try to read random locations on disk
-  //
-  // XXX revisit this later. What about unicode package names?
-  if (/[^A-Za-z0-9.\-]/.test(packageName) || !/[A-Za-z]/.test(packageName) )
+  if (! utils.validPackageName(packageName)) {
     return null;
+  }
 
   var loadPath = path.join(tropohouse.getWarehouseDir(), "packages",
                            packageName, version);
   return loadPath;
 };
 
+// Contacts the package server, downloads and extracts a tarball for a given
+// buildRecord into the warehouse downloadedBuildPath for that build.
+//
+// XXX: Error handling.
 tropohouse.downloadSpecifiedBuild = function (buildRecord) {
   // XXX nb: "version" field is calculated by getBuildsForArches
   var path = tropohouse.downloadedBuildPath(
@@ -84,7 +100,12 @@ tropohouse.downloadSpecifiedBuild = function (buildRecord) {
   files.extractTarGz(packageTarball, path);
 };
 
-// Returns true if we now have the package.
+// Given versionInfo for a package version and required architectures, checks to
+// make sure that we have the package at the requested arch. If we do not have
+// the package, contact the server and attempt to download and extract the right
+// build. Returns true once we have the package, or false if the correct build
+// does not exist on the package server.
+//
 // XXX more precise error handling in offline case. maybe throw instead like
 // warehouse does.
 tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
