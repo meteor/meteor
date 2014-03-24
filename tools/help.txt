@@ -364,3 +364,12 @@ Grant a permission on an official service
 Usage: meteor admin grant [XXX]
 
 Not yet implemented
+
+
+>>> list-sites
+List sites for which you are authorized.
+Usage: meteor list-sites
+
+List the sites that you have deployed with 'meteor deploy', and sites
+for which other users have authorized you with the 'meteor authorized'
+command.
