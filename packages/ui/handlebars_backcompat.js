@@ -10,8 +10,11 @@ UI._globalHelper = function (name) {
   return globalHelpers[name];
 };
 
+Handlebars = {};
+Handlebars.registerHelper = UI.registerHelper;
+
 // Utility to HTML-escape a string.
-UI._escape  = (function() {
+UI._escape = Handlebars._escape = (function() {
   var escape_map = {
     "<": "&lt;",
     ">": "&gt;",
@@ -37,9 +40,3 @@ Handlebars.SafeString = function(string) {
 Handlebars.SafeString.prototype.toString = function() {
   return this.string.toString();
 };
-
-// XXX COMPAT WITH 0.7.2
-Handlebars = {};
-Handlebars._escape = UI._escape;
-Handlebars.registerHelper = UI.registerHelper;
-
