@@ -1596,9 +1596,26 @@ main.registerCommand({
   var name = packageSource.name;
   var version = packageSource.version;
 
+  // Check that the package name is valid.
+  if (! utils.validPackageName(name) ) {
+    process.stderr.write(
+      "Package name invalid. Package names can only contain \n" +
+      "ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
+      "Package names cannot begin with a dot. \n");
+    return 1;
+  }
+
+  // Check that we have a version.
   if (! version) {
     process.stderr.write(
      "That package cannot be published because it doesn't have a version.\n");
+    return 1;
+  }
+
+  // Check that the version description is under the character limit.
+  if (packageSource.metadata.summary.length > 100) {
+    process.stderr.write("Description must be under 100 chars.");
+    process.stderr.write("Publish failed.");
     return 1;
   }
 
@@ -1623,6 +1640,7 @@ main.registerCommand({
     version: version,
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+    containsPlugins: packageSource.containsPlugins,
     dependencies: packageSource.getDependencyMetadata()
   });
 

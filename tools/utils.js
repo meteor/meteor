@@ -240,6 +240,20 @@ exports.splitConstraint = function (constraint) {
   return ret;
 };
 
+// Check for invalid package names. Currently package names can only contain
+// ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
+// safety reasons, package names may not start with a dot.
+//
+// This does not check that the package name is valid in terms of our naming
+// scheme: ie, that it is prepended by a user's username. That check should
+// happen at publication time.
+exports.validPackageName = function (packageName) {
+ if (/[^a-z0-9.\-]/.test(packageName) || !/[a-z]/.test(packageName) ) {
+   return false;
+ }
+ return true;
+};
+
 
 // True if this looks like a valid email address. We deliberately
 // don't support
