@@ -28,6 +28,7 @@ UI.Component.instantiate = function (parent) {
     data: null,
     __component__: inst
   };
+  inst.templateInstance.$ = inst.templateInstance.findAll;
 
   inst.parent = (parent || null);
 

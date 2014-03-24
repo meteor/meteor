@@ -77,7 +77,7 @@ if (Meteor.isClient) {
   // querySelectorAll's.  In other words, all the parts
   // of `selector` must be found under `context`.
   DomBackend.findBySelector = function (selector, context) {
-    return $jq.find(selector, context);
+    return $jq(selector, context);
   };
 
   DomBackend.newFragment = function (nodeArray) {
