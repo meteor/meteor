@@ -3068,3 +3068,27 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   handle.stop();
 });
 
+Tinytest.add("minimongo - benchmark sorted query", function (test) {
+  var coll = new LocalCollection();
+
+  var adds = 0, changes = 0, removes = 0;
+  var o = coll.find({}, { sort: { x: 1, y: -1 } }).observeChanges({
+    added: function () { adds++; },
+    changed: function () { changes++; },
+    removed: function () { removes++; }
+  });
+
+  // insert 100*100 elements
+  var toInsert = [];
+  _.times(100, function (x) {
+    _.times(100, function (y) {
+      toInsert.push({ x: x, y: y });
+    });
+  });
+
+  toInsert = _.shuffle(toInsert);
+
+  _.each(toInsert, function (obj) { coll.insert(obj); });
+  test.equal(adds, 100 * 100);
+});
+
