@@ -1308,6 +1308,7 @@ main.registerCommand({
   if (! auth.isLoggedIn()) {
     process.stderr.write(
       "You must be logged in for that. Try 'meteor login'.\n");
+    return 1;
   }
 
   return deploy.listSites();
