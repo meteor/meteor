@@ -477,6 +477,14 @@ Meteor.methods({
     }
   },
 
+  // Generates a new login token with the same expiration as the
+  // connection's current token and saves it to the database. Associates
+  // the connection with this new token and returns it. Throws an error
+  // if called on a connection that isn't logged in.
+  //
+  // @returns Object
+  //   If successful, returns { token: <new token>, id: <user id>,
+  //   tokenExpires: <expiration date> }.
   getNewToken: function () {
     var self = this;
     var user = Meteor.users.findOne(self.userId, {
@@ -505,6 +513,9 @@ Meteor.methods({
     return loginUser(self, self.userId, newStampedToken);
   },
 
+  // Removes all tokens except the token associated with the current
+  // connection. Throws an error if the connection is not logged
+  // in. Returns nothing on success.
   removeOtherTokens: function () {
     var self = this;
     if (! self.userId) {
