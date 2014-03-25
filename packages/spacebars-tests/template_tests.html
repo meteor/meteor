@@ -651,3 +651,11 @@ Hi there!
     {{greekLetter}}
   {{/with}}
 </template>
+
+<template name="spacebars_test_helpers_dont_leak">
+  {{> spacebars_test_helpers_dont_leak2 foo="correct"}}
+</template>
+
+<template name="spacebars_test_helpers_dont_leak2">
+  {{foo}}{{bar}} {{#spacebars_template_test_content}}{{bonus}}{{/spacebars_template_test_content}}
+</template>

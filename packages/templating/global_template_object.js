@@ -8,6 +8,7 @@ Template.__define__ = function (templateName, renderFunc) {
 
   Template[templateName] = UI.Component.extend({
     kind: "Template_" + templateName,
-    render: renderFunc
+    render: renderFunc,
+    __helperHost: true
   });
 };
