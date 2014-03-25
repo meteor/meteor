@@ -237,8 +237,7 @@ var toc = [
         {name: "created", id: "template_created"},
         {name: "destroyed", id: "template_destroyed"},
         {name: "events", id: "template_events"},
-        {name: "helpers", id: "template_helpers"},
-        {name: "preserve", id: "template_preserve"}
+        {name: "helpers", id: "template_helpers"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "this", name: "findAll", id: "template_findAll"},
