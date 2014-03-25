@@ -1000,12 +1000,6 @@ Template.api.eventmaps = {
   name: "Event Maps"
 };
 
-Template.api.isolate = {
-  id: "isolate",
-  name: "Reactivity isolation"
-};
-
-
 
 Template.api.user = {
   id: "meteor_user",

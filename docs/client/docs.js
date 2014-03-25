@@ -247,8 +247,7 @@ var toc = [
         {instance: "this", name: "data", id: "template_data"}
       ],
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"},
-      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
+      {name: "Event maps", style: "noncode"}
      ],
 
     "Match", [
