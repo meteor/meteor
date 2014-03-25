@@ -63,13 +63,17 @@ exports.loadCachedServerData = function () {
       console.log("No cached server data found on disk.");
       return noDataToken;
     }
+    // XXX we should probably return an error to the caller here to
+    // figure out how to handle it
     console.log(e.message);
-    exit(1);
+    process.exit(1);
   }
-  var ret = JSON.parse(data);
-  if (!ret) {
+  var ret = noDataToken;
+  try {
+    ret = JSON.parse(data);
+  } catch (err) {
+    // XXX error handling
     console.log("Could not parse JSON in data.json.");
-    return noDataToken;
   }
   return ret;
 };
