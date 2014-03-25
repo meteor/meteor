@@ -1,13 +1,13 @@
+var fs = require('fs');
+var path = require('path');
+var Future = require('fibers/future');
+var _ = require('underscore');
 var auth = require('./auth.js');
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
-var fs = require('fs');
-var path = require('path');
-var Future = require('fibers/future');
-var _ = require('underscore');
-
+var ServiceConnection = require('./service-connection.js');
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -31,10 +31,11 @@ var getLoadedPackages = _.once(function () {
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
 var openPackageServerConnection = function () {
-  var DDP = getLoadedPackages().livedata.DDP;
-  return DDP.connect(config.getPackageServerUrl(), {
-    headers: { 'User-Agent': httpHelpers.getUserAgent() }
-  });
+  return new ServiceConnection(
+    getLoadedPackages(),
+    config.getPackageServerUrl(),
+    { 'User-Agent': httpHelpers.getUserAgent() }
+  );
 };
 
 
@@ -90,8 +91,8 @@ exports.loadCachedServerData = function () {
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
 //
-// If we cannot contact the server, does
-// XXX: ... does something better than hang indefinitely and be sad.
+// Throws a ServiceConnection.ConnectionTimeoutError if the method call
+// times out.
 var loadRemotePackageData = function (syncToken) {
   var conn = openPackageServerConnection();
   var collectionData = conn.call('syncNewPackageData', syncToken);
@@ -159,13 +160,24 @@ var writePackageDataToDisk = function (syncToken, collectionData) {
 // those to talk to the server and get the latest updates. Applies the diff from
 // the server to the in-memory version of the on-disk data, then writes the new
 // file to disk as the new data.json.
+//
+// Returns null if contacting the server times out.
 exports.updateServerPackageData = function (cachedServerData) {
   var sources = [];
   if (cachedServerData.collections) {
     sources.push(cachedServerData.collections);
   }
   var syncToken = cachedServerData.syncToken;
-  var remoteData = loadRemotePackageData(syncToken);
+  var remoteData;
+  try {
+    remoteData = loadRemotePackageData(syncToken);
+  } catch (err) {
+    if (err instanceof ServiceConnection.ConnectionTimeoutError) {
+      return null;
+    } else {
+      throw err;
+    }
+  }
   sources.push(remoteData.collections);
 
   var allPackageData = mergeCollections(sources);
@@ -173,10 +185,10 @@ exports.updateServerPackageData = function (cachedServerData) {
   return allPackageData;
 };
 
-// XXX onReconnect
 // Returns a logged-in DDP connection to the package server, or null if
-// we cannot log in.
-// XXX needs a timeout
+// we cannot log in. If an error unrelated to login occurs
+// (e.g. connection to package server times out), then it will be
+// thrown.
 exports.loggedInPackagesConnection = function () {
   // Make sure that we are logged in with Meteor Accounts so that we can
   // do an OAuth flow.
@@ -208,8 +220,8 @@ exports.loggedInPackagesConnection = function () {
   });
 
   var cleanUp = function () {
-    serviceConfigurationsSub.stop();
-    conn.close();
+    serviceConfigurationsSub && serviceConfigurationsSub.stop();
+    conn && conn.close();
   };
 
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
@@ -223,9 +235,19 @@ exports.loggedInPackagesConnection = function () {
   // Try to log in with an existing login token, if we have one.
   var existingToken = auth.getSessionToken(config.getPackageServerDomain());
   if (existingToken) {
-    loginResult = conn.apply('login', [{
-      resume: existingToken
-    }], { wait: true });
+    try {
+      loginResult = conn.apply('login', [{
+        resume: existingToken
+      }], { wait: true });
+    } catch (err) {
+      // If we get a Meteor.Error, then we swallow it and go on to
+      // attempt an OAuth flow and get a new token. If it's not a
+      // Meteor.Error, then we leave it to the caller to handle.
+      if (! err instanceof getLoadedPackages().meteor.Meteor.Error) {
+        cleanUp();
+        throw err;
+      }
+    }
 
     if (loginResult && loginResult.token && loginResult.id) {
       // Success!
@@ -249,10 +271,16 @@ exports.loggedInPackagesConnection = function () {
     setUpOnReconnect();
     return conn;
   } else {
-    process.stderr.write('Error logging in to package server: ' +
-                         loginResult.error + '\n');
-    cleanUp();
-    return null;
+    if (loginResult.error === "login-failed" ||
+        loginResult.error === "access-denied") {
+      process.stderr.write('Error logging in to package server: ' +
+                           loginResult.error + '\n');
+      cleanUp();
+      return null;
+    } else {
+      cleanUp();
+      throw new Error(loginResult.error);
+    }
   }
 };
 
@@ -401,4 +429,19 @@ exports.createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
                        ', version ' + unipackage.version);
 
   process.stdout.write('\nDone!\n');
+};
+
+exports.handlePackageServerConnectionError = function (error) {
+  var Package = getLoadedPackages();
+  if (error instanceof Package.meteor.Meteor.Error) {
+    process.stderr.write("Error connecting to package server");
+    if (error.message) {
+      process.stderr.write(": " + error.message);
+    }
+    process.stderr.write("\n");
+  } else if (error instanceof ServiceConnection.ConnectionTimeoutError) {
+    process.stderr.write("Connection to package server timed out.\n");
+  } else {
+    throw error;
+  }
 };

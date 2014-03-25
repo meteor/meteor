@@ -110,6 +110,8 @@ _.extend(Catalog.prototype, {
   // the catalog is not in offline mode. This is an optimization for loading
   // local packages. (An offline catalog will not sync with the server even if
   // sync is true.)
+  //
+  // Prints a warning if `sync` is true and we can't contact the package server.
   _refresh: function (sync) {
     var self = this;
     self._requireInitialized();
@@ -118,6 +120,13 @@ _.extend(Catalog.prototype, {
     var serverPackageData;
     if (! self.offline && sync) {
       serverPackageData = packageClient.updateServerPackageData(localData);
+      if (! serverPackageData) {
+        // If we couldn't contact the package server, use our local data.
+        serverPackageData = localData.collections;
+        // XXX should do some nicer error handling here (return error to
+        // caller and let them handle it?)
+        process.stderr.write("Warning: could not connect to package server\n");
+      }
     } else {
       serverPackageData = localData.collections;
     }

@@ -1619,7 +1619,12 @@ main.registerCommand({
     return 1;
   }
 
-  var conn = packageClient.loggedInPackagesConnection();
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
   if (! conn) {
     process.stderr.write('Publish failed\n');
     return 1;
@@ -1716,7 +1721,13 @@ main.registerCommand({
   var unipackage = compiler.compile(packageSource).unipackage;
   unipackage.saveToPath(path.join(packageDir, '.build'));
 
-  var conn = packageClient.loggedInPackagesConnection();
+  var conn;
+  try {
+    conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
   packageClient.createAndPublishBuiltPackage(conn, unipackage, packageDir);
 
   return 0;

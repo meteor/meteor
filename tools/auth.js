@@ -464,6 +464,9 @@ var sendAuthorizeRequest = function (clientId, redirectUri, state) {
 //  - sessionType: the value of the 'type' field for the session saved
 //    in the Meteor session file on success
 // All options are required.
+//
+// Returns true if the login was successful, and an object with an
+// 'error' key otherwise.
 var oauthFlow = function (conn, options) {
   var crypto = require('crypto');
   var credentialToken = crypto.randomBytes(16).toString('hex');
@@ -497,9 +500,13 @@ var oauthFlow = function (conn, options) {
   }
 
   // XXX tokenId???
-  var loginResult = conn.apply('login', [{
-    oauth: { credentialToken: credentialToken }
-  }], { wait: true });
+  try {
+    var loginResult = conn.apply('login', [{
+      oauth: { credentialToken: credentialToken }
+    }], { wait: true });
+  } catch (err) {
+    return { error: 'login-failed' };
+  }
 
   if (loginResult.token && loginResult.id) {
     var data = readSessionData();
@@ -509,8 +516,7 @@ var oauthFlow = function (conn, options) {
     writeSessionData(data);
     return true;
   } else {
-    process.stderr.write('Login failed');
-    return false;
+    return { error: 'login-failed' };
   }
 };
 
