@@ -95,8 +95,11 @@ exports.loadCachedServerData = function () {
 // times out.
 var loadRemotePackageData = function (syncToken) {
   var conn = openPackageServerConnection();
-  var collectionData = conn.call('syncNewPackageData', syncToken);
-  conn.close();
+  try {
+    var collectionData = conn.call('syncNewPackageData', syncToken);
+  } finally {
+    conn.close();
+  }
   return collectionData;
 };
 
