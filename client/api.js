@@ -1000,11 +1000,6 @@ Template.api.eventmaps = {
   name: "Event Maps"
 };
 
-Template.api.constant = {
-  id: "constant",
-  name: "Constant regions"
-};
-
 Template.api.isolate = {
   id: "isolate",
   name: "Reactivity isolation"

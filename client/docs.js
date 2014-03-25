@@ -248,7 +248,6 @@ var toc = [
       ],
       {type: "spacer"},
       {name: "Event maps", style: "noncode"},
-      {name: "Constant regions", style: "noncode", id: "constant"},
       {name: "Reactivity isolation", style: "noncode", id: "isolate"}
      ],
 
