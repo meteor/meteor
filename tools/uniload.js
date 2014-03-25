@@ -26,10 +26,10 @@ var packageCache = require("./package-cache.js");
 // completely.
 //
 // XXX XXX currently only local packages (eg, checkout packages) can
-// be loaded. This means that unipackage.load is completely
+// be loaded. This means that uniload.load is completely
 // nonfunctional on release builds, breaking quite a lot of tool
 // functionality. We have several options here. We could make the tool
-// into a star and eliminate unipackage.load completely. Or we could
+// into a star and eliminate uniload.load completely. Or we could
 // make a static list of versions when we build a release and put that
 // in the root of the tools directory and use that to create the
 // PackageLoader.
@@ -43,7 +43,7 @@ var packageCache = require("./package-cache.js");
 //   environment)
 //
 // Example usage:
-//   var DDP = require('./unipackage.js').load({
+//   var DDP = require('./uniload.js').load({
 //     packages: ['livedata'],
 //     release: release.current.name
 //   }).livedata.DDP;
