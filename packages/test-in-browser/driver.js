@@ -353,11 +353,14 @@ Template.testTable.helpers({
 
 //// Template - test_group
 
-Template.test_group.events({
+Template.test_group.helpers({
   thisWithDep: function () {
     this.dep.depend();
     return this;
-  },
+  }
+});
+
+Template.test_group.events({
   'click .groupname': function (evt) {
     changeToPath(this.path);
     // prevent enclosing groups from also triggering on

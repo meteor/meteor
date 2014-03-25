@@ -59,7 +59,7 @@ _extend(UI.Component, {
 
       return (compWithData ? compWithData.data : null);
 
-    } else if ((comp = findComponentWithProp(id, self))) {
+    } else if ((comp = findComponentWithHelper(id, self))) {
       // found a property or method of a component
       // (`self` or one of its ancestors)
       var result = comp[id];

@@ -508,7 +508,7 @@ Tinytest.add("spacebars - templates - each on array", function (test) {
 
 Tinytest.add("spacebars - templates - ..", function (test) {
   var tmpl = Template.spacebars_template_test_dots;
-  tmpl.getTitle = function (from) {
+  Template.spacebars_template_test_dots_subtemplate.getTitle = function (from) {
     return from.title;
   };
 
@@ -1800,4 +1800,18 @@ Tinytest.add('spacebars - template - falsy with', function (test) {
 
   R.set({greekLetter: 'alpha'});
   divRendersTo(test, div, "alpha");
+});
+
+Tinytest.add("spacebars - template - helpers don't leak", function (test) {
+  var tmpl = Template.spacebars_test_helpers_dont_leak;
+  tmpl.foo = "wrong";
+  tmpl.bar = function () { return "WRONG"; };
+
+  // Also test that custom block helpers (implemented as templates) do NOT
+  // interfere with helper lookup in the current template
+  Template.spacebars_test_helpers_dont_leak2.bonus =
+    function () { return 'BONUS'; };
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, "correct BONUS");
 });

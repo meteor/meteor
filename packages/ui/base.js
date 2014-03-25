@@ -206,6 +206,19 @@ findComponentWithProp = function (id, comp) {
   return null;
 };
 
+findComponentWithHelper = function (id, comp) {
+  while (comp) {
+    if (comp.__helperHost) {
+      if (typeof comp[id] !== 'undefined')
+        return comp;
+      else
+        return null;
+    }
+    comp = comp.parent;
+  }
+  return null;
+};
+
 getComponentData = function (comp) {
   comp = findComponentWithProp('data', comp);
   return (comp ?
