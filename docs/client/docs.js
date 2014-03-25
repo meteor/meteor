@@ -213,7 +213,7 @@ var toc = [
       "Accounts.onCreateUser",
       "Accounts.validateLoginAttempt",
       "Accounts.onLogin",
-      "Accounts.onLoginFailure"
+      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"},
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [
