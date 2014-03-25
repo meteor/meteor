@@ -1166,7 +1166,7 @@ Template.api.accounts_ui_config = {
   id: "accounts_ui_config",
   name: "Accounts.ui.config(options)",
   locus: "Client",
-  descr: ["Configure the behavior of [`{{loginButtons}}`](#accountsui)."],
+  descr: ["Configure the behavior of [`{{> loginButtons}}`](#accountsui)."],
   options: [
     {
       name: "requestPermissions",

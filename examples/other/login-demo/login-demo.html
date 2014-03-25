@@ -15,7 +15,7 @@
       <li>Logged out &mdash; otherwise</li>
     </ul>
     <p>If you reload the page while logged in, you'll start in the "logging in" state and see the "Loading..." message until the data loads.  Because logging in doesn't complete until all subscriptions have been rerun and finished loading, and the app only serves data when you're logged in, the "logging in" state encompasses loading the initial data for all subscriptions and is the only loading screen we need.</p>
-    <p>To configure this app for Google auth, the easiest way is to add the <code>accounts-ui</code> package, add <code>&#123;{loginButtons}}</code> to the end of the body, and use the configuration wizard.</p>
+    <p>To configure this app for Google auth, the easiest way is to add the <code>accounts-ui</code> package, add <code>&#123;{> loginButtons}}</code> to the end of the body, and use the configuration wizard.</p>
   </div>
 </body>
 
