@@ -13,6 +13,7 @@ var url = require('url');
 var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js');
+var ServiceConnection = require('./service-connection.js');
 
 // a bit of a hack
 var getPackage = _.once(function () {
@@ -40,7 +41,7 @@ var handleError = function (error, galaxyName, messages) {
     else if (error.message)
       process.stderr.write("Denied: " + error.message + "\n");
     return 1;
-  } else if (error instanceof ConnectionTimeoutError) {
+  } else if (error instanceof ServiceConnection.ConnectionTimeoutError) {
     // If we have an http/https URL for a galaxyName instead of a
     // proper galaxyName (which is what the code in this file
     // currently passes), strip off the scheme and trailing slash.
@@ -55,20 +56,15 @@ var handleError = function (error, galaxyName, messages) {
   }
 };
 
-// Wrapper to manage a DDP connection to a service within a
-// Galaxy. Provides (1) authentication from the credential cache, (2)
-// failing method calls and subscriptions if, after 10 seconds, we're
-// not connected. This functionality should eventually end up in the
-// DDP client in one form or other.
+// Returns a ServiceConnection to a galaxy service that is authenticated
+// from the credential cache.
 //
 // - galaxy: the name of the galaxy to connect to, as returned by
 //   discoverGalaxy (as described there, should probably be a galaxy
 //   name, but currently is a https or http URL)
 // - service: the service to connect to within the Galaxy, such as
 //   'ultraworld' or 'log-reader'.
-var ConnectionTimeoutError = function () {};
-var ServiceConnection = function (galaxy, service) {
-  var self = this;
+var galaxyServiceConnection = function (galaxy, service) {
   var Package = getPackage();
   var endpointUrl = galaxy + "/" + service;
   var parsedEndpoint = url.parse(endpointUrl);
@@ -80,105 +76,10 @@ var ServiceConnection = function (galaxy, service) {
   if (! authToken)
     throw new Error("not logged in to galaxy?");
 
-  self.connection = Package.livedata.DDP.connect(endpointUrl, {
-    headers: {
-      cookie: "GALAXY_AUTH=" + authToken
-    }
+  return new ServiceConnection(Package, endpointUrl, {
+    cookie: "GALAXY_AUTH=" + authToken
   });
-
-  self.connectionTimeoutCallbacks = [];
-  self.connectionTimer = Package.meteor.Meteor.setTimeout(function () {
-    if (self.connection.status().status !== "connected") {
-      self.connection = null;
-      _.each(self.connectionTimeoutCallbacks, function (f) {
-        f();
-      });
-      self.connectionTimeoutCallbacks = [];
-    }
-  }, 10*1000);
 };
-
-_.extend(ServiceConnection.prototype, {
-  _onConnectionTimeout: function (f) {
-    var self = this;
-    if (! self.connection)
-      f();
-    else
-      self.connectionTimeoutCallbacks.push(f);
-  },
-
-  call: function (/* arguments */) {
-    var self = this;
-    var fut = new Future;
-    self._onConnectionTimeout(function () {
-      fut['throw'](new ConnectionTimeoutError);
-    });
-
-    var args = _.toArray(arguments);
-    var name = args.shift();
-    self.connection.apply(name, args, function (err, result) {
-      if (err) {
-        fut['throw'](err);
-      } else {
-        self._cleanUpTimer();
-        fut['return'](result);
-      }
-    });
-
-    return fut.wait();
-  },
-
-  // XXX derived from _subscribeAndWait in livedata_connection.js
-  // -- but with a different signature..
-  subscribeAndWait: function (/* arguments */) {
-    var self = this;
-
-    var fut = new Future();
-    self._onConnectionTimeout(function () {
-      fut['throw'](new ConnectionTimeoutError);
-    });
-
-    var ready = false;
-    var args = _.toArray(arguments);
-    args.push({
-      onReady: function () {
-        ready = true;
-        self._cleanUpTimer();
-        fut['return']();
-      },
-      onError: function (e) {
-        if (! ready)
-          fut['throw'](e);
-        else
-          /* XXX handle post-ready error */;
-      }
-    });
-
-    var sub = self.connection.subscribe.apply(self.connection, args);
-    fut.wait();
-    return sub;
-  },
-
-  _cleanUpTimer: function () {
-    var self = this;
-    var Package = getPackage();
-    Package.meteor.Meteor.clearTimeout(self.connectionTimer);
-    self.connectionTimer = null;
-  },
-
-  close: function () {
-    var self = this;
-    if (self.connection) {
-      self.connection.close();
-      self.connection = null;
-    }
-    if (self.connectionTimer) {
-      // Clean up the timer so that Node can exit cleanly
-      self._cleanUpTimer();
-    }
-  }
-});
-
 
 // Determine if a particular site is hosted by Galaxy, and if so, by
 // which Galaxy. 'app' should be a hostname, like 'myapp.meteor.com'
@@ -251,7 +152,7 @@ exports.discoverGalaxy = function (app) {
 
 exports.deleteApp = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = new ServiceConnection(galaxy, "ultraworld");
+  var conn = galaxyServiceConnection(galaxy, "ultraworld");
 
   try {
     conn.call("destroyApp", app);
@@ -342,7 +243,7 @@ exports.deploy = function (options) {
     process.stdout.write('Uploading...\n');
 
     var galaxy = exports.discoverGalaxy(options.app);
-    conn = new ServiceConnection(galaxy, "ultraworld");
+    conn = new galaxyServiceConnection(galaxy, "ultraworld");
     var Package = getPackage();
 
     var created = true;
@@ -439,7 +340,7 @@ exports.deploy = function (options) {
 // null.
 exports.logs = function (options) {
   var galaxy = exports.discoverGalaxy(options.app);
-  var logReader = new ServiceConnection(galaxy, "log-reader");
+  var logReader = new galaxyServiceConnection(galaxy, "log-reader");
 
   try {
     var lastLogId = null;
@@ -515,7 +416,7 @@ exports.logs = function (options) {
 // site's database.
 exports.temporaryMongoUrl = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = new ServiceConnection(galaxy, "ultraworld");
+  var conn = new galaxyServiceConnection(galaxy, "ultraworld");
 
   try {
     var mongoUrl = conn.call('getTemporaryMongoUrl', app);
