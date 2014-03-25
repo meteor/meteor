@@ -1816,18 +1816,6 @@ Template.api.template_helpers = {
   ]
 };
 
-Template.api.template_preserve = {
-  id: "template_preserve",
-  name: "Template.<em>myTemplate</em>.preserve(selectors)",
-  locus: "Client",
-  descr: ["Specify rules for preserving individual DOM elements on re-render."],
-  args: [
-    {name: "selectors",
-     type: "Array or Object",
-     descr: "Array of CSS selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
-  ]
-};
-
 Template.api.template_findAll = {
   id: "template_findAll",
   name: "<em>this</em>.findAll(selector)",
