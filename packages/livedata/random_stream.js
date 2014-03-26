@@ -55,14 +55,26 @@ DDP.RandomStreams.get = function (scope, key) {
   return randomStream._sequence(key);
 };
 
+//Generate an id for a new object, using randomStream, so that the client
+//and server will produce the same id values.  By using the name of the collection
+//as the key for the random seed, we can tolerate reorderings of operations iff
+//these happen on different collections.
 DDP.RandomStreams.makeCollectionId = function (collectionName) {
+  var src = Random;
   if (collectionName) {
     var scope = DDP._CurrentInvocation.get();
-    var id = DDP.RandomStreams.get(scope, '/collection/' + collectionName).id();
-    return id;
-  } else {
-    return Random.id();
+    src = DDP.RandomStreams.get(scope, '/collection/' + collectionName);
   }
+  return src.id();
+};
+
+DDP.RandomStreams.makeMongoOid = function (collectionName) {
+  var src = Random;
+  if (collectionName) {
+    var scope = DDP._CurrentInvocation.get();
+    src = DDP.RandomStreams.get(scope, '/collection/' + collectionName);
+  }
+  return src.hexString(24);
 };
 
 _.extend(RandomStream.prototype, {

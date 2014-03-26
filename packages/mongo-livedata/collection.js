@@ -40,13 +40,13 @@ Meteor.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      return new Meteor.Collection.ObjectID();
+      return new Meteor.Collection.ObjectID(DDP.RandomStreams.makeMongoOid(name));
     };
     break;
   case 'STRING':
   default:
     self._makeNewID = function () {
-      return self._makeNewConsistentID();
+      return DDP.RandomStreams.makeCollectionId(name);
     };
     break;
   }
@@ -883,16 +883,4 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   // an ID, we don't have to any more.
 
   return self._collection.remove.call(self._collection, selector);
-};
-
-// Generate an id for a new object, using randomStream, so that the client
-// and server will produce the same id values.  By using the name of the collection
-// as the key for the random seed, we can tolerate reorderings of operations iff
-// these happen on different collections.
-Meteor.Collection.prototype._makeNewConsistentID = function () {
-  var self = this;
-  
-  var name = self._name;
-  
-  return DDP.RandomStreams.makeCollectionId(name);
 };
