@@ -171,3 +171,111 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
   test.equal(versions.sparkle, "2.1.1");
 });
 
+Tinytest.add("constraint solver - benchmark on gems", function (test) {
+  var catalogStub = {
+    getAllPackageNames: function () {
+      return _.uniq(_.pluck(gems, 'name'));
+    },
+    getPackage: function (name) {
+      throw new Error("Not implemeneted");
+    },
+    getSortedVersions: function (name) {
+      return _.chain(gems)
+        .filter(function (pv) { return pv.name === name; })
+        .pluck('number')
+        .map(function (version) {
+          var nv = exactVersion(version);
+          if (nv.length < version.length)
+            return version;
+          return nv;
+        })
+        .filter(function (v) {
+          return semver.valid(v);
+        })
+        .value()
+        .sort(semver.compare);
+    },
+    getVersion: function (name, version) {
+      var gem = _.find(gems, function (pv) {
+        return pv.name === name && exactVersion(pv.number) === version;
+      });
+
+      var ecv = function (version) {
+        // hard-code to "x.0.0"
+        return parseInt(version) + ".0.0";
+      };
+
+      var packageVersion = {
+        packageName: gem.name,
+        version: gem.number,
+        earliestCompatibleVersion: ecv(gem.number),
+        dependencies: {}
+      };
+
+      _.each(gem.dependencies, function (dep) {
+        var name = dep[0];
+        var constraints = dep[1];
+
+        packageVersion.dependencies[name] = {
+          constraint: convertConstraints(constraints)[0], // XXX pick first one only
+          references: [{
+            "slice": "main",
+            "arch": "browser"
+          }, {
+            "slice": "main",
+            "arch": "os" }]
+        };
+      });
+
+      return packageVersion;
+    }
+  };
+
+  var r = new ConstraintSolver.PackagesResolver(catalogStub);
+  r.resolve({
+    'rails': '4.0.0'
+  });
+});
+
+// Naively converts ruby-gems style constraints string to either exact
+// constraint or a regular constraint.
+function convertConstraints (inp) {
+  var out = inp.split(",").map(function (s) {
+    return s.trim();
+  })
+  // remove the constraints we don't support
+  .filter(function (s) {
+    return !/</g.test(s) && !/!=/.test(s);
+  })
+  // convert 1.2.3.beta2 => 1.2.3
+  // and 0.2 => 0.2.0
+  .map(function (s) {
+    var x = s.split(" ");
+    return [x[0], exactVersion(x[1])].join(" ");
+  })
+  // convert '= 1.2.3' => '=1.2.3'
+  // '~>1.2.3' => '1.2.3'
+  // '>=1.2.3' => '1.2.3'
+  .map(function (s) {
+    var x = s.split(' ');
+    if (x[0] === '~>' || x[0] === '>=' || x[0] === '>')
+      x[0] = '';
+    else if (x[0] === '=')
+      x[0] = '=';
+    else
+      throw new Error('unknown operator: ' + x[0]);
+    return x.join("");
+  });
+
+  return out;
+}
+
+function exactVersion (s) {
+  s = s.match(/\d+(\.\d+(\.\d+)?)?/)[0];
+  if (s.split('.').length < 3)
+    s += ".0";
+  if (s.split('.').length < 3)
+    s += ".0";
+  return s;
+}
+
