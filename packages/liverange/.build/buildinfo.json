@@ -1,0 +1,62 @@
+{
+  "builtBy": "meteor/10",
+  "sliceDependencies": {
+    "browser.json": {
+      "files": {
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/liverange/liverange.js": "b87a543f2c61ac6f2b0666ed5bd3bdd4877e14a8",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "os.json": {
+      "files": {
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "tests.browser.json": {
+      "files": {
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/liverange/liverange_test_helpers.js": "98c35c1bf472fb0c7d7273969f2555b7d955d95e",
+        "/Users/avital/meteor/packages/liverange/liverange_tests.js": "46c668a75c0677fc99cc63f4d06ee3828a61e141",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/tinytest/package.js": "59df393052590f92672f79d18e7271fbbd8e4740",
+        "/Users/avital/meteor/packages/test-helpers/package.js": "14ee8e734960461be5c0654c978bfb3c950b24de",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb",
+        "/Users/avital/meteor/packages/underscore/package.js": "4bccf0eea7c3fa4888ecdb6a0a016c03a140632f",
+        "/Users/avital/meteor/packages/jquery/package.js": "18673401c2d39492c43f9a7adecb4705b0d0724b"
+      },
+      "directories": []
+    },
+    "tests.os.json": {
+      "files": {
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/tinytest/package.js": "59df393052590f92672f79d18e7271fbbd8e4740"
+      },
+      "directories": []
+    }
+  },
+  "pluginDependencies": {
+    "files": {
+      "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08"
+    },
+    "directories": []
+  },
+  "pluginProviderPackages": {
+    "liverange": "/Users/avital/meteor/packages/liverange",
+    "meteor": "/Users/avital/meteor/packages/meteor",
+    "tinytest": "/Users/avital/meteor/packages/tinytest",
+    "test-helpers": "/Users/avital/meteor/packages/test-helpers",
+    "domutils": "/Users/avital/meteor/packages/domutils",
+    "underscore": "/Users/avital/meteor/packages/underscore",
+    "jquery": "/Users/avital/meteor/packages/jquery"
+  },
+  "source": "/Users/avital/meteor/packages/liverange"
+}

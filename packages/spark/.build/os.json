@@ -1,0 +1,19 @@
+{
+  "format": "unipackage-slice-pre1",
+  "packageVariables": [],
+  "uses": [
+    {
+      "package": "meteor"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "os/packages/spark.js",
+      "length": 0,
+      "offset": 0,
+      "servePath": "/packages/spark.js",
+      "sourceMap": "os/packages/spark.js.map"
+    }
+  ]
+}

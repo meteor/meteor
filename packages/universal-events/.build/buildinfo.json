@@ -1,0 +1,67 @@
+{
+  "builtBy": "meteor/10",
+  "sliceDependencies": {
+    "browser.json": {
+      "files": {
+        "/Users/avital/meteor/packages/universal-events/package.js": "89323e260fb4e7ff77b741c0200f7479699f31e1",
+        "/Users/avital/meteor/packages/universal-events/listener.js": "2732ba16afe59fda7d80e6d51db6034f22e4277b",
+        "/Users/avital/meteor/packages/universal-events/events-w3c.js": "67edf0e2fbfad1a74c5ee2e4db496204f5c86b16",
+        "/Users/avital/meteor/packages/universal-events/events-ie.js": "95243e767ec3a7bd75328abde274f51ae799da8a",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/underscore/package.js": "4bccf0eea7c3fa4888ecdb6a0a016c03a140632f",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb"
+      },
+      "directories": []
+    },
+    "os.json": {
+      "files": {
+        "/Users/avital/meteor/packages/universal-events/package.js": "89323e260fb4e7ff77b741c0200f7479699f31e1",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "tests.browser.json": {
+      "files": {
+        "/Users/avital/meteor/packages/universal-events/package.js": "89323e260fb4e7ff77b741c0200f7479699f31e1",
+        "/Users/avital/meteor/packages/universal-events/event_tests.js": "bcb73820550426bdbdb3f814660309f28517d5a3",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/tinytest/package.js": "59df393052590f92672f79d18e7271fbbd8e4740",
+        "/Users/avital/meteor/packages/test-helpers/package.js": "14ee8e734960461be5c0654c978bfb3c950b24de",
+        "/Users/avital/meteor/packages/underscore/package.js": "4bccf0eea7c3fa4888ecdb6a0a016c03a140632f",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb",
+        "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f"
+      },
+      "directories": []
+    },
+    "tests.os.json": {
+      "files": {
+        "/Users/avital/meteor/packages/universal-events/package.js": "89323e260fb4e7ff77b741c0200f7479699f31e1",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/tinytest/package.js": "59df393052590f92672f79d18e7271fbbd8e4740",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb",
+        "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f"
+      },
+      "directories": []
+    }
+  },
+  "pluginDependencies": {
+    "files": {
+      "/Users/avital/meteor/packages/universal-events/package.js": "89323e260fb4e7ff77b741c0200f7479699f31e1"
+    },
+    "directories": []
+  },
+  "pluginProviderPackages": {
+    "universal-events": "/Users/avital/meteor/packages/universal-events",
+    "meteor": "/Users/avital/meteor/packages/meteor",
+    "underscore": "/Users/avital/meteor/packages/underscore",
+    "domutils": "/Users/avital/meteor/packages/domutils",
+    "tinytest": "/Users/avital/meteor/packages/tinytest",
+    "test-helpers": "/Users/avital/meteor/packages/test-helpers",
+    "spark": "/Users/avital/meteor/packages/spark"
+  },
+  "source": "/Users/avital/meteor/packages/universal-events"
+}

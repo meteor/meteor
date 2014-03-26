@@ -1,0 +1,19 @@
+{
+  "format": "unipackage-slice-pre1",
+  "packageVariables": [],
+  "uses": [
+    {
+      "package": "meteor"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "os/packages/universal-events.js",
+      "length": 0,
+      "offset": 0,
+      "servePath": "/packages/universal-events.js",
+      "sourceMap": "os/packages/universal-events.js.map"
+    }
+  ]
+}

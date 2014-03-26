@@ -1,0 +1,50 @@
+{
+  "format": "unipackage-slice-pre1",
+  "noExports": true,
+  "packageVariables": [],
+  "uses": [
+    {
+      "package": "meteor"
+    },
+    {
+      "package": "tinytest"
+    },
+    {
+      "package": "underscore"
+    },
+    {
+      "package": "liverange"
+    },
+    {
+      "package": "deps"
+    },
+    {
+      "package": "domutils"
+    },
+    {
+      "package": "minimongo"
+    },
+    {
+      "package": "random"
+    },
+    {
+      "package": "spark"
+    },
+    {
+      "package": "test-helpers"
+    },
+    {
+      "package": "jquery"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "tests.browser/packages/sparktests.js",
+      "length": 413965,
+      "offset": 0,
+      "servePath": "/packages/spark:tests.js",
+      "sourceMap": "tests.browser/packages/sparktests.js.map"
+    }
+  ]
+}

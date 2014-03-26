@@ -1,0 +1,93 @@
+{
+  "builtBy": "meteor/10",
+  "sliceDependencies": {
+    "browser.json": {
+      "files": {
+        "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f",
+        "/Users/avital/meteor/packages/spark/spark.js": "439346bda9d6057191ee23a70a7c6c4278ab87ad",
+        "/Users/avital/meteor/packages/spark/patch.js": "29b57159f716244a4a7dc3026db4bf0ea46430f8",
+        "/Users/avital/meteor/packages/spark/convenience.js": "d95773f5292befaed20c83eb0a9c70c6e4bdac8e",
+        "/Users/avital/meteor/packages/spark/utils.js": "7157ea56be5f9445e94ff72f909276ca72d87aa4",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/underscore/package.js": "4bccf0eea7c3fa4888ecdb6a0a016c03a140632f",
+        "/Users/avital/meteor/packages/random/package.js": "f0b9232e06c2beebbfd6e39b213a32dd6dfb04d2",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb",
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/universal-events/package.js": "89323e260fb4e7ff77b741c0200f7479699f31e1",
+        "/Users/avital/meteor/packages/ordered-dict/package.js": "ace0f8514ac66a44ae69e3a21bb243e1b3b0de90",
+        "/Users/avital/meteor/packages/deps/package.js": "d2058c9a1b3d0d369e30683e3bca61445f879cc7",
+        "/Users/avital/meteor/packages/ejson/package.js": "38053d1b548272bec4bad8a6b3d001b64821473f"
+      },
+      "directories": []
+    },
+    "os.json": {
+      "files": {
+        "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "tests.browser.json": {
+      "files": {
+        "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f",
+        "/Users/avital/meteor/packages/spark/spark_tests.js": "2c60a87c8fe3281b210bb4a8a33a4fec26ab1d14",
+        "/Users/avital/meteor/packages/spark/patch_tests.js": "89e82d5bce61b36833c1e8131feb851e5c89d0ba",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/tinytest/package.js": "59df393052590f92672f79d18e7271fbbd8e4740",
+        "/Users/avital/meteor/packages/underscore/package.js": "4bccf0eea7c3fa4888ecdb6a0a016c03a140632f",
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/deps/package.js": "d2058c9a1b3d0d369e30683e3bca61445f879cc7",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb",
+        "/Users/avital/meteor/packages/minimongo/package.js": "1c49589fa72e8a1f9b2ccf05af69e5ea009e7a25",
+        "/Users/avital/meteor/packages/random/package.js": "f0b9232e06c2beebbfd6e39b213a32dd6dfb04d2",
+        "/Users/avital/meteor/packages/test-helpers/package.js": "14ee8e734960461be5c0654c978bfb3c950b24de",
+        "/Users/avital/meteor/packages/jquery/package.js": "18673401c2d39492c43f9a7adecb4705b0d0724b"
+      },
+      "directories": []
+    },
+    "tests.os.json": {
+      "files": {
+        "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f",
+        "/Users/avital/meteor/packages/spark/test_form_responder.js": "b2e5e68b4badb107ecac40f6655413b4b44e98e2",
+        "/Users/avital/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/Users/avital/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119",
+        "/Users/avital/meteor/packages/webapp/package.js": "e8da2907c471d46a6e8fb5dbadd91b7f891beb29",
+        "/Users/avital/meteor/packages/tinytest/package.js": "59df393052590f92672f79d18e7271fbbd8e4740",
+        "/Users/avital/meteor/packages/underscore/package.js": "4bccf0eea7c3fa4888ecdb6a0a016c03a140632f",
+        "/Users/avital/meteor/packages/liverange/package.js": "1f67ed15abbd76479569309a29a9c75a4f011b08",
+        "/Users/avital/meteor/packages/deps/package.js": "d2058c9a1b3d0d369e30683e3bca61445f879cc7",
+        "/Users/avital/meteor/packages/domutils/package.js": "371fb41ed77f24aa4869ac7e32657879b91964eb",
+        "/Users/avital/meteor/packages/minimongo/package.js": "1c49589fa72e8a1f9b2ccf05af69e5ea009e7a25",
+        "/Users/avital/meteor/packages/random/package.js": "f0b9232e06c2beebbfd6e39b213a32dd6dfb04d2"
+      },
+      "directories": []
+    }
+  },
+  "pluginDependencies": {
+    "files": {
+      "/Users/avital/meteor/packages/spark/package.js": "c49c33c405410997f170818e8f826eb78b66620f"
+    },
+    "directories": []
+  },
+  "pluginProviderPackages": {
+    "spark": "/Users/avital/meteor/packages/spark",
+    "meteor": "/Users/avital/meteor/packages/meteor",
+    "underscore": "/Users/avital/meteor/packages/underscore",
+    "random": "/Users/avital/meteor/packages/random",
+    "domutils": "/Users/avital/meteor/packages/domutils",
+    "liverange": "/Users/avital/meteor/packages/liverange",
+    "universal-events": "/Users/avital/meteor/packages/universal-events",
+    "ordered-dict": "/Users/avital/meteor/packages/ordered-dict",
+    "deps": "/Users/avital/meteor/packages/deps",
+    "ejson": "/Users/avital/meteor/packages/ejson",
+    "tinytest": "/Users/avital/meteor/packages/tinytest",
+    "minimongo": "/Users/avital/meteor/packages/minimongo",
+    "test-helpers": "/Users/avital/meteor/packages/test-helpers",
+    "jquery": "/Users/avital/meteor/packages/jquery",
+    "webapp": "/Users/avital/meteor/packages/webapp"
+  },
+  "source": "/Users/avital/meteor/packages/spark"
+}
