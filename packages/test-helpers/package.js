@@ -17,7 +17,7 @@ Package.on_use(function (api) {
 
 
   api.export([
-    'pollUntil', 'WrappedFrag', 'try_all_permutations',
+    'pollUntil', 'try_all_permutations',
     'SeededRandom', 'ReactiveVar', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
@@ -28,7 +28,6 @@ Package.on_use(function (api) {
   api.add_files('event_simulation.js');
   api.add_files('seeded_random.js');
   api.add_files('canonicalize_html.js');
-  api.add_files('wrappedfrag.js');
   api.add_files('current_style.js');
   api.add_files('reactivevar.js');
   api.add_files('callback_logger.js');
