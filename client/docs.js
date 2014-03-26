@@ -232,13 +232,12 @@ var toc = [
     ],
 
     {name: "Templates", id: "templates_api"}, [
-      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"},
+      {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
         {name: "events", id: "template_events"},
         {name: "helpers", id: "template_helpers"},
-        {name: "preserve", id: "template_preserve"}
+        {name: "rendered", id: "template_rendered"},
+        {name: "created", id: "template_created"},
+        {name: "destroyed", id: "template_destroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "this", name: "findAll", id: "template_findAll"},
@@ -248,9 +247,7 @@ var toc = [
         {instance: "this", name: "data", id: "template_data"}
       ],
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"},
-      {name: "Constant regions", style: "noncode", id: "constant"},
-      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
+      {name: "Event maps", style: "noncode"}
      ],
 
     "Match", [

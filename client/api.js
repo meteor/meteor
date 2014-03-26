@@ -1000,17 +1000,6 @@ Template.api.eventmaps = {
   name: "Event Maps"
 };
 
-Template.api.constant = {
-  id: "constant",
-  name: "Constant regions"
-};
-
-Template.api.isolate = {
-  id: "isolate",
-  name: "Reactivity isolation"
-};
-
-
 
 Template.api.user = {
   id: "meteor_user",
@@ -1177,7 +1166,7 @@ Template.api.accounts_ui_config = {
   id: "accounts_ui_config",
   name: "Accounts.ui.config(options)",
   locus: "Client",
-  descr: ["Configure the behavior of [`{{loginButtons}}`](#accountsui)."],
+  descr: ["Configure the behavior of [`{{> loginButtons}}`](#accountsui)."],
   options: [
     {
       name: "requestPermissions",
@@ -1757,19 +1746,6 @@ Template.api.http_del = {
 };
 
 
-// XXX move these up to right place
-Template.api.template_call = {
-  id: "template_call",
-  name: "Template.<em>myTemplate</em>([data])",
-  locus: "Client",
-  descr: ["Call a template function by name to produce HTML."],
-  args: [
-    {name: "data",
-     type: "Object",
-     descr: 'Optional. The data context object with which to call the template.'}
-  ]
-};
-
 Template.api.template_rendered = {
   id: "template_rendered",
   name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",
@@ -1813,18 +1789,6 @@ Template.api.template_helpers = {
     {name: "helpers",
      type: "Object",
      descr: "Dictionary of helper functions by name."}
-  ]
-};
-
-Template.api.template_preserve = {
-  id: "template_preserve",
-  name: "Template.<em>myTemplate</em>.preserve(selectors)",
-  locus: "Client",
-  descr: ["Specify rules for preserving individual DOM elements on re-render."],
-  args: [
-    {name: "selectors",
-     type: "Array or Object",
-     descr: "Array of CSS selectors that each match at most one element, such as `['.thing1', '.thing2']`, or, alternatively, a dictionary of selectors and node-labeling functions (see below)."}
   ]
 };
 

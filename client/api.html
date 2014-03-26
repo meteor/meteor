@@ -2011,11 +2011,19 @@ Example:
 
 <h2 id="templates_api"><span>Templates</span></h2>
 
-A template that you declare as `<{{! }}template name="foo"> ... <{{!
-}}/template>` can be accessed as the function `Template.foo`,
-which returns a string of HTML when called.
 
-The same template may occur many times on the page, and these
+When you write a template as `<{{! }}template name="foo"> ... <{{!
+}}/template>` in an HTML file in your app, Meteor generates a
+"component object" named `Template.foo`.
+
+{{#note}}
+   Meteor's component API is currently in flux. This section documents a few
+   features of the component object that are useful for writing apps; a future
+   release will elaborate more about how components work and about how to build
+   components that aren't just template.
+{{/note}}
+
+The same template may occur many times on a page, and these
 occurrences are called template instances.  Template instances have a
 life cycle of being created, put into the document, and later taken
 out of the document and destroyed.  Meteor manages these stages for
@@ -2023,61 +2031,6 @@ you, including determining when a template instance has been removed
 or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
-
-Additionally, Meteor will maintain a template instance and its state
-even if its surrounding HTML is re-rendered into new DOM nodes.  As
-long as the structure of template invocations is the same, Meteor will
-not consider any instances to have been created or destroyed.  You can
-request that the same DOM nodes be retained as well using `preserve`
-and `constant`.
-
-There are a number of callbacks and directives that you can specify on
-a named template and that apply to all instances of the template.
-They are described below.
-
-{{> api_box template_call}}
-
-When called inside a template helper, the body of `Meteor.render`, or
-other settings where reactive HTML is being generated, the resulting
-HTML is annotated so that it renders as reactive DOM elements.
-Otherwise, the HTML is unadorned and static.
-
-
-{{> api_box template_rendered}}
-
-This callback is called once when an instance of Template.*myTemplate* is
-rendered into DOM nodes and put into the document for the first time, and again
-each time any part of the template is re-rendered.
-
-In the body of the callback, `this` is a [template
-instance](#template_inst) object that is unique to this occurrence of
-the template and persists across re-renderings.  Use the `created` and
-`destroyed` callbacks to perform initialization or clean-up on the
-object.
-
-{{> api_box template_created}}
-
-This callback is called when an invocation of *myTemplate* represents
-a new occurrence of the template and not a re-rendering of an existing
-template instance.  Inside the callback, `this` is the new [template
-instance](#template_inst) object.  Properties you set on this object
-will be visible from the `rendered` and `destroyed` callbacks and from
-event handlers.
-
-This callback fires once and is the first callback to fire.  Every
-`created` has a corresponding `destroyed`; that is, if you get a
-`created` callback with a certain template instance object in `this`,
-you will eventually get a `destroyed` callback for the same object.
-
-{{> api_box template_destroyed}}
-
-This callback is called when an occurrence of a template is taken off
-the page for any reason and not replaced with a re-rendering.  Inside
-the callback, `this` is the [template instance](#template_inst) object
-being destroyed.
-
-This callback is most useful for cleaning up or undoing any external
-effects of `created`.  It fires once and is the last callback to fire.
 
 
 {{> api_box template_events}}
@@ -2101,104 +2054,81 @@ Example:
       }
     });
 
-In Handlebars, this helper would then be invoked as `{{dstache}}foo}}`.
+Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
+with `<{{! }}template name="myTemplate">`.
 
-The following syntax is equivalent, but won't work for reserved property
-names:
+The following syntax is a shorthand for when you only have one helper to define:
 
     Template.myTemplate.foo = function () {
       return Session.get("foo");
     };
 
-{{> api_box template_preserve}}
 
-You can "preserve" a DOM element during re-rendering, leaving the
-existing element in place in the document while replacing the
-surrounding HTML.  This means that re-rendering a template need not
-disturb text fields, iframes, and other sensitive elements it
-contains.  The elements to preserve must be present both as nodes in
-the old DOM and as tags in the new HTML.  Meteor will patch the DOM
-around the preserved elements.
 
-{{#note}}
-By default, new Meteor apps automatically include the
-`preserve-inputs` package.  This preserves all elements of type
-`input`, `textarea`, `button`, `select`, and `option` that have unique
-`id` attributes or that have `name` attributes that are unique within
-an enclosing element with an `id` attribute.  To turn off this default
-behavior, simply remove the `preserve-inputs` package.
-{{/note}}
+{{> api_box template_rendered}}
 
-Preservation is useful in a variety of cases where replacing a DOM
-element with an identical or modified element would not have the same
-effect as retaining the original element.  These include:
+This callback is called once when an instance of Template.*myTemplate* is
+rendered into DOM nodes and put into the document for the first time.
 
-* Input text fields and other form controls
-* Elements with CSS animations
-* Iframes
-* Nodes with references kept in JavaScript code
+In the body of the callback, `this` is a [template
+instance](#template_inst) object that is unique to this occurrence of
+the template and persists across re-renderings.  Use the `created` and
+`destroyed` callbacks to perform initialization or clean-up on the
+object.
 
-If you want to preserve a whole region of the DOM, an element and its
-children, or nodes not rendered by Meteor, use a [constant
-region](#constant) instead.
+Because your template has been rendered, you can use functions like
+`this.findAll` which look at its DOM nodes.
 
-To preserve nodes, pass a list of selectors, each of which should match
-at most one element in the template.  When the template is re-rendered,
-the selector is run on the old DOM and the new DOM, and Meteor will
-reuse the old element in place while working in any HTML changes around
-it.
+{{> api_box template_created}}
 
-A second form of `preserve` takes a labeling function for each selector
-and allows the selectors to match multiple nodes. The node-labeling
-function takes a node and returns a label string that is unique for each
-node, or `false` to exclude the node from preservation.
+This callback is called before your template's logic is evaluated for the first
+time.  Inside the callback, `this` is the new [template
+instance](#template_inst) object.  Properties you set on this object will be
+visible from the `rendered` and `destroyed` callbacks and from event handlers.
 
-For example, to preserve all `<input>` elements with ids in template 'foo', use:
-
-    Template.foo.preserve({
-      'input[id]': function (node) { return node.id; }
-    });
-
-Selectors are interpreted as rooted at the top level of the template.
-Each occurrence of the template operates independently, so the selectors
-do not have to be unique on the entire page, only within one occurrence
-of the template.  Selectors will match nodes even if they are in
-sub-templates.
-
-Preserving a node does *not* preserve its attributes or contents. They
-will be updated to reflect the new HTML. Text in input fields is not
-preserved unless the input field has focus, in which case the cursor and
-selection are left intact. Iframes retain their navigation state and
-animations continue to run as long as their parameters haven't changed.
-
-There are some cases where nodes can not be preserved because of
-constraints inherent in the DOM API. For example, an element's tag name
-can't be changed, and it can't be moved relative to its parent or other
-preserved nodes.  For this reason, nodes that are re-ordered or
-re-parented by an update will not be preserved.
+This callback fires once and is the first callback to fire.  Every
+`created` has a corresponding `destroyed`; that is, if you get a
+`created` callback with a certain template instance object in `this`,
+you will eventually get a `destroyed` callback for the same object.
 
 {{#note}}
-Previous versions of Meteor had an implicit page-wide `preserve`
-directive that labeled nodes by their "id" and "name" attributes.
-This has been removed in favor of the explicit, opt-in mechanism.
+  The `created` callback is not currently very useful. In a later release, the
+  template instance object (or something like it) will be visible from helper
+  functions, and `created` will be a useful way to set up values that are read
+  from helpers. For now, you probably just want to use `rendered`.
 {{/note}}
+
+{{> api_box template_destroyed}}
+
+This callback is called when an occurrence of a template is taken off
+the page for any reason and not replaced with a re-rendering.  Inside
+the callback, `this` is the [template instance](#template_inst) object
+being destroyed.
+
+This callback is most useful for cleaning up or undoing any external effects of
+`created` or `rendered`.  It fires once and is the last callback to fire.
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
 
 A template instance object represents an occurrence of a template in
 the document.  It can be used to access the DOM and it can be
-assigned properties that persist across page re-renderings.
+assigned properties that persist as the template is reactively updated.
 
 Template instance objects are found as the value of `this` in the
-`created`, `rendered`, and `destroyed` template callbacks and as an
+`created`, `rendered`, and `destroyed` template callbacks, and as an
 argument to event handlers.
 
-In addition to the properties and functions described below, you can
-assign additional properties of your choice to the object.  Property names
-starting with `_` are guaranteed to be available for your use.  Use
-the `created` and `destroyed` callbacks to perform initialization or
-clean-up on the object.
+{{#note}}
+  You cannot currently access the template instance object from helpers.
+  We plan to refactor how template instances work and make them more
+  universally accessible.
+{{/note}}
+
+In addition to the properties and functions described below, you can assign
+additional properties of your choice to the object. Use the
+[`created`](#template_created) and [`destroyed`](#template_destroyed) callbacks
+to perform initialization or clean-up on the object.
 
 You can only access `findAll`, `find`, `firstNode`, and `lastNode`
 from the `rendered` callback and event handlers, not from `created`
@@ -2207,7 +2137,11 @@ in the DOM.
 
 {{> api_box template_findAll}}
 
-Returns an array of DOM elements matching `selector`.
+Returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of DOM elements
+matching `selector`. This object is similar to an array but has other methods
+defined by the jQuery library.
+
+You can also call this function as `this.$(selector)`.
 
 The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
@@ -2268,8 +2202,8 @@ information about the event, and `template`, a [template
 instance](#template_inst) for the template where the handler is
 defined.  The handler also receives some additional context data in
 `this`, depending on the context of the current element handling the
-event.  In a Handlebars template, an element's context is the
-Handlebars data context where that element occurs, which is set by
+event.  In a template, an element's context is the
+data context where that element occurs, which is set by
 block helpers such as `#with` and `#each`.
 
 Example:
@@ -2401,11 +2335,6 @@ catching typing in text fields, while `keydown` and `keyup` can be
 used for arrow keys or modifier keys.
 {{/dtdd}}
 
-{{#dtdd "<code>tap</code>"}} Tap on an element.  On touch-enabled
-devices, this is a replacement to `click` that fires immediately.
-These events are synthesized from `touchmove` and `touchend`.
-{{/dtdd}}
-
 </dl>
 
 Other DOM events are available as well, but for the events above,
@@ -2414,58 +2343,6 @@ browsers.
 
 {{/api_box}}
 
-
-
-{{#api_box constant}}
-
-You can mark a region of a template as "constant" and not subject to
-re-rendering using the
-`{{dstache}}#constant}}...{{dstache}}/constant}}` block helper.
-Content inside the `#constant` block helper is preserved exactly as-is
-even if the enclosing template is re-rendered.  Changes to other parts
-of the template are patched in around it in the same manner as
-`preserve`.  Unlike individual node preservation, a constant region
-retains not only the identities of its nodes but also their attributes
-and contents.  The contents of the block will only be evaluated once
-per occurrence of the enclosing template.
-
-Constant regions allow non-Meteor content to be embedded in a Meteor
-template.  Many third-party widgets create and manage their own DOM
-nodes programmatically. Typically, you put an empty element in your
-template, which the widget or library will then populate with
-children. Normally, when Meteor re-renders the enclosing template it
-would remove the new children, since the template says it should be
-empty. If the container is wrapped in a `#constant` block, however, it
-is left alone; whatever content is currently in the DOM remains.
-
-{{#note}}
-Constant regions are intended for embedding non-Meteor content.
-Event handlers and reactive dependencies don't currently work
-correctly inside constant regions.
-{{/note}}
-
-
-{{/api_box}}
-
-{{#api_box isolate}}
-
-Each template runs as its own reactive computation.  When the template
-accesses a reactive data source, such as by calling `Session.get` or
-making a database query, this establishes a data dependency that will
-cause the whole template to be re-rendered when the data changes.
-This means that the amount of re-rendering for a particular change
-is affected by how you've divided your HTML into templates.
-
-Typically, the exact extent of re-rendering is not crucial, but if you
-want more control, such as for performance reasons, you can use the
-`{{dstache}}#isolate}}...{{dstache}}/isolate}}` helper.  Data
-dependencies established inside an `#isolate` block are localized to
-the block and will not in themselves cause the parent template to be
-re-rendered.  This block helper essentially conveys the reactivity
-benefits you would get by pulling the content out into a new
-sub-template.
-
-{{/api_box}}
 
 <h2 id="match"><span>Match</span></h2>
 
