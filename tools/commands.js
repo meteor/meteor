@@ -1593,6 +1593,8 @@ main.registerCommand({
     return 1;
   }
 
+  compileResult.unipackage.saveToPath(path.join(options.packageDir, '.build'));
+
   var name = packageSource.name;
   var version = packageSource.version;
 
