@@ -1746,19 +1746,6 @@ Template.api.http_del = {
 };
 
 
-// XXX move these up to right place
-Template.api.template_call = {
-  id: "template_call",
-  name: "Template.<em>myTemplate</em>([data])",
-  locus: "Client",
-  descr: ["Call a template function by name to produce HTML."],
-  args: [
-    {name: "data",
-     type: "Object",
-     descr: 'Optional. The data context object with which to call the template.'}
-  ]
-};
-
 Template.api.template_rendered = {
   id: "template_rendered",
   name: "Template.<em>myTemplate</em>.rendered = function ( ) { ... }",

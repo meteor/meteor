@@ -232,12 +232,12 @@ var toc = [
     ],
 
     {name: "Templates", id: "templates_api"}, [
-      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
+      {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
+        {name: "events", id: "template_events"},
+        {name: "helpers", id: "template_helpers"},
         {name: "rendered", id: "template_rendered"},
         {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"},
-        {name: "events", id: "template_events"},
-        {name: "helpers", id: "template_helpers"}
+        {name: "destroyed", id: "template_destroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "this", name: "findAll", id: "template_findAll"},
