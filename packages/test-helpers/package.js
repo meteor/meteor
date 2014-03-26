@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random',
           'domutils']);
-  api.use(['spark', 'jquery'], 'client');
+  api.use(['jquery'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in
   // test-helpers. It probably would be better off in livedata. But it's
@@ -19,7 +19,7 @@ Package.on_use(function (api) {
 
   api.export([
     'pollUntil', 'WrappedFrag', 'try_all_permutations',
-    'SeededRandom', 'ReactiveVar', 'OnscreenDiv', 'clickElement', 'blurElement',
+    'SeededRandom', 'ReactiveVar', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
     'makeTestConnection'], {testOnly: true});
@@ -29,7 +29,6 @@ Package.on_use(function (api) {
   api.add_files('event_simulation.js');
   api.add_files('seeded_random.js');
   api.add_files('canonicalize_html.js');
-  api.add_files('onscreendiv.js');
   api.add_files('wrappedfrag.js');
   api.add_files('current_style.js');
   api.add_files('reactivevar.js');

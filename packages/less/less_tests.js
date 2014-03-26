@@ -1,16 +1,17 @@
 
 Tinytest.add("less - presence", function(test) {
 
-  var d = OnscreenDiv(Meteor.render(function() {
-    return '<p class="less-dashy-left-border"></p>'; }));
-  d.node().style.display = 'block';
+  var div = document.createElement('div');
+  UI.materialize(Template.less_test_presence, div);
+  div.style.display = 'block';
+  document.body.appendChild(div);
 
-  var p = d.node().firstChild;
+  var p = div.querySelector('p');
   test.equal(getStyleProperty(p, 'border-left-style'), "dashed");
 
   // test @import
   test.equal(getStyleProperty(p, 'border-right-style'), "dotted");
   test.equal(getStyleProperty(p, 'border-bottom-style'), "double");
 
-  d.kill();
+  document.body.removeChild(div);
 });

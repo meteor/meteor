@@ -1,25 +1,27 @@
 
 Tinytest.add("stylus - presence", function(test) {
-  var d = OnscreenDiv(Meteor.render(function() {
-    return '<p class="stylus-dashy-left-border"></p>'; }));
-  d.node().style.display = 'block';
 
-  var p = d.node().firstChild;
+  var div = document.createElement('div');
+  UI.materialize(Template.stylus_test_presence, div);
+  div.style.display = 'block';
+  document.body.appendChild(div);
+
+  var p = div.querySelector('p');
   var leftBorder = getStyleProperty(p, 'border-left-style');
   test.equal(leftBorder, "dashed");
 
-  d.kill();
+  document.body.removeChild(div);
 });
 
 Tinytest.add("stylus - @import", function(test) {
-  var d = OnscreenDiv(Meteor.render(function() {
-    return '<p class="stylus-import-dashy-border stylus-overwrite-color"></p>';
-  }));
-  d.node().style.display = 'block';
+  var div = document.createElement('div');
+  UI.materialize(Template.stylus_test_import, div);
+  div.style.display = 'block';
+  document.body.appendChild(div);
 
-  var p = d.node().firstChild;
+  var p = div.querySelector('p');
   test.equal(getStyleProperty(p, 'font-size'), "20px");
   test.equal(getStyleProperty(p, 'border-left-style'), "dashed");
 
-  d.kill();
+  document.body.removeChild(div);
 });

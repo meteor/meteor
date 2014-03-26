@@ -258,6 +258,9 @@ _.extend(Deps.Dependency.prototype, {
 _.extend(Deps, {
   // http://docs.meteor.com/#deps_flush
   flush: function (_opts) {
+    // XXX What part of the comment below is still true? (We no longer
+    // have Spark)
+    //
     // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
     // app event handler that calls Deps.flush.  At the moment
