@@ -675,7 +675,7 @@ _.extend(Connection.prototype, {
     randomSeed.generator = function (){
       var self = randomSeed;
       if (self.randomSeed === undefined) {
-        self.randomSeed = DDP.randomStream(enclosing, '/rpc/' + name).hexString(20);
+        self.randomSeed = DDP.RandomStreams.get(enclosing, '/rpc/' + name).hexString(20);
       }
       return self.randomSeed;
     };

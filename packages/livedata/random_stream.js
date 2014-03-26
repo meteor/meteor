@@ -29,12 +29,14 @@ function randomToken() {
   return Random.hexString(20);
 };
 
+DDP.RandomStreams = {};
+
 // Returns the random stream with the specified key.
 // This first tries to use the DDP method invocation as the scope;
 // if we're not in a method invocation, then we can use fallbackScope instead.
 // Otherwise we generate an ephemeral  scope, which will be random,
 // but won't produce values that we can easily reproduce elsewhere.
-DDP.randomStream = function (scope, key) {
+DDP.RandomStreams.get = function (scope, key) {
   if (!key) {
     key = "default";
   }
@@ -52,6 +54,16 @@ DDP.randomStream = function (scope, key) {
     });
   }
   return randomStream._sequence(key);
+};
+
+DDP.RandomStreams.makeCollectionId = function (collectionName) {
+  if (collectionName) {
+    var scope = DDP._CurrentInvocation.get();
+    var id = DDP.RandomStreams.get(scope, '/collection/' + collectionName).id();
+    return id;
+  } else {
+    return Random.id();
+  }
 };
 
 _.extend(RandomStream.prototype, {

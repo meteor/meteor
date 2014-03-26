@@ -1,7 +1,7 @@
-Tinytest.add("livedata - DDP.randomStream", function (test) {
+Tinytest.add("livedata - DDP.RandomStreams.get", function (test) {
   var randomSeed = Random.id();
   var context = { randomSeed: randomSeed };
-  var sequence = DDP.randomStream(context, '1');
+  var sequence = DDP.RandomStreams.get(context, '1');
 
   var seeds = sequence.alea.args;
 
@@ -11,14 +11,14 @@ Tinytest.add("livedata - DDP.randomStream", function (test) {
 
   var id1 = sequence.id();
 
-  // Clone the sequence by building it the same way DDP.randomStream does
+  // Clone the sequence by building it the same way DDP.RandomStreams.get does
   var sequenceClone = Random.createWithSeeds.apply(null, seeds);
   var id1Cloned = sequenceClone.id();
   var id2Cloned = sequenceClone.id();
   test.equal(id1, id1Cloned);
 
   // We should get the same sequence when we use the same key
-  sequence = DDP.randomStream(context, '1');
+  sequence = DDP.RandomStreams.get(context, '1');
   seeds = sequence.alea.args;
   test.equal(seeds.length, 2);
   test.equal(seeds[0], randomSeed);
@@ -34,6 +34,6 @@ Tinytest.add("livedata - DDP.randomStream", function (test) {
   test.equal(id2, id2Cloned);
 });
 
-Tinytest.add("livedata - no-args", function (test) {
-  DDP.randomStream().id();
+Tinytest.add("livedata - DDP.RandomStreams.get with no-args", function (test) {
+  DDP.RandomStreams.get().id();
 });

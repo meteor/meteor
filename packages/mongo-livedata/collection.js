@@ -894,11 +894,5 @@ Meteor.Collection.prototype._makeNewConsistentID = function () {
   
   var name = self._name;
   
-  if (name) {
-    var scope = DDP._CurrentInvocation.get();
-    var id = DDP.randomStream(scope, '/collection/' + name).id();
-    return id;
-  } else {
-    return Random.id();
-  }
+  return DDP.RandomStreams.makeCollectionId(name);
 };
