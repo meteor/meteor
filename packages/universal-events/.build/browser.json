@@ -1,0 +1,30 @@
+{
+  "format": "unipackage-slice-pre1",
+  "packageVariables": [
+    {
+      "name": "UniversalEventListener",
+      "export": true
+    }
+  ],
+  "uses": [
+    {
+      "package": "meteor"
+    },
+    {
+      "package": "underscore"
+    },
+    {
+      "package": "domutils"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "browser/packages/universal-events.js",
+      "length": 58173,
+      "offset": 0,
+      "servePath": "/packages/universal-events.js",
+      "sourceMap": "browser/packages/universal-events.js.map"
+    }
+  ]
+}

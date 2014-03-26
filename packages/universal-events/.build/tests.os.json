@@ -1,0 +1,29 @@
+{
+  "format": "unipackage-slice-pre1",
+  "noExports": true,
+  "packageVariables": [],
+  "uses": [
+    {
+      "package": "meteor"
+    },
+    {
+      "package": "tinytest"
+    },
+    {
+      "package": "domutils"
+    },
+    {
+      "package": "spark"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "tests.os/packages/universal-eventstests.js",
+      "length": 0,
+      "offset": 0,
+      "servePath": "/packages/universal-events:tests.js",
+      "sourceMap": "tests.os/packages/universal-eventstests.js.map"
+    }
+  ]
+}

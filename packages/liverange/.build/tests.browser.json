@@ -1,0 +1,42 @@
+{
+  "format": "unipackage-slice-pre1",
+  "noExports": true,
+  "packageVariables": [
+    {
+      "name": "check_liverange_integrity"
+    }
+  ],
+  "uses": [
+    {
+      "package": "meteor"
+    },
+    {
+      "package": "tinytest"
+    },
+    {
+      "package": "liverange"
+    },
+    {
+      "package": "test-helpers"
+    },
+    {
+      "package": "domutils"
+    },
+    {
+      "package": "underscore"
+    },
+    {
+      "package": "jquery"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "tests.browser/packages/liverangetests.js",
+      "length": 85676,
+      "offset": 0,
+      "servePath": "/packages/liverange:tests.js",
+      "sourceMap": "tests.browser/packages/liverangetests.js.map"
+    }
+  ]
+}

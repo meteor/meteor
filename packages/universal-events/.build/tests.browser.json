@@ -1,0 +1,38 @@
+{
+  "format": "unipackage-slice-pre1",
+  "noExports": true,
+  "packageVariables": [],
+  "uses": [
+    {
+      "package": "meteor"
+    },
+    {
+      "package": "tinytest"
+    },
+    {
+      "package": "universal-events"
+    },
+    {
+      "package": "test-helpers"
+    },
+    {
+      "package": "underscore"
+    },
+    {
+      "package": "domutils"
+    },
+    {
+      "package": "spark"
+    }
+  ],
+  "resources": [
+    {
+      "type": "prelink",
+      "file": "tests.browser/packages/universal-eventstests.js",
+      "length": 7828,
+      "offset": 0,
+      "servePath": "/packages/universal-events:tests.js",
+      "sourceMap": "tests.browser/packages/universal-eventstests.js.map"
+    }
+  ]
+}
