@@ -32,13 +32,13 @@ MethodInvocation = function (options) {
   // On the server, the connection this method call came in on.
   this.connection = options.connection;
 
-  // The seed for repeatable 'random' id generation
+  // The seed for randomStream value generation
   this.randomSeed = options.randomSeed;
 
   // This is set by DDP.randomStream; and holds the random stream state
   // We declare it here because setting a property from another class is not
   // great coding style, but there's not really a great alternative.
-  this.repeatableRandom = null;
+  this.randomStream = null;
 };
 
 _.extend(MethodInvocation.prototype, {

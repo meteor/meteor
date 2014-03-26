@@ -885,7 +885,7 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   return self._collection.remove.call(self._collection, selector);
 };
 
-// Generate an id for a new object, using repeatableRandom, so that the client
+// Generate an id for a new object, using randomStream, so that the client
 // and server will produce the same id values.  By using the name of the collection
 // as the key for the random seed, we can tolerate reorderings of operations iff
 // these happen on different collections.

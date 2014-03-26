@@ -1,4 +1,4 @@
-// RepeatableRandom allows for generation of pseudo-random values, from a seed.
+// RandomStream allows for generation of pseudo-random values, from a seed.
 //
 // We use this for consistent 'random' numbers across the client and server.  Here,
 // we want to generate probably-unique IDs on the client, and we ideally want the server
@@ -13,7 +13,7 @@
 // We expose multiple streams, each keyed by a string; each stream is independent and seeded differently
 // (but predictably).  By using multiple streams, we support reordering of requests,
 // as long as they occur on different streams.
-RepeatableRandom = function (options) {
+RandomStream = function (options) {
   var self = this;
 
   this.seed = [].concat(options.seed || randomToken());
@@ -32,28 +32,29 @@ function randomToken() {
 // Returns the random stream with the specified key.
 // This first tries to use the DDP method invocation as the scope;
 // if we're not in a method invocation, then we can use fallbackScope instead.
-// Otherwise we generate an ephemeral  scope, which will be random but not repeatable.
+// Otherwise we generate an ephemeral  scope, which will be random,
+// but won't produce values that we can easily reproduce elsewhere.
 DDP.randomStream = function (scope, key) {
   if (!key) {
     key = "default";
   }
   if (!scope) {
     // We aren't in a method invocation, there was no scope passed in, so
-    // the sequence won't actually be repeatable.
-    Meteor._debug("Requested repeatable random, but no scope available");
+    // the sequence won't actually be reproducible.
+    Meteor._debug("Requested randomStream, but no scope available");
     var seeds = [randomToken(), key];
     return Random.createWithSeeds.apply(null, seeds);
   }
-  var repeatableRandom = scope.repeatableRandom;
-  if (!repeatableRandom) {
-    scope.repeatableRandom = repeatableRandom = new RepeatableRandom({
+  var randomStream = scope.randomStream;
+  if (!randomStream) {
+    scope.randomStream = randomStream = new RandomStream({
       seed: scope.randomSeed
     });
   }
-  return repeatableRandom._sequence(key);
+  return randomStream._sequence(key);
 };
 
-_.extend(RepeatableRandom.prototype, {
+_.extend(RandomStream.prototype, {
   // Get a random sequence with the specified key, creating it if does not exist.
   // New sequences are seeded with the seed concatenated with the key.
   // By passing a seed into Random.create, we use the Alea generator.
