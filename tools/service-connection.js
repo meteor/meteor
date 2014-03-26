@@ -44,14 +44,20 @@ _.extend(ServiceConnection.prototype, {
 
   call: function (/* arguments */) {
     var self = this;
+    var args = _.toArray(arguments);
+    var name = args.shift();
+    return self.apply(name, args);
+  },
+
+  apply: function (/* arguments */) {
+    var self = this;
     var fut = new Future;
     self._onConnectionTimeout(function () {
       fut['throw'](new ServiceConnection.ConnectionTimeoutError);
     });
 
     var args = _.toArray(arguments);
-    var name = args.shift();
-    self.connection.apply(name, args, function (err, result) {
+    args.push(function (err, result) {
       if (err) {
         fut['throw'](err);
       } else {
@@ -60,6 +66,7 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
+    self.connection.apply.apply(self.connection, args);
     return fut.wait();
   },
 
