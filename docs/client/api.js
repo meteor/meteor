@@ -1011,7 +1011,7 @@ Template.api.user = {
 Template.api.currentUser = {
   id: "template_currentuser",
   name: "{{currentUser}}",
-  locus: "Handlebars templates",
+  locus: "Templates",
   descr: ["Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."]
 };
 
@@ -1040,7 +1040,7 @@ Template.api.loggingIn = {
 Template.api.loggingInTemplate = {
   id: "template_loggingin",
   name: "{{loggingIn}}",
-  locus: "Handlebars templates",
+  locus: "Templates",
   descr: ["Calls [Meteor.loggingIn()](#meteor_loggingin)."]
 };
 
@@ -1836,6 +1836,80 @@ Template.api.template_data = {
   locus: "Client",
   descr: ["The data context of this instance's latest invocation."]
 };
+
+
+Template.api.ui_registerhelper = {
+  id: "ui_registerhelper",
+  name: "UI.registerHelper(name, function)",
+  locus: "Client",
+  descr: ["Defines a [helper function](#template_helpers) which can be used from all templates."],
+  args: [
+    {name: "name",
+     type: "String",
+     descr: "The name of the helper function you are defining."
+    },
+    {name: "function",
+     type: "Function",
+     descr: "The helper function itself."
+    }]
+};
+
+Template.api.ui_body = {
+  id: "ui_body",
+  name: "UI.body",
+  locus: "Client",
+  descr: ["The [component object](#templates_api) representing your `<body>` tag."]
+};
+
+Template.api.ui_render = {
+  id: "ui_render",
+  name: "UI.render(Template.<em>myTemplate</em>)",
+  locus: "Client",
+  descr: ["Executes a template's logic."],
+  args: [
+    {name: "template",
+     type: "Template",
+     descr: "The particular template to evaluate."
+    }]
+};
+
+Template.api.ui_renderwithdata = {
+  id: "ui_renderwithdata",
+  name: "UI.renderWithData(Template.<em>myTemplate</em>, data)",
+  locus: "Client",
+  descr: ["Executes a template's logic with a data context. Otherwise identical to `UI.render`."],
+  args: [
+    {name: "template",
+     type: "Template",
+     descr: "The particular template to evaluate."
+    },
+    {name: "data",
+     type: "Object",
+     descr: "The data context that will be used when evaluating the template."
+    }]
+};
+
+Template.api.ui_insert = {
+  id: "ui_insert",
+  name: "UI.insert(instantiatedComponent, parentNode[, nextNode])",
+  locus: "Client",
+  descr: ["Inserts an instantiated component into the DOM and calls its [`rendered`](#template_rendered) callback."],
+  args: [
+    {name: "instantiatedComponent",
+     type: "Instantiated component object",
+     descr: "The return value from `UI.render` or `UI.renderWithData`."
+    },
+    {name: "parentNode",
+     type: "DOM Node",
+     descr: "The node that will be the parent of the rendered template."
+    },
+    {name: "nextNode",
+     type: "DOM Node",
+     descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child."
+    }]
+};
+
+
 
 var rfc = function (descr) {
   return '[RFC5322](http://tools.ietf.org/html/rfc5322) ' + descr;
