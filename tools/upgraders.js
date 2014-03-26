@@ -55,9 +55,19 @@ var addAppPackagesAndStandardAppPackages = function (appDir) {
   });
 };
 
+// In Meteor 0.8.0, preserve-inputs became a no-op, because Blaze doesn't
+// require manual preserve directives any more. We print a deprecation message
+// on apps that use it, but it's part of the default app skeleton, and we don't
+// want literally every user to have to type the same "meteor remove
+// preserve-inputs" command. So we do it for them.
+var noPreserveInputs = function (appDir) {
+  project.removePackage(appDir, 'preserve-inputs');
+};
+
 
 var upgradersByName = {
-  "app-packages": addAppPackagesAndStandardAppPackages
+  "app-packages": addAppPackagesAndStandardAppPackages,
+  "no-preserve-inputs": noPreserveInputs
 };
 
 exports.runUpgrader = function (upgraderName, appDir) {
