@@ -1,24 +1,24 @@
-Tinytest.add("livedata - Meteor.repeatableRandom", function (test) {
+Tinytest.add("livedata - DDP.randomStream", function (test) {
   var randomSeed = Random.id();
   var context = { randomSeed: randomSeed };
-  var sequence = Meteor.repeatableRandom('1', context);
-  
+  var sequence = DDP.randomStream(context, '1');
+
   var seeds = sequence.alea.args;
-  
+
   test.equal(seeds.length, 2);
   test.equal(seeds[0], randomSeed);
   test.equal(seeds[1], '1');
 
   var id1 = sequence.id();
-  
-  // Clone the sequence by building it the same way Meteor.repeatableRandom does
-  var sequenceClone = Random.create.apply(null, seeds);
+
+  // Clone the sequence by building it the same way DDP.randomStream does
+  var sequenceClone = Random.createWithSeeds.apply(null, seeds);
   var id1Cloned = sequenceClone.id();
   var id2Cloned = sequenceClone.id();
   test.equal(id1, id1Cloned);
 
   // We should get the same sequence when we use the same key
-  sequence = Meteor.repeatableRandom('1', context);
+  sequence = DDP.randomStream(context, '1');
   seeds = sequence.alea.args;
   test.equal(seeds.length, 2);
   test.equal(seeds[0], randomSeed);
@@ -26,10 +26,14 @@ Tinytest.add("livedata - Meteor.repeatableRandom", function (test) {
 
   // But we should be at the 'next' position in the stream
   var id2 = sequence.id();
-  
+
   // Technically these could be equal, but likely to be a bug if hit
   // http://search.dilbert.com/comic/Random%20Number%20Generator
   test.notEqual(id1, id2);
-  
+
   test.equal(id2, id2Cloned);
+});
+
+Tinytest.add("livedata - no-args", function (test) {
+  DDP.randomStream().id();
 });

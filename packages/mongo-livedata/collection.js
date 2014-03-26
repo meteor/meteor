@@ -889,14 +889,14 @@ Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
 // and server will produce the same id values.  By using the name of the collection
 // as the key for the random seed, we can tolerate reorderings of operations iff
 // these happen on different collections.
-Meteor.Collection.prototype._makeNewConsistentID = function() {
+Meteor.Collection.prototype._makeNewConsistentID = function () {
   var self = this;
   
   var name = self._name;
   
   if (name) {
-    var id = Meteor.repeatableRandom('/collection/' + name).id();
-    //Meteor._debug("Generated id " + id);
+    var scope = DDP._CurrentInvocation.get();
+    var id = DDP.randomStream(scope, '/collection/' + name).id();
     return id;
   } else {
     return Random.id();

@@ -658,6 +658,28 @@ _.extend(Connection.prototype, {
       };
     })();
 
+    var enclosing = DDP._CurrentInvocation.get();
+    var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+    // Lazily generate a randomSeed, only if it is requested by the stub.
+    // The random streams only have utility if they're used on both the client
+    // and the server; if the client doesn't generate any 'random' values
+    // then we don't expect the server to generate any either.
+    // Less commonly, the server may perform different actions to the client,
+    // and may in fact generate values where the client did not, but we don't
+    // have any client-side values to match, so even here we may as well just
+    // use a random seed on the server.  In that case, we don't pass the
+    // randomSeed to save bandwidth, and we don't even generate it to save a
+    // bit of CPU and to avoid consuming entropy.
+    var randomSeed = {};
+    randomSeed.generator = function (){
+      var self = randomSeed;
+      if (self.randomSeed === undefined) {
+        self.randomSeed = DDP.randomStream(enclosing, '/rpc/' + name).hexString(20);
+      }
+      return self.randomSeed;
+    };
+
     // Run the stub, if we have one. The stub is supposed to make some
     // temporary writes to the database to give the user a smooth experience
     // until the actual result of executing the method comes back from the
@@ -670,11 +692,6 @@ _.extend(Connection.prototype, {
     // to do a RPC, so we use the return value of the stub as our return
     // value.
 
-    var enclosing = DDP._CurrentInvocation.get();
-    var alreadyInSimulation = enclosing && enclosing.isSimulation;
-
-    var randomSeed = Meteor.repeatableRandom('/rpc/' + name, self).hexString(20);
-
     var stub = self._methodHandlers[name];
     if (stub) {
       var setUserId = function(userId) {
@@ -684,7 +701,7 @@ _.extend(Connection.prototype, {
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
-        randomSeed: randomSeed
+        randomSeed: randomSeed.generator
       });
 
       if (!alreadyInSimulation)
@@ -759,19 +776,25 @@ _.extend(Connection.prototype, {
     // Send the RPC. Note that on the client, it is important that the
     // stub have finished before we send the RPC, so that we know we have
     // a complete list of which local documents the stub wrote.
+    var message = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: methodId()
+    };
+
+    // Send the randomSeed only if we used it
+    if (randomSeed.randomSeed) {
+      message.randomSeed = randomSeed.randomSeed;
+    }
+
     var methodInvoker = new MethodInvoker({
       methodId: methodId(),
       callback: callback,
       connection: self,
       onResultReceived: options.onResultReceived,
       wait: !!options.wait,
-      message: {
-        msg: 'method',
-        method: name,
-        params: args,
-        id: methodId(),
-        randomSeed: randomSeed
-      }
+      message: message
     });
 
     if (options.wait) {

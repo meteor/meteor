@@ -16,26 +16,33 @@
 RepeatableRandom = function (options) {
   var self = this;
 
-  options = _.extend({
-  }, options);
-
-  this.seed = [].concat(options.seed || Random.hexString(20));
+  this.seed = [].concat(options.seed || randomToken());
 
   this._sequences = {};
+};
+
+// Returns a random string of sufficient length for a random seed.
+// This is a placeholder function; a similar function is planned
+// for Random itself; when that is added we should remove this function,
+// and call Random's randomToken instead.
+function randomToken() {
+  return Random.hexString(20);
 };
 
 // Returns the random stream with the specified key.
 // This first tries to use the DDP method invocation as the scope;
 // if we're not in a method invocation, then we can use fallbackScope instead.
 // Otherwise we generate an ephemeral  scope, which will be random but not repeatable.
-Meteor.repeatableRandom = function (key, fallbackScope) {
-  var scope = DDP._CurrentInvocation.get() || fallbackScope;
+DDP.randomStream = function (scope, key) {
+  if (!key) {
+    key = "default";
+  }
   if (!scope) {
     // We aren't in a method invocation, there was no scope passed in, so
     // the sequence won't actually be repeatable.
     Meteor._debug("Requested repeatable random, but no scope available");
-    var seeds = [Random.hexString(20), key];
-    return Random.create.apply(null, seeds);
+    var seeds = [randomToken(), key];
+    return Random.createWithSeeds.apply(null, seeds);
   }
   var repeatableRandom = scope.repeatableRandom;
   if (!repeatableRandom) {
@@ -52,10 +59,16 @@ _.extend(RepeatableRandom.prototype, {
   // By passing a seed into Random.create, we use the Alea generator.
   _sequence: function (key) {
     var self = this;
-    
+
     var sequence = self._sequences[key] || null;
     if (sequence === null) {
-      self._sequences[key] = sequence = Random.create.apply(null, self.seed.concat(key));
+      var sequenceSeed = self.seed.concat(key);
+      for (var i = 0; i < sequenceSeed.length; i++) {
+        if (_.isFunction(sequenceSeed[i])) {
+          sequenceSeed[i] = sequenceSeed[i]();
+        }
+      }
+      self._sequences[key] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
     }
     return sequence;
   }

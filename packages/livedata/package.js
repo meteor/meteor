@@ -40,7 +40,6 @@ Package.on_use(function (api) {
   // Transport
   api.use('reload', 'client', {weak: true});
   api.add_files('common.js');
-  api.add_files('repeatable_random.js', ['client', 'server']);
   api.add_files(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
   api.add_files('stream_client_nodejs.js', 'server');
   api.add_files('stream_client_common.js', ['client', 'server']);
@@ -58,6 +57,7 @@ Package.on_use(function (api) {
   api.add_files('crossbar.js', 'server');
 
   api.add_files('livedata_common.js', ['client', 'server']);
+  api.add_files('repeatable_random.js', ['client', 'server']);
 
   api.add_files('livedata_connection.js', ['client', 'server']);
 

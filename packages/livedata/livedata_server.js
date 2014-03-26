@@ -599,7 +599,7 @@ _.extend(Session.prototype, {
       if (typeof (msg.id) !== "string" ||
           typeof (msg.method) !== "string" ||
           (('params' in msg) && !(msg.params instanceof Array)) ||
-          (('randomSeed' in msg) && typeof(msg.randomSeed) !== "string")) {
+          (('randomSeed' in msg) && (typeof msg.randomSeed !== "string"))) {
         self.sendError("Malformed method invocation", msg);
         return;
       }
