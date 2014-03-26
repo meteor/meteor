@@ -1626,7 +1626,7 @@ main.registerCommand({
     return 1;
   }
   if (! conn) {
-    process.stderr.write('Publish failed\n');
+    process.stderr.write('No connection: Publish failed\n');
     return 1;
   }
 

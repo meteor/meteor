@@ -213,10 +213,10 @@ exports.loggedInPackagesConnection = function () {
   // can get the OAuth client ID to kick off the OAuth flow.
   var serviceConfigurations = new (getLoadedPackages().meteor.Meteor.Collection)(
     'meteor_accounts_loginServiceConfiguration',
-    { connection: conn }
+    { connection: conn.connection }
   );
   var serviceConfigurationsSub = conn.
-        _subscribeAndWait('meteor.loginServiceConfiguration');
+        subscribeAndWait('meteor.loginServiceConfiguration');
 
   var accountsConfiguration = serviceConfigurations.findOne({
     service: 'meteor-developer'
@@ -228,6 +228,7 @@ exports.loggedInPackagesConnection = function () {
   };
 
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
+    console.log(serviceConfigurations.find().fetch());
     cleanUp();
     return null;
   }
