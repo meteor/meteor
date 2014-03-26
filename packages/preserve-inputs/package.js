@@ -3,6 +3,4 @@ Package.describe({
   internal: true
 });
 
-Package.on_use(function (api) {
-  // Deprecated -- Meteor UI makes preserve directives unnecessary
-});
+console.log("The 'preserve-inputs' package is now unnecessary and deprecated.");
