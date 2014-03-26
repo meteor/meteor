@@ -4,8 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random',
-          'domutils']);
+  api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random']);
   api.use(['jquery'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in
@@ -22,7 +21,7 @@ Package.on_use(function (api) {
     'SeededRandom', 'ReactiveVar', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
-    'makeTestConnection'], {testOnly: true});
+    'makeTestConnection', 'DomUtils'], {testOnly: true});
 
   api.add_files('try_all_permutations.js');
   api.add_files('async_multi.js');
@@ -33,6 +32,7 @@ Package.on_use(function (api) {
   api.add_files('current_style.js');
   api.add_files('reactivevar.js');
   api.add_files('callback_logger.js');
+  api.add_files('domutils.js', 'client');
   api.add_files('connection.js', 'server');
 });
 
