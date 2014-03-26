@@ -246,6 +246,13 @@ var toc = [
         {instance: "this", name: "lastNode", id: "template_lastNode"},
         {instance: "this", name: "data", id: "template_data"}
       ],
+      "UI", [
+        "UI.registerHelper",
+        "UI.body",
+        "UI.render",
+        "UI.renderWithData",
+        "UI.insert"
+      ],
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
      ],

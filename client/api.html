@@ -2063,6 +2063,8 @@ The following syntax is a shorthand for when you only have one helper to define:
       return Session.get("foo");
     };
 
+To create a helper that can be used in any template, use
+[`UI.registerHelper`](#ui_registerhelper).
 
 
 {{> api_box template_rendered}}
@@ -2171,6 +2173,38 @@ after `firstNode`, or else they are the same node.
 This property provides access to the data context at the top level of
 the template.  It is updated each time the template is re-rendered.
 Access is read-only and non-reactive.
+
+
+<h2 id="ui"><span>Template utilities</span></h2>
+
+The `UI` namespace contains several utilities that are helpful when writing your
+user interface.  `UI.registerHelper` allows you to define helper functions which
+you can use in every template.  `UI.render`, `UI.renderWithData`, and
+`UI.insert` allow you to manually render templates and insert them directly into
+any part of the DOM for finer control than just using template inclusions.
+
+{{> api_box ui_registerhelper}}
+
+{{> api_box ui_body}}
+
+You can define helpers and event maps on `UI.body` just like on any
+`Template.myTemplate` object.
+
+{{> api_box ui_render}}
+
+This returns an "instantiated component" object, which can be passed to
+[`UI.insert`](#ui_insert). The template's [`created`](#template_created) callback
+will be invoked.
+
+{{#note}}
+  Future releases will provide a richer API for "instantiated components"
+  (probably unifying them with "template instances"). For now, all you can
+  do with them is pass them to `UI.insert`.
+{{/note}}
+
+{{> api_box ui_renderwithdata}}
+
+{{> api_box ui_insert}}
 
 
 
