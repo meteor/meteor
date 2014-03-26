@@ -3,4 +3,6 @@ Package.describe({
   internal: true
 });
 
-console.log("The 'preserve-inputs' package is now unnecessary and deprecated.");
+Package.on_use(function (api) {
+  api.add_files('deprecated.js', 'server');
+});
