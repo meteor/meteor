@@ -595,7 +595,14 @@ _.extend(Session.prototype, {
       var self = this;
 
       // reject malformed messages
-      // XXX should also reject messages with unknown attributes?
+      // We silently ignore unknown attributes, for forwards compatability.
+      // When adding randomSeed functionality, we added an attribute.
+      // If old server versions raised errors on the unknown attribute
+      // that would have made the compatability story much more complicated.
+      // This worked because the value was optional, though.
+      // When we must add an attribute that cannot be ignored,
+      // we should probably do that by checking that our counterparty's
+      // version is compatible with our requirements.
       if (typeof (msg.id) !== "string" ||
           typeof (msg.method) !== "string" ||
           (('params' in msg) && !(msg.params instanceof Array)) ||
