@@ -462,7 +462,8 @@ UI.body = UI.Component.extend({
     return this.contentParts;
   },
   // XXX revisit how body works.
-  INSTANTIATED: false
+  INSTANTIATED: false,
+  __helperHost: true
 });
 
 UI.block = function (renderFunc) {
