@@ -1109,15 +1109,6 @@ the matching documents.
 
 {{> api_box cursor_count}}
 
-    // Display a count of posts matching certain criteria. Automatically
-    // keep it updated as the database changes.
-    var frag = Meteor.render(function () {
-      var highScoring = Posts.find({score: {$gt: 10}});
-      return "<p>There are " + highScoring.count() + " posts with " +
-        "scores greater than 10</p>";
-    });
-    document.body.appendChild(frag);
-
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
@@ -1440,17 +1431,24 @@ variable every time a new version of your app is loaded.
 
 Example:
 
-    Session.set("enemy", "Eastasia");
-    var frag = Meteor.render(function () {
-      return "<p>We've always been at war with " +
-        Session.get("enemy") + "</p>";
+    // in main.html
+    {{lt}}template name="main>
+      <p>We've always been at war with {{dstache}}theEnemy}}.</p>
+    {{lt}}/template>
+
+    // in main.js
+    Template.main.helpers({
+      theEnemy: function () {
+        return Session.get("enemy");
+      }
     });
 
+    Session.set("enemy", "Eastasia");
     // Page will say "We've always been at war with Eastasia"
-    document.body.append(frag);
 
-    // Page will change to say "We've always been at war with Eurasia"
     Session.set("enemy", "Eurasia");
+    // Page will change to say "We've always been at war with Eurasia"
+
 
 {{> api_box equals}}
 
@@ -2194,7 +2192,8 @@ You can define helpers and event maps on `UI.body` just like on any
 
 This returns an "instantiated component" object, which can be passed to
 [`UI.insert`](#ui_insert). The template's [`created`](#template_created) callback
-will be invoked.
+will be invoked.  The component will continue to be updated reactively as the
+data used changes.
 
 {{#note}}
   Future releases will provide a richer API for "instantiated components"
@@ -2616,8 +2615,9 @@ document during a flush may be cleaned up by Meteor (meaning that
 Meteor will stop tracking and updating the elements, so that the
 browser's garbage collector can delete them).  So, if you manually
 call `flush`, you need to make sure that any auto-updating elements
-that you have created by calling [`Meteor.render`](#meteor_render)
-have already been inserted in the main DOM tree.
+that you have manually created by calling [`UI.render`](#ui_render)
+have already been inserted in the main DOM tree with
+[`UI.insert`](#ui_insert).
 
 It is illegal to call `flush` from inside a `flush` or from a running
 computation.
