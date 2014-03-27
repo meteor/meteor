@@ -71,6 +71,8 @@ for full details on upgrading your app to 0.8.0.  This includes:
   now `Spacebars.SafeString`, and `Handlebars.registerHelper` is now
   `UI.registerHelper`.
 
+Patches contributed by GitHub users cmather and mart-jansink.
+
 
 ## v0.7.2
 
