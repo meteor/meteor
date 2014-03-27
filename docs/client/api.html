@@ -2195,11 +2195,20 @@ This returns an "instantiated component" object, which can be passed to
 will be invoked.  The component will continue to be updated reactively as the
 data used changes.
 
-{{#note}}
+{{#warning}}
   Future releases will provide a richer API for "instantiated components"
   (probably unifying them with "template instances"). For now, all you can
   do with them is pass them to `UI.insert`.
-{{/note}}
+
+  Most users will not need to manually render components or manually insert them
+  into the DOM at all.  As of 0.8.0, if you call `UI.render` and never insert
+  the result into the DOM, the logic to keep the instantiated component updated
+  will continue running in your browser forever. Additionally, if you remove any
+  part of your DOM using any mechanism other than jQuery, the logic to keep that
+  part of the the DOM updated will continue running.  To avoid these issues,
+  either avoid directly updating the DOM and ensure that any removals go through
+  jQuery.
+{{/warning}}
 
 {{> api_box ui_renderwithdata}}
 
