@@ -5,6 +5,8 @@ var files = require('./files.js');
 var utils = require('./utils.js');
 var tropohouse = require('./tropohouse.js');
 var archinfo = require('./archinfo.js');
+var watch = require('./watch.js');
+var PackageSource = require('./package-source.js');
 
 var project = exports;
 
@@ -76,9 +78,60 @@ project.processPerConstraintLines = function(lines) {
 
 };
 
-// Read in the .meteor/packages file.
+project.getProgramsDirectory = function (appDir) {
+  return path.join(appDir, "programs");
+};
+
+// Return the list of subdirectories containing programs in the
+// app. Options can include:
+//  - watchSet: if provided, the app's programs directory will be added to it
+project.getProgramsSubdirs = function (appDir, options) {
+  var programsDir = project.getProgramsDirectory(appDir);
+  var watchOptions = {
+    absPath: programsDir,
+    include: [/\/$/],
+    exclude: [/^\./]
+  };
+  if (options.watchSet) {
+    return watch.readAndWatchDirectory(options.watchSet, watchOptions);
+  } else {
+    return watch.readDirectory(programsDir, watchOptions);
+  }
+};
+
+// Read direct dependencies from the .meteor/packages file and from
+// programs in this app.
+//
+// Returns an object with keys:
+//  - appDeps: object mapping package names to version constraints
+//  - programsDeps: an object mapping program name to program deps,
+//    where program deps is an object mapping package names to version
+//    constraints.
 project.getDirectDependencies = function(appDir) {
-  return project.processPerConstraintLines(getPackagesLines(appDir));
+  var appDeps = project.processPerConstraintLines(
+    project.getPackagesLines(appDir)
+  );
+
+  var programsDeps = {};
+  var programsSubdirs = project.getProgramsSubdirs(appDir);
+  _.each(programsSubdirs, function (item) {
+    var programName = item.substr(0, item.length - 1);
+    programsDeps[programName] = {};
+
+    var programSubdir = path.join(project.getProgramsDirectory(appDir), item);
+    var programSource = new PackageSource(programSubdir);
+    programSource.initFromPackageDir(programName, programSubdir);
+    _.each(programSource.slices, function (sourceSlice) {
+      _.each(sourceSlice.uses, function (use) {
+        programsDeps[programName][use.packageName] = use.constraint;
+      });
+    });
+  });
+
+  return {
+    appDeps: appDeps,
+    programsDeps: programsDeps
+  };
 };
 
 // Get a list of constraints from the .meteor/versions file.
@@ -150,6 +203,24 @@ var meteorReleaseFilePath = function (appDir) {
   return path.join(appDir, '.meteor', 'release');
 };
 
+// Helper function. Given an object `deps` as returned from
+// `getDirectDependencies`, combine all the direct dependencies (for the
+// app and its programs) into a single object mapping package name to a
+// list of version constraints, which can be passed into the constraint
+// solver.
+project.combineAppAndProgramDependencies = function (deps) {
+  var allDeps = {};
+  _.each(deps.appDeps, function (constraint, packageName) {
+    allDeps[packageName] = [constraint];
+  });
+  _.each(deps.programDeps, function (deps, programName) {
+    _.each(deps, function (constraint, packageName) {
+      allDeps[packageName] = allDeps[packageName] || [];
+      allDeps[packageName].push(constraint);
+    });
+  });
+  return allDeps;
+};
 
 // Run the constraint solver to determine the package versions to use.
 //
@@ -161,20 +232,23 @@ project.generatePackageLoader = function (appDir) {
   var versions = project.getIndirectDependencies(appDir);
   var packages = project.getDirectDependencies(appDir);
 
+  // package name -> list of version constraints
+  var allPackages = project.combineAppAndProgramDependencies(packages);
+
   // XXX: We are manually adding ctl here, but we should do this in a more
   // principled manner.
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
   // XXX: constraint solver currently ignores versions, but it should not.
   var newVersions = resolver.resolve(
-    _.extend(packages, { "ctl" : "none" }));
+    _.extend(allPackages, { "ctl" : ["none"] }));
   if ( ! newVersions) {
     return { outcome: 'conflicting-versions' };
   }
 
   // Download any necessary package builds and write out the new versions file.
   delete packages["ctl"];
-  project.setDependencies(appDir, packages, newVersions);
+  project.setDependencies(appDir, packages.appDeps, newVersions);
 
   var newVersionsReform = {};
   _.each(newVersions, function (version, name) {

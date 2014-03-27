@@ -189,7 +189,7 @@ main.registerCommand({
   var allPackages = project.getIndirectDependencies(options.appDir);
 
   var messages = buildmessage.capture(function () {
-    _.forEach(allPackages, function (version, name) {
+    _.forEach(allPackages, function (versions, name) {
       // Calling getPackage on the loader will return a unipackage object, which
       // means that the package will be compiled/downloaded. That we throw the
       // package variable away afterwards is immaterial.
@@ -616,16 +616,17 @@ main.registerCommand({
       }
     }
     // Check that the constraint is new. If we are already using the package at
-    // the same constraint, return from this function.
-    if (_.has(packages, constraint.name) &&
-        constraint.versionConstraint === packages[constraint.name] ) {
+    // the same constraint in the app, return from this function.
+    if (_.has(packages.appDeps, constraint.name) &&
+        _.contains(packages.appDeps[constraint.name],
+                   constraint.versionConstraint)) {
       process.stderr.write(constraint.name + " with version constraint " +
                            constraint.versionConstraint + " has already been added.\n");
       failed = true;
     }
 
     // Add the package to our direct dependency constraints that we get from .meteor/packages.
-    packages[constraint.name] = constraint.versionConstraint;
+    packages.appDeps[constraint.name] = constraint.versionConstraint;
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -643,9 +644,12 @@ main.registerCommand({
   // Call the constraint solver.
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
+  // Combine into one object mapping package name to list of
+  // constraints, to pass in to the constraint solver.
+  var allPackages = project.combineAppAndProgramDependencies(packages);
   // XXX: constraint solver currently ignores versions, but it should not.
   // XXX: this would also be the place to add no-update options.
-  var newVersions = resolver.resolve(packages);
+  var newVersions = resolver.resolve(allPackages);
   if ( ! newVersions) {
     // XXX: Better error handling.
     process.stderr.write("Cannot resolve package dependencies.");
@@ -670,8 +674,11 @@ main.registerCommand({
   // we can load a browser slice and a slice that will run on this
   // system. (Later we may also need to download more builds to be able to
   // deploy to another architecture.)
-  var downloaded = project.setDependencies(options.appDir, packages,
-                                           newVersions);
+  var downloaded = project.setDependencies(
+    options.appDir,
+    packages.appDeps,
+    newVersions
+  );
 
   _.each(newVersions, function(version, packageName) {
     if (failed)
@@ -760,12 +767,12 @@ main.registerCommand({
   _.each(options.args, function (packageName) {
     // Check that we are using the package. We don't check if the package
     // exists. You should be able to remove non-existent packages.
-    if (! _.has(packages, packageName)) {
+    if (! _.has(packages.appDeps, packageName)) {
       process.stderr.write( packageName  + " is not in this project \n");
     }
 
     // Remove the package from our dependency list.
-    delete packages[packageName];
+    delete packages.appDeps[packageName];
   });
 
   // Get the contents of our versions file. We need to pass them to the
@@ -778,7 +785,8 @@ main.registerCommand({
   var resolver = new constraintSolver.Resolver;
   // XXX: constraint solver currently ignores versions, but it should not.
   // XXX: this would also be the place to add no-update options.
-  var newVersions = resolver.resolve(packages);
+  var newVersions = resolver.resolve(
+    project.combineAppAndProgramDependencies(packages));
   if ( ! newVersions) {
     // This should never really happen.
     process.stderr.write("Cannot resolve package dependencies.");
@@ -796,7 +804,7 @@ main.registerCommand({
   });
 
   // Write the dependency files with the right versions
-  project.setDependencies(options.appDir, packages, newVersions);
+  project.setDependencies(options.appDir, packages.appDeps, newVersions);
 
   // Show the user the messageLog of everything we removed.
   _.each(messageLog, function (msg) {
@@ -829,7 +837,7 @@ main.registerCommand({
   var items = [];
   if (options.using) {
     var packages = project.getDirectDependencies(options.appDir);
-    _.each(packages, function (version, name) {
+    _.each(packages.appDeps, function (version, name) {
       var versionInfo = catalog.getVersion(name, version);
       if (!versionInfo) {
         process.stderr.write("Cannot process package list. Unknown: " + name +
@@ -1360,16 +1368,9 @@ main.registerCommand({
     // The catalog doesn't know about other programs in your app. Let's blow
     // away their .build directories if they have them, and not rebuild
     // them. Sort of hacky, but eh.
-    var programsDir = path.join(options.appDir, 'programs');
-    try {
-      var programs = fs.readdirSync(programsDir);
-    } catch (e) {
-      // OK if the programs directory doesn't exist; that'll just leave
-      // 'programs' empty.
-      if (e.code !== "ENOENT")
-        throw e;
-    }
-    _.each(programs, function (program) {
+    var programsDir = project.getProgramsDirectory(options.appDir);
+    var programsSubdirs = project.getProgramsSubdirs(options.appDir);
+    _.each(programsSubdirs, function (program) {
       files.rm_recursive(path.join(programsDir, program, '.build'));
     });
   }
