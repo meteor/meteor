@@ -1829,5 +1829,6 @@ Tinytest.add(
     document.body.appendChild(div);
     clickIt(document.getElementById(elemId));
     test.isFalse(/#bad-url/.test(window.location.hash));
+    document.body.removeChild(div);
   }
 );
