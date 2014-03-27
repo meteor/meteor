@@ -73,8 +73,6 @@ for full details on upgrading your app to 0.8.0.  This includes:
 * The internal `spark`, `liverange`, `universal-events`, and `domutils` packages
   have been removed.
 
-* The `preserve-inputs` package is no longer necessary and has been removed.
-
 * The `Handlebars` namespace has been deprecated.  `Handlebars.SafeString` is
   now `Spacebars.SafeString`, and `Handlebars.registerHelper` is now
   `UI.registerHelper`.
