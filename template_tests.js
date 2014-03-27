@@ -16,6 +16,15 @@ var nodesToArray = function (array) {
   return _.map(array, _.identity);
 };
 
+var clickIt = function (elem) {
+  // jQuery's bubbling change event polyfill for IE 8 seems
+  // to require that the element in question have focus when
+  // it receives a simulated click.
+  if (elem.focus)
+    elem.focus();
+  clickElement(elem);
+};
+
 Tinytest.add("spacebars - templates - simple helper", function (test) {
   var tmpl = Template.spacebars_template_test_simple_helper;
   var R = ReactiveVar(1);
@@ -1499,15 +1508,6 @@ Tinytest.add("spacebars - controls - radio", function(test) {
   test.equal(_.pluck(btns, 'checked'), [false, false, false]);
   test.equal(text(), "Band: ");
 
-  var clickIt = function (elem) {
-    // jQuery's bubbling change event polyfill for IE 8 seems
-    // to require that the element in question have focus when
-    // it receives a simulated click.
-    if (elem.focus)
-      elem.focus();
-    clickElement(elem);
-  };
-
   clickIt(btns[0]);
   test.equal(change_buf, ['AM']);
   change_buf.length = 0;
@@ -1815,3 +1815,19 @@ Tinytest.add("spacebars - template - helpers don't leak", function (test) {
   var div = renderToDiv(tmpl);
   divRendersTo(test, div, "correct BONUS");
 });
+
+Tinytest.add(
+  "spacebars - template - event handler returns false",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_returns_false;
+    var elemId = "spacebars_test_event_returns_false_link";
+    tmpl.events({
+      'click a': function (evt) { return false; }
+    });
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    clickIt(document.getElementById(elemId));
+    test.isFalse(/#bad-url/.test(window.location.hash));
+  }
+);
