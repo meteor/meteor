@@ -31,6 +31,20 @@ var _throwOrLog = function (from, e) {
   }
 };
 
+// Like `Meteor._noYieldsAllowed(function () { f(comp); })` but shorter,
+// and doesn't clutter the stack with an extra frame on the client,
+// where `_noYieldsAllowed` is a no-op.  `f` may be a computation
+// function or an onInvalidate callback.
+var callWithNoYieldsAllowed = function (f, comp) {
+  if (Meteor.isClient) {
+    f(comp);
+  } else {
+    Meteor._noYieldsAllowed(function () {
+      f(comp);
+    });
+  }
+};
+
 var nextId = 1;
 // computations whose callbacks we should call at flush time
 var pendingComputations = [];
@@ -111,18 +125,13 @@ _.extend(Deps.Computation.prototype, {
     if (typeof f !== 'function')
       throw new Error("onInvalidate requires a function");
 
-    var g = function () {
+    if (self.invalidated) {
       Deps.nonreactive(function () {
-        return Meteor._noYieldsAllowed(function () {
-          f(self);
-        });
+        callWithNoYieldsAllowed(f, self);
       });
-    };
-
-    if (self.invalidated)
-      g();
-    else
-      self._onInvalidateCallbacks.push(g);
+    } else {
+      self._onInvalidateCallbacks.push(f);
+    }
   },
 
   // http://docs.meteor.com/#computation_invalidate
@@ -140,8 +149,11 @@ _.extend(Deps.Computation.prototype, {
 
       // callbacks can't add callbacks, because
       // self.invalidated === true.
-      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++)
-        f(); // already bound with self as argument
+      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++) {
+        Deps.nonreactive(function () {
+          callWithNoYieldsAllowed(f, self);
+        });
+      }
       self._onInvalidateCallbacks = [];
     }
   },
@@ -163,7 +175,7 @@ _.extend(Deps.Computation.prototype, {
     var previousInCompute = inCompute;
     inCompute = true;
     try {
-      self._func(self);
+      callWithNoYieldsAllowed(self._func, self);
     } finally {
       setCurrentComputation(previous);
       inCompute = false;
@@ -246,6 +258,9 @@ _.extend(Deps.Dependency.prototype, {
 _.extend(Deps, {
   // http://docs.meteor.com/#deps_flush
   flush: function (_opts) {
+    // XXX What part of the comment below is still true? (We no longer
+    // have Spark)
+    //
     // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
     // app event handler that calls Deps.flush.  At the moment
@@ -309,9 +324,7 @@ _.extend(Deps, {
       throw new Error('Deps.autorun requires a function argument');
 
     constructingComputation = true;
-    var c = new Deps.Computation(function (c) {
-      Meteor._noYieldsAllowed(function () { f(c); });
-    }, Deps.currentComputation);
+    var c = new Deps.Computation(f, Deps.currentComputation);
 
     if (Deps.active)
       Deps.onInvalidate(function () {

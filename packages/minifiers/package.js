@@ -18,6 +18,6 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use('minifiers', 'server');
   api.use('tinytest');
-  api.add_files('minifiers-tests.js', 'server');
-});
 
+  api.add_files('beautify_tests.js', 'server');
+});

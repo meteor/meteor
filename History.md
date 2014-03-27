@@ -1,5 +1,79 @@
 ## v.NEXT
 
+## v0.8.0
+
+Meteor 0.8.0 introduces Blaze, a total rewrite of our live templating engine,
+replacing Spark. Advantages of Blaze include:
+
+  * Better interoperability with jQuery plugins and other techniques which
+    directly manipulate the DOM
+  * More fine-grained updates: only the specific elements or attributes that
+    change are touched rather than the entire template
+  * A fully documented templating language
+  * No need for the confusing `{{#constant}}`, `{{#isolate}}`, and `preserve`
+    directives
+  * Uses standard jQuery delegation (`.on`) instead of our custom implementation
+  * Blaze supports live SVG templates that work just like HTML templates
+
+See
+[the Using Blaze wiki page](https://github.com/meteor/meteor/wiki/Using-Blaze)
+for full details on upgrading your app to 0.8.0.  This includes:
+
+* The `Template.foo.rendered` callback is now only called once when the template
+  is rendered, rather than repeatedly as it is "re-rendered", because templates
+  now directly update changed data instead of fully re-rendering.
+
+* The `accounts-ui` login buttons are now invoked as a `{{> loginButtons}}`
+  rather than as `{{loginButtons}}`.
+
+* Previous versions of Meteor used a heavily modified version of the Handlebars
+  templating language. In 0.8.0, we've given it its own name: Spacebars!
+  Spacebars has an
+  [explicit specification](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md)
+  instead of being defined as a series of changes to Handlebars. There are some
+  incompatibilities with our previous Handlebars fork, such as a
+  [different way of specifying dynamic element attributes](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md#in-attribute-values)
+  and a
+  [new way of defining custom block helpers](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md#custom-block-helpers).
+
+* Your template files must consist of
+  [well-formed HTML](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md#html-dialect). Invalid
+  HTML is now a compilation failure.  (There is a current limitation in our HTML
+  parser such that it does not support
+  [omitting end tags](http://www.w3.org/TR/html5/syntax.html#syntax-tag-omission)
+  on elements such as `<P>` and `<LI>`.)
+
+* `Template.foo` is no longer a function. It is instead a
+  "component". Components render to an intermediate representation of an HTML
+  tree, not a string, so there is no longer an easy way to render a component to
+  a static HTML string.
+
+* `Meteor.render` and `Spark.render` have been removed. Use `UI.render` and
+  `UI.insert` instead.
+
+* The `<body>` tag now defines a template just like the `<template>` tag, which
+  can have helpers and event handlers.  Define them directly on the object
+  `UI.body`.
+
+* Previous versions of Meteor shipped with a synthesized `tap` event,
+  implementing a zero-delay click event on mobile browsers. Unfortunately, this
+  event never worked very well. We're eliminating it. Instead, use one of the
+  excellent third party solutions.
+
+* The `madewith` package (which supported adding a badge to your website
+  displaying its score from http://madewith.meteor.com/) has been removed, as it
+  is not compatible with the new version of that site.
+
+* The internal `spark`, `liverange`, `universal-events`, and `domutils` packages
+  have been removed.
+
+* The `Handlebars` namespace has been deprecated.  `Handlebars.SafeString` is
+  now `Spacebars.SafeString`, and `Handlebars.registerHelper` is now
+  `UI.registerHelper`.
+
+Patches contributed by GitHub users cmather and mart-jansink.
+
+
 ## v0.7.2
 
 * Support oplog tailing on queries with the `limit` option. All queries

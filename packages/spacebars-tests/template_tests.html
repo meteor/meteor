@@ -1,0 +1,665 @@
+
+<!-- convenient templates to use in different tests -->
+<template name="spacebars_template_test_aaa">
+  aaa
+</template>
+
+<template name="spacebars_template_test_bbb">
+  bbb
+</template>
+
+<template name="spacebars_template_test_bracketed_this">
+  [{{this}}]
+</template>
+
+<template name="spacebars_template_test_span_this">
+  <span>{{this}}</span>
+</template>
+
+<template name="spacebars_template_test_content">
+  {{> UI.contentBlock}}
+</template>
+
+<template name="spacebars_template_test_elsecontent">
+  {{> UI.elseBlock}}
+</template>
+
+<template name="spacebars_template_test_iftemplate">
+  {{#if condition}}
+    {{> UI.contentBlock}}
+  {{else}}
+    {{> UI.elseBlock}}
+  {{/if}}
+</template>
+
+<!-- -->
+
+
+
+<template name="spacebars_template_test_simple_helper">
+  {{foo bar}}
+</template>
+
+<template name="spacebars_template_test_dynamic_template">
+  {{> foo}}
+</template>
+
+<template name="spacebars_template_test_interpolate_attribute">
+  <div class="aaa{{foo bar}}zzz"></div>
+</template>
+
+<template name="spacebars_template_test_dynamic_attrs">
+  <span {{attrsObj}} {{singleAttr}} {{nonexistent}}>hi</span>
+</template>
+
+<template name="spacebars_template_test_triple">
+  {{{html}}}
+</template>
+
+<template name="spacebars_template_test_triple2">
+  x{{{html}}}{{{html2}}}{{{html3}}}y
+</template>
+
+<template name="spacebars_template_test_inclusion_args">
+  {{> foo bar}}
+</template>
+
+<template name="spacebars_template_test_inclusion_args2">
+  {{> foo bar q=baz}}
+</template>
+
+<template name="spacebars_template_test_inclusion_dotted_args">
+  {{> foo bar.baz}}
+</template>
+
+<template name="spacebars_template_test_inclusion_slashed_args">
+  {{> foo bar/baz}}
+</template>
+
+<template name="spacebars_template_test_block_helper">
+  {{#foo}}
+    bar
+  {{else}}
+    baz
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_function_one_string_arg">
+  {{#foo "bar"}}
+    content
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_function_one_helper_arg">
+  {{#foo bar}}
+    content
+  {{/foo}}
+</template>
+
+<template name="spacebars_template_test_block_helper_component_one_helper_arg">
+  {{#if bar}}
+    content
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_block_helper_component_three_helper_args">
+  {{#if equals bar_or_baz "bar"}}
+    content
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_block_helper_dotted_arg">
+  {{#foo bar.baz qux}}{{/foo}}
+</template>
+
+<template name="spacebars_template_test_nested_content">
+  {{#spacebars_template_test_iftemplate condition=flag}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate}}
+</template>
+
+<template name="spacebars_template_test_iftemplate2">
+  {{#spacebars_template_test_iftemplate condition=flag}}
+    {{> UI.contentBlock}}
+  {{else}}
+    {{> UI.elseBlock}}
+  {{/spacebars_template_test_iftemplate}}
+</template>
+
+<template name="spacebars_template_test_nested_content2">
+  {{#spacebars_template_test_iftemplate2 flag=x}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate2}}
+</template>
+
+<template name="spacebars_template_test_if">
+  {{#if foo}}
+    {{bar}}
+  {{else}}
+    {{baz}}
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_if_in_with">
+  {{#with foo}}
+    {{bar}}
+    {{#if true}}
+      {{bar}}
+    {{/if}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_each">
+  {{#each items}}
+    {{text}}
+  {{else}}
+    else-clause
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_dots">
+  {{#with foo}}
+    A
+    {{#with bar}}
+      B
+      {{! #if shouldn't add a data context }}
+      {{#if true}}
+        C
+        {{#each items}}
+          D
+          {{! inclusion should only add a data context if passed explicitly }}
+          {{> spacebars_template_test_dots_subtemplate}}
+          {{> spacebars_template_test_dots_subtemplate ..}}
+        {{/each}}
+      {{/if}}
+    {{/with}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_dots_subtemplate">
+  TITLE
+  1{{title}}
+  2{{./title}}
+  3{{../title}}
+  4{{../../title}}
+
+  GETTITLE
+  5{{getTitle .}}
+  6{{getTitle ..}}
+  7{{getTitle ../..}}
+</template>
+
+<template name="spacebars_template_test_select_tag">
+  <select>
+    {{#each optgroups}}
+      <optgroup label={{label}}>
+        {{#each options}}
+          <option value={{value}} {{selectedAttr}}>{{label}}</option>
+        {{/each}}
+      </optgroup>
+    {{/each}}
+  </select>
+</template>
+
+<!-- Test for issue #770 - falsy value for with. -->
+<template name="test_template_issue770">
+  {{# with value1}}
+    {{this}}
+  {{else}}
+    xxx
+  {{/with}}
+
+  {{# with value2}}
+    {{this}}
+  {{else}}
+    xxx
+  {{/with}}
+
+  {{# with value1}}
+    {{this}}
+  {{/with}}
+
+  {{# with value2}}
+    {{this}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_tricky_attrs">
+  <input type={{theType}}><input type=checkbox class={{theClass}}>
+</template>
+
+<template name="spacebars_template_test_no_data">
+  {{this.foo}}{{#unless this.bar}}asdf{{/unless}}
+</template>
+
+<template name="spacebars_template_test_isolate">
+  {{#isolate}}hello{{/isolate}}
+</template>
+
+<template name="spacebars_template_test_constant">
+  {{#constant}}hello{{/constant}}
+</template>
+
+<template name="spacebars_template_test_textarea">
+  <textarea>{{foo}}</textarea>
+</template>
+
+<template name="spacebars_template_test_textarea2">
+  <textarea>{{#if foo}}</not a tag>{{else}}<also not a tag>{{/if}}</textarea>
+</template>
+
+<template name="spacebars_template_test_textarea_each">
+  <textarea>{{#each foo}}<not a tag {{.}} {{else}}<>{{/each}}</textarea>
+</template>
+
+<template name="spacebars_template_test_defer_in_rendered">
+  {{#each items}}
+    {{> spacebars_template_test_defer_in_rendered_subtemplate}}
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_defer_in_rendered_subtemplate">
+  {{! see rendered callback }}
+</template>
+
+<template name="spacebars_template_test_with_someData">
+  {{#with someData}}
+    {{foo}} {{bar}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_each_stops">
+  {{#each items}}
+    x
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_block_helpers_in_attribute">
+  <div class="{{#each classes}}{{#if startsLowerCase name}}{{name}} {{/if}}{{else}}none{{/each}}">Hello</div>
+</template>
+
+<template name="spacebars_template_test_block_helpers_in_attribute_2">
+  <input value="{{#if foo}}"{{else}}&&lt;></x>{{/if}}">
+</template>
+
+<template name="spacebars_template_test_constant_each_argument">
+  {{#with someData}}
+    {{#each anArray}}
+      {{justReturn this}}
+    {{/each}}
+    {{this}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_markdown_basic">
+  {{#with obj}}
+    {{#markdown}}
+{{hi}}
+/each}}
+
+<b>{{hi}}</b>
+<b>/each}}</b>
+
+* {{hi}}
+* /each}}
+
+* <b>{{hi}}</b>
+* <b>/each}}</b>
+
+some paragraph to fix showdown's four space parsing below.
+
+    {{hi}}
+    /each}}
+
+    <b>{{hi}}</b>
+    <b>/each}}</b>
+
+&gt
+
+* &gt
+
+`&gt`
+
+    &gt
+
+&gt;
+
+* &gt;
+
+`&gt;`
+
+    &gt;
+
+`{{hi}}`
+`/each}}`
+
+`<b>{{hi}}</b>`
+`<b>/each}}`
+
+    {{/markdown}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_markdown_if">
+  {{#markdown}}
+
+{{#if cond}}true{{else}}false{{/if}}
+
+<b>{{#if cond}}true{{else}}false{{/if}}</b>
+
+* {{#if cond}}true{{else}}false{{/if}}
+
+* <b>{{#if cond}}true{{else}}false{{/if}}</b>
+
+some paragraph to fix showdown's four space parsing below.
+
+    {{#if cond}}true{{else}}false{{/if}}
+
+    <b>{{#if cond}}true{{else}}false{{/if}}</b>
+
+`{{#if cond}}true{{else}}false{{/if}}`
+
+`<b>{{#if cond}}true{{else}}false{{/if}}</b>`
+
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_each">
+  {{#markdown}}
+
+{{#each seq}}{{.}}{{/each}}
+
+<b>{{#each seq}}{{.}}{{/each}}</b>
+
+* {{#each seq}}{{.}}{{/each}}
+
+* <b>{{#each seq}}{{.}}{{/each}}</b>
+
+some paragraph to fix showdown's four space parsing below.
+
+    {{#each seq}}{{.}}{{/each}}
+
+    <b>{{#each seq}}{{.}}{{/each}}</b>
+
+`{{#each seq}}{{.}}{{/each}}`
+
+`<b>{{#each seq}}{{.}}{{/each}}</b>`
+
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_inclusion">
+  {{#markdown}}
+{{> spacebars_template_test_markdown_inclusion_subtmpl}}
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_markdown_inclusion_subtmpl">
+  <span>{{#if foo}}Foo is {{foo}}.{{/if}}</span>
+</template>
+
+<template name="spacebars_template_test_markdown_block_helpers">
+  {{#markdown}}
+    {{#spacebars_template_test_just_content}}
+Hi there!
+    {{/spacebars_template_test_just_content}}
+  {{/markdown}}
+</template>
+
+<template name="spacebars_template_test_just_content">
+  {{> UI.contentBlock}}
+</template>
+
+<template name="spacebars_template_test_simple_helpers_are_isolated">
+  {{foo}}
+</template>
+
+<template name="spacebars_template_test_attr_helpers_are_isolated">
+  <p attr={{foo}}></p>
+</template>
+
+<template name="spacebars_template_test_attr_object_helpers_are_isolated">
+  <p {{attrs}}></p>
+</template>
+
+<template name="spacebars_template_test_inclusion_helpers_are_isolated">
+  {{> foo}}
+</template>
+
+<template name="spacebars_template_test_inclusion_helpers_are_isolated_subtemplate">
+</template>
+
+<template name="spacebars_template_test_nully_attributes0">
+  <input type="checkbox" checked="" stuff="">
+</template>
+
+<template name="spacebars_template_test_nully_attributes1">
+  <input type="checkbox" checked={{foo}} stuff={{foo}}>
+</template>
+
+<template name="spacebars_template_test_nully_attributes2">
+  <input type="checkbox" checked={{foo}}{{bar}} stuff={{foo}}{{bar}}>
+</template>
+
+<template name="spacebars_template_test_nully_attributes3">
+  <input type="checkbox" checked={{#if foo}}{{/if}} stuff={{#if foo}}{{/if}}>
+</template>
+
+<template name="spacebars_template_test_double">
+  {{foo}}
+</template>
+
+<template name="spacebars_template_test_inclusion_lookup">
+  {{> spacebars_template_test_inclusion_lookup_subtmpl}}
+  {{> dataContextSubtmpl}}
+</template>
+
+<template name="spacebars_template_test_inclusion_lookup_subtmpl">
+  This is the template.
+</template>
+
+<template name="spacebars_template_test_inclusion_lookup_subtmpl2">
+  This is generated by a helper with the same name.
+</template>
+
+<template name="spacebars_template_test_inclusion_lookup_subtmpl3">
+  This is a template passed in the data context.
+</template>
+
+<template name="spacebars_template_test_content_context">
+  {{#with foo}}
+    {{#with bar}}
+      {{#spacebars_template_test_iftemplate condition=cond}}
+        {{firstLetter}}{{../secondLetter}}
+      {{else}}
+        {{../firstLetter}}{{secondLetter}}
+      {{/spacebars_template_test_iftemplate}}
+    {{/with}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_control_input">
+  <input type={{type}} value={{value}}>
+</template>
+
+<template name="spacebars_test_control_textarea">
+  <textarea>{{value}}</textarea>
+</template>
+
+<template name="spacebars_test_control_select">
+  <select>
+    {{#each options}}
+      <option selected={{selected}}>{{.}}</option>
+    {{/each}}
+  </select>
+</template>
+
+<template name="spacebars_test_control_radio">
+  Band:
+
+  {{#each bands}}
+    <input name="bands" type="radio" value={{.}} checked={{isChecked}} />
+  {{/each}}
+
+  {{band}}
+</template>
+
+<template name="spacebars_test_control_checkbox">
+  {{#each labels}}
+    <input type="checkbox" value={{.}} checked={{isChecked}} />
+  {{/each}}
+</template>
+
+<template name="spacebars_test_nonexistent_template">
+  {{> this_template_lives_in_outer_space}}
+</template>
+
+<template name="spacebars_test_if_helper">
+  {{#if foo}}
+    true
+  {{else}}
+    false
+  {{/if}}
+</template>
+
+<template name="spacebars_test_block_helper_function">
+  {{#foo}}
+  {{/foo}}
+</template>
+
+<template name="spacebars_test_helpers_stop_onetwo">
+  {{#if showOne}}
+    {{> one}}
+  {{else}}
+    {{> two}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_helpers_stop_onetwo_attribute">
+  <br data-stuff=
+  {{#if showOne}}
+    {{> one}}
+  {{else}}
+    {{> two}}
+  {{/if}}>
+</template>
+
+<template name="spacebars_test_helpers_stop_with1">
+  {{#with options}}
+    one
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with2">
+  {{#with options}}
+    two
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_each1">
+  {{#each options}}
+    one
+  {{/each}}
+</template>
+
+<template name="spacebars_test_helpers_stop_each2">
+  {{#each options}}
+    two
+  {{/each}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_each1">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_each3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_each2">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_each3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_each3">
+  {{#each this}}
+  {{/each}}
+</template>
+
+<template name="spacebars_test_helpers_stop_if1">
+  {{#if options}}
+    one
+  {{/if}}
+</template>
+
+<template name="spacebars_test_helpers_stop_if2">
+  {{#if options}}
+    two
+  {{/if}}
+</template>
+
+<template name="spacebars_test_helpers_stop_inclusion1">
+  {{> options}}
+</template>
+
+<template name="spacebars_test_helpers_stop_inclusion2">
+  {{> options}}
+</template>
+
+<template name="spacebars_test_helpers_stop_inclusion3">
+  blah
+</template>
+
+<template name="spacebars_test_helpers_stop_with_callbacks1">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_callbacks3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_callbacks2">
+  {{#with options}}
+    {{> spacebars_test_helpers_stop_with_callbacks3}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_stop_with_callbacks3">
+  blah
+</template>
+
+<template name="spacebars_test_helpers_stop_unless1">
+  {{#unless options}}
+    one
+  {{/unless}}
+</template>
+
+<template name="spacebars_test_helpers_stop_unless2">
+  {{#unless options}}
+    two
+  {{/unless}}
+</template>
+
+<template name="spacebars_test_no_data_context">
+  <button></button>
+  {{foo}}
+</template>
+
+<template name="spacebars_test_falsy_with">
+  {{#with obj}}
+    {{greekLetter}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_helpers_dont_leak">
+  {{> spacebars_test_helpers_dont_leak2 foo="correct"}}
+</template>
+
+<template name="spacebars_test_helpers_dont_leak2">
+  {{foo}}{{bar}} {{#spacebars_template_test_content}}{{bonus}}{{/spacebars_template_test_content}}
+</template>
+
+<template name="spacebars_test_event_returns_false">
+  <a href="#bad-url" id="spacebars_test_event_returns_false_link">click me</a>
+</template>

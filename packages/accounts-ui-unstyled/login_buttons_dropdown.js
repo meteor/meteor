@@ -3,7 +3,7 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 
 // events shared between loginButtonsLoggedOutDropdown and
 // loginButtonsLoggedInDropdown
-Template._loginButtons.events({
+Template.loginButtons.events({
   'click #login-name-link, click #login-sign-in-link': function () {
     loginButtonsSession.set('dropdownVisible', true);
     Deps.flush();
@@ -94,7 +94,9 @@ Template._loginButtonsLoggedOutDropdown.events({
         document.getElementById('login-username').value = usernameOrEmail;
     else
       document.getElementById('login-email').value = usernameOrEmail;
-    // "login-password" is preserved, since password fields aren't updated by Spark.
+
+    if (password !== null)
+      document.getElementById('login-password').value = password;
 
     // Force redrawing the `login-dropdown-list` element because of
     // a bizarre Chrome bug in which part of the DIV is not redrawn
@@ -134,6 +136,8 @@ Template._loginButtonsLoggedOutDropdown.events({
     var username = trimmedElementValueById('login-username');
     var email = trimmedElementValueById('login-email')
           || trimmedElementValueById('forgot-password-email'); // Ughh. Standardize on names?
+    // notably not trimmed. a password could (?) start or end with a space
+    var password = elementValueById('login-password');
 
     loginButtonsSession.set('inSignupFlow', false);
     loginButtonsSession.set('inForgotPasswordFlow', false);
@@ -144,9 +148,12 @@ Template._loginButtonsLoggedOutDropdown.events({
       document.getElementById('login-username').value = username;
     if (document.getElementById('login-email'))
       document.getElementById('login-email').value = email;
-    // "login-password" is preserved, since password fields aren't updated by Spark.
+
     if (document.getElementById('login-username-or-email'))
       document.getElementById('login-username-or-email').value = email || username;
+
+    if (password !== null)
+      document.getElementById('login-password').value = password;
   },
   'keypress #login-username, keypress #login-email, keypress #login-username-or-email, keypress #login-password, keypress #login-password-again': function (event) {
     if (event.keyCode === 13)

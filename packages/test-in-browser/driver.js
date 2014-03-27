@@ -220,98 +220,81 @@ var _testStatus = function(t) {
 
 //// Template - navBars
 
-Template.navBars.running = function() {
-  countDep.depend();
-  return running;
-};
+Template.navBars.helpers({
+  running: function() {
+    countDep.depend();
+    return running;
+  },
+  passed: function() {
+    countDep.depend();
+    return failedCount === 0;
+  },
+  total_test_time: function() {
+    countDep.depend();
 
-Template.navBars.passed = function() {
-  countDep.depend();
-  return failedCount === 0;
-};
+    // walk whole tree to get all tests
+    var walk = function (groups) {
+      var total = 0;
 
-Template.navBars.total_test_time = function() {
-  countDep.depend();
+      _.each(groups || [], function (group) {
+        _.each(group.tests || [], function (t) {
+          total += _testTime(t);
+        });
 
-  // walk whole tree to get all tests
-  var walk = function (groups) {
-    var total = 0;
-
-    _.each(groups || [], function (group) {
-      _.each(group.tests || [], function (t) {
-        total += _testTime(t);
+        total += walk(group.groups);
       });
 
-      total += walk(group.groups);
-    });
+      return total;
+    };
 
-    return total;
-  };
-
-  return walk(resultTree);
-};
+    return walk(resultTree);
+  }
+});
 
 
 //// Template - progressBar
 
-Template.progressBar.running = function () {
-  countDep.depend();
-  return running;
-};
-
-Template.progressBar.percentPass = function () {
-  countDep.depend();
-  if (totalCount === 0)
-    return 0;
-  return 100*passedCount/totalCount;
-};
-
-Template.progressBar.totalCount = function () {
-  countDep.depend();
-  return totalCount;
-};
-
-Template.progressBar.passedCount = function () {
-  countDep.depend();
-  return passedCount;
-};
-
-Template.progressBar.percentFail = function () {
-  countDep.depend();
-  if (totalCount === 0)
-    return 0;
-  return 100*failedCount/totalCount;
-};
-
-Template.progressBar.anyFail = function () {
-  countDep.depend();
-  return failedCount > 0;
-};
-
-Template.progressBar.barOuterClass = function () {
-  return Template.progressBar.running() ? 'progress-striped' : '';
-};
-
-Template.progressBar.barInnerClass = function () {
-  return (Template.progressBar.anyFail() ?
-          'bar-warning' : 'bar-success');
-};
-
+Template.progressBar.helpers({
+  running: function () {
+    countDep.depend();
+    return running;
+  },
+  percentPass: function () {
+    countDep.depend();
+    if (totalCount === 0)
+      return 0;
+    return 100*passedCount/totalCount;
+  },
+  totalCount: function () {
+    countDep.depend();
+    return totalCount;
+  },
+  passedCount: function () {
+    countDep.depend();
+    return passedCount;
+  },
+  percentFail: function () {
+    countDep.depend();
+    if (totalCount === 0)
+      return 0;
+    return 100*failedCount/totalCount;
+  },
+  anyFail: function () {
+    countDep.depend();
+    return failedCount > 0;
+  },
+  barOuterClass: function () {
+    countDep.depend();
+    return running ? 'progress-striped' : '';
+  },
+  barInnerClass: function () {
+    countDep.depend();
+    return (failedCount > 0 ?
+            'bar-warning' : 'bar-success');
+  }
+});
 
 //// Template - groupNav
-
-Template.groupNav.groupPaths = function () {
-  var groupPath = Session.get("groupPath");
-  var ret = [];
-  for (var i = 1; i <= groupPath.length; i++) {
-    ret.push({path: groupPath.slice(0,i), name: groupPath[i-1]});
-  }
-  return ret;
-};
-
-Template.groupNav.rerunScheduled = function () {
-  return Session.get("rerunScheduled");
-};
 
 var changeToPath = function (path) {
   Session.set("groupPath", path);
@@ -321,11 +304,25 @@ var changeToPath = function (path) {
   Reload._reload();
 };
 
+Template.groupNav.helpers({
+  groupPaths: function () {
+    var groupPath = Session.get("groupPath");
+    var ret = [];
+    for (var i = 1; i <= groupPath.length; i++) {
+      ret.push({path: groupPath.slice(0,i), name: groupPath[i-1]});
+    }
+    return ret;
+  },
+  rerunScheduled: function () {
+    return Session.get("rerunScheduled");
+  }
+});
+
 Template.groupNav.events({
-  "click .group": function () {
+  'click .group': function () {
     changeToPath(this.path);
   },
-  "click .rerun": function () {
+  'click .rerun': function () {
     Session.set("rerunScheduled", true);
     Reload._reload();
   }
@@ -334,116 +331,121 @@ Template.groupNav.events({
 
 //// Template - failedTests
 
-Template.failedTests.failedTests = function() {
-  countDep.depend();
-  return failedTests;
-};
-
-
+Template.failedTests.helpers({
+  failedTests: function() {
+    countDep.depend();
+    return failedTests;
+  }
+});
 
 //// Template - testTable
 
-Template.testTable.data = function() {
-  topLevelGroupsDep.depend();
-  return resultTree;
-};
-
+Template.testTable.helpers({
+  testdata: function () {
+    topLevelGroupsDep.depend();
+    return resultTree;
+  },
+  thisWithDep: function () {
+    this.dep.depend();
+    return this;
+  }
+});
 
 //// Template - test_group
 
-Template.test_group.groupDep = function () {
-  // this template just establishes a dependency. It doesn't actually
-  // render anything.
-  this.dep.depend();
-  return "";
-};
+Template.test_group.helpers({
+  thisWithDep: function () {
+    this.dep.depend();
+    return this;
+  }
+});
 
 Template.test_group.events({
-  "click .groupname": function () {
+  'click .groupname': function (evt) {
     changeToPath(this.path);
+    // prevent enclosing groups from also triggering on
+    // same groupname.  It would be cleaner to think of
+    // this as each group only listening to its *own*
+    // groupname, but currently it listens to all of them.
+    evt.stopImmediatePropagation();
   }
 });
 
 
 //// Template - test
 
-Template.test.testDep = function () {
-  // this template just establishes a dependency. It doesn't actually
-  // render anything.
-  this.dep.depend();
-  return "";
-};
+Template.test.helpers({
+  test_status_display: function() {
+    var status = _testStatus(this);
+    if (status == "failed") {
+      return "FAIL";
+    } else if (status == "succeeded") {
+      return "PASS";
+    } else {
+      return "waiting...";
+    }
+  },
 
-Template.test.test_status_display = function() {
-  var status = _testStatus(this);
-  if (status == "failed") {
-    return "FAIL";
-  } else if (status == "succeeded") {
-    return "PASS";
-  } else {
-    return "waiting...";
+  test_time_display: function() {
+    var time = _testTime(this);
+    return (typeof time === "number") ? time + " ms" : "";
+  },
+
+  test_class: function() {
+    var events = this.events || [];
+    var classes = [_testStatus(this)];
+
+    if (this.expanded) {
+      classes.push("expanded");
+    } else {
+      classes.push("collapsed");
+    }
+
+    return classes.join(' ');
+  },
+
+  eventsArray: function() {
+    var events = _.filter(this.events, function(e) {
+      return e.type != "finish";
+    });
+
+    var partitionBy = function(seq, func) {
+      var result = [];
+      var lastValue = {};
+      _.each(seq, function(x) {
+        var newValue = func(x);
+        if (newValue === lastValue) {
+          result[result.length-1].push(x);
+        } else {
+          lastValue = newValue;
+          result.push([x]);
+        }
+      });
+      return result;
+    };
+
+    var dupLists = partitionBy(
+      _.map(events, function(e) {
+        // XXX XXX We need something better than stringify!
+        // stringify([undefined]) === "[null]"
+        e = _.clone(e);
+        delete e.sequence;
+        return {obj: e, str: JSON.stringify(e)};
+      }), function(x) { return x.str; });
+
+    return _.map(dupLists, function(L) {
+      var obj = L[0].obj;
+      return (L.length > 1) ? _.extend({times: L.length}, obj) : obj;
+    });
   }
-};
-
-Template.test.test_time_display = function() {
-  var time = _testTime(this);
-  return (typeof time === "number") ? time + " ms" : "";
-};
-
-Template.test.test_class = function() {
-  var events = this.events || [];
-  var classes = [_testStatus(this)];
-
-  if (this.expanded) {
-    classes.push("expanded");
-  } else {
-    classes.push("collapsed");
-  }
-
-  return classes.join(' ');
-};
+});
 
 Template.test.events({
-  'click .testname': function() {
+  'click .testname': function () {
     this.expanded = ! this.expanded;
     this.dep.changed();
   }
 });
-
-Template.test.eventsArray = function() {
-  var events = _.filter(this.events, function(e) {
-    return e.type != "finish";
-  });
-
-  var partitionBy = function(seq, func) {
-    var result = [];
-    var lastValue = {};
-    _.each(seq, function(x) {
-      var newValue = func(x);
-      if (newValue === lastValue) {
-        result[result.length-1].push(x);
-      } else {
-        lastValue = newValue;
-        result.push([x]);
-      }
-    });
-    return result;
-  };
-
-  var dupLists = partitionBy(
-    _.map(events, function(e) {
-      // XXX XXX We need something better than stringify!
-      // stringify([undefined]) === "[null]"
-      e = _.clone(e);
-      delete e.sequence;
-      return {obj: e, str: JSON.stringify(e)};
-    }), function(x) { return x.str; });
-
-  return _.map(dupLists, function(L) {
-    var obj = L[0].obj;
-    return (L.length > 1) ? _.extend({times: L.length}, obj) : obj;
-  });
-};
 
 
 //// Template - event
@@ -481,6 +483,7 @@ Template.event.helpers({
       details = _.clone(details);
       delete details.type;
       delete details.stack;
+
       var prepare = function(details) {
         if (type === 'string_equal') {
           var diff = doDiff(details.actual,
@@ -494,20 +497,20 @@ Template.event.helpers({
           if (type === 'string_equal' &&
               (key === 'actual' || key === 'expected')) {
             var html = '<pre class="string_equal string_equal_'+key+'">';
-          _.each(diff, function (piece) {
-            var which = piece[0];
-            var text = piece[1];
-            if (which === 0 ||
-                which === (key === 'actual' ? -1 : 1)) {
-              var htmlBit = Handlebars._escape(text).replace(
-                /\n/g, '<br>');
-              if (which !== 0)
-                htmlBit = '<ins>' + htmlBit + '</ins>';
-              html += htmlBit;
-            }
-          });
-          html += '</pre>';
-          val = new Handlebars.SafeString(html);
+            _.each(diff, function (piece) {
+              var which = piece[0];
+              var text = piece[1];
+              if (which === 0 ||
+                  which === (key === 'actual' ? -1 : 1)) {
+                var htmlBit = UI._escape(text).replace(
+                    /\n/g, '<br>');
+                if (which !== 0)
+                  htmlBit = '<ins>' + htmlBit + '</ins>';
+                html += htmlBit;
+              }
+            });
+            html += '</pre>';
+            val = new Spacebars.SafeString(html);
           }
 
           // You can end up with a an undefined value, e.g. using
@@ -530,9 +533,9 @@ Template.event.helpers({
         details: prepare(details)
       };
     }
+  },
+
+  is_debuggable: function() {
+    return !!this.cookie;
   }
 });
-
-Template.event.is_debuggable = function() {
-  return !!this.cookie;
-};
