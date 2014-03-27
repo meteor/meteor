@@ -1,5 +1,7 @@
-=> Meteor 0.7.2: Support limit queries in the oplog tailing driver. Add
-   hooks to customize the login process.
+=> Meteor 0.8.0: Introducing Blaze, Meteor's new live templating engine!
+   Better integration with jQuery plugins, fine-grained updates,
+   reactive SVG support, and more!
+   https://github.com/meteor/meteor/wiki/Using-Blaze
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.7.2 by running 'meteor update'.
+   project to Meteor 0.8.0 by running 'meteor update'.
