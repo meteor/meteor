@@ -262,9 +262,7 @@ context) if there are zero items in the sequence at any time.
 
 When the argument to `#each` changes, the DOM is always updated to reflect the new sequence, but it's sometimes significant exactly how that is achieved.  When the argument is a Meteor live cursor, the `#each` has access to fine-grained updates to the sequence -- add, remove, move, and change callbacks -- and the items are all documents identified by unique ids.  As long as the cursor itself remains constant (i.e. the query doesn't change), it is very easy to reason about how the DOM will be updated as the contents of the cursor change.  The rendered content for each document persists as long as the document is in the cursor, and when documents are re-ordered, the DOM is re-ordered.
 
-Things are more complicated if the argument to the `#each` reactively changes between different cursor objects, or between arrays of plain JavaScript objects that may not be identified clearly.  The implementation of `#each` tries to be intelligent without doing too much expensive work.
-
-XXX explain more
+Things are more complicated if the argument to the `#each` reactively changes between different cursor objects, or between arrays of plain JavaScript objects that may not be identified clearly.  The implementation of `#each` tries to be intelligent without doing too much expensive work. Specifically, it tries to match items between the old and new array or cursor with the following strategy: (1) If the items are objects with an `_id` field, use the value of that field as the matching key; (2) If the items are objects with no `_id` field, use the index in the array as the matching key (meaning appends are fast but prepends are slower); (3) If the items are numbers or strings, use their value as the matching key. In addition, the keys are deduped so arrays with repeating items work fine.
 
 ## Custom Block Helpers
 
