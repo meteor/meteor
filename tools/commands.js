@@ -602,7 +602,6 @@ main.registerCommand({
       failed = true;
       return;
     }
-    console.log(constraint);
 
     // If the version was specified, check that the version exists.
     if ( constraint.versionConstraint !== "none") {
@@ -663,26 +662,28 @@ main.registerCommand({
     messageLog.push("removed dependency on " + packageName);
   });
 
-  // Install the new versions.
+  // Install the new versions. If all new versions were installed
+  // successfully, then `setDependencies` also records dependency
+  // changes in the .meteor/versions file.
+  //
+  // Makes sure we have enough builds of the package downloaded such that
+  // we can load a browser slice and a slice that will run on this
+  // system. (Later we may also need to download more builds to be able to
+  // deploy to another architecture.)
+  var downloaded = project.setDependencies(options.appDir, packages,
+                                           newVersions);
+
   _.each(newVersions, function(version, packageName) {
-    if ( failed )
+    if (failed)
       return;
+
     if (_.has(versions, packageName) &&
          versions[packageName] == version ) {
       // Nothing changed. Skip this.
       return;
      }
 
-    // Make sure we have enough builds of the package downloaded such that
-    // we can load a browser slice and a slice that will run on this
-    // system. (Later we may also need to download more builds to be able to
-    // deploy to another architecture.)
-    var available = tropohouse.maybeDownloadPackageForArchitectures(
-      catalog.getVersion(packageName, version),
-      // XXX we also download the deploy arch now, because we don't run the
-      // constraint solver / downloader anywhere other than add-package yet.
-      ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
-    if (! available) {
+    if (! downloaded[packageName] || downloaded[packageName] !== version) {
       // XXX maybe we shouldn't be letting the constraint solver choose
       // things that don't have the right arches?
       process.stderr.write("Package " + packageName +
@@ -700,7 +701,7 @@ main.registerCommand({
 
     // If the previous versions file had this, then we are upgrading, if it did
     // not, then we must be adding this package anew.
-    if ( _.has(versions, packageName )) {
+    if (_.has(versions, packageName)) {
       messageLog.push("upgraded " + packageName + " from version " +
                       versions[packageName] +
                       " to version " + newVersions[packageName]);
@@ -712,9 +713,6 @@ main.registerCommand({
 
   if (failed)
     return 1;
-
-  // Record dependency changes.
-  project.rewriteDependencies(options.appDir, packages, newVersions);
 
   // Show the user the messageLog of packages we added.
   _.each(messageLog, function (msg) {
@@ -798,7 +796,7 @@ main.registerCommand({
   });
 
   // Write the dependency files with the right versions
-  project.rewriteDependencies(options.appDir, packages, newVersions);
+  project.setDependencies(options.appDir, packages, newVersions);
 
   // Show the user the messageLog of everything we removed.
   _.each(messageLog, function (msg) {

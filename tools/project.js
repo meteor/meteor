@@ -3,6 +3,8 @@ var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
 var utils = require('./utils.js');
+var tropohouse = require('./tropohouse.js');
+var archinfo = require('./archinfo.js');
 
 var project = exports;
 
@@ -85,7 +87,7 @@ project.getIndirectDependencies = function(appDir) {
 };
 
 // Write the .meteor/versions file after running the constraint solver.
-project.rewriteDependencies = function (appDir, deps, versions) {
+var rewriteDependencies = function (appDir, deps, versions) {
 
   // Rewrite the packages file. Do this first, since the versions file is
   // derived from the packages file.
@@ -110,6 +112,38 @@ project.rewriteDependencies = function (appDir, deps, versions) {
   lines.sort();
   fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
                    lines.join(''), 'utf8');
+};
+
+
+// Call this after running the constraint solver. Downloads the
+// necessary package builds and writes the .meteor/versions and
+// .meteor/packages files with the results of the constraint solver.
+//
+// Only writes to .meteor/versions if all the requested versions were
+// available from the package server.
+//
+// Returns an object whose keys are package names and values are
+// versions that were successfully downloaded.
+project.setDependencies = function (appDir, deps, versions) {
+  var downloadedPackages = {};
+  _.each(versions, function (version, name) {
+    var packageVersionInfo = { packageName: name, version: version };
+    // XXX error handling
+    var available = tropohouse.maybeDownloadPackageForArchitectures(
+      packageVersionInfo,
+      ['browser', archinfo.host()]
+    );
+    if (available) {
+      downloadedPackages[name] = version;
+    }
+  });
+
+  if (_.keys(downloadedPackages).length === versions.length) {
+    rewriteDependencies(appDir, deps, versions);
+    return true;
+  } else {
+    return false;
+  }
 };
 
 var meteorReleaseFilePath = function (appDir) {
@@ -138,9 +172,9 @@ project.generatePackageLoader = function (appDir) {
     return { outcome: 'conflicting-versions' };
   }
 
-  // Write out the new versions file.
+  // Download any necessary package builds and write out the new versions file.
   delete packages["ctl"];
-  project.rewriteDependencies(appDir, packages, newVersions);
+  project.setDependencies(appDir, packages, newVersions);
 
   var newVersionsReform = {};
   _.each(newVersions, function (version, name) {
