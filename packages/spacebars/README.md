@@ -7,18 +7,20 @@ Spacebars is a Meteor template language inspired by [Handlebars](http://handleba
 A Spacebars template consists of HTML interspersed with template tags, which are delimited by `{{` and `}}` (two curly braces).
 
 ```
-<h1>{{pageTitle}}</h1>
+<template name="myPage">
+  <h1>{{pageTitle}}</h1>
 
-{{> nav}}
+  {{> nav}}
 
-{{#each posts}}
-  <div class="post">
-    <h3>{{title}}</h3>
-    <div class="post-content">
-      {{{content}}}
+  {{#each posts}}
+    <div class="post">
+      <h3>{{title}}</h3>
+      <div class="post-content">
+        {{{content}}}
+      </div>
     </div>
-  </div>
-{{/each}}
+  {{/each}}
+</template>
 ```
 
 As illustrated by the above example, there are four major types of template tags:
@@ -356,3 +358,24 @@ or equivalently `<br/>`.
 
 The HTML spec allows omitting some additional end tags, such as P and
 LI, but Spacebars doesn't currently support this.
+
+## Top-level Elements in a `.html` file
+
+Technically speaking, the `<template>` element is not part of the Spacebars
+language. A `foo.html` template file in Meteor consists of one or more of the
+following elements:
+
+* `<template name="myName">` - The `<template>` element contains a Spacebars
+  template (as defined in the rest of this file) which will be compiled to the
+  `Template.myName` component.
+
+* `<head>` - Static HTML that will be inserted into the `<head>` element of the
+  default HTML boilerplate page. Cannot contain template tags. If `<head>` is
+  used multiple times (perhaps in different files), the contents of all of the
+  `<head>` elements are concatenated.
+
+* `<body>` - A template that will be inserted into the `<body>` of the main
+  page.  It will be compiled to the `UI.body` component. If `<body>` is used
+  multiple times (perhaps in different files), the contents of all of the
+  `<body>` elements are concatenated.
+

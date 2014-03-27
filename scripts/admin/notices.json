@@ -95,6 +95,23 @@
     "release": "0.7.2"
   },
   {
+    "release": "0.8.0",
+    "notices": [
+      "Meteor has a new live templating engine: Blaze!",
+      "See https://github.com/meteor/meteor/wiki/Using-Blaze for what's new."
+    ],
+    "packageNotices": {
+      "accounts-ui": ["Include login buttons with {{> loginButtons}}, not {{loginButtons}}."],
+      "spark": ["The spark package has been removed."],
+      "domutils": ["The domutils package has been removed."],
+      "universal-events": ["The universal-events package has been removed.",
+                           "Use jQuery event delegation instead."],
+      "liverange": ["The liverange package has been removed."],
+      "madewith": ["The madewith package has been removed.",
+                   "http://madewith.meteor.com/ no longer supports app badges."]
+    }
+  },
+  {
     "release": "NEXT"
   }
 ]
