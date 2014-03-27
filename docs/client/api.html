@@ -1432,7 +1432,7 @@ variable every time a new version of your app is loaded.
 Example:
 
     // in main.html
-    {{lt}}template name="main>
+    {{lt}}template name="main">
       <p>We've always been at war with {{dstache}}theEnemy}}.</p>
     {{lt}}/template>
 
@@ -2206,7 +2206,7 @@ data used changes.
   will continue running in your browser forever. Additionally, if you remove any
   part of your DOM using any mechanism other than jQuery, the logic to keep that
   part of the the DOM updated will continue running.  To avoid these issues,
-  either avoid directly updating the DOM and ensure that any removals go through
+  either avoid directly updating the DOM or ensure that any removals go through
   jQuery.
 {{/warning}}
 
