@@ -143,11 +143,16 @@ Add users to roles:
     });
 
     if (user.roles.length > 0) {
+      // Need _id of existing user record so this call must come 
+      // after `Accounts.createUser` or `Accounts.onCreate`
       Roles.addUsersToRoles(id, user.roles);
     }
   
   });
 ```
+
+<br />
+Note that the `Roles.addUsersToRoles` call needs to come _after_ `Accounts.createUser` or `Accounts.onCreate` or else the roles package won't be able to find the user record (since it hasn't been created yet).  This SO answer gives more detail: http://stackoverflow.com/a/22650399/219238
 
 <br />
 
@@ -280,6 +285,8 @@ The same with group:
 ```
 
 <br />
+
+Note that 
 
 ### Documentation
 
