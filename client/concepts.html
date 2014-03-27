@@ -11,8 +11,7 @@ when writing those apps.
 {{> structure }}
 {{> data }}
 {{> reactivity }}
-{{> livehtml }}
-{{> templates }}
+{{> livehtmltemplates }}
 {{> packages_concept }}
 {{> namespacing }}
 {{> deploying }}
@@ -139,7 +138,7 @@ initial page load.
 Template sections, on the other hand, are converted into JavaScript
 functions, available under the `Template` namespace.  It's
 a really convenient way to ship HTML templates to the client.
-See the [templates](#templates) section for more.
+See the [templates](#livehtmltemplates) section for more.
 
 Lastly, the Meteor server will serve any files under the `public`
 directory, just like in a Rails or Django project.  This is the place
@@ -387,9 +386,9 @@ error-prone logic.
 
 These Meteor functions run your code as a reactive computation:
 
-* [Templates](#templates)
+* [Templates](#livehtmltemplates)
 * [`Deps.autorun`](#deps_autorun)
-* `UI.render` and `UI.renderWithData`
+* [`UI.render`](#ui_render) and [`UI.renderWithData`](#ui_renderwithdata)
 
 And the reactive data sources that can trigger changes are:
 
@@ -417,147 +416,95 @@ You can use it yourself to implement new reactive data sources.
 {{/markdown}}
 </template>
 
-<template name="livehtml">
+<template name="livehtmltemplates">
 {{#markdown}}
 
-<h2 id="livehtml">Live HTML</h2>
+<h2 id="livehtmltemplates">Live HTML templates</h2>
 
 HTML templating is central to web applications. With Blaze, Meteor's live
 page update technology, you can render your HTML _reactively_, meaning
 that it will update automatically to track changes in the data used to
 generate it.
 
-This optional feature works with any HTML templating library, or even
-with HTML you generate manually from JavaScript. Here's an example:
+Meteor makes it easy to use your favorite HTML templating language along with
+Meteor's live page update technology. Just write your template as you normally
+would, and Meteor will take care of making it update in realtime.
 
-    var fragment = Meteor.render(
-      function () {
-        var name = Session.get("name") || "Anonymous";
-        return "<div>Hello, " + name + "</div>";
-      });
-    document.body.appendChild(fragment);
+Meteor ships with a templating language called
+[Spacebars](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md),
+inspired by [Handlebars](http://handlebarsjs.com/).  It shares some of the
+spirit and syntax of Handlebars, but it has been tailored to produce reactive
+Meteor templates when compiled.
 
-    Session.set("name", "Bob"); // page updates automatically!
+{{#note}}
+  Today, the only templating system that ships with Meteor is Spacebars, though
+  our community has created packages for other languages such as
+  [Jade](https://atmospherejs.com/package/jade).
+{{/note}}
 
-[`Meteor.render`](#meteor_render) takes a rendering function, that is, a
-function that returns some HTML as a string. It returns an auto-updating
-`DocumentFragment`. When there is a change to data used by the rendering
-function, it is re-run. The DOM nodes in the `DocumentFragment` then
-update themselves in-place, no matter where they were inserted on the
-page. It's completely automatic. [`Meteor.render`](#meteor_render) uses
-a [reactive computation](#reactivity) to discover what data is used by the
-rendering function.
-
-Most of the time, though, you won't call these functions directly
-&mdash; you'll just use your favorite templating package, such as
-Handlebars or Jade. The `render` and `renderList` functions are intended
-for people that are implementing new templating systems.
-
-Meteor normally batches up any needed updates and executes them only
-when your code isn't running. That way, you can be sure that the DOM
-won't change out from underneath you. Sometimes you want the opposite
-behavior. For example, if you've just inserted a record in the
-database, you might want to force the DOM to update so you can find
-the new elements using a library like jQuery. In that case, call
-[`Deps.flush`](#deps_flush) to bring the DOM up to date
-immediately.
-
-When live-updating DOM elements are taken off the screen, they are automatically
-cleaned up &mdash; their callbacks are torn down, any associated database
-queries are stopped, and they stop updating. For this reason, you never have to
-worry about the [zombie
-templates](http://lostechies.com/derickbailey/2011/09/15/zombies-run-managing-page-transitions-in-backbone-apps/)
-that plague hand-written update logic. To protect your elements from cleanup,
-just make sure that they are on-screen before your code returns to the event loop,
-or before any call you make to [`Deps.flush`](#deps_flush).
-
-Another thorny problem in hand-written applications is element
-preservation. Suppose the user is typing text into an `<input>`
-element, and then the area of the page that includes that element is
-redrawn. The user could be in for a bumpy ride, as the focus, the
-cursor position, the partially entered text, and the accented
-character input state will be lost when the `<input>` is recreated.
-
-This is another problem that Meteor solves for you. You can specify
-elements to preserve when templates are re-rendered with the
-[`preserve`](#template_preserve) directive on the template. Meteor will
-preserve these elements even when their enclosing template is
-rerendered, but will still update their children and copy over any
-attribute changes.
-
-{{/markdown}}
-</template>
-
-<template name="templates">
-{{#markdown}}
-
-<h2 id="templates">Templates</h2>
-
-Meteor makes it easy to use your favorite HTML templating language,
-such as Handlebars or Jade, along with Meteor's live page update
-technology. Just write your template as you normally would, and Meteor
-will take care of making it update in realtime.
-
-To use this feature, create a file in your project with the `.html`
+To define templates, create a file in your project with the `.html`
 extension. In the file, make a `<template>` tag and give it a
 `name` attribute. Put the template contents inside the tag. Meteor
 will precompile the template, ship it down to the client, and make it
-available as a function on the global `Template` object.
+available as on the global `Template` object.
 
-{{#note}}
-Today, the only templating system that has been packaged for Meteor is
-Handlebars. Let us know what templating systems you'd like to use with
-Meteor. Meanwhile, see the [Handlebars
-documentation](http://www.handlebarsjs.com/) and [Meteor Handlebars
-extensions](https://github.com/meteor/meteor/wiki/Handlebars).
-{{/note}}
-
-A template with a `name` of `hello` is rendered by calling the
-function `Template.hello`, passing any data for the template:
-
-    <!-- in myapp.html -->
-    <template name="hello">
-      <div class="greeting">Hello there, {{dstache}}first}} {{dstache}}last}}!</div>
-    {{lt}}/template>
-
-    // in the JavaScript console
-    > Template.hello({first: "Alyssa", last: "Hacker"});
-     => "<div class="greeting">Hello there, Alyssa Hacker!</div>"
-
-This returns a string. To use the template along with the [`Live
-HTML`](#livehtml) system, and get DOM elements that update
-automatically in place, use [`Meteor.render`](#meteor_render):
-
-    Meteor.render(function () {
-      return Template.hello({first: "Alyssa", last: "Hacker"});
-    })
-      => automatically updating DOM elements
+When you app is loaded, it automatically renders the special template called
+`<body>`, which is written using the `<body>` element instead of a
+`<template>`. You insert a template inside another template by using the
+`{{dstache}}> inclusion}}` operator.
 
 The easiest way to get data into templates is by defining helper
 functions in JavaScript. Just add the helper functions directly on the
-`Template.[template name]` object. For example, in this template:
+`Template.`*templateName* object. Putting it all together:
 
+
+    <!-- in myapp.html -->
+    <body>
+      <h1>Today's weather!</h1>
+      {{dstache}}> forecast}}
+    </body>
+
+    <template name="forecast">
+      <div>It'll be {{dstache}}prediction}} tonight</div>
+    {{lt}}/template>
+
+    // in client/myapp.js: reactive helper function
+    Template.forecast.prediction = function () {
+      return Session.get("weather");
+    };
+
+    // in the JavaScript console
+    > Session.set("weather", "cloudy");
+    > document.body.innerHTML
+     => "<h1>Today's weather!</h1> <div>It'll be cloudy tonight</div>"
+
+    > Session.set("weather", "cool and dry");
+    > document.body.innerHTML
+     => "<h1>Today's weather!</h1> <div>It'll be cool and dry tonight</div>"
+
+
+To iterate over an array or database cursor, use `{{dstache}}#each}}`:
+
+    <!-- in myapp.html -->
     <template name="players">
       {{dstache}}#each topScorers}}
         <div>{{dstache}}name}}</div>
       {{dstache}}/each}}
     {{lt}}/template>
 
-instead of passing in `topScorers` as data when we call the
-template function, we could define a function on `Template.players`:
-
+    // in myapp.js
     Template.players.topScorers = function () {
       return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
     };
 
 In this case, the data is coming from a database query. When the
-database cursor is passed to `#each`, it will wire up all of the
+database cursor is passed to `{{dstache}}#each}}`, it will wire up all of the
 machinery to efficiently add and move DOM nodes as new results enter
 the query.
 
 Helpers can take arguments, and they receive the current template context data
 in `this`. Note that some block helpers change the current context (notably
-`each` and `with`):
+`{{dstache}}#each}}` and `{{dstache}}#with}}`):
 
     // in a JavaScript file
     Template.players.leagueIs = function (league) {
@@ -575,14 +522,6 @@ in `this`. Note that some block helpers change the current context (notably
         {{dstache}}/if}}
       {{dstache}}/each}}
     {{lt}}/template>
-
-{{#note}}
-Handlebars note: `{{dstache}}#if leagueIs "junior"}}` is
-allowed because of a Meteor extension that allows nesting a helper
-in a block helper. (Both `if` and `leagueIs` are
-technically helpers, and stock Handlebars would not invoke
-`leagueIs` here.)
-{{/note}}
 
 Helpers can also be used to pass in constant data.
 
@@ -614,29 +553,8 @@ the data context of the element that triggered the event.
       }
     });
 
-Putting it all together, here's an example of how you can inject
-arbitrary data into your templates, and have them update automatically
-whenever that data changes. See [Live HTML](#livehtml) for further
-discussion.
-
-    <!-- in myapp.html -->
-    <template name="forecast">
-      <div>It'll be {{dstache}}prediction}} tonight</div>
-    {{lt}}/template>
-
-    <!-- in myapp.js -->
-    // JavaScript: reactive helper function
-    Template.forecast.prediction = function () {
-      return Session.get("weather");
-    };
-
-    <!-- in the console -->
-    > Session.set("weather", "cloudy");
-    > document.body.appendChild(Meteor.render(Template.forecast));
-    In DOM:  <div>It'll be cloudy tonight</div>
-
-    > Session.set("weather", "cool and dry");
-    In DOM:  <div>It'll be cool and dry tonight</div>
+For more details about Spacebars, read [the Spacebars
+README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
 
 {{/markdown}}
 </template>
