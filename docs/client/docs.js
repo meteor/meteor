@@ -212,7 +212,7 @@ var toc = [
       "Accounts.onCreateUser",
       "Accounts.validateLoginAttempt",
       "Accounts.onLogin",
-      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"},
+      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"}
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [
@@ -380,6 +380,10 @@ Template.nav.sections = function () {
   var ret = [];
   var walk = function (items, depth) {
     _.each(items, function (item) {
+      // Work around (eg) accidental trailing commas leading to spurious holes
+      // in IE8.
+      if (!item)
+        return;
       if (item instanceof Array)
         walk(item, depth + 1);
       else {
