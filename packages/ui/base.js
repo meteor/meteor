@@ -290,6 +290,7 @@ UI.Component.notifyParented = function () {
       var wrappedHandler = function (event) {
         var comp = UI.DomRange.getContainingComponent(event.currentTarget);
         var data = comp && getComponentData(comp);
+        var args = _.toArray(arguments);
         updateTemplateInstance(self);
         Deps.nonreactive(function () {
           // Don't want to be in a deps context, even if we were somehow
@@ -298,7 +299,10 @@ UI.Component.notifyParented = function () {
           // XXX we should probably do what Spark did and block all
           // event handling during our DOM manip.  Many apps had weird
           // unanticipated bugs until we did that.
-          esh.handler.call(data, event, self.templateInstance);
+
+          // put self.templateInstance as the second argument (due to compatibility reasons)
+          args.splice(1, 0, self.templateInstance);
+          esh.handler.apply(data, args);
         });
       };
 
