@@ -483,6 +483,7 @@ var runWebAppServer = function () {
         boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
               HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
       } catch (e) {
+        Log.error("Error running template: " + e);
         res.writeHead(500, headers);
         res.end();
         return undefined;
@@ -621,9 +622,11 @@ var runWebAppServer = function () {
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = Spacebars.compile(
       boilerplateTemplateSource, { isBody: true });
-    // Use 'new Function' instead of eval to avoid capturing local variables of
-    // this context.
-    var boilerplateRender = new Function("return " + boilerplateRenderCode)();
+
+    // Note that we are actually depending on eval's local environment capture
+    // so that UI and HTML are visible to the eval'd code.
+    var boilerplateRender = eval(boilerplateRenderCode);
+
     boilerplateTemplate = UI.Component.extend({
       kind: "MainPage",
       render: boilerplateRender
