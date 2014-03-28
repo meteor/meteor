@@ -734,8 +734,9 @@ compiler.compile = function (packageSource, options) {
     sources.push.apply(sources, sliceSources);
   });
 
-
-  if (options.officialBuild) {
+  // XXX what should we do if the PackageSource doesn't have a version?
+  // (e.g. a plugin)
+  if (! options.officialBuild && packageSource.version) {
     // XXX I have no idea if this should be using buildmessage.enterJob
     // or not. test what happens on error
     buildmessage.enterJob({
