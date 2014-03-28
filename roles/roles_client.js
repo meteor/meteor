@@ -69,16 +69,16 @@ Roles._uiHelpers = {
   }
 }
 
-if ('undefined' !== typeof Package.ui) {
+if (Package.ui) {
   _.each(Roles._uiHelpers, function (func, name) {
     Package.ui.UI.registerHelper(name, func) 
   })
-} else if ('undefined' !== typeof Package.handlebars) {
+} else if (Package.handlebars) {
   _.each(Roles._uiHelpers, function (func, name) {
     Package.handlebars.Handlebars.registerHelper(name, func)
   })
 } else {
-  console.log && console.log('WARNING: Roles template helpers not registered. Handlebars or UI not defined')
+  console.log && console.log('WARNING: Roles template helpers not registered. Handlebars or UI package not included')
 }
 
 }());
