@@ -1585,7 +1585,7 @@ main.registerCommand({
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
 
-      compileResult = compiler.compile(packageSource);
+      compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
 
   if (messages.hasMessages()) {
@@ -1720,7 +1720,9 @@ main.registerCommand({
 
   var packageSource = new PackageSource(packageDir);
   packageSource.initFromPackageDir(options.name, packageDir);
-  var unipackage = compiler.compile(packageSource).unipackage;
+  var unipackage = compiler.compile(packageSource, {
+    officialBuild: true
+  }).unipackage;
   unipackage.saveToPath(path.join(packageDir, '.build'));
 
   var conn;
