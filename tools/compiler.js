@@ -805,11 +805,6 @@ compiler.getBuildOrderConstraints = function (packageSource) {
 // identical code). True if we have dependency info and it
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
-//
-// 'what' identifies the build to check for up-to-dateness and is an
-// object with exactly one of the following keys:
-// - path: a path on disk to a unipackage
-// - unipackage: a Unipackage object
 compiler.checkUpToDate = function (packageSource, unipackage) {
   if (unipackage.forceNotUpToDate)
     return false;
