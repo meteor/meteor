@@ -6,7 +6,6 @@ var utils = require('./utils.js');
 var tropohouse = require('./tropohouse.js');
 var archinfo = require('./archinfo.js');
 var watch = require('./watch.js');
-var PackageSource = require('./package-source.js');
 
 var project = exports;
 
@@ -114,7 +113,12 @@ project.getDirectDependencies = function(appDir) {
 
   var programsDeps = {};
   var programsSubdirs = project.getProgramsSubdirs(appDir);
+  var PackageSource;
   _.each(programsSubdirs, function (item) {
+    if (! PackageSource) {
+      PackageSource = require('./package-source.js');
+    }
+
     var programName = item.substr(0, item.length - 1);
     programsDeps[programName] = {};
 
