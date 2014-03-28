@@ -8,6 +8,7 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
+var PackageLoader = require('./package-loader.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -851,6 +852,77 @@ _.extend(Unipackage.prototype, {
       builder.abort();
       throw e;
     }
+  },
+
+  // Computes a hash of the versions of all the package's dependencies
+  // (direct and plugin dependencies) and the slices' and plugins' watch
+  // sets. Adds the result as a build identifier to the unipackage's
+  // version. The caller is responsible for checking whether the
+  // existing version has a build identifier already.
+  addBuildIdentifierToVersion: function () {
+    var self = this;
+    // Gather all the dependencies' versions and organize them into
+    // arrays. We use arrays to avoid relying on the order of
+    // stringified object keys.
+    var directDeps = [];
+    var directDepsLoader = new PackageLoader(self.buildTimeDirectDependencies);
+    _.each(self.buildTimeDirectDependencies, function (version, packageName) {
+      var unipackage = directDepsLoader.getPackage(packageName);
+      directDeps.push([unipackage.name, unipackage.version]);
+    });
+
+    // Sort direct dependencies by package name (which is the "0" property
+    // of each element in the array).
+    directDeps = _.sortBy(directDeps, "0");
+
+    var pluginDeps = [];
+    _.each(self.buildTimePluginDependencies, function (versions, pluginName) {
+      var pluginDepsLoader = new PackageLoader(versions);
+      var singlePluginDeps = [];
+      _.each(versions, function (version, packageName) {
+        var unipackage = pluginDepsLoader.getPackage(packageName);
+        singlePluginDeps.push([unipackage.name, unipackage.version]);
+      });
+      singlePluginDeps = _.sortBy(singlePluginDeps, "0");
+      pluginDeps.push([pluginName, singlePluginDeps]);
+    });
+    pluginDeps = _.sortBy(pluginDeps, "0");
+
+    // Now that we have versions for all our dependencies, canonicalize
+    // the slices' and plugins' watch sets.
+    // XXX Do we need to relativize paths? Why?
+    var sliceFiles = [];
+    _.each(self.slices, function (slice) {
+      var watchSetFiles = [];
+      _.each(slice.watchSet.files, function (hash, fileAbsPath) {
+        watchSetFiles.push([fileAbsPath, hash]);;
+      });
+      watchSetFiles = _.sortBy(watchSetFiles, "0");
+      sliceFiles.push([slice.sliceName, slice.arch, watchSetFiles]);
+    });
+    // Sort by the combination of slice name and architecture.
+    sliceFiles = _.sortBy(sliceFiles, function (sliceInfo) {
+      return sliceInfo[0] + " " + sliceInfo[1];
+    });
+
+    var pluginFiles = [];
+    _.each(self.pluginWatchSet.files, function (hash, fileAbsPath) {
+      pluginFiles.push([fileAbsPath, hash]);
+    });
+    pluginFiles = _.sortBy(pluginFiles, "0");
+
+    // Stick all our info into one big array, stringify it, and hash it.
+    var buildIdInfo = [
+      directDeps,
+      pluginDeps,
+      sliceFiles,
+      pluginFiles
+    ];
+    var crypto = require('crypto');
+    var hasher = crypto.createHash('sha1');
+    hasher.update(JSON.stringify(buildIdInfo));
+    var buildId = hasher.digest('hex');
+    self.version = self.version + "+" + buildId;
   }
 });
 

@@ -599,15 +599,26 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
 // the appropriate compiler plugins. Once build has completed, any errors
 // detected in the package will have been emitted to buildmessage.
 //
+// Options:
+//  - officialBuild: defaults to false. If false, then we will compute a
+//    build identifier (a hash of the package's dependency versions and
+//    source files) and include it as part of the unipackage's version
+//    string. If true, then we will use the version that is contained in
+//    the package's source. You should set it to true when you are
+//    building a package to publish as an official build with the
+//    package server.
+//
 // Returns an object with keys:
 // - unipackage: the build Unipackage
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the build (the source files you'd have to
 //   ship to a different machine to replicate the build there)
-compiler.compile = function (packageSource) {
+compiler.compile = function (packageSource, options) {
   var sources = [];
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
+
+  options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
   var buildTimeDeps = determineBuildTimeDependencies(packageSource);
@@ -722,6 +733,26 @@ compiler.compile = function (packageSource) {
                                     nodeModulesPath, isPortable);
     sources.push.apply(sources, sliceSources);
   });
+
+
+  if (options.officialBuild) {
+    // XXX I have no idea if this should be using buildmessage.enterJob
+    // or not. test what happens on error
+    buildmessage.enterJob({
+      title: "compute build identifier for package `" +
+        packageSource.name + "`",
+      rootPath: packageSource.sourceRoot
+    }, function () {
+      if (packageSource.version.indexOf("+") !== -1) {
+        buildmessage.error("cannot compute build identifier for package `" +
+                           packageSource.name + "` version " +
+                           packageSource.version + "because it already " +
+                           "has a build identifier");
+      } else {
+        unipackage.addBuildIdentifierToVersion();
+      }
+    });
+  }
 
   return {
     sources: _.uniq(sources),
