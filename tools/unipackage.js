@@ -464,6 +464,10 @@ _.extend(Unipackage.prototype, {
     // Read basic buildinfo.json info
 
     self.builtBy = buildInfoJson.builtBy || null;
+    self.buildTimeDirectDependencies =
+      buildInfoJson.buildTimeDirectDependencies || null;
+    self.buildTimePluginDependencies =
+      buildInfoJson.buildTimePluginDependencies || null;
 
     if (options.buildOfPath &&
         (buildInfoJson.source !== options.buildOfPath)) {
@@ -658,7 +662,9 @@ _.extend(Unipackage.prototype, {
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
         pluginProviderPackages: self.pluginProviderPackageDirs,
-        source: options.buildOfPath || undefined
+        source: options.buildOfPath || undefined,
+        buildTimeDirectDependencies: self._buildTimeDirectDependenciesWithBuildIds(),
+        buildTimePluginDependencies: self._buildTimePluginDependenciesWithBuildIds()
       };
 
       builder.reserve("unipackage.json");
@@ -854,6 +860,31 @@ _.extend(Unipackage.prototype, {
     }
   },
 
+  _buildTimeDirectDependenciesWithBuildIds: function () {
+    var self = this;
+    var directDepsLoader = new PackageLoader(self.buildTimeDirectDependencies);
+    var result = {};
+    _.each(self.buildTimeDirectDependencies, function (version, packageName) {
+      var unipackage = directDepsLoader.getPackage(packageName);
+      result[packageName] = unipackage.version;
+    });
+    return result;
+  },
+
+  _buildTimePluginDependenciesWithBuildIds: function () {
+    var self = this;
+    var result = {};
+    _.each(self.buildTimePluginDependencies, function (deps, pluginName) {
+      var pluginPackageLoader = new PackageLoader(deps);
+      result[pluginName] = {};
+      _.each(deps, function (version, packageName) {
+        var unipackage = pluginPackageLoader.getPackage(packageName);
+        result[pluginName][packageName] = version;
+      });
+    });
+    return result;
+  },
+
   // Computes a hash of the versions of all the package's dependencies
   // (direct and plugin dependencies) and the slices' and plugins' watch
   // sets. Adds the result as a build identifier to the unipackage's
@@ -865,27 +896,31 @@ _.extend(Unipackage.prototype, {
     // arrays. We use arrays to avoid relying on the order of
     // stringified object keys.
     var directDeps = [];
-    var directDepsLoader = new PackageLoader(self.buildTimeDirectDependencies);
-    _.each(self.buildTimeDirectDependencies, function (version, packageName) {
-      var unipackage = directDepsLoader.getPackage(packageName);
-      directDeps.push([unipackage.name, unipackage.version]);
-    });
+    _.each(
+      self._buildTimeDirectDependenciesWithBuildIds(),
+      function (version, packageName) {
+        directDeps.push([packageName, version]);
+      }
+    );
 
     // Sort direct dependencies by package name (which is the "0" property
     // of each element in the array).
     directDeps = _.sortBy(directDeps, "0");
 
     var pluginDeps = [];
-    _.each(self.buildTimePluginDependencies, function (versions, pluginName) {
-      var pluginDepsLoader = new PackageLoader(versions);
-      var singlePluginDeps = [];
-      _.each(versions, function (version, packageName) {
-        var unipackage = pluginDepsLoader.getPackage(packageName);
-        singlePluginDeps.push([unipackage.name, unipackage.version]);
-      });
-      singlePluginDeps = _.sortBy(singlePluginDeps, "0");
-      pluginDeps.push([pluginName, singlePluginDeps]);
-    });
+    _.each(
+      self._buildTimePluginDependenciesWithBuildIds(),
+      function (versions, pluginName) {
+        var pluginDepsLoader = new PackageLoader(versions);
+        var singlePluginDeps = [];
+        _.each(versions, function (version, packageName) {
+          var unipackage = pluginDepsLoader.getPackage(packageName);
+          singlePluginDeps.push([unipackage.name, unipackage.version]);
+        });
+        singlePluginDeps = _.sortBy(singlePluginDeps, "0");
+        pluginDeps.push([pluginName, singlePluginDeps]);
+      }
+    );
     pluginDeps = _.sortBy(pluginDeps, "0");
 
     // Now that we have versions for all our dependencies, canonicalize
