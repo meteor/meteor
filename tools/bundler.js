@@ -1785,6 +1785,7 @@ exports.bundle = function (options) {
     // Step 1: scan for targets and make a list. We will reload if you create a
     // new subdir in 'programs', or create 'programs' itself.
     var programs = [];
+    var programsDir = project.getProgramsDirectory(appDir);
     var programsSubdirs = project.getProgramsSubdirs(appDir, {
       watchSet: watchSet
     });
@@ -1879,7 +1880,7 @@ exports.bundle = function (options) {
       // it
 
       var pkg = packageCache.packageCache.
-        loadPackageAtPath(p.name, p.loadPath);
+        loadPackageAtPath(p.name, p.path);
       var target;
       switch (p.type) {
       case "server":

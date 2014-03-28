@@ -685,17 +685,17 @@ main.registerCommand({
       return;
 
     if (_.has(versions, packageName) &&
-         versions[packageName] == version ) {
+         versions[packageName] === version) {
       // Nothing changed. Skip this.
       return;
-     }
+    }
 
     if (! downloaded[packageName] || downloaded[packageName] !== version) {
       // XXX maybe we shouldn't be letting the constraint solver choose
       // things that don't have the right arches?
       process.stderr.write("Package " + packageName +
                            " has no compatible build for version " +
-                           version);
+                           version + "\n");
       failed = true;
       return;
     }

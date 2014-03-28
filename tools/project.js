@@ -85,16 +85,17 @@ project.getProgramsDirectory = function (appDir) {
 // app. Options can include:
 //  - watchSet: if provided, the app's programs directory will be added to it
 project.getProgramsSubdirs = function (appDir, options) {
+  options = options || {};
   var programsDir = project.getProgramsDirectory(appDir);
-  var watchOptions = {
+  var readOptions = {
     absPath: programsDir,
     include: [/\/$/],
     exclude: [/^\./]
   };
   if (options.watchSet) {
-    return watch.readAndWatchDirectory(options.watchSet, watchOptions);
+    return watch.readAndWatchDirectory(options.watchSet, readOptions);
   } else {
-    return watch.readDirectory(programsDir, watchOptions);
+    return watch.readDirectory(readOptions);
   }
 };
 
@@ -107,9 +108,7 @@ project.getProgramsSubdirs = function (appDir, options) {
 //    where program deps is an object mapping package names to version
 //    constraints.
 project.getDirectDependencies = function(appDir) {
-  var appDeps = project.processPerConstraintLines(
-    project.getPackagesLines(appDir)
-  );
+  var appDeps = project.processPerConstraintLines(getPackagesLines(appDir));
 
   var programsDeps = {};
   var programsSubdirs = project.getProgramsSubdirs(appDir);
@@ -127,7 +126,7 @@ project.getDirectDependencies = function(appDir) {
     programSource.initFromPackageDir(programName, programSubdir);
     _.each(programSource.slices, function (sourceSlice) {
       _.each(sourceSlice.uses, function (use) {
-        programsDeps[programName][use.packageName] = use.constraint;
+        programsDeps[programName][use["package"]] = use.constraint || "none";
       });
     });
   });
@@ -195,12 +194,10 @@ project.setDependencies = function (appDir, deps, versions) {
     }
   });
 
-  if (_.keys(downloadedPackages).length === versions.length) {
+  if (_.keys(downloadedPackages).length === _.keys(versions).length) {
     rewriteDependencies(appDir, deps, versions);
-    return true;
-  } else {
-    return false;
   }
+  return downloadedPackages;
 };
 
 var meteorReleaseFilePath = function (appDir) {
@@ -217,7 +214,7 @@ project.combineAppAndProgramDependencies = function (deps) {
   _.each(deps.appDeps, function (constraint, packageName) {
     allDeps[packageName] = [constraint];
   });
-  _.each(deps.programDeps, function (deps, programName) {
+  _.each(deps.programsDeps, function (deps, programName) {
     _.each(deps, function (constraint, packageName) {
       allDeps[packageName] = allDeps[packageName] || [];
       allDeps[packageName].push(constraint);
