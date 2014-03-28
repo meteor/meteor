@@ -26,7 +26,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/10';
+compiler.BUILT_BY = 'meteor/11';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -811,11 +811,82 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
-  if (unipackage.builtBy !== compiler.BUILT_BY)
+  if (unipackage.builtBy !== compiler.BUILT_BY) {
+    // XXX XXX XXX XXX XXX XXX XXX
+    //
+    // This branch is not currently in a state where we can build
+    // packages with plugins, so we explicitly do NOT want to trigger
+    // re-builds of packages built by different versions of meteor.
+    //
+    // Once this branch is in a state where we CAN build packages
+    // a-fresh, then we should change this back to "return false".
+    //
+    // XXX XXX XXX XXX XXX XXX XXX
+    console.log("XXX warning: considering package",
+                packageSource.name, "to be up to date because",
+                "it was built by <", compiler.BUILT_BY,
+                "and this makes no sense at all");
+    return true;
     return false;
+  }
 
-  // XXX XXX XXX
-  var pluginProviderPackageDirs = unipackage.pluginProviderPackageDirs;
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+
+  // Compute the unipackage's direct and plugin dependencies to
+  // `buildTimeDeps`, by comparing versions (including build
+  // identifiers).
+
+  if (_.keys(buildTimeDeps.directDependencies).length !==
+      _.keys(unipackage.buildTimeDirectDependencies).length) {
+    return false;
+  }
+
+  var directDepsPackageLoader = new PackageLoader(
+    buildTimeDeps.directDependencies);
+  var directDepsMatch = _.all(
+    buildTimeDeps.directDependencies,
+    function (version, packageName) {
+      var loadedPackage = directDepsPackageLoader.getPackage(packageName);
+      // XXX Check that `versionWithBuildId` is the same as `version`
+      // except for the build id?
+      return (loadedPackage &&
+        unipackage.buildTimeDirectDependencies[packageName] ===
+        loadedPackage.version);
+    }
+  );
+  if (! directDepsMatch) {
+    return false;
+  }
+
+  if (_.keys(buildTimeDeps.pluginDependencies).length !==
+      _.keys(unipackage.buildTimePluginDependencies).length) {
+    return false;
+  }
+
+  var pluginDepsMatch = _.all(
+    buildTimeDeps.pluginDependencies,
+    function (pluginDeps, pluginName) {
+      // For each plugin, check that the resolved build-time deps for
+      // that plugin match the unipackage's build time deps for it.
+      var packageLoaderForPlugin = new PackageLoader(
+        buildTimeDeps.pluginDependencies
+      );
+      var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];
+      if (! unipackagePluginDeps ||
+          _.keys(pluginDeps).length !== _.keys(unipackagePluginDeps).length) {
+        return false;
+      }
+      return _.all(pluginDeps, function (version, packageName) {
+        var loadedPackage = packageLoaderForPlugin.getPackage(packageName);
+        return loadedPackage &&
+          unipackagePluginDeps[packageName] === loadedPackage.version;
+      });
+    }
+  );
+
+  if (! pluginDepsMatch) {
+    return false;
+  }
 
   /*
   // XXX XXX this shouldn't work this way at all. instead it should
@@ -848,8 +919,9 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     watchSet.merge(slice.watchSet);
   });
 
-  if (! watch.isUpToDate(watchSet))
+  if (! watch.isUpToDate(watchSet)) {
     return false;
+  }
 
   return true;
 };
