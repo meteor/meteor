@@ -135,7 +135,9 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
-    self._insertServerPackages(serverPackageData);
+    if (serverPackageData) {
+      self._insertServerPackages(serverPackageData);
+    }
     self._addLocalPackageOverrides(true /* setInitialized */);
   },
 
