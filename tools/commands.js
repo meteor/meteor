@@ -618,8 +618,7 @@ main.registerCommand({
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function.
     if (_.has(packages.appDeps, constraint.name) &&
-        _.contains(packages.appDeps[constraint.name],
-                   constraint.versionConstraint)) {
+        packages.appDeps[constraint.name] === constraint.versionConstraint) {
       process.stderr.write(constraint.name + " with version constraint " +
                            constraint.versionConstraint + " has already been added.\n");
       failed = true;
