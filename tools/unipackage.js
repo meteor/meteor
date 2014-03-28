@@ -891,32 +891,22 @@ _.extend(Unipackage.prototype, {
     // Now that we have versions for all our dependencies, canonicalize
     // the slices' and plugins' watch sets.
     // XXX Do we need to relativize paths? Why?
-    var sliceFiles = [];
+    var watchFiles = [];
+    var watchSet = new watch.WatchSet();
+    watchSet.merge(self.pluginWatchSet);
     _.each(self.slices, function (slice) {
-      var watchSetFiles = [];
-      _.each(slice.watchSet.files, function (hash, fileAbsPath) {
-        watchSetFiles.push([fileAbsPath, hash]);;
-      });
-      watchSetFiles = _.sortBy(watchSetFiles, "0");
-      sliceFiles.push([slice.sliceName, slice.arch, watchSetFiles]);
+      watchSet.merge(slice.watchSet);
     });
-    // Sort by the combination of slice name and architecture.
-    sliceFiles = _.sortBy(sliceFiles, function (sliceInfo) {
-      return sliceInfo[0] + " " + sliceInfo[1];
+    _.each(watchSet.files, function (hash, fileAbsPath) {
+      watchFiles.push([fileAbsPath, hash]);
     });
-
-    var pluginFiles = [];
-    _.each(self.pluginWatchSet.files, function (hash, fileAbsPath) {
-      pluginFiles.push([fileAbsPath, hash]);
-    });
-    pluginFiles = _.sortBy(pluginFiles, "0");
+    watchFiles = _.sortBy(watchFiles, "0");
 
     // Stick all our info into one big array, stringify it, and hash it.
     var buildIdInfo = [
       directDeps,
       pluginDeps,
-      sliceFiles,
-      pluginFiles
+      watchFiles
     ];
     var crypto = require('crypto');
     var hasher = crypto.createHash('sha1');
