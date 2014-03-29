@@ -1,3 +1,8 @@
+## v1.2.8
+
+* Bump version number since Atmosphere only supports 3 levels
+
+
 ## v1.2.7.1
 
 * Remove debug logging related to Blaze support
