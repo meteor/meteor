@@ -12,10 +12,7 @@ Package.on_use(function (api) {
   // The 'weak' flag doesn't work with packages that aren't 
   // in meteor's internal cache (ie. non-core packages)
   if(uiExists()) {
-    console.log('ui exists')
     api.use(['ui'], 'client', {weak: true});
-  } else {
-    console.log('ui does not exist')
   }
 
   api.export && api.export('Roles');

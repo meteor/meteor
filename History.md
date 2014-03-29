@@ -1,4 +1,10 @@
+## v1.2.7.1
+
+* Remove debug logging related to Blaze support
+
+
 ## v1.2.7
+
 
 * Add support for Blaze UI (Meteor 0.8.0+)!  The 'roles' package must
   come after 'ui' or 'standard-app-packages' in '.meteor/packages' 
