@@ -3,10 +3,10 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
+standard-app-packages
 accounts-password
 accounts-ui
 bootstrap
 roles
 mini-pages
 spiderable
-standard-app-packages

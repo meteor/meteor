@@ -1,8 +1,6 @@
 {
   "packages": {
-    "roles": {
-      "path": "../../roles"
-    },
+    "roles": {},
     "mini-pages": {}
   }
 }

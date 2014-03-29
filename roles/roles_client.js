@@ -78,7 +78,7 @@ if (Package.ui) {
     Package.handlebars.Handlebars.registerHelper(name, func)
   })
 } else {
-  console.log && console.log('WARNING: Roles template helpers not registered. Handlebars or UI package not included')
+  console.log && console.log('WARNING: Roles template helpers not registered. Handlebars or UI package not found')
 }
 
 }());

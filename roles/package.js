@@ -7,7 +7,6 @@ Package.on_use(function (api) {
   api.use(['underscore', 'accounts-base'], both);
   api.use(['handlebars'], 'client', {weak: true});
 
-  console.log('roles package loaded')
   // This is needed due to Meteor Issue #1358
   //   https://github.com/meteor/meteor/issues/1358
   // The 'weak' flag doesn't work with packages that aren't 
@@ -47,23 +46,18 @@ function uiExists() {
     return false;
   }
 
-  console.log(meteorPackages);
-
   if (/^\s*ui\s*$/m.test(meteorPackages)) {
     // definitely there
     return true;
   }
 
-  if (/^\s*standard-app-packages\s*$/m.test(meteorPackages)) {
-    // _may_ be there.  have to check for actual package since
-    // releases before 0.8.0 had standard-app-packages but not
-    // ui
-    // 
-    // local dev package location:
-    //   ".meteor/local/build/programs/client/packages"
-    // bundled package location:
-    //   ??
-  }
+  //if (/^\s*standard-app-packages\s*$/m.test(meteorPackages)) {
+    // The ui package may or may _not_ be there...
+    // Releases before 0.8.0 had standard-app-packages but not
+    // ui.  Without weak references working properly, there is 
+    // no good way to detect the inclusion of the ui package in
+    // bundled apps.
+  //}
 
   return false;
 }
