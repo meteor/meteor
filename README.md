@@ -9,10 +9,22 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 Thanks to:
 
+  * [@zimme](https://github.com/zimme)
+  * [@danieljonce](https://github.com/danieljonce)
   * [@pascoual](https://github.com/pascoual)
   * [@nickmoylan](https://github.com/nickmoylan)
   * [@mcrider](https://github.com/mcrider)
   * [@alanning](https://github.com/alanning)
+
+<br />
+
+### Blaze Support
+
+v1.2.7 adds support for Blaze UI (Meteor 0.8.0+)!  Older versions of
+Meteor are still supported as are ui-less apps.
+
+NOTE: The 'roles' package must come after 'ui' or 'standard-app-packages' 
+in '.meteor/packages' for the 'isInRole' helper to be registered.
 
 <br />
 

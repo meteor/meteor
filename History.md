@@ -1,3 +1,10 @@
+## v1.2.7
+
+* Add support for Blaze UI (Meteor 0.8.0+)!  The 'roles' package must
+  come after 'ui' or 'standard-app-packages' in '.meteor/packages' 
+  for the 'isInRole' helper to be registered.
+
+
 ## v1.2.6
 
 * Add descriptive error msg when group name starts with $

@@ -8,11 +8,11 @@
         "roles/roles_client.js": {
             "name": "roles/roles_client.js",
             "modules": {
-                "HandlebarsHelpers": 1
+                "UIHelpers": 1
             },
             "classes": {},
             "fors": {
-                "HandlebarsHelpers": 1
+                "UIHelpers": 1
             },
             "namespaces": {}
         },
@@ -36,14 +36,14 @@
         }
     },
     "modules": {
-        "HandlebarsHelpers": {
-            "name": "HandlebarsHelpers",
+        "UIHelpers": {
+            "name": "UIHelpers",
             "submodules": {},
             "classes": {
-                "HandlebarsHelpers": 1
+                "UIHelpers": 1
             },
             "fors": {
-                "HandlebarsHelpers": 1
+                "UIHelpers": 1
             },
             "namespaces": {},
             "tag": "module",
@@ -66,15 +66,15 @@
         }
     },
     "classes": {
-        "HandlebarsHelpers": {
-            "name": "HandlebarsHelpers",
-            "shortname": "HandlebarsHelpers",
+        "UIHelpers": {
+            "name": "UIHelpers",
+            "shortname": "UIHelpers",
             "classitems": [],
             "plugins": [],
             "extensions": [],
             "plugin_for": [],
             "extension_for": [],
-            "module": "HandlebarsHelpers",
+            "module": "UIHelpers",
             "namespace": ""
         },
         "Roles": {
@@ -97,7 +97,7 @@
         {
             "file": "roles/roles_client.js",
             "line": 23,
-            "description": "Handlebars helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.",
+            "description": "UI helper to check if current user is in at least one\nof the target roles.  For use in client-side templates.",
             "example": [
                 "\n    {{#if isInRole 'admin'}}\n    {{/if}}\n\n    {{#if isInRole 'editor,user'}}\n    {{/if}}\n\n    {{#if isInRole 'editor,user' 'group1'}}\n    {{/if}}"
             ],
@@ -121,8 +121,8 @@
                 "type": "Boolean"
             },
             "static": 1,
-            "class": "HandlebarsHelpers",
-            "module": "HandlebarsHelpers"
+            "class": "UIHelpers",
+            "module": "UIHelpers"
         },
         {
             "file": "roles/roles_common.js",
