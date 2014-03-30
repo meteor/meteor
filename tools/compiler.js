@@ -692,21 +692,6 @@ compiler.compile = function (packageSource, options) {
     }
   }
 
-  // XXX XXX HERE HERE
-  //
-  // Unless the 'officalBuild' option was set, compute a build
-  // identifier by finding the versions of all of our package
-  // dependencies (direct and plugin dependencies) -- real versions,
-  // not +local version, which means a lookup in the catalog -- and
-  // hashing them together (in a structured way with what they go
-  // with, canoncialized as well as possible) with the contents of the
-  // merged watchsets of our slices and our plugins, with paths
-  // relativized somehow (that last bit may be tricky!)
-  //
-  // Then -- again, unless 'officialBuild' was set -- modify version
-  // by adding +<buildid> to the version (it's an error if you already
-  // had one, I guess).
-
   var unipackage = new Unipackage;
   unipackage.initFromOptions({
     name: packageSource.name,
