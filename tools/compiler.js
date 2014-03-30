@@ -888,31 +888,6 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     return false;
   }
 
-  /*
-  // XXX XXX this shouldn't work this way at all. instead it should
-  // just get the resolved build-time dependencies from packageSource
-  // and make sure they match the versions that were used for the
-  // build.
-  var packageLoader = XXX;
-
-  // Are all of the packages we directly use (which can provide
-  // plugins which affect compilation) resolving to the same
-  // directory? (eg, have we updated our release version to something
-  // with a new version of a package?)
-  var packageResolutionsSame = _.all(
-    _pluginProviderPackageDirs, function (packageDir, name) {
-      return packageLoader.getLoadPathForPackage(name) === packageDir;
-    });
-  if (! packageResolutionsSame)
-    return false;
-  */
-
-  // XXX as we're checking build-time dependency freshness in the
-  // future, remember to not rely on
-  // packageSource.directBuildTimeDependencies, which may contain
-  // versions like 1.2.3+local, but instead get versions with real
-  // build ids through the catalog
-
   var watchSet = new watch.WatchSet();
   watchSet.merge(unipackage.pluginWatchSet);
   _.each(unipackage.slices, function (slice) {
