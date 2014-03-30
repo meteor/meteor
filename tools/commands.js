@@ -1580,7 +1580,7 @@ main.registerCommand({
       // still confirming that it matches the name of the directory)
       var packageName = path.basename(options.packageDir.toLowerCase());
 
-      packageSource = new PackageSource(options.packageDir);
+      packageSource = new PackageSource;
       packageSource.initFromPackageDir(packageName, options.packageDir);
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
@@ -1718,7 +1718,7 @@ main.registerCommand({
     return 1;
   }
 
-  var packageSource = new PackageSource(packageDir);
+  var packageSource = new PackageSource;
   packageSource.initFromPackageDir(options.name, packageDir);
   var unipackage = compiler.compile(packageSource, {
     officialBuild: true

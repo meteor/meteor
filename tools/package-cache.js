@@ -70,14 +70,15 @@ _.extend(PackageCache.prototype, {
       delete self.softReloadCache[loadPath];
 
       var isUpToDate;
+      var unipackage;
       if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
         // We don't even have the source to this package, so it must
         // be up to date.
         isUpToDate = true;
       } else {
-        var packageSource = new PackageSource(loadPath);
+        var packageSource = new PackageSource;
         packageSource.initFromPackageDir(name, loadPath);
-        var unipackage = new Unipackage(loadPath);
+        unipackage = new Unipackage;
         unipackage.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
       }
@@ -94,7 +95,7 @@ _.extend(PackageCache.prototype, {
     // Does loadPath point directly at a unipackage (rather than a
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      var unipackage = new Unipackage(loadPath);
+      unipackage = new Unipackage;
       unipackage.initFromPath(name, loadPath);
       self.loadedPackages[loadPath] = {
         pkg: unipackage,
@@ -105,13 +106,13 @@ _.extend(PackageCache.prototype, {
     };
 
     // It's a source tree. Load it.
-    var packageSource = new PackageSource(loadPath);
+    var packageSource = new PackageSource;
     packageSource.initFromPackageDir(name, loadPath);
 
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build');
     if (fs.existsSync(buildDir)) {
-      var unipackage = new Unipackage(loadPath);
+      unipackage = new Unipackage;
       unipackage.initFromPath(name, buildDir);
       if (compiler.checkUpToDate(packageSource, unipackage)) {
         self.loadedPackages[loadPath] = { pkg: unipackage,

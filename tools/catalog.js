@@ -214,7 +214,7 @@ _.extend(Catalog.prototype, {
     var packageSources = {}; // name to PackageSource
     var versionIds = {}; // name to _id of the created Version record
     _.each(self.effectiveLocalPackages, function (packageDir, name) {
-      var packageSource = new PackageSource(packageDir);
+      var packageSource = new PackageSource;
       packageSource.initFromPackageDir(name, packageDir);
       packageSources[name] = packageSource;
 
@@ -326,7 +326,7 @@ _.extend(Catalog.prototype, {
       var sourcePath = self.effectiveLocalPackages[name];
       var buildDir = path.join(sourcePath, '.build');
       if (fs.existsSync(buildDir)) {
-        var unipackage = new Unipackage(sourcePath);
+        var unipackage = new Unipackage;
         unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
         if (compiler.checkUpToDate(packageSources[name], unipackage)) {
           return unipackage;

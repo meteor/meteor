@@ -180,7 +180,7 @@ _.extend(UnipackageSlice.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // XXX document
-var Unipackage = function (packageDirectoryForBuildInfo) {
+var Unipackage = function () {
   var self = this;
 
   // These have the same meaning as in PackageSource.
@@ -190,10 +190,6 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
   self.earliestCompatibleVersion = null;
   self.defaultSlices = {};
   self.testSlices = {};
-
-  // XXX this is likely to go away once we have build versions
-  // (also in PackageSource)
-  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Build slices. Array of UnipackageSlice.
   self.slices = [];
@@ -212,7 +208,6 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
 
   // The versions that we used at build time for each of our direct
   // dependencies. Map from package name to version string.
-  // XXX save to disk
   self.buildTimeDirectDependencies = null;
 
   // The complete list of versions (including transitive dependencies)
@@ -263,7 +258,6 @@ _.extend(Unipackage.prototype, {
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.defaultSlices = options.defaultSlices;
     self.testSlices = options.testSlices;
-    self.packageDirectoryForBuildInfo = options.packageDirectoryForBuildInfo;
     self.plugins = options.plugins;
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;

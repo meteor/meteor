@@ -707,7 +707,7 @@ compiler.compile = function (packageSource, options) {
   // by adding +<buildid> to the version (it's an error if you already
   // had one, I guess).
 
-  var unipackage = new Unipackage();
+  var unipackage = new Unipackage;
   unipackage.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
@@ -715,7 +715,6 @@ compiler.compile = function (packageSource, options) {
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     defaultSlices: packageSource.defaultSlices,
     testSlices: packageSource.testSlices,
-    packageDirectoryForBuildInfo: packageSource.packageDirectoryForBuildInfo,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
