@@ -3,7 +3,6 @@
 // - UI hooks (expose, test)
 // - Quick remove/add (mark "leaving" members; needs UI hooks)
 // - Event removal on removal
-// - Event moving on TBODY move
 
 var DomBackend = UI.DomBackend;
 
@@ -98,9 +97,6 @@ var rangeParented = function (range) {
       // element.  This is really just for IE 9+
       // TextNode GC issues, but we can't do reliable
       // feature detection (i.e. bug detection).
-      // Note that because we keep a direct pointer to
-      // `parentNode.$_uiranges`, it doesn't matter
-      // if we are reparented (e.g. wrapped in a TBODY).
       var parentNode = range.parentNode();
       var rangeDict = (
         parentNode.$_uiranges ||
@@ -306,11 +302,6 @@ _extend(DomRange.prototype, {
       range.owner = this;
       var nodes = range.getNodes();
 
-      if (tbodyFixNeeded(nodes, parentNode))
-        // may cause a refresh(); important that the
-        // member isn't added yet
-        parentNode = moveWithOwnersIntoTbody(this);
-
       members[id] = newMember;
       for (var i = 0; i < nodes.length; i++)
         insertNode(nodes[i], parentNode, nextNode);
@@ -326,11 +317,6 @@ _extend(DomRange.prototype, {
       // don't bother on any browser.
       if (node.nodeType !== 3)
         node.$ui = this;
-
-      if (tbodyFixNeeded(node, parentNode))
-        // may cause a refresh(); important that the
-        // member isn't added yet
-        parentNode = moveWithOwnersIntoTbody(this);
 
       members[id] = newMember;
       insertNode(node, parentNode, nextNode);
@@ -720,8 +706,6 @@ DomRange.getComponents = function (element) {
 // `parentNode` must be an ELEMENT, not a fragment
 DomRange.insert = function (range, parentNode, nextNode) {
   var nodes = range.getNodes();
-  if (tbodyFixNeeded(nodes, parentNode))
-    parentNode = makeOrFindTbody(parentNode, nextNode);
   for (var i = 0; i < nodes.length; i++)
     insertNode(nodes[i], parentNode, nextNode);
   rangeParented(range);
@@ -739,65 +723,6 @@ DomRange.getContainingComponent = function (element) {
     range = range.owner;
   }
   return null;
-};
-
-///// TBODY FIX for compatibility with jQuery.
-//
-// Because people might use jQuery from UI hooks, and
-// jQuery is unable to do $(myTable).append(myTR) without
-// adding a TBODY (for historical reasons), we move any DomRange
-// that gains a TR, and its immediately enclosing DomRanges,
-// into a TBODY.
-//
-// See http://www.quora.com/David-Greenspan/Posts/The-Great-TBODY-Debacle
-var tbodyFixNeeded = function (childOrChildren, parent) {
-  if (parent.nodeName !== 'TABLE')
-    return false;
-
-  if (isArray(childOrChildren)) {
-    var foundTR = false;
-    for (var i = 0, N = childOrChildren.length; i < N; i++) {
-      var n = childOrChildren[i];
-      if (n.nodeType === 1 && n.nodeName === 'TR') {
-        foundTR = true;
-        break;
-      }
-    }
-    if (! foundTR)
-      return false;
-  } else {
-    var n = childOrChildren;
-    if (! (n.nodeType === 1 && n.nodeName === 'TR'))
-      return false;
-  }
-
-  return true;
-};
-
-var makeOrFindTbody = function (parent, next) {
-  // we have a TABLE > TR situation
-  var tbody = parent.getElementsByTagName('tbody')[0];
-  if (! tbody) {
-    tbody = parent.ownerDocument.createElement("tbody");
-    parent.insertBefore(tbody, next || null);
-  }
-  return tbody;
-};
-
-var moveWithOwnersIntoTbody = function (range) {
-  while (range.owner)
-    range = range.owner;
-
-  var nodes = range.getNodes(); // causes refresh
-  var tbody = makeOrFindTbody(range.parentNode(),
-                              range.end.nextSibling);
-  for (var i = 0; i < nodes.length; i++)
-    tbody.appendChild(nodes[i]);
-
-  // XXX complete the reparenting by moving event
-  // HandlerRecs of `range`.
-
-  return tbody;
 };
 
 ///// FIND BY SELECTOR
