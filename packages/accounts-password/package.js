@@ -9,7 +9,7 @@ Package.on_use(function(api) {
   api.imply('accounts-base', ['client', 'server']);
   api.use('srp', ['client', 'server']);
   api.use('email', ['server']);
-  api.use('random@1.0.0', ['server']);
+  api.use('random', ['server']);
   api.use('check', ['server']);
   api.use('underscore');
   api.use('livedata', ['client', 'server']);

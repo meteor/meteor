@@ -368,8 +368,6 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           else if (key === "earliestCompatibleVersion")
             self.earliestCompatibleVersion = value;
-          else if (key === "name")
-            var foo = value;
           else
             buildmessage.error("unknown attribute '" + key + "' " +
                                "in package description");

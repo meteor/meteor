@@ -779,7 +779,6 @@ compiler.getBuildOrderConstraints = function (packageSource) {
 // - path: a path on disk to a unipackage
 // - unipackage: a Unipackage object
 compiler.checkUpToDate = function (packageSource, unipackage) {
-  return true;
   if (unipackage.forceNotUpToDate)
     return false;
 

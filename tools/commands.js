@@ -94,15 +94,11 @@ var formatList = function (items) {
   _.each(items, function (item) {
     var name = item.name + pad.substr(item.name.length);
     var description = item.description || 'No description';
-    out += (name + "   " + snipLocal(item.version) + "   " +
+    out += (name + "  " +
             description.substr(0, width - 2 - pad.length) + "\n");
   });
 
   return out;
-};
-
-var snipLocal = function (version) {
-  return version.split("+")[0];
 };
 
 var XXX_DEPLOY_ARCH = 'os.linux.x86_64';
@@ -121,7 +117,7 @@ main.registerCommand({
 });
 
 // Prints the current release in use. Note that if there is not
-// actually a specific release , we print to stderr and exit non-zero,
+// actually a specific release, we print to stderr and exit non-zero,
 // while if there is a release we print to stdout and exit zero
 // (making this useful to scripts).
 // XXX: What does this mean in our new release-free world?
@@ -380,7 +376,6 @@ main.registerCommand({
   // update' is how you fix apps that don't have a release.
   requiresRelease: false
 }, function (options) {
-
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
     process.stderr.write(
@@ -607,6 +602,7 @@ main.registerCommand({
       failed = true;
       return;
     }
+    console.log(constraint);
 
     // If the version was specified, check that the version exists.
     if ( constraint.versionConstraint !== "none") {
@@ -630,11 +626,7 @@ main.registerCommand({
     }
 
     // Add the package to our direct dependency constraints that we get from .meteor/packages.
-    if (constraint.versionConstraint === "none") {
-      constraint.versionConstraint = catalog.getLatestVersion(constraint.name).version;
-    };
     packages[constraint.name] = constraint.versionConstraint;
-
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -668,9 +660,7 @@ main.registerCommand({
   // Remove the versions that don't exist
   var removed = _.difference(_.keys(versions), _.keys(newVersions));
   _.each(removed, function(packageName) {
-    if (packageName !== "ctl" && packageName != "ctl-helper") {
-      messageLog.push("removed dependency on " + packageName);
-    }
+    messageLog.push("removed dependency on " + packageName);
   });
 
   // Install the new versions.
@@ -680,19 +670,6 @@ main.registerCommand({
     if (_.has(versions, packageName) &&
          versions[packageName] == version ) {
       // Nothing changed. Skip this.
-
-      // demo fakery
-      if (packageName === "random") {
-        if (_.contains(options.args, "ekate:color-square0") ||
-           _.contains(options.args, "ekate:color-square")) {
-          messageLog.push("  upgraded " + packageName +
-                       " from version 1.0.0 to version 1.1.0");
-        } else if (_.contains(options.args, "accounts-password")) {
-           messageLog.push("  added " + packageName +
-                      " at version 1.0.0");
-        }
-      }
-
       return;
      }
 
@@ -715,7 +692,6 @@ main.registerCommand({
       return;
     }
 
-
     // Add a message to the update logs to show the user what we have done.
     if ( _.contains(options.args, packageName)) {
       // If we asked for this, we will log it later in more detail.
@@ -725,14 +701,13 @@ main.registerCommand({
     // If the previous versions file had this, then we are upgrading, if it did
     // not, then we must be adding this package anew.
     if ( _.has(versions, packageName )) {
-      messageLog.push("  upgraded " + packageName + " from version " +
-                      snipLocal(versions[packageName]) +
-                      " to version " + snipLocal(newVersions[packageName]));
+      messageLog.push("upgraded " + packageName + " from version " +
+                      versions[packageName] +
+                      " to version " + newVersions[packageName]);
     } else {
-      messageLog.push("  added " + packageName +
-                      " at version " + snipLocal(newVersions[packageName]));
+      messageLog.push("added " + packageName +
+                      " at version " + newVersions[packageName]);
     };
-
   });
 
   if (failed)
@@ -747,18 +722,18 @@ main.registerCommand({
   });
 
   // Show the user the messageLog of the packages that they installed.
-  process.stdout.write("Successfully added the following packages: \n \n");
+  process.stdout.write("Successfully added the following packages. \n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
     var versionRecord = catalog.getVersion(constraint.name, version);
     if (constraint.versionConstraint !== "none" &&
         version !== constraint.versionConstraint) {
-      process.stdout.write("  Added " + constraint.name + " at version " + version + "\n");
+      process.stdout.write("Added " + constraint.name + " at version " + version +
+                           " to avoid conflicting dependencies.");
     }
-    process.stdout.write(constraint.name + " (" + snipLocal(version) + ") : " + versionRecord.description + "\n");
+    process.stdout.write(constraint.name + " : " + versionRecord.description + "\n");
   });
 
-  process.stdout.write("\n");
   return 0;
 });
 
@@ -862,52 +837,17 @@ main.registerCommand({
         process.stderr.write("Cannot process package list. Unknown: " + name +
                              " at version " + version);
       }
-      items.push({ name: name, version: versionInfo.version, description: versionInfo.description });
+      items.push({ name: name, description: versionInfo.description });
     });
   } else {
     _.each(catalog.getAllPackageNames(), function (name) {
       var versionInfo = catalog.getLatestVersion(name);
       if (versionInfo) {
-        items.push({ name: name, version: versionInfo.version, description: versionInfo.description });
+        items.push({ name: name, description: versionInfo.description });
       }
     });
   }
   process.stdout.write(formatList(items));
-});
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-// search
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'search',
-  maxArgs: 1
-}, function (options) {
-
-  var name = options.args[0];
-  var versions = catalog.getSortedVersions(name);
-  var items = [];
-  _.each(versions, function(v) {
-    var vi = catalog.getVersion(name, v);
-    if (vi) {
-      items.push({ name: name, version: vi.version, description: vi.description });
-    }
-  });
-
-  process.stdout.write("You are looking for package : ");
-  process.stdout.write("    " + name + "    \n");
-  if (!catalog.getPackage(name)) {
-    process.stderr.write("It does not exist. \n");
-    exit(1);
-  }
-  if (catalog.getPackage(name).maintainers) {
-    process.stdout.write("It is maintained by " + catalog.getPackage(name).maintainers[0].username);
-  }
-  process.stdout.write(" and is available at the following versions: \n \n");
-  process.stdout.write(formatList(items));
-  process.stdout.write("\n");
 });
 
 
@@ -1660,7 +1600,7 @@ main.registerCommand({
 
   // Check that the package name is valid.
   if (! utils.validPackageName(name) ) {
-      process.stderr.write(
+    process.stderr.write(
       "Package name invalid. Package names can only contain \n" +
       "ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
       "Package names cannot begin with a dot. \n");
