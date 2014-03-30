@@ -1832,3 +1832,19 @@ Tinytest.add(
     document.body.removeChild(div);
   }
 );
+
+Tinytest.add("spacebars - template - tables", function (test) {
+  var tmpl1 = Template.spacebars_test_tables1;
+
+  var div = renderToDiv(tmpl1);
+  test.equal(_.pluck(div.querySelectorAll('*'), 'tagName'),
+             ['TABLE', 'TR', 'TD']);
+  divRendersTo(test, div, '<table><tr><td>Foo</td></tr></table>');
+
+  var tmpl2 = Template.spacebars_test_tables2;
+  tmpl2.foo = 'Foo';
+  div = renderToDiv(tmpl2);
+  test.equal(_.pluck(div.querySelectorAll('*'), 'tagName'),
+             ['TABLE', 'TR', 'TD']);
+  divRendersTo(test, div, '<table><tr><td>Foo</td></tr></table>');
+});
