@@ -3,6 +3,9 @@ var path = require('path');
 var _ = require('underscore');
 var files = require('./files.js');
 var utils = require('./utils.js');
+var tropohouse = require('./tropohouse.js');
+var archinfo = require('./archinfo.js');
+var watch = require('./watch.js');
 
 var project = exports;
 
@@ -74,9 +77,64 @@ project.processPerConstraintLines = function(lines) {
 
 };
 
-// Read in the .meteor/packages file.
+project.getProgramsDirectory = function (appDir) {
+  return path.join(appDir, "programs");
+};
+
+// Return the list of subdirectories containing programs in the
+// app. Options can include:
+//  - watchSet: if provided, the app's programs directory will be added to it
+project.getProgramsSubdirs = function (appDir, options) {
+  options = options || {};
+  var programsDir = project.getProgramsDirectory(appDir);
+  var readOptions = {
+    absPath: programsDir,
+    include: [/\/$/],
+    exclude: [/^\./]
+  };
+  if (options.watchSet) {
+    return watch.readAndWatchDirectory(options.watchSet, readOptions);
+  } else {
+    return watch.readDirectory(readOptions);
+  }
+};
+
+// Read direct dependencies from the .meteor/packages file and from
+// programs in this app.
+//
+// Returns an object with keys:
+//  - appDeps: object mapping package names to version constraints
+//  - programsDeps: an object mapping program name to program deps,
+//    where program deps is an object mapping package names to version
+//    constraints.
 project.getDirectDependencies = function(appDir) {
-  return project.processPerConstraintLines(getPackagesLines(appDir));
+  var appDeps = project.processPerConstraintLines(getPackagesLines(appDir));
+
+  var programsDeps = {};
+  var programsSubdirs = project.getProgramsSubdirs(appDir);
+  var PackageSource;
+  _.each(programsSubdirs, function (item) {
+    if (! PackageSource) {
+      PackageSource = require('./package-source.js');
+    }
+
+    var programName = item.substr(0, item.length - 1);
+    programsDeps[programName] = {};
+
+    var programSubdir = path.join(project.getProgramsDirectory(appDir), item);
+    var programSource = new PackageSource(programSubdir);
+    programSource.initFromPackageDir(programName, programSubdir);
+    _.each(programSource.slices, function (sourceSlice) {
+      _.each(sourceSlice.uses, function (use) {
+        programsDeps[programName][use["package"]] = use.constraint || "none";
+      });
+    });
+  });
+
+  return {
+    appDeps: appDeps,
+    programsDeps: programsDeps
+  };
 };
 
 // Get a list of constraints from the .meteor/versions file.
@@ -85,7 +143,7 @@ project.getIndirectDependencies = function(appDir) {
 };
 
 // Write the .meteor/versions file after running the constraint solver.
-project.rewriteDependencies = function (appDir, deps, versions) {
+var rewriteDependencies = function (appDir, deps, versions) {
 
   // Rewrite the packages file. Do this first, since the versions file is
   // derived from the packages file.
@@ -112,10 +170,58 @@ project.rewriteDependencies = function (appDir, deps, versions) {
                    lines.join(''), 'utf8');
 };
 
+
+// Call this after running the constraint solver. Downloads the
+// necessary package builds and writes the .meteor/versions and
+// .meteor/packages files with the results of the constraint solver.
+//
+// Only writes to .meteor/versions if all the requested versions were
+// available from the package server.
+//
+// Returns an object whose keys are package names and values are
+// versions that were successfully downloaded.
+project.setDependencies = function (appDir, deps, versions) {
+  var downloadedPackages = {};
+  _.each(versions, function (version, name) {
+    var packageVersionInfo = { packageName: name, version: version };
+    // XXX error handling
+    var available = tropohouse.maybeDownloadPackageForArchitectures(
+      packageVersionInfo,
+      ['browser', archinfo.host()]
+    );
+    if (available) {
+      downloadedPackages[name] = version;
+    }
+  });
+
+  if (_.keys(downloadedPackages).length === _.keys(versions).length) {
+    rewriteDependencies(appDir, deps, versions);
+  }
+  return downloadedPackages;
+};
+
 var meteorReleaseFilePath = function (appDir) {
   return path.join(appDir, '.meteor', 'release');
 };
 
+// Helper function. Given an object `deps` as returned from
+// `getDirectDependencies`, combine all the direct dependencies (for the
+// app and its programs) into a single object mapping package name to a
+// list of version constraints, which can be passed into the constraint
+// solver.
+project.combineAppAndProgramDependencies = function (deps) {
+  var allDeps = {};
+  _.each(deps.appDeps, function (constraint, packageName) {
+    allDeps[packageName] = [constraint];
+  });
+  _.each(deps.programsDeps, function (deps, programName) {
+    _.each(deps, function (constraint, packageName) {
+      allDeps[packageName] = allDeps[packageName] || [];
+      allDeps[packageName].push(constraint);
+    });
+  });
+  return allDeps;
+};
 
 // Run the constraint solver to determine the package versions to use.
 //
@@ -127,20 +233,23 @@ project.generatePackageLoader = function (appDir) {
   var versions = project.getIndirectDependencies(appDir);
   var packages = project.getDirectDependencies(appDir);
 
+  // package name -> list of version constraints
+  var allPackages = project.combineAppAndProgramDependencies(packages);
+
   // XXX: We are manually adding ctl here, but we should do this in a more
   // principled manner.
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
   // XXX: constraint solver currently ignores versions, but it should not.
   var newVersions = resolver.resolve(
-    _.extend(packages, { "ctl" : "none" }));
+    _.extend(allPackages, { "ctl" : ["none"] }));
   if ( ! newVersions) {
     return { outcome: 'conflicting-versions' };
   }
 
-  // Write out the new versions file.
+  // Download any necessary package builds and write out the new versions file.
   delete packages["ctl"];
-  project.rewriteDependencies(appDir, packages, newVersions);
+  project.setDependencies(appDir, packages.appDeps, newVersions);
 
   var newVersionsReform = {};
   _.each(newVersions, function (version, name) {

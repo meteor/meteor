@@ -28,7 +28,7 @@ var deepClone = function (v) {
     // For some reason, _.map doesn't work in this context on Opera (weird test
     // failures).
     ret = [];
-    for (i = 0; i < v.length; i++)
+    for (var i = 0; i < v.length; i++)
       ret[i] = deepClone(v[i]);
     return ret;
   }
@@ -244,7 +244,8 @@ var rejectExactDeps = function (deps) { return _.reject(deps, isExact); };
 // converts dependencies from simple format to the structured format
 var toStructuredDeps = function (dependencies) {
   var structuredDeps = [];
-  _.each(dependencies, function (details, packageName) {
+
+  var addStructuredDep = function (packageName, details) {
     // if details is null, it means 'no constraint'
     if (typeof details === "string" || details === null) {
       structuredDeps.push(_.extend(
@@ -252,6 +253,16 @@ var toStructuredDeps = function (dependencies) {
         utils.parseVersionConstraint(details)));
     } else {
       structuredDeps.push(_.extend({ packageName: packageName }, details));
+    }
+  };
+
+  _.each(dependencies, function (details, packageName) {
+    if (_.isArray(details)) {
+      _.each(details, function (constraint) {
+        addStructuredDep(packageName, constraint);
+      });
+    } else {
+      addStructuredDep(packageName, details);
     }
   });
   return structuredDeps;

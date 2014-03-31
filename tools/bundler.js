@@ -1784,12 +1784,10 @@ exports.bundle = function (options) {
     // Pick up any additional targets in /programs
     // Step 1: scan for targets and make a list. We will reload if you create a
     // new subdir in 'programs', or create 'programs' itself.
-    var programsDir = path.join(appDir, 'programs');
     var programs = [];
-    var programsSubdirs = watch.readAndWatchDirectory(watchSet, {
-      absPath: programsDir,
-      include: [/\/$/],
-      exclude: [/^\./]
+    var programsDir = project.getProgramsDirectory(appDir);
+    var programsSubdirs = project.getProgramsSubdirs(appDir, {
+      watchSet: watchSet
     });
 
     _.each(programsSubdirs, function (item) {
@@ -1882,7 +1880,7 @@ exports.bundle = function (options) {
       // it
 
       var pkg = packageCache.packageCache.
-        loadPackageAtPath(p.name, p.loadPath);
+        loadPackageAtPath(p.name, p.path);
       var target;
       switch (p.type) {
       case "server":
