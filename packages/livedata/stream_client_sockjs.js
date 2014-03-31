@@ -18,7 +18,7 @@ LivedataTest.ClientStream = function (url, options) {
   // client automatically.
   // https://github.com/sockjs/sockjs-client/issues/67
   // https://github.com/sockjs/sockjs-node/issues/68
-  self.HEARTBEAT_TIMEOUT = 60000;
+  self.HEARTBEAT_TIMEOUT = 100*1000;
 
   self.rawUrl = url;
   self.socket = null;
