@@ -856,7 +856,9 @@ _.extend(Unipackage.prototype, {
 
   _buildTimeDirectDependenciesWithBuildIds: function () {
     var self = this;
-    var directDepsLoader = new PackageLoader(self.buildTimeDirectDependencies);
+    var directDepsLoader = new PackageLoader({
+      versions: self.buildTimeDirectDependencies
+    });
     var result = {};
     _.each(self.buildTimeDirectDependencies, function (version, packageName) {
       var unipackage = directDepsLoader.getPackage(packageName);
@@ -869,11 +871,11 @@ _.extend(Unipackage.prototype, {
     var self = this;
     var result = {};
     _.each(self.buildTimePluginDependencies, function (deps, pluginName) {
-      var pluginPackageLoader = new PackageLoader(deps);
+      var pluginPackageLoader = new PackageLoader({ versions: deps });
       result[pluginName] = {};
       _.each(deps, function (version, packageName) {
         var unipackage = pluginPackageLoader.getPackage(packageName);
-        result[pluginName][packageName] = version;
+        result[pluginName][packageName] = unipackage.version;
       });
     });
     return result;
@@ -905,7 +907,7 @@ _.extend(Unipackage.prototype, {
     _.each(
       self._buildTimePluginDependenciesWithBuildIds(),
       function (versions, pluginName) {
-        var pluginDepsLoader = new PackageLoader(versions);
+        var pluginDepsLoader = new PackageLoader({ versions: versions });
         var singlePluginDeps = [];
         _.each(versions, function (version, packageName) {
           var unipackage = pluginDepsLoader.getPackage(packageName);
