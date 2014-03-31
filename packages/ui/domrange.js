@@ -872,7 +872,7 @@ var HandlerRec = function (elem, type, selector, handler, $ui) {
         return;
       if (! h.$ui.contains(evt.currentTarget))
         return;
-      return h.handler.call(h.$ui, evt);
+      return h.handler.apply(h.$ui, arguments);
     };
   })(this);
 

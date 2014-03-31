@@ -303,16 +303,18 @@ UI.Component.notifyParented = function () {
       var wrappedHandler = function (event) {
         var comp = UI.DomRange.getContainingComponent(event.currentTarget);
         var data = comp && getComponentData(comp);
+        var args = _.toArray(arguments);
         updateTemplateInstance(self);
         return Deps.nonreactive(function () {
+          // put self.templateInstance as the second argument
+          args.splice(1, 0, self.templateInstance);
           // Don't want to be in a deps context, even if we were somehow
           // triggered synchronously in an existing deps context
           // (the `blur` event can do this).
           // XXX we should probably do what Spark did and block all
           // event handling during our DOM manip.  Many apps had weird
           // unanticipated bugs until we did that.
-          return esh.handler.call(data === null ? {} : data,
-                                  event, self.templateInstance);
+          return esh.handler.apply(data === null ? {} : data, args);
         });
       };
 
