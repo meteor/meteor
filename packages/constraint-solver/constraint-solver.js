@@ -189,7 +189,7 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   function (options, dc) {
   var resolverOptions = {};
-  switch (resolverOptions.mode) {
+  switch (options.mode) {
   case "LATEST":
     resolverOptions.costFunction = function (choices) {
       var c = _.reduce(choices, function (sum, uv) {
