@@ -320,17 +320,39 @@ _.extend(Catalog.prototype, {
     var remaining = _.clone(self.effectiveLocalPackages);
     var onStack = {}; // map from name to true
 
+    var maybeGetUpToDateBuild = function (name) {
+      var sourcePath = self.effectiveLocalPackages[name];
+      var buildDir = path.join(sourcePath, '.build');
+      if (fs.existsSync(buildDir)) {
+        var unipackage = new Unipackage(sourcePath);
+        unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
+        if (compiler.checkUpToDate(packageSources[name], unipackage)) {
+          return unipackage;
+        }
+      }
+      return null;
+    };
+
     var build = function (name) {
+      var unipackage = null;
+
       if (! _.has(remaining, name))
         return;
 
       // First build things that have to build before us (if not built yet)
       _.each(packageBuildDeps[name], function (otherName) {
         if (_.has(onStack, otherName)) {
-          buildmessage.error("circular dependency between packages " +
-                             name + " and " + otherName);
-          // recover by not enforcing one of the depedencies
-          return;
+          // Allow a circular dependency if the other thing is already
+          // built and doesn't need to be rebuilt.
+          unipackage = maybeGetUpToDateBuild(otherName);
+          if (unipackage) {
+            return;
+          } else {
+            buildmessage.error("circular dependency between packages " +
+                               name + " and " + otherName);
+            // recover by not enforcing one of the depedencies
+            return;
+          }
         }
 
         onStack[otherName] = true;
@@ -339,18 +361,8 @@ _.extend(Catalog.prototype, {
       });
 
       // Now build this package if it needs building
-      var unipackage = null;
       var sourcePath = self.effectiveLocalPackages[name];
-      var buildDir = path.join(sourcePath, '.build');
-
-      if (fs.existsSync(buildDir)) {
-        // Looks like we have an existing build. See if it's up to date.
-        unipackage = new Unipackage(sourcePath);
-        unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
-
-        if (! compiler.checkUpToDate(packageSources[name], unipackage))
-          unipackage = null;
-      }
+      unipackage = maybeGetUpToDateBuild(name);
 
       if (! unipackage) {
         // Didn't have a build or it wasn't up to date. Build it.
@@ -363,6 +375,7 @@ _.extend(Catalog.prototype, {
           if (! buildmessage.jobHasMessages()) {
             // Save the build, for a fast load next time
             try {
+              var buildDir = path.join(sourcePath, '.build');
               files.addToGitignore(sourcePath, '.build*');
               unipackage.saveToPath(buildDir, { buildOfPath: sourcePath });
             } catch (e) {
