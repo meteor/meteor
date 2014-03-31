@@ -192,7 +192,20 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   switch (options.mode) {
   case "LATEST":
     resolverOptions.costFunction = function (choices) {
-      var c = _.reduce(choices, function (sum, uv) {
+      return (1 << 30) - _.reduce(choices, function (sum, uv) {
+        var v = _.map(uv.version.split('.'), function (x, i, array) {
+          return parseInt(x);
+        });
+
+        return v[0] * 10000 + v[1] * 100 + v[2] + sum;
+      }, 0);
+    };
+
+    break;
+
+  case "CONSERVATIVE":
+    resolverOptions.costFunction = function (choices) {
+      return _.reduce(choices, function (sum, uv) {
         var v = _.map(uv.version.split('.'), function (x, i, array) {
           return parseInt(x);
         });

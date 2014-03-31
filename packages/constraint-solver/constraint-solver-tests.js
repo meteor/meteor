@@ -89,8 +89,8 @@ var catalogStub = {
 var resolver = new ConstraintSolver.PackagesResolver(catalogStub);
 
 var currentTest = null;
-var t = function (deps, expected) {
-  var resolvedDeps = resolver.resolve(deps);
+var t = function (deps, expected, options) {
+  var resolvedDeps = resolver.resolve(deps, options);
   currentTest.equal(resolvedDeps, expected);
 };
 
@@ -120,13 +120,14 @@ Tinytest.add("constraint solver - exact dependencies", function (test) {
 
 Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
   currentTest = test;
+
   t({ "sparky-forms": "=1.1.2" }, {
     "sparky-forms": "1.1.2",
     "forms": "1.0.1",
     "sparkle": "2.1.1",
     "jquery-widgets": "1.0.0",
     "jquery": "1.8.2"
-  });
+  }, { mode: "CONSERVATIVE" });
 
   t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
     "sparky-forms": "1.1.2",
@@ -136,7 +137,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
     "jquery": "1.8.2",
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
-  });
+  }, { mode: "CONSERVATIVE" });
 });
 
 Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
@@ -152,22 +153,22 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
     "jquery": "1.8.2",
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
-  });
+  }, { mode: "CONSERVATIVE" });
 });
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   currentTest = test;
-  var versions = resolver.resolve({ "sparkle": "none" });
+  var versions = resolver.resolve({ "sparkle": "none" }, { mode: "CONSERVATIVE" });
   test.isTrue(_.isString(versions.sparkle));
-  versions = resolver.resolve({ "sparkle": null });
+  versions = resolver.resolve({ "sparkle": null }, { mode: "CONSERVATIVE" });
   test.isTrue(_.isString(versions.sparkle));
 });
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   currentTest = test;
-  var versions = resolver.resolve({ "sparkle": "none", "sparky-forms": "1.1.2" });
+  var versions = resolver.resolve({ "sparkle": "none", "sparky-forms": "1.1.2" }, { mode: "CONSERVATIVE" });
   test.equal(versions.sparkle, "2.1.1");
-  var versions = resolver.resolve({ "sparkle": null, "sparky-forms": "1.1.2" });
+  var versions = resolver.resolve({ "sparkle": null, "sparky-forms": "1.1.2" }, { mode: "CONSERVATIVE" });
   test.equal(versions.sparkle, "2.1.1");
 });
 
