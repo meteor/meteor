@@ -932,7 +932,14 @@ _.extend(Connection.prototype, {
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
         onTimeout: function () {
-          Meteor._debug("Connection timeout. No DDP heartbeat received.");
+          if (Meteor.isClient) {
+            // only print on the client. this message is useful on the
+            // browser console to see that we've lost connection. on the
+            // server (eg when doing server-to-server DDP), it gets
+            // kinda annoying. also this matches the behavior with
+            // sockjs timeouts.
+            Meteor._debug("Connection timeout. No DDP heartbeat received.");
+          }
           self._lostConnection();
         },
         sendPing: function () {
