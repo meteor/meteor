@@ -500,6 +500,11 @@ _.extend(Session.prototype, {
     // If the negotiated DDP version is "pre1" which didn't support
     // pings, preserve the "pre1" behavior of responding with a "bad
     // request" for the unknown messages.
+    //
+    // Fibers are needed because heartbeat uses Meteor.setTimeout, which
+    // needs a Fiber. We could actually use regular setTimeout and avoid
+    // these new fibers, but it is easier to just make everything use
+    // Meteor.setTimeout and not think too hard.
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
         self.send({msg: "pong", id: msg_in.id});

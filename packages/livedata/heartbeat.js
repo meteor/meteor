@@ -1,8 +1,9 @@
 // Heartbeat options:
 //   heartbeatInterval: interval to send pings, in milliseconds.
-//   heartbeatTimeout: timeout to close the connection if a reply isn't received, in milliseconds.
-//   sendPing: send a ping on the connection.
-//   onTimeout: close the connection.
+//   heartbeatTimeout: timeout to close the connection if a reply isn't
+//     received, in milliseconds.
+//   sendPing: function to call to send a ping on the connection.
+//   onTimeout: function to call to close the connection.
 
 Heartbeat = function (options) {
   var self = this;

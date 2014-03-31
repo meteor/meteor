@@ -14,10 +14,12 @@ LivedataTest.ClientStream = function (url, options) {
   // how long between hearing heartbeat from the server until we declare
   // the connection dead. heartbeats come every 45s (stream_server.js)
   //
-  // NOTE: this is a workaround until sockjs detects heartbeats on the
-  // client automatically.
-  // https://github.com/sockjs/sockjs-client/issues/67
-  // https://github.com/sockjs/sockjs-node/issues/68
+  // NOTE: this is a older timeout mechanism. We now send heartbeats at
+  // the DDP level (https://github.com/meteor/meteor/pull/1865), and
+  // expect those timeouts to kill a non-responsive connection before
+  // this timeout fires. This is kept around for compatibility (when
+  // talking to a server that doesn't support DDP heartbeats) and can be
+  // removed later.
   self.HEARTBEAT_TIMEOUT = 100*1000;
 
   self.rawUrl = url;
