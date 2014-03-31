@@ -12,7 +12,7 @@ LivedataTest.ClientStream = function (url, options) {
 
 
   // how long between hearing heartbeat from the server until we declare
-  // the connection dead. heartbeats come every 25s (stream_server.js)
+  // the connection dead. heartbeats come every 45s (stream_server.js)
   //
   // NOTE: this is a workaround until sockjs detects heartbeats on the
   // client automatically.
@@ -88,6 +88,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.socket.close();
       self.socket = null;
     }
+
+    _.each(self.eventCallbacks.disconnect, function (callback) { callback(); });
   },
 
   _clearConnectionAndHeartbeatTimers: function () {

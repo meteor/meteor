@@ -31,10 +31,13 @@ var Connection = function (url, options) {
     onDDPVersionNegotiationFailure: function (description) {
       Meteor._debug(description);
     },
+    heartbeatInterval: 35000,
+    heartbeatTimeout: 15000,
     // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
-    retry: true
+    retry: true,
+    respondToPings: true
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -63,6 +66,9 @@ var Connection = function (url, options) {
   self._methodHandlers = {}; // name -> func
   self._nextMethodId = 1;
   self._supportedDDPVersions = options.supportedDDPVersions;
+
+  self._heartbeatInterval = options.heartbeatInterval;
+  self._heartbeatTimeout = options.heartbeatTimeout;
 
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
@@ -224,6 +230,17 @@ var Connection = function (url, options) {
         options.onDDPVersionNegotiationFailure(description);
       }
     }
+    else if (msg.msg === 'ping') {
+      if (options.respondToPings)
+        self._send({msg: "pong", id: msg.id});
+      if (self._heartbeat)
+        self._heartbeat.pingReceived();
+    }
+    else if (msg.msg === 'pong') {
+      if (self._heartbeat) {
+        self._heartbeat.pongReceived();
+      }
+    }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
     else if (msg.msg === 'nosub')
@@ -291,12 +308,21 @@ var Connection = function (url, options) {
     });
   };
 
+  var onDisconnect = function () {
+    if (self._heartbeat) {
+      self._heartbeat.stop()
+      self._heartbeat = null;
+    }
+  };
+
   if (Meteor.isServer) {
     self._stream.on('message', Meteor.bindEnvironment(onMessage, Meteor._debug));
     self._stream.on('reset', Meteor.bindEnvironment(onReset, Meteor._debug));
+    self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, Meteor._debug));
   } else {
     self._stream.on('message', onMessage);
     self._stream.on('reset', onReset);
+    self._stream.on('disconnect', onDisconnect);
   }
 };
 
@@ -834,6 +860,14 @@ _.extend(Connection.prototype, {
     self._stream.send(stringifyDDP(obj));
   },
 
+  // We detected via DDP-level heartbeats that we've lost the
+  // connection.  Unlike `disconnect` or `close`, a lost connection
+  // will be automatically retried.
+  _lostConnection: function () {
+    var self = this;
+    self._stream._lostConnection();
+  },
+
   status: function (/*passthrough args*/) {
     var self = this;
     return self._stream.status.apply(self._stream, arguments);
@@ -892,6 +926,18 @@ _.extend(Connection.prototype, {
 
   _livedata_connected: function (msg) {
     var self = this;
+
+    if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
+      self._heartbeat = new Heartbeat({
+        heartbeatInterval: self._heartbeatInterval,
+        heartbeatTimeout: self._heartbeatTimeout,
+        onTimeout: _.bind(self._lostConnection, self),
+        sendPing: function () {
+          self._send({msg: 'ping'});
+        }
+      });
+      self._heartbeat.start();
+    }
 
     // If this is a reconnect, we'll have to reset all stores.
     if (self._lastSessionId)
