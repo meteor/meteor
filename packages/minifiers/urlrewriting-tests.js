@@ -25,4 +25,8 @@ Tinytest.add("minifiers - url rewriting when merging", function (test) {
   t('/image.png', '/image.png', 'absolute url');
   t('"/image.png"', '"/image.png"', 'double quoted url');
   t("'/image.png'", "'/image.png'", 'single quoted url');
+  t('"./../image.png"', '"dir/image.png"', 'quoted parent directory');
+  t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
+  t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
+  t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
 });
