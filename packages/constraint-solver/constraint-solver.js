@@ -191,8 +191,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var resolverOptions = {};
   switch (resolverOptions.mode) {
   case "LATEST":
-    resolverOptions.costFunction = function (sum, choices) {
-      return _.reduce(choices, function (uv) {
+    resolverOptions.costFunction = function (choices) {
+      var c = _.reduce(choices, function (sum, uv) {
         var v = _.map(uv.version.split('.'), function (x, i, array) {
           return parseInt(x);
         });
