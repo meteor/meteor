@@ -83,23 +83,29 @@ CssTools = {
   // given AST without doing a deep copy.
   rewriteCssUrls: function (ast) {
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
+      var basePath = path.dirname(rule.position.source);
+
       _.each(rule.declarations, function(declaration, declarationIndex) {
-        var parts, basePath, relativePath, absolutePath;
+        var parts, relativePath, absolutePath, quotes, oldUrl, newUrl;
         var value = declaration.value;
 
-        // Match css values containing a functional call to `url(URI)` where
-        // URI is optionally quoted.
+        // Match css values containing some functional calls to `url(URI)` where
+        // URI is optionally quoted
         // Note that a css value can contains other elements, for instance:
         //   background: top center url("background.png") black;
-        if (parts = /url\s*\(\s*(['"]?)(.+)\1\s*\)/.exec(value)) {
-          basePath = path.dirname(rule.position.source);
+        // or even multiple url(), for instance for multiple backgrounds.
+        var urlCallRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
+        while (parts = urlCallRegex.exec(value)) {
+          oldUrl = parts[0];
+          quotes = parts[1];
           relativePath = parts[2];
 
           // If the path start with "/", don't modify it. Otherwise it's a
           // relative path and we want to rewrite it
           if (! /^\//.exec(relativePath)) {
             absolutePath = path.join(basePath, relativePath);
-            value = value.replace(relativePath, absolutePath);
+            newUrl = "url(" + quotes + absolutePath + quotes + ")"
+            value = value.replace(oldUrl, newUrl);
           }
         }
 

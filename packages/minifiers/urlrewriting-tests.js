@@ -1,7 +1,7 @@
 
 Tinytest.add("minifiers - url rewriting when merging", function (test) {
   var stylesheet = function(backgroundPath) {
-    return "body { color: green; background: top center url(" + backgroundPath + ") black; }"
+    return "body { color: green; background: top center url(" + backgroundPath + ") black, bottom center url(" + backgroundPath + "); }"
   };
 
   var filename = 'dir/subdir/style.css';
