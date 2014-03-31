@@ -106,7 +106,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
   _heartbeat_timeout: function () {
     var self = this;
-    Meteor._debug("Connection timeout. No heartbeat received.");
+    Meteor._debug("Connection timeout. No sockjs heartbeat received.");
     self._lostConnection();
   },
 

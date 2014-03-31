@@ -931,7 +931,10 @@ _.extend(Connection.prototype, {
       self._heartbeat = new Heartbeat({
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
-        onTimeout: _.bind(self._lostConnection, self),
+        onTimeout: function () {
+          Meteor._debug("Connection timeout. No DDP heartbeat received.");
+          self._lostConnection();
+        },
         sendPing: function () {
           self._send({msg: 'ping'});
         }
