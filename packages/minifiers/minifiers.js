@@ -2,6 +2,7 @@ UglifyJSMinify = Npm.require('uglify-js').minify;
 
 var cssParse = Npm.require('css-parse');
 var cssStringify = Npm.require('css-stringify');
+var path = Npm.require('path');
 
 CssTools = {
   parseCss: cssParse,
@@ -52,6 +53,8 @@ CssTools = {
           break;
         }
 
+      CssTools.rewriteCssUrls(ast);
+
       var imports = ast.stylesheet.rules.splice(0, importCount);
       newAst.stylesheet.rules = newAst.stylesheet.rules.concat(imports);
 
@@ -71,6 +74,44 @@ CssTools = {
     });
 
     return newAst;
+  },
+
+  // We are looking for all relative urls defined with the `url()` functional
+  // notation and rewriting them to the equivalent absolute url using the
+  // `position.source` path provided by css-parse
+  // For performance reasons this function acts by side effect by modifying the
+  // given AST without doing a deep copy.
+  rewriteCssUrls: function (ast) {
+    _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
+      var basePath = path.dirname(rule.position.source);
+
+      _.each(rule.declarations, function(declaration, declarationIndex) {
+        var parts, relativePath, absolutePath, quotes, oldUrl, newUrl;
+        var value = declaration.value;
+
+        // Match css values containing some functional calls to `url(URI)` where
+        // URI is optionally quoted
+        // Note that a css value can contains other elements, for instance:
+        //   background: top center url("background.png") black;
+        // or even multiple url(), for instance for multiple backgrounds.
+        var urlCallRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
+        while (parts = urlCallRegex.exec(value)) {
+          oldUrl = parts[0];
+          quotes = parts[1];
+          relativePath = parts[2];
+
+          // If the path start with "/", don't modify it. Otherwise it's a
+          // relative path and we want to rewrite it
+          if (! /^\//.exec(relativePath)) {
+            absolutePath = path.join(basePath, relativePath);
+            newUrl = "url(" + quotes + absolutePath + quotes + ")"
+            value = value.replace(oldUrl, newUrl);
+          }
+        }
+
+        ast.stylesheet.rules[ruleIndex].declarations[declarationIndex].value = value;
+      });
+    });
   }
 };
 
