@@ -3,6 +3,7 @@ UglifyJSMinify = Npm.require('uglify-js').minify;
 var cssParse = Npm.require('css-parse');
 var cssStringify = Npm.require('css-stringify');
 var path = Npm.require('path');
+var url = Npm.require('url');
 
 CssTools = {
   parseCss: cssParse,
@@ -82,30 +83,36 @@ CssTools = {
   // For performance reasons this function acts by side effect by modifying the
   // given AST without doing a deep copy.
   rewriteCssUrls: function (ast) {
+
+    var isRelative = function(path) {
+      return path.charAt(0) !== '/';
+    };
+
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
       var basePath = path.dirname(rule.position.source);
 
       _.each(rule.declarations, function(declaration, declarationIndex) {
-        var parts, relativePath, absolutePath, quotes, oldUrl, newUrl;
+        var parts, resource, absolutePath, quotes, oldCssUrl, newCssUrl;
         var value = declaration.value;
 
         // Match css values containing some functional calls to `url(URI)` where
-        // URI is optionally quoted
+        // URI is optionally quoted.
         // Note that a css value can contains other elements, for instance:
         //   background: top center url("background.png") black;
         // or even multiple url(), for instance for multiple backgrounds.
-        var urlCallRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
-        while (parts = urlCallRegex.exec(value)) {
-          oldUrl = parts[0];
+        var cssUrlRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
+        while (parts = cssUrlRegex.exec(value)) {
+          oldCssUrl = parts[0];
           quotes = parts[1];
-          relativePath = parts[2];
+          resource = url.parse(parts[2]);
 
-          // If the path start with "/", don't modify it. Otherwise it's a
-          // relative path and we want to rewrite it
-          if (! /^\//.exec(relativePath)) {
-            absolutePath = path.join(basePath, relativePath);
-            newUrl = "url(" + quotes + absolutePath + quotes + ")"
-            value = value.replace(oldUrl, newUrl);
+          // Rewrite relative paths to absolute paths.
+          // We don't rewrite urls starting with a protocol definition such as
+          // http, https, or data.
+          if (isRelative(resource.path) && _.isNull(resource.protocol)) {
+            absolutePath = path.join(basePath, resource.path);
+            newCssUrl = "url(" + quotes + absolutePath + quotes + ")"
+            value = value.replace(oldCssUrl, newCssUrl);
           }
         }
 
