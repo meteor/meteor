@@ -87,7 +87,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
   on: function (name, callback) {
     var self = this;
 
-    if (name !== 'message' && name !== 'reset')
+    if (name !== 'message' && name !== 'reset' && name !== 'disconnect')
       throw new Error("unknown event type: " + name);
 
     if (!self.eventCallbacks[name])

@@ -1285,6 +1285,25 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
+Tinytest.add("livedata connection - ping without id", function (test) {
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+  startAndConnect(test, stream);
+
+  stream.receive({msg: 'ping'});
+  testGotMessage(test, stream, {msg: 'pong'});
+});
+
+Tinytest.add("livedata connection - ping with id", function (test) {
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+  startAndConnect(test, stream);
+
+  var id = Random.id();
+  stream.receive({msg: 'ping', id: id});
+  testGotMessage(test, stream, {msg: 'pong', id: id});
+});
+
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
     return Meteor._relativeToSiteRootUrl("/");

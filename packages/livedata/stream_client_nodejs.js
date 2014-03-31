@@ -96,6 +96,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.client = null;
       client.close();
     }
+
+    _.each(self.eventCallbacks.disconnect, function (callback) { callback(); });
   },
 
   _clearConnectionTimer: function () {
