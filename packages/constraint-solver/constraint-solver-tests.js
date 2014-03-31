@@ -232,6 +232,7 @@ Tinytest.add("constraint solver - benchmark on gems", function (test) {
   };
 
   var r = new ConstraintSolver.PackagesResolver(catalogStub);
+
   r.resolve({
     'rails': '4.0.0'
   });

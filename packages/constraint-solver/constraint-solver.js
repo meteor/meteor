@@ -12,6 +12,8 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 
   options = options || {};
 
+  self.catalog = catalog;
+
   // The main resolver
   self.resolver = new ConstraintSolver.Resolver();
 
@@ -105,11 +107,19 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 ConstraintSolver.PackagesResolver.prototype.resolve =
   function (dependencies, options) {
   var self = this;
+
+  options = _.defaults(options || {}, {
+    mode: 'LATEST'
+  });
+
   var dc = self._splitDepsToConstraints(dependencies);
+
+  var resolverOptions = self._getResolverOptions(options, dc);
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints, [], options);
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints, [],
+                                  resolverOptions);
 
   var resultChoices = {};
   _.each(res, function (uv) {
@@ -174,5 +184,26 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   });
 
   return { dependencies: dependencies, constraints: constraints };
+};
+
+ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
+  function (options, dc) {
+  var resolverOptions = {};
+  switch (resolverOptions.mode) {
+  case "LATEST":
+    resolverOptions.costFunction = function (sum, choices) {
+      return _.reduce(choices, function (uv) {
+        var v = _.map(uv.version.split('.'), function (x, i, array) {
+          return parseInt(x);
+        });
+
+        return v[0] * 10000 + v[1] * 100 + v[2] + sum;
+      }, 0);
+    };
+
+    break;
+  }
+
+  return resolverOptions;
 };
 
