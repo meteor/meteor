@@ -164,11 +164,11 @@ var determineBuildTimeDependencies = function (packageSource) {
 
     // info.uses is currently just an array of strings, and there's
     // no way to specify weak/unordered. Much like an app.
-    _.each(info.uses, function (spec) {
+    _.each(info.use, function (spec) {
       var parsedSpec = utils.parseSpec(spec);
       if (parsedSpec.slice)
         throw new Error("can't deal with slice specs here yet");
-      constraints[parsedSpec.package] = parsedSpec.constraint;
+      constraints[parsedSpec.package] = parsedSpec.constraint || null;
     });
 
     var resolver = new constraintSolver.Resolver;
