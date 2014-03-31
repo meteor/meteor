@@ -188,16 +188,24 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
 
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   function (options, dc) {
+  var self = this;
+
+  var semverToNum = function (version) {
+    var v = _.map(version.split('.'), function (x) {
+      return parseInt(x);
+    });
+
+    return v[0] * 10000 + v[1] * 100 + v[2];
+  };
+
   var resolverOptions = {};
   switch (options.mode) {
   case "LATEST":
     resolverOptions.costFunction = function (choices) {
-      return (1 << 30) - _.reduce(choices, function (sum, uv) {
-        var v = _.map(uv.version.split('.'), function (x, i, array) {
-          return parseInt(x);
-        });
-
-        return v[0] * 10000 + v[1] * 100 + v[2] + sum;
+      return _.reduce(choices, function (sum, uv) {
+        var difference = semverToNum(self.resolver._latestVersion[uv.name]) -
+          semverToNum(uv.version);
+        return difference + sum;
       }, 0);
     };
 
@@ -206,11 +214,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   case "CONSERVATIVE":
     resolverOptions.costFunction = function (choices) {
       return _.reduce(choices, function (sum, uv) {
-        var v = _.map(uv.version.split('.'), function (x, i, array) {
-          return parseInt(x);
-        });
-
-        return v[0] * 10000 + v[1] * 100 + v[2] + sum;
+        return semverToNum(uv.version) + sum;
       }, 0);
     };
 
