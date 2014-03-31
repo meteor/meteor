@@ -8,6 +8,7 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
+var PackageLoader = require('./package-loader.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -179,7 +180,7 @@ _.extend(UnipackageSlice.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // XXX document
-var Unipackage = function (packageDirectoryForBuildInfo) {
+var Unipackage = function () {
   var self = this;
 
   // These have the same meaning as in PackageSource.
@@ -189,10 +190,6 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
   self.earliestCompatibleVersion = null;
   self.defaultSlices = {};
   self.testSlices = {};
-
-  // XXX this is likely to go away once we have build versions
-  // (also in PackageSource)
-  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Build slices. Array of UnipackageSlice.
   self.slices = [];
@@ -211,7 +208,6 @@ var Unipackage = function (packageDirectoryForBuildInfo) {
 
   // The versions that we used at build time for each of our direct
   // dependencies. Map from package name to version string.
-  // XXX save to disk
   self.buildTimeDirectDependencies = null;
 
   // The complete list of versions (including transitive dependencies)
@@ -262,7 +258,6 @@ _.extend(Unipackage.prototype, {
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.defaultSlices = options.defaultSlices;
     self.testSlices = options.testSlices;
-    self.packageDirectoryForBuildInfo = options.packageDirectoryForBuildInfo;
     self.plugins = options.plugins;
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
@@ -463,6 +458,10 @@ _.extend(Unipackage.prototype, {
     // Read basic buildinfo.json info
 
     self.builtBy = buildInfoJson.builtBy || null;
+    self.buildTimeDirectDependencies =
+      buildInfoJson.buildTimeDirectDependencies || null;
+    self.buildTimePluginDependencies =
+      buildInfoJson.buildTimePluginDependencies || null;
 
     if (options.buildOfPath &&
         (buildInfoJson.source !== options.buildOfPath)) {
@@ -657,7 +656,9 @@ _.extend(Unipackage.prototype, {
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
         pluginProviderPackages: self.pluginProviderPackageDirs,
-        source: options.buildOfPath || undefined
+        source: options.buildOfPath || undefined,
+        buildTimeDirectDependencies: self._buildTimeDirectDependenciesWithBuildIds(),
+        buildTimePluginDependencies: self._buildTimePluginDependenciesWithBuildIds()
       };
 
       builder.reserve("unipackage.json");
@@ -851,6 +852,98 @@ _.extend(Unipackage.prototype, {
       builder.abort();
       throw e;
     }
+  },
+
+  _buildTimeDirectDependenciesWithBuildIds: function () {
+    var self = this;
+    var directDepsLoader = new PackageLoader({
+      versions: self.buildTimeDirectDependencies
+    });
+    var result = {};
+    _.each(self.buildTimeDirectDependencies, function (version, packageName) {
+      var unipackage = directDepsLoader.getPackage(packageName);
+      result[packageName] = unipackage.version;
+    });
+    return result;
+  },
+
+  _buildTimePluginDependenciesWithBuildIds: function () {
+    var self = this;
+    var result = {};
+    _.each(self.buildTimePluginDependencies, function (deps, pluginName) {
+      var pluginPackageLoader = new PackageLoader({ versions: deps });
+      result[pluginName] = {};
+      _.each(deps, function (version, packageName) {
+        var unipackage = pluginPackageLoader.getPackage(packageName);
+        result[pluginName][packageName] = unipackage.version;
+      });
+    });
+    return result;
+  },
+
+  // Computes a hash of the versions of all the package's dependencies
+  // (direct and plugin dependencies) and the slices' and plugins' watch
+  // sets. Adds the result as a build identifier to the unipackage's
+  // version. The caller is responsible for checking whether the
+  // existing version has a build identifier already.
+  addBuildIdentifierToVersion: function () {
+    var self = this;
+    // Gather all the dependencies' versions and organize them into
+    // arrays. We use arrays to avoid relying on the order of
+    // stringified object keys.
+    var directDeps = [];
+    _.each(
+      self._buildTimeDirectDependenciesWithBuildIds(),
+      function (version, packageName) {
+        directDeps.push([packageName, version]);
+      }
+    );
+
+    // Sort direct dependencies by package name (which is the "0" property
+    // of each element in the array).
+    directDeps = _.sortBy(directDeps, "0");
+
+    var pluginDeps = [];
+    _.each(
+      self._buildTimePluginDependenciesWithBuildIds(),
+      function (versions, pluginName) {
+        var pluginDepsLoader = new PackageLoader({ versions: versions });
+        var singlePluginDeps = [];
+        _.each(versions, function (version, packageName) {
+          var unipackage = pluginDepsLoader.getPackage(packageName);
+          singlePluginDeps.push([unipackage.name, unipackage.version]);
+        });
+        singlePluginDeps = _.sortBy(singlePluginDeps, "0");
+        pluginDeps.push([pluginName, singlePluginDeps]);
+      }
+    );
+    pluginDeps = _.sortBy(pluginDeps, "0");
+
+    // Now that we have versions for all our dependencies, canonicalize
+    // the slices' and plugins' watch sets.
+    // XXX Do we need to relativize paths? Why?
+    var watchFiles = [];
+    var watchSet = new watch.WatchSet();
+    watchSet.merge(self.pluginWatchSet);
+    _.each(self.slices, function (slice) {
+      watchSet.merge(slice.watchSet);
+    });
+    _.each(watchSet.files, function (hash, fileAbsPath) {
+      watchFiles.push([fileAbsPath, hash]);
+    });
+    watchFiles = _.sortBy(watchFiles, "0");
+
+    // Stick all our info into one big array, stringify it, and hash it.
+    var buildIdInfo = [
+      directDeps,
+      pluginDeps,
+      watchFiles
+    ];
+    var crypto = require('crypto');
+    var hasher = crypto.createHash('sha1');
+    hasher.update(JSON.stringify(buildIdInfo));
+    var buildId = hasher.digest('hex');
+    self.version = self.version + "+" + buildId;
   }
 });
 

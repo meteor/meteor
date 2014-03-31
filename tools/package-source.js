@@ -171,7 +171,7 @@ var SourceSlice = function (pkg, options) {
 // PackageSource
 ///////////////////////////////////////////////////////////////////////////////
 
-var PackageSource = function (packageDirectoryForBuildInfo) {
+var PackageSource = function () {
   var self = this;
 
   // The name of the package, or null for an app pseudo-package or
@@ -192,15 +192,6 @@ var PackageSource = function (packageDirectoryForBuildInfo) {
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right).
   self.serveRoot = null;
-
-  // The package's directory. This is used only by other packages that use this
-  // package in their buildinfo.json (to detect that they need to be rebuilt if
-  // the PackageLoader resolves it to a different package); it is not used to
-  // read files or anything else. Notably, it should be the same if a package is
-  // read from a source tree or read from the .build unipackage inside that
-  // source tree.
-  // XXX can this go away now?
-  self.packageDirectoryForBuildInfo = packageDirectoryForBuildInfo;
 
   // Package metadata. Keys are 'summary' and 'internal'. Currently
   // both of these are optional.

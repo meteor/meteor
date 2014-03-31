@@ -138,9 +138,9 @@ _.extend(WatchSet.prototype, {
       self.alwaysFire = true;
       return;
     }
-//    _.each(other.files, function (hash, name) {
-//      self.addFile(name, hash);
-//    });
+   _.each(other.files, function (hash, name) {
+     self.addFile(name, hash);
+   });
     _.each(other.directories, function (dir) {
       // XXX this doesn't deep-clone the directory, but I think these objects
       // are never mutated #WatchSetShallowClone

@@ -26,7 +26,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/10';
+compiler.BUILT_BY = 'meteor/11';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -599,15 +599,26 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
 // the appropriate compiler plugins. Once build has completed, any errors
 // detected in the package will have been emitted to buildmessage.
 //
+// Options:
+//  - officialBuild: defaults to false. If false, then we will compute a
+//    build identifier (a hash of the package's dependency versions and
+//    source files) and include it as part of the unipackage's version
+//    string. If true, then we will use the version that is contained in
+//    the package's source. You should set it to true when you are
+//    building a package to publish as an official build with the
+//    package server.
+//
 // Returns an object with keys:
 // - unipackage: the build Unipackage
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the build (the source files you'd have to
 //   ship to a different machine to replicate the build there)
-compiler.compile = function (packageSource) {
+compiler.compile = function (packageSource, options) {
   var sources = [];
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
+
+  options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
   var buildTimeDeps = determineBuildTimeDependencies(packageSource);
@@ -681,22 +692,7 @@ compiler.compile = function (packageSource) {
     }
   }
 
-  // XXX XXX HERE HERE
-  //
-  // Unless the 'officalBuild' option was set, compute a build
-  // identifier by finding the versions of all of our package
-  // dependencies (direct and plugin dependencies) -- real versions,
-  // not +local version, which means a lookup in the catalog -- and
-  // hashing them together (in a structured way with what they go
-  // with, canoncialized as well as possible) with the contents of the
-  // merged watchsets of our slices and our plugins, with paths
-  // relativized somehow (that last bit may be tricky!)
-  //
-  // Then -- again, unless 'officialBuild' was set -- modify version
-  // by adding +<buildid> to the version (it's an error if you already
-  // had one, I guess).
-
-  var unipackage = new Unipackage();
+  var unipackage = new Unipackage;
   unipackage.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
@@ -704,7 +700,6 @@ compiler.compile = function (packageSource) {
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     defaultSlices: packageSource.defaultSlices,
     testSlices: packageSource.testSlices,
-    packageDirectoryForBuildInfo: packageSource.packageDirectoryForBuildInfo,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
@@ -722,6 +717,27 @@ compiler.compile = function (packageSource) {
                                     nodeModulesPath, isPortable);
     sources.push.apply(sources, sliceSources);
   });
+
+  // XXX what should we do if the PackageSource doesn't have a version?
+  // (e.g. a plugin)
+  if (! options.officialBuild && packageSource.version) {
+    // XXX I have no idea if this should be using buildmessage.enterJob
+    // or not. test what happens on error
+    buildmessage.enterJob({
+      title: "compute build identifier for package `" +
+        packageSource.name + "`",
+      rootPath: packageSource.sourceRoot
+    }, function () {
+      if (packageSource.version.indexOf("+") !== -1) {
+        buildmessage.error("cannot compute build identifier for package `" +
+                           packageSource.name + "` version " +
+                           packageSource.version + "because it already " +
+                           "has a build identifier");
+      } else {
+        unipackage.addBuildIdentifierToVersion();
+      }
+    });
+  }
 
   return {
     sources: _.uniq(sources),
@@ -773,47 +789,88 @@ compiler.getBuildOrderConstraints = function (packageSource) {
 // identical code). True if we have dependency info and it
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
-//
-// 'what' identifies the build to check for up-to-dateness and is an
-// object with exactly one of the following keys:
-// - path: a path on disk to a unipackage
-// - unipackage: a Unipackage object
 compiler.checkUpToDate = function (packageSource, unipackage) {
   if (unipackage.forceNotUpToDate)
     return false;
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
-  if (unipackage.builtBy !== compiler.BUILT_BY)
+  if (unipackage.builtBy !== compiler.BUILT_BY) {
+    // XXX XXX XXX XXX XXX XXX XXX
+    //
+    // This branch is not currently in a state where we can build
+    // packages with plugins, so we explicitly do NOT want to trigger
+    // re-builds of packages built by different versions of meteor.
+    //
+    // Once this branch is in a state where we CAN build packages
+    // a-fresh, then we should change this back to "return false".
+    //
+    // XXX XXX XXX XXX XXX XXX XXX
+    console.log("XXX warning: considering package",
+                packageSource.name, "to be up to date because",
+                "it was built by <", compiler.BUILT_BY,
+                "and this makes no sense at all");
+    return true;
     return false;
+  }
 
-  // XXX XXX XXX
-  var pluginProviderPackageDirs = unipackage.pluginProviderPackageDirs;
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
 
-  /*
-  // XXX XXX this shouldn't work this way at all. instead it should
-  // just get the resolved build-time dependencies from packageSource
-  // and make sure they match the versions that were used for the
-  // build.
-  var packageLoader = XXX;
+  // Compute the unipackage's direct and plugin dependencies to
+  // `buildTimeDeps`, by comparing versions (including build
+  // identifiers).
 
-  // Are all of the packages we directly use (which can provide
-  // plugins which affect compilation) resolving to the same
-  // directory? (eg, have we updated our release version to something
-  // with a new version of a package?)
-  var packageResolutionsSame = _.all(
-    _pluginProviderPackageDirs, function (packageDir, name) {
-      return packageLoader.getLoadPathForPackage(name) === packageDir;
-    });
-  if (! packageResolutionsSame)
+  if (_.keys(buildTimeDeps.directDependencies).length !==
+      _.keys(unipackage.buildTimeDirectDependencies).length) {
     return false;
-  */
+  }
 
-  // XXX as we're checking build-time dependency freshness in the
-  // future, remember to not rely on
-  // packageSource.directBuildTimeDependencies, which may contain
-  // versions like 1.2.3+local, but instead get versions with real
-  // build ids through the catalog
+  var directDepsPackageLoader = new PackageLoader(
+    buildTimeDeps.directDependencies);
+  var directDepsMatch = _.all(
+    buildTimeDeps.directDependencies,
+    function (version, packageName) {
+      var loadedPackage = directDepsPackageLoader.getPackage(packageName);
+      // XXX Check that `versionWithBuildId` is the same as `version`
+      // except for the build id?
+      return (loadedPackage &&
+        unipackage.buildTimeDirectDependencies[packageName] ===
+        loadedPackage.version);
+    }
+  );
+  if (! directDepsMatch) {
+    return false;
+  }
+
+  if (_.keys(buildTimeDeps.pluginDependencies).length !==
+      _.keys(unipackage.buildTimePluginDependencies).length) {
+    return false;
+  }
+
+  var pluginDepsMatch = _.all(
+    buildTimeDeps.pluginDependencies,
+    function (pluginDeps, pluginName) {
+      // For each plugin, check that the resolved build-time deps for
+      // that plugin match the unipackage's build time deps for it.
+      var packageLoaderForPlugin = new PackageLoader(
+        buildTimeDeps.pluginDependencies
+      );
+      var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];
+      if (! unipackagePluginDeps ||
+          _.keys(pluginDeps).length !== _.keys(unipackagePluginDeps).length) {
+        return false;
+      }
+      return _.all(pluginDeps, function (version, packageName) {
+        var loadedPackage = packageLoaderForPlugin.getPackage(packageName);
+        return loadedPackage &&
+          unipackagePluginDeps[packageName] === loadedPackage.version;
+      });
+    }
+  );
+
+  if (! pluginDepsMatch) {
+    return false;
+  }
 
   var watchSet = new watch.WatchSet();
   watchSet.merge(unipackage.pluginWatchSet);
@@ -821,8 +878,9 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     watchSet.merge(slice.watchSet);
   });
 
-  if (! watch.isUpToDate(watchSet))
+  if (! watch.isUpToDate(watchSet)) {
     return false;
+  }
 
   return true;
 };
