@@ -117,26 +117,26 @@ _.extend(Catalog.prototype, {
     self._requireInitialized();
 
     var localData = packageClient.loadCachedServerData();
-    var serverPackageData;
+    var allPackageData;
     if (! self.offline && sync) {
-      serverPackageData = packageClient.updateServerPackageData(localData);
-      if (! serverPackageData) {
+      allPackageData = packageClient.updateServerPackageData(localData);
+      if (! allPackageData) {
         // If we couldn't contact the package server, use our local data.
-        serverPackageData = localData.collections;
+        allPackageData = localData.collections;
         // XXX should do some nicer error handling here (return error to
         // caller and let them handle it?)
         process.stderr.write("Warning: could not connect to package server\n");
       }
     } else {
-      serverPackageData = localData.collections;
+      allPackageData = localData.collections;
     }
 
     self.initialized = false;
     self.packages = [];
     self.versions = [];
     self.builds = [];
-    if (serverPackageData) {
-      self._insertServerPackages(serverPackageData);
+    if (allPackageData) {
+      self._insertServerPackages(allPackageData);
     }
     self._addLocalPackageOverrides(true /* setInitialized */);
   },
