@@ -78,16 +78,16 @@ _.extend(PackageLoader.prototype, {
 
     if (self.versions && ! _.has(self.versions, name)) {
       throw new Error("no version chosen for package " + name + "?");
-   }
+    }
 
     var version;
     if (self.versions) {
-      version = self.versions[name].version;
+      version = self.versions[name];
     } else {
       version = null;
     }
 
-   return catalog.catalog.getLoadPathForPackage(name, version);
+    return catalog.catalog.getLoadPathForPackage(name, version);
   },
 
   // Given a slice set spec -- either a package name like "ddp", or a particular

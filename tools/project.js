@@ -251,16 +251,9 @@ project.generatePackageLoader = function (appDir) {
   delete packages["ctl"];
   project.setDependencies(appDir, packages.appDeps, newVersions);
 
-  var newVersionsReform = {};
-  _.each(newVersions, function (version, name) {
-    newVersionsReform[name] = {
-      version: version
-    };
-  });
-
   var PackageLoader = require('./package-loader.js');
   var loader = new PackageLoader({
-    versions: newVersionsReform
+    versions: newVersions
   });
   return loader;
 };
