@@ -1,4 +1,8 @@
 gems = [
+  {"name":"hoe","number":"1.2.2","platform":"ruby","dependencies":[]},
+  {"name":"hoe","number":"1.3.0","platform":"ruby","dependencies":[]},
+  {"name":"hoe","number":"1.20.3","platform":"ruby","dependencies":[]},
+  {"name":"hoe","number":"2.20.1","platform":"ruby","dependencies":[]},
   {"name":"bundler","number":"1.0.0","platform":"ruby","dependencies":[]},
   {"name":"bundler","number":"1.0.2","platform":"ruby","dependencies":[]},
   {"name":"bundler","number":"1.1.0","platform":"ruby","dependencies":[]},
@@ -4073,7 +4077,6 @@ gems = [
   {"name":"mime-types","number":"1.17.2","platform":"ruby","dependencies":[]},
   {"name":"mime-types","number":"1.15","platform":"ruby","dependencies":[]},
   {"name":"mime-types","number":"1.18","platform":"ruby","dependencies":[]},
-  {"name":"mime-types","number":"1.16","platform":"ruby","dependencies":[["archive-tar-minitar","~> 0.5"],["nokogiri","~> 1.2"],["rcov","~> 0.8"],["hoe",">= 1.8.3"]]},
   {"name":"mime-types","number":"1.17","platform":"ruby","dependencies":[]},
   {"name":"mime-types","number":"1.17.1","platform":"ruby","dependencies":[]},
   {"name":"mime-types","number":"1.19","platform":"ruby","dependencies":[]},
