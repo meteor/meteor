@@ -1,6 +1,7 @@
 
 Package.describe({
-  summary: "Standards-compliant HTML tools"
+  summary: "Standards-compliant HTML tools",
+  internal: true
 });
 
 Package.on_use(function (api) {
