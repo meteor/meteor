@@ -49,6 +49,7 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("is crashing");
   s.unlink("crash.js");
+  run.waitSecs(5);
   run.match("Modified");
   run.match("restarted");
   s.write("empty.js", "");
@@ -70,6 +71,7 @@ selftest.define("run", function () {
 
   // Back to working
   s.unlink("junk.js");
+  run.waitSecs(5);
   run.match("restarted");
 
   // Crash just once, then restart successfully
