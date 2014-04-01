@@ -651,16 +651,14 @@ _.extend(Unipackage.prototype, {
       // built package's warehouse version. So it should not contain
       // platform-dependent data and should contain all sources of change to the
       // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
-      var buildTimeDirectDeps = self._buildTimeDirectDependenciesWithBuildIds();
-      var buildTimePluginDeps = self._buildTimePluginDependenciesWithBuildIds();
       var buildInfoJson = {
         builtBy: compiler.BUILT_BY,
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
         pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined,
-        buildTimeDirectDependencies: buildTimeDirectDeps,
-        buildTimePluginDependencies: buildTimePluginDeps
+        buildTimeDirectDependencies: self._buildTimeDirectDependenciesWithBuildIds(),
+        buildTimePluginDependencies: self._buildTimePluginDependenciesWithBuildIds()
       };
 
       builder.reserve("unipackage.json");
@@ -863,12 +861,8 @@ _.extend(Unipackage.prototype, {
     });
     var result = {};
     _.each(self.buildTimeDirectDependencies, function (version, packageName) {
-      if (packageName !== self.name) {
-        console.log("loading package", packageName, "for build id for", self.name);
-        var unipackage = directDepsLoader.getPackage(packageName);
-        console.log("done loading package", packageName, "for build id for", self.name);
-        result[packageName] = unipackage.version;
-      }
+      var unipackage = directDepsLoader.getPackage(packageName);
+      result[packageName] = unipackage.version;
     });
     return result;
   },
@@ -880,10 +874,8 @@ _.extend(Unipackage.prototype, {
       var pluginPackageLoader = new PackageLoader({ versions: deps });
       result[pluginName] = {};
       _.each(deps, function (version, packageName) {
-        if (packageName !== self.name) {
-          var unipackage = pluginPackageLoader.getPackage(packageName);
-          result[pluginName][packageName] = unipackage.version;
-        }
+        var unipackage = pluginPackageLoader.getPackage(packageName);
+        result[pluginName][packageName] = unipackage.version;
       });
     });
     return result;
@@ -896,32 +888,30 @@ _.extend(Unipackage.prototype, {
   // existing version has a build identifier already.
   addBuildIdentifierToVersion: function () {
     var self = this;
-    console.log("adding build id to", self.name);
+    // Gather all the dependencies' versions and organize them into
+    // arrays. We use arrays to avoid relying on the order of
+    // stringified object keys.
+    var directDeps = [];
+    _.each(
+      self._buildTimeDirectDependenciesWithBuildIds(),
+      function (version, packageName) {
+        directDeps.push([packageName, version]);
+      }
+    );
 
-    // // Gather all the dependencies' versions and organize them into
-    // // arrays. We use arrays to avoid relying on the order of
-    // // stringified object keys.
-    // var directDeps = [];
-    // _.each(
-    //   self._buildTimeDirectDependenciesWithBuildIds(),
-    //   function (version, packageName) {
-    //     directDeps.push([packageName, version]);
-    //   }
-    // );
-
-    // console.log("Got direct deps for build id for", self.name);
-
-    // // Sort direct dependencies by package name (which is the "0" property
-    // // of each element in the array).
-    // directDeps = _.sortBy(directDeps, "0");
+    // Sort direct dependencies by package name (which is the "0" property
+    // of each element in the array).
+    directDeps = _.sortBy(directDeps, "0");
 
     var pluginDeps = [];
     _.each(
       self._buildTimePluginDependenciesWithBuildIds(),
       function (versions, pluginName) {
+        var pluginDepsLoader = new PackageLoader({ versions: versions });
         var singlePluginDeps = [];
         _.each(versions, function (version, packageName) {
-          singlePluginDeps.push([packageName, version]);
+          var unipackage = pluginDepsLoader.getPackage(packageName);
+          singlePluginDeps.push([unipackage.name, unipackage.version]);
         });
         singlePluginDeps = _.sortBy(singlePluginDeps, "0");
         pluginDeps.push([pluginName, singlePluginDeps]);
@@ -945,6 +935,7 @@ _.extend(Unipackage.prototype, {
 
     // Stick all our info into one big array, stringify it, and hash it.
     var buildIdInfo = [
+      directDeps,
       pluginDeps,
       watchFiles
     ];
@@ -953,7 +944,6 @@ _.extend(Unipackage.prototype, {
     hasher.update(JSON.stringify(buildIdInfo));
     var buildId = hasher.digest('hex');
     self.version = self.version + "+" + buildId;
-    console.log("added build id to", self.name, self.version);
   }
 });
 
