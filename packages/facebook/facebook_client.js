@@ -20,7 +20,7 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
   }
 
   var credentialToken = Random.id();
-  var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
+  var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent);
   var display = mobile ? 'touch' : 'popup';
 
   var scope = "email";
