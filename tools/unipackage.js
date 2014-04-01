@@ -651,14 +651,16 @@ _.extend(Unipackage.prototype, {
       // built package's warehouse version. So it should not contain
       // platform-dependent data and should contain all sources of change to the
       // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
+      var buildTimeDirectDeps = self._buildTimeDirectDependenciesWithBuildIds();
+      var buildTimePluginDeps = self._buildTimePluginDependenciesWithBuildIds();
       var buildInfoJson = {
         builtBy: compiler.BUILT_BY,
         sliceDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
         pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined,
-        buildTimeDirectDependencies: self._buildTimeDirectDependenciesWithBuildIds(),
-        buildTimePluginDependencies: self._buildTimePluginDependenciesWithBuildIds()
+        buildTimeDirectDependencies: buildTimeDirectDeps,
+        buildTimePluginDependencies: buildTimePluginDeps
       };
 
       builder.reserve("unipackage.json");
@@ -907,11 +909,9 @@ _.extend(Unipackage.prototype, {
     _.each(
       self._buildTimePluginDependenciesWithBuildIds(),
       function (versions, pluginName) {
-        var pluginDepsLoader = new PackageLoader({ versions: versions });
         var singlePluginDeps = [];
         _.each(versions, function (version, packageName) {
-          var unipackage = pluginDepsLoader.getPackage(packageName);
-          singlePluginDeps.push([unipackage.name, unipackage.version]);
+          singlePluginDeps.push([packageName, version]);
         });
         singlePluginDeps = _.sortBy(singlePluginDeps, "0");
         pluginDeps.push([pluginName, singlePluginDeps]);
