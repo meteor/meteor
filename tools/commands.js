@@ -1640,13 +1640,16 @@ main.registerCommand({
   }
 
   process.stdout.write('Creating package version...\n');
+  var buildTimeDeps = compiler.determineBuildTimeDependencies(packageSource);
   var uploadInfo = conn.call('createPackageVersion', {
     packageName: packageSource.name,
     version: version,
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     containsPlugins: packageSource.containsPlugins,
-    dependencies: packageSource.getDependencyMetadata()
+    dependencies: packageSource.getDependencyMetadata(),
+    buildTimeDirectDependencies: buildTimeDeps.directDependencies,
+    buildTimePluginDependencies: buildTimeDeps.pluginDependencies
   });
 
   // XXX If package version already exists, print a nice error message
@@ -1719,7 +1722,11 @@ main.registerCommand({
   var packageSource = new PackageSource;
   packageSource.initFromPackageDir(options.name, packageDir);
   var unipackage = compiler.compile(packageSource, {
-    officialBuild: true
+    officialBuild: true,
+    buildTimeDependencies: {
+      directDependencies: pkgVersion.buildTimeDirectDependencies,
+      pluginDependencies: pkgVersion.buildTimePluginDependencies
+    }
   }).unipackage;
   unipackage.saveToPath(path.join(packageDir, '.build'));
 

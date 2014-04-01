@@ -178,6 +178,8 @@ var determineBuildTimeDependencies = function (packageSource) {
   return ret;
 };
 
+compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
+
 // inputSlice is a SourceSlice to compile. Process all source files
 // through the appropriate handlers and run the prelink phase on any
 // resulting JavaScript. Create a new UnipackageSlice and add it to
@@ -607,6 +609,9 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
 //    the package's source. You should set it to true when you are
 //    building a package to publish as an official build with the
 //    package server.
+//  - buildTimeDependencies: optional. If present with keys
+//    'directDependencies' and 'pluginDependencies', it will be used
+//    instead of calling 'determineBuildTimeDependencies'.
 //
 // Returns an object with keys:
 // - unipackage: the build Unipackage
@@ -621,7 +626,14 @@ compiler.compile = function (packageSource, options) {
   options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  var buildTimeDeps;
+  if (options.buildTimeDependencies &&
+      options.buildTimeDependencies.directDependencies &&
+      options.buildTimeDependencies.pluginDependencies) {
+    buildTimeDeps = options.buildTimeDependencies;
+  } else {
+    buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  }
 
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
