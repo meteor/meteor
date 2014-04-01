@@ -890,21 +890,9 @@ _.extend(Unipackage.prototype, {
   // existing version has a build identifier already.
   addBuildIdentifierToVersion: function () {
     var self = this;
-    // Gather all the dependencies' versions and organize them into
-    // arrays. We use arrays to avoid relying on the order of
+    // Gather all the plugin dependencies' versions and organize them
+    // into arrays. We use arrays to avoid relying on the order of
     // stringified object keys.
-    var directDeps = [];
-    _.each(
-      self._buildTimeDirectDependenciesWithBuildIds(),
-      function (version, packageName) {
-        directDeps.push([packageName, version]);
-      }
-    );
-
-    // Sort direct dependencies by package name (which is the "0" property
-    // of each element in the array).
-    directDeps = _.sortBy(directDeps, "0");
-
     var pluginDeps = [];
     _.each(
       self._buildTimePluginDependenciesWithBuildIds(),
@@ -935,7 +923,6 @@ _.extend(Unipackage.prototype, {
 
     // Stick all our info into one big array, stringify it, and hash it.
     var buildIdInfo = [
-      directDeps,
       pluginDeps,
       watchFiles
     ];
