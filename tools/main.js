@@ -678,10 +678,13 @@ Fiber(function () {
     localPackageDirs = localPackageDirs.concat(
       process.env.PACKAGE_DIRS.split(':'));
 
+  var bootstrapPackageDirs = [];
+
   if (releaseName === null) {
     // Running from a checkout, so use the Meteor core packages from
     // the checkout.
-    localPackageDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
+    bootstrapPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
   }
 
   // Initialize the singleton Catalog. Only after this point is the
@@ -691,8 +694,9 @@ Fiber(function () {
   // attempt to contact the server for more recent data. Otherwise, the catalog
   // will attempt to synchronize with the remote package server.
   catalog.initialize({
-      localPackageDirs: localPackageDirs,
-      offline: _.has(rawOptions, '--no-net')
+    bootstrapLocalPackageDirs: bootstrapPackageDirs,
+    localPackageDirs: localPackageDirs,
+    offline: _.has(rawOptions, '--no-net')
   });
   // We need to delete the option or we will throw an error.
   // XXX: This seems like a hack?
