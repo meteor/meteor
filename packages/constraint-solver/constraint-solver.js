@@ -209,6 +209,20 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       }, 0);
     };
 
+    resolverOptions.estimateCostFunction = function (state) {
+      return _.reduce(state.dependencies, function (sum, dep) {
+        var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(), function (uv) { return unitVersionDoesntValidateConstraints(uv, state.constraints); });
+
+        if (! uv)
+          return (1 << 30);
+
+        var difference = semverToNum(self.resolver._latestVersion[uv.name]) -
+          semverToNum(uv.version);
+
+        return sum + difference;
+      }, 0);
+    };
+
     break;
 
   case "CONSERVATIVE":

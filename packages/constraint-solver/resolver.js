@@ -64,7 +64,7 @@ ConstraintSolver.Resolver.prototype.resolve =
   choices = choices || [];
   options = _.extend({
     costFunction: function (choices) { return 0; },
-    estimateCostFunction: function (dependencies, constraints, choices) {
+    estimateCostFunction: function (state) {
       return 0;
     }
   }, options);
@@ -267,7 +267,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   };
 };
 
-var unitVersionDoesntValidateConstraints = function (uv, constraints) {
+unitVersionDoesntValidateConstraints = function (uv, constraints) {
   return _.all(constraints, function (c) {
     return c.name !== uv.name || c.isSatisfied(uv);
   });
