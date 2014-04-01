@@ -143,7 +143,7 @@ _.extend(PackageCache.prototype, {
       self.loadedPackages[loadPath] = {
         pkg: unipackage,
         sourceDir: null,
-        buildDir: loadPath
+        buildDir: buildDir
       };
 
       if (! buildmessage.jobHasMessages()) {
