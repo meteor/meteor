@@ -166,7 +166,7 @@ var release = require('./release.js');
 var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 
 
 // files to ignore when bundling. node has no globs, so use regexps

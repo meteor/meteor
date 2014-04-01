@@ -5,7 +5,7 @@ var files = require('./files.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var release = require('./release.js');
 
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 var Proxy = require('./run-proxy.js').Proxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;

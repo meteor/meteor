@@ -13,7 +13,7 @@ var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').

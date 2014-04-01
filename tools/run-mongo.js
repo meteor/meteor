@@ -6,7 +6,7 @@ var utils = require('./utils.js');
 var release = require('./release.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 
 var _ = require('underscore');
 var unipackage = require('./unipackage.js');

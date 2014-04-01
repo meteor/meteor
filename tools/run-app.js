@@ -10,7 +10,7 @@ var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
