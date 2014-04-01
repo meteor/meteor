@@ -837,8 +837,9 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     return false;
   }
 
-  var directDepsPackageLoader = new PackageLoader(
-    buildTimeDeps.directDependencies);
+  var directDepsPackageLoader = new PackageLoader({
+    versions: buildTimeDeps.directDependencies
+  });
   var directDepsMatch = _.all(
     buildTimeDeps.directDependencies,
     function (version, packageName) {
