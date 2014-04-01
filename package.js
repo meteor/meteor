@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Small library for expressing HTML trees"
+  summary: "Small library for expressing HTML trees",
+  internal: true
 });
 
 Package.on_use(function (api) {
