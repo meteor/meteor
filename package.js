@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Additional tests for Spacebars"
+  summary: "Additional tests for Spacebars",
+  internal: true
 });
 
 // These tests are in a separate package to avoid a circular dependency
