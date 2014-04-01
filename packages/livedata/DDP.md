@@ -82,7 +82,11 @@ the server having been upgraded.
 
 ### Procedure:
 
-At any time after the connection is established either side may send a `ping` message. The sender may chose to include an `id` field in the `ping` message. When the other side receives a `ping` it must immediately respond with a `pong` message. If the received `ping` message includes an `id` field, the `pong` message must include the same `id` field.
+At any time after the connection is established either side may send a `ping`
+message. The sender may chose to include an `id` field in the `ping`
+message. When the other side receives a `ping` it must immediately respond with
+a `pong` message. If the received `ping` message includes an `id` field, the
+`pong` message must include the same `id` field.
 
 ## Managing Data:
 
