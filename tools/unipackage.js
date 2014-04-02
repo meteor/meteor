@@ -893,6 +893,14 @@ _.extend(Unipackage.prototype, {
     // Gather all the plugin dependencies' versions and organize them
     // into arrays. We use arrays to avoid relying on the order of
     // stringified object keys.
+    var directDepsWithPlugins = [];
+    _.each(
+      self._buildTimeDirectDependenciesWithBuildIds(),
+      function (version, packageName) {
+        directDepsWithPlugins.push([packageName, version]);
+      }
+    );
+
     var pluginDeps = [];
     _.each(
       self._buildTimePluginDependenciesWithBuildIds(),
@@ -923,6 +931,7 @@ _.extend(Unipackage.prototype, {
 
     // Stick all our info into one big array, stringify it, and hash it.
     var buildIdInfo = [
+      directDepsWithPlugins,
       pluginDeps,
       watchFiles
     ];

@@ -627,12 +627,22 @@ compiler.compile = function (packageSource, options) {
 
   // Determine versions of build-time dependencies
   var buildTimeDeps;
+  var allDirectDeps;
   if (options.buildTimeDependencies &&
       options.buildTimeDependencies.directDependencies &&
-      options.buildTimeDependencies.pluginDependencies) {
-    buildTimeDeps = options.buildTimeDependencies;
+      options.buildTImeDependencies.pluginDependencies) {
+    allDirectDeps = options.buildTimeDependencies.directDependencies;
+    buildTimeDeps = buildTimeDependenciesToConstraints(
+      packageSource,
+      options.buildTimeDependencies
+    );
   } else {
-    buildTimeDeps = determineBuildTimeDependencies(packageSource);
+    var allBuildTimeDeps = determineBuildTimeDependencies(packageSource);
+    allDirectDeps = allBuildTimeDeps.directDependencies;
+    buildTimeDeps = buildTimeDependenciesToConstraints(
+      packageSource,
+      allBuildTimeDeps
+    );
   }
 
   // Build plugins
@@ -642,6 +652,7 @@ compiler.compile = function (packageSource, options) {
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
+
       var packageLoader = new PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name]
       });
@@ -721,7 +732,7 @@ compiler.compile = function (packageSource, options) {
   // Build slices. Might use our plugins, so needs to happen
   // second.
   var packageLoader = new PackageLoader({
-    versions: buildTimeDeps.directDependencies
+    versions: allDirectDeps
   });
 
   _.each(packageSource.slices, function (slice) {
@@ -757,6 +768,37 @@ compiler.compile = function (packageSource, options) {
   };
 };
 
+var buildTimeDependenciesToConstraints = function (packageSource, buildTimeDeps) {
+  var result = {
+    directDependencies: {},
+    pluginDependencies: {}
+  };
+
+  _.each(buildTimeDeps.directDependencies, function (version, name) {
+    if (name !== packageSource.name) {
+      // Direct dependencies only create a build-order constraint if
+      // they contain a plugin.
+      var catalogVersion = catalog.catalog.getVersion(name, version);
+      if (! catalogVersion) {
+        throw new Error("No catalog version for " +
+                        name + " " + version + "?");
+      }
+      if (catalogVersion.containsPlugins) {
+        result.directDependencies[name] = version;
+      }
+    }
+  });
+  _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
+    result.pluginDependencies[pluginName] = {};
+    _.each(versions, function (version, name) {
+      if (name !== packageSource.name) {
+        result.pluginDependencies[pluginName][name] = version;
+      }
+    });
+  });
+  return result;
+};
+
 // Figure out what packages have to be compiled and available in the
 // catalog before 'packageSource' can be compiled. Returns an array of
 // objects with keys 'name', 'version' (the latter a version
@@ -770,19 +812,15 @@ compiler.getBuildOrderConstraints = function (packageSource) {
     versions[name][version] = true;
   };
 
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
-  _.each(buildTimeDeps.directDependencies, function (version, name) {
-    // Direct dependencies only create a build-order constraint if they contain
-    // a plugin.
-    if( catalog.catalog.getVersion(name, version).containsPlugins) {
-      addVersion(version, name);
-    }
-  });
+  var buildTimeDeps = buildTimeDependenciesToConstraints(
+    packageSource,
+    determineBuildTimeDependencies(packageSource)
+  );
+
+  _.each(buildTimeDeps.directDependencies, addVersion);
   _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
     _.each(versions, addVersion);
   });
-
-  delete versions[packageSource.name];
 
   var ret = [];
   _.each(versions, function (versionArray, name) {
