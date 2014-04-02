@@ -77,6 +77,15 @@ DDP.RandomStreams.makeMongoOid = function (collectionName) {
   return src.hexString(24);
 };
 
+// Creates a randomSeed for passing to a method call
+// Note that we take enclosing as an argument, though we expect it to be DDP._CurrentInvocation.get()
+// However, we often evaluate makeRpcSeed lazily, and thus the relevant invocation may not be the one
+// currently in scope.
+DDP.RandomStreams.makeRpcSeed = function (enclosing, methodName) {
+  var stream = DDP.RandomStreams.get(enclosing, '/rpc/' + methodName);
+  return stream.hexString(20);
+};
+
 _.extend(RandomStream.prototype, {
   // Get a random sequence with the specified key, creating it if does not exist.
   // New sequences are seeded with the seed concatenated with the key.

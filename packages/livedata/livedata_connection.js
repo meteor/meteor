@@ -672,10 +672,10 @@ _.extend(Connection.prototype, {
     // randomSeed to save bandwidth, and we don't even generate it to save a
     // bit of CPU and to avoid consuming entropy.
     var randomSeed = {};
-    randomSeed.generator = function (){
+    randomSeed.generator = function () {
       var self = randomSeed;
       if (self.randomSeed === undefined) {
-        self.randomSeed = DDP.RandomStreams.get(enclosing, '/rpc/' + name).hexString(20);
+        self.randomSeed = DDP.RandomStreams.makeRpcSeed(enclosing, name);
       }
       return self.randomSeed;
     };
@@ -701,7 +701,7 @@ _.extend(Connection.prototype, {
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
-        randomSeed: randomSeed.generator
+        randomSeed: function () { return randomSeed.generator(); }
       });
 
       if (!alreadyInSimulation)
