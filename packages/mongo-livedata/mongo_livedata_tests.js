@@ -35,13 +35,17 @@ var INSERTED_IDS = {};
 Meteor.methods({
   insertObjects: function (collectionName, doc, count) {
     var c = COLLECTIONS[collectionName];
-    ids = [];
+    var ids = [];
     for (var i = 0; i < count; i++) {
       var id = c.insert(doc);
       INSERTED_IDS[collectionName] = (INSERTED_IDS[collectionName] || []).concat([id]);
       ids.push(id);
     }
     return ids;
+  },
+  upsertObject: function (collectionName, selector, modifier) {
+    var c = COLLECTIONS[collectionName];
+    return c.upsert(selector, modifier);
   },
   doMeteorCall: function (name /*, arguments */) {
     var args = Array.prototype.slice.call(arguments);
@@ -2157,7 +2161,42 @@ testAsyncMulti('mongo-livedata - specified _id', [
 function collectionInsert (test, expect, coll, index) {
   var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
     test.equal(id, clientSideId);
-    test.notEqual(null, coll.find(clientSideId));
+    var o = coll.findOne(id);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function collectionUpsert (test, expect, coll, index) {
+  var upsertId = '123456' + index;
+
+  coll.upsert(upsertId, {$set: {name: "foo"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, upsertId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(upsertId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function collectionUpsertExisting (test, expect, coll, index) {
+  var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
+    test.equal(id, clientSideId);
+
+    var o = coll.findOne(id);
+    test.isTrue(_.isObject(o));
+    // We're not testing sequencing/visibility rules here, so skip this check
+    // test.equal(o.name, 'foo');
+  }));
+
+  coll.upsert(clientSideId, {$set: {name: "bar"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, clientSideId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(clientSideId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'bar');
   }));
 };
 
@@ -2168,7 +2207,39 @@ function functionCallsInsert (test, expect, coll, index) {
 
     test.equal(ids.length, 1);
     test.equal(ids[0], stubId);
-    test.notEqual(null, coll.find(stubId));
+
+    var o = coll.findOne(stubId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function functionCallsUpsert (test, expect, coll, index) {
+  var upsertId = '123456' + index;
+  Meteor.call("upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, upsertId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(upsertId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function functionCallsUpsertExisting (test, expect, coll, index) {
+  var id = coll.insert({name: "foo"});
+
+  var o = coll.findOne(id);
+  test.notEqual(null, o);
+  test.equal(o.name, 'foo');
+
+  Meteor.call("upsertObject", coll._name, id, {$set:{name: "bar"}}, expect(function (err1, result) {
+    test.equal(result.numberAffected, 1);
+    test.equal(result.insertedId, undefined);
+
+    var o = coll.findOne(id);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'bar');
   }));
 };
 
@@ -2180,7 +2251,10 @@ function functionCalls3Inserts (test, expect, coll, index) {
     for (var i = 0; i < 3; i++) {
       var stubId = INSERTED_IDS[coll._name][(3 * index) + i];
       test.equal(ids[i], stubId);
-      test.notEqual(null, coll.find(stubId));
+
+      var o = coll.findOne(stubId);
+      test.isTrue(_.isObject(o));
+      test.equal(o.name, 'foo');
     }
   }));
 };
@@ -2188,12 +2262,14 @@ function functionCalls3Inserts (test, expect, coll, index) {
 function functionChainInsert (test, expect, coll, index) {
   Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
     test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
-    test.equal(ids.length, 1);
-
     var stubId = INSERTED_IDS[coll._name][index];
+
+    test.equal(ids.length, 1);
     test.equal(ids[0], stubId);
 
-    test.notEqual(null, coll.find(stubId));
+    var o = coll.findOne(stubId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
   }));
 };
 
@@ -2205,11 +2281,29 @@ function functionChain2Insert (test, expect, coll, index) {
     test.equal(ids.length, 1);
     test.equal(ids[0], stubId);
 
-    test.notEqual(null, coll.find(stubId));
+    var o = coll.findOne(stubId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
   }));
 };
 
-_.each( [collectionInsert, functionCallsInsert, functionCalls3Inserts, functionChainInsert, functionChain2Insert], function (fn) {
+function functionChain2Upsert (test, expect, coll, index) {
+  var upsertId = '123456' + index;
+  Meteor.call("doMeteorCall", "doMeteorCall", "upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, upsertId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(upsertId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+_.each( [collectionInsert, collectionUpsert,
+         functionCallsInsert, functionCallsUpsert, functionCallsUpsertExisting,
+         functionCalls3Inserts,
+         functionChainInsert,
+         functionChain2Insert, functionChain2Upsert], function (fn) {
 _.each( [1, 3], function (repetitions) {
 _.each( [1, 3], function (collectionCount) {
 _.each( [undefined, 'STRING', 'MONGO'], function (idGeneration) {
@@ -2233,7 +2327,7 @@ _.each( [undefined, 'STRING', 'MONGO'], function (idGeneration) {
       collections.push(coll);
     }
 
-    // Reset state
+    // Reset state before actual test
     INSERTED_IDS = {};
 
     for (var i = 0; i < repetitions; i++) {
