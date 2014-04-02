@@ -2,6 +2,10 @@
 // the selector (or inserted document) contains fail: true.
 
 var TRANSFORMS = {};
+
+// We keep track of the collections, so we can refer to them by name
+var COLLECTIONS = {};
+
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
@@ -15,6 +19,7 @@ if (Meteor.isServer) {
         options.transform = TRANSFORMS[options.transformName];
       }
       var c = new Meteor.Collection(name, options);
+      COLLECTIONS[name] = c;
       c._insecure = true;
       Meteor.publish('c-' + name, function () {
         return c.find();
@@ -22,6 +27,28 @@ if (Meteor.isServer) {
     }
   });
 }
+
+// We store the generated id, keyed by collection, for each insert
+// This is so we can test the stub and the server generate the same id
+var INSERTED_IDS = {};
+
+Meteor.methods({
+  insertObjects: function (collectionName, doc, count) {
+    var c = COLLECTIONS[collectionName];
+    ids = [];
+    for (var i = 0; i < count; i++) {
+      var id = c.insert(doc);
+      INSERTED_IDS[collectionName] = (INSERTED_IDS[collectionName] || []).concat([id]);
+      ids.push(id);
+    }
+    return ids;
+  },
+  doMeteorCall: function () {
+    var args = Array.prototype.slice.call(arguments);
+
+    return Meteor.call.apply(null, args);
+  }
+});
 
 var runInFence = function (f) {
   if (Meteor.isClient) {
@@ -2126,22 +2153,82 @@ testAsyncMulti('mongo-livedata - specified _id', [
 ]);
 
 
-testAsyncMulti('mongo-livedata - consistent _id generation', [
-  function (test, expect) {
-    var collectionName = "consistentid_" + Random.id();
-    if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+// Consistent id generation tests
+function collectionInsert (test, expect, coll, index) {
+  var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
+    test.equal(id, clientSideId);
+    test.notEqual(null, coll.find(clientSideId));
+  }));
+};
+
+function functionCallsInsert (test, expect, coll, index) {
+  Meteor.call("insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    var stubId = INSERTED_IDS[coll._name][index];
+    test.equal(ids[0], stubId);
+    test.notEqual(null, coll.find(stubId));
+  }));
+};
+
+function functionCalls3Inserts (test, expect, coll, index) {
+  Meteor.call("insertObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
+    for (var i = 0; i < 3; i++) {
+      var stubId = INSERTED_IDS[coll._name][(3 * index) + i];
+      test.equal(ids[i], stubId);
+      test.notEqual(null, coll.find(stubId));
     }
-    var coll = new Meteor.Collection(collectionName);
-    
-    var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
-      test.equal(id, clientSideId);
-      var doc = coll.findOne();
-      test.equal(doc._id, clientSideId);
-    }));
-  }
-]);
+  }));
+};
+
+function functionChainInsert (test, expect, coll, index) {
+  Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    var stubId = INSERTED_IDS[coll._name][index];
+    test.equal(ids[0], stubId);
+    test.notEqual(null, coll.find(stubId));
+  }));
+};
+
+function functionChain2Insert (test, expect, coll, index) {
+  Meteor.call("doMeteorCall", "doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    var stubId = INSERTED_IDS[coll._name][index];
+    test.equal(ids[0], stubId);
+    test.notEqual(null, coll.find(stubId));
+  }));
+};
+
+_.each([collectionInsert, functionCallsInsert, functionCalls3Inserts, functionChainInsert, functionChain2Insert], function (fn) {
+  _.each([1, 3], function (repetitions) {
+    _.each([1, 3], function (collectionCount) {
+      testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections', [ function (test, expect) {
+        var collections = [];
+
+        for (var i = 0; i < collectionCount; i++) {
+          //var fn = this[fnName];
+          var collectionName = "consistentid_" + Random.id();
+          if (Meteor.isClient) {
+            Meteor.call('createInsecureCollection', collectionName);
+            Meteor.subscribe('c-' + collectionName);
+          }
+
+          var coll = new Meteor.Collection(collectionName);
+          COLLECTIONS[collectionName] = coll;
+
+          collections.push(coll);
+        }
+
+        // Reset state
+        INSERTED_IDS = {};
+
+        for (var i = 0; i < repetitions; i++) {
+          for (var j = 0; j < collectionCount; j++) {
+            fn(test, expect, collections[j], i);
+          }
+        }
+      }]);
+    });
+  });
+});
+
+
 
 testAsyncMulti('mongo-livedata - empty string _id', [
   function (test, expect) {
