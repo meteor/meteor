@@ -443,8 +443,11 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
+      options = {};
+      options.suppressRandomSeed = true;
+
       ret = chooseReturnValueFromCollectionResult(
-        self._connection.apply(self._prefix + name, args, wrappedCallback)
+        self._connection.apply(self._prefix + name, args, options, wrappedCallback)
       );
 
     } else {
