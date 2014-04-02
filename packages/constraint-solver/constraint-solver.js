@@ -201,26 +201,32 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var resolverOptions = {};
   switch (options.mode) {
   case "LATEST":
-    resolverOptions.costFunction = function (choices) {
-      return _.reduce(choices, function (sum, uv) {
-        var difference = semverToNum(self.resolver._latestVersion[uv.name]) -
-          semverToNum(uv.version);
-        return difference + sum;
-      }, 0);
+    resolverOptions.costFunction = function (choices, options) {
+      var rootDeps = options.rootDependencies;
+      return _.chain(choices)
+              .filter(function (uv) { return _.contains(rootDeps, uv.name); })
+              .reduce(function (sum, uv) {
+                return semverToNum(self.resolver._latestVersion[uv.name]) -
+                  semverToNum(uv.version) + sum;
+              }, 0).value();
     };
 
-    resolverOptions.estimateCostFunction = function (state) {
-      return _.reduce(state.dependencies, function (sum, dep) {
-        var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(), function (uv) { return unitVersionDoesntValidateConstraints(uv, state.constraints); });
+    resolverOptions.estimateCostFunction = function (state, options) {
+      var rootDeps = options.rootDependencies;
+      return _.chain(state.dependencies)
+              .filter(function (dep) { return _.contains(rootDeps, dep); })
+              .reduce(function (sum, dep) {
+                var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(),
+                                function (uv) { return unitVersionDoesntValidateConstraints(uv, state.constraints); });
 
-        if (! uv)
-          return (1 << 30);
+                if (! uv)
+                  return (1 << 30);
 
-        var difference = semverToNum(self.resolver._latestVersion[uv.name]) -
-          semverToNum(uv.version);
+                var difference = semverToNum(self.resolver._latestVersion[uv.name]) -
+                  semverToNum(uv.version);
 
-        return sum + difference;
-      }, 0);
+                return sum + difference;
+              }, 0).value();
     };
 
     break;

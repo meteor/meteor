@@ -72,6 +72,8 @@ ConstraintSolver.Resolver.prototype.resolve =
   dependencies = _.uniq(dependencies);
   constraints = _.uniq(constraints);
 
+  var rootDependencies = _.clone(dependencies);
+
   var exactDepsConstraints = _.filter(constraints, function (c) {
     return c.exact && _.contains(dependencies, c.name);
   });
@@ -111,7 +113,8 @@ ConstraintSolver.Resolver.prototype.resolve =
     choices: choices
   };
 
-  pq.push(startState, options.estimateCostFunction(startState));
+  var opts = { rootDependencies: rootDependencies };
+  pq.push(startState, options.estimateCostFunction(startState, opts));
 
   var someError = null;
   while (! pq.empty()) {
@@ -120,15 +123,18 @@ ConstraintSolver.Resolver.prototype.resolve =
     if (_.isEmpty(currentState.dependencies))
       return currentState.choices;
 
-    var currentCost = options.costFunction(currentState.choices);
+    console.log(currentState.dependencies.length)
+
+    var currentCost = options.costFunction(currentState.choices, opts);
     var neighborsObj = self._stateNeighbors(currentState);
 
     if (! neighborsObj.success)
       someError = someError || neighborsObj.failureMsg;
     else {
       _.each(neighborsObj.neighbors, function (state) {
-        var tentativeCost = options.costFunction(state.choices) +
-          options.estimateCostFunction(state);
+        var tentativeCost =
+          options.costFunction(state.choices, opts) +
+          options.estimateCostFunction(state, opts);
 
         pq.push(state, tentativeCost);
       });
