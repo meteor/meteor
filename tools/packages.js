@@ -49,47 +49,56 @@ var parseSpec = function (spec) {
   return ret;
 };
 
-// A sort comparator to order files into load order.
-var loadOrderSort = function (a, b) {
-  // XXX HUGE HACK --
-  // push html (template) files ahead of everything else. this is
-  // important because the user wants to be able to say
-  // Template.foo.events = { ... }
-  //
-  // maybe all of the templates should go in one file? packages should
-  // probably have a way to request this treatment (load order
-  // dependency tags?) .. who knows.
-  var ishtml_a = path.extname(a) === '.html';
-  var ishtml_b = path.extname(b) === '.html';
-  if (ishtml_a !== ishtml_b) {
-    return (ishtml_a ? -1 : 1);
-  }
+// Returns a sort comparator to order files into load order.
+// templateExtensions should be a list of extensions like 'html'
+// which should be loaded before other extensions.
+var loadOrderSort = function (templateExtensions) {
+  var templateExtnames = {};
+  _.each(templateExtensions, function (extension) {
+    templateExtnames['.' + extension] = true;
+  });
 
-  // main.* loaded last
-  var ismain_a = (path.basename(a).indexOf('main.') === 0);
-  var ismain_b = (path.basename(b).indexOf('main.') === 0);
-  if (ismain_a !== ismain_b) {
-    return (ismain_a ? 1 : -1);
-  }
+  return function (a, b) {
+    // XXX MODERATELY SIZED HACK --
+    // push template files ahead of everything else. this is
+    // important because the user wants to be able to say
+    //   Template.foo.events = { ... }
+    // in a JS file and not have to worry about ordering it
+    // before the corresponding .html file.
+    //
+    // maybe all of the templates should go in one file?
+    var isTemplate_a = _.has(templateExtnames, path.extname(a));
+    var isTemplate_b = _.has(templateExtnames, path.extname(b));
+    if (isTemplate_a !== isTemplate_b) {
+      return (isTemplate_a ? -1 : 1);
+    }
 
-  // /lib/ loaded first
-  var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
-                 a.indexOf('lib' + path.sep) === 0);
-  var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
-                 b.indexOf('lib' + path.sep) === 0);
-  if (islib_a !== islib_b) {
-    return (islib_a ? -1 : 1);
-  }
+    // main.* loaded last
+    var ismain_a = (path.basename(a).indexOf('main.') === 0);
+    var ismain_b = (path.basename(b).indexOf('main.') === 0);
+    if (ismain_a !== ismain_b) {
+      return (ismain_a ? 1 : -1);
+    }
 
-  // deeper paths loaded first.
-  var len_a = a.split(path.sep).length;
-  var len_b = b.split(path.sep).length;
-  if (len_a !== len_b) {
-    return (len_a < len_b ? 1 : -1);
-  }
+    // /lib/ loaded first
+    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   a.indexOf('lib' + path.sep) === 0);
+    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   b.indexOf('lib' + path.sep) === 0);
+    if (islib_a !== islib_b) {
+      return (islib_a ? -1 : 1);
+    }
 
-  // otherwise alphabetical
-  return (a < b ? -1 : 1);
+    // deeper paths loaded first.
+    var len_a = a.split(path.sep).length;
+    var len_b = b.split(path.sep).length;
+    if (len_a !== len_b) {
+      return (len_a < len_b ? 1 : -1);
+    }
+
+    // otherwise alphabetical
+    return (a < b ? -1 : 1);
+  };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -729,15 +738,18 @@ _.extend(Slice.prototype, {
     // We provide a hardcoded handler for *.js files.. since plugins
     // are written in JavaScript we have to start somewhere.
     _.extend(ret, {
-      js: function (compileStep) {
-        compileStep.addJavaScript({
-          data: compileStep.read().toString('utf8'),
-          path: compileStep.inputPath,
-          sourcePath: compileStep.inputPath,
-          // XXX eventually get rid of backward-compatibility "raw" name
-          // XXX COMPAT WITH 0.6.4
-          bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
-        });
+      js: {
+        handler: function (compileStep) {
+          compileStep.addJavaScript({
+            data: compileStep.read().toString('utf8'),
+            path: compileStep.inputPath,
+            sourcePath: compileStep.inputPath,
+            // XXX eventually get rid of backward-compatibility "raw" name
+            // XXX COMPAT WITH 0.6.4
+            bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
+          });
+        },
+        isTemplate: false
       }
     });
 
@@ -768,6 +780,20 @@ _.extend(Slice.prototype, {
     return _.keys(self._allHandlers());
   },
 
+  // Return a list of all of the extensions that indicate *template* source
+  // files for this slice, not including leading dots. Computed based on
+  // this.uses, so should only be called once that has been set.
+  registeredTemplateExtensions: function () {
+    var self = this;
+    var ret = [];
+    _.each(self._allHandlers(), function (handler, extension) {
+      if (handler.isTemplate) {
+        ret.push(extension);
+      }
+    });
+    return ret;
+  },
+
   // Find the function that should be used to handle a source file for
   // this slice, or return null if there isn't one. We'll use handlers
   // that are defined in this package and in its immediate dependencies.
@@ -778,7 +804,7 @@ _.extend(Slice.prototype, {
     for (var i = 0; i < parts.length; i++) {
       var extension = parts.slice(i).join('.');
       if (_.has(handlers, extension))
-        return handlers[extension];
+        return handlers[extension].handler;
     }
     return null;
   }
@@ -1001,9 +1027,18 @@ _.extend(Package.prototype, {
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
+      // 'options' can be elided. The only known option is 'isTemplate', which
+      // is a bit of a hack meaning "in an app, these files should be loaded
+      // before non-templates".
+      //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
-      registerSourceHandler: function (extension, handler) {
+      registerSourceHandler: function (extension, options, handler) {
+        if (!handler) {
+          handler = options;
+          options = {};
+        }
+
         if (_.has(self.sourceHandlers, extension)) {
           buildmessage.error("duplicate handler for '*." +
                              extension + "'; may only have one per Plugin",
@@ -1012,7 +1047,10 @@ _.extend(Package.prototype, {
           return;
         }
 
-        self.sourceHandlers[extension] = handler;
+        self.sourceHandlers[extension] = {
+          handler: handler,
+          isTemplate: !!options.isTemplate
+        };
       }
     };
 
@@ -1795,7 +1833,8 @@ _.extend(Package.prototype, {
         }
 
         // We've found all the source files. Sort them!
-        sources.sort(loadOrderSort);
+        var templateExtensions = slice.registeredTemplateExtensions();
+        sources.sort(loadOrderSort(templateExtensions));
 
         // Convert into relPath/fileOptions objects.
         sources = _.map(sources, function (relPath) {
