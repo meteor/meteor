@@ -43,7 +43,7 @@ Meteor.methods({
     }
     return ids;
   },
-  doMeteorCall: function () {
+  doMeteorCall: function (name /*, arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
     return Meteor.call.apply(null, args);
@@ -2163,7 +2163,10 @@ function collectionInsert (test, expect, coll, index) {
 
 function functionCallsInsert (test, expect, coll, index) {
   Meteor.call("insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
     var stubId = INSERTED_IDS[coll._name][index];
+
+    test.equal(ids.length, 1);
     test.equal(ids[0], stubId);
     test.notEqual(null, coll.find(stubId));
   }));
@@ -2171,6 +2174,9 @@ function functionCallsInsert (test, expect, coll, index) {
 
 function functionCalls3Inserts (test, expect, coll, index) {
   Meteor.call("insertObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+    test.equal(ids.length, 3);
+
     for (var i = 0; i < 3; i++) {
       var stubId = INSERTED_IDS[coll._name][(3 * index) + i];
       test.equal(ids[i], stubId);
@@ -2181,16 +2187,24 @@ function functionCalls3Inserts (test, expect, coll, index) {
 
 function functionChainInsert (test, expect, coll, index) {
   Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+    test.equal(ids.length, 1);
+
     var stubId = INSERTED_IDS[coll._name][index];
     test.equal(ids[0], stubId);
+
     test.notEqual(null, coll.find(stubId));
   }));
 };
 
 function functionChain2Insert (test, expect, coll, index) {
   Meteor.call("doMeteorCall", "doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
     var stubId = INSERTED_IDS[coll._name][index];
+
+    test.equal(ids.length, 1);
     test.equal(ids[0], stubId);
+
     test.notEqual(null, coll.find(stubId));
   }));
 };
