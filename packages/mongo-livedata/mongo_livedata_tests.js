@@ -2209,37 +2209,43 @@ function functionChain2Insert (test, expect, coll, index) {
   }));
 };
 
-_.each([collectionInsert, functionCallsInsert, functionCalls3Inserts, functionChainInsert, functionChain2Insert], function (fn) {
-  _.each([1, 3], function (repetitions) {
-    _.each([1, 3], function (collectionCount) {
-      testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections', [ function (test, expect) {
-        var collections = [];
+_.each( [collectionInsert, functionCallsInsert, functionCalls3Inserts, functionChainInsert, functionChain2Insert], function (fn) {
+_.each( [1, 3], function (repetitions) {
+_.each( [1, 3], function (collectionCount) {
+_.each( [undefined, 'STRING', 'MONGO'], function (idGeneration) {
 
-        for (var i = 0; i < collectionCount; i++) {
-          //var fn = this[fnName];
-          var collectionName = "consistentid_" + Random.id();
-          if (Meteor.isClient) {
-            Meteor.call('createInsecureCollection', collectionName);
-            Meteor.subscribe('c-' + collectionName);
-          }
+  testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
+    var collectionOptions = { idGeneration: idGeneration, };
 
-          var coll = new Meteor.Collection(collectionName);
-          COLLECTIONS[collectionName] = coll;
+    var collections = [];
 
-          collections.push(coll);
-        }
+    for (var i = 0; i < collectionCount; i++) {
+      //var fn = this[fnName];
+      var collectionName = "consistentid_" + Random.id();
+      if (Meteor.isClient) {
+        Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+        Meteor.subscribe('c-' + collectionName);
+      }
 
-        // Reset state
-        INSERTED_IDS = {};
+      var coll = new Meteor.Collection(collectionName, collectionOptions);
+      COLLECTIONS[collectionName] = coll;
 
-        for (var i = 0; i < repetitions; i++) {
-          for (var j = 0; j < collectionCount; j++) {
-            fn(test, expect, collections[j], i);
-          }
-        }
-      }]);
-    });
-  });
+      collections.push(coll);
+    }
+
+    // Reset state
+    INSERTED_IDS = {};
+
+    for (var i = 0; i < repetitions; i++) {
+      for (var j = 0; j < collectionCount; j++) {
+        fn(test, expect, collections[j], i);
+      }
+    }
+  }]);
+
+});
+});
+});
 });
 
 
