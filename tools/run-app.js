@@ -322,6 +322,7 @@ var AppRunner = function (appDir, options) {
   self.startFuture = null;
   self.runFuture = null;
   self.exitFuture = null;
+  self.watchFuture = null;
 };
 
 _.extend(AppRunner.prototype, {
@@ -359,6 +360,7 @@ _.extend(AppRunner.prototype, {
     self.exitFuture = new Future;
 
     self._runFutureReturn({ outcome: 'stopped' });
+    self._watchFutureReturn();
 
     self.exitFuture.wait();
     self.exitFuture = null;
@@ -504,6 +506,15 @@ _.extend(AppRunner.prototype, {
     runFuture['return'](value);
   },
 
+  _watchFutureReturn: function () {
+    var self = this;
+    if (!self.watchFuture)
+      return;
+    var watchFuture = self.watchFuture;
+    self.watchFuture = null;
+    watchFuture.return();
+  },
+
   _fiber: function () {
     var self = this;
 
@@ -573,13 +584,20 @@ _.extend(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        var fut = new Future;
+        self.watchFuture = new Future;
         var watcher = new watch.Watcher({
           watchSet: runResult.bundleResult.watchSet,
-          onChange: function () { fut['return'](); }
+          onChange: function () {
+            self._watchFutureReturn();
+          }
         });
         self.proxy.setMode("errorpage");
-        fut.wait();
+        // If onChange wasn't called synchronously (clearing watchFuture), wait
+        // on it.
+        self.watchFuture && self.watchFuture.wait();
+        // While we were waiting, did somebody stop() us?
+        if (self.exitFuture)
+          break;
         runLog.log("=> Modified -- restarting.");
         continue;
       }

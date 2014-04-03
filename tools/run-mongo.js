@@ -266,9 +266,9 @@ var launchMongo = function (options) {
       stderrOutput += data;
     });
 
-    callOnExit = function (code, signal) {
+    callOnExit = inFiber(function (code, signal) {
       onExit(code, signal, stderrOutput);
-    };
+    });
     proc.on('exit', callOnExit);
 
     proc.stdout.setEncoding('utf8');
