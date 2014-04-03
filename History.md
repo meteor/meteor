@@ -5,6 +5,10 @@
 * Move boilerplate HTML from tools to webapp. Changes internal
   Webapp.addHtmlAttributeHook API incompatibly.
 
+* Store pending OAuth login results in the database instead of
+  in-memory, so that an OAuth flow succeeds even if different requests
+  go to different server processes.
+
 
 ## v0.8.0
 
