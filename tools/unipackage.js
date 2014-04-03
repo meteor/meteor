@@ -923,7 +923,6 @@ _.extend(Unipackage.prototype, {
 
     // Now that we have versions for all our dependencies, canonicalize
     // the slices' and plugins' watch sets.
-    // XXX Do we need to relativize paths? Why?
     var watchFiles = [];
     var watchSet = new watch.WatchSet();
     watchSet.merge(self.pluginWatchSet);

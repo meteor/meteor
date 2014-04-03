@@ -760,7 +760,9 @@ compiler.compile = function (packageSource, options) {
                            packageSource.version + "because it already " +
                            "has a build identifier");
       } else {
-        unipackage.addBuildIdentifierToVersion();
+        unipackage.addBuildIdentifierToVersion({
+          relativeTo: packageSource.sourceRoot
+        });
       }
     });
   }
