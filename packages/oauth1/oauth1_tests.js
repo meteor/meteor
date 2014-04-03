@@ -1,4 +1,4 @@
-Tinytest.add("oauth1 - transientResult is stored", function (test) {
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved", function (test) {
   var http = Npm.require('http');
   var twitterfooId = Random.id();
   var twitterfooName = 'nickname' + Random.id();
@@ -55,7 +55,7 @@ Tinytest.add("oauth1 - transientResult is stored", function (test) {
     OauthTest.middleware(req, new http.ServerResponse(req));
 
     // Test that the result for the token is available
-    var result = Oauth._retrieveTransientResult(credentialToken);
+    var result = Oauth._retrievePendingCredential(credentialToken);
     test.equal(result.serviceName, serviceName);
     test.equal(result.serviceData.id, twitterfooId);
     test.equal(result.serviceData.screenName, twitterfooName);
@@ -63,8 +63,8 @@ Tinytest.add("oauth1 - transientResult is stored", function (test) {
     test.equal(result.serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
     test.equal(result.options.option1, twitterOption1);
 
-    // Test that login results are transient
-    result = Oauth._retrieveTransientResult(credentialToken);
+    // Test that pending credential is removed after being retrieved
+    result = Oauth._retrievePendingCredential(credentialToken);
     test.isUndefined(result);
 
   } finally {

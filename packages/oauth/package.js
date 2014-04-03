@@ -15,7 +15,7 @@ Package.on_use(function (api) {
 
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
-  api.add_files('transient_results.js', 'server');
+  api.add_files('pending_credentials.js', 'server');
 });
 
 

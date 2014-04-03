@@ -61,7 +61,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
       // Store the login result so it can be retrieved in another
       // browser tab by the result handler
-      Oauth._storeTransientResult(query.state, {
+      Oauth._storePendingCredential(query.state, {
         serviceName: service.serviceName,
         serviceData: oauthResult.serviceData,
         options: oauthResult.options

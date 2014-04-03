@@ -50,7 +50,7 @@ OauthTest.unregisterService = function (name) {
 
 
 Oauth.retrieveCredential = function(credentialToken) {
-  return Oauth._retrieveTransientResult(credentialToken);
+  return Oauth._retrievePendingCredential(credentialToken);
 };
 
 
@@ -96,7 +96,7 @@ middleware = function (req, res, next) {
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
     if (req.query.state && err instanceof Error)
-      Oauth._storeTransientResult(req.query.state, err);
+      Oauth._storePendingCredential(req.query.state, err);
 
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
@@ -138,7 +138,7 @@ var oauthServiceName = function (req) {
 var ensureConfigured = function(serviceName) {
   if (!ServiceConfiguration.configurations.findOne({service: serviceName})) {
     throw new ServiceConfiguration.ConfigError("Service not configured");
-  };
+  }
 };
 
 // Internal: used by the oauth1 and oauth2 packages
