@@ -15,6 +15,16 @@ var setCurrentComputation = function (c) {
   Deps.active = !! c;
 };
 
+// _assign is like _.extend or the upcoming Object.assign.
+// Copy src's own, enumerable properties onto tgt and return
+// tgt.
+var _assign = function (tgt, src) {
+  for (var k in src)
+    if (src.hasOwnProperty(k))
+      tgt[k] = src[k];
+  return tgt;
+};
+
 var _debugFunc = function () {
   // lazy evaluation because `Meteor` does not exist right away
   return (typeof Meteor !== "undefined" ? Meteor._debug :
@@ -116,7 +126,7 @@ Deps.Computation = function (f, parent) {
   }
 };
 
-_.extend(Deps.Computation.prototype, {
+_assign(Deps.Computation.prototype, {
 
   // http://docs.meteor.com/#computation_oninvalidate
   onInvalidate: function (f) {
@@ -213,7 +223,7 @@ Deps.Dependency = function () {
   this._dependentsById = {};
 };
 
-_.extend(Deps.Dependency.prototype, {
+_assign(Deps.Dependency.prototype, {
   // http://docs.meteor.com/#dependency_depend
   //
   // Adds `computation` to this set if it is not already
@@ -255,7 +265,7 @@ _.extend(Deps.Dependency.prototype, {
   }
 });
 
-_.extend(Deps, {
+_assign(Deps, {
   // http://docs.meteor.com/#deps_flush
   flush: function (_opts) {
     // XXX What part of the comment below is still true? (We no longer
