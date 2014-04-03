@@ -9,6 +9,9 @@
   in-memory, so that an OAuth flow succeeds even if different requests
   go to different server processes.
 
+* When validateLoginAttempt callbacks return false, don't override a more
+  specific error message.
+
 
 ## v0.8.0
 
