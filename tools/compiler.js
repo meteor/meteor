@@ -611,7 +611,10 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
 //    package server.
 //  - buildTimeDependencies: optional. If present with keys
 //    'directDependencies' and 'pluginDependencies', it will be used
-//    instead of calling 'determineBuildTimeDependencies'.
+//    instead of calling 'determineBuildTimeDependencies'. This is used
+//    when we already have a resolved set of build-time dependencies and
+//    want to use that instead of resolving them again, e.g. when
+//    running 'meteor publish-for-arch'.
 //
 // Returns an object with keys:
 // - unipackage: the build Unipackage
