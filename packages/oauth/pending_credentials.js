@@ -93,7 +93,7 @@ var recreateError = function(errorDoc) {
 
   if (errorDoc.meteorError) {
     error = new Meteor.Error();
-    delete errorDoc.meteorErrror;
+    delete errorDoc.meteorError;
   } else {
     error = new Error();
   }
