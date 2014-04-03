@@ -49,9 +49,8 @@ var Runner = function (appDir, options) {
       onFailure: options.onFailure
     });
 
-    mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
-    oplogUrl = (options.disableOplog ? null :
-                "mongodb://127.0.0.1:" + mongoPort + "/local");
+    mongoUrl = self.mongoRunner.mongoUrl();
+    oplogUrl = options.disableOplog ? null : self.mongoRunner.oplogUrl();
   }
 
   self.updater = new Updater;
