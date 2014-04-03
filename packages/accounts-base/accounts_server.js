@@ -73,12 +73,19 @@ var validateLogin = function (connection, attempt) {
     }
     catch (e) {
       attempt.allowed = false;
+      // XXX this means the last thrown error overrides previous error
+      // messages. Maybe this is surprising to users and we should make
+      // overriding errors more explicit. (see
+      // https://github.com/meteor/meteor/issues/1960)
       attempt.error = e;
       return true;
     }
     if (! ret) {
       attempt.allowed = false;
-      attempt.error = new Meteor.Error(403, "Login forbidden");
+      // don't override a specific error provided by a previous
+      // validator or the initial attempt (eg "incorrect password").
+      if (!attempt.error)
+        attempt.error = new Meteor.Error(403, "Login forbidden");
     }
     return true;
   });
