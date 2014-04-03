@@ -242,8 +242,11 @@ exports.run = function (appDir, options) {
           result.outcome === "wrong-release" ||
           (result.outcome === "terminated" &&
            result.signal === undefined && result.code === undefined)) {
-        runner.stop();
-        fut.isResolved() || fut['return'](result);
+        // Allow run() to continue (and call runner.stop()) only once the
+        // AppRunner has processed our "return false"; otherwise we deadlock.
+        process.nextTick(function () {
+          fut.isResolved() || fut['return'](result);
+        });
         return false;  // stop restarting
       }
       runner.regenerateAppPort();

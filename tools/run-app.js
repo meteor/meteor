@@ -266,11 +266,9 @@ _.extend(AppProcess.prototype, {
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
 //   proxy
 //
-// To use, construct an instance of AppRunner, and then call start()
-// to start it running. Call stop() at any time to shut it down and
-// clean it up. You should call stop() to clean up even if you return
-// false from onRunEnd(); this stops the restarting but doesn't
-// destroy the AppRunner instance.
+// To use, construct an instance of AppRunner, and then call start() to start it
+// running. To stop it, either return false from onRunEnd, or call stop().  (But
+// don't call stop() from inside onRunEnd: that causes a deadlock.)
 //
 // The 'result' argument to onRunEnd is an object with keys:
 //
@@ -338,7 +336,8 @@ _.extend(AppRunner.prototype, {
     self.startFuture = new Future;
     self.fiber = new Fiber(function () {
       self._fiber();
-    }).run();
+    });
+    self.fiber.run();
     self.startFuture.wait();
     self.startFuture = null;
   },
