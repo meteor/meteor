@@ -630,22 +630,12 @@ compiler.compile = function (packageSource, options) {
 
   // Determine versions of build-time dependencies
   var buildTimeDeps;
-  var allDirectDeps;
   if (options.buildTimeDependencies &&
       options.buildTimeDependencies.directDependencies &&
       options.buildTImeDependencies.pluginDependencies) {
-    allDirectDeps = options.buildTimeDependencies.directDependencies;
-    buildTimeDeps = buildTimeDependenciesToConstraints(
-      packageSource,
-      options.buildTimeDependencies
-    );
+    buildTimeDeps = options.buildTimeDependencies;
   } else {
-    var allBuildTimeDeps = determineBuildTimeDependencies(packageSource);
-    allDirectDeps = allBuildTimeDeps.directDependencies;
-    buildTimeDeps = buildTimeDependenciesToConstraints(
-      packageSource,
-      allBuildTimeDeps
-    );
+    buildTimeDeps = determineBuildTimeDependencies(packageSource);
   }
 
   // Build plugins
@@ -735,7 +725,7 @@ compiler.compile = function (packageSource, options) {
   // Build slices. Might use our plugins, so needs to happen
   // second.
   var packageLoader = new PackageLoader({
-    versions: allDirectDeps
+    versions: buildTimeDeps.directDependencies
   });
 
   _.each(packageSource.slices, function (slice) {
@@ -773,33 +763,27 @@ compiler.compile = function (packageSource, options) {
   };
 };
 
-var buildTimeDependenciesToConstraints = function (packageSource, buildTimeDeps) {
-  var result = {
-    directDependencies: {},
-    pluginDependencies: {}
-  };
-
-  _.each(buildTimeDeps.directDependencies, function (version, name) {
-    if (name !== packageSource.name) {
-      // Direct dependencies only create a build-order constraint if
-      // they contain a plugin.
-      var catalogVersion = catalog.catalog.getVersion(name, version);
-      if (! catalogVersion) {
-        throw new Error("No catalog version for " +
-                        name + " " + version + "?");
-      }
-      if (catalogVersion.containsPlugins) {
-        result.directDependencies[name] = version;
-      }
+// Given an object mapping package name to version, return an object
+// that includes all the packages that contain plugins, according to the
+// catalog.
+//
+// XXX HACK: This IGNORES package versions that are not available in the
+// catalog, which could happen if for example this is called during
+// catalog initialization before +local versions have been updated with
+// their real buildids. It so happens that this works out, because when
+// we are calling it during catalog initialization, we are calling it
+// for a package whose build-time dependencies have already been built,
+// so any dependencies that contains plugins have real versions in the
+// catalog already. Still, this seems very brittle and we should fix it.
+var getPluginProviders = function (versions) {
+  var result = {};
+  _.each(versions, function (version, name) {
+    // Direct dependencies only create a build-order constraint if
+    // they contain a plugin.
+    var catalogVersion = catalog.catalog.getVersion(name, version);
+    if (catalogVersion && catalogVersion.containsPlugins) {
+      result[name] = version;
     }
-  });
-  _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
-    result.pluginDependencies[pluginName] = {};
-    _.each(versions, function (version, name) {
-      if (name !== packageSource.name) {
-        result.pluginDependencies[pluginName][name] = version;
-      }
-    });
   });
   return result;
 };
@@ -812,17 +796,18 @@ var buildTimeDependenciesToConstraints = function (packageSource, buildTimeDeps)
 compiler.getBuildOrderConstraints = function (packageSource) {
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {
-    if (! _.has(versions, name))
-      versions[name] = {};
-    versions[name][version] = true;
+    if (name !== packageSource.name) {
+      if (! _.has(versions, name))
+        versions[name] = {};
+      versions[name][version] = true;
+    }
   };
 
-  var buildTimeDeps = buildTimeDependenciesToConstraints(
-    packageSource,
-    determineBuildTimeDependencies(packageSource)
-  );
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
 
-  _.each(buildTimeDeps.directDependencies, addVersion);
+  // Direct dependencies only impose a build-order constraint if they
+  // contain plugins.
+  _.each(getPluginProviders(buildTimeDeps.directDependencies), addVersion);
   _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
     _.each(versions, addVersion);
   });
@@ -869,14 +854,20 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     return false;
   }
 
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
-
   // Compute the unipackage's direct and plugin dependencies to
   // `buildTimeDeps`, by comparing versions (including build
-  // identifiers).
+  // identifiers). For direct dependencies, we only care if the set of
+  // direct dependencies that provide plugins has changed.
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  var sourcePluginProviders = getPluginProviders(
+    buildTimeDeps.directDependencies
+  );
+  var unipackagePluginProviders = getPluginProviders(
+    unipackage.buildTimeDirectDependencies
+  );
 
-  if (_.keys(buildTimeDeps.directDependencies).length !==
-      _.keys(unipackage.buildTimeDirectDependencies).length) {
+  if (_.keys(sourcePluginProviders).length !==
+      _.keys(unipackagePluginProviders).length) {
     return false;
   }
 
@@ -884,14 +875,14 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     versions: buildTimeDeps.directDependencies
   });
   var directDepsMatch = _.all(
-    buildTimeDeps.directDependencies,
+    sourcePluginProviders,
     function (version, packageName) {
       var loadedPackage = directDepsPackageLoader.getPackage(packageName);
       // XXX Check that `versionWithBuildId` is the same as `version`
       // except for the build id?
       return (loadedPackage &&
-        unipackage.buildTimeDirectDependencies[packageName] ===
-        loadedPackage.version);
+              unipackagePluginProviders[packageName] ===
+              loadedPackage.version);
     }
   );
   if (! directDepsMatch) {

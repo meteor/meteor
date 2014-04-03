@@ -9,6 +9,7 @@ var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
 var PackageLoader = require('./package-loader.js');
+var catalog = require('./catalog.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -178,6 +179,25 @@ _.extend(UnipackageSlice.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 // Unipackage
 ///////////////////////////////////////////////////////////////////////////////
+
+// Helper function. Takes an object mapping package name to version, and
+// ensures that all the versions have real build ids (by loading them
+// through a PackageLoader) rather than +local build ids (which is what
+// they could have if we just read them out of the catalog).
+//
+// If the optional `filter` function is provided, then we will only load
+// packages for which `filter(packageName, version)` returns truthy.
+var getLoadedPackageVersions = function (versions, filter) {
+  var result = {};
+  var packageLoader = new PackageLoader({ versions: versions });
+  _.each(versions, function (version, packageName) {
+    if (! filter || filter(packageName, version)) {
+      var unipackage = packageLoader.getPackage(packageName);
+      result[packageName] = unipackage.version;
+    }
+  });
+  return result;
+};
 
 // XXX document
 var Unipackage = function () {
@@ -651,8 +671,13 @@ _.extend(Unipackage.prototype, {
       // built package's warehouse version. So it should not contain
       // platform-dependent data and should contain all sources of change to the
       // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
-      var buildTimeDirectDeps = self._buildTimeDirectDependenciesWithBuildIds();
-      var buildTimePluginDeps = self._buildTimePluginDependenciesWithBuildIds();
+      var buildTimeDirectDeps = getLoadedPackageVersions(
+        self.buildTimeDirectDependencies);
+      var buildTimePluginDeps = {};
+      _.each(self.buildTimePluginDependencies, function (versions, pluginName) {
+        buildTimePluginDeps[pluginName] = getLoadedPackageVersions(versions);
+      });
+
       var buildInfoJson = {
         builtBy: compiler.BUILT_BY,
         sliceDependencies: { },
@@ -856,33 +881,6 @@ _.extend(Unipackage.prototype, {
     }
   },
 
-  _buildTimeDirectDependenciesWithBuildIds: function () {
-    var self = this;
-    var directDepsLoader = new PackageLoader({
-      versions: self.buildTimeDirectDependencies
-    });
-    var result = {};
-    _.each(self.buildTimeDirectDependencies, function (version, packageName) {
-      var unipackage = directDepsLoader.getPackage(packageName);
-      result[packageName] = unipackage.version;
-    });
-    return result;
-  },
-
-  _buildTimePluginDependenciesWithBuildIds: function () {
-    var self = this;
-    var result = {};
-    _.each(self.buildTimePluginDependencies, function (deps, pluginName) {
-      var pluginPackageLoader = new PackageLoader({ versions: deps });
-      result[pluginName] = {};
-      _.each(deps, function (version, packageName) {
-        var unipackage = pluginPackageLoader.getPackage(packageName);
-        result[pluginName][packageName] = unipackage.version;
-      });
-    });
-    return result;
-  },
-
   // Computes a hash of the versions of all the package's dependencies
   // (direct and plugin dependencies) and the slices' and plugins' watch
   // sets. Options are:
@@ -896,25 +894,53 @@ _.extend(Unipackage.prototype, {
 
     options = options || {};
 
-    // Gather all the plugin dependencies' versions and organize them
-    // into arrays. We use arrays to avoid relying on the order of
-    // stringified object keys.
-    var directDepsWithPlugins = [];
-    _.each(
-      self._buildTimeDirectDependenciesWithBuildIds(),
-      function (version, packageName) {
-        directDepsWithPlugins.push([packageName, version]);
+    // Gather all the direct dependencies (that provide plugins) and
+    // plugin dependencies' versions and organize them into arrays. We
+    // use arrays to avoid relying on the order of stringified object
+    // keys.
+    var pluginProviders = [];
+    var pluginProviderVersions = getLoadedPackageVersions(
+      self.buildTimeDirectDependencies,
+      function (packageName, version) { // filter
+        if (packageName !== self.name) {
+          var catalogVersion = catalog.catalog.getVersion(packageName,
+                                                          version);
+          // XXX This could throw if we call it on a freshly-built
+          // unipackage (as opposed to one read from disk that has real
+          // build ids for build-time deps instead of +local) before
+          // catalog initialization has finished. See XXX at the top of
+          // `getPluginProviders` in compiler.js.
+          if (! catalogVersion) {
+            throw new Error("No catalog version for" + packageName +
+                            "version" + version + "?");
+          }
+          return catalogVersion.containsPlugins;
+        } else {
+          return false;
+        }
       }
     );
 
+    _.each(pluginProviderVersions, function (version, packageName) {
+      pluginProviders.push([packageName, version]);
+    });
+    _.sortBy(pluginProviders, "0");
+
     var pluginDeps = [];
     _.each(
-      self._buildTimePluginDependenciesWithBuildIds(),
+      self.buildTimePluginDependencies,
       function (versions, pluginName) {
         var singlePluginDeps = [];
-        _.each(versions, function (version, packageName) {
-          singlePluginDeps.push([packageName, version]);
-        });
+        versions = _.clone(versions);
+        delete versions[self.name];
+        _.each(
+          getLoadedPackageVersions(versions),
+          function (version, packageName) {
+            if (packageName !== self.name) {
+              singlePluginDeps.push([packageName, version]);
+            }
+          }
+        );
         singlePluginDeps = _.sortBy(singlePluginDeps, "0");
         pluginDeps.push([pluginName, singlePluginDeps]);
       }
@@ -941,7 +967,7 @@ _.extend(Unipackage.prototype, {
     // Stick all our info into one big array, stringify it, and hash it.
     var buildIdInfo = [
       self.builtBy,
-      directDepsWithPlugins,
+      pluginProviders,
       pluginDeps,
       watchFiles
     ];
@@ -956,6 +982,7 @@ _.extend(Unipackage.prototype, {
   // a build identifier already. Options are the same as
   // `getBuildIdentifier`.
   addBuildIdentifierToVersion: function (options) {
+    var self = this;
     self.version = self.version + "+" +
       self.getBuildIdentifier(options);
   }

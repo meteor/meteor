@@ -347,6 +347,21 @@ _.extend(Catalog.prototype, {
     var remaining = _.clone(self.effectiveLocalPackages);
     var onStack = {}; // map from name to true
 
+    // Update the catalog version to include a build id. After catalog
+    // initialization, this allows us to use `getVersion` with
+    // unipackages that have build ids.
+    // XXX When we have a real number of packages, we probably want to
+    // do this in a faster way.
+    var updateCatalogVersion = function (name, oldVersion, newVersion) {
+      console.log("Updating version for ", name, oldVersion, newVersion);
+      _.each(self.versions, function (version) {
+        if (version.packageName === name &&
+            version.version === oldVersion) {
+          version.version = newVersion;
+        }
+      });
+    };
+
     var maybeGetUpToDateBuild = function (name) {
       var sourcePath = self.effectiveLocalPackages[name];
       var buildDir = path.join(sourcePath, '.build');
@@ -354,6 +369,11 @@ _.extend(Catalog.prototype, {
         var unipackage = new Unipackage;
         unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
         if (compiler.checkUpToDate(packageSources[name], unipackage)) {
+          updateCatalogVersion(
+            name,
+            packageSources[name].version + "+local",
+            unipackage.version
+          );
           return unipackage;
         }
       }
@@ -411,6 +431,11 @@ _.extend(Catalog.prototype, {
               if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
                 throw e;
             }
+            updateCatalogVersion(
+              name,
+              packageSources[name].version + "+local",
+              unipackage.version
+            );
           }
         });
       }
