@@ -940,6 +940,7 @@ _.extend(Unipackage.prototype, {
 
     // Stick all our info into one big array, stringify it, and hash it.
     var buildIdInfo = [
+      self.builtBy,
       directDepsWithPlugins,
       pluginDeps,
       watchFiles
