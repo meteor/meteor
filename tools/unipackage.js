@@ -885,11 +885,17 @@ _.extend(Unipackage.prototype, {
 
   // Computes a hash of the versions of all the package's dependencies
   // (direct and plugin dependencies) and the slices' and plugins' watch
-  // sets. Adds the result as a build identifier to the unipackage's
-  // version. The caller is responsible for checking whether the
-  // existing version has a build identifier already.
-  addBuildIdentifierToVersion: function () {
+  // sets. Options are:
+  //  - relativeTo: if provided, the watch set file paths are
+  //    relativized to this path. If not provided, we use absolute
+  //    paths.
+  //
+  // Returns the build id as a hex string.
+  getBuildIdentifier: function (options) {
     var self = this;
+
+    options = options || {};
+
     // Gather all the plugin dependencies' versions and organize them
     // into arrays. We use arrays to avoid relying on the order of
     // stringified object keys.
@@ -925,7 +931,11 @@ _.extend(Unipackage.prototype, {
       watchSet.merge(slice.watchSet);
     });
     _.each(watchSet.files, function (hash, fileAbsPath) {
-      watchFiles.push([fileAbsPath, hash]);
+      var watchFilePath = fileAbsPath;
+      if (options.relativeTo) {
+        watchFilePath = path.relative(options.relativeTo, fileAbsPath);
+      }
+      watchFiles.push([watchFilePath, hash]);
     });
     watchFiles = _.sortBy(watchFiles, "0");
 
@@ -938,8 +948,16 @@ _.extend(Unipackage.prototype, {
     var crypto = require('crypto');
     var hasher = crypto.createHash('sha1');
     hasher.update(JSON.stringify(buildIdInfo));
-    var buildId = hasher.digest('hex');
-    self.version = self.version + "+" + buildId;
+    return hasher.digest('hex');
+  },
+
+  // Adds the build identifier to the unipackage's `version` field. The
+  // caller is responsible for checking whether the existing version has
+  // a build identifier already. Options are the same as
+  // `getBuildIdentifier`.
+  addBuildIdentifierToVersion: function (options) {
+    self.version = self.version + "+" +
+      self.getBuildIdentifier(options);
   }
 });
 
