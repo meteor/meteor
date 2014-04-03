@@ -26,4 +26,5 @@ Tinytest.add("oauth - pendingCredential handles Meteor.Errors", function (test) 
   test.equal(result.message, testError.message);
   test.equal(result.reason, testError.reason);
   test.equal(result.stack, testError.stack);
+  test.isUndefined(result.meteorError);
 });
