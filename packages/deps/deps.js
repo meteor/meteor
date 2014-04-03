@@ -46,7 +46,7 @@ var _throwOrLog = function (from, e) {
 // where `_noYieldsAllowed` is a no-op.  `f` may be a computation
 // function or an onInvalidate callback.
 var callWithNoYieldsAllowed = function (f, comp) {
-  if (Meteor.isClient) {
+  if ((typeof Meteor === 'undefined') || Meteor.isClient) {
     f(comp);
   } else {
     Meteor._noYieldsAllowed(function () {
