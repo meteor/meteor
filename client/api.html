@@ -1848,10 +1848,18 @@ proceed.  If the callback returns a falsy value or throws an
 exception, the login is aborted.  Throwing a `Meteor.Error` will
 report the error reason to the user.
 
-All registered validate login callbacks are called, even if one of the
-callbacks aborts the login.  The later callbacks will see the
-`allowed` field set to `false` since the login will now not be
-successful.
+All registered validate login callbacks are called, even if one of the callbacks
+aborts the login.  The later callbacks will see the `allowed` field set to
+`false` since the login will now not be successful.  This allows later callbacks
+to override an error from a previous callback; for example, you could override
+the "Incorrect password" error with a different message.
+
+Validate login callbacks that aren't explicitly trying to override a previous
+error generally have no need to run if the attempt has already been determined
+to fail, and should start with
+
+    if (!attempt.allowed)
+      return false;
 
 
 {{> api_box accounts_onLogin}}
