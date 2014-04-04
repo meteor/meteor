@@ -43,7 +43,6 @@ DDP.RandomStreams.get = function (scope, key) {
   if (!scope) {
     // We aren't in a method invocation, there was no scope passed in, so
     // the sequence won't actually be reproducible.
-    Meteor._debug("Requested randomStream, but no scope available");
     return Random;
   }
   var randomStream = scope.randomStream;
