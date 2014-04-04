@@ -219,6 +219,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       var rootDeps = options.rootDependencies;
       return _.chain(state.dependencies)
               .reduce(function (sum, dep) {
+                if (!self.resolver.unitsVersions[dep])
+                  console.log("FAIL", dep) // xcxc
                 var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(),
                                 function (uv) { return unitVersionDoesntValidateConstraints(uv, state.constraints); });
 

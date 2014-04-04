@@ -131,7 +131,6 @@ ConstraintSolver.Resolver.prototype.resolve =
 
 
     if (! neighborsObj.success) {
-      console.log(":( ", currentState.choices.map(function (x) { return x.toString() }))
       someError = someError || neighborsObj.failureMsg;
     } else {
       _.each(neighborsObj.neighbors, function (state) {
@@ -208,7 +207,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   if (! neighbors.length)
     return { success: false,
              failureMsg: "None of the versions unit produces a sensible result -- "
-               + candidateName };
+               + candidateName,
+             triedUnitVersions: candidateVersions };
 
   return { success: true, neighbors: neighbors };
 };

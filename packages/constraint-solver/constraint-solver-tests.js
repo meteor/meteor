@@ -173,7 +173,25 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
 });
 
 Tinytest.add("constraint solver - benchmark on gems", function (test) {
-  var catalogStub = {
+  var r = new ConstraintSolver.PackagesResolver(getCatalogStub(sinatraGems));
+
+  r.resolve({
+    'capistrano': '2.14.2',
+    'data_mapper': '1.2.0',
+    'dm-core': '1.2.0',
+    'dm-sqlite-adapter': '1.2.0',
+    'dm-timestamps': '1.2.0',
+    'haml': '3.1.7',
+    'sass': '3.2.1',
+    'shotgun': '0.9.0',
+    'sinatra': '1.3.5',
+    'sqlite3': '1.3.7'
+  });
+});
+
+// Given a set of gems definitions returns a Catalog-like object
+function getCatalogStub (gems) {
+  return {
     getAllPackageNames: function () {
       return _.uniq(_.pluck(gems, 'name'));
     },
@@ -213,6 +231,9 @@ Tinytest.add("constraint solver - benchmark on gems", function (test) {
         dependencies: {}
       };
 
+      if (packageVersion.packageName === "rack")
+        packageVersion.earliestCompatibleVersion = "0.0.0";
+
       _.each(gem.dependencies, function (dep) {
         var name = dep[0];
         var constraints = dep[1];
@@ -231,13 +252,7 @@ Tinytest.add("constraint solver - benchmark on gems", function (test) {
       return packageVersion;
     }
   };
-
-  var r = new ConstraintSolver.PackagesResolver(catalogStub);
-
-  r.resolve({
-    'rails': '4.0.0'
-  });
-});
+}
 
 // Naively converts ruby-gems style constraints string to either exact
 // constraint or a regular constraint.
