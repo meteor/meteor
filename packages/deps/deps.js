@@ -290,6 +290,7 @@ _assign(Deps, {
     willFlush = true;
     throwFirstError = !! (_opts && _opts._throwFirstError);
 
+    var finishedTry = false;
     try {
       while (pendingComputations.length ||
              afterFlushCallbacks.length) {
@@ -311,11 +312,13 @@ _assign(Deps, {
           }
         }
       }
-    } catch (e) {
-      inFlush = false; // needed before calling `Deps.flush()` again
-      Deps.flush({_throwFirstError: false}); // finish flushing
-      throw e;
+      finishedTry = true;
     } finally {
+      if (! finishedTry) {
+        // we're erroring
+        inFlush = false; // needed before calling `Deps.flush()` again
+        Deps.flush({_throwFirstError: false}); // finish flushing
+      }
       willFlush = false;
       inFlush = false;
     }
