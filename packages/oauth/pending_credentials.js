@@ -10,13 +10,13 @@
 
 
 // Collection containing pending credentials of oauth credential requests
-// Has token, credential, and createdAt fields.
+// Has key, credential, and createdAt fields.
 Oauth._pendingCredentials = new Meteor.Collection(
   "meteor_oauth_pendingCredentials", {
     _preventAutopublish: true
   });
 
-Oauth._pendingCredentials._ensureIndex('token', {unique: 1});
+Oauth._pendingCredentials._ensureIndex('key', {unique: 1});
 Oauth._pendingCredentials._ensureIndex('createdAt');
 
 
@@ -31,18 +31,18 @@ var _cleanStaleResults = function() {
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
-// Stores the token and credential in the _pendingCredentials collection
+// Stores the key and credential in the _pendingCredentials collection
 // XXX After oauth token encryption is added to Meteor, apply it here too
 //
-// @param credentialToken {string}
+// @param key {string}
 // @param credential {string}   The credential to store
 //
-Oauth._storePendingCredential = function (credentialToken, credential) {
+Oauth._storePendingCredential = function (key, credential) {
   if (credential instanceof Error)
     credential = storableError(credential);
 
   Oauth._pendingCredentials.insert({
-    token: credentialToken,
+    key: key,
     credential: credential,
     createdAt: new Date()
   });
@@ -52,12 +52,12 @@ Oauth._storePendingCredential = function (credentialToken, credential) {
 // Retrieves and removes a credential from the _pendingCredentials collection
 // XXX After oauth token encryption is added to Meteor, apply it here too
 //
-// @param credentialToken {string}
+// @param key {string}
 //
-Oauth._retrievePendingCredential = function (credentialToken) {
-  check(credentialToken, String);
+Oauth._retrievePendingCredential = function (key) {
+  check(key, String);
 
-  var pendingCredential = Oauth._pendingCredentials.findOne({ token:credentialToken });
+  var pendingCredential = Oauth._pendingCredentials.findOne({ key:key });
   if (pendingCredential) {
     Oauth._pendingCredentials.remove({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
