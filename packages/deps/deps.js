@@ -71,7 +71,7 @@ var inCompute = false;
 // `true` if the `_throwFirstError` option was passed in to the call
 // to Deps.flush that we are in. When set, throw rather than log the
 // first error encountered while flushing. Before throwing the error,
-// finish flushing (from a catch block), logging any subsequent
+// finish flushing (from a finally block), logging any subsequent
 // errors.
 var throwFirstError = false;
 
