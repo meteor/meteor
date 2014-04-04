@@ -5,7 +5,7 @@ Package.describe({
 
 Npm.depends({
   "uglify-js": "2.4.7",
-  "css-parse": "1.7.0",
+  "css-parse": "https://github.com/reworkcss/css-parse/tarball/aa7e23285375ca621dd20250bac0266c6d8683a5",
   "css-stringify": "1.4.1"
 });
 

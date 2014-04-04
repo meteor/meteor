@@ -28,7 +28,7 @@
       }
     },
     "css-parse": {
-      "version": "1.7.0"
+      "version": "https://github.com/reworkcss/css-parse/tarball/aa7e23285375ca621dd20250bac0266c6d8683a5"
     },
     "css-stringify": {
       "version": "1.4.1",
