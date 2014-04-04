@@ -263,7 +263,9 @@ _.extend(Slice.prototype, {
       _.each(self[field], function (u) {
         var pkg = self.pkg.library.get(u.package, /* throwOnError */ false);
         if (! pkg) {
-          buildmessage.error("no such package: '" + u.package + "'");
+          if (! u.weak) {
+            buildmessage.error("no such package: '" + u.package + "'");
+          }
           // recover by omitting this package from the field
         } else
           scrubbed.push(u);
