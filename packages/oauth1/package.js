@@ -15,6 +15,7 @@ Package.on_use(function (api) {
 
   api.add_files('oauth1_binding.js', 'server');
   api.add_files('oauth1_server.js', 'server');
+  api.add_files('oauth1_pending_request_tokens.js', 'server');
 });
 
 Package.on_test(function (api) {
