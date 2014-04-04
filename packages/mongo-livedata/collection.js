@@ -374,7 +374,23 @@ _.each(["insert", "update", "remove"], function (name) {
               || insertId instanceof Meteor.Collection.ObjectID))
           throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
-        insertId = args[0]._id = self._makeNewID();
+        var generateId = true;
+        // Don't generate the id in the browser on the 'outermost' call
+        // This optimization saves us passing both the randomSeed and the id
+        // Passing both is redundant.
+        if (Meteor.isClient) {
+          var enclosing = DDP._CurrentInvocation.get();
+          if (!enclosing) {
+            generateId = false;
+          }
+        }
+        // Transforms require an ID always
+        if (!self._transform) {
+          generateId = true;
+        }
+        if (generateId) {
+          insertId = args[0]._id = self._makeNewID();
+        }
       }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
@@ -401,10 +417,14 @@ _.each(["insert", "update", "remove"], function (name) {
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
     var chooseReturnValueFromCollectionResult = function (result) {
-      if (name === "insert")
+      if (name === "insert") {
+        if (!insertId && result) {
+          insertId = result;
+        }
         return insertId;
-      else
+      } else {
         return result;
+      }
     };
 
     var wrappedCallback;
@@ -444,7 +464,7 @@ _.each(["insert", "update", "remove"], function (name) {
       }
 
       options = {};
-      options.suppressRandomSeed = true;
+      options.returnStubValue = true;
 
       ret = chooseReturnValueFromCollectionResult(
         self._connection.apply(self._prefix + name, args, options, wrappedCallback)
@@ -641,6 +661,15 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
         try {
+          if (method === "insert") {
+            // Ensure that we have an id on an insert
+            if (!_.has(arguments[0], '_id')) {
+              // shallow-copy the document and generate an ID
+              arguments[0] = _.extend({}, arguments[0]);
+              arguments[0]._id = self._makeNewID();
+            }
+          }
+
           if (this.isSimulation) {
 
             // In a client simulation, you can do any mutation (even with a

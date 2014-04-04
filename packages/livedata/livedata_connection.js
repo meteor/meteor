@@ -671,13 +671,13 @@ _.extend(Connection.prototype, {
     // use a random seed on the server.  In that case, we don't pass the
     // randomSeed to save bandwidth, and we don't even generate it to save a
     // bit of CPU and to avoid consuming entropy.
-    var randomSeed = {};
-    randomSeed.generator = function () {
-      var self = randomSeed;
-      if (self.randomSeed === undefined) {
-        self.randomSeed = DDP.RandomStreams.makeRpcSeed(enclosing, name);
+    var randomSeedGenerator = {};
+    randomSeedGenerator.generate = function () {
+      var self = randomSeedGenerator;
+      if (!self.generated) {
+        self.generated   = DDP.RandomStreams.makeRpcSeed(enclosing, name);
       }
-      return self.randomSeed;
+      return self.generated;
     };
 
     // Run the stub, if we have one. The stub is supposed to make some
@@ -697,11 +697,12 @@ _.extend(Connection.prototype, {
       var setUserId = function(userId) {
         self.setUserId(userId);
       };
+
       var invocation = new MethodInvocation({
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
-        randomSeed: function () { return randomSeed.generator(); }
+        randomSeed: function () { return randomSeedGenerator.generate(); }
       });
 
       if (!alreadyInSimulation)
@@ -784,8 +785,8 @@ _.extend(Connection.prototype, {
     };
 
     // Send the randomSeed only if we used it
-    if (randomSeed.randomSeed && !options.suppressRandomSeed) {
-      message.randomSeed = randomSeed.randomSeed;
+    if (randomSeedGenerator.generated) {
+      message.randomSeed = randomSeedGenerator.generated;
     }
 
     var methodInvoker = new MethodInvoker({
@@ -819,7 +820,7 @@ _.extend(Connection.prototype, {
     if (future) {
       return future.wait();
     }
-    return undefined;
+    return options.returnStubValue ? ret : undefined;
   },
 
   // Before calling a method stub, prepare all stores to track changes and allow

@@ -1270,7 +1270,7 @@ testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
     var self = this;
     var collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
     }
 
