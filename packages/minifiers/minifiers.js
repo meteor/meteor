@@ -109,14 +109,14 @@ CssTools = {
           // Rewrite relative paths to absolute paths.
           // We don't rewrite urls starting with a protocol definition such as
           // http, https, or data.
-          if (isRelative(resource.path) && _.isNull(resource.protocol)) {
+          if (isRelative(resource.path) && resource.protocol === null) {
             absolutePath = path.join(basePath, resource.path);
-            newCssUrl = "url(" + quotes + absolutePath + quotes + ")"
+            newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
             value = value.replace(oldCssUrl, newCssUrl);
           }
         }
 
-        ast.stylesheet.rules[ruleIndex].declarations[declarationIndex].value = value;
+        declaration.value = value;
       });
     });
   }
