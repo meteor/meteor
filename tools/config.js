@@ -123,7 +123,7 @@ _.extend(exports, {
     if (isLocalUniverse())
       host = localhostOffset(20);
     else
-      host = getUniverse().replace(/^www\./, 'packages.');
+      host = getUniverse().replace(/^www\./, 'test-packages.');
 
     return addScheme(host);
   },
