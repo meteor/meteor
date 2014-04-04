@@ -116,7 +116,7 @@ var builtinConverters = [
       var typeName = obj.$type;
       var converter = customTypes[typeName];
       if (typeof converter !== "function")
-        throw new Error("Custom EJSON type " + name + " is not defined");
+        throw new Error("Custom EJSON type " + typeName + " is not defined");
       return converter(obj.$value);
     }
   }
