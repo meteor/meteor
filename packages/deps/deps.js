@@ -28,7 +28,8 @@ var _assign = function (tgt, src) {
 var _debugFunc = function () {
   // lazy evaluation because `Meteor` does not exist right away
   return (typeof Meteor !== "undefined" ? Meteor._debug :
-          ((typeof console !== "undefined") && console.log ? console.log :
+          ((typeof console !== "undefined") && console.log ?
+           function () { console.log.apply(console, arguments); } :
            function () {}));
 };
 
