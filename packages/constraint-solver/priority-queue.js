@@ -1,7 +1,13 @@
 PriorityQueue = function () {
   var self = this;
   // id -> cost
-  self._heap = new MinHeap(function (a, b) { return a-b; });
+  self._heap = new MinHeap(function (a, b) {
+    for (var i = 0; i < a.length; i++)
+      if (a[i] !== b[i])
+        return a[i] - b[i];
+
+    return 0;
+  });
   // id -> reference to item
   self._items = {};
 };

@@ -114,7 +114,10 @@ ConstraintSolver.Resolver.prototype.resolve =
   };
 
   var opts = { rootDependencies: rootDependencies };
-  pq.push(startState, options.estimateCostFunction(startState, opts));
+  var costFunction = options.costFunction;
+  var estimateCostFunction = options.estimateCostFunction;
+
+  pq.push(startState, [estimateCostFunction(startState, opts), 0]);
 
   var someError = null;
   while (! pq.empty()) {
@@ -123,20 +126,20 @@ ConstraintSolver.Resolver.prototype.resolve =
     if (_.isEmpty(currentState.dependencies))
       return currentState.choices;
 
-    console.log(currentState.dependencies.length)
-
-    var currentCost = options.costFunction(currentState.choices, opts);
+    var currentCost = costFunction(currentState.choices, opts);
     var neighborsObj = self._stateNeighbors(currentState);
 
-    if (! neighborsObj.success)
+
+    if (! neighborsObj.success) {
+      console.log(":( ", currentState.choices.map(function (x) { return x.toString() }))
       someError = someError || neighborsObj.failureMsg;
-    else {
+    } else {
       _.each(neighborsObj.neighbors, function (state) {
         var tentativeCost =
-          options.costFunction(state.choices, opts) +
-          options.estimateCostFunction(state, opts);
+          costFunction(state.choices, opts) +
+          estimateCostFunction(state, opts);
 
-        pq.push(state, tentativeCost);
+        pq.push(state, [tentativeCost, -state.choices.length]);
       });
     }
   }
@@ -201,6 +204,11 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   }).filter(function (state) {
     return choicesDontValidateConstraints(state.choices, state.constraints);
   }).value();
+
+  if (! neighbors.length)
+    return { success: false,
+             failureMsg: "None of the versions unit produces a sensible result -- "
+               + candidateName };
 
   return { success: true, neighbors: neighbors };
 };
