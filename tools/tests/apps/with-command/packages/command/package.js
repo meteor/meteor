@@ -1,5 +1,5 @@
 Package.describe({
-  name: "command",
+  name: "command-tool",
   version: "1.0.0",
   summary: "test command"
 });

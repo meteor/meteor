@@ -631,7 +631,7 @@ var Run = function (execPath, options) {
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
 
-  console.log("XXX: We ignore the package server always.");
+  console.log("XXX: Allow syncing with server option");
   var opts = options.args || [];
   opts.push('--no-net');
   self.args.apply(self, opts || []);
@@ -862,7 +862,7 @@ _.extend(Run.prototype, {
   // Like stop, but doesn't wait for it to exit.
   _stopWithoutWaiting: function () {
     var self = this;
-    if (self.exitStatus === undefined) {
+    if (self.exitStatus === undefined && self.proc) {
       self.proc.kill();
     }
   },

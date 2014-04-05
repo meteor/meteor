@@ -10,7 +10,8 @@ var testUtils = require('../test-utils.js');
 // 'app-for-selftest-test-owned'
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
-
+console.log("XXX: another instance of login taking a while");
+var loginTimeoutSecs = 2;
 
 // Run 'meteor logs' or 'meteor mongo' against an app. Options:
 //  - legacy: boolean
@@ -74,6 +75,7 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
       //
       // (If testReprompt is true, try getting reprompted as a result
       // of entering no username or a bad password.)
+      run.waitSecs(loginTimeoutSecs);
       if (options.testReprompt) {
         run.matchErr('Username: ');
         run.write("\n");
@@ -81,9 +83,8 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
         run.write("   \n");
       }
       run.matchErr('Username: ');
+      run.waitSecs(loginTimeoutSecs);
       run.write((options.username || 'test') + '\n');
-      console.log('XXX: Had to add an extra second wait here. Needed?');
-      run.waitSecs(1);
       if (options.testReprompt) {
         run.matchErr("Password:");
         run.write("wrongpassword\n");
