@@ -124,6 +124,8 @@ _.extend(exports, {
       host = localhostOffset(20);
     else
       host = getUniverse().replace(/^www\./, 'test-packages.');
+    console.log("XXX: currently using http, not https for package server.");
+
     return "http://" + host;
     return addScheme(host);
   },
