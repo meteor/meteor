@@ -621,8 +621,7 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  console.log("XXX: we have increased base timeout to deal with catalog speed");
-  self.baseTimeout = 5;
+  self.baseTimeout = 2;
   self.extraTime = 0;
 
   self.stdoutMatcher = new Matcher(self);
@@ -632,7 +631,10 @@ var Run = function (execPath, options) {
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
 
-  self.args.apply(self, options.args || []);
+  console.log("XXX: We ignore the package server always.");
+  var opts = options.args || [];
+  opts.push('--no-net');
+  self.args.apply(self, opts || []);
 
   self.fakeMongoPort = null;
   self.fakeMongoConnection = null;

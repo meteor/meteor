@@ -82,6 +82,8 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
       }
       run.matchErr('Username: ');
       run.write((options.username || 'test') + '\n');
+      console.log('XXX: Had to add an extra second wait here. Needed?');
+      run.waitSecs(1);
       if (options.testReprompt) {
         run.matchErr("Password:");
         run.write("wrongpassword\n");
