@@ -835,12 +835,16 @@ main.registerCommand({
 }, function (options) {
   var items = [];
   if (options.using) {
+    // Generate a package loader for this project. This will also compute the
+    // nessessary versions and write them to disk.
+    project.generatePackageLoader(options.appDir);
     var packages = project.getDirectDependencies(options.appDir);
     _.each(packages.appDeps, function (version, name) {
       var versionInfo = catalog.getVersion(name, version);
       if (!versionInfo) {
         process.stderr.write("Cannot process package list. Unknown: " + name +
-                             " at version " + version);
+                             " at version " + version + "\n");
+        process.exit(1);
       }
       items.push({ name: name, description: versionInfo.description });
     });
