@@ -172,7 +172,7 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
   test.equal(versions.sparkle, "2.1.1");
 });
 
-Tinytest.add("constraint solver - benchmark on gems", function (test) {
+Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
   var r = new ConstraintSolver.PackagesResolver(getCatalogStub(sinatraGems));
 
   r.resolve({
@@ -186,6 +186,14 @@ Tinytest.add("constraint solver - benchmark on gems", function (test) {
     'shotgun': '0.9.0',
     'sinatra': '1.3.5',
     'sqlite3': '1.3.7'
+  });
+});
+
+Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
+  var r = new ConstraintSolver.PackagesResolver(getCatalogStub(railsGems));
+
+  r.resolve({
+    'rails': '4.0.4'
   });
 });
 
