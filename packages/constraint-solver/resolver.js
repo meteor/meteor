@@ -182,6 +182,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
              failureMsg: "Cannot choose satisfying versions of package -- "
                          + candidateName };
 
+  var lastInvalidNeighbor = null;
+
   var neighbors = _.chain(candidateVersions).map(function (uv) {
     var nDependencies = _.clone(dependencies);
     var nConstraints = _.clone(constraints);
@@ -201,14 +203,21 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       choices: nChoices
     };
   }).filter(function (state) {
-    return choicesDontValidateConstraints(state.choices, state.constraints);
+    var isValid =
+      choicesDontValidateConstraints(state.choices, state.constraints);
+
+    if (! isValid)
+      lastInvalidNeighbor = state;
+
+    return isValid;
   }).value();
 
   if (! neighbors.length)
     return { success: false,
              failureMsg: "None of the versions unit produces a sensible result -- "
                + candidateName,
-             triedUnitVersions: candidateVersions };
+             triedUnitVersions: candidateVersions,
+             lastInvalidNeighbor: lastInvalidNeighbor };
 
   return { success: true, neighbors: neighbors };
 };

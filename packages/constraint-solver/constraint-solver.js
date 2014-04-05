@@ -53,7 +53,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
           unitVersion.addDependency(targetUnitName);
 
         // Add a constraint if such exists
-        if (dep.constraint) {
+        if (dep.constraint && dep.constraint !== "none") {
           var constraint =
             self.resolver.getConstraint(targetUnitName, dep.constraint);
           unitVersion.addConstraint(constraint);

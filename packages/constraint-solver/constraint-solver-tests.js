@@ -189,11 +189,89 @@ Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) 
   });
 });
 
+var railsCatalog = getCatalogStub(railsGems);
 Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
-  var r = new ConstraintSolver.PackagesResolver(getCatalogStub(railsGems));
+  var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
   r.resolve({
     'rails': '4.0.4'
+  });
+});
+
+Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq", function (test) {
+  var r = new ConstraintSolver.PackagesResolver(railsCatalog);
+
+  r.resolve({
+    'rails': '4.0.0',
+    'protected_attributes': null,
+    'rails-observers': null,
+    'actionpack-page_caching': null,
+    'actionpack-action_caching': null,
+    'default_value_for': '3.0.0',
+    'mysql2': null,
+    'devise': '3.0.4',
+    'devise-async': '0.8.0',
+    'omniauth': '1.1.3',
+    'omniauth-google-oauth2': null,
+    'omniauth-twitter': null,
+    'omniauth-github': null,
+    'gitlab_git': '5.7.1',
+    'gitlab-grack': '2.0.0',
+    'gitlab_omniauth-ldap': '1.0.4',
+    'gitlab-gollum-lib': '1.1.0',
+    'gitlab-linguist': '3.0.0',
+    'grape': '0.6.1',
+    'rack-cors': null,
+    'email_validator': '1.4.0',
+    'stamp': null,
+    'enumerize': null,
+    'kaminari': '0.15.1',
+    'haml-rails': null,
+    'carrierwave': null,
+    'fog': '1.3.1',
+    'six': null,
+    'seed-fu': null,
+    'redcarpet': '2.2.2',
+    'github-markup': '0.7.4',
+    'asciidoctor': null,
+    'unicorn': '4.6.3',
+    'unicorn-worker-killer': null,
+    'state_machine': null,
+    'acts-as-taggable-on': null,
+    'slim': null,
+    'sinatra': null,
+    'sidekiq': null,
+    'httparty': null,
+    'colored': null,
+    'settingslogic': null,
+    'foreman': null,
+    'version_sorter': null,
+    'redis-rails': null,
+    'tinder': '1.9.2',
+    'hipchat': '0.14.0',
+    'gemnasium-gitlab-service': '0.2.0',
+    'slack-notifier': '0.2.0',
+    'd3_rails': '3.1.4',
+    'underscore-rails': '1.4.4',
+    'sanitize': null,
+    'rack-attack': null,
+    'ace-rails-ap': null,
+    'sass-rails': null,
+    'coffee-rails': null,
+    'uglifier': null,
+    'therubyracer': null,
+    'turbolinks': null,
+    'jquery-turbolinks': null,
+    'select2-rails': null,
+    'jquery-atwho-rails': '0.3.3',
+    'jquery-rails': '2.1.3',
+    'jquery-ui-rails': '2.0.2',
+    'modernizr': '2.6.2',
+    'raphael-rails': '2.1.2',
+    'bootstrap-sass': '3.0.0',
+    'font-awesome-rails': '3.2.0',
+    'gitlab_emoji': '0.0.1',
+    'gon': '5.0.0'
   });
 });
 
@@ -239,8 +317,17 @@ function getCatalogStub (gems) {
         dependencies: {}
       };
 
+      // These gems didn't really follow the semver and they prevent our
+      // generated tests from being resolved. We set the ECV manually so we can
+      // get some results as the correctness is not as important as the speed.
       if (packageVersion.packageName === "rack")
         packageVersion.earliestCompatibleVersion = "0.0.0";
+      if (packageVersion.packageName === "railties")
+        packageVersion.earliestCompatibleVersion = "3.0.0";
+      if (packageVersion.packageName === "activesupport")
+        packageVersion.earliestCompatibleVersion = "3.0.0";
+      if (packageVersion.packageName === "actionpack")
+        packageVersion.earliestCompatibleVersion = "3.0.0";
 
       _.each(gem.dependencies, function (dep) {
         var name = dep[0];
@@ -282,6 +369,8 @@ function convertConstraints (inp) {
   // '~>1.2.3' => '1.2.3'
   // '>=1.2.3' => '1.2.3'
   .map(function (s) {
+    if (s === ">= 0.0.0")
+      return "none";
     var x = s.split(' ');
     if (x[0] === '~>' || x[0] === '>=' || x[0] === '>')
       x[0] = '';
