@@ -846,10 +846,10 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     // a-fresh, then we should change this back to "return false".
     //
     // XXX XXX XXX XXX XXX XXX XXX
-    console.log("XXX warning: considering package",
+ /*   console.log("XXX warning: considering package",
                 packageSource.name, "to be up to date because",
                 "it was built by <", compiler.BUILT_BY,
-                "and this makes no sense at all");
+                "and this makes no sense at all"); */
     return true;
     return false;
   }
