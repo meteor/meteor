@@ -120,8 +120,13 @@ ConstraintSolver.Resolver.prototype.resolve =
   pq.push(startState, [estimateCostFunction(startState, opts), 0]);
 
   var someError = null;
+  var stateStrings = {};
   while (! pq.empty()) {
     var currentState = pq.pop();
+        var tentativeCost =
+          costFunction(currentState.choices, opts) +
+          estimateCostFunction(currentState, opts);
+    console.log(">> ", tentativeCost);
 
     if (_.isEmpty(currentState.dependencies))
       return currentState.choices;
@@ -131,6 +136,12 @@ ConstraintSolver.Resolver.prototype.resolve =
 
 
     if (! neighborsObj.success) {
+      console.log(":( ", currentState.choices.map(function (x) { return x.toString() }))
+      console.log("<< left: ", currentState.dependencies)
+      console.log("<< constr: ", _.map(_.filter(currentState.constraints, function (x) { return _.contains(currentState.dependencies, x.name) }), function (x) { return x.toString() }));
+      console.log(neighborsObj.failureMsg, '\n\n')
+      //console.log(neighborsObj.failureMsg, neighborsObj.triedUnitVersions.map(function (x) { return x.toString() }), '\n', neighborsObj.lastInvalidNeighbor.choices.map(function (x) { return x.toString() }), '\n', neighborsObj.lastInvalidNeighbor.constraints.map(function (x) { return x.toString() }), '\n\n')
+
       someError = someError || neighborsObj.failureMsg;
     } else {
       _.each(neighborsObj.neighbors, function (state) {
@@ -138,7 +149,8 @@ ConstraintSolver.Resolver.prototype.resolve =
           costFunction(state.choices, opts) +
           estimateCostFunction(state, opts);
 
-        pq.push(state, [tentativeCost, -state.choices.length]);
+        //if (_.isFinite(tentativeCost))
+          pq.push(state, [tentativeCost, -state.choices.length]);
       });
     }
   }
@@ -368,6 +380,9 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     _.each(exactDeps, function (c) {
       var unitVersion = c.getSatisfyingUnitVersion(resolver);
       // TODO: error handling in case a satisfying dependency wasn't found
+      // xcxc
+      if (!unitVersion)
+        console.log("FAIL: ", c);
 
       // Collect the transitive dependencies of the direct exact dependencies.
       exactTransitiveConstraints = _.union(exactTransitiveConstraints,
