@@ -410,7 +410,7 @@ var Target = function (options) {
 
   // All of the Slices that are to go into this target, in the order
   // that they are to be loaded.
-  self.slices = [];
+  self.builds = [];
 
   // JavaScript files. List of File. They will be loaded at startup in
   // the order given.
@@ -441,7 +441,7 @@ _.extend(Target.prototype, {
   // target-type-dependent function such as write() or toJsImage().
   //
   // options
-  // - packages: packages to include (Unipackage or 'foo' or 'foo.slice'),
+  // - packages: packages to include (Unipackage or 'foo' or 'foo.build'),
   //   per _determineLoadOrder
   // - test: packages to test (Unipackage or 'foo'), per _determineLoadOrder
   // - minify: true to minify
@@ -451,7 +451,7 @@ _.extend(Target.prototype, {
   make: function (options) {
     var self = this;
 
-    // Populate the list of slices to load
+    // Populate the list of builds to load
     self._determineLoadOrder({
       packages: options.packages || [],
       test: options.test || []
@@ -486,57 +486,53 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Determine the packages to load, create Slices for
-  // them, put them in load order, save in slices.
+  // Determine the packages to load, create Builds for
+  // them, put them in load order, save in builds.
   //
   // options include:
-  // - packages: an array of packages (or, properly speaking, slices)
+  // - packages: an array of packages (or, properly speaking, builds)
   //   to include. Each element should either be a Unipackage object or a
   //   package name as a string (to include that package's default
-  //   slices for this arch, or a string of the form 'package.slice'
-  //   to include a particular named slice from a particular package.
+  //   builds for this arch, or a string of the form 'package.build'
+  //   to include a particular named build from a particular package.
   // - test: an array of packages (as Unipackage objects or as name
-  //   strings) whose test slices should be included
+  //   strings) whose test builds should be included
   _determineLoadOrder: function (options) {
     var self = this;
     var packageLoader = self.packageLoader;
 
     // Find the roots
-    var rootSlices =
+    var rootBuilds =
       _.flatten([
         _.map(options.packages || [], function (p) {
           if (typeof p === "string")
-            return packageLoader.getSlices(p, self.arch);
+            return packageLoader.getBuilds(p, self.arch);
           else
-            return p.getDefaultSlices(self.arch);
-        }),
-        _.map(options.test || [], function (p) {
-          var pkg = (typeof p === "string" ? packageLoader.getPackage(p) : p);
-          return pkg.getTestSlices(self.arch);
+            return p.getDefaultBuilds(self.arch);
         })
       ]);
 
-    // PHASE 1: Which slices will be used?
+    // PHASE 1: Which builds will be used?
     //
-    // Figure out which slices are going to be used in the target, regardless of
+    // Figure out which builds are going to be used in the target, regardless of
     // order. We ignore weak dependencies here, because they don't actually
     // create a "must-use" constraint, just an ordering constraint.
 
-    // What slices will be used in the target? Built in Phase 1, read in
+    // What builds will be used in the target? Built in Phase 1, read in
     // Phase 2.
-    var getsUsed = {};  // Map from slice.id to Slice.
-    var addToGetsUsed = function (slice) {
-      if (_.has(getsUsed, slice.id))
+    var getsUsed = {};  // Map from build.id to Build.
+    var addToGetsUsed = function (build) {
+      if (_.has(getsUsed, build.id))
         return;
-      getsUsed[slice.id] = slice;
-      compiler.eachUsedSlice(slice.uses, self.arch, packageLoader,
+      getsUsed[build.id] = build;
+      compiler.eachUsedBuild(build.uses, self.arch, packageLoader,
                           {skipWeak: true}, addToGetsUsed);
     };
-    _.each(rootSlices, addToGetsUsed);
+    _.each(rootBuilds, addToGetsUsed);
 
-    // PHASE 2: In what order should we load the slices?
+    // PHASE 2: In what order should we load the builds?
     //
-    // Set self.slices to be all of the roots, plus all of their non-weak
+    // Set self.builds to be all of the roots, plus all of their non-weak
     // dependencies, in the correct load order. "Load order" means that if X
     // depends on (uses) Y, and that relationship is not marked as unordered, Y
     // appears before X in the ordering. Raises an exception iff there is no
@@ -544,47 +540,47 @@ _.extend(Target.prototype, {
     //
     // XXX The topological sort code here is duplicated in catalog.js.
 
-    // What slices have not yet been added to self.slices?
-    var needed = _.clone(getsUsed);  // Map from slice.id to Slice.
-    // Slices that we are in the process of adding; used to detect circular
+    // What builds have not yet been added to self.builds?
+    var needed = _.clone(getsUsed);  // Map from build.id to Build.
+    // Builds that we are in the process of adding; used to detect circular
     // ordered dependencies.
-    var onStack = {};  // Map from slice.id to true.
+    var onStack = {};  // Map from build.id to true.
 
-    // This helper recursively adds slice's ordered dependencies to self.slices,
-    // then adds slice itself.
-    var add = function (slice) {
+    // This helper recursively adds build's ordered dependencies to self.builds,
+    // then adds build itself.
+    var add = function (build) {
       // If this has already been added, there's nothing to do.
-      if (!_.has(needed, slice.id))
+      if (!_.has(needed, build.id))
         return;
 
       // Process each ordered dependency. (If we have an unordered dependency
       // `u`, then there's no reason to add it *now*, and for all we know, `u`
-      // will depend on `slice` and need to be added after it. So we ignore
+      // will depend on `build` and need to be added after it. So we ignore
       // those edge. Because we did follow those edges in Phase 1, any unordered
-      // slices were at some point in `needed` and will not be left out).
-      compiler.eachUsedSlice(
-        slice.uses, self.arch, packageLoader, {skipUnordered: true},
-        function (usedSlice, useOptions) {
+      // builds were at some point in `needed` and will not be left out).
+      compiler.eachUsedBuild(
+        build.uses, self.arch, packageLoader, {skipUnordered: true},
+        function (usedBuild, useOptions) {
           // If this is a weak dependency, and nothing else in the target had a
           // strong dependency on it, then ignore this edge.
-          if (useOptions.weak && ! _.has(getsUsed, usedSlice.id))
+          if (useOptions.weak && ! _.has(getsUsed, usedBuild.id))
             return;
-          if (onStack[usedSlice.id]) {
+          if (onStack[usedBuild.id]) {
             buildmessage.error("circular dependency between packages " +
-                               slice.pkg.name + " and " + usedSlice.pkg.name);
+                               build.pkg.name + " and " + usedBuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
           }
-          onStack[usedSlice.id] = true;
-          add(usedSlice);
-          delete onStack[usedSlice.id];
+          onStack[usedBuild.id] = true;
+          add(usedBuild);
+          delete onStack[usedBuild.id];
         });
-      self.slices.push(slice);
-      delete needed[slice.id];
+      self.builds.push(build);
+      delete needed[build.id];
     };
 
     while (true) {
-      // Get an arbitrary slice from those that remain, or break if none remain.
+      // Get an arbitrary build from those that remain, or break if none remain.
       var first = null;
       for (first in needed) break;
       if (! first)
@@ -594,7 +590,7 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Process all of the sorted slices (which includes running the JavaScript
+  // Process all of the sorted builds (which includes running the JavaScript
   // linker).
   _emitResources: function () {
     var self = this;
@@ -603,15 +599,15 @@ _.extend(Target.prototype, {
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
-    _.each(self.slices, function (slice) {
-      var isApp = ! slice.pkg.name;
+    _.each(self.builds, function (build) {
+      var isApp = ! build.pkg.name;
 
       // Emit the resources
-      var resources = slice.getResources(self.arch, self.packageLoader);
+      var resources = build.getResources(self.arch, self.packageLoader);
 
       // First, find all the assets, so that we can associate them with each js
-      // resource (for os slices).
-      var sliceAssets = {};
+      // resource (for os builds).
+      var buildAssets = {};
       _.each(resources, function (resource) {
         if (resource.type !== "asset")
           return;
@@ -630,7 +626,7 @@ _.extend(Target.prototype, {
         if (isBrowser)
           f.setUrlFromRelPath(resource.servePath);
         else {
-          sliceAssets[resource.path] = resource.data;
+          buildAssets[resource.path] = resource.data;
         }
 
         self.asset.push(f);
@@ -663,21 +659,21 @@ _.extend(Target.prototype, {
           if (resource.type === "js" && isOs) {
             // Hack, but otherwise we'll end up putting app assets on this file.
             if (resource.servePath !== "/packages/global-imports.js")
-              f.setAssets(sliceAssets);
+              f.setAssets(buildAssets);
 
-            if (! isApp && slice.nodeModulesPath) {
-              var nmd = self.nodeModulesDirectories[slice.nodeModulesPath];
+            if (! isApp && build.nodeModulesPath) {
+              var nmd = self.nodeModulesDirectories[build.nodeModulesPath];
               if (! nmd) {
                 nmd = new NodeModulesDirectory({
-                  sourcePath: slice.nodeModulesPath,
+                  sourcePath: build.nodeModulesPath,
                   // It's important that this path end with
                   // node_modules. Otherwise, if two modules in this package
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: path.join(
-                    'npm', slice.pkg.name, slice.sliceName, 'node_modules')
+                    'npm', build.pkg.name, build.buildName, 'node_modules')
                 });
-                self.nodeModulesDirectories[slice.nodeModulesPath] = nmd;
+                self.nodeModulesDirectories[build.nodeModulesPath] = nmd;
               }
               f.nodeModulesDirectory = nmd;
             }
@@ -703,12 +699,12 @@ _.extend(Target.prototype, {
       });
 
       // Depend on the source files that produced these resources.
-      self.watchSet.merge(slice.watchSet);
+      self.watchSet.merge(build.watchSet);
       // Remember the versions of all of the build-time dependencies
       // that were used in these resources.
       // XXX assumes that this merges cleanly
       _.extend(self.pluginProviderPackageDirs,
-               slice.pkg.pluginProviderPackageDirs)
+               build.pkg.pluginProviderPackageDirs)
     });
   },
 
@@ -757,7 +753,7 @@ _.extend(Target.prototype, {
   // would be 'os'.
   mostCompatibleArch: function () {
     var self = this;
-    return archinfo.leastSpecificDescription(_.pluck(self.slices, 'arch'));
+    return archinfo.leastSpecificDescription(_.pluck(self.builds, 'arch'));
   }
 });
 
@@ -1995,7 +1991,7 @@ exports.buildJsImage = function (options) {
   var packageSource = new PackageSource;
 
   packageSource.initFromOptions(options.name, {
-    sliceName: "plugin",
+    buildName: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],

@@ -32,14 +32,14 @@ var rejectBadPath = function (p) {
 // - packageVariables
 // - resources
 
-var nextUniqueSliceId = 1;
-var UnipackageSlice = function (unipackage, options) {
+var nextUniqueBuildId = 1;
+var UnipackageBuild = function (unipackage, options) {
   var self = this;
   options = options || {};
   self.pkg = unipackage;
 
   // These have the same meaning as they do in SourceSlice.
-  self.sliceName = options.name;
+  self.buildName = options.name;
   self.arch = options.arch;
   self.uses = options.uses;
   self.implies = options.implies || [];
@@ -57,8 +57,8 @@ var UnipackageSlice = function (unipackage, options) {
   // to keep track of UnipackageSlices in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
-  self.id = unipackage.name + "." + self.sliceName + "@" + self.arch + "#" +
-    (nextUniqueSliceId ++);
+  self.id = unipackage.name + "." + self.buildName + "@" + self.arch + "#" +
+    (nextUniqueBuildId ++);
 
   // Prelink output.
   //
@@ -103,7 +103,7 @@ var UnipackageSlice = function (unipackage, options) {
   self.nodeModulesPath = options.nodeModulesPath;
 };
 
-_.extend(UnipackageSlice.prototype, {
+_.extend(UnipackageBuild.prototype, {
   // Get the resources that this function contributes to a bundle, in
   // the same format as self.resources as documented above. This
   // includes static assets and fully linked JavaScript.
@@ -136,14 +136,14 @@ _.extend(UnipackageSlice.prototype, {
     // shouldn't be affected by the non-local decision of whether or not an
     // unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
-    compiler.eachUsedSlice(
+    compiler.eachUsedBuild(
       self.uses,
       bundleArch, packageLoader,
       {skipWeak: true, skipUnordered: true}, function (otherSlice) {
         _.each(otherSlice.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||
-              (symbol.export === "tests" && self.sliceName === "tests"))
+              (symbol.export === "tests" && self.buildName === "tests"))
             imports[symbol.name] = otherSlice.pkg.name;
         });
       });
@@ -208,11 +208,10 @@ var Unipackage = function () {
   self.metadata = {};
   self.version = null;
   self.earliestCompatibleVersion = null;
-  self.defaultSlices = {};
-  self.testSlices = {};
+  self.defaultBuilds = {};
 
   // Build slices. Array of UnipackageSlice.
-  self.slices = [];
+  self.builds = [];
 
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
   self.plugins = {};
@@ -264,8 +263,7 @@ _.extend(Unipackage.prototype, {
   initEmpty: function (name) {
     var self = this;
     self.name = name;
-    self.defaultSlices = {'': []};
-    self.testSlices = {'': []};
+    self.defaultBuilds = {'': []};
   },
 
   // This is primarily intended to be used by the compiler. After
@@ -276,8 +274,7 @@ _.extend(Unipackage.prototype, {
     self.metadata = options.metadata;
     self.version = options.version;
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
-    self.defaultSlices = options.defaultSlices;
-    self.testSlices = options.testSlices;
+    self.defaultBuilds = options.defaultBuilds;
     self.plugins = options.plugins;
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
@@ -288,25 +285,25 @@ _.extend(Unipackage.prototype, {
   // called as part of building up a new Unipackage using
   // initFromOptions. 'options' are the options to the UnipackageSlice
   // constructor.
-  addSlice: function (options) {
+  addBuild: function (options) {
     var self = this;
-    self.slices.push(new UnipackageSlice(self, options));
+    self.builds.push(new UnipackageBuild(self, options));
   },
 
   architectures: function () {
     var self = this;
-    return _.uniq(_.pluck(self.slices, 'arch')).sort();
+    return _.uniq(_.pluck(self.builds, 'arch')).sort();
   },
 
   // Return the slice of the package to use for a given slice name
   // (eg, 'main' or 'test') and target architecture (eg,
   // 'os.linux.x86_64' or 'browser'), or throw an exception if
   // that packages can't be loaded under these circumstances.
-  getSingleSlice: function (name, arch) {
+  getSingleBuild: function (name, arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(
-      arch, _.pluck(_.where(self.slices, { sliceName: name }), 'arch'));
+      arch, _.pluck(_.where(self.builds, { buildName: name }), 'arch'));
 
     if (! chosenArch) {
       // XXX need improvement. The user should get a graceful error
@@ -318,7 +315,7 @@ _.extend(Unipackage.prototype, {
                       "' that runs on architecture '" + arch + "'");
     }
 
-    return _.where(self.slices, { sliceName: name, arch: chosenArch })[0];
+    return _.where(self.builds, { buildName: name, arch: chosenArch })[0];
   },
 
   // Return the slices that should be used on a given arch if the
@@ -327,11 +324,11 @@ _.extend(Unipackage.prototype, {
   //
   // On error, throw an exception, or if inside
   // buildmessage.capture(), log a build error and return [].
-  getDefaultSlices: function (arch) {
+  getDefaultBuilds: function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(arch,
-                                                _.keys(self.defaultSlices));
+                                                _.keys(self.defaultBuilds));
 
     if (! chosenArch) {
       buildmessage.error(
@@ -342,29 +339,8 @@ _.extend(Unipackage.prototype, {
       return [];
     }
 
-    return _.map(self.defaultSlices[chosenArch], function (name) {
-      return self.getSingleSlice(name, arch);
-    });
-  },
-
-  // Return the slices that should be used to test the package on a
-  // given arch.
-  getTestSlices: function (arch) {
-    var self = this;
-
-    var chosenArch = archinfo.mostSpecificMatch(arch,
-                                                _.keys(self.testSlices));
-    if (! chosenArch) {
-      buildmessage.error(
-        (self.name || "this app") +
-          " does not have tests for architecture " + arch + "'",
-        { secondary: true });
-      // recover by returning by no slices
-      return [];
-    }
-
-    return _.map(self.testSlices[chosenArch], function (name) {
-      return self.getSingleSlice(name, arch);
+    return _.map(self.defaultBuilds[chosenArch], function (name) {
+      return self.getSingleBuild(name, arch);
     });
   },
 
@@ -521,10 +497,8 @@ _.extend(Unipackage.prototype, {
     }
     // If multiple sub-unipackages specify defaultSlices or testSlices for the
     // same arch, just take the answer from the first sub-unipackage.
-    self.defaultSlices = _.extend(mainJson.defaultSlices,
-                                  self.defaultSlices || {});
-    self.testSlices = _.extend(mainJson.testSlices,
-                               self.testSlices || {});
+    self.defaultBuilds = _.extend(mainJson.defaultSlices,
+                                  self.defaultBuilds || {});
 
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -548,7 +522,7 @@ _.extend(Unipackage.prototype, {
 
       // Skip slices we already have.
       var alreadyHaveSlice = _.find(self.slices, function (slice) {
-        return slice.sliceName === sliceMeta.name &&
+        return slice.buildName === sliceMeta.name &&
           slice.arch === sliceMeta.arch;
       });
       if (alreadyHaveSlice)
@@ -615,7 +589,7 @@ _.extend(Unipackage.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      self.slices.push(new UnipackageSlice(self, {
+      self.builds.push(new UnipackageBuild(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
         uses: sliceJson.uses,
@@ -661,8 +635,7 @@ _.extend(Unipackage.prototype, {
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         slices: [],
-        defaultSlices: self.defaultSlices,
-        testSlices: self.testSlices,
+        defaultSlices: self.defaultBuilds,
         plugins: []
       };
 
@@ -717,10 +690,10 @@ _.extend(Unipackage.prototype, {
       });
 
       // Slices
-      _.each(self.slices, function (slice) {
+      _.each(self.builds, function (slice) {
         // Make up a filename for this slice
         var baseSliceName =
-          (slice.sliceName === "main" ? "" : (slice.sliceName + ".")) +
+          (slice.buildName === "main" ? "" : (slice.buildName + ".")) +
           slice.arch;
         var sliceDir =
           builder.generateFilename(baseSliceName, { directory: true });
@@ -728,7 +701,7 @@ _.extend(Unipackage.prototype, {
           builder.generateFilename(baseSliceName + ".json");
 
         mainJson.slices.push({
-          name: slice.sliceName,
+          name: slice.buildName,
           arch: slice.arch,
           path: sliceJsonFile
         });
@@ -952,7 +925,7 @@ _.extend(Unipackage.prototype, {
     var watchFiles = [];
     var watchSet = new watch.WatchSet();
     watchSet.merge(self.pluginWatchSet);
-    _.each(self.slices, function (slice) {
+    _.each(self.builds, function (slice) {
       watchSet.merge(slice.watchSet);
     });
     _.each(watchSet.files, function (hash, fileAbsPath) {

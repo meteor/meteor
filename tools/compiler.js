@@ -17,7 +17,7 @@ var compiler = exports;
 // Whenever you change anything about the code that generates unipackages, bump
 // this version number. The idea is that the "format" field of the unipackage
 // JSON file only changes when the actual specified structure of the
-// unipackage/slice changes, but this version (which is build-tool-specific) can
+// unipackage/build changes, but this version (which is build-tool-specific) can
 // change when the the contents (not structure) of the built output changes. So
 // eg, if we improve the linker's static analysis, this should be bumped.
 //
@@ -31,24 +31,24 @@ compiler.BUILT_BY = 'meteor/11';
 // XXX where should this go? I'll make it a random utility function
 // for now
 //
-// 'dependencies' is the 'uses' attribute from a UnipackageSlice. Call
-// 'callback' with each slice (of architecture matching `arch`)
+// 'dependencies' is the 'uses' attribute from a UnipackageBuild. Call
+// 'callback' with each build (of architecture matching `arch`)
 // referenced by that dependency list. This includes directly used
-// slices, and slices that are transitively "implied" by used
-// slices. (But not slices that are used by slices that we use!)
+// builds, and builds that are transitively "implied" by used
+// builds. (But not builds that are used by builds that we use!)
 // Options are skipWeak and skipUnordered, meaning to ignore direct
 // "uses" that are weak or unordered.
 //
 // packageLoader is the PackageLoader that should be used to resolve
 // the dependencies.
-compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
+compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
                                    callback) {
   if (typeof options === "function") {
     callback = options;
     options = {};
   }
 
-  var processedSliceId = {};
+  var processedBuildId = {};
   var usesToProcess = [];
   _.each(dependencies, function (use) {
     if (options.skipUnordered && use.unordered)
@@ -61,19 +61,19 @@ compiler.eachUsedSlice = function (dependencies, arch, packageLoader, options,
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var slices =
-      packageLoader.getSlices(_.pick(use, 'package', 'spec'),
+    var builds =
+      packageLoader.getBuilds(_.pick(use, 'package', 'spec'),
                                     arch);
-    _.each(slices, function (slice) {
-      if (_.has(processedSliceId, slice.id))
+    _.each(builds, function (build) {
+      if (_.has(processedBuildId, build.id))
         return;
-      processedSliceId[slice.id] = true;
-      callback(slice, {
+      processedBuildId[build.id] = true;
+      callback(build, {
         unordered: !!use.unordered,
         weak: !!use.weak
       });
 
-      _.each(slice.implies, function (implied) {
+      _.each(build.implies, function (implied) {
         usesToProcess.push(implied);
       });
     });
@@ -117,7 +117,7 @@ var determineBuildTimeDependencies = function (packageSource) {
 
   // -- Direct dependencies --
 
-  // XXX it looks like when we load plugins in compileSlice, we honor
+  // XXX it looks like when we load plugins in compileBuild, we honor
   // implied plugins, but here where we're determining dependencies,
   // we don't include them. we should probably straighten this out.
   var dependencyMetadata =
@@ -166,8 +166,8 @@ var determineBuildTimeDependencies = function (packageSource) {
     // no way to specify weak/unordered. Much like an app.
     _.each(info.use, function (spec) {
       var parsedSpec = utils.parseSpec(spec);
-      if (parsedSpec.slice)
-        throw new Error("can't deal with slice specs here yet");
+      if (parsedSpec.build)
+        throw new Error("can't deal with build specs here yet");
       constraints[parsedSpec.package] = parsedSpec.constraint || null;
     });
 
@@ -180,9 +180,9 @@ var determineBuildTimeDependencies = function (packageSource) {
 
 compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 
-// inputSlice is a SourceSlice to compile. Process all source files
+// inputBuild is a SourceBuild to compile. Process all source files
 // through the appropriate handlers and run the prelink phase on any
-// resulting JavaScript. Create a new UnipackageSlice and add it to
+// resulting JavaScript. Create a new UnipackageBuild and add it to
 // 'unipackage'.
 //
 // packageLoader is a PackageLoader that can load our build-time
@@ -191,13 +191,13 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileSlice = function (unipackage, inputSlice, packageLoader,
+var compileBuild = function (unipackage, inputBuild, packageLoader,
                              nodeModulesPath, isPortable) {
-  var isApp = ! inputSlice.pkg.name;
+  var isApp = ! inputBuild.pkg.name;
   var resources = [];
   var js = [];
   var sources = [];
-  var watchSet = inputSlice.watchSet.clone();
+  var watchSet = inputBuild.watchSet.clone();
 
   // *** Determine and load active plugins
 
@@ -206,10 +206,10 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
   // a special "use" role anymore. it's not totally clear to me what
   // the correct behavior should be -- we need to resolve whether we
   // think about extensions as being global to a package or particular
-  // to a slice.
+  // to a build.
 
   // (there's also some weirdness here with handling implies, because
-  // the implies field is on the target slice, but we really only care
+  // the implies field is on the target build, but we really only care
   // about packages.)
   var activePluginPackages = [unipackage];
 
@@ -218,7 +218,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
   // not some unrelated package in the target has a dependency. And we
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
-  _.each(inputSlice.uses, function (dependency) {
+  _.each(inputBuild.uses, function (dependency) {
     if (! dependency.weak && ! dependency.unordered &&
         dependency.package !== unipackage.name &&
         packageLoader.containsPlugins(dependency.package)) {
@@ -250,7 +250,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
       if (ext in allHandlers && allHandlers[ext] !== handler) {
         buildmessage.error(
           "conflict: two packages included in " +
-            (inputSlice.pkg.name || "the app") + ", " +
+            (inputBuild.pkg.name || "the app") + ", " +
             (allHandlers[ext].pkg.name || "the app") + " and " +
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
@@ -269,19 +269,19 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
   var sourceExtensions = _.keys(allHandlers);
-  var sourceItems = inputSlice.getSourcesFunc(sourceExtensions, watchSet);
+  var sourceItems = inputBuild.getSourcesFunc(sourceExtensions, watchSet);
 
   // *** Process each source file
   var addAsset = function (contents, relPath, hash) {
     // XXX hack
-    if (! inputSlice.pkg.name)
+    if (! inputBuild.pkg.name)
       relPath = relPath.replace(/^(private|public)\//, '');
 
     resources.push({
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: path.join(inputSlice.pkg.serveRoot, relPath),
+      servePath: path.join(inputBuild.pkg.serveRoot, relPath),
       hash: hash
     });
 
@@ -291,7 +291,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
   _.each(sourceItems, function (source) {
     var relPath = source.relPath;
     var fileOptions = _.clone(source.fileOptions) || {};
-    var absPath = path.resolve(inputSlice.pkg.sourceRoot, relPath);
+    var absPath = path.resolve(inputBuild.pkg.sourceRoot, relPath);
     var filename = path.basename(relPath);
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
@@ -352,8 +352,8 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
     // - fileOptions: any options passed to "api.add_files"; for
     //   use by the plugin. The built-in "js" plugin uses the "bare"
     //   option for files that shouldn't be wrapped in a closure.
-    // - declaredExports: An array of symbols exported by this slice, or null
-    //   if it may not export any symbols (eg, test slices). This is used by
+    // - declaredExports: An array of symbols exported by this build, or null
+    //   if it may not export any symbols (eg, test builds). This is used by
     //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
     // - read(n): read from the input file. If n is given it should
     //   be an integer, and you will receive the next n bytes of the
@@ -404,7 +404,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
     // (code that isn't dependent on the arch, other than 'browser'
     // vs 'os') -- they can look at the arch that is provided
     // but they can't rely on the running on that particular arch
-    // (in the end, an arch-specific slice will be emitted only if
+    // (in the end, an arch-specific build will be emitted only if
     // there are native node modules). Obviously this should
     // change. A first step would be a setOutputArch() function
     // analogous to what we do with native node modules, but maybe
@@ -438,19 +438,19 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
       _fullInputPath: absPath, // avoid, see above..
       // XXX duplicates _pathForSourceMap() in linker
       pathForSourceMap: (
-        inputSlice.pkg.name
-          ? inputSlice.pkg.name + "/" + relPath
+        inputBuild.pkg.name
+          ? inputBuild.pkg.name + "/" + relPath
           : path.basename(relPath)),
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
-      packageName: inputSlice.pkg.name,
-      rootOutputPath: inputSlice.pkg.serveRoot,
-      arch: inputSlice.arch, // XXX: what is the story with arch?
+      packageName: inputBuild.pkg.name,
+      rootOutputPath: inputBuild.pkg.serveRoot,
+      arch: inputBuild.arch, // XXX: what is the story with arch?
       archMatches: function (pattern) {
-        return archinfo.matches(inputSlice.arch, pattern);
+        return archinfo.matches(inputBuild.arch, pattern);
       },
       fileOptions: fileOptions,
-      declaredExports: _.pluck(inputSlice.declaredExports, 'name'),
+      declaredExports: _.pluck(inputBuild.declaredExports, 'name'),
       read: function (n) {
         if (n === undefined || readOffset + n > contents.length)
           n = contents.length - readOffset;
@@ -459,7 +459,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
         return ret;
       },
       appendDocument: function (options) {
-        if (! archinfo.matches(inputSlice.arch, "browser"))
+        if (! archinfo.matches(inputBuild.arch, "browser"))
           throw new Error("Document sections can only be emitted to " +
                           "browser targets");
         if (options.section !== "head" && options.section !== "body")
@@ -472,7 +472,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
         });
       },
       addStylesheet: function (options) {
-        if (! archinfo.matches(inputSlice.arch, "browser"))
+        if (! archinfo.matches(inputBuild.arch, "browser"))
           throw new Error("Stylesheets can only be emitted to " +
                           "browser targets");
         if (typeof options.data !== "string")
@@ -480,7 +480,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
         resources.push({
           type: "css",
           data: new Buffer(options.data, 'utf8'),
-          servePath: path.join(inputSlice.pkg.serveRoot, options.path),
+          servePath: path.join(inputBuild.pkg.serveRoot, options.path),
           sourceMap: options.sourceMap
         });
       },
@@ -489,12 +489,12 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSlice.arch, "browser"))
+        if (options.bare && ! archinfo.matches(inputBuild.arch, "browser"))
           throw new Error("'bare' option may only be used for browser targets");
         js.push({
           source: options.data,
           sourcePath: options.sourcePath,
-          servePath: path.join(inputSlice.pkg.serveRoot, options.path),
+          servePath: path.join(inputBuild.pkg.serveRoot, options.path),
           bare: !! options.bare,
           sourceMap: options.sourceMap
         });
@@ -529,9 +529,9 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
 
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
-  // default slice is not allowed to depend on anything!)
+  // default build is not allowed to depend on anything!)
   var jsAnalyze = null;
-  if (! _.isEmpty(js) && inputSlice.pkg.name !== "js-analyze") {
+  if (! _.isEmpty(js) && inputBuild.pkg.name !== "js-analyze") {
     jsAnalyze = uniload.load({
       packages: ["js-analyze"]
     })["js-analyze"].JSAnalyze;
@@ -541,17 +541,17 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
     inputFiles: js,
     useGlobalNamespace: isApp,
     combinedServePath: isApp ? null :
-      "/packages/" + inputSlice.pkg.name +
-      (inputSlice.sliceName === "main" ? "" : (":" + inputSlice.sliceName)) + ".js",
-    name: inputSlice.pkg.name || null,
-    declaredExports: _.pluck(inputSlice.declaredExports, 'name'),
+      "/packages/" + inputBuild.pkg.name +
+      (inputBuild.buildName === "main" ? "" : (":" + inputBuild.buildName)) + ".js",
+    name: inputBuild.pkg.name || null,
+    declaredExports: _.pluck(inputBuild.declaredExports, 'name'),
     jsAnalyze: jsAnalyze
   });
 
   // *** Determine captured variables
   var packageVariables = [];
   var packageVariableNames = {};
-  _.each(inputSlice.declaredExports, function (symbol) {
+  _.each(inputBuild.declaredExports, function (symbol) {
     if (_.has(packageVariableNames, symbol.name))
       return;
     packageVariables.push({
@@ -570,7 +570,7 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
   });
 
   // *** Consider npm dependencies and portability
-  var arch = inputSlice.arch;
+  var arch = inputBuild.arch;
   if (arch === "os" && ! isPortable) {
     // Contains non-portable npm module builds, so set arch correctly
     arch = archinfo.host();
@@ -580,16 +580,16 @@ var compileSlice = function (unipackage, inputSlice, packageLoader,
     nodeModulesPath = undefined;
   }
 
-  // *** Output slice object
-  unipackage.addSlice({
-    name: inputSlice.sliceName,
-    arch: inputSlice.arch, // XXX: arch?
-    uses: inputSlice.uses,
-    implies: inputSlice.implies,
+  // *** Output build object
+  unipackage.addBuild({
+    name: inputBuild.buildName,
+    arch: inputBuild.arch, // XXX: arch?
+    uses: inputBuild.uses,
+    implies: inputBuild.implies,
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPath,
     prelinkFiles: results.files,
-    noExports: inputSlice.noExports,
+    noExports: inputBuild.noExports,
     packageVariables: packageVariables,
     resources: resources
   });
@@ -671,8 +671,8 @@ compiler.compile = function (packageSource, options) {
 
       // Add this plugin's dependencies to our "plugin dependency"
       // WatchSet. buildResult.watchSet will end up being the merged
-      // watchSets of all of the slices of the plugin -- plugins have
-      // only one slice and this should end up essentially being just
+      // watchSets of all of the builds of the plugin -- plugins have
+      // only one build and this should end up essentially being just
       // the source files of the plugin.
       pluginWatchSet.merge(buildResult.watchSet);
 
@@ -714,24 +714,23 @@ compiler.compile = function (packageSource, options) {
     metadata: packageSource.metadata,
     version: packageSource.version,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-    defaultSlices: packageSource.defaultSlices,
-    testSlices: packageSource.testSlices,
+    defaultBuilds: packageSource.defaultBuilds,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies
   });
 
-  // Build slices. Might use our plugins, so needs to happen
+  // Build builds. Might use our plugins, so needs to happen
   // second.
   var packageLoader = new PackageLoader({
     versions: buildTimeDeps.directDependencies
   });
 
-  _.each(packageSource.slices, function (slice) {
-    var sliceSources = compileSlice(unipackage, slice, packageLoader,
+  _.each(packageSource.builds, function (build) {
+    var buildSources = compileBuild(unipackage, build, packageLoader,
                                     nodeModulesPath, isPortable);
-    sources.push.apply(sources, sliceSources);
+    sources.push.apply(sources, buildSources);
   });
 
   // XXX what should we do if the PackageSource doesn't have a version?
@@ -921,8 +920,8 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
 
   var watchSet = new watch.WatchSet();
   watchSet.merge(unipackage.pluginWatchSet);
-  _.each(unipackage.slices, function (slice) {
-    watchSet.merge(slice.watchSet);
+  _.each(unipackage.builds, function (build) {
+    watchSet.merge(build.watchSet);
   });
 
   if (! watch.isUpToDate(watchSet)) {

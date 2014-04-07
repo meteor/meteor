@@ -90,21 +90,21 @@ _.extend(PackageLoader.prototype, {
     return catalog.catalog.getLoadPathForPackage(name, version);
   },
 
-  // Given a slice set spec -- either a package name like "ddp", or a particular
-  // slice within the package like "ddp/client", or a parsed object like
-  // {package: "ddp", slice: "client"} -- return the list of matching slices (as
-  // an array of Slice objects) for a given architecture.
-  getSlices: function (spec, arch) {
+  // Given a build set spec -- either a package name like "ddp", or a particular
+  // build within the package like "ddp/client", or a parsed object like
+  // {package: "ddp", build: "client"} -- return the list of matching builds (as
+  // an array of Build objects) for a given architecture.
+  getBuilds: function (spec, arch) {
     var self = this;
 
     if (typeof spec === "string")
       spec = utils.parseSpec(spec);
 
     var pkg = self.getPackage(spec.package, { throwOnError: true });
-    if (spec.slice)
-      return [pkg.getSingleSlice(spec.slice, arch)];
+    if (spec.build)
+      return [pkg.getSingleBuild(spec.build, arch)];
     else
-      return pkg.getDefaultSlices(arch);
+      return pkg.getDefaultBuilds(arch);
   }
 });
 

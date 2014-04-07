@@ -124,8 +124,8 @@ project.getDirectDependencies = function(appDir) {
     var programSubdir = path.join(project.getProgramsDirectory(appDir), item);
     var programSource = new PackageSource(programSubdir);
     programSource.initFromPackageDir(programName, programSubdir);
-    _.each(programSource.slices, function (sourceSlice) {
-      _.each(sourceSlice.uses, function (use) {
+    _.each(programSource.builds, function (sourceBuild) {
+      _.each(sourceBuild.uses, function (use) {
         programsDeps[programName][use["package"]] = use.constraint || "none";
       });
     });

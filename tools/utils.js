@@ -219,7 +219,7 @@ exports.parseSpec = function (spec) {
     throw new Error("Bad package spec: " + spec);
   var ret = { package: m[1] };
   if (m[3])
-    ret.slice = m[3];
+    ret.build = m[3];
   if (m[5])
     ret.constraint = m[5];
   return ret;

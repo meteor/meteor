@@ -76,7 +76,7 @@ var loadOrderSort = function (a, b) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// SourceSlice
+// SourceBuild
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
@@ -92,17 +92,17 @@ var loadOrderSort = function (a, b) {
 //
 // Do not include the source files in watchSet. They will be
 // added at compile time when the sources are actually read.
-var SourceSlice = function (pkg, options) {
+var SourceBuild = function (pkg, options) {
   var self = this;
   options = options || {};
   self.pkg = pkg;
 
-  // Name for this slice. For example, the "client" in "ddp.client"
+  // Name for this build. For example, the "client" in "ddp.client"
   // (which, NB, we might load on server arches).
-  self.sliceName = options.name;
+  self.buildName = options.name;
 
   // The architecture (fully or partially qualified) that can use this
-  // slice.
+  // build.
   self.arch = options.arch;
 
   // Packages used. The ordering is significant only for determining
@@ -113,7 +113,7 @@ var SourceSlice = function (pkg, options) {
   // - package: the package name
   // - constraint: the constraint on the version of the package to use,
   //   as a string (may be null)
-  // - slice: the slice name (optional)
+  // - build: the build name (optional)
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
   //   to ensure that it loads if we load.
@@ -125,18 +125,18 @@ var SourceSlice = function (pkg, options) {
   // such a dependency would have no effect.
   //
   // In most places, instead of using 'uses' directly, you want to use
-  // something like compiler.eachUsedSlice so you also take into
+  // something like compiler.eachUsedBuild so you also take into
   // account implied packages.
   self.uses = options.uses || [];
 
-  // Packages which are "implied" by using this package. If a slice X
-  // uses this slice Y, and Y implies Z, then X will effectively use Z
+  // Packages which are "implied" by using this package. If a build X
+  // uses this build Y, and Y implies Z, then X will effectively use Z
   // as well (and get its imports and plugins).  An array of objects
   // of the same type as the elements of self.uses (although for now
   // unordered and weak are not allowed).
   self.implies = options.implies || [];
 
-  // A function that returns the source files for this slice. Array of
+  // A function that returns the source files for this build. Array of
   // objects with keys "relPath" and "fileOptions". Null if loaded
   // from unipackage.
   //
@@ -151,11 +151,11 @@ var SourceSlice = function (pkg, options) {
   // local plugins in this package) to compute this.
   self.getSourcesFunc = options.getSourcesFunc || null;
 
-  // True if this slice is not permitted to have any exports, and in
-  // fact should not even define `Package.name` (ie, test slices).
+  // True if this build is not permitted to have any exports, and in
+  // fact should not even define `Package.name` (ie, test builds).
   self.noExports = options.noExports || false;
 
-  // Symbols that this slice should export. List of symbols (as
+  // Symbols that this build should export. List of symbols (as
   // strings). Null on packages where noExports is set.
   self.declaredExports = options.declaredExports || null;
 
@@ -207,27 +207,22 @@ var PackageSource = function () {
   // compatible replacement. Set if and only if version is set.
   self.earliestCompatibleVersion = null;
 
-  // Available editions/subpackages ("slices") of this package. Array
-  // of SourceSlice.
-  self.slices = [];
+  // Available editions/subpackages ("builds") of this package. Array
+  // of SourceBuild.
+  self.builds = [];
 
-  // Map from an arch to the list of slice names that should be
+  // Map from an arch to the list of build names that should be
   // included by default if this package is used without specifying a
-  // slice (eg, as "ddp" rather than "ddp.server"). The most specific
+  // build (eg, as "ddp" rather than "ddp.server"). The most specific
   // arch will be used.
-  self.defaultSlices = {};
-
-  // Map from an arch to the list of slice names that should be
-  // included when this package is tested. The most specific arch will
-  // be used.
-  self.testSlices = {};
+  self.defaultBuilds = {};
 
   // The information necessary to build the plugins in this
   // package. Map from plugin name to object with keys 'name', 'use',
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
-  // Analogous to watchSet in SourceSlice but for plugins. At this
+  // Analogous to watchSet in SourceBuild but for plugins. At this
   // stage will typically contain just 'package.js'.
   self.pluginWatchSet = new watch.WatchSet;
 
@@ -250,8 +245,7 @@ _.extend(PackageSource.prototype, {
   initEmpty: function (name) {
     var self = this;
     self.name = name;
-    self.defaultSlices = {'': []};
-    self.testSlices = {'': []};
+    self.defaultBuilds = {'': []};
   },
 
   // Programmatically initialize a PackageSource from scratch.
@@ -272,7 +266,7 @@ _.extend(PackageSource.prototype, {
   // Options:
   // - sourceRoot (required if sources present)
   // - serveRoot (required if sources present)
-  // - sliceName
+  // - buildName
   // - use
   // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
@@ -299,19 +293,19 @@ _.extend(PackageSource.prototype, {
       return source;
     });
 
-    var slice = new SourceSlice(self, {
-      name: options.sliceName,
+    var build = new SourceBuild(self, {
+      name: options.buildName,
       arch: "os",
       uses: _.map(options.use, utils.parseSpec),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
-    self.slices.push(slice);
+    self.builds.push(build);
 
-    if (! self._checkCrossSliceVersionConstraints())
-      throw new Error("only one slice, so how can consistency check fail?");
+    if (! self._checkCrossBuildVersionConstraints())
+      throw new Error("only one build, so how can consistency check fail?");
 
-    self.defaultSlices = {'os': [options.sliceName]};
+    self.defaultBuilds = {'os': [options.buildName]};
   },
 
   // Initialize a PackageSource from a package.js-style package
@@ -447,7 +441,7 @@ _.extend(PackageSource.prototype, {
     // == 'Npm' object visible in package.js ==
     var Npm = {
       depends: function (_npmDependencies) {
-        // XXX make npmDependencies be per slice, so that production
+        // XXX make npmDependencies be per build, so that production
         // doesn't have to ship all of the npm modules used by test
         // code
         if (npmDependencies) {
@@ -550,9 +544,9 @@ _.extend(PackageSource.prototype, {
     // symbols exported
     var exports = {client: [], server: []};
 
-    // packages used and implied (keys are 'package', 'slice', 'unordered', and
-    // 'weak').  an "implied" package is a package that will be used by a slice
-    // which uses us. (since you can't use a test slice, only the use slice can
+    // packages used and implied (keys are 'package', 'build', 'unordered', and
+    // 'weak').  an "implied" package is a package that will be used by a build
+    // which uses us. (since you can't use a test build, only the use build can
     // have "implies".)
     var uses = {use: {client: [], server: []},
                 test: {client: [], server: []}};
@@ -786,8 +780,8 @@ _.extend(PackageSource.prototype, {
     });
 
     // Make sure that if a dependency was specified in multiple
-    // slices, the constraint is exactly the same.
-    if (! self._checkCrossSliceVersionConstraints()) {
+    // builds, the constraint is exactly the same.
+    if (! self._checkCrossBuildVersionConstraints()) {
       // A build error was written. Recover by ignoring the
       // fact that we have differing constraints.
     }
@@ -818,7 +812,7 @@ _.extend(PackageSource.prototype, {
       files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
     });
 
-    // Create slices
+    // Create builds
     _.each(["use", "test"], function (role) {
       _.each(["browser", "os"], function (arch) {
         var where = (arch === "browser") ? "client" : "server";
@@ -836,20 +830,20 @@ _.extend(PackageSource.prototype, {
           // in the "meteor" package).
           var alreadyDependsOnMeteor =
             !! _.find(uses[role][where], function (u) {
-              return u.package === "meteor" && !u.slice;
+              return u.package === "meteor" && !u.build;
             });
           if (! alreadyDependsOnMeteor)
             uses[role][where].unshift({ package: "meteor" });
         }
 
-        // Each slice has its own separate WatchSet. This is so that, eg, a test
-        // slice's dependencies doesn't end up getting merged into the
-        // pluginWatchSet of a package that uses it: only the use slice's
+        // Each build has its own separate WatchSet. This is so that, eg, a test
+        // build's dependencies doesn't end up getting merged into the
+        // pluginWatchSet of a package that uses it: only the use build's
         // dependencies need to go there!
         var watchSet = new watch.WatchSet();
         watchSet.addFile(packageJsPath, packageJsHash);
 
-        self.slices.push(new SourceSlice(self, {
+        self.builds.push(new SourceBuild(self, {
           name: ({ use: "main", test: "tests" })[role],
           arch: arch,
           uses: uses[role][where],
@@ -862,9 +856,8 @@ _.extend(PackageSource.prototype, {
       });
     });
 
-    // Default slices
-    self.defaultSlices = { browser: ['main'], 'os': ['main'] };
-    self.testSlices = { browser: ['tests'], 'os': ['tests'] };
+    // Default builds
+    self.defaultBuilds = { browser: ['main'], 'os': ['main'] };
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
@@ -875,28 +868,28 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    _.each(["client", "server"], function (sliceName) {
+    _.each(["client", "server"], function (buildName) {
       // Determine used packages
       var names = project.getPackages(appDir);
-      var arch = sliceName === "server" ? "os" : "browser";
+      var arch = buildName === "server" ? "os" : "browser";
 
-      // Create slice
-      var slice = new SourceSlice(self, {
-        name: sliceName,
+      // Create build
+      var build = new SourceBuild(self, {
+        name: buildName,
         arch: arch,
         uses: _.map(names, utils.parseSpec)
       });
-      self.slices.push(slice);
+      self.builds.push(build);
 
       // Watch control files for changes
       // XXX this read has a race with the actual reads that are used
       _.each([path.join(appDir, '.meteor', 'packages'),
               path.join(appDir, '.meteor', 'release')], function (p) {
-                watch.readAndWatchFile(slice.watchSet, p);
+                watch.readAndWatchFile(build.watchSet, p);
               });
 
       // Determine source files
-      slice.getSourcesFunc = function (extensions, watchSet) {
+      build.getSourcesFunc = function (extensions, watchSet) {
         var sourceInclude = _.map(
           extensions,
           function (ext) {
@@ -926,8 +919,8 @@ _.extend(PackageSource.prototype, {
           exclude: sourceExclude
         });
 
-        var otherSliceRegExp =
-              (sliceName === "server" ? /^client\/$/ : /^server\/$/);
+        var otherBuildRegExp =
+              (buildName === "server" ? /^client\/$/ : /^server\/$/);
 
         // The paths that we've called checkForInfiniteRecursion on.
         var seenPaths = {};
@@ -957,7 +950,7 @@ _.extend(PackageSource.prototype, {
           include: [/\/$/],
           exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
                     /^public\/$/, /^private\/$/,
-                    otherSliceRegExp].concat(sourceExclude)
+                    otherBuildRegExp].concat(sourceExclude)
         });
         checkForInfiniteRecursion('');
 
@@ -980,7 +973,7 @@ _.extend(PackageSource.prototype, {
           // directory names that are only special at the top level.
           Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherSliceRegExp].concat(sourceExclude)
+            exclude: [/^tests\/$/, otherBuildRegExp].concat(sourceExclude)
           }));
         }
 
@@ -993,7 +986,7 @@ _.extend(PackageSource.prototype, {
 
           // Special case: on the client, JavaScript files in a
           // `client/compatibility` directory don't get wrapped in a closure.
-          if (sliceName === "client" && relPath.match(/\.js$/)) {
+          if (buildName === "client" && relPath.match(/\.js$/)) {
             var clientCompatSubstr =
                   path.sep + 'client' + path.sep + 'compatibility' + path.sep;
             if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
@@ -1002,8 +995,8 @@ _.extend(PackageSource.prototype, {
           return sourceObj;
         });
 
-        // Now look for assets for this slice.
-        var assetDir = sliceName === "client" ? "public" : "private";
+        // Now look for assets for this build.
+        var assetDir = buildName === "client" ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
         });
@@ -1048,14 +1041,14 @@ _.extend(PackageSource.prototype, {
       };
     });
 
-    if (! self._checkCrossSliceVersionConstraints()) {
-      // should never happen since we created the slices from
+    if (! self._checkCrossBuildVersionConstraints()) {
+      // should never happen since we created the builds from
       // .meteor/packages, which doesn't have a way to express
-      // different constraints for different slices
+      // different constraints for different builds
       throw new Error("conflicting constraints in a package?");
     }
 
-    self.defaultSlices = { browser: ['client'], 'os': ['server'] };
+    self.defaultBuilds = { browser: ['client'], 'os': ['server'] };
   },
 
   // True if the package defines any plugins.
@@ -1064,7 +1057,7 @@ _.extend(PackageSource.prototype, {
     return ! _.isEmpty(self.pluginInfo);
   },
 
-  // Return dependency metadata for all slices, in the format needed
+  // Return dependency metadata for all builds, in the format needed
   // by the package catalog.
   //
   // Options:
@@ -1079,23 +1072,23 @@ _.extend(PackageSource.prototype, {
       if (options.logError)
         return null;
       else
-        throw new Error("inconsistent dependency constraint across slices?");
+        throw new Error("inconsistent dependency constraint across builds?");
     }
     return ret;
   },
 
-  // If dependencies aren't consistent across slices, return false and
+  // If dependencies aren't consistent across builds, return false and
   // also log a buildmessage error if inside a buildmessage job. Else
   // return true.
   // XXX: Check that this is used when refactoring is done.
-  _checkCrossSliceVersionConstraints: function () {
+  _checkCrossBuildVersionConstraints: function () {
     var self = this;
     return !! self._computeDependencyMetadata({ logError: true });
   },
 
   // Compute the return value for getDependencyMetadata, or return
   // null if there is a dependency that doesn't have the same
-  // constraint across all slices (and, if logError is true, log a
+  // constraint across all builds (and, if logError is true, log a
   // buildmessage error).
   //
   // For options, see getDependencyMetadata.
@@ -1107,9 +1100,9 @@ _.extend(PackageSource.prototype, {
     var allConstraints = {}; // for error reporting. package name to array
     var failed = false;
 
-    _.each(self.slices, function (slice) {
+    _.each(self.builds, function (build) {
       // XXX also iterate over "implies"
-      _.each(slice.uses, function (use) {
+      _.each(build.uses, function (use) {
         if ((use.weak && options.skipWeak) ||
             (use.unordered && options.skipUnordered))
           return;
@@ -1134,9 +1127,9 @@ _.extend(PackageSource.prototype, {
         }
 
         d.references.push({
-          slice: slice.sliceName,
-          arch: archinfo.withoutSpecificOs(slice.arch),
-          targetSlice: use.slice,  // usually undefined, for "default slices"
+          build: build.buildName,
+          arch: archinfo.withoutSpecificOs(build.arch),
+          targetBuild: use.build,  // usually undefined, for "default builds"
           weak: use.weak,
           unordered: use.unordered
         });
