@@ -51,6 +51,7 @@ selftest.define("run", function () {
   s.unlink("crash.js");
   run.waitSecs(5);
   run.match("Modified");
+  run.waitSecs(5);
   run.match("restarted");
   s.write("empty.js", "");
   run.waitSecs(5);
@@ -64,6 +65,7 @@ selftest.define("run", function () {
   // Bundle failure
   s.unlink("crash.js");
   s.write("junk.js", "]");
+  run.waitSecs(5);
   run.match("Modified");
   run.match("prevented startup");
   run.match("Unexpected token");
@@ -87,6 +89,7 @@ selftest.define("run", function () {
 "}\n");
   run.waitSecs(5);
   run.match("with code: 137");
+  run.waitSecs(5);
   run.match("restarted");
   run.stop();
 
@@ -100,6 +103,7 @@ selftest.define("run", function () {
   run.match("Unexpected token");
   run.match("file change");
   s.unlink("junk.js");
+  run.waitSecs(5);
   run.match("restarted");
   run.stop();
 
