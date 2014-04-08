@@ -12,6 +12,7 @@
 * When validateLoginAttempt callbacks return false, don't override a more
   specific error message.
 
+* Upgrade Node.js from 0.10.25 to 0.10.26.
 
 ## v0.8.0
 
