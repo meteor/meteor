@@ -101,12 +101,22 @@ _.extend(OplogHandle.prototype, {
     // be ready.
     self._readyFuture.wait();
 
-    // We need to make the selector at least as restrictive as the actual
-    // tailing selector (ie, we need to specify the DB name) or else we might
-    // find a TS that won't show up in the actual tail stream.
-    var lastEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, self._baseOplogSelector,
-      {fields: {ts: 1}, sort: {$natural: -1}});
+    while (true) {
+      // We need to make the selector at least as restrictive as the actual
+      // tailing selector (ie, we need to specify the DB name) or else we might
+      // find a TS that won't show up in the actual tail stream.
+      try {
+        var lastEntry = self._oplogLastEntryConnection.findOne(
+          OPLOG_COLLECTION, self._baseOplogSelector,
+          {fields: {ts: 1}, sort: {$natural: -1}});
+        break;
+      } catch (e) {
+        // During failover (eg) if we get an exception we should log and retry
+        // instead of crashing.
+        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._sleepForMs(100);
+      }
+    }
 
     if (!lastEntry) {
       // Really, nothing in the oplog? Well, we've processed everything.
