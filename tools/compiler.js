@@ -714,7 +714,7 @@ compiler.compile = function (packageSource, options) {
     metadata: packageSource.metadata,
     version: packageSource.version,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-    defaultBuilds: packageSource.defaultBuilds,
+    defaultBuilds: packageSource.defaultArches,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
@@ -727,7 +727,7 @@ compiler.compile = function (packageSource, options) {
     versions: buildTimeDeps.directDependencies
   });
 
-  _.each(packageSource.builds, function (build) {
+  _.each(packageSource.architectures, function (build) {
     var buildSources = compileBuild(unipackage, build, packageLoader,
                                     nodeModulesPath, isPortable);
     sources.push.apply(sources, buildSources);

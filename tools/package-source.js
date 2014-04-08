@@ -76,12 +76,12 @@ var loadOrderSort = function (a, b) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// SourceBuild
+// SourceArch
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
 // - name [required]
-// - arch [required] (XXX: For now.)
+// - arch [required]
 // - uses
 // - implies
 // - getSourcesFunc
@@ -92,7 +92,7 @@ var loadOrderSort = function (a, b) {
 //
 // Do not include the source files in watchSet. They will be
 // added at compile time when the sources are actually read.
-var SourceBuild = function (pkg, options) {
+var SourceArch = function (pkg, options) {
   var self = this;
   options = options || {};
   self.pkg = pkg;
@@ -207,22 +207,21 @@ var PackageSource = function () {
   // compatible replacement. Set if and only if version is set.
   self.earliestCompatibleVersion = null;
 
-  // Available editions/subpackages ("builds") of this package. Array
-  // of SourceBuild.
-  self.builds = [];
+  // Available architectures of this package. Array of SourceArch.
+  self.architectures = [];
 
-  // Map from an arch to the list of build names that should be
-  // included by default if this package is used without specifying a
-  // build (eg, as "ddp" rather than "ddp.server"). The most specific
-  // arch will be used.
-  self.defaultBuilds = {};
+  // Map from a system architecture to the list of architecture names that
+  // should be included by default if this package is used without specifying an
+  // architecture by default. (eg: "ddp" vs "ddp.server"). The most specific
+  // sourceArch will be used.
+  self.defaultArches = {};
 
   // The information necessary to build the plugins in this
   // package. Map from plugin name to object with keys 'name', 'use',
   // 'sources', and 'npmDependencies'.
   self.pluginInfo = {};
 
-  // Analogous to watchSet in SourceBuild but for plugins. At this
+  // Analogous to watchSet in SourceArch but for plugins. At this
   // stage will typically contain just 'package.js'.
   self.pluginWatchSet = new watch.WatchSet;
 
@@ -245,7 +244,7 @@ _.extend(PackageSource.prototype, {
   initEmpty: function (name) {
     var self = this;
     self.name = name;
-    self.defaultBuilds = {'': []};
+    self.defaultArches = {'': []};
   },
 
   // Programmatically initialize a PackageSource from scratch.
@@ -293,7 +292,7 @@ _.extend(PackageSource.prototype, {
       return source;
     });
 
-    var build = new SourceBuild(self, {
+    var build = new SourceArch(self, {
       name: options.buildName,
       arch: "os",
       uses: _.map(options.use, utils.parseSpec),
@@ -304,13 +303,13 @@ _.extend(PackageSource.prototype, {
     // XXX: WTF
     // #Don'tInitializeTestSlices
     if (build.buildName != "tests") {
-      self.builds.push(build);
+      self.architectures.push(build);
     }
 
     if (! self._checkCrossBuildVersionConstraints())
       throw new Error("only one build, so how can consistency check fail?");
 
-    self.defaultBuilds = {'os': [options.buildName]};
+    self.defaultArches = {'os': [options.buildName]};
   },
 
   // Initialize a PackageSource from a package.js-style package
@@ -850,8 +849,8 @@ _.extend(PackageSource.prototype, {
 
         // XXX: #Don't Initialize Test Slices.
         if (role != "test") {
-         self.builds.push(new SourceBuild(self, {
-          name: ({ use: "main", test: "tests" })[role],
+         self.architectures.push(new SourceArch(self, {
+          name: "main",
           arch: arch,
           uses: uses[role][where],
           implies: role === "use" && implies[where] || undefined,
@@ -865,7 +864,7 @@ _.extend(PackageSource.prototype, {
     });
 
     // Default builds
-    self.defaultBuilds = { browser: ['main'], 'os': ['main'] };
+    self.defaultArches = { browser: ['main'], 'os': ['main'] };
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
@@ -882,12 +881,12 @@ _.extend(PackageSource.prototype, {
       var arch = buildName === "server" ? "os" : "browser";
 
       // Create build
-      var build = new SourceBuild(self, {
+      var build = new SourceArch(self, {
         name: buildName,
         arch: arch,
         uses: _.map(names, utils.parseSpec)
       });
-      self.builds.push(build);
+      self.architectures.push(build);
 
       // Watch control files for changes
       // XXX this read has a race with the actual reads that are used
@@ -1056,7 +1055,7 @@ _.extend(PackageSource.prototype, {
       throw new Error("conflicting constraints in a package?");
     }
 
-    self.defaultBuilds = { browser: ['client'], 'os': ['server'] };
+    self.defaultArches = { browser: ['client'], 'os': ['server'] };
   },
 
   // True if the package defines any plugins.
@@ -1108,7 +1107,7 @@ _.extend(PackageSource.prototype, {
     var allConstraints = {}; // for error reporting. package name to array
     var failed = false;
 
-    _.each(self.builds, function (build) {
+    _.each(self.architectures, function (build) {
       // XXX also iterate over "implies"
       _.each(build.uses, function (use) {
         if ((use.weak && options.skipWeak) ||
