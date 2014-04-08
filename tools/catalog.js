@@ -321,6 +321,13 @@ _.extend(Catalog.prototype, {
     self.unbuilt = _.clone(self.effectiveLocalPackages);
   },
 
+  // Given a version string that may or may not have a build ID, convert it into
+  // the catalog's internal format for local versions -- [version
+  // number]+local. (for example, 1.0.0+local).
+  _getLocalVersion: function (version) {
+    return version.split("+")[0] + "+local";
+  },
+
   // Returns the latest unipackage build if the package has already been
   // compiled and built in the directory, and null otherwise.
   _maybeGetUpToDateBuild : function (name) {
@@ -363,16 +370,22 @@ _.extend(Catalog.prototype, {
         return;
       }
 
-      // Make sure that the version we need for this dependency is actually
-      // local. If it is not, then using the local build will not give us the
-      // right answer. This should never happen if the constraint solver/catalog
-      // are doing their jobs right, but we would rather fail than surprise
-      // someone with an incorrect build.
-
-      // XXX: Catalog should know how to deal with requests for local versions.
-      // #LocalVersionsInCatalog
-      if (dep.version.split("+")[0] !== self.packageSources[dep.name].version)
+      // Make sure that the version we need for this dependency is actually the
+      // right local version. If it is not, then using the local build
+      // will not give us the right answer. This should never happen if the
+      // constraint solver/catalog are doing their jobs right, but we would
+      // rather fail than surprise someone with an incorrect build.
+      //
+      // The catalog doesn't understand buildID versions and doesn't know about
+      // them. We might not even have them yet, so let's strip those out.
+      if (self.isLocalPackage(dep.name)) {
+        var version = self._getLocalVersion(dep.version);
+        var packageVersion =
+            self._getLocalVersion(self.packageSources[dep.name].version);
+        if (version != packageVersion) {
           throw new Error("unknown version for local package? " + name);
+        }
+      }
 
       // OK, it is a local package. Check to see if this is a circular dependency.
       if (_.has(onStack, dep.name)) {
@@ -642,10 +655,16 @@ _.extend(Catalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    // XXX: Catalog should know how to deal with requests for local versions.
-    // #LocalVersionsInCatalog
+    // The catalog doesn't understand buildID versions and doesn't know about
+    // them. Depending on when we build them, we can refer to local packages as
+    // 1.0.0+local or 1.0.0+[buildId]. Luckily, we know which packages are
+    // local, so just look those up by their local version instead.
+    if (self.isLocalPackage(name)) {
+      version = self._getLocalVersion(version);
+    }
+
     var versionRecord =  _.findWhere(self.versions, { packageName: name,
-                                        version: version });
+        version: version });
     if (!versionRecord) {
       versionRecord = _.findWhere(self.versions, {packageName: name});
       if (versionRecord) {
