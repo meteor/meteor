@@ -822,6 +822,60 @@ maybeStopExpireTokensInterval = function () {
 expireTokenInterval = Meteor.setInterval(expireTokens,
                                          EXPIRE_TOKENS_INTERVAL_MS);
 
+
+///
+/// OAuth Encryption Support
+///
+
+var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
+
+
+var usingOAuthEncryption = function () {
+  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
+};
+
+
+var pinEncryptedFieldsToUser = function (serviceData, userId) {
+  _.each(_.keys(serviceData), function (key) {
+    var value = serviceData[key];
+    if (OAuthEncryption && OAuthEncryption.isSealed(value))
+      value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
+    serviceData[key] = value;
+  });
+};
+
+
+// Encrypt unencrypted login service secrets when oauth-encryption is
+// added.
+//
+// XXX For the oauthSecretKey to be available here at startup, the
+// developer must call Accounts.config({oauthSecretKey: ...}) at load
+// time, instead of in a Meteor.startup block, because the startup
+// block in the app code will run after this accounts-base startup
+// block.  Perhaps we need a post-startup callback?
+
+Meteor.startup(function () {
+  if (!usingOAuthEncryption())
+    return;
+
+  var ServiceConfiguration =
+    Package['service-configuration'].ServiceConfiguration;
+
+  ServiceConfiguration.configurations.find( {$and: [
+      { secret: {$exists: true} },
+      { "secret.algorithm": {$exists: false} }
+    ] } ).
+    forEach(function (config) {
+      ServiceConfiguration.configurations.update(
+        config._id,
+        { $set: {
+          secret: OAuthEncryption.seal(config.secret)
+        } }
+      );
+    });
+});
+
+
 ///
 /// CREATE USER HOOKS
 ///
@@ -857,6 +911,11 @@ Accounts.insertUserDoc = function (options, user) {
   // one that gets called after (in which you should change other
   // collections)
   user = _.extend({createdAt: new Date(), _id: Random.id()}, user);
+
+  if (user.services)
+    _.each(user.services, function (serviceData) {
+      pinEncryptedFieldsToUser(serviceData, user._id);
+    });
 
   var fullUser;
   if (onCreateUserHook) {
@@ -993,6 +1052,8 @@ Accounts.updateOrCreateUserFromExternalService = function(
   var user = Meteor.users.findOne(selector);
 
   if (user) {
+    pinEncryptedFieldsToUser(serviceData, user._id);
+
     // We *don't* process options (eg, profile) for update, but we do replace
     // the serviceData (eg, so that we keep an unexpired access token and
     // don't cache old email addresses in serviceData.email).
@@ -1129,6 +1190,10 @@ Meteor.methods({
       Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
+
+    if (_.has(options, "secret") && usingOAuthEncryption())
+      options.secret = OAuthEncryption.seal(options.secret);
+
     ServiceConfiguration.configurations.insert(options);
   }
 });

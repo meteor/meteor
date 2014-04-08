@@ -3,7 +3,7 @@ Facebook = {};
 var querystring = Npm.require('querystring');
 
 
-Oauth.registerService('facebook', 2, null, function(query) {
+OAuth.registerService('facebook', 2, null, function(query) {
 
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
@@ -54,7 +54,7 @@ var getTokenResponse = function (query) {
         params: {
           client_id: config.appId,
           redirect_uri: Meteor.absoluteUrl("_oauth/facebook?close"),
-          client_secret: config.secret,
+          client_secret: OAuth._openSecret(config.secret),
           code: query.code
         }
       }).content;
@@ -96,5 +96,5 @@ var getIdentity = function (accessToken) {
 };
 
 Facebook.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+  return OAuth.retrieveCredential(credentialToken);
 };

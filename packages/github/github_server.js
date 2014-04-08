@@ -1,6 +1,6 @@
 Github = {};
 
-Oauth.registerService('github', 2, null, function(query) {
+OAuth.registerService('github', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
   var identity = getIdentity(accessToken);
@@ -8,7 +8,7 @@ Oauth.registerService('github', 2, null, function(query) {
   return {
     serviceData: {
       id: identity.id,
-      accessToken: accessToken,
+      accessToken: {seal: accessToken},
       email: identity.email,
       username: identity.login
     },
@@ -37,7 +37,7 @@ var getAccessToken = function (query) {
         params: {
           code: query.code,
           client_id: config.clientId,
-          client_secret: config.secret,
+          client_secret: OAuth._openSecret(config.secret),
           redirect_uri: Meteor.absoluteUrl("_oauth/github?close"),
           state: query.state
         }
@@ -68,5 +68,5 @@ var getIdentity = function (accessToken) {
 
 
 Github.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+  return OAuth.retrieveCredential(credentialToken);
 };

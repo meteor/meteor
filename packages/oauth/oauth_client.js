@@ -1,4 +1,4 @@
-Oauth = {};
+OAuth = Oauth = {};
 
 // Open a popup window, centered on the screen, and call a callback when it
 // closes.
@@ -8,7 +8,7 @@ Oauth = {};
 //   arguments.
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
-Oauth.showPopup = function (url, callback, dimensions) {
+OAuth.showPopup = function (url, callback, dimensions) {
   // default dimensions that worked well for facebook and google
   var popup = openCenteredPopup(
     url,
@@ -64,8 +64,8 @@ var openCenteredPopup = function(url, width, height) {
 
 // XXX COMPAT WITH 0.7.0.1
 // Private interface but probably used by many oauth clients in atmosphere.
-Oauth.initiateLogin = function (credentialToken, url, callback, dimensions) {
-  Oauth.showPopup(
+OAuth.initiateLogin = function (credentialToken, url, callback, dimensions) {
+  OAuth.showPopup(
     url,
     _.bind(callback, null, credentialToken),
     dimensions

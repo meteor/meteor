@@ -30,7 +30,7 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
         '&state=' + credentialToken;
 
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken),
     {width: 900, height: 450}

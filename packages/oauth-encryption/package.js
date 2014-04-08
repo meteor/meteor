@@ -1,0 +1,14 @@
+Package.describe({
+  summary: "Encrypt account secrets stored in the database"
+});
+
+Package.on_use(function (api) {
+  api.export("OAuthEncryption", ["server"]);
+  api.add_files("encrypt.js", ["server"]);
+});
+
+Package.on_test(function (api) {
+  api.use("tinytest");
+  api.use("oauth-encryption");
+  api.add_files("encrypt_tests.js", ["server"]);
+});

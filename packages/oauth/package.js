@@ -10,8 +10,10 @@ Package.on_use(function (api) {
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 
+  api.export('OAuth');
+  // XXX backwards compatibility
   api.export('Oauth');
-  api.export('OauthTest', 'server', {testOnly: true});
+  api.export('OAuthTest', 'server', {testOnly: true});
 
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');

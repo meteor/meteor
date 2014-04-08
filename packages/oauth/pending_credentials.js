@@ -11,13 +11,13 @@
 
 // Collection containing pending credentials of oauth credential requests
 // Has token, credential, and createdAt fields.
-Oauth._pendingCredentials = new Meteor.Collection(
+OAuth._pendingCredentials = new Meteor.Collection(
   "meteor_oauth_pendingCredentials", {
     _preventAutopublish: true
   });
 
-Oauth._pendingCredentials._ensureIndex('token', {unique: 1});
-Oauth._pendingCredentials._ensureIndex('createdAt');
+OAuth._pendingCredentials._ensureIndex('token', {unique: 1});
+OAuth._pendingCredentials._ensureIndex('createdAt');
 
 
 
@@ -26,22 +26,51 @@ var _cleanStaleResults = function() {
   // Remove credentials older than 1 minute
   var timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  Oauth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
 };
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
+var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
+
+var usingOAuthEncryption = function () {
+  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
+};
+
+// Return a copy of the service data with field values of
+// `{seal: plaintext}` replaced with the encrypted ciphertext, using
+// the user id as the additional authenticated data when provided.
+//
+// If oauth encryption is not being used, `{seal: plaintext}` is
+// simply replaced with the plaintext.
+//
+var sealSecrets = function (plaintextServiceData, userId) {
+  var result = {};
+  _.map(plaintextServiceData, function (value, key) {
+    if (value && value.seal)
+      if (usingOAuthEncryption())
+        value = OAuthEncryption.seal(value.seal, userId);
+      else
+        value = value.seal;
+    result[key] = value;
+  });
+  return result;
+};
+
+
 // Stores the token and credential in the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
 // @param credentialToken {string}
 // @param credential {string}   The credential to store
 //
-Oauth._storePendingCredential = function (credentialToken, credential) {
+OAuth._storePendingCredential = function (credentialToken, credential) {
   if (credential instanceof Error)
     credential = storableError(credential);
 
-  Oauth._pendingCredentials.insert({
+  if (credential.serviceData)
+    credential.serviceData = sealSecrets(credential.serviceData);
+
+  OAuth._pendingCredentials.insert({
     token: credentialToken,
     credential: credential,
     createdAt: new Date()
@@ -50,16 +79,15 @@ Oauth._storePendingCredential = function (credentialToken, credential) {
 
 
 // Retrieves and removes a credential from the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
 // @param credentialToken {string}
 //
-Oauth._retrievePendingCredential = function (credentialToken) {
+OAuth._retrievePendingCredential = function (credentialToken) {
   check(credentialToken, String);
 
-  var pendingCredential = Oauth._pendingCredentials.findOne({ token:credentialToken });
+  var pendingCredential = OAuth._pendingCredentials.findOne({ token:credentialToken });
   if (pendingCredential) {
-    Oauth._pendingCredentials.remove({ _id: pendingCredential._id });
+    OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
       return recreateError(pendingCredential.credential.error);
     else

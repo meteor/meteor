@@ -6,7 +6,7 @@ Accounts.registerLoginHandler(function (options) {
 
   check(options.oauth, {credentialToken: String});
 
-  var result = Oauth.retrieveCredential(options.oauth.credentialToken);
+  var result = OAuth.retrieveCredential(options.oauth.credentialToken);
 
   if (!result) {
     // OAuth credentialToken is not recognized, which could be either
