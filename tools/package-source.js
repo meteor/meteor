@@ -300,7 +300,12 @@ _.extend(PackageSource.prototype, {
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
-    self.builds.push(build);
+
+    // XXX: WTF
+    // #Don'tInitializeTestSlices
+    if (build.buildName != "tests") {
+      self.builds.push(build);
+    }
 
     if (! self._checkCrossBuildVersionConstraints())
       throw new Error("only one build, so how can consistency check fail?");
@@ -843,7 +848,9 @@ _.extend(PackageSource.prototype, {
         var watchSet = new watch.WatchSet();
         watchSet.addFile(packageJsPath, packageJsHash);
 
-        self.builds.push(new SourceBuild(self, {
+        // XXX: #Don't Initialize Test Slices.
+        if (role != "test") {
+         self.builds.push(new SourceBuild(self, {
           name: ({ use: "main", test: "tests" })[role],
           arch: arch,
           uses: uses[role][where],
@@ -853,6 +860,7 @@ _.extend(PackageSource.prototype, {
           declaredExports: role === "use" ? exports[where] : null,
           watchSet: watchSet
         }));
+       };
       });
     });
 

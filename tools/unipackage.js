@@ -899,6 +899,7 @@ _.extend(Unipackage.prototype, {
     });
     _.sortBy(pluginProviders, "0");
 
+
     var pluginDeps = [];
     _.each(
       self.buildTimePluginDependencies,

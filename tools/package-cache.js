@@ -114,7 +114,7 @@ _.extend(PackageCache.prototype, {
     if (fs.existsSync(buildDir)) {
       unipackage = new Unipackage;
       unipackage.initFromPath(name, buildDir);
-      if (compiler.checkUpToDate(packageSource, unipackage)) {
+       if (compiler.checkUpToDate(packageSource, unipackage)) {
         self.loadedPackages[loadPath] = { pkg: unipackage,
                                           sourceDir: loadPath,
                                           buildDir: buildDir

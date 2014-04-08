@@ -778,7 +778,7 @@ var getPluginProviders = function (versions) {
   var result = {};
   _.each(versions, function (version, name) {
     // Direct dependencies only create a build-order constraint if
-    // they contain a plugin.
+    // they contain a plugin.x
     var catalogVersion = catalog.catalog.getVersion(name, version);
     if (catalogVersion && catalogVersion.containsPlugins) {
       result[name] = version;
@@ -829,27 +829,13 @@ compiler.getBuildOrderConstraints = function (packageSource) {
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
 compiler.checkUpToDate = function (packageSource, unipackage) {
-  if (unipackage.forceNotUpToDate)
+  if (unipackage.forceNotUpToDate) {
     return false;
+  }
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
   if (unipackage.builtBy !== compiler.BUILT_BY) {
-    // XXX XXX XXX XXX XXX XXX XXX
-    //
-    // This branch is not currently in a state where we can build
-    // packages with plugins, so we explicitly do NOT want to trigger
-    // re-builds of packages built by different versions of meteor.
-    //
-    // Once this branch is in a state where we CAN build packages
-    // a-fresh, then we should change this back to "return false".
-    //
-    // XXX XXX XXX XXX XXX XXX XXX
- /*   console.log("XXX warning: considering package",
-                packageSource.name, "to be up to date because",
-                "it was built by <", compiler.BUILT_BY,
-                "and this makes no sense at all"); */
-    return true;
     return false;
   }
 
@@ -861,6 +847,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
   var sourcePluginProviders = getPluginProviders(
     buildTimeDeps.directDependencies
   );
+
   var unipackagePluginProviders = getPluginProviders(
     unipackage.buildTimeDirectDependencies
   );

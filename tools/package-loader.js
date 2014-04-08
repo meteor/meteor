@@ -34,7 +34,6 @@ _.extend(PackageLoader.prototype, {
     if (options.throwOnError === undefined) {
       options.throwOnError = true;
     }
-
     var loadPath = self.getLoadPathForPackage(name);
 
     if (! loadPath) {

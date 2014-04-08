@@ -368,12 +368,14 @@ _.extend(Catalog.prototype, {
       // right answer. This should never happen if the constraint solver/catalog
       // are doing their jobs right, but we would rather fail than surprise
       // someone with an incorrect build.
-      if (dep.version !== self.packageSources[dep.name].version + "+local")
-          throw new Error("unknown version for local package?" + name);
+
+      // XXX: Catalog should know how to deal with requests for local versions.
+      // #LocalVersionsInCatalog
+      if (dep.version.split("+")[0] !== self.packageSources[dep.name].version)
+          throw new Error("unknown version for local package? " + name);
 
       // OK, it is a local package. Check to see if this is a circular dependency.
       if (_.has(onStack, dep.name)) {
-        console.log("this one is on stack");
         // Allow a circular dependency if the other thing is already
         // built and doesn't need to be rebuilt.
         unipackage = self._maybeGetUpToDateBuild(dep.name);
@@ -639,6 +641,19 @@ _.extend(Catalog.prototype, {
   getVersion: function (name, version) {
     var self = this;
     self._requireInitialized();
+
+    // XXX: Catalog should know how to deal with requests for local versions.
+    // #LocalVersionsInCatalog
+    var versionRecord =  _.findWhere(self.versions, { packageName: name,
+                                        version: version });
+    if (!versionRecord) {
+      versionRecord = _.findWhere(self.versions, {packageName: name});
+      if (versionRecord) {
+        versionRecord.version = version;
+        return versionRecord;
+      }
+      return null;
+    }
     return _.findWhere(self.versions, { packageName: name,
                                         version: version });
   },
