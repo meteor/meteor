@@ -13,7 +13,7 @@ Package.describe({
 });
 
 Npm.depends({
-  mongodb: "1.4.0-rc9"
+  mongodb: "1.4.0"
 });
 
 Package.on_use(function (api) {
