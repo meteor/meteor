@@ -37,6 +37,10 @@ _.extend(PriorityQueue.prototype, {
   empty: function () {
     var self = this;
     return self._heap.empty();
+  },
+  size: function () {
+    var self = this;
+    return self._heap.size();
   }
 });
 
