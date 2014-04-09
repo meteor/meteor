@@ -103,10 +103,6 @@ ConstraintSolver.Resolver.prototype.resolve =
 
   var pq = new PriorityQueue();
 
-  // XXX put it somewhere
-  //if (! _.isNumber(cost) || _.isNaN(cost))
-  //  throw new Error("Cost function must return a non-NaN number");
-
   var startState = {
     dependencies: dependencies,
     constraints: constraints,
@@ -120,6 +116,7 @@ ConstraintSolver.Resolver.prototype.resolve =
   pq.push(startState, [estimateCostFunction(startState, opts), 0]);
 
   var someError = null;
+  var solution = null;
   while (! pq.empty()) {
     var currentState = pq.pop();
     var tentativeCost =
@@ -129,8 +126,10 @@ ConstraintSolver.Resolver.prototype.resolve =
     if (tentativeCost === Infinity)
       break;
 
-    if (_.isEmpty(currentState.dependencies))
-      return currentState.choices;
+    if (_.isEmpty(currentState.dependencies)) {
+      solution = currentState.choices;
+      break;
+    }
 
     var neighborsObj = self._stateNeighbors(currentState);
 
@@ -146,6 +145,9 @@ ConstraintSolver.Resolver.prototype.resolve =
       });
     }
   }
+
+  if (solution)
+    return solution;
 
   // XXX should be much much better
   if (someError)
@@ -176,9 +178,12 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var candidateName = dependencies[0];
   dependencies = dependencies.slice(1);
 
+  var candidateConstraints = _.filter(constraints, function (c) {
+    return c.name === candidateName;
+  });
   var candidateVersions =
     _.filter(self.unitsVersions[candidateName], function (uv) {
-      return unitVersionDoesntValidateConstraints(uv, constraints);
+      return unitVersionDoesntValidateConstraints(uv, candidateConstraints);
     });
 
   if (_.isEmpty(candidateVersions))
