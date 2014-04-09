@@ -97,9 +97,9 @@ var SourceArch = function (pkg, options) {
   options = options || {};
   self.pkg = pkg;
 
-  // Name for this build. For example, the "client" in "ddp.client"
-  // (which, NB, we might load on server arches).
-  self.buildName = options.name;
+  // Name for this sourceArchitecture. At the moment, there are really two options -- main and plugin.
+  // XXX: Should this be different somehow? Is there a chance that we might extend this?
+  self.archName = options.name;
 
   // The architecture (fully or partially qualified) that can use this
   // build.
@@ -265,7 +265,7 @@ _.extend(PackageSource.prototype, {
   // Options:
   // - sourceRoot (required if sources present)
   // - serveRoot (required if sources present)
-  // - buildName
+  // - archName
   // - use
   // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
@@ -293,7 +293,7 @@ _.extend(PackageSource.prototype, {
     });
 
     var build = new SourceArch(self, {
-      name: options.buildName,
+      name: options.archName,
       arch: "os",
       uses: _.map(options.use, utils.parseSpec),
       getSourcesFunc: function () { return sources; },
@@ -302,14 +302,14 @@ _.extend(PackageSource.prototype, {
 
     // XXX: WTF
     // #Don'tInitializeTestSlices
-    if (build.buildName != "tests") {
+    if (build.archName != "tests") {
       self.architectures.push(build);
     }
 
     if (! self._checkCrossBuildVersionConstraints())
       throw new Error("only one build, so how can consistency check fail?");
 
-    self.defaultArches = {'os': [options.buildName]};
+    self.defaultArches = {'os': [options.archName]};
   },
 
   // Initialize a PackageSource from a package.js-style package
@@ -875,14 +875,14 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    _.each(["client", "server"], function (buildName) {
+    _.each(["client", "server"], function (archName) {
       // Determine used packages
       var names = project.getPackages(appDir);
-      var arch = buildName === "server" ? "os" : "browser";
+      var arch = archName === "server" ? "os" : "browser";
 
       // Create build
       var build = new SourceArch(self, {
-        name: buildName,
+        name: archName,
         arch: arch,
         uses: _.map(names, utils.parseSpec)
       });
@@ -927,7 +927,7 @@ _.extend(PackageSource.prototype, {
         });
 
         var otherBuildRegExp =
-              (buildName === "server" ? /^client\/$/ : /^server\/$/);
+              (archName === "server" ? /^client\/$/ : /^server\/$/);
 
         // The paths that we've called checkForInfiniteRecursion on.
         var seenPaths = {};
@@ -993,7 +993,7 @@ _.extend(PackageSource.prototype, {
 
           // Special case: on the client, JavaScript files in a
           // `client/compatibility` directory don't get wrapped in a closure.
-          if (buildName === "client" && relPath.match(/\.js$/)) {
+          if (archName === "client" && relPath.match(/\.js$/)) {
             var clientCompatSubstr =
                   path.sep + 'client' + path.sep + 'compatibility' + path.sep;
             if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
@@ -1003,7 +1003,7 @@ _.extend(PackageSource.prototype, {
         });
 
         // Now look for assets for this build.
-        var assetDir = buildName === "client" ? "public" : "private";
+        var assetDir = archName === "client" ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
         });
@@ -1134,7 +1134,7 @@ _.extend(PackageSource.prototype, {
         }
 
         d.references.push({
-          build: build.buildName,
+          build: build.archName,
           arch: archinfo.withoutSpecificOs(build.arch),
           targetBuild: use.build,  // usually undefined, for "default builds"
           weak: use.weak,

@@ -1991,7 +1991,7 @@ exports.buildJsImage = function (options) {
   var packageSource = new PackageSource;
 
   packageSource.initFromOptions(options.name, {
-    buildName: "plugin",
+    archName: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],

@@ -542,7 +542,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
     useGlobalNamespace: isApp,
     combinedServePath: isApp ? null :
       "/packages/" + inputBuild.pkg.name +
-      (inputBuild.buildName === "main" ? "" : (":" + inputBuild.buildName)) + ".js",
+      (inputBuild.archName === "main" ? "" : (":" + inputBuild.archName)) + ".js",
     name: inputBuild.pkg.name || null,
     declaredExports: _.pluck(inputBuild.declaredExports, 'name'),
     jsAnalyze: jsAnalyze
@@ -582,8 +582,8 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
 
   // *** Output build object
   unipackage.addBuild({
-    name: inputBuild.buildName,
-    arch: inputBuild.arch, // XXX: arch?
+    name: inputBuild.archName,
+    arch: inputBuild.arch,
     uses: inputBuild.uses,
     implies: inputBuild.implies,
     watchSet: watchSet,
