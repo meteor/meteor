@@ -27,16 +27,53 @@ AttributeHandler = function (name, value) {
   this.value = value;
 };
 
-_.extend(AttributeHandler.prototype, {
-  update: function (element, oldValue, value) {
-    if (value === null) {
-      if (oldValue !== null)
-        element.removeAttribute(this.name);
-    } else {
-      element.setAttribute(this.name, this.value);
-    }
+AttributeHandler.prototype.update = function (element, oldValue, value) {
+  if (value === null) {
+    if (oldValue !== null)
+      element.removeAttribute(this.name);
+  } else {
+    element.setAttribute(this.name, this.value);
   }
-});
+};
+
+// _assign is like _.extend or the upcoming Object.assign.
+// Copy src's own, enumerable properties onto tgt and return
+// tgt.
+var _assign = function (tgt, src) {
+  for (var k in src)
+    if (src.hasOwnProperty(k))
+      tgt[k] = src[k];
+  return tgt;
+};
+
+// return an array with the falsy elements removed
+var _arrayCompact = function (array) {
+  var result = [];
+  for (var i = 0; i < array.length; i++) {
+    var item = array[i];
+    if (item)
+      result.push(item);
+  }
+  return result;
+};
+
+var _arrayContains = function (array, item) {
+  for (var i = 0; i < array.length; i++) {
+    if (array[i] === item)
+      return true;
+  }
+  return false;
+};
+
+var _arrayWithout = function (array, item) {
+  var result = [];
+  for (var i = 0; i < array.length; i++) {
+    var x = array[i];
+    if (x !== item)
+      result.push(x);
+  }
+  return result;
+};
 
 AttributeHandler.extend = function (options) {
   var curType = this;
@@ -46,7 +83,7 @@ AttributeHandler.extend = function (options) {
   subType.prototype = new curType;
   subType.extend = curType.extend;
   if (options)
-    _.extend(subType.prototype, options);
+    _assign(subType.prototype, options);
   return subType;
 };
 
@@ -56,22 +93,24 @@ var BaseClassHandler = AttributeHandler.extend({
     if (!this.getCurrentValue || !this.setValue)
       throw new Error("Missing methods in subclass of 'BaseClassHandler'");
 
-    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
-    var newClasses = value ? _.compact(value.split(' ')) : [];
+    var oldClasses = oldValue ? _arrayCompact(oldValue.split(' ')) : [];
+    var newClasses = value ? _arrayCompact(value.split(' ')) : [];
 
     // the current classes on the element, which we will mutate.
-    var classes = _.compact(this.getCurrentValue(element).split(' '));
+    var classes = _arrayCompact(this.getCurrentValue(element).split(' '));
 
     // optimize this later (to be asymptotically faster) if necessary
-    _.each(oldClasses, function (c) {
-      if (_.indexOf(newClasses, c) < 0)
-        classes = _.without(classes, c);
-    });
-    _.each(newClasses, function (c) {
-      if (_.indexOf(oldClasses, c) < 0 &&
-          _.indexOf(classes, c) < 0)
+    for (var i = 0; i < oldClasses.length; i++) {
+      var c = oldClasses[i];
+      if (! _arrayContains(newClasses, c))
+        classes = _arrayWithout(classes, c);
+    }
+    for (var i = 0; i < newClasses.length; i++) {
+      var c = newClasses[i];
+      if ((! _arrayContains(oldClasses, c)) &&
+          (! _arrayContains(classes, c)))
         classes.push(c);
-    });
+    }
 
     this.setValue(element, classes.join(' '));
   }
