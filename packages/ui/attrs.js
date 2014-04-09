@@ -32,7 +32,7 @@ AttributeHandler.prototype.update = function (element, oldValue, value) {
     if (oldValue !== null)
       element.removeAttribute(this.name);
   } else {
-    element.setAttribute(this.name, this.value);
+    element.setAttribute(this.name, value);
   }
 };
 
