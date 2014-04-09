@@ -535,9 +535,6 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 // 'Foo', "Foo.bar", etc) to the module from which it should be
 // imported (which must load before us at runtime)
 //
-// noExports: if true, don't generate an exports section (don't even create
-// `Package.name`).
-//
 // packageVariables: package-scope variables, some of which may be exports.
 //   a list of {name, export} objects; any non-falsy value for "export" means
 //   to export it.
@@ -566,12 +563,9 @@ var link = function (options) {
     packageVariables: options.packageVariables
   });
 
-  var exported;
-  if (!options.noExports) {
-    exported = _.pluck(_.filter(options.packageVariables, function (v) {
-      return v.export;
-    }), 'name');
-  }
+  var exported = _.pluck(_.filter(options.packageVariables, function (v) {
+    return v.export;
+  }), 'name');
 
   var footer = getFooter({
     exported: exported,

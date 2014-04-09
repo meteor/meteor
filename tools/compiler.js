@@ -589,7 +589,6 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPath,
     prelinkFiles: results.files,
-    noExports: inputBuild.noExports,
     packageVariables: packageVariables,
     resources: resources
   });

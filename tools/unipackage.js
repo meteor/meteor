@@ -25,15 +25,14 @@ var rejectBadPath = function (p) {
 // - arch [required]
 // - uses
 // - implies
-// - noExports
 // - watchSet
 // - nodeModulesPath
 // - prelinkFiles
 // - packageVariables
 // - resources
 
-var nextUniqueBuildId = 1;
-var UnipackageBuild = function (unipackage, options) {
+var nextBuildId = 1;
+var Build = function (unipackage, options) {
   var self = this;
   options = options || {};
   self.pkg = unipackage;
@@ -43,7 +42,6 @@ var UnipackageBuild = function (unipackage, options) {
   self.arch = options.arch;
   self.uses = options.uses;
   self.implies = options.implies || [];
-  self.noExports = options.noExports;
 
   // This WatchSet will end up having the watch items from the
   // SourceSlice (such as package.js or .meteor/packages), plus all of
@@ -52,13 +50,13 @@ var UnipackageBuild = function (unipackage, options) {
   // scanned).
   self.watchSet = options.watchSet || new watch.WatchSet();
 
-  // Each UnipackageSlice is given a unique id when it's loaded (it is
+  // Each Build is given a unique id when it's loaded (it is
   // not saved to disk). This is just a convenience to make it easier
-  // to keep track of UnipackageSlices in a map; it's used by bundler
+  // to keep track of Builds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
   self.id = unipackage.name + "." + self.buildName + "@" + self.arch + "#" +
-    (nextUniqueBuildId ++);
+    (nextBuildId ++);
 
   // Prelink output.
   //
@@ -103,7 +101,7 @@ var UnipackageBuild = function (unipackage, options) {
   self.nodeModulesPath = options.nodeModulesPath;
 };
 
-_.extend(UnipackageBuild.prototype, {
+_.extend(Build.prototype, {
   // Get the resources that this function contributes to a bundle, in
   // the same format as self.resources as documented above. This
   // includes static assets and fully linked JavaScript.
@@ -287,7 +285,7 @@ _.extend(Unipackage.prototype, {
   // constructor.
   addBuild: function (options) {
     var self = this;
-    self.builds.push(new UnipackageBuild(self, options));
+    self.builds.push(new Build(self, options));
   },
 
   architectures: function () {
@@ -589,7 +587,7 @@ _.extend(Unipackage.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      self.builds.push(new UnipackageBuild(self, {
+      self.builds.push(new Build(self, {
         name: sliceMeta.name,
         arch: sliceMeta.arch,
         uses: sliceJson.uses,
