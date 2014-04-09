@@ -187,3 +187,54 @@ makeAttributeHandler = function (elem, name, value) {
   // XXX will need one for 'style' on IE, though modern browsers
   // seem to handle setAttribute ok.
 };
+
+
+ElementAttributesUpdater = function (elem) {
+  this.elem = elem;
+  this.handlers = {};
+};
+
+// Update attributes on `elem` to the dictionary `attrs`, whose
+// values are strings.
+ElementAttributesUpdater.prototype.update = function(newAttrs) {
+  var elem = this.elem;
+  var handlers = this.handlers;
+
+  for (var k in handlers) {
+    if (! newAttrs.hasOwnProperty(k)) {
+      // remove attributes (and handlers) for attribute names
+      // that don't exist as keys of `newAttrs` and so won't
+      // be visited when traversing it.  (Attributes that
+      // exist in the `newAttrs` object but are `null`
+      // are handled later.)
+      var handler = handlers[k];
+      var oldValue = handler.value;
+      handler.value = null;
+      handler.update(elem, oldValue, null);
+      delete handlers[k];
+    }
+  }
+
+  for (var k in newAttrs) {
+    var handler = null;
+    var oldValue;
+    var value = newAttrs[k];
+    if (! handlers.hasOwnProperty(k)) {
+      if (value !== null) {
+        // make new handler
+        handler = makeAttributeHandler(elem, k, value);
+        handlers[k] = handler;
+        oldValue = null;
+      }
+    } else {
+      handler = handlers[k];
+      oldValue = handler.value;
+    }
+    if (oldValue !== value) {
+      handler.value = value;
+      handler.update(elem, oldValue, value);
+      if (value === null)
+        delete handlers[k];
+    }
+  }
+};

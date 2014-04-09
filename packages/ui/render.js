@@ -198,56 +198,6 @@ var insert = function (nodeOrRange, parent, before) {
   }
 };
 
-// Update attributes on `elem` to the dictionary `attrs`, using the
-// dictionary of existing `handlers` if provided.
-//
-// Values in the `attrs` dictionary are in pseudo-DOM form -- a string,
-// CharRef, or array of strings and CharRefs -- but they are passed to
-// the AttributeHandler in string form.
-var updateAttributes = function(elem, newAttrs, handlers) {
-
-  if (handlers) {
-    for (var k in handlers) {
-      if (! newAttrs.hasOwnProperty(k)) {
-        // remove attributes (and handlers) for attribute names
-        // that don't exist as keys of `newAttrs` and so won't
-        // be visited when traversing it.  (Attributes that
-        // exist in the `newAttrs` object but are `null`
-        // are handled later.)
-        var handler = handlers[k];
-        var oldValue = handler.value;
-        handler.value = null;
-        handler.update(elem, oldValue, null);
-        delete handlers[k];
-      }
-    }
-  }
-
-  for (var k in newAttrs) {
-    var handler = null;
-    var oldValue;
-    var value = newAttrs[k];
-    if ((! handlers) || (! handlers.hasOwnProperty(k))) {
-      if (value !== null) {
-        // make new handler
-        handler = makeAttributeHandler(elem, k, value);
-        if (handlers)
-          handlers[k] = handler;
-        oldValue = null;
-      }
-    } else {
-      handler = handlers[k];
-      oldValue = handler.value;
-    }
-    if (handler && oldValue !== value) {
-      handler.value = value;
-      handler.update(elem, oldValue, value);
-      if (value === null)
-        delete handlers[k];
-    }
-  }
-};
-
 UI.render = function (kind, parentComponent) {
   if (kind.isInited)
     throw new Error("Can't render component instance, only component kind");
@@ -394,9 +344,11 @@ var materialize = function (node, parent, before, parentComponent) {
     };
 
     if (rawAttrs) {
-      var attrUpdater = Deps.autorun(function (c) {
-        if (! c.handlers)
-          c.handlers = {};
+      var attrComp = Deps.autorun(function (c) {
+        var attrUpdater = c.updater;
+        if (! attrUpdater) {
+          attrUpdater = c.updater = new ElementAttributesUpdater(elem);
+        }
 
         try {
           var attrs = HTML.evaluateAttributes(rawAttrs, parentComponent);
@@ -406,14 +358,14 @@ var materialize = function (node, parent, before, parentComponent) {
               stringAttrs[k] = HTML.toText(attrs[k], HTML.TEXTMODE.STRING,
                                            parentComponent);
             }
-            updateAttributes(elem, stringAttrs, c.handlers);
+            attrUpdater.update(stringAttrs);
           }
         } catch (e) {
           reportUIException(e);
         }
       });
       UI.DomBackend.onRemoveElement(elem, function () {
-        attrUpdater.stop();
+        attrComp.stop();
       });
     }
     materialize(children, elem, null, parentComponent);
