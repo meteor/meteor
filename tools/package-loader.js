@@ -45,11 +45,7 @@ _.extend(PackageLoader.prototype, {
       return pkg;
     }
 
-    var test = (name === "accounts-base-test");
-    if (test) {
-      console.log(catalog.catalog.getLatestVersion(name).isTest);
-    }
-    return packageCache.packageCache.loadPackageAtPath(name, loadPath, test);
+    return packageCache.packageCache.loadPackageAtPath(name, loadPath);
   },
 
   containsPlugins: function (name) {

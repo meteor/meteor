@@ -300,11 +300,7 @@ _.extend(PackageSource.prototype, {
       nodeModulesPath: nodeModulesPath
     });
 
-    // XXX: WTF
-    // #Don'tInitializeTestSlices
-    if (build.archName != "tests") {
-      self.architectures.push(build);
-    }
+    self.architectures.push(build);
 
     if (! self._checkCrossBuildVersionConstraints())
       throw new Error("only one build, so how can consistency check fail?");
@@ -329,13 +325,6 @@ _.extend(PackageSource.prototype, {
 
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
-
-    // Are we initializing a package, or its tests? If we are only initializing
-    // the tests, then we should use the on_test handler for the dependencies.
-    var role = "use";
-    if (name === "accounts-base-test") {
-      role = "test";
-    }
 
     var roleHandlers = {use: null, test: null};
     var npmDependencies = null;
@@ -372,16 +361,18 @@ _.extend(PackageSource.prototype, {
           else if (key === "earliestCompatibleVersion")
             self.earliestCompatibleVersion = value;
           else if (key === "name") {
-            if (role === "XXXuse") {
-              self.name = value;
-            }
+            // Do nothing, actually. This tells us that we are not building a
+            // test package, but that's roughly what we assumed anyway.
           }
           else if (key === "test") {
+            if (name === value) {
+              self.isTest = true;
+            }
             self.test = value;
           }
           else
             buildmessage.error("unknown attribute '" + key + "' " +
-                               "in package description" + role);
+                               "in package description");
         });
       },
 
@@ -559,6 +550,16 @@ _.extend(PackageSource.prototype, {
     if (self.version && ! self.earliestCompatibleVersion) {
       self.earliestCompatibleVersion =
         earliestCompatible(self.version);
+    }
+
+    // One of the concepts used in this function is roles. A package has role
+    // 'use' if it is not a test package; test packages have role 'test'. They
+    // use different handlers to get source files.
+    // XXX: I really don't like this design pattern. I am going to clean it up
+    // once I am done making sure that everything works.
+    var role = "use";
+    if (self.isTest) {
+      role = "test";
     }
 
     // source files used

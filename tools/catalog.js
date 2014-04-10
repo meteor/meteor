@@ -586,11 +586,7 @@ _.extend(Catalog.prototype, {
     // passes because otherwise we might end up rebuilding a package
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      var test = (name === "accounts-base-test");
-      if (test) {
-        console.log(self.getLatestVersion(name).isTest);
-      }
-      packageCache.packageCache.loadPackageAtPath(name, loadPath, test);
+      packageCache.packageCache.loadPackageAtPath(name, loadPath);
       count ++;
     });
 
