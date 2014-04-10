@@ -1536,7 +1536,7 @@ Template.api.setInterval = {
   id: "meteor_setinterval",
   name: "Meteor.setInterval(func, delay)",
   locus: "Anywhere",
-  descr: ["Call a function repeatedly, with a time delay between calls."],
+  descr: ["Call a function repeatedly, with a time delay between calls, after waiting for `delay` miliseconds first."],
   args: [
     {
       name: "func",
