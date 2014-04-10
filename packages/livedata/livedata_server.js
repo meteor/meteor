@@ -1399,7 +1399,8 @@ _.extend(Server.prototype, {
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {
           return maybeAuditArgumentChecks(
-            handler, invocation, args, "internal call to '" + name + "'");
+            handler, invocation, EJSON.clone(args), "internal call to '" +
+              name + "'");
         });
       } catch (e) {
         exception = e;

@@ -519,7 +519,7 @@ _.extend(Connection.prototype, {
       self._subscriptions[id] = {
         id: id,
         name: name,
-        params: params,
+        params: EJSON.clone(params),
         inactive: false,
         ready: false,
         readyDeps: (typeof Deps !== "undefined") && new Deps.Dependency,
@@ -644,6 +644,10 @@ _.extend(Connection.prototype, {
       );
     }
 
+    // Keep our args safe from mutation (eg if we don't send the message for a
+    // while because of a wait method).
+    args = EJSON.clone(args);
+
     // Lazily allocate method ID once we know that it'll be needed.
     var methodId = (function () {
       var id;
@@ -691,6 +695,7 @@ _.extend(Connection.prototype, {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.
             return Meteor._noYieldsAllowed(function () {
+              // re-clone, so that the stub can't affect our caller's values
               return stub.apply(invocation, EJSON.clone(args));
             });
           } else {
