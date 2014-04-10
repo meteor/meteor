@@ -114,9 +114,9 @@ var builtinConverters = [
     },
     fromJSONValue: function (obj) {
       var typeName = obj.$type;
-      var converter = customTypes[typeName];
-      if (typeof converter !== "function")
+      if (!_.has(customTypes, typeName))
         throw new Error("Custom EJSON type " + typeName + " is not defined");
+      var converter = customTypes[typeName];
       return converter(obj.$value);
     }
   }
