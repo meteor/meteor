@@ -44,7 +44,12 @@ _.extend(PackageLoader.prototype, {
       pkg.initEmpty(name);
       return pkg;
     }
-    return packageCache.packageCache.loadPackageAtPath(name, loadPath);
+
+    var test = (name === "accounts-base-test");
+    if (test) {
+      console.log(catalog.catalog.getLatestVersion(name).isTest);
+    }
+    return packageCache.packageCache.loadPackageAtPath(name, loadPath, test);
   },
 
   containsPlugins: function (name) {
@@ -74,6 +79,8 @@ _.extend(PackageLoader.prototype, {
     var self = this;
 
     if (self.versions && ! _.has(self.versions, name)) {
+      console.log("XXX no version chosen for package " + name);
+      return catalog.catalog.getLoadPathForPackage(name, null);
       throw new Error("no version chosen for package " + name + "?");
     }
 

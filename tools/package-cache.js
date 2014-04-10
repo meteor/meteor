@@ -50,24 +50,29 @@ _.extend(PackageCache.prototype, {
   // on disk, you won't see the changes. To flush the package cache
   // and force all of the packages to be reloaded the next time
   // loadPackageAtPath() is called for them, see refresh().
-  loadPackageAtPath: function (name, loadPath, test) {
+  loadPackageAtPath: function (name, loadPath) {
     var self = this;
 
-    // Packages cached from previous calls
-    if (_.has(self.loadedPackages, loadPath) && !test) {
-      return self.loadedPackages[loadPath].pkg;
+    // This method of storage is really an alternative to the roles-based method
+    // that we used to haev in package source (where your role is either 'use'
+    // or 'test' and you operate based on that. I really don't like that one,
+    // and I like the idea of making this extensible to using multiple packages
+    // per directory.
+    var key = name + "@" + loadPath;
+    if (_.has(self.loadedPackages, key)) {
+       return self.loadedPackages[key].pkg;
     }
 
     // See if we can reuse a package that we have cached from before
     // the last soft refresh.
     // XXX XXX this is not very efficient. refactor
-    if (_.has(self.softReloadCache, loadPath) && !test) {
-      var entry = self.softReloadCache[loadPath];
+    if (_.has(self.softReloadCache, key)) {
+      var entry = self.softReloadCache[key];
 
       // Either we will decide that the cache is invalid, or we will "upgrade"
       // this entry into loadedPackages. Either way, it's not needed in
       // softReloadCache any more.
-      delete self.softReloadCache[loadPath];
+      delete self.softReloadCache[key];
 
       var isUpToDate;
       var unipackage;
@@ -77,7 +82,7 @@ _.extend(PackageCache.prototype, {
         isUpToDate = true;
       } else {
         var packageSource = new PackageSource;
-        packageSource.initFromPackageDir(name, loadPath, test);
+        packageSource.initFromPackageDir(name, loadPath);
         unipackage = new Unipackage;
         unipackage.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
@@ -85,7 +90,7 @@ _.extend(PackageCache.prototype, {
 
       if (isUpToDate) {
         // Cache hit
-        self.loadedPackages[loadPath] = entry;
+        self.loadedPackages[key] = entry;
         return entry.pkg;
       }
     }
@@ -96,10 +101,9 @@ _.extend(PackageCache.prototype, {
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
       unipackage = new Unipackage;
-        console.log("Init2");
 
       unipackage.initFromPath(name, loadPath);
-      self.loadedPackages[loadPath] = {
+      self.loadedPackages[key] = {
         pkg: unipackage,
         sourceDir: null,
         buildDir: loadPath
@@ -109,7 +113,7 @@ _.extend(PackageCache.prototype, {
 
     // It's a source tree. Load it.
     var packageSource = new PackageSource;
-    packageSource.initFromPackageDir(name, loadPath, test);
+    packageSource.initFromPackageDir(name, loadPath);
 
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
@@ -117,7 +121,7 @@ _.extend(PackageCache.prototype, {
       unipackage = new Unipackage;
       unipackage.initFromPath(name, buildDir);
        if (compiler.checkUpToDate(packageSource, unipackage)) {
-        self.loadedPackages[loadPath] = { pkg: unipackage,
+        self.loadedPackages[key] = { pkg: unipackage,
                                           sourceDir: loadPath,
                                           buildDir: buildDir
                                         };
@@ -142,7 +146,7 @@ _.extend(PackageCache.prototype, {
       // and swoop in and build all of the local packages informed by
       // a topological sort
       var unipackage = compiler.compile(packageSource).unipackage;
-      self.loadedPackages[loadPath] = {
+      self.loadedPackages[key] = {
         pkg: unipackage,
         sourceDir: null,
         buildDir: buildDir
@@ -160,7 +164,6 @@ _.extend(PackageCache.prototype, {
             throw e;
         }
       }
-
       return unipackage;
     });
   },

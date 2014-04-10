@@ -40,6 +40,7 @@ var Build = function (unipackage, options) {
   // These have the same meaning as they do in SourceSlice.
   self.buildName = options.name;
   self.arch = options.arch;
+
   self.uses = options.uses;
   self.implies = options.implies || [];
 
@@ -122,7 +123,7 @@ _.extend(Build.prototype, {
     var self = this;
 
     if (! archinfo.matches(bundleArch, self.arch))
-      throw new Error("slice of arch '" + self.arch + "' does not support '" +
+      throw new Error("build of arch '" + self.arch + "' does not support '" +
                       bundleArch + "'?");
 
     // Compute imports by merging the exports of all of the packages
@@ -279,7 +280,7 @@ _.extend(Unipackage.prototype, {
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
   },
 
-  // Programmatically add a slice to this Unipackage. Should only be
+  // Programmatically add a build to this Unipackage. Should only be
   // called as part of building up a new Unipackage using
   // initFromOptions. 'options' are the options to the UnipackageSlice
   // constructor.

@@ -31,7 +31,7 @@ compiler.BUILT_BY = 'meteor/11';
 // XXX where should this go? I'll make it a random utility function
 // for now
 //
-// 'dependencies' is the 'uses' attribute from a UnipackageBuild. Call
+// 'dependencies' is the 'uses' attribute from a Build. Call
 // 'callback' with each build (of architecture matching `arch`)
 // referenced by that dependency list. This includes directly used
 // builds, and builds that are transitively "implied" by used
@@ -57,6 +57,7 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
       return;
     usesToProcess.push(use);
   });
+
 
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();

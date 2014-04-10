@@ -332,11 +332,9 @@ _.extend(PackageSource.prototype, {
 
     // Are we initializing a package, or its tests? If we are only initializing
     // the tests, then we should use the on_test handler for the dependencies.
-    var role;
-    if (test) {
+    var role = "use";
+    if (name === "accounts-base-test") {
       role = "test";
-    } else {
-      role = "use";
     }
 
     var roleHandlers = {use: null, test: null};
@@ -358,6 +356,7 @@ _.extend(PackageSource.prototype, {
       // - summary: for 'meteor list'
       // - internal: if true, hide in list
       // - version: package version string (semver)
+      // - test: name of the test package (string)
       // - earliestCompatibleVersion: version string
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
@@ -373,14 +372,11 @@ _.extend(PackageSource.prototype, {
           else if (key === "earliestCompatibleVersion")
             self.earliestCompatibleVersion = value;
           else if (key === "name") {
-            if (role === "use") {
+            if (role === "XXXuse") {
               self.name = value;
             }
           }
           else if (key === "test") {
-            if (role === "test") {
-              self.name = value;
-            }
             self.test = value;
           }
           else
@@ -574,10 +570,8 @@ _.extend(PackageSource.prototype, {
 
     // packages used and implied (keys are 'package', 'build', 'unordered', and
     // 'weak').  an "implied" package is a package that will be used by a build
-    // which uses us. (since you can't use a test build, only the use build can
-    // have "implies".)
-    var uses = {use: {client: [], server: []},
-                test: {client: [], server: []}};
+    // which uses us.
+    var uses =  {client: [], server: []};
     var implies = {client: [], server: []};
 
     // For this old-style, on_use/on_test/where-based package, figure
@@ -687,7 +681,7 @@ _.extend(PackageSource.prototype, {
             _.each(where, function (w) {
               if (options.role && options.role !== "use")
                 throw new Error("Role override is no longer supported");
-              uses[role][w].push(_.extend(utils.parseSpec(name), {
+              uses[w].push(_.extend(utils.parseSpec(name), {
                 unordered: options.unordered || false,
                 weak: options.weak || false
               }));
@@ -699,14 +693,6 @@ _.extend(PackageSource.prototype, {
         // another package.  eg, for umbrella packages which want packages
         // using them to also get symbols or plugins from their components.
         imply: function (names, where) {
-          if (role === "test") {
-            buildmessage.error(
-              "api.imply() is only allowed in on_use, not on_test.",
-              { useMyCaller: true });
-            // recover by ignoring
-            return;
-          }
-
           names = toArray(names);
           where = toWhereArray(where);
 
@@ -743,12 +729,6 @@ _.extend(PackageSource.prototype, {
         // The default is ['client', 'server'].
         // @param options 'testOnly', boolean.
         export: function (symbols, where, options) {
-          if (role === "test") {
-            buildmessage.error("You cannot export symbols from a test.",
-                               { useMyCaller: true });
-            // recover by ignoring
-            return;
-          }
           // Support `api.export("FooTest", {testOnly: true})` without
           // where.
           if (_.isObject(where) && !_.isArray(where) && !options) {
@@ -841,7 +821,7 @@ _.extend(PackageSource.prototype, {
       files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
     });
 
-    // Create builds
+    // Create source architectures, one for the server and one for the client.
     _.each(["browser", "os"], function (arch) {
       var where = (arch === "browser") ? "client" : "server";
 
@@ -857,11 +837,11 @@ _.extend(PackageSource.prototype, {
         // dependency on meteor dating from when the .js extension handler was
         // in the "meteor" package).
         var alreadyDependsOnMeteor =
-              !! _.find(uses[role][where], function (u) {
+              !! _.find(uses[where], function (u) {
                 return u.package === "meteor" && !u.build;
               });
         if (! alreadyDependsOnMeteor)
-          uses[role][where].unshift({ package: "meteor" });
+          uses[where].unshift({ package: "meteor" });
       }
 
       // Each build has its own separate WatchSet. This is so that, eg, a test
@@ -874,8 +854,8 @@ _.extend(PackageSource.prototype, {
       self.architectures.push(new SourceArch(self, {
         name: "main",
         arch: arch,
-        uses: uses[role][where],
-        implies: role === "use" && implies[where] || undefined,
+        uses: uses[where],
+        implies: implies[where],
         getSourcesFunc: function () { return sources[role][where]; },
         noExports: role === "test",
         declaredExports: role === "use" ? exports[where] : null,

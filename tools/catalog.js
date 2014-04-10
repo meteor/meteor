@@ -236,7 +236,7 @@ _.extend(Catalog.prototype, {
     // constraint solver.
     var packageSources = {}; // name to PackageSource
 
-    var initVersionRecordFromSource =  function (packageDir, name) {
+    var initVersionRecordFromSource =  function (packageDir, name, test) {
       var packageSource = new PackageSource;
       packageSource.initFromPackageDir(name, packageDir);
       packageSources[name] = packageSource;
@@ -308,6 +308,7 @@ _.extend(Catalog.prototype, {
         source: null,
         lastUpdated: null,
         published: null,
+        isTest: test,
         containsPlugins: packageSource.containsPlugins()
       });
     };
@@ -586,7 +587,9 @@ _.extend(Catalog.prototype, {
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
       var test = (name === "accounts-base-test");
-      console.log("ESK: Load at path");
+      if (test) {
+        console.log(self.getLatestVersion(name).isTest);
+      }
       packageCache.packageCache.loadPackageAtPath(name, loadPath, test);
       count ++;
     });
