@@ -151,6 +151,13 @@ OplogObserveDriver = function (options) {
     }
   ));
 
+  // When Mongo fails over, we need to repoll the query, in case we processed an
+  // oplog entry that got rolled back.
+  self._stopHandles.push(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
+    function () {
+      self._needToPollQuery();
+    })));
+
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
   Meteor.defer(finishIfNeedToPollQuery(function () {

@@ -44,6 +44,8 @@ Package.on_use(function (api) {
   // If the facts package is loaded, publish some statistics.
   api.use('facts', 'server', {weak: true});
 
+  api.use('callback-hook', 'server');
+
   // Stuff that should be exposed via a real API, but we haven't yet.
   api.export('MongoInternals', 'server');
   // For tests only.
