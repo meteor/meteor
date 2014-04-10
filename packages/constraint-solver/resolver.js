@@ -260,12 +260,12 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
     var exactTransitiveDepsVersions =
       uv.exactTransitiveDependenciesVersions(self);
     var inexactTransitiveDeps = uv.inexactTransitiveDependencies(self);
-    var transitiveContraints = _.chain(exactTransitiveDepsVersions).union([uv])
+    var transitiveConstraints = _.chain(exactTransitiveDepsVersions).union([uv])
       .map(function (uv) { return uv.constraints; }).flatten().uniq().value();
 
-    dependencies = _.union(dependencies, inexactTransitiveDeps),
-    constraints = _.union(constraints, transitiveContraints),
-    choices = _.union(choices, exactTransitiveDepsVersions)
+    dependencies = _.union(dependencies, inexactTransitiveDeps);
+    constraints = _.union(constraints, transitiveConstraints);
+    choices = _.union(choices, exactTransitiveDepsVersions);
 
     // Since exact transitive deps are put into choices, there is no need to
     // keep them in dependencies.
@@ -356,7 +356,7 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 
     self.constraints.push(constraint);
   },
-  exactConstraits: function () {
+  exactConstraints: function () {
     var self = this;
     return _.filter(self.constraints, function (c) { return c.exact; });
   },
@@ -372,7 +372,7 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 
     // Get all dependencies we depend on and have constraints to pick an exact
     // version simultaneously as constraints.
-    var exactDeps = _.filter(self.exactConstraits(), function (c) {
+    var exactDeps = _.filter(self.exactConstraints(), function (c) {
       return _.contains(self.dependencies, c.name);
     });
 
@@ -463,6 +463,3 @@ ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion =
                            _.bind(self.isSatisfied, self));
   return unitVersion;
 };
-
-
-
