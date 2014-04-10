@@ -89,19 +89,30 @@ OAuthEncryption.seal = function (data, userId) {
 // throws "decryption unsuccessful" on any error.
 //
 // For developers working on new code which uses oauth-encryption
-// (such as working on a new login service), it's more convenient to
-// be able to see the actual cause of failure.  Setting
-// `Meteor._insecureExceptions` to `true` enables this.  (Developers
-// who are simply using existing oauth and accounts packages don't
-// need to do this).
+// (such as working on a new login service), it's painful not to be
+// able to see the actual cause of failure.  Setting
+// `Meteor._printDecryptionFailure` displays the reason the decryption
+// failed.  This should never be set in production.  (Developers who
+// are simply using existing oauth and accounts packages wouldn't need
+// to use this).
+//
+// XXX `Meteor._printDecryptionFailure` parallels livedata's
+// `Meteor._printSentDDP` and `Meteor._printReceivedDDP`: debugging
+// utilities very useful for development but ones we wouldn't want to
+// run in production.  We might like to have an API such as
+// `Meteor.dev` which would be guaranteed to be an empty
+// object in production.
 //
 OAuthEncryption.open = function (ciphertext, userId) {
   if (! gcmKey)
     throw new Error("No OAuth encryption key loaded");
 
   try {
-    if (ciphertext.algorithm !== "aes-128-gcm")
-      throw new Error("unsupported algorithm");
+    if (ciphertext.algorithm !== "aes-128-gcm") {
+      if (Meteor._printDecryptionFailure)
+        Meteor._debug("unsupported algorithm in OAuth ciphertext");
+      throw new Error();
+    }
 
     var result = gcm.decrypt(
       gcmKey,
@@ -120,21 +131,20 @@ OAuthEncryption.open = function (ciphertext, userId) {
       data = EJSON.parse(result.plaintext.toString());
     }
     catch (e) {
-      if (e instanceof SyntaxError)
-        throw new Error("OAuth decryption unsuccessful");
-      else
-        throw e;
+      if (e instanceof SyntaxError && Meteor._printDecryptionFailure)
+        Meteor._debug("OAuth decryption unsuccessful: probably wrong key");
+      throw new Error();
     }
 
-    if (! result.auth_ok)
-      throw new Error("userId does not match in OAuth decryption");
+    if (! result.auth_ok) {
+      if (Meteor._printDecryptionFailure)
+        Meteor._debug("userId does not match in OAuth decryption");
+      throw new Error();
+    }
 
     return data;
   } catch (e) {
-    if (Meteor._insecureExceptions)
-      throw e;
-    else
-      throw new Error("decryption failed");
+    throw new Error("decryption failed");
   }
 };
 

@@ -29,6 +29,32 @@ can use [`Meteor.settings`](http://docs.meteor.com/#meteor_settings):
     Accounts.config({oauthSecretKey: Meteor.settings.oauthSecretKey});
 
 
+## Migrating unencrypted user tokens
+
+This example for Twitter shows how existing unencrypted user tokens
+can be encrypted.  The query finds user documents which have a Twitter
+access token but not the `algorithm` field which is created when the
+token is encrypted.  The relevant fields in the service data are then
+encrypted.
+
+    Meteor.users.find({ $and: [
+        { 'services.twitter.accessToken': {$exists: true} },
+        { 'services.twitter.accessToken.algorithm': {$exists: false} }
+      ] }).
+    forEach(function (userDoc) {
+      var set = {};
+      _.each(['accessToken', 'accessTokenSecret', 'refreshToken'], function (field) {
+        var plaintext = userDoc.services.twitter[field];
+        if (!_.isString(plaintext))
+          return;
+        set['services.twitter.' + field] = OAuthEncryption.seal(
+          userDoc.services.twitter[field],
+          userDoc._id
+        );
+      });
+      Meteor.users.update(userDoc._id, {$set: set});
+    });
+
 ## Using oauth-encryption without accounts
 
 If you're using the oauth packages directly instead of through the
