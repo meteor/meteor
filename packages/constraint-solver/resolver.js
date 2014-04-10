@@ -310,8 +310,10 @@ unitVersionDoesntValidateConstraints = function (uv, constraints) {
 };
 
 var choicesDontValidateConstraints = function (choices, constraints) {
+  var constraintsByName = _.groupBy(constraints, 'name');
   return _.all(choices, function (uv) {
-    return unitVersionDoesntValidateConstraints(uv, constraints);
+    return unitVersionDoesntValidateConstraints(
+      uv, constraintsByName[uv.name] || []);
   });
 };
 
