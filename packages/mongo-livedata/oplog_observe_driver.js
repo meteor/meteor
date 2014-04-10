@@ -443,6 +443,10 @@ _.extend(OplogObserveDriver.prototype, {
                 if (err) {
                   Meteor._debug("Got exception while fetching documents: " +
                                 err);
+                  // If we get an error from the fetcher (eg, trouble connecting
+                  // to Mongo), let's just abandon the fetch phase altogether
+                  // and fall back to polling. It's not like we're getting live
+                  // updates anyway.
                   if (self._phase !== PHASE.QUERYING) {
                     self._needToPollQuery();
                   }
@@ -607,7 +611,12 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     var newResults, newBuffer;
 
+    // This while loop is just to retry failures.
     while (true) {
+      // If we've been stopped, we don't have to run anything any more.
+      if (self._stopped)
+        return;
+
       newResults = new LocalCollection._IdMap;
       newBuffer = new LocalCollection._IdMap;
 

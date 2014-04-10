@@ -101,7 +101,7 @@ _.extend(OplogHandle.prototype, {
     // be ready.
     self._readyFuture.wait();
 
-    while (true) {
+    while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
@@ -117,6 +117,9 @@ _.extend(OplogHandle.prototype, {
         Meteor._sleepForMs(100);
       }
     }
+
+    if (self._stopped)
+      return;
 
     if (!lastEntry) {
       // Really, nothing in the oplog? Well, we've processed everything.
