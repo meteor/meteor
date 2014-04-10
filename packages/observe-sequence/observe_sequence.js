@@ -99,6 +99,7 @@ ObserveSequence = {
         } else if (seq instanceof Array) {
           var idsUsed = {};
           seqArray = _.map(seq, function (item, index) {
+            var id;
             if (typeof item === 'string') {
               // ensure not empty, since other layers (eg DomRange) assume this as well
               id = "-" + item;
