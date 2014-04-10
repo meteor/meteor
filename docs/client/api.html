@@ -2527,6 +2527,9 @@ code must always run within a Fiber, and advising to use
 
 Returns a handle that can be used by `Meteor.clearTimeout`.
 
+A delay of zero will defer the execution of `func` until the next tick
+of the event loop, similar to Node's [process.nextTick](http://howtonode.org/understanding-process-next-tick).
+
 {{> api_box setInterval}}
 
 Returns a handle that can be used by `Meteor.clearInterval`.
@@ -2537,9 +2540,9 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 <h2 id="deps"><span>Deps</span></h2>
 
 Meteor has a simple dependency tracking system which allows it to
-automatically rerun templates and other computations whenever
-[`Session`](#session) variables, database queries, and other data
-sources change.
+automatically rerun templates and other functions (called *computations*)
+whenever [`Session`](#session) variables, database queries, and other data
+sources accessed within change.
 
 Unlike most other systems, you don't have to manually declare these
 dependencies &mdash; it "just works". The mechanism is simple and
@@ -2676,7 +2679,7 @@ computation.
 
 Each time a computation runs, it may access various reactive data
 sources that serve as inputs to the computation, which are called its
-dependencies.  At some future time, one of these dependencies may
+*dependencies*.  At some future time, one of these dependencies may
 trigger the computation to be rerun by invalidating it.  When this
 happens, the dependencies are cleared, and the computation is
 scheduled to be rerun at flush time.
@@ -2774,7 +2777,7 @@ invalidated.
 
 Dependencies don't store data, they just track the set of computations to
 invalidate if something changes.  Typically, a data value will be
-accompanied by a Dependency object that tracks the computations that depend
+accompanied by a `Dependency` object that tracks the computations that depend
 on it, as in this example:
 
     var weather = "sunny";
@@ -2797,6 +2800,14 @@ setter.  The getter records that the current computation depends on
 the `weatherDep` dependency using `depend()`, while the setter
 signals the dependency to invalidate all dependent computations by
 calling `changed()`.
+
+There is no explicit link between `weatherDep` and the `weather` variable.
+Recall that computations are simply functions that can be re-run when their
+dependencies change. Here, all computations that call `weatherDep.depend()`
+will be invalidated every time `weatherDep.changed()` is called. Thus
+`getWeather` will be invalidated by `setWeather`, and would be automatically
+called again if it was placed in a [`Deps.autorun`](#deps_autorun) call
+(or called by another [reactive computation](#reactivity), such as a template).
 
 The reason Dependencies do not store data themselves is that it can be
 useful to associate multiple Dependencies with the same piece of data.
