@@ -273,7 +273,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
 
     // There could be new combination of exact constraint/dependency outgoing
     // from existing state and the new node.
-    // XXX we don't need to look for all previously considered combinations.
+    // We don't need to look for all previously considered combinations.
     // Looking for newNode.dependencies+exact constraints and
     // newNode.exactConstraints+dependencies is enough.
     var exactDeps = _.chain(uv.dependencies).map(function (dep) {
@@ -282,11 +282,10 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
       });
     }).filter(_.identity).map(function (c) {
       return c.getSatisfyingUnitVersion(self);
-    }).union(_.chain(uv.constraints).filter(function (c) {
-      return c.exact;
-    }).map(function (c) {
-      return c.getSatisfyingUnitVersion(self);
-    }).value()).difference(choices).value();
+    }).union(_.chain(uv.constraints).filter(function (c) { return c.exact; })
+              .map(function (c) { return c.getSatisfyingUnitVersion(self); })
+              .value()
+            ).difference(choices).value();
 
     // Enqueue all new exact dependencies.
     _.each(exactDeps, function (dep) {
