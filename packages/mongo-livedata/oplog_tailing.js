@@ -176,7 +176,7 @@ _.extend(OplogHandle.prototype, {
 
     // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, {}, {sort: {$natural: -1}});
+      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
 
     var oplogSelector = _.clone(self._baseOplogSelector);
     if (lastOplogEntry) {
