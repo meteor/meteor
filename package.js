@@ -1,4 +1,6 @@
 Package.describe({
+  name: "htmljs",
+  test: "htmljs-test",
   summary: "Easy macros for generating DOM elements in Javascript",
   version: '1.0.0'
 });
