@@ -46,7 +46,10 @@ var Runner = function (appDir, options) {
     self.mongoRunner = new MongoRunner({
       appDir: self.appDir,
       port: mongoPort,
-      onFailure: options.onFailure
+      onFailure: options.onFailure,
+      // For testing mongod failover, run with 3 mongod if the env var is
+      // set. Note that data is not preserved from one run to the next.
+      multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
     });
 
     mongoUrl = self.mongoRunner.mongoUrl();
