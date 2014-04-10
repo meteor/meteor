@@ -501,7 +501,6 @@ _.extend(Target.prototype, {
     var self = this;
     var packageLoader = self.packageLoader;
 
-    console.log("XX: tests?");
     // Find the roots
     var rootBuilds =
       _.flatten([
