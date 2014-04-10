@@ -1,4 +1,8 @@
 Package.describe({
+  name: "jsparse",
+  test: "jsparse-test",
+  name: "jsparse",
+  test: "jsparse-test",
   summary: "Full-featured JavaScript parser",
   version: "1.0.0",
   internal: true

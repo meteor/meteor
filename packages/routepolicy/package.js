@@ -1,4 +1,6 @@
 Package.describe({
+  name: "routepolicy",
+  test: "routepolicy-test",
   summary: "route policy declarations",
   version: '1.0.0',
   internal: true

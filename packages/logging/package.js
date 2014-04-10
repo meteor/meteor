@@ -1,4 +1,6 @@
 Package.describe({
+  name: "logging",
+  test: "logging-test",
   summary: "Logging facility.",
   version: '1.0.0',
   internal: true

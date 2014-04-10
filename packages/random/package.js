@@ -1,4 +1,6 @@
 Package.describe({
+  name: "random",
+  test: "random-test",
   summary: "Random number generator and utilities",
   version: '1.0.0',
   internal: true

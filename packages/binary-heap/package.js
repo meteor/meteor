@@ -1,4 +1,6 @@
 Package.describe({
+  name: "binary-heap",
+  test: "binary-heap-test",
   summary: "Binary Heap datastructure implementation",
   version: '1.0.0',
   internal: true

@@ -1,4 +1,6 @@
 Package.describe({
+  name: "accounts-password",
+  test: "accounts-password-test",
   summary: "Password support for accounts",
   version: "1.0.0"
 });

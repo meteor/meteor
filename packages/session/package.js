@@ -1,4 +1,6 @@
 Package.describe({
+  name: "session",
+  test: "session-test",
   summary: "Session variable",
   version: '1.0.0',
   internal: true

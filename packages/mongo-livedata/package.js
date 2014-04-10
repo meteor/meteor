@@ -8,6 +8,8 @@
 // minutiae.
 
 Package.describe({
+  name: "mongo-livedata",
+  test: "mongo-livedata-test",
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
   version: '1.0.0',
   internal: true

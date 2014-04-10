@@ -1,4 +1,6 @@
 Package.describe({
+  name: "universal-events",
+  test: "universal-events-test",
   summary: "Listen to events globally, and normalize them",
   version: '1.0.0',
   internal: true

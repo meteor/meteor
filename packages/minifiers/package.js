@@ -1,4 +1,6 @@
 Package.describe({
+  name: "minifiers",
+  test: "minifiers-test",
   summary: "JavaScript and CSS minifiers",
   version: "1.0.0",
   internal: true

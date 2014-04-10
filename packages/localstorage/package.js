@@ -1,4 +1,6 @@
 Package.describe({
+  name: "localstorage",
+  test: "localstorage-test",
   summary: "Simulates local storage on IE 6,7 using userData",
   version: "1.0.0",
   internal: true

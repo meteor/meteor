@@ -1,4 +1,6 @@
 Package.describe({
+  name: "accounts-oauth",
+  test: "accounts-oauth-test",
   summary: "Common code for OAuth-based login services",
   version: "1.0.0",
   internal: true

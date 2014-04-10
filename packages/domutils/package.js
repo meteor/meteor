@@ -1,4 +1,6 @@
 Package.describe({
+  name: "domutils",
+  test: "domutils-test",
   summary: "Utility functions for DOM manipulation",
   version: '1.0.0',
   internal: true

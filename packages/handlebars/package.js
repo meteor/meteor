@@ -1,4 +1,6 @@
 Package.describe({
+  name: "handlebars",
+  test: "handlebars-test",
   summary: "Simple semantic templating language",
   version: '1.0.0',
   internal: true

@@ -1,4 +1,6 @@
 Package.describe({
+  name: "oauth2",
+  test: "oauth2-test",
   summary: "Common code for OAuth2-based login services",
   version: "1.0.0",
   internal: true
