@@ -151,7 +151,7 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
     var unipackage = new Unipackage;
     var builds = tropohouse.downloadedBuilds(packageName, version);
     _.each(builds, function (build, i) {
-      unipackage._loadSlicesFromPath(
+      unipackage._loadBuildsFromPath(
         packageName,
         tropohouse.downloadedBuildPath(packageName, version, build),
         {firstUnipackage: i === 0});

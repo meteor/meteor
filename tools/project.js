@@ -235,7 +235,7 @@ project.generatePackageLoader = function (appDir) {
 
   // package name -> list of version constraints
   var allPackages = project.combineAppAndProgramDependencies(packages);
-
+  console.log(allPackages);
   // XXX: We are manually adding ctl here, but we should do this in a more
   // principled manner.
   var constraintSolver = require('./constraint-solver.js');

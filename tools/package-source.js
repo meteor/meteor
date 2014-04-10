@@ -314,7 +314,13 @@ _.extend(PackageSource.prototype, {
 
   // Initialize a PackageSource from a package.js-style package
   // directory.
-  initFromPackageDir: function (name, dir) {
+  //
+  // name: name of the package.
+  // dir: location of directory on disk.
+  // options:
+  //     test: Boolean. Is this a test package? If so, use the on_test field to
+  //     initialize the package and its dependencies, instead of on_use.
+  initFromPackageDir: function (name, dir, test) {
     var self = this;
     var isPortable = true;
     self.name = name;
@@ -323,6 +329,15 @@ _.extend(PackageSource.prototype, {
 
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
+
+    // Are we initializing a package, or its tests? If we are only initializing
+    // the tests, then we should use the on_test handler for the dependencies.
+    var role;
+    if (test) {
+      role = "test";
+    } else {
+      role = "use";
+    }
 
     var roleHandlers = {use: null, test: null};
     var npmDependencies = null;
@@ -357,11 +372,20 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           else if (key === "earliestCompatibleVersion")
             self.earliestCompatibleVersion = value;
-          else if (key === "name")
-            self.name = value;
+          else if (key === "name") {
+            if (role === "use") {
+              self.name = value;
+            }
+          }
+          else if (key === "test") {
+            if (role === "test") {
+              self.name = value;
+            }
+            self.test = value;
+          }
           else
             buildmessage.error("unknown attribute '" + key + "' " +
-                               "in package description");
+                               "in package description" + role);
         });
       },
 
@@ -571,217 +595,218 @@ _.extend(PackageSource.prototype, {
     // probably is sufficient for virtually all packages that actually
     // exist in the field, if not every single
     // one. #OldStylePackageSupport
-    _.each(["use", "test"], function (role) {
-      if (roleHandlers[role]) {
-        var toArray = function (x) {
-          if (x instanceof Array)
-            return x;
-          return x ? [x] : [];
-        };
 
-        var allWheres = ['client', 'server'];
-        var toWhereArray = function (where) {
-          if (!(where instanceof Array)) {
-            where = where ? [where] : allWheres;
+    // For the given 'role' (ie: use or test), this figures out which
+    // architectures (server or client or both) we haev files for.
+    if (roleHandlers[role]) {
+      var toArray = function (x) {
+        if (x instanceof Array)
+          return x;
+        return x ? [x] : [];
+      };
+
+      var allWheres = ['client', 'server'];
+      var toWhereArray = function (where) {
+        if (!(where instanceof Array)) {
+          where = where ? [where] : allWheres;
+        }
+        where = _.uniq(where);
+        var realWhere = _.intersection(where, allWheres);
+        if (realWhere.length !== where.length) {
+          var badWheres = _.difference(where, allWheres);
+          // avoid using _.each so as to not add more frames to skip
+          for (var i = 0; i < badWheres.length; ++i) {
+            buildmessage.error(
+              "Invalid 'where' argument: '" + badWheres[i] + "'",
+              // skip toWhereArray in addition to the actual API function
+              {useMyCaller: 1});
+          };
+          // recover by using the real ones only
+        }
+        return realWhere;
+      };
+
+      var api = {
+        // Called when this package wants to make another package be
+        // used. Can also take literal package objects, if you have
+        // anonymous packages you want to use (eg, app packages)
+        //
+        // @param where 'client', 'server', or an array of those.
+        // The default is ['client', 'server'].
+        //
+        // options can include:
+        //
+        // - role: defaults to "use", but you could pass something
+        //   like "test" if for some reason you wanted to include a
+        //   package's tests
+        //
+        // - unordered: if true, don't require this package to load
+        //   before us -- just require it to be loaded anytime. Also
+        //   don't bring this package's imports into our
+        //   namespace. If false, override a true value specified in
+        //   a previous call to use for this package name. (A
+        //   limitation of the current implementation is that this
+        //   flag is not tracked per-environment or per-role.)  This
+        //   option can be used to resolve circular dependencies in
+        //   exceptional circumstances, eg, the 'meteor' package
+        //   depends on 'handlebars', but all packages (including
+        //   'handlebars') have an implicit dependency on
+        //   'meteor'. Internal use only -- future support of this
+        //   is not guaranteed. #UnorderedPackageReferences
+        //
+        // - weak: if true, don't require this package to load at all, but if
+        //   it's going to load, load it before us.  Don't bring this
+        //   package's imports into our namespace and don't allow us to use
+        //   its plugins. (Has the same limitation as "unordered" that this
+        //   flag is not tracked per-environment or per-role; this may
+        //   change.)
+        use: function (names, where, options) {
+          // Support `api.use(package, {weak: true})` without where.
+          if (_.isObject(where) && !_.isArray(where) && !options) {
+            options = where;
+            where = null;
           }
-          where = _.uniq(where);
-          var realWhere = _.intersection(where, allWheres);
-          if (realWhere.length !== where.length) {
-            var badWheres = _.difference(where, allWheres);
-            // avoid using _.each so as to not add more frames to skip
-            for (var i = 0; i < badWheres.length; ++i) {
-              buildmessage.error(
-                "Invalid 'where' argument: '" + badWheres[i] + "'",
-                // skip toWhereArray in addition to the actual API function
-                {useMyCaller: 1});
-            };
-            // recover by using the real ones only
+          options = options || {};
+
+          names = toArray(names);
+          where = toWhereArray(where);
+
+          // A normal dependency creates an ordering constraint and a "if I'm
+          // used, use that" constraint. Unordered dependencies lack the
+          // former; weak dependencies lack the latter. There's no point to a
+          // dependency that lacks both!
+          if (options.unordered && options.weak) {
+            buildmessage.error(
+              "A dependency may not be both unordered and weak.",
+              { useMyCaller: true });
+            // recover by ignoring
+            return;
           }
-          return realWhere;
-        };
 
-        var api = {
-          // Called when this package wants to make another package be
-          // used. Can also take literal package objects, if you have
-          // anonymous packages you want to use (eg, app packages)
-          //
-          // @param where 'client', 'server', or an array of those.
-          // The default is ['client', 'server'].
-          //
-          // options can include:
-          //
-          // - role: defaults to "use", but you could pass something
-          //   like "test" if for some reason you wanted to include a
-          //   package's tests
-          //
-          // - unordered: if true, don't require this package to load
-          //   before us -- just require it to be loaded anytime. Also
-          //   don't bring this package's imports into our
-          //   namespace. If false, override a true value specified in
-          //   a previous call to use for this package name. (A
-          //   limitation of the current implementation is that this
-          //   flag is not tracked per-environment or per-role.)  This
-          //   option can be used to resolve circular dependencies in
-          //   exceptional circumstances, eg, the 'meteor' package
-          //   depends on 'handlebars', but all packages (including
-          //   'handlebars') have an implicit dependency on
-          //   'meteor'. Internal use only -- future support of this
-          //   is not guaranteed. #UnorderedPackageReferences
-          //
-          // - weak: if true, don't require this package to load at all, but if
-          //   it's going to load, load it before us.  Don't bring this
-          //   package's imports into our namespace and don't allow us to use
-          //   its plugins. (Has the same limitation as "unordered" that this
-          //   flag is not tracked per-environment or per-role; this may
-          //   change.)
-          use: function (names, where, options) {
-            // Support `api.use(package, {weak: true})` without where.
-            if (_.isObject(where) && !_.isArray(where) && !options) {
-              options = where;
-              where = null;
-            }
-            options = options || {};
-
-            names = toArray(names);
-            where = toWhereArray(where);
-
-            // A normal dependency creates an ordering constraint and a "if I'm
-            // used, use that" constraint. Unordered dependencies lack the
-            // former; weak dependencies lack the latter. There's no point to a
-            // dependency that lacks both!
-            if (options.unordered && options.weak) {
-              buildmessage.error(
-                "A dependency may not be both unordered and weak.",
-                { useMyCaller: true });
-              // recover by ignoring
-              return;
-            }
-
-            _.each(names, function (name) {
-              _.each(where, function (w) {
-                if (options.role && options.role !== "use")
-                  throw new Error("Role override is no longer supported");
-                uses[role][w].push(_.extend(utils.parseSpec(name), {
-                  unordered: options.unordered || false,
-                  weak: options.weak || false
-                }));
-              });
+          _.each(names, function (name) {
+            _.each(where, function (w) {
+              if (options.role && options.role !== "use")
+                throw new Error("Role override is no longer supported");
+              uses[role][w].push(_.extend(utils.parseSpec(name), {
+                unordered: options.unordered || false,
+                weak: options.weak || false
+              }));
             });
-          },
+          });
+        },
 
-          // Called when this package wants packages using it to also use
-          // another package.  eg, for umbrella packages which want packages
-          // using them to also get symbols or plugins from their components.
-          imply: function (names, where) {
-            if (role === "test") {
-              buildmessage.error(
-                "api.imply() is only allowed in on_use, not on_test.",
-                { useMyCaller: true });
-              // recover by ignoring
-              return;
-            }
+        // Called when this package wants packages using it to also use
+        // another package.  eg, for umbrella packages which want packages
+        // using them to also get symbols or plugins from their components.
+        imply: function (names, where) {
+          if (role === "test") {
+            buildmessage.error(
+              "api.imply() is only allowed in on_use, not on_test.",
+              { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
 
-            names = toArray(names);
-            where = toWhereArray(where);
+          names = toArray(names);
+          where = toWhereArray(where);
 
-            _.each(names, function (name) {
-              _.each(where, function (w) {
-                // We don't allow weak or unordered implies, since the main
-                // purpose of imply is to provide imports and plugins.
-                implies[w].push(utils.parseSpec(name));
-              });
+          _.each(names, function (name) {
+            _.each(where, function (w) {
+              // We don't allow weak or unordered implies, since the main
+              // purpose of imply is to provide imports and plugins.
+              implies[w].push(utils.parseSpec(name));
             });
-          },
+          });
+        },
 
-          // Top-level call to add a source file to a package. It will
-          // be processed according to its extension (eg, *.coffee
-          // files will be compiled to JavaScript).
-          add_files: function (paths, where, fileOptions) {
-            paths = toArray(paths);
-            where = toWhereArray(where);
+        // Top-level call to add a source file to a package. It will
+        // be processed according to its extension (eg, *.coffee
+        // files will be compiled to JavaScript).
+        add_files: function (paths, where, fileOptions) {
+          paths = toArray(paths);
+          where = toWhereArray(where);
 
-            _.each(paths, function (path) {
-              _.each(where, function (w) {
-                var source = {relPath: path};
-                if (fileOptions)
-                  source.fileOptions = fileOptions;
-                sources[role][w].push(source);
-              });
+          _.each(paths, function (path) {
+            _.each(where, function (w) {
+              var source = {relPath: path};
+              if (fileOptions)
+                source.fileOptions = fileOptions;
+              sources[role][w].push(source);
             });
-          },
+          });
+        },
 
-          // Export symbols from this package.
-          //
-          // @param symbols String (eg "Foo") or array of String
-          // @param where 'client', 'server', or an array of those.
-          // The default is ['client', 'server'].
-          // @param options 'testOnly', boolean.
-          export: function (symbols, where, options) {
-            if (role === "test") {
-              buildmessage.error("You cannot export symbols from a test.",
+        // Export symbols from this package.
+        //
+        // @param symbols String (eg "Foo") or array of String
+        // @param where 'client', 'server', or an array of those.
+        // The default is ['client', 'server'].
+        // @param options 'testOnly', boolean.
+        export: function (symbols, where, options) {
+          if (role === "test") {
+            buildmessage.error("You cannot export symbols from a test.",
+                               { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
+          // Support `api.export("FooTest", {testOnly: true})` without
+          // where.
+          if (_.isObject(where) && !_.isArray(where) && !options) {
+            options = where;
+            where = null;
+          }
+          options = options || {};
+
+          symbols = toArray(symbols);
+          where = toWhereArray(where);
+
+          _.each(symbols, function (symbol) {
+            // XXX be unicode-friendlier
+            if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
+              buildmessage.error("Bad exported symbol: " + symbol,
                                  { useMyCaller: true });
               // recover by ignoring
               return;
             }
-            // Support `api.export("FooTest", {testOnly: true})` without
-            // where.
-            if (_.isObject(where) && !_.isArray(where) && !options) {
-              options = where;
-              where = null;
-            }
-            options = options || {};
-
-            symbols = toArray(symbols);
-            where = toWhereArray(where);
-
-            _.each(symbols, function (symbol) {
-              // XXX be unicode-friendlier
-              if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
-                buildmessage.error("Bad exported symbol: " + symbol,
-                                   { useMyCaller: true });
-                // recover by ignoring
-                return;
-              }
-              _.each(where, function (w) {
-                exports[w].push({name: symbol, testOnly: !!options.testOnly});
-              });
+            _.each(where, function (w) {
+              exports[w].push({name: symbol, testOnly: !!options.testOnly});
             });
-          },
-          // XXX COMPAT WITH 0.6.4
-          error: function () {
-            // I would try to support this but I don't even know what
-            // its signature was supposed to be anymore
-            buildmessage.error(
-              "api.error(), ironically, is no longer supported",
-              { useMyCaller: true });
-            // recover by ignoring
-          },
-          // XXX COMPAT WITH 0.6.4
-          registered_extensions: function () {
-            buildmessage.error(
-              "api.registered_extensions() is no longer supported",
-              { useMyCaller: true });
-            // recover by returning dummy value
-            return [];
-          }
-        };
-
-        try {
-          roleHandlers[role](api);
-        } catch (e) {
-          buildmessage.exception(e);
-          // Recover by ignoring all of the source files in the
-          // packages and any remaining role handlers. It violates the
-          // principle of least surprise to half-run a role handler
-          // and then continue.
-          sources = {use: {client: [], server: []},
-                     test: {client: [], server: []}};
-          roleHandlers = {use: null, test: null};
-          self.pluginInfo = {};
-          npmDependencies = null;
+          });
+        },
+        // XXX COMPAT WITH 0.6.4
+        error: function () {
+          // I would try to support this but I don't even know what
+          // its signature was supposed to be anymore
+          buildmessage.error(
+            "api.error(), ironically, is no longer supported",
+            { useMyCaller: true });
+          // recover by ignoring
+        },
+        // XXX COMPAT WITH 0.6.4
+        registered_extensions: function () {
+          buildmessage.error(
+            "api.registered_extensions() is no longer supported",
+            { useMyCaller: true });
+          // recover by returning dummy value
+          return [];
         }
+      };
+
+      try {
+        roleHandlers[role](api);
+      } catch (e) {
+        buildmessage.exception(e);
+        // Recover by ignoring all of the source files in the
+        // packages and any remaining role handlers. It violates the
+        // principle of least surprise to half-run a role handler
+        // and then continue.
+        sources = {use: {client: [], server: []},
+                   test: {client: [], server: []}};
+        roleHandlers = {use: null, test: null};
+        self.pluginInfo = {};
+        npmDependencies = null;
       }
-    });
+    }
 
     // Make sure that if a dependency was specified in multiple
     // builds, the constraint is exactly the same.
@@ -817,50 +842,45 @@ _.extend(PackageSource.prototype, {
     });
 
     // Create builds
-    _.each(["use", "test"], function (role) {
-      _.each(["browser", "os"], function (arch) {
-        var where = (arch === "browser") ? "client" : "server";
+    _.each(["browser", "os"], function (arch) {
+      var where = (arch === "browser") ? "client" : "server";
 
-        // Everything depends on the package 'meteor', which sets up
-        // the basic environment) (except 'meteor' itself, and js-analyze
-        // which needs to be loaded by the linker).
-        // XXX add a better API for js-analyze to declare itself here
-        if (! (name === "meteor" && role === "use") && name !== "js-analyze") {
-          // Don't add the dependency if one already exists. This allows the
-          // package to create an unordered dependency and override the one that
-          // we'd add here. This is necessary to resolve the circular dependency
-          // between meteor and underscore (underscore has an unordered
-          // dependency on meteor dating from when the .js extension handler was
-          // in the "meteor" package).
-          var alreadyDependsOnMeteor =
-            !! _.find(uses[role][where], function (u) {
-              return u.package === "meteor" && !u.build;
-            });
-          if (! alreadyDependsOnMeteor)
-            uses[role][where].unshift({ package: "meteor" });
-        }
+      // Everything depends on the package 'meteor', which sets up
+      // the basic environment) (except 'meteor' itself, and js-analyze
+      // which needs to be loaded by the linker).
+      // XXX add a better API for js-analyze to declare itself here
+      if (! (name === "meteor" && role === "use") && name !== "js-analyze") {
+        // Don't add the dependency if one already exists. This allows the
+        // package to create an unordered dependency and override the one that
+        // we'd add here. This is necessary to resolve the circular dependency
+        // between meteor and underscore (underscore has an unordered
+        // dependency on meteor dating from when the .js extension handler was
+        // in the "meteor" package).
+        var alreadyDependsOnMeteor =
+              !! _.find(uses[role][where], function (u) {
+                return u.package === "meteor" && !u.build;
+              });
+        if (! alreadyDependsOnMeteor)
+          uses[role][where].unshift({ package: "meteor" });
+      }
 
-        // Each build has its own separate WatchSet. This is so that, eg, a test
-        // build's dependencies doesn't end up getting merged into the
-        // pluginWatchSet of a package that uses it: only the use build's
-        // dependencies need to go there!
-        var watchSet = new watch.WatchSet();
-        watchSet.addFile(packageJsPath, packageJsHash);
+      // Each build has its own separate WatchSet. This is so that, eg, a test
+      // build's dependencies doesn't end up getting merged into the
+      // pluginWatchSet of a package that uses it: only the use build's
+      // dependencies need to go there!
+      var watchSet = new watch.WatchSet();
+      watchSet.addFile(packageJsPath, packageJsHash);
 
-        // XXX: #Don't Initialize Test Slices.
-        if (role != "test") {
-         self.architectures.push(new SourceArch(self, {
-          name: "main",
-          arch: arch,
-          uses: uses[role][where],
-          implies: role === "use" && implies[where] || undefined,
-          getSourcesFunc: function () { return sources[role][where]; },
-          noExports: role === "test",
-          declaredExports: role === "use" ? exports[where] : null,
-          watchSet: watchSet
-        }));
-       };
-      });
+      self.architectures.push(new SourceArch(self, {
+        name: "main",
+        arch: arch,
+        uses: uses[role][where],
+        implies: role === "use" && implies[where] || undefined,
+        getSourcesFunc: function () { return sources[role][where]; },
+        noExports: role === "test",
+        declaredExports: role === "use" ? exports[where] : null,
+        watchSet: watchSet
+      }));
     });
 
     // Default builds

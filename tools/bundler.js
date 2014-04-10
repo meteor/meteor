@@ -501,12 +501,14 @@ _.extend(Target.prototype, {
     var self = this;
     var packageLoader = self.packageLoader;
 
+    console.log("XX: tests?");
     // Find the roots
     var rootBuilds =
       _.flatten([
         _.map(options.packages || [], function (p) {
-          if (typeof p === "string")
+          if (typeof p === "string") {
             return packageLoader.getBuilds(p, self.arch);
+          }
           else
             return p.getDefaultBuilds(self.arch);
         })
@@ -1874,7 +1876,6 @@ exports.bundle = function (options) {
     _.each(programs, function (p) {
       // Read this directory as a package and create a target from
       // it
-
       var pkg = packageCache.packageCache.
         loadPackageAtPath(p.name, p.path);
       var target;

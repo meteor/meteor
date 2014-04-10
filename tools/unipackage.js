@@ -421,10 +421,10 @@ _.extend(Unipackage.prototype, {
     options = _.clone(options || {});
     options.firstUnipackage = true;
 
-    return self._loadSlicesFromPath(name, dir, options);
+    return self._loadBuildsFromPath(name, dir, options);
   },
 
-  _loadSlicesFromPath: function (name, dir, options) {
+  _loadBuildsFromPath: function (name, dir, options) {
     var self = this;
     options = options || {};
 
@@ -468,10 +468,10 @@ _.extend(Unipackage.prototype, {
       self.forceNotUpToDate = true;
     }
 
-    // Read the watch sets for each slice
-    var sliceWatchSets = {};
-    _.each(buildInfoJson.sliceDependencies, function (watchSetJSON, sliceTag) {
-      sliceWatchSets[sliceTag] = watch.WatchSet.fromJSON(watchSetJSON);
+    // Read the watch sets for each build
+    var buildWatchSets = {};
+    _.each(buildInfoJson.buildDependencies, function (watchSetJSON, buildTag) {
+      buildWatchSets[buildTag] = watch.WatchSet.fromJSON(watchSetJSON);
     });
 
     // Read pluginWatchSet and pluginProviderPackageDirs. (In the
@@ -493,9 +493,9 @@ _.extend(Unipackage.prototype, {
       self.version = mainJson.version;
       self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
     }
-    // If multiple sub-unipackages specify defaultSlices or testSlices for the
+    // If multiple sub-unipackages specify defaultBuilds or testBuilds for the
     // same arch, just take the answer from the first sub-unipackage.
-    self.defaultBuilds = _.extend(mainJson.defaultSlices,
+    self.defaultBuilds = _.extend(mainJson.defaultBuilds,
                                   self.defaultBuilds || {});
 
     _.each(mainJson.plugins, function (pluginMeta) {
@@ -513,37 +513,37 @@ _.extend(Unipackage.prototype, {
     });
     self.pluginsBuilt = true;
 
-    _.each(mainJson.slices, function (sliceMeta) {
+    _.each(mainJson.builds, function (buildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
-      rejectBadPath(sliceMeta.path);
+      rejectBadPath(buildMeta.path);
 
-      // Skip slices we already have.
-      var alreadyHaveSlice = _.find(self.slices, function (slice) {
-        return slice.buildName === sliceMeta.name &&
-          slice.arch === sliceMeta.arch;
+      // Skip builds we already have.
+      var alreadyHaveBuild = _.find(self.builds, function (build) {
+        return build.buildName === buildMeta.name &&
+          build.arch === buildMeta.arch;
       });
-      if (alreadyHaveSlice)
+      if (alreadyHaveBuild)
         return;
 
-      var sliceJson = JSON.parse(
-        fs.readFileSync(path.join(dir, sliceMeta.path)));
-      var sliceBasePath = path.dirname(path.join(dir, sliceMeta.path));
+      var buildJson = JSON.parse(
+        fs.readFileSync(path.join(dir, buildMeta.path)));
+      var buildBasePath = path.dirname(path.join(dir, buildMeta.path));
 
-      if (sliceJson.format!== "unipackage-slice-pre1")
-        throw new Error("Unsupported unipackage slice format: " +
-                        JSON.stringify(sliceJson.format));
+      if (buildJson.format!== "unipackage-build-pre1")
+        throw new Error("Unsupported unipackage build format: " +
+                        JSON.stringify(buildJson.format));
 
       var nodeModulesPath = null;
-      if (sliceJson.node_modules) {
-        rejectBadPath(sliceJson.node_modules);
-        nodeModulesPath = path.join(sliceBasePath, sliceJson.node_modules);
+      if (buildJson.node_modules) {
+        rejectBadPath(buildJson.node_modules);
+        nodeModulesPath = path.join(buildBasePath, buildJson.node_modules);
       }
 
       var prelinkFiles = [];
       var resources = [];
 
-      _.each(sliceJson.resources, function (resource) {
+      _.each(buildJson.resources, function (resource) {
         rejectBadPath(resource.file);
 
         var data = new Buffer(resource.length);
@@ -552,7 +552,7 @@ _.extend(Unipackage.prototype, {
         // throws instead of acting like POSIX read:
         // https://github.com/joyent/node/issues/5685
         if (resource.length > 0) {
-          var fd = fs.openSync(path.join(sliceBasePath, resource.file), "r");
+          var fd = fs.openSync(path.join(buildBasePath, resource.file), "r");
           try {
             var count = fs.readSync(
               fd, data, 0, resource.length, resource.offset);
@@ -571,7 +571,7 @@ _.extend(Unipackage.prototype, {
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
             prelinkFile.sourceMap = fs.readFileSync(
-              path.join(sliceBasePath, resource.sourceMap), 'utf8');
+              path.join(buildBasePath, resource.sourceMap), 'utf8');
           }
           prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "asset"],
@@ -588,15 +588,15 @@ _.extend(Unipackage.prototype, {
       });
 
       self.builds.push(new Build(self, {
-        name: sliceMeta.name,
-        arch: sliceMeta.arch,
-        uses: sliceJson.uses,
-        implies: sliceJson.implies,
-        noExports: !! sliceJson.noExports,
-        watchSet: sliceWatchSets[sliceMeta.path],
+        name: buildMeta.name,
+        arch: buildMeta.arch,
+        uses: buildJson.uses,
+        implies: buildJson.implies,
+        noExports: !! buildJson.noExports,
+        watchSet: buildWatchSets[buildMeta.path],
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
-        packageVariables: sliceJson.packageVariables || [],
+        packageVariables: buildJson.packageVariables || [],
         resources: resources
       }));
     });
@@ -610,8 +610,9 @@ _.extend(Unipackage.prototype, {
   //   directory that was built to produce this package. Used as part
   //   of the dependency info to detect builds that were moved and
   //   then modified.
-  saveToPath: function (outputPath, options) {
+  saveToPath: function (outputDir, options) {
     var self = this;
+    var outputPath = outputDir + "." + self.name;
     options = options || {};
 
     if (! self.version) {
@@ -632,8 +633,8 @@ _.extend(Unipackage.prototype, {
         internal: self.metadata.internal,
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
-        slices: [],
-        defaultSlices: self.defaultBuilds,
+        builds: [],
+        defaultBuilds: self.defaultBuilds,
         plugins: []
       };
 
@@ -651,7 +652,7 @@ _.extend(Unipackage.prototype, {
 
       var buildInfoJson = {
         builtBy: compiler.BUILT_BY,
-        sliceDependencies: { },
+        buildDependencies: { },
         pluginDependencies: self.pluginWatchSet.toJSON(),
         pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined,
@@ -664,11 +665,11 @@ _.extend(Unipackage.prototype, {
       builder.reserve("head");
       builder.reserve("body");
 
-      // Map from absolute path to npm directory in the slice, to the generated
-      // filename in the unipackage we're writing.  Multiple slices can use the
-      // same npm modules (eg, for now, main and tests slices), but also there
+      // Map from absolute path to npm directory in the build, to the generated
+      // filename in the unipackage we're writing.  Multiple builds can use the
+      // same npm modules (eg, for now, main and tests builds), but also there
       // can be different sets of directories as well (eg, for a unipackage
-      // merged with from multiple unipackages with _loadSlicesFromPath).
+      // merged with from multiple unipackages with _loadBuildsFromPath).
       var npmDirectories = {};
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to
@@ -687,61 +688,61 @@ _.extend(Unipackage.prototype, {
           "utf8")
       });
 
-      // Slices
-      _.each(self.builds, function (slice) {
-        // Make up a filename for this slice
-        var baseSliceName =
-          (slice.buildName === "main" ? "" : (slice.buildName + ".")) +
-          slice.arch;
-        var sliceDir =
-          builder.generateFilename(baseSliceName, { directory: true });
-        var sliceJsonFile =
-          builder.generateFilename(baseSliceName + ".json");
+      // Builds
+      _.each(self.builds, function (build) {
+        // Make up a filename for this build
+        var baseBuildName =
+          (build.buildName === "main" ? "" : (build.buildName + ".")) +
+          build.arch;
+        var buildDir =
+          builder.generateFilename(baseBuildName, { directory: true });
+        var buildJsonFile =
+          builder.generateFilename(baseBuildName + ".json");
 
-        mainJson.slices.push({
-          name: slice.buildName,
-          arch: slice.arch,
-          path: sliceJsonFile
+        mainJson.builds.push({
+          name: build.buildName,
+          arch: build.arch,
+          path: buildJsonFile
         });
 
-        // Save slice dependencies. Keyed by the json path rather than thinking
+        // Save build dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
-        buildInfoJson.sliceDependencies[sliceJsonFile] =
-          slice.watchSet.toJSON();
+        buildInfoJson.buildDependencies[buildJsonFile] =
+          build.watchSet.toJSON();
 
         // Figure out where the npm dependencies go.
         var nodeModulesPath = undefined;
         var needToCopyNodeModules = false;
-        if (slice.nodeModulesPath) {
-          if (_.has(npmDirectories, slice.nodeModulesPath)) {
-            // We already have this npm directory from another slice.
-            nodeModulesPath = npmDirectories[slice.nodeModulesPath];
+        if (build.nodeModulesPath) {
+          if (_.has(npmDirectories, build.nodeModulesPath)) {
+            // We already have this npm directory from another build.
+            nodeModulesPath = npmDirectories[build.nodeModulesPath];
           } else {
             // It's important not to put node_modules at the top level of the
             // unipackage, so that it is not visible from within plugins.
-            nodeModulesPath = npmDirectories[slice.nodeModulesPath] =
+            nodeModulesPath = npmDirectories[build.nodeModulesPath] =
               builder.generateFilename("npm/node_modules", {directory: true});
             needToCopyNodeModules = true;
           }
         }
 
-        // Construct slice metadata
-        var sliceJson = {
-          format: "unipackage-slice-pre1",
-          noExports: slice.noExports || undefined,
-          packageVariables: slice.packageVariables,
-          uses: _.map(slice.uses, function (u) {
+        // Construct build metadata
+        var buildJson = {
+          format: "unipackage-build-pre1",
+          noExports: build.noExports || undefined,
+          packageVariables: build.packageVariables,
+          uses: _.map(build.uses, function (u) {
             return {
               'package': u.package,
               // For cosmetic value, leave false values for these options out of
               // the JSON file.
               constraint: u.constraint || undefined,
-              slice: u.slice || undefined,
+              build: u.build || undefined,
               unordered: u.unordered || undefined,
               weak: u.weak || undefined
             };
           }),
-          implies: (_.isEmpty(slice.implies) ? undefined : slice.implies),
+          implies: (_.isEmpty(build.implies) ? undefined : build.implies),
           node_modules: nodeModulesPath,
           resources: []
         };
@@ -749,7 +750,7 @@ _.extend(Unipackage.prototype, {
         // Output 'head', 'body' resources nicely
         var concat = { head: [], body: [] };
         var offset = { head: 0, body: 0 };
-        _.each(slice.resources, function (resource) {
+        _.each(build.resources, function (resource) {
           if (_.contains(["head", "body"], resource.type)) {
             if (concat[resource.type].length) {
               concat[resource.type].push(new Buffer("\n", "utf8"));
@@ -757,9 +758,9 @@ _.extend(Unipackage.prototype, {
             }
             if (! (resource.data instanceof Buffer))
               throw new Error("Resource data must be a Buffer");
-            sliceJson.resources.push({
+            buildJson.resources.push({
               type: resource.type,
-              file: path.join(sliceDir, resource.type),
+              file: path.join(buildDir, resource.type),
               length: resource.data.length,
               offset: offset[resource.type]
             });
@@ -769,21 +770,21 @@ _.extend(Unipackage.prototype, {
         });
         _.each(concat, function (parts, type) {
           if (parts.length) {
-            builder.write(path.join(sliceDir, type), {
+            builder.write(path.join(buildDir, type), {
               data: Buffer.concat(concat[type], offset[type])
             });
           }
         });
 
         // Output other resources each to their own file
-        _.each(slice.resources, function (resource) {
+        _.each(build.resources, function (resource) {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
-          sliceJson.resources.push({
+          buildJson.resources.push({
             type: resource.type,
             file: builder.writeToGeneratedFilename(
-              path.join(sliceDir, resource.servePath),
+              path.join(buildDir, resource.servePath),
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
@@ -793,12 +794,12 @@ _.extend(Unipackage.prototype, {
         });
 
         // Output prelink resources
-        _.each(slice.prelinkFiles, function (file) {
+        _.each(build.prelinkFiles, function (file) {
           var data = new Buffer(file.source, 'utf8');
           var resource = {
             type: 'prelink',
             file: builder.writeToGeneratedFilename(
-              path.join(sliceDir, file.servePath),
+              path.join(buildDir, file.servePath),
               { data: data }),
             length: data.length,
             offset: 0,
@@ -808,24 +809,24 @@ _.extend(Unipackage.prototype, {
           if (file.sourceMap) {
             // Write the source map.
             resource.sourceMap = builder.writeToGeneratedFilename(
-              path.join(sliceDir, file.servePath + '.map'),
+              path.join(buildDir, file.servePath + '.map'),
               { data: new Buffer(file.sourceMap, 'utf8') }
             );
           }
 
-          sliceJson.resources.push(resource);
+          buildJson.resources.push(resource);
         });
 
-        // If slice has included node_modules, copy them in
+        // If build has included node_modules, copy them in
         if (needToCopyNodeModules) {
           builder.copyDirectory({
-            from: slice.nodeModulesPath,
+            from: build.nodeModulesPath,
             to: nodeModulesPath
           });
         }
 
-        // Control file for slice
-        builder.writeJson(sliceJsonFile, sliceJson);
+        // Control file for build
+        builder.writeJson(buildJsonFile, buildJson);
       });
 
       // Plugins
@@ -853,7 +854,7 @@ _.extend(Unipackage.prototype, {
   },
 
   // Computes a hash of the versions of all the package's dependencies
-  // (direct and plugin dependencies) and the slices' and plugins' watch
+  // (direct and plugin dependencies) and the builds' and plugins' watch
   // sets. Options are:
   //  - relativeTo: if provided, the watch set file paths are
   //    relativized to this path. If not provided, we use absolute
@@ -920,12 +921,12 @@ _.extend(Unipackage.prototype, {
     pluginDeps = _.sortBy(pluginDeps, "0");
 
     // Now that we have versions for all our dependencies, canonicalize
-    // the slices' and plugins' watch sets.
+    // the builds' and plugins' watch sets.
     var watchFiles = [];
     var watchSet = new watch.WatchSet();
     watchSet.merge(self.pluginWatchSet);
-    _.each(self.builds, function (slice) {
-      watchSet.merge(slice.watchSet);
+    _.each(self.builds, function (build) {
+      watchSet.merge(build.watchSet);
     });
     _.each(watchSet.files, function (hash, fileAbsPath) {
       var watchFilePath = fileAbsPath;

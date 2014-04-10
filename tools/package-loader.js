@@ -35,7 +35,6 @@ _.extend(PackageLoader.prototype, {
       options.throwOnError = true;
     }
     var loadPath = self.getLoadPathForPackage(name);
-
     if (! loadPath) {
       if (options.throwOnError === false)
         return null;
@@ -45,7 +44,6 @@ _.extend(PackageLoader.prototype, {
       pkg.initEmpty(name);
       return pkg;
     }
-
     return packageCache.packageCache.loadPackageAtPath(name, loadPath);
   },
 

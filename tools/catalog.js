@@ -231,12 +231,12 @@ _.extend(Catalog.prototype, {
       return ! _.has(self.effectiveLocalPackages, pkg.name);
     });
 
-    // Phase 1: Load the source code and create Package and Version
+    // Load the source code and create Package and Version
     // entries from them. We have to do this before we can run the
     // constraint solver.
     var packageSources = {}; // name to PackageSource
-    var versionIds = {}; // name to _id of the created Version record
-    _.each(self.effectiveLocalPackages, function (packageDir, name) {
+
+    var initVersionRecordFromSource =  function (packageDir, name) {
       var packageSource = new PackageSource;
       packageSource.initFromPackageDir(name, packageDir);
       packageSources[name] = packageSource;
@@ -298,6 +298,7 @@ _.extend(Catalog.prototype, {
       self.versions.push({
         _id: versionId,
         packageName: name,
+        testName: packageSource.test,
         version: version,
         publishedBy: null,
         earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
@@ -309,14 +310,27 @@ _.extend(Catalog.prototype, {
         published: null,
         containsPlugins: packageSource.containsPlugins()
       });
+    };
+
+    var versionIds = {}; // name to _id of the created Version record
+
+    // First, we add the records for all the local packages.
+    _.each(self.effectiveLocalPackages, initVersionRecordFromSource);
+
+    // Sometimes, packages contain test packages. We treat them as separate
+    // packages. Add those packages to the catalog too.
+    _.each(packageSources, function (source) {
+      if (source.test) {
+        self.effectiveLocalPackages[source.test] = source.sourceRoot;
+        initVersionRecordFromSource(source.sourceRoot, source.test, true);
+      }
     });
 
     if (_setInitialized)
       self.initialized = true;
 
-    // Phase 2: Figure out which local packages need to be built
-    // before which other local packages because of build-time
-    // dependencies.
+    // Save the package sources and the list of all unbuilt packages. We will
+    // build them lazily when someone asks for them.
     self.packageSources = packageSources;
     self.unbuilt = _.clone(self.effectiveLocalPackages);
   },
@@ -333,7 +347,7 @@ _.extend(Catalog.prototype, {
   _maybeGetUpToDateBuild : function (name) {
     var self = this;
     var sourcePath = self.effectiveLocalPackages[name];
-    var buildDir = path.join(sourcePath, '.build');
+    var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
       var unipackage = new Unipackage;
       unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
@@ -571,7 +585,9 @@ _.extend(Catalog.prototype, {
     // passes because otherwise we might end up rebuilding a package
     // and then immediately deleting it.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      packageCache.packageCache.loadPackageAtPath(name, loadPath);
+      var test = (name === "accounts-base-test");
+      console.log("ESK: Load at path");
+      packageCache.packageCache.loadPackageAtPath(name, loadPath, test);
       count ++;
     });
 

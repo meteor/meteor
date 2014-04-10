@@ -74,6 +74,33 @@ var getPackages = function () {
   }
 };
 
+// Get all local packages available. Returns a map from the package name the
+// version record for that package.
+//
+// If problems happen while generating the list, print appropriate
+// messages to stderr and return null.
+var getLocalPackages = function () {
+  var ret = {};
+
+  var messages = buildmessage.capture(function () {
+    var names = catalog.getAllPackageNames();
+    _.each(names, function (name) {
+      if (catalog.isLocalPackage(name)) {
+        ret[name] = catalog.getLatestVersion(name);
+      }
+    });
+  });
+
+  if (messages.hasMessages()) {
+    process.stderr.write("=> Errors while scanning packages:\n\n");
+    process.stderr.write(messages.formatMessages());
+    return null;
+  } else {
+    return ret;
+  }
+};
+
+
 // Returns a pretty list suitable for showing to the user. Input is an
 // array of objects with keys 'name' and 'description'.
 var formatList = function (items) {
@@ -1249,6 +1276,25 @@ main.registerCommand({
 // test-packages
 ///////////////////////////////////////////////////////////////////////////////
 
+
+// XXX: What does test-packages do in the new world?  There are two sticking
+// points:
+// 1. Do we test non-local packages automatically? Probably not.
+// 2. What happens with no arguments? Test local packages.
+// 3. Do we test all  packages at once, or individually? Specifically:
+// 3a. If I call test-packages directly on foo:bar@1.0.0 and bar:foo@1.0.0 do we
+// test that they are compatible and their tests work, or do we test their tests
+// individually? I can see reason for both.
+// 3b. What if there are no arguments? Sleep on it.
+//
+// Why was this not an issue before? Well, before this we didn't have
+// dependencies. But now, if A depends on x@1.0 and B depends on x@1.1, testing
+// A&B together will give us A on x@1.1. I think that this is a good idea. Here
+// is why -- if I just want to test A, I can type in test-packages A and be
+// fine. But if I want to add both A and B to my app, and to make sure that they
+// have no strange interactions, it makes sense to test them together. So, now
+// test-packages provides some awesome user-relevant functionality, which is
+// kind of cool.
 main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
@@ -1271,7 +1317,11 @@ main.registerCommand({
   var testPackages;
   var localPackageNames = [];
   if (options.args.length === 0) {
-    var packageList = getPackages();
+    // Only test local packages if no package is specified. We simply cannot
+    // try to test all packages from troposphere, so we are going to test the
+    // local stuff -- things you are probably developing and care about. If you
+    // want to test non-local stuff for some reason, enter it manually.
+    var packageList = getLocalPackages();
     if (! packageList) {
       // Couldn't load the package list, probably because some package
       // has a parse error. Bail out -- this kind of sucks; we would
@@ -1320,8 +1370,21 @@ main.registerCommand({
   project.addPackage(testRunnerAppDir,
                      options['driver-package'] || 'test-in-browser');
 
+  // When we test packages, we need to know their versions and all of their
+  // dependencies. We are going to add them to the project and have the project
+  // compute them for us. This means that right now, we are testing all packages
+  // as they work together.
+  var buildMe = [];
+  _.each(testPackages, function(name) {
+    var versionRecord = catalog.getLatestVersion(name);
+    if (versionRecord && versionRecord.testName) {
+      project.addPackage(testRunnerAppDir, versionRecord.testName);
+      buildMe.push(versionRecord.testName);
+    }
+  });
+
   var buildOptions = {
-    testPackages: testPackages,
+  // testPackages: buildMe,
     minify: options.production
   };
 

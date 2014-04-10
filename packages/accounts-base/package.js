@@ -1,4 +1,6 @@
 Package.describe({
+  name: "accounts-base",
+  test: "accounts-base-test",
   summary: "A user account system",
   version: "1.0.0"
 });

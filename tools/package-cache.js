@@ -50,18 +50,18 @@ _.extend(PackageCache.prototype, {
   // on disk, you won't see the changes. To flush the package cache
   // and force all of the packages to be reloaded the next time
   // loadPackageAtPath() is called for them, see refresh().
-  loadPackageAtPath: function (name, loadPath) {
+  loadPackageAtPath: function (name, loadPath, test) {
     var self = this;
 
     // Packages cached from previous calls
-    if (_.has(self.loadedPackages, loadPath)) {
+    if (_.has(self.loadedPackages, loadPath) && !test) {
       return self.loadedPackages[loadPath].pkg;
     }
 
     // See if we can reuse a package that we have cached from before
     // the last soft refresh.
     // XXX XXX this is not very efficient. refactor
-    if (_.has(self.softReloadCache, loadPath)) {
+    if (_.has(self.softReloadCache, loadPath) && !test) {
       var entry = self.softReloadCache[loadPath];
 
       // Either we will decide that the cache is invalid, or we will "upgrade"
@@ -77,7 +77,7 @@ _.extend(PackageCache.prototype, {
         isUpToDate = true;
       } else {
         var packageSource = new PackageSource;
-        packageSource.initFromPackageDir(name, loadPath);
+        packageSource.initFromPackageDir(name, loadPath, test);
         unipackage = new Unipackage;
         unipackage.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
@@ -96,6 +96,8 @@ _.extend(PackageCache.prototype, {
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
       unipackage = new Unipackage;
+        console.log("Init2");
+
       unipackage.initFromPath(name, loadPath);
       self.loadedPackages[loadPath] = {
         pkg: unipackage,
@@ -107,10 +109,10 @@ _.extend(PackageCache.prototype, {
 
     // It's a source tree. Load it.
     var packageSource = new PackageSource;
-    packageSource.initFromPackageDir(name, loadPath);
+    packageSource.initFromPackageDir(name, loadPath, test);
 
     // Does it have an up-to-date build?
-    var buildDir = path.join(loadPath, '.build');
+    var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {
       unipackage = new Unipackage;
       unipackage.initFromPath(name, buildDir);
