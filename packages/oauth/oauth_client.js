@@ -1,4 +1,4 @@
-OAuth = Oauth = {};
+OAuth = {};
 
 // Open a popup window, centered on the screen, and call a callback when it
 // closes.

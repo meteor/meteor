@@ -54,7 +54,7 @@ var getTokenResponse = function (query) {
         params: {
           client_id: config.appId,
           redirect_uri: Meteor.absoluteUrl("_oauth/facebook?close"),
-          client_secret: OAuth._openSecret(config.secret),
+          client_secret: OAuth.openSecret(config.secret),
           code: query.code
         }
       }).content;

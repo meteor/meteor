@@ -17,8 +17,8 @@ OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
   var serviceData = {
     id: identity.id_str,
     screenName: identity.screen_name,
-    accessToken: {seal: oauthBinding.accessToken},
-    accessTokenSecret: {seal: oauthBinding.accessTokenSecret}
+    accessToken: OAuth.sealSecret(oauthBinding.accessToken),
+    accessTokenSecret: OAuth.sealSecret(oauthBinding.accessTokenSecret)
   };
 
   // include helpful fields from twitter

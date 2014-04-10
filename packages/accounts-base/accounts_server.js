@@ -835,6 +835,13 @@ var usingOAuthEncryption = function () {
 };
 
 
+// OAuth service data is temporarily stored in the pending credentials
+// collection during the oauth authentication process.  Sensitive data
+// such as access tokens are encrypted without the user id AAD because
+// we don't know the user id yet.  We re-encrypt these fields with the
+// user id AAD included when storing the service data permanently in
+// the users collection.
+//
 var pinEncryptedFieldsToUser = function (serviceData, userId) {
   _.each(_.keys(serviceData), function (key) {
     var value = serviceData[key];

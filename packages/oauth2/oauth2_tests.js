@@ -13,7 +13,7 @@ var testPendingCredential = function (test) {
       return {
         serviceData: {
           id: foobookId,
-          secretStuff: {seal: "confidential"}
+          secretStuff: OAuth.sealSecret("confidential")
         },
         options: {option1: foobookOption1}
       };
@@ -27,7 +27,7 @@ var testPendingCredential = function (test) {
 
     // Test that the result for the token is available
     var result = OAuth._retrievePendingCredential(credentialToken);
-    var serviceData = OAuth._openSecrets(result.serviceData);
+    var serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
     test.equal(serviceData.id, foobookId);
     test.equal(serviceData.secretStuff, 'confidential');

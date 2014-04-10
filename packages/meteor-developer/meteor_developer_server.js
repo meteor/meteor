@@ -6,7 +6,7 @@ OAuth.registerService("meteor-developer", 2, null, function (query) {
   var identity = getIdentity(accessToken);
 
   var serviceData = {
-    accessToken: {seal: accessToken},
+    accessToken: OAuth.sealSecret(accessToken),
     expiresAt: (+new Date) + (1000 * response.expiresIn)
   };
 
@@ -16,7 +16,7 @@ OAuth.registerService("meteor-developer", 2, null, function (query) {
   // that we don't lose old ones (since we only get this on the first
   // log in attempt)
   if (response.refreshToken)
-    serviceData.refreshToken = {seal: response.refreshToken};
+    serviceData.refreshToken = OAuth.sealSecret(response.refreshToken);
 
   return {
     serviceData: serviceData,
@@ -45,7 +45,7 @@ var getTokens = function (query) {
           grant_type: "authorization_code",
           code: query.code,
           client_id: config.clientId,
-          client_secret: OAuth._openSecret(config.secret),
+          client_secret: OAuth.openSecret(config.secret),
           redirect_uri: Meteor.absoluteUrl("_oauth/meteor-developer?close")
         }
       }

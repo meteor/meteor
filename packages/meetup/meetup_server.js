@@ -25,7 +25,7 @@ var getAccessToken = function (query) {
       "https://secure.meetup.com/oauth2/access", {headers: {Accept: 'application/json'}, params: {
         code: query.code,
         client_id: config.clientId,
-        client_secret: OAuth._openSecret(config.secret),
+        client_secret: OAuth.openSecret(config.secret),
         grant_type: 'authorization_code',
         redirect_uri: Meteor.absoluteUrl("_oauth/meetup?close"),
         state: query.state

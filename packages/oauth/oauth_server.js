@@ -1,7 +1,7 @@
 var Fiber = Npm.require('fibers');
 var url = Npm.require('url');
 
-OAuth = Oauth = {};
+OAuth = {};
 OAuthTest = {};
 
 RoutePolicy.declare('/_oauth/', 'network');
@@ -49,7 +49,7 @@ OAuthTest.unregisterService = function (name) {
 };
 
 
-Oauth.retrieveCredential = function(credentialToken) {
+OAuth.retrieveCredential = function(credentialToken) {
   return OAuth._retrievePendingCredential(credentialToken);
 };
 
@@ -183,17 +183,43 @@ var usingOAuthEncryption = function () {
   return OAuthEncryption && OAuthEncryption.keyIsLoaded();
 };
 
-OAuth._openSecret = function (maybeSecret, userId) {
-  if (!usingOAuthEncryption() || !OAuthEncryption.isSealed(maybeSecret))
+// Encrypt sensitive service data such as access tokens if the
+// "oauth-encryption" package is loaded and the oauth secret key has
+// been specified.  Returns the unencrypted plaintext otherwise.
+//
+// The user id is not specified because the user isn't known yet at
+// this point in the oauth authentication process.  After the oauth
+// authentication process completes the encrypted service data fields
+// will be re-encrypted with the user id as the AAD (additional
+// authenticated data) before inserting the service data into the user
+// document.
+//
+OAuth.sealSecret = function (plaintext) {
+  if (usingOAuthEncryption())
+    return OAuthEncryption.seal(plaintext);
+  else
+    return plaintext;
+}
+
+// Unencrypt a service data field, if the "oauth-encryption"
+// package is loaded and the field is encrypted.
+//
+// Throws an error if the "oauth-encryption" package is loaded and the
+// field is encrypted, but the oauth secret key hasn't been specified.
+//
+OAuth.openSecret = function (maybeSecret, userId) {
+  if (!Package["oauth-encryption"] || !OAuthEncryption.isSealed(maybeSecret))
     return maybeSecret;
 
   return OAuthEncryption.open(maybeSecret, userId);
 };
 
-OAuth._openSecrets = function (serviceData, userId) {
+// Unencrypt fields in the service data object.
+//
+OAuth.openSecrets = function (serviceData, userId) {
   var result = {};
   _.each(_.keys(serviceData), function (key) {
-    result[key] = OAuth._openSecret(serviceData[key], userId);
+    result[key] = OAuth.openSecret(serviceData[key], userId);
   });
   return result;
 };

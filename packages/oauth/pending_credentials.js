@@ -37,26 +37,6 @@ var usingOAuthEncryption = function () {
   return OAuthEncryption && OAuthEncryption.keyIsLoaded();
 };
 
-// Return a copy of the service data with field values of
-// `{seal: plaintext}` replaced with the encrypted ciphertext, using
-// the user id as the additional authenticated data when provided.
-//
-// If oauth encryption is not being used, `{seal: plaintext}` is
-// simply replaced with the plaintext.
-//
-var sealSecrets = function (plaintextServiceData, userId) {
-  var result = {};
-  _.map(plaintextServiceData, function (value, key) {
-    if (value && value.seal)
-      if (usingOAuthEncryption())
-        value = OAuthEncryption.seal(value.seal, userId);
-      else
-        value = value.seal;
-    result[key] = value;
-  });
-  return result;
-};
-
 
 // Stores the token and credential in the _pendingCredentials collection
 //
@@ -66,9 +46,6 @@ var sealSecrets = function (plaintextServiceData, userId) {
 OAuth._storePendingCredential = function (credentialToken, credential) {
   if (credential instanceof Error)
     credential = storableError(credential);
-
-  if (credential.serviceData)
-    credential.serviceData = sealSecrets(credential.serviceData);
 
   OAuth._pendingCredentials.insert({
     token: credentialToken,

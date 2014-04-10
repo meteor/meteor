@@ -1,6 +1,6 @@
 var crypto = Npm.require("crypto");
 // XXX We hope to be able to use the `crypto` module exclusively when
-// it supports GCM.
+// Node supports GCM in version 0.11.
 var gcm = Npm.require("node-aes-gcm");
 
 OAuthEncryption = {};
@@ -21,6 +21,12 @@ OAuthEncryption._isBase64 = function (str) {
 };
 
 
+// Loads the OAuth secret key, which must be 16 bytes in length
+// encoded in base64.
+//
+// The key may be `null` which reverts to having no key (mainly used
+// by tests).
+//
 OAuthEncryption.loadKey = function (key) {
   if (key === null) {
     gcmKey = null;
@@ -47,6 +53,15 @@ var userIdToAAD = function (userId) {
 };
 
 
+// Encrypt `data`, which may be any EJSON-compatible object, using the
+// previously loaded OAuth secret key.
+//
+// The `userId` argument is optional.  If specified, it is used as the
+// "additional authenticated data" (AAD).  The encrypted ciphertext
+// can only be decrypted by supplying the same user id, which prevents
+// user specific credentials such as access tokens from being used by
+// a different user.
+//
 OAuthEncryption.seal = function (data, userId) {
   if (! gcmKey)
     throw new Error("No OAuth encryption key loaded");
@@ -62,40 +77,65 @@ OAuthEncryption.seal = function (data, userId) {
   };
 };
 
+// Decrypt the passed ciphertext (as returned from `seal`) using the
+// previously loaded OAuth secret key.
+//
+// `userId` must match the user id passed to `seal`: if the user id
+// wasn't specified, it must not be specified here, if it was
+// specified, it must be the same user id.
+//
+// To prevent an attacker from breaking the encryption key by
+// observing the result of sending manipulated ciphertexts, `open`
+// throws "decryption unsuccessful" on any error.
+//
+// For developers working on new code which uses oauth-encryption
+// (such as working on a new login service), it's more convenient to
+// be able to see the actual cause of failure.  Setting
+// `Meteor._insecureExceptions` to `true` enables this.  (Developers
+// who are simply using existing oauth and accounts packages don't
+// need to do this).
+//
 OAuthEncryption.open = function (ciphertext, userId) {
   if (! gcmKey)
     throw new Error("No OAuth encryption key loaded");
 
-  if (ciphertext.algorithm !== "aes-128-gcm")
-    throw new Error("unsupported algorithm");
-
-  var result = gcm.decrypt(
-    gcmKey,
-    new Buffer(ciphertext.iv, "base64"),
-    new Buffer(ciphertext.ciphertext, "base64"),
-    userIdToAAD(userId),
-    new Buffer(ciphertext.authTag, "base64")
-  );
-
-  // If we can't parse the decrypted text, it's probably because we
-  // decrypted with the wrong key.  Check this before checking
-  // auth_ok because if decryption fails then auth_ok will also be
-  // false.
-  var data;
   try {
-    data = EJSON.parse(result.plaintext.toString());
-  }
-  catch (e) {
-    if (e instanceof SyntaxError)
-      throw new Error("OAuth decryption unsuccessful");
-    else
+    if (ciphertext.algorithm !== "aes-128-gcm")
+      throw new Error("unsupported algorithm");
+
+    var result = gcm.decrypt(
+      gcmKey,
+      new Buffer(ciphertext.iv, "base64"),
+      new Buffer(ciphertext.ciphertext, "base64"),
+      userIdToAAD(userId),
+      new Buffer(ciphertext.authTag, "base64")
+    );
+
+    // If we can't parse the decrypted text, it's probably because we
+    // decrypted with the wrong key.  Check this before checking
+    // auth_ok because if decryption fails then auth_ok will also be
+    // false.
+    var data;
+    try {
+      data = EJSON.parse(result.plaintext.toString());
+    }
+    catch (e) {
+      if (e instanceof SyntaxError)
+        throw new Error("OAuth decryption unsuccessful");
+      else
+        throw e;
+    }
+
+    if (! result.auth_ok)
+      throw new Error("userId does not match in OAuth decryption");
+
+    return data;
+  } catch (e) {
+    if (Meteor._insecureExceptions)
       throw e;
+    else
+      throw new Error("decryption failed");
   }
-
-  if (! result.auth_ok)
-    throw new Error("userId does not match in OAuth decryption");
-
-  return data;
 };
 
 

@@ -66,7 +66,7 @@ Tinytest.add("oauth-encryption - open with wrong key", function (test) {
     function () {
       OAuthEncryption.open(ciphertext, userId);
     },
-    "decryption unsuccessful"
+    "decryption failed"
   );
 
   OAuthEncryption.loadKey(null);
@@ -85,7 +85,7 @@ Tinytest.add("oauth-encryption - open with wrong userId", function (test) {
     function () {
       OAuthEncryption.open(ciphertext, differentUser);
     },
-    "userId does not match"
+    "decryption failed"
   );
 
   OAuthEncryption.loadKey(null);

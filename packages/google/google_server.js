@@ -46,7 +46,7 @@ var getTokens = function (query) {
       "https://accounts.google.com/o/oauth2/token", {params: {
         code: query.code,
         client_id: config.clientId,
-        client_secret: OAuth._openSecret(config.secret),
+        client_secret: OAuth.openSecret(config.secret),
         redirect_uri: Meteor.absoluteUrl("_oauth/google?close"),
         grant_type: 'authorization_code'
       }});

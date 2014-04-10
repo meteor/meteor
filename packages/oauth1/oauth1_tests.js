@@ -30,8 +30,8 @@ var testPendingCredential = function (test) {
         serviceData: {
           id: twitterfooId,
           screenName: twitterfooName,
-          accessToken: {seal: twitterfooAccessToken},
-          accessTokenSecret: {seal: twitterfooAccessTokenSecret}
+          accessToken: OAuth.sealSecret(twitterfooAccessToken),
+          accessTokenSecret: OAuth.sealSecret(twitterfooAccessTokenSecret)
         },
         options: {
           option1: twitterOption1
@@ -56,7 +56,7 @@ var testPendingCredential = function (test) {
 
     // Test that the result for the token is available
     var result = OAuth._retrievePendingCredential(credentialToken);
-    var serviceData = OAuth._openSecrets(result.serviceData);
+    var serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
     test.equal(serviceData.id, twitterfooId);
     test.equal(serviceData.screenName, twitterfooName);

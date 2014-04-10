@@ -1,3 +1,6 @@
+// Uses the node-aes-gcm NPM module from the dev bundle (because
+// binary modules aren't working yet).
+
 Package.describe({
   summary: "Encrypt account secrets stored in the database"
 });

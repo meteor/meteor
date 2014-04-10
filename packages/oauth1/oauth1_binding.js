@@ -106,7 +106,7 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
     self._encodeString(parameters)
   ].join('&');
 
-  var secret = OAuth._openSecret(self._config.secret);
+  var secret = OAuth.openSecret(self._config.secret);
 
   var signingKey = self._encodeString(secret) + '&';
   if (accessTokenSecret)
