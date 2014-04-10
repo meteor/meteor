@@ -2519,6 +2519,9 @@ code must always run within a Fiber, and advising to use
 
 Returns a handle that can be used by `Meteor.clearTimeout`.
 
+A delay of zero will defer the execution of `func` until the next tick
+of the event loop, similar to Node's [process.nextTick](http://howtonode.org/understanding-process-next-tick).
+
 {{> api_box setInterval}}
 
 Returns a handle that can be used by `Meteor.clearInterval`.
