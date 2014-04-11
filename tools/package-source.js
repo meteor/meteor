@@ -87,7 +87,6 @@ var loadOrderSort = function (a, b) {
 // - getSourcesFunc
 // - declaredExports
 // - watchSet
-// - nodeModulesPath
 //
 // Do not include the source files in watchSet. They will be
 // added at compile time when the sources are actually read.
@@ -205,7 +204,7 @@ var PackageSource = function () {
   // Available architectures of this package. Array of SourceArch.
   self.architectures = [];
 
-  // Map from a system architecture to the list of architecture names that
+  // Map from a system architecture to the list of SourceArch names that
   // should be included by default if this package is used without specifying an
   // architecture by default. (eg: "ddp" vs "ddp.server"). The most specific
   // sourceArch will be used.
