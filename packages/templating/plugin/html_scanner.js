@@ -162,7 +162,7 @@ html_scanner = {
           });
 
         results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
-          ", " + renderFuncCode + ");\n";
+          ", " + renderFuncCode + ", " + JSON.stringify(attribs) + ");\n";
       } else {
         // <body>
         if (hasAttribs)
