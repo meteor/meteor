@@ -1,4 +1,6 @@
 Package.describe({
+  name: "coffeescript",
+  test: "coffeescript-test",
   summary: "Javascript dialect with fewer braces and semicolons",
   version: "1.0.0"
 });

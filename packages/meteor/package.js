@@ -1,6 +1,8 @@
 // All other packages automatically depend on this one
 
 Package.describe({
+  name:"meteor",
+  test:"meteor-test",
   summary: "Core Meteor environment",
   internal: true,
   version: '1.0.0'

@@ -248,7 +248,10 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
 
   _.each(activePluginPackages, function (otherPkg) {
     _.each(otherPkg.getSourceHandlers(), function (handler, ext) {
-      if (ext in allHandlers && allHandlers[ext] !== handler) {
+      if (ext in allHandlers &&
+          allHandlers[ext].toString() !== handler.toString()) {
+        console.log("1:", allHandlers[ext]);
+        console.log("2:", handler);
         buildmessage.error(
           "conflict: two packages included in " +
             (inputBuild.pkg.name || "the app") + ", " +
