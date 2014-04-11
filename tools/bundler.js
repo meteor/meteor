@@ -124,7 +124,7 @@
 // /app/*: source code of the (server part of the) app
 // /packages/foo.js: the (linked) source code for package foo
 // /package-tests/foo.js: the (linked) source code for foo's tests
-// /npm/foo/bar: node_modules for slice bar of package foo. may be
+// /npm/foo/bar: node_modules for build bar of package foo. may be
 // symlinked if developing locally.
 //
 // /node_modules: node_modules needed for server.js. omitted if
@@ -408,7 +408,7 @@ var Target = function (options) {
   // Something like "browser.w3c" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
 
-  // All of the Slices that are to go into this target, in the order
+  // All of the Builds that are to go into this target, in the order
   // that they are to be loaded.
   self.builds = [];
 

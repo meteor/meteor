@@ -143,9 +143,7 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
 
   var packageDir = tropohouse.packagePath(packageName, version);
   if (fs.existsSync(packageDir)) {
-    // XXX package exists but it may need to be rebuilt if we added more slices!
-    // do we have to do that here, or can we trust that the automatic rebuild
-    // will work once implemented?
+    // Package exists for this build, so we are good.
   } else {
     // We need to turn our builds into a unipackage.
     var unipackage = new Unipackage;

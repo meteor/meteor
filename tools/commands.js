@@ -697,7 +697,7 @@ main.registerCommand({
   // changes in the .meteor/versions file.
   //
   // Makes sure we have enough builds of the package downloaded such that
-  // we can load a browser slice and a slice that will run on this
+  // we can load a browser build and a build that will run on this
   // system. (Later we may also need to download more builds to be able to
   // deploy to another architecture.)
   var downloaded = project.setDependencies(
@@ -1342,10 +1342,9 @@ main.registerCommand({
       // Why use addLocalPackage instead of just loading the packages
       // and passing Unipackage objects to the bundler? Because we
       // actually need the Catalog to know about the package, so that
-      // we are able to resolve the test slice's dependency on the
-      // main slice. This is not ideal (I hate how this mutates global
-      // state) but it'll do for now. In the future maybe we could
-      // just have test slices implicitly depend on use slices.
+      // we are able to resolve the test package's dependency on the
+      // main package. This is not ideal (I hate how this mutates global
+      // state) but it'll do for now.
       var packageDir = path.resolve(p);
       var packageName = path.basename(packageDir);
       catalog.addLocalPackage(packageName, packageDir);
@@ -1710,6 +1709,8 @@ main.registerCommand({
   var buildTimeDeps = compiler.determineBuildTimeDependencies(packageSource);
   var uploadInfo = conn.call('createPackageVersion', {
     packageName: packageSource.name,
+    testName: packageSource.testName,
+    isTest: packageSource.isTest,
     version: version,
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,

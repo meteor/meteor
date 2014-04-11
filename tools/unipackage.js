@@ -17,7 +17,7 @@ var rejectBadPath = function (p) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// UnipackageSlice
+// Build
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
@@ -37,7 +37,7 @@ var Build = function (unipackage, options) {
   options = options || {};
   self.pkg = unipackage;
 
-  // These have the same meaning as they do in SourceSlice.
+  // These have the same meaning as they do in SourceArch.
   self.buildName = options.name;
   self.arch = options.arch;
 
@@ -45,8 +45,8 @@ var Build = function (unipackage, options) {
   self.implies = options.implies || [];
 
   // This WatchSet will end up having the watch items from the
-  // SourceSlice (such as package.js or .meteor/packages), plus all of
-  // the actual source files for the slice (including items that we
+  // SourceArch (such as package.js or .meteor/packages), plus all of
+  // the actual source files for the build (including items that we
   // looked at to find the source files, such as directories we
   // scanned).
   self.watchSet = options.watchSet || new watch.WatchSet();
@@ -70,7 +70,7 @@ var Build = function (unipackage, options) {
   // closure. A list of objects with keys 'name' (required) and
   // 'export' (true, 'tests', or falsy).
   //
-  // Both of these are saved into slices on disk, and are inputs into the final
+  // Both of these are saved into builds on disk, and are inputs into the final
   // link phase, which inserts the final JavaScript resources into
   // 'resources'.
   self.prelinkFiles = options.prelinkFiles;
@@ -97,7 +97,7 @@ var Build = function (unipackage, options) {
   self.resources = options.resources;
 
   // Absolute path to the node_modules directory to use at runtime to
-  // resolve Npm.require() calls in this slice. null if this slice
+  // resolve Npm.require() calls in this build. null if this build
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
 };
@@ -138,12 +138,12 @@ _.extend(Build.prototype, {
     compiler.eachUsedBuild(
       self.uses,
       bundleArch, packageLoader,
-      {skipWeak: true, skipUnordered: true}, function (otherSlice) {
-        _.each(otherSlice.packageVariables, function (symbol) {
+      {skipWeak: true, skipUnordered: true}, function (depBuild) {
+        _.each(depBuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||
               (symbol.export === "tests" && self.buildName === "tests"))
-            imports[symbol.name] = otherSlice.pkg.name;
+            imports[symbol.name] = depBuild.pkg.name;
         });
       });
 
@@ -209,7 +209,7 @@ var Unipackage = function () {
   self.earliestCompatibleVersion = null;
   self.defaultBuilds = {};
 
-  // Build slices. Array of UnipackageSlice.
+  // Builds, an array of class Build.
   self.builds = [];
 
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
@@ -266,7 +266,7 @@ _.extend(Unipackage.prototype, {
   },
 
   // This is primarily intended to be used by the compiler. After
-  // calling this, call addSlice to add the slices.
+  // calling this, call addBuild to add the builds.
   initFromOptions: function (options) {
     var self = this;
     self.name = options.name;
@@ -282,7 +282,7 @@ _.extend(Unipackage.prototype, {
 
   // Programmatically add a build to this Unipackage. Should only be
   // called as part of building up a new Unipackage using
-  // initFromOptions. 'options' are the options to the UnipackageSlice
+  // initFromOptions. 'options' are the options to the Build
   // constructor.
   addBuild: function (options) {
     var self = this;
@@ -294,7 +294,7 @@ _.extend(Unipackage.prototype, {
     return _.uniq(_.pluck(self.builds, 'arch')).sort();
   },
 
-  // Return the slice of the package to use for a given slice name
+  // Return the build of the package to use for a given build name
   // (eg, 'main' or 'test') and target architecture (eg,
   // 'os.linux.x86_64' or 'browser'), or throw an exception if
   // that packages can't be loaded under these circumstances.
@@ -306,18 +306,16 @@ _.extend(Unipackage.prototype, {
 
     if (! chosenArch) {
       // XXX need improvement. The user should get a graceful error
-      // message, not an exception, and all of this talk of slices an
-      // architectures is likely to be confusing/overkill in many
-      // contexts.
+      // message, not an exception.
       throw new Error((self.name || "this app") +
-                      " does not have a slice named '" + name +
+                      " does not have a build named '" + name +
                       "' that runs on architecture '" + arch + "'");
     }
 
     return _.where(self.builds, { buildName: name, arch: chosenArch })[0];
   },
 
-  // Return the slices that should be used on a given arch if the
+  // Return the builds that should be used on a given arch if the
   // package is named without any qualifiers (eg, 'ddp' rather than
   // 'ddp.client').
   //
@@ -334,7 +332,7 @@ _.extend(Unipackage.prototype, {
         (self.name || "this app") +
           " is not compatible with architecture '" + arch + "'",
         { secondary: true });
-      // recover by returning by no slices
+      // recover by returning by no builds
       return [];
     }
 
