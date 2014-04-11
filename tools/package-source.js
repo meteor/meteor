@@ -326,7 +326,7 @@ _.extend(PackageSource.prototype, {
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
 
-    var roleHandlers = {use: null, test: null};
+    var fileAndDepLoader = null;
     var npmDependencies = null;
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
@@ -367,8 +367,9 @@ _.extend(PackageSource.prototype, {
           else if (key === "test") {
             if (name === value) {
               self.isTest = true;
+            } else {
+              self.test = value;
             }
-            self.test = value;
           }
           else
             buildmessage.error("unknown attribute '" + key + "' " +
@@ -377,25 +378,27 @@ _.extend(PackageSource.prototype, {
       },
 
       on_use: function (f) {
-        if (roleHandlers.use) {
-          buildmessage.error("duplicate on_use handler; a package may have " +
-                             "only one", { useMyCaller: true });
-          // Recover by ignoring the duplicate
-          return;
+        if (!self.isTest) {
+          if (fileAndDepLoader) {
+            buildmessage.error("duplicate on_use handler; a package may have " +
+                               "only one", { useMyCaller: true });
+            // Recover by ignoring the duplicate
+            return;
+          }
+          fileAndDepLoader = f;
         }
-
-        roleHandlers.use = f;
       },
 
       on_test: function (f) {
-        if (roleHandlers.test) {
-          buildmessage.error("duplicate on_test handler; a package may have " +
-                             "only one", { useMyCaller: true });
-          // Recover by ignoring the duplicate
-          return;
+        if (self.isTest) {
+          if (fileAndDepLoader) {
+            buildmessage.error("duplicate on_test handler; a package may have " +
+                               "only one", { useMyCaller: true });
+            // Recover by ignoring the duplicate
+            return;
+          }
+          fileAndDepLoader = f;
         }
-
-        roleHandlers.test = f;
       },
 
       // XXX COMPAT WITH 0.6.4
@@ -523,7 +526,6 @@ _.extend(PackageSource.prototype, {
       // out to feel pretty disconcerting -- definitely violates the
       // principle of least surprise.) Leave the metadata if we have
       // it, though.
-      roleHandlers = {use: null, test: null};
       self.pluginInfo = {};
       npmDependencies = null;
     }
@@ -552,19 +554,8 @@ _.extend(PackageSource.prototype, {
         earliestCompatible(self.version);
     }
 
-    // One of the concepts used in this function is roles. A package has role
-    // 'use' if it is not a test package; test packages have role 'test'. They
-    // use different handlers to get source files.
-    // XXX: I really don't like this design pattern. I am going to clean it up
-    // once I am done making sure that everything works.
-    var role = "use";
-    if (self.isTest) {
-      role = "test";
-    }
-
     // source files used
-    var sources = {use: {client: [], server: []},
-                   test: {client: [], server: []}};
+    var sources = {client: [], server: []};
 
     // symbols exported
     var exports = {client: [], server: []};
@@ -591,9 +582,7 @@ _.extend(PackageSource.prototype, {
     // exist in the field, if not every single
     // one. #OldStylePackageSupport
 
-    // For the given 'role' (ie: use or test), this figures out which
-    // architectures (server or client or both) we haev files for.
-    if (roleHandlers[role]) {
+    if (fileAndDepLoader) {
       var toArray = function (x) {
         if (x instanceof Array)
           return x;
@@ -631,9 +620,9 @@ _.extend(PackageSource.prototype, {
         //
         // options can include:
         //
-        // - role: defaults to "use", but you could pass something
+        // - role: DEPRECATED. defaults to "use", but you could pass something
         //   like "test" if for some reason you wanted to include a
-        //   package's tests
+        //   package's tests (XXX: OK to remove this?)
         //
         // - unordered: if true, don't require this package to load
         //   before us -- just require it to be loaded anytime. Also
@@ -718,7 +707,7 @@ _.extend(PackageSource.prototype, {
               var source = {relPath: path};
               if (fileOptions)
                 source.fileOptions = fileOptions;
-              sources[role][w].push(source);
+              sources[w].push(source);
             });
           });
         },
@@ -774,16 +763,15 @@ _.extend(PackageSource.prototype, {
       };
 
       try {
-        roleHandlers[role](api);
+        fileAndDepLoader(api);
       } catch (e) {
         buildmessage.exception(e);
         // Recover by ignoring all of the source files in the
         // packages and any remaining role handlers. It violates the
         // principle of least surprise to half-run a role handler
         // and then continue.
-        sources = {use: {client: [], server: []},
-                   test: {client: [], server: []}};
-        roleHandlers = {use: null, test: null};
+        sources = {client: [], server: []};
+        fileAndDepLoader = null;
         self.pluginInfo = {};
         npmDependencies = null;
       }
@@ -830,7 +818,7 @@ _.extend(PackageSource.prototype, {
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
       // XXX add a better API for js-analyze to declare itself here
-      if (! (name === "meteor" && role === "use") && name !== "js-analyze") {
+      if (! (name === "meteor" && !self.isTest) && name !== "js-analyze") {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
         // we'd add here. This is necessary to resolve the circular dependency
@@ -857,9 +845,8 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: uses[where],
         implies: implies[where],
-        getSourcesFunc: function () { return sources[role][where]; },
-        noExports: role === "test",
-        declaredExports: role === "use" ? exports[where] : null,
+        getSourcesFunc: function () { return sources[where]; },
+        declaredExports: exports[where],
         watchSet: watchSet
       }));
     });
