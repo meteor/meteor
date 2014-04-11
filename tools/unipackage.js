@@ -612,7 +612,7 @@ _.extend(Unipackage.prototype, {
   //   then modified.
   saveToPath: function (outputDir, options) {
     var self = this;
-    var outputPath = outputDir + "." + self.name;
+    var outputPath = outputDir;
     options = options || {};
 
     if (! self.version) {

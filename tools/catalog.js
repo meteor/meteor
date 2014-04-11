@@ -437,7 +437,7 @@ _.extend(Catalog.prototype, {
         if (! buildmessage.jobHasMessages()) {
           // Save the build, for a fast load next time
           try {
-            var buildDir = path.join(sourcePath, '.build');
+            var buildDir = path.join(sourcePath, '.build.'+ name);
             files.addToGitignore(sourcePath, '.build*');
             unipackage.saveToPath(buildDir, { buildOfPath: sourcePath });
           } catch (e) {
@@ -578,7 +578,7 @@ _.extend(Catalog.prototype, {
     // Delete any that are source packages with builds.
     var count = 0;
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      var buildDir = path.join(loadPath, '.build.'+name);
+      var buildDir = path.join(loadPath, '.build.' + name);
       files.rm_recursive(buildDir);
     });
 

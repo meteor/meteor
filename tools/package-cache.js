@@ -13,6 +13,12 @@ var packageCache = exports;
 var PackageCache = function () {
   var self = this;
 
+  // We are going to store the package sources here as well, and only build them
+  // when nessesary and cache the build in package cache. (We can't load package
+  // sources lazily because the catalog needs to read them.)
+  self.packageSources = {};
+  self.tobeBuilt = {};
+
   // both map from package load path to:
   // - pkg: cached Unipackage object
   // - sourceDir: directory that contained its source code, or null
@@ -22,6 +28,8 @@ var PackageCache = function () {
 };
 
 _.extend(PackageCache.prototype, {
+
+
   // Force reload of changed packages. See description at loadPackageAtPath().
   //
   // If soft is false, the default, the cache is totally flushed and
