@@ -578,7 +578,7 @@ _.extend(Catalog.prototype, {
     // Delete any that are source packages with builds.
     var count = 0;
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
-      var buildDir = path.join(loadPath, '.build');
+      var buildDir = path.join(loadPath, '.build.'+name);
       files.rm_recursive(buildDir);
     });
 

@@ -142,7 +142,7 @@ _.extend(Build.prototype, {
         _.each(depBuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||
-              (symbol.export === "tests" && self.buildName === "tests"))
+              (symbol.export === "tests" && self.pkg.isTest))
             imports[symbol.name] = depBuild.pkg.name;
         });
       });
@@ -208,6 +208,7 @@ var Unipackage = function () {
   self.version = null;
   self.earliestCompatibleVersion = null;
   self.defaultBuilds = {};
+  self.isTest = false;
 
   // Builds, an array of class Build.
   self.builds = [];
@@ -274,6 +275,7 @@ _.extend(Unipackage.prototype, {
     self.version = options.version;
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.defaultBuilds = options.defaultBuilds;
+    self.isTest = options.isTest;
     self.plugins = options.plugins;
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
@@ -491,6 +493,7 @@ _.extend(Unipackage.prototype, {
       };
       self.version = mainJson.version;
       self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
+      self.isTest = mainJson.isTest;
     }
     // If multiple sub-unipackages specify defaultBuilds or testBuilds for the
     // same arch, just take the answer from the first sub-unipackage.
@@ -632,6 +635,7 @@ _.extend(Unipackage.prototype, {
         internal: self.metadata.internal,
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
+        isTest: self.isTest,
         builds: [],
         defaultBuilds: self.defaultBuilds,
         plugins: []

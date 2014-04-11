@@ -718,6 +718,7 @@ compiler.compile = function (packageSource, options) {
     version: packageSource.version,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     defaultBuilds: packageSource.defaultArches,
+    isTest: packageSource.isTest,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
