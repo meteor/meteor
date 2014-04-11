@@ -75,8 +75,6 @@ _.extend(PackageLoader.prototype, {
     var self = this;
 
     if (self.versions && ! _.has(self.versions, name)) {
-      console.log("XXX no version chosen for package " + name);
-      return catalog.catalog.getLoadPathForPackage(name, null);
       throw new Error("no version chosen for package " + name + "?");
     }
 

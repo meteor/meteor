@@ -1096,8 +1096,11 @@ _.extend(PackageSource.prototype, {
     var failed = false;
 
     _.each(self.architectures, function (build) {
-      // XXX also iterate over "implies"
-      _.each(build.uses, function (use) {
+      // We need to iterate over both uses and implies, since implied packages
+      // also constitute dependencies.
+      _.each(_.union(build.uses, build.implies), function (use) {
+        // We can't really have a weak implies (what does that even mean?) but
+        // we check for that elsewhere.
         if ((use.weak && options.skipWeak) ||
             (use.unordered && options.skipUnordered))
           return;
