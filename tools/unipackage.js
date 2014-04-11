@@ -155,7 +155,6 @@ _.extend(Build.prototype, {
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
-      noExports: self.noExports,
       packageVariables: self.packageVariables,
       includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
       name: self.pkg.name || null
@@ -594,7 +593,6 @@ _.extend(Unipackage.prototype, {
         arch: buildMeta.arch,
         uses: buildJson.uses,
         implies: buildJson.implies,
-        noExports: !! buildJson.noExports,
         watchSet: buildWatchSets[buildMeta.path],
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
@@ -732,7 +730,6 @@ _.extend(Unipackage.prototype, {
         // Construct build metadata
         var buildJson = {
           format: "unipackage-build-pre1",
-          noExports: build.noExports || undefined,
           packageVariables: build.packageVariables,
           uses: _.map(build.uses, function (u) {
             return {

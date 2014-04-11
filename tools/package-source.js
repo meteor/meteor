@@ -85,7 +85,6 @@ var loadOrderSort = function (a, b) {
 // - uses
 // - implies
 // - getSourcesFunc
-// - noExports
 // - declaredExports
 // - watchSet
 // - nodeModulesPath
@@ -97,8 +96,8 @@ var SourceArch = function (pkg, options) {
   options = options || {};
   self.pkg = pkg;
 
-  // Name for this sourceArchitecture. At the moment, there are really two options -- main and plugin.
-  // XXX: Should this be different somehow? Is there a chance that we might extend this?
+  // Name for this sourceArchitecture. At the moment, there are really two
+  // options -- main and plugin.
   self.archName = options.name;
 
   // The architecture (fully or partially qualified) that can use this
@@ -136,9 +135,9 @@ var SourceArch = function (pkg, options) {
   // unordered and weak are not allowed).
   self.implies = options.implies || [];
 
-  // A function that returns the source files for this build. Array of
-  // objects with keys "relPath" and "fileOptions". Null if loaded
-  // from unipackage.
+  // A function that returns the source files for this architecture. Array of
+  // objects with keys "relPath" and "fileOptions". Null if loaded from
+  // unipackage.
   //
   // fileOptions is optional and represents arbitrary options passed
   // to "api.add_files"; they are made available on to the plugin as
@@ -151,12 +150,8 @@ var SourceArch = function (pkg, options) {
   // local plugins in this package) to compute this.
   self.getSourcesFunc = options.getSourcesFunc || null;
 
-  // True if this build is not permitted to have any exports, and in
-  // fact should not even define `Package.name` (ie, test builds).
-  self.noExports = options.noExports || false;
-
-  // Symbols that this build should export. List of symbols (as
-  // strings). Null on packages where noExports is set.
+  // Symbols that this architecture should export. List of symbols (as
+  // strings).
   self.declaredExports = options.declaredExports || null;
 
   // Files and directories that we want to monitor for changes in
@@ -308,15 +303,14 @@ _.extend(PackageSource.prototype, {
     self.defaultArches = {'os': [options.archName]};
   },
 
-  // Initialize a PackageSource from a package.js-style package
-  // directory.
+  // Initialize a PackageSource from a package.js-style package directory. Uses
+  // the name field provided and the name/test fields in the package.js file to
+  // figre out if this is a test package (load from on_test) or a use package
+  // (load from on_use).
   //
   // name: name of the package.
   // dir: location of directory on disk.
-  // options:
-  //     test: Boolean. Is this a test package? If so, use the on_test field to
-  //     initialize the package and its dependencies, instead of on_use.
-  initFromPackageDir: function (name, dir, test) {
+  initFromPackageDir: function (name, dir) {
     var self = this;
     var isPortable = true;
     self.name = name;
@@ -526,6 +520,7 @@ _.extend(PackageSource.prototype, {
       // out to feel pretty disconcerting -- definitely violates the
       // principle of least surprise.) Leave the metadata if we have
       // it, though.
+      fileAndDepLoader = null;
       self.pluginInfo = {};
       npmDependencies = null;
     }

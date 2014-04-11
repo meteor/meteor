@@ -780,7 +780,7 @@ var getPluginProviders = function (versions) {
   var result = {};
   _.each(versions, function (version, name) {
     // Direct dependencies only create a build-order constraint if
-    // they contain a plugin.x
+    // they contain a plugin.
     var catalogVersion = catalog.catalog.getVersion(name, version);
     if (catalogVersion && catalogVersion.containsPlugins) {
       result[name] = version;

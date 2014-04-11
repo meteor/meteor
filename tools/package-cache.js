@@ -53,11 +53,10 @@ _.extend(PackageCache.prototype, {
   loadPackageAtPath: function (name, loadPath) {
     var self = this;
 
-    // This method of storage is really an alternative to the roles-based method
-    // that we used to haev in package source (where your role is either 'use'
-    // or 'test' and you operate based on that. I really don't like that one,
-    // and I like the idea of making this extensible to using multiple packages
-    // per directory.
+    // We need to build and load both the test and normal package, which,
+    // frequently means 2 packages per directory/loadPath. Rather than
+    // special-casing it with some sort of a test flag, we can just
+    // differentiate by name (and extend the interface if it ever comes up).
     var key = name + "@" + loadPath;
     if (_.has(self.loadedPackages, key)) {
        return self.loadedPackages[key].pkg;

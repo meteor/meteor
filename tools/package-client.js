@@ -389,7 +389,7 @@ var bundleBuild = function (unipackage, packageDir) {
         unipackage.architectures().join('+');
   var tarInputDir = path.join(tempDir, packageTarName);
 
-  files.cp_r(path.join(packageDir, '.build.'+unipackage.name), tarInputDir);
+  files.cp_r(path.join(packageDir, '.build.' + unipackage.name), tarInputDir);
 
   // Don't upload buildinfo.json. It's only of interest locally (for
   // example, it contains a watchset with local paths).
