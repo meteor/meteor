@@ -1848,3 +1848,32 @@ Tinytest.add("spacebars - template - tables", function (test) {
              ['TABLE', 'TR', 'TD']);
   divRendersTo(test, div, '<table><tr><td>Foo</td></tr></table>');
 });
+
+Tinytest.add(
+  "spacebars - template - jQuery.trigger extraParameters are passed to the event callback",
+  function (test) {
+    var tmpl = Template.spacebars_test_jquery_events;
+    var captured = false;
+    var args = ["param1", "param2", {option: 1}, 1, 2, 3];
+
+    tmpl.events({
+      'someCustomEvent': function (event, template) {
+        var i;
+        for (i=0; i<args.length; i++) {
+          // expect the arguments to be just after template
+          test.equal(arguments[i+2], args[i]);
+        }
+        captured = true;
+      }
+    });
+
+    tmpl.rendered = function () {
+      $(this.find('button')).trigger('someCustomEvent', args);
+    };
+
+    renderToDiv(tmpl);
+    Deps.flush();
+    test.equal(captured, true);
+  }
+);
+
