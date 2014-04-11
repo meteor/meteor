@@ -15,6 +15,7 @@ Package.on_test(function (api) {
 
   api.use('templating', 'client');
   api.add_files([
+    'template_attrs.js',
     'template_tests.html',
     'template_tests.js'
   ], 'client');
