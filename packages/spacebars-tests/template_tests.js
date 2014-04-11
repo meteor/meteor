@@ -1848,3 +1848,20 @@ Tinytest.add("spacebars - template - tables", function (test) {
              ['TABLE', 'TR', 'TD']);
   divRendersTo(test, div, '<table><tr><td>Foo</td></tr></table>');
 });
+
+Tinytest.add("spacebars - template - custom template attributes", function (test) {
+  
+  _.each(Template, function (value, key) {
+    var attrs = Template.__getAttrs__(key);
+    if (attrs) {
+      test.equal(attrs.name, key);
+    }
+  });
+
+  test.equal(
+    Template.__getAttrs__('spacebars_test_custom_template_attributes').custom,
+    'some custom attribute'
+  );
+
+});
+
