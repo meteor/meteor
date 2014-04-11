@@ -1,8 +1,6 @@
 Package.describe({
   name: "srp",
   test: "srp-test",
-  name: "srp",
-  test: "srp-test",
   summary: "Library for Secure Remote Password (SRP) exchanges",
   version: "1.0.0",
   internal: true
