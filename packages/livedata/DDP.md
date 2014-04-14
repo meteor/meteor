@@ -187,7 +187,7 @@ a `pong` message. If the received `ping` message includes an `id` field, the
    - `method`: string (method name)
    - `params`: optional array of EJSON items (parameters to the method)
    - `id`: string (an arbitrary client-determined identifier for this method call)
-   - `randomSeed`: string (an arbitrary client-determined seed for pseudo-random generators)
+   - `randomSeed`: options object (an arbitrary client-determined seed for pseudo-random generators)
  * `result` (server -> client):
    - `id`: string (the id passed to 'method')
    - `error`: optional Error (an error thrown by the method (or method-not-found)
@@ -211,12 +211,17 @@ a `pong` message. If the received `ping` message includes an `id` field, the
  * There is no particular required ordering between `result` and `updated`
    messages for a method call.
 
- * The client may provide a randomSeed string.  If provided, this value is used
+ * The client may provide a randomSeed object.  If provided, this value is used
    to seed pseudo-random number generation.  By using the same seed with
    the same algorithm, the same pseudo-random values can be generated
    on the client and the server.  In particular, this is used for generating ids for
-   newly created collection objects.  If randomSeed is not provided, then values
+   newly created documents.  If randomSeed is not provided, then values
    generated on the server and the client will not be identical.
+
+ * Currently randomSeed is expected to be a string, and the algorithm by which
+   values are produced from this is not yet documented.  It will likely be formally
+   specified in future when we are confident that the complete requirements are
+   known, or when a compatible implementation requires this to be specified.
 
 ## Errors:
 
