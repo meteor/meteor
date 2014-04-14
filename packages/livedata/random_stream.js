@@ -15,6 +15,12 @@
 // each stream is independent and seeded differently (but predictably).
 // By using multiple streams, we support reordering of requests,
 // as long as they occur on different streams.
+//
+// @param options {Optional Object}
+//   seed: Array or value - Seed value(s) for the generator.
+//                          If an array, will be used as-is
+//                          If a value, will be converted to a single-value array
+//                          If omitted, a random array will be used as the seed.
 RandomStream = function (options) {
   var self = this;
 
