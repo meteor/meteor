@@ -11,8 +11,8 @@
 // If a randomSeed is provided it will be used to seed our random sequences.
 // In this way, client and server method calls will generate the same values.
 //
-// We expose multiple streams, each keyed by a string;
-// each stream is independent and seeded differently (but predictably).
+// We expose multiple named streams; each stream is independent
+// and is seeded differently (but predictably from the name).
 // By using multiple streams, we support reordering of requests,
 // as long as they occur on different streams.
 //
@@ -37,16 +37,16 @@ function randomToken() {
   return Random.hexString(20);
 };
 
-// Returns the random stream with the specified key, in the specified scope.
+// Returns the random stream with the specified name, in the specified scope.
 // If scope is null (or otherwise falsey) then we will use Random, which will
 // give us as random numbers as possible, but won't produce the same
 // values across client and server.
 // However, scope will normally be the current DDP method invocation, so
-// we'll use the stream with named key, and we should get consistent
+// we'll use the stream with the specified name, and we should get consistent
 // values on the client and server sides of a method call.
-RandomStream.get = function (scope, key) {
-  if (!key) {
-    key = "default";
+RandomStream.get = function (scope, name) {
+  if (!name) {
+    name = "default";
   }
   if (!scope) {
     // There was no scope passed in;
@@ -59,7 +59,7 @@ RandomStream.get = function (scope, key) {
       seed: scope.randomSeed
     });
   }
-  return randomStream._sequence(key);
+  return randomStream._sequence(name);
 };
 
 // Returns the named sequence of pseudo-random values.
@@ -82,21 +82,21 @@ makeRpcSeed = function (enclosing, methodName) {
 };
 
 _.extend(RandomStream.prototype, {
-  // Get a random sequence with the specified key, creating it if does not exist.
-  // New sequences are seeded with the seed concatenated with the key.
+  // Get a random sequence with the specified name, creating it if does not exist.
+  // New sequences are seeded with the seed concatenated with the name.
   // By passing a seed into Random.create, we use the Alea generator.
-  _sequence: function (key) {
+  _sequence: function (name) {
     var self = this;
 
-    var sequence = self.sequences[key] || null;
+    var sequence = self.sequences[name] || null;
     if (sequence === null) {
-      var sequenceSeed = self.seed.concat(key);
+      var sequenceSeed = self.seed.concat(name);
       for (var i = 0; i < sequenceSeed.length; i++) {
         if (_.isFunction(sequenceSeed[i])) {
           sequenceSeed[i] = sequenceSeed[i]();
         }
       }
-      self.sequences[key] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
+      self.sequences[name] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
     }
     return sequence;
   }
