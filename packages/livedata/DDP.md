@@ -187,7 +187,7 @@ a `pong` message. If the received `ping` message includes an `id` field, the
    - `method`: string (method name)
    - `params`: optional array of EJSON items (parameters to the method)
    - `id`: string (an arbitrary client-determined identifier for this method call)
-   - `randomSeed`: options object (an arbitrary client-determined seed for pseudo-random generators)
+   - `randomSeed`: optional object (an arbitrary client-determined seed for pseudo-random generators)
  * `result` (server -> client):
    - `id`: string (the id passed to 'method')
    - `error`: optional Error (an error thrown by the method (or method-not-found)
