@@ -1,17 +1,19 @@
 // RandomStream allows for generation of pseudo-random values, from a seed.
 //
-// We use this for consistent 'random' numbers across the client and server.  Here,
-// we want to generate probably-unique IDs on the client, and we ideally want the server
-// to generate the same IDs when it executes the method.
+// We use this for consistent 'random' numbers across the client and server.
+// We want to generate probably-unique IDs on the client, and we ideally want
+// the server to generate the same IDs when it executes the method.
 //
 // For generated values to be the same, we must seed ourselves the same way,
 // and we must keep track of the current state of our pseudo-random generators.
-// We call this state the scope. By default, we use the current DDP method invocation as our scope.
-// DDP now allows the client to specify a randomSeed.  If a randomSeed is provided it will be used
-// to seed our random sequences.  In this way, client and server method calls will generate the same values.
+// We call this state the scope. By default, we use the current DDP method
+// invocation as our scope.  DDP now allows the client to specify a randomSeed.
+// If a randomSeed is provided it will be used to seed our random sequences.
+// In this way, client and server method calls will generate the same values.
 //
-// We expose multiple streams, each keyed by a string; each stream is independent and seeded differently
-// (but predictably).  By using multiple streams, we support reordering of requests,
+// We expose multiple streams, each keyed by a string;
+// each stream is independent and seeded differently (but predictably).
+// By using multiple streams, we support reordering of requests,
 // as long as they occur on different streams.
 RandomStream = function (options) {
   var self = this;
@@ -34,7 +36,8 @@ function randomToken() {
 // give us as random numbers as possible, but won't produce the same
 // values across client and server.
 // However, scope will normally be the current DDP method invocation, so
-// when we're doing a method call we should get consistent values.
+// we'll use the stream with named key, and we should get consistent
+// values on the client and server sides of a method call.
 RandomStream.get = function (scope, key) {
   if (!key) {
     key = "default";
@@ -55,16 +58,17 @@ RandomStream.get = function (scope, key) {
 
 // Returns the named sequence of pseudo-random values.
 // The scope will be DDP._CurrentInvocation.get(), so the stream will produce
-// consistent values on the client & server.
+// consistent values for method calls on the client and server.
 DDP.randomStream = function (name) {
   var scope = DDP._CurrentInvocation.get();
   return RandomStream.get(scope, name);
 };
 
-// Creates a randomSeed for passing to a method call
-// Note that we take enclosing as an argument, though we expect it to be DDP._CurrentInvocation.get()
-// However, we often evaluate makeRpcSeed lazily, and thus the relevant invocation may not be the one
-// currently in scope.
+// Creates a randomSeed for passing to a method call.
+// Note that we take enclosing as an argument,
+// though we expect it to be DDP._CurrentInvocation.get()
+// However, we often evaluate makeRpcSeed lazily, and thus the relevant
+// invocation may not be the one currently in scope.
 // If enclosing is null, we'll use Random and values won't be repeatable.
 makeRpcSeed = function (enclosing, methodName) {
   var stream = RandomStream.get(enclosing, '/rpc/' + methodName);
