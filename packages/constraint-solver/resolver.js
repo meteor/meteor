@@ -34,8 +34,10 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
     self._latestVersion[unitVersion.name] = unitVersion.version;
   }
 
-  self.unitsVersions[unitVersion.name].push(unitVersion);
-  self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
+  if (! _.has(self._unitsVersionsMap, unitVersion.toString())) {
+    self.unitsVersions[unitVersion.name].push(unitVersion);
+    self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
+  }
 
   if (semver.lt(self._latestVersion[unitVersion.name], unitVersion.version))
     self._latestVersion[unitVersion.name] = unitVersion.version;
@@ -72,46 +74,27 @@ ConstraintSolver.Resolver.prototype.resolve =
     }
   }, options);
 
-  dependencies = _.uniq(dependencies);
-  constraints = _.uniq(constraints);
-
   var rootDependencies = _.clone(dependencies);
 
-  var exactDepsConstraints = _.filter(constraints, function (c) {
-    return c.exact && _.contains(dependencies, c.name);
-  });
+  dependencies = ConstraintSolver.DependenciesList.fromArray(dependencies, true);
+  constraints = ConstraintSolver.ConstraintsList.fromArray(constraints);
 
-  var exactDepsVersions = _.map(exactDepsConstraints, function (c) {
-    return c.getSatisfyingUnitVersion(self);
-  });
+  // create a fake unit version to represnt the app or the build target
+  var appUV = new ConstraintSolver.UnitVersion("target", "1.0.0", "0.0.0");
+  appUV.dependencies = dependencies;
+  appUV.constraints = constraints;
 
-  var exactDepsNames = _.pluck(exactDepsVersions, "name");
-
-  // Remove them from dependencies.
-  dependencies = _.difference(dependencies, exactDepsNames);
-
-  // Take exact dependencies and propagate them.
-  // Will also pick these versions into choices as we have no choice but take
-  // them.
-  _.each(exactDepsVersions, function (uv) {
-    var propagatedExactTransDeps =
-      self._propagateExactTransDeps(uv, dependencies, constraints, choices);
-    dependencies = propagatedExactTransDeps.dependencies;
-    constraints = propagatedExactTransDeps.constraints;
-    choices = propagatedExactTransDeps.choices;
-  });
+  // state is an object:
+  // - dependencies: DependenciesList
+  // - constraints: ConstraintsList
+  // - choices: array of UnitVersion
+  var startState = self._propagateExactTransDeps(appUV, dependencies, constraints, choices);
+  startState.choices = _.filter(startState.choices, function (uv) { return uv.name !== "target"; });
 
   if (options.stopAfterFirstPropagation)
-    return choices;
+    return startState.choices;
 
   var pq = new PriorityQueue();
-
-  var startState = {
-    dependencies: dependencies,
-    constraints: constraints,
-    choices: choices
-  };
-
   var opts = { rootDependencies: rootDependencies };
   var costFunction = options.costFunction;
   var estimateCostFunction = options.estimateCostFunction;
@@ -129,7 +112,7 @@ ConstraintSolver.Resolver.prototype.resolve =
     if (tentativeCost === Infinity)
       break;
 
-    if (_.isEmpty(currentState.dependencies)) {
+    if (currentState.dependencies.isEmpty()) {
       solution = currentState.choices;
       break;
     }
@@ -157,16 +140,23 @@ ConstraintSolver.Resolver.prototype.resolve =
     throw new Error(someError);
 
   throw new Error("Couldn't resolve, I am sorry");
+
+
+  function stateStringify (state) {
+    function toString (x) { return x.toString(); }
+    return "deps: " + state.dependencies.toString(1) + " constraints: " + state.constraints.toString(1) + "choices: " + state.choices.map(toString).join(" ")
+  }
 };
 
-// dependencies: [String] - remaining dependencies
-// constraints: [ConstraintSolver.Constraint] - constraints to satisfy
-// choices: [ConstraintSolver.UnitVersion] - current fixed set of choices
+// state is an object:
+// - dependencies: DependenciesList - remaining dependencies
+// - constraints: ConstraintsList - constraints to satisfy
+// - choices: array of UnitVersion - current fixed set of choices
 //
 // returns {
 //   success: Boolean,
 //   failureMsg: String,
-//   choices: [ConstraintSolver.UnitVersion]
+//   neighbors: [state]
 // }
 //
 // NOTE: assumes that exact dependencies are already propagated
@@ -178,15 +168,12 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var constraints = state.constraints;
   var choices = state.choices;
 
-  var candidateName = dependencies[0];
-  dependencies = dependencies.slice(1);
+  var candidateName = dependencies.peek();
+  dependencies = dependencies.remove(candidateName);
 
-  var candidateConstraints = _.filter(constraints, function (c) {
-    return c.name === candidateName;
-  });
   var candidateVersions =
     _.filter(self.unitsVersions[candidateName], function (uv) {
-      return unitVersionDoesntValidateConstraints(uv, candidateConstraints);
+      return !constraints.violated(uv);
     });
 
   if (_.isEmpty(candidateVersions))
@@ -197,26 +184,13 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var lastInvalidNeighbor = null;
 
   var neighbors = _.chain(candidateVersions).map(function (uv) {
-    var nDependencies = _.clone(dependencies);
-    var nConstraints = _.clone(constraints);
     var nChoices = _.clone(choices);
-
     nChoices.push(uv);
-    var propagatedExactTransDeps =
-      self._propagateExactTransDeps(uv, nDependencies, nConstraints, nChoices);
 
-    nDependencies = propagatedExactTransDeps.dependencies;
-    nConstraints = propagatedExactTransDeps.constraints;
-    nChoices = propagatedExactTransDeps.choices;
-
-    return {
-      dependencies: nDependencies,
-      constraints: nConstraints,
-      choices: nChoices
-    };
+    return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices);
   }).filter(function (state) {
     var isValid =
-      choicesDontValidateConstraints(state.choices, state.constraints);
+      choicesDontViolateConstraints(state.choices, state.constraints);
 
     if (! isValid)
       lastInvalidNeighbor = state;
@@ -234,7 +208,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   return { success: true, neighbors: neighbors };
 };
 
-// Propagates exact dependencies (depencies which have exact constraints) from
+// Propagates exact dependencies (which have exact constraints) from
 // the given unit version taking into account the existing set of dependencies
 // and constraints.
 // Assumes that the unit versions graph without passed unit version is already
@@ -258,37 +232,44 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
     uv = queue[0];
     queue.shift();
 
-    choices = _.union(choices, [uv]);
+    choices = _.clone(choices);
+    choices.push(uv);
 
     var exactTransitiveDepsVersions =
       uv.exactTransitiveDependenciesVersions(self);
     var inexactTransitiveDeps = uv.inexactTransitiveDependencies(self);
-    var transitiveConstraints = _.chain(exactTransitiveDepsVersions).union([uv])
-      .map(function (uv) { return uv.constraints; }).flatten().uniq().value();
+    var transitiveConstraints = new ConstraintSolver.ConstraintsList();
+    _.each(_.union(exactTransitiveDepsVersions, [uv]), function (uv) {
+      transitiveConstraints = transitiveConstraints.union(uv.constraints);
+    });
 
-    dependencies = _.union(dependencies, inexactTransitiveDeps);
-    constraints = _.union(constraints, transitiveConstraints);
+    dependencies = dependencies.union(inexactTransitiveDeps);
+    constraints = constraints.union(transitiveConstraints);
     choices = _.union(choices, exactTransitiveDepsVersions);
 
     // Since exact transitive deps are put into choices, there is no need to
     // keep them in dependencies.
-    dependencies = _.difference(dependencies, _.pluck(choices, "name"));
+    _.each(choices, function (uv) {
+      dependencies = dependencies.remove(uv.name);
+    });
 
     // There could be new combination of exact constraint/dependency outgoing
     // from existing state and the new node.
     // We don't need to look for all previously considered combinations.
     // Looking for newNode.dependencies+exact constraints and
     // newNode.exactConstraints+dependencies is enough.
-    var exactDeps = _.chain(uv.dependencies).map(function (dep) {
-      return _.find(constraints, function (c) {
-        return c.name === uv.name && c.exact;
-      });
-    }).filter(_.identity).map(function (c) {
-      return c.getSatisfyingUnitVersion(self);
-    }).union(_.chain(uv.constraints).filter(function (c) { return c.exact; })
-              .map(function (c) { return c.getSatisfyingUnitVersion(self); })
-              .value()
-            ).difference(choices).value();
+    var newExactConstraintsList = uv.dependencies
+      .exactConstraintsIntersection(constraints)
+      .union(uv.constraints.exactDependenciesIntersection(uv.dependencies));
+
+    var exactDeps = [];
+
+    newExactConstraintsList.each(function (c) {
+      var uv = c.getSatisfyingUnitVersion(self);
+      if (! uv)
+        throw new Error("No unit version was found for the constraint -- " + c.toString());
+      exactDeps.push(uv);
+    });
 
     // Enqueue all new exact dependencies.
     _.each(exactDeps, function (dep) {
@@ -306,17 +287,9 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   };
 };
 
-unitVersionDoesntValidateConstraints = function (uv, constraints) {
-  return _.all(constraints, function (c) {
-    return c.name !== uv.name || c.isSatisfied(uv);
-  });
-};
-
-var choicesDontValidateConstraints = function (choices, constraints) {
-  var constraintsByName = _.groupBy(constraints, 'name');
+var choicesDontViolateConstraints = function (choices, constraints) {
   return _.all(choices, function (uv) {
-    return unitVersionDoesntValidateConstraints(
-      uv, constraintsByName[uv.name] || []);
+    return !constraints.violated(uv);
   });
 };
 
@@ -334,10 +307,8 @@ ConstraintSolver.UnitVersion = function (name, unitVersion, ecv) {
 
   self.name = name;
   self.version = unitVersion;
-  // array of Strings - names of dependencies
-  self.dependencies = [];
-  // array of ConstraintSolver.Constraint's
-  self.constraints = [];
+  self.dependencies = new ConstraintSolver.DependenciesList();
+  self.constraints = new ConstraintSolver.ConstraintsList();
   // a string in a form of "1.2.0"
   self.ecv = ecv;
 };
@@ -347,26 +318,18 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     var self = this;
 
     check(name, String);
-    if (_.contains(self.dependencies, name))
+    if (self.dependencies.contains(name))
       throw new Error("Dependency already exists -- " + name);
-    self.dependencies.push(name);
+    self.dependencies = self.dependencies.push(name);
   },
   addConstraint: function (constraint) {
     var self = this;
 
     check(constraint, ConstraintSolver.Constraint);
-    if (_.contains(self.constraints, constraint))
+    if (self.constraints.contains(constraint))
       throw new Error("Constraint already exists -- " + constraint.toString());
 
-    self.constraints.push(constraint);
-  },
-  exactConstraints: function () {
-    var self = this;
-    return _.filter(self.constraints, function (c) { return c.exact; });
-  },
-  looseConstraints: function () {
-    var self = this;
-    return _.filter(self.constraints, function (c) { return !c.exact; });
+    self.constraints = self.constraints.push(constraint);
   },
 
   // Returns a list of transitive exact constraints, those could be found as
@@ -374,48 +337,58 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
   _exactTransitiveConstraints: function (resolver) {
     var self = this;
 
-    // Get all dependencies we depend on and have constraints to pick an exact
-    // version simultaneously as constraints.
-    var exactDeps = _.filter(self.exactConstraints(), function (c) {
-      return _.contains(self.dependencies, c.name);
-    });
+    var exactTransitiveConstraints =
+      self.dependencies.exactConstraintsIntersection(self.constraints);
 
-    // Merge all their's transitive exact dependencies
-    var exactTransitiveConstraints = _.clone(exactDeps);
-
-    _.each(exactDeps, function (c) {
+    exactTransitiveConstraints.each(function (c) {
       var unitVersion = c.getSatisfyingUnitVersion(resolver);
-      // TODO: error handling in case a satisfying dependency wasn't found
-      // xcxc
-      if (!unitVersion)
-        console.log("FAIL: ", c);
+      if (! unitVersion)
+        throw new Error("No unit version was found for the constraint -- " + c.toString());
 
       // Collect the transitive dependencies of the direct exact dependencies.
-      exactTransitiveConstraints = _.union(exactTransitiveConstraints,
+      exactTransitiveConstraints = exactTransitiveConstraints.union(
                 unitVersion._exactTransitiveConstraints(resolver));
     });
 
     return exactTransitiveConstraints;
   },
 
+  // XXX weirdly returns an array as opposed to some UVCollection
   exactTransitiveDependenciesVersions: function (resolver) {
     var self = this;
-    return _.map(self._exactTransitiveConstraints(resolver), function (c) {
-      return c.getSatisfyingUnitVersion(resolver);
+    var uvs = [];
+    self._exactTransitiveConstraints(resolver).each(function (c) {
+      var unitVersion = c.getSatisfyingUnitVersion(resolver);
+      if (! unitVersion)
+        throw new Error("No unit version was found for the constraint -- " + c.toString());
+
+      uvs.push(unitVersion);
     });
+
+    return uvs;
   },
+
   inexactTransitiveDependencies: function (resolver) {
     var self = this;
     var exactTransitiveConstraints = self._exactTransitiveConstraints(resolver);
+    var deps = self.dependencies;
 
-    return _.chain(exactTransitiveConstraints).map(function (c) {
+    exactTransitiveConstraints.each(function (c) {
       var unitVersion = c.getSatisfyingUnitVersion(resolver);
-      // TODO: error handling in case unitVersion wasn't found
+      if (! unitVersion)
+        throw new Error("No unit version was found for the constraint -- " + c.toString());
 
-      return unitVersion.dependencies;
-    }).flatten().union(self.dependencies).uniq()
-      .difference(_.pluck(exactTransitiveConstraints, "name")).value();
+      deps = deps.union(unitVersion.dependencies);
+    });
+
+    // remove the the exact constraints
+    exactTransitiveConstraints.each(function (c) {
+      deps = deps.remove(c.name);
+    });
+
+    return deps;
   },
+
   toString: function () {
     var self = this;
     return self.name + "@" + self.version;
