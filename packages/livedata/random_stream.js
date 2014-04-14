@@ -20,7 +20,7 @@ RandomStream = function (options) {
 
   this.seed = [].concat(options.seed || randomToken());
 
-  this._sequences = {};
+  this.sequences = {};
 };
 
 // Returns a random string of sufficient length for a random seed.
@@ -82,7 +82,7 @@ _.extend(RandomStream.prototype, {
   _sequence: function (key) {
     var self = this;
 
-    var sequence = self._sequences[key] || null;
+    var sequence = self.sequences[key] || null;
     if (sequence === null) {
       var sequenceSeed = self.seed.concat(key);
       for (var i = 0; i < sequenceSeed.length; i++) {
@@ -90,7 +90,7 @@ _.extend(RandomStream.prototype, {
           sequenceSeed[i] = sequenceSeed[i]();
         }
       }
-      self._sequences[key] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
+      self.sequences[key] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
     }
     return sequence;
   }
