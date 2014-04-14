@@ -290,3 +290,32 @@ of EJSON should not rely on key order, if possible.
 
 > MongoDB relies on key order.  When using EJSON with MongoDB, the
 > implementation of EJSON must preserve key order.
+
+
+## Appendix 2: randomSeed backward/forward compatibility
+
+randomSeed was added into DDP, but it does not break backward or forward compatibility.
+
+If the client stub and the server produce documents that are different in any way,
+Meteor will reconcile this difference. This may cause 'flicker' in the UI as the values change
+on the client to reflect what happened on the server, but the final result will be correct: the
+server and the client will agree.
+
+Consistent id generation / randomSeed does not alter the syncing process, and thus
+will (at worst) be the same:
+
+* If neither the server nor the client support randomSeed, we will get the classical/flicker behavior.
+
+* If the client supports randomSeed, but the server does not, the server will ignore randomSeed,
+as it ignores any unknown properties in a DDP method call.  Different ids will be generated,
+but this will be fixed by syncing.
+
+* If the server supports randomSeed, but the client does not, the server will generate unseeded
+random values (providing a randomSeed is optional); different ids will be generated; and again this will be fixed by syncing.
+
+* If both client and server support randomSeed, but different ids are generated, either because
+the generation procedure is buggy, or the stub behaves differently to the server, then syncing
+will fix this.
+
+* If both client and server support randomSeed, in the normal case the ids generated will be the same,
+and syncing will be a no-op.
