@@ -40,13 +40,15 @@ Meteor.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      return new Meteor.Collection.ObjectID(DDP.RandomStreams.makeMongoOid(name));
+      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      return new Meteor.Collection.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
     self._makeNewID = function () {
-      return DDP.RandomStreams.makeCollectionId(name);
+      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      return src.id();
     };
     break;
   }
