@@ -1406,7 +1406,7 @@ _.extend(Server.prototype, {
         userId: userId,
         setUserId: setUserId,
         connection: connection,
-        randomSeed: DDP.RandomStreams.makeRpcSeed(currentInvocation, name)
+        randomSeed: makeRpcSeed(currentInvocation, name)
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {

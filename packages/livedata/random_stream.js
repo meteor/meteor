@@ -29,19 +29,18 @@ function randomToken() {
   return Random.hexString(20);
 };
 
-DDP.RandomStreams = {};
-
-// Returns the random stream with the specified key.
-// This first tries to use the DDP method invocation as the scope;
-// if we're not in a method invocation, then we can use fallbackScope instead.
-// Otherwise we generate an ephemeral  scope, which will be random,
-// but won't produce values that we can easily reproduce elsewhere.
-DDP.RandomStreams.get = function (scope, key) {
+// Returns the random stream with the specified key, in the specified scope.
+// If scope is null (or otherwise falsey) then we will use Random, which will
+// give us as random numbers as possible, but won't produce the same
+// values across client and server.
+// However, scope will normally be the current DDP method invocation, so
+// when we're doing a method call we should get consistent values.
+RandomStream.get = function (scope, key) {
   if (!key) {
     key = "default";
   }
   if (!scope) {
-    // We aren't in a method invocation, there was no scope passed in, so
+    // There was no scope passed in;
     // the sequence won't actually be reproducible.
     return Random;
   }
@@ -54,21 +53,21 @@ DDP.RandomStreams.get = function (scope, key) {
   return randomStream._sequence(key);
 };
 
-//Generate an id for a new object, using randomStream, so that the client
-//and server will produce the same id values.  By using the name of the collection
-//as the key for the random seed, we can tolerate reorderings of operations iff
-//these happen on different collections.
+// Returns the named sequence of pseudo-random values.
+// The scope will be DDP._CurrentInvocation.get(), so the stream will produce
+// consistent values on the client & server.
 DDP.randomStream = function (name) {
   var scope = DDP._CurrentInvocation.get();
-  return DDP.RandomStreams.get(scope, name);
+  return RandomStream.get(scope, name);
 };
 
 // Creates a randomSeed for passing to a method call
 // Note that we take enclosing as an argument, though we expect it to be DDP._CurrentInvocation.get()
 // However, we often evaluate makeRpcSeed lazily, and thus the relevant invocation may not be the one
 // currently in scope.
-DDP.RandomStreams.makeRpcSeed = function (enclosing, methodName) {
-  var stream = DDP.RandomStreams.get(enclosing, '/rpc/' + methodName);
+// If enclosing is null, we'll use Random and values won't be repeatable.
+makeRpcSeed = function (enclosing, methodName) {
+  var stream = RandomStream.get(enclosing, '/rpc/' + methodName);
   return stream.hexString(20);
 };
 

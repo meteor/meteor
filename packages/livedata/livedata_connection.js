@@ -675,7 +675,7 @@ _.extend(Connection.prototype, {
     randomSeedGenerator.generate = function () {
       var self = randomSeedGenerator;
       if (!self.generated) {
-        self.generated   = DDP.RandomStreams.makeRpcSeed(enclosing, name);
+        self.generated = makeRpcSeed(enclosing, name);
       }
       return self.generated;
     };
