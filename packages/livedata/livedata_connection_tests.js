@@ -359,7 +359,7 @@ if (Meteor.isClient) {
     var message2 = JSON.parse(stream.sent.shift());
     test.isUndefined(message2.randomSeed);
     test.equal(message2, {msg: 'method', method: 'do_something_else',
-                          params: ['monday'], id: message2.id });
+                          params: ['monday'], id: message2.id});
 
     // get the first data satisfied message. changes are applied to database even
     // though another method is outstanding, because the other method didn't have
