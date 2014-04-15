@@ -1034,7 +1034,7 @@ Meteor.publish(null, function() {
       {_id: this.userId},
       {fields: {profile: 1, username: 1, emails: 1}});
   } else {
-    return null;
+    return this.ready();
   }
 }, /*suppress autopublish warning*/{is_auto: true});
 
