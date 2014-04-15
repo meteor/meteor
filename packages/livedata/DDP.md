@@ -7,7 +7,7 @@ DDP is a protocol between a client and a server that supports two operations:
    client informed about the contents of those documents as they change over
    time.
 
-This document specifies the version "pre1" of DDP. It's a rough description of
+This document specifies the version "pre2" of DDP. It's a rough description of
 the protocol and not intended to be entirely definitive.
 
 ## General Message Structure:
