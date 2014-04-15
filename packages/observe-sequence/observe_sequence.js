@@ -31,8 +31,8 @@ ObserveSequence = {
   //     _id fields.  Specifically:
   //
   //     * addedAt(id, item, atIndex, beforeId)
-  //     * changed(id, newItem, oldItem)
-  //     * removed(id, oldItem)
+  //     * changedAt(id, newItem, oldItem, atIndex)
+  //     * removedAt(id, oldItem, atIndex)
   //     * movedTo(id, item, fromIndex, toIndex, beforeId)
   //
   // @returns {Object(stop: Function)} call 'stop' on the return value
@@ -41,9 +41,9 @@ ObserveSequence = {
   // We don't make any assumptions about our ability to compare sequence
   // elements (ie, we don't assume EJSON.equals works; maybe there is extra
   // state/random methods on the objects) so unlike cursor.observe, we may
-  // sometimes call changed() when nothing actually changed.
+  // sometimes call changedAt() when nothing actually changed.
   // XXX consider if we *can* make the stronger assumption and avoid
-  //     no-op changed calls (in some cases?)
+  //     no-op changedAt calls (in some cases?)
   //
   // XXX currently only supports the callbacks used by our
   // implementation of {{#each}}, but this can be expanded.
@@ -143,11 +143,12 @@ ObserveSequence = {
                 callbacks.addedAt(document._id, document, atIndex, before);
               }
             },
-            changed: function (newDocument, oldDocument) {
-              callbacks.changed(newDocument._id, newDocument, oldDocument);
+            changedAt: function (newDocument, oldDocument, atIndex) {
+              callbacks.changedAt(newDocument._id, newDocument, oldDocument,
+                                  atIndex);
             },
-            removed: function (oldDocument) {
-              callbacks.removed(oldDocument._id, oldDocument);
+            removedAt: function (oldDocument, atIndex) {
+              callbacks.removedAt(oldDocument._id, oldDocument, atIndex);
             },
             movedTo: function (document, fromIndex, toIndex, before) {
               callbacks.movedTo(
@@ -213,6 +214,8 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   var newIdObjects = [];
   var posOld = {}; // maps from idStringify'd ids
   var posNew = {}; // ditto
+  var posCur = {};
+  var lengthCur = lastSeqArray.length;
 
   _.each(seqArray, function (doc, i) {
     newIdObjects.push(_.pick(doc, '_id'));
@@ -221,32 +224,66 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   _.each(lastSeqArray, function (doc, i) {
     oldIdObjects.push(_.pick(doc, '_id'));
     posOld[idStringify(doc._id)] = i;
+    posCur[idStringify(doc._id)] = i;
   });
 
   // Arrays can contain arbitrary objects. We don't diff the
-  // objects. Instead we always fire 'changed' callback on every
+  // objects. Instead we always fire 'changedAt' callback on every
   // object. The consumer of `observe-sequence` should deal with
   // it appropriately.
   diffFn(oldIdObjects, newIdObjects, {
     addedBefore: function (id, doc, before) {
-        callbacks.addedAt(
-          id,
-          seqArray[posNew[idStringify(id)]].item,
-          posNew[idStringify(id)],
-          before);
+      var position = before ? posCur[idStringify(before)] : lengthCur;
+
+      _.each(posCur, function (pos, id) {
+        if (pos >= position)
+          posCur[id]++;
+      });
+
+      lengthCur++;
+      posCur[idStringify(id)] = position;
+
+      callbacks.addedAt(
+        id,
+        seqArray[posNew[idStringify(id)]].item,
+        position,
+        before);
     },
     movedBefore: function (id, before) {
-        callbacks.movedTo(
-          id,
-          seqArray[posNew[idStringify(id)]].item,
-          posOld[idStringify(id)],
-          posNew[idStringify(id)],
-          before);
+      var prevPosition = posCur[idStringify(id)];
+      var position = before ? posCur[idStringify(before)] : lengthCur - 1;
+
+      _.each(posCur, function (pos, id) {
+        if (pos >= prevPosition && pos <= position)
+          posCur[id]--;
+        else if (pos <= prevPosition && pos >= position)
+          posCur[id]++;
+      });
+
+      posCur[idStringify(id)] = position;
+
+      callbacks.movedTo(
+        id,
+        seqArray[posNew[idStringify(id)]].item,
+        prevPosition,
+        position,
+        before);
     },
     removed: function (id) {
-        callbacks.removed(
-          id,
-          lastSeqArray[posOld[idStringify(id)]].item);
+      var prevPosition = posCur[idStringify(id)];
+
+      _.each(posCur, function (pos, id) {
+        if (pos >= prevPosition)
+          posCur[id]--;
+      });
+
+      delete posCur[idStringify(id)];
+      lengthCur--;
+
+      callbacks.removedAt(
+        id,
+        lastSeqArray[posOld[idStringify(id)]].item,
+        prevPosition);
     }
   });
 
@@ -254,7 +291,7 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
     var id = idParse(idString);
     if (_.has(posOld, idString)) {
       // specifically for primitive types, compare equality before
-      // firing the changed callback. otherwise, always fire it
+      // firing the 'changedAt' callback. otherwise, always fire it
       // because doing a deep EJSON comparison is not guaranteed to
       // work (an array can contain arbitrary objects, and 'transform'
       // can be used on cursors). also, deep diffing is not
@@ -264,7 +301,7 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
       var oldItem = lastSeqArray[posOld[idString]].item;
 
       if (typeof newItem === 'object' || newItem !== oldItem)
-          callbacks.changed(id, newItem, oldItem);
+          callbacks.changedAt(id, newItem, oldItem, pos);
       }
   });
 };
