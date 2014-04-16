@@ -18,10 +18,12 @@ var setCurrentComputation = function (c) {
 // _assign is like _.extend or the upcoming Object.assign.
 // Copy src's own, enumerable properties onto tgt and return
 // tgt.
+var _hasOwnProperty = Object.prototype.hasOwnProperty;
 var _assign = function (tgt, src) {
-  for (var k in src)
-    if (src.hasOwnProperty(k))
+  for (var k in src) {
+    if (_hasOwnProperty.call(src, k))
       tgt[k] = src[k];
+  }
   return tgt;
 };
 
