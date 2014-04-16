@@ -1877,3 +1877,11 @@ Tinytest.add(
   }
 );
 
+Tinytest.add(
+  "spacebars - template - block comments should not be displayed",
+  function (test) {
+    var tmpl = Template.spacebars_test_block_comment;
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), '');
+  }
+);
