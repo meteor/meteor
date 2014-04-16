@@ -133,20 +133,19 @@ selftest.define("change packages", function () {
   run.match("restarted");
 
   // Change something in the plugin.
-  console.log("XXX: change something in plugin does not work");
   s.cd("packages/contains-plugin/plugin", function () {
     s.write("plugin.js", "console.log(\"edit\");");
   });
-/*  run.waitSecs(2);
+  run.waitSecs(2);
   run.match("edit");
-  run.match("restarted"); */
+  run.match("foobar!");
+  run.match("restarted");
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
 
   run.waitSecs(2);
-  run.match("edit");
   run.match("restarted");
 
 });

@@ -701,11 +701,13 @@ _.extend(Target.prototype, {
 
       // Depend on the source files that produced these resources.
       self.watchSet.merge(build.watchSet);
+
       // Remember the versions of all of the build-time dependencies
-      // that were used in these resources.
+      // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
+       self.watchSet.merge(build.pkg.pluginWatchSet);
       _.extend(self.pluginProviderPackageDirs,
-               build.pkg.pluginProviderPackageDirs)
+               build.pkg.pluginProviderPackageDirs);
     });
   },
 
