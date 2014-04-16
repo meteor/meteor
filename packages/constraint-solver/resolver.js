@@ -14,6 +14,8 @@ ConstraintSolver.Resolver = function () {
 
   // Maps unit name string to an array of version definitions
   self.unitsVersions = {};
+  // Maps name@version string to a unit version
+  self._unitsVersionsMap = {};
 
   // Maps unit name string to the greatest version string we have
   self._latestVersion = {};
@@ -33,6 +35,7 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
   }
 
   self.unitsVersions[unitVersion.name].push(unitVersion);
+  self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
 
   if (semver.lt(self._latestVersion[unitVersion.name], unitVersion.version))
     self._latestVersion[unitVersion.name] = unitVersion.version;
@@ -460,7 +463,12 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (unitVersion) {
 ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion =
   function (resolver) {
   var self = this;
+
+  if (self.exact)
+    return resolver._unitsVersionsMap[self.toString().replace("=", "")];
+
   var unitVersion = _.find(resolver.unitsVersions[self.name],
                            _.bind(self.isSatisfied, self));
   return unitVersion;
 };
+
