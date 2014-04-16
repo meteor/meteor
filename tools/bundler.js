@@ -443,7 +443,6 @@ _.extend(Target.prototype, {
   // options
   // - packages: packages to include (Unipackage or 'foo' or 'foo.build'),
   //   per _determineLoadOrder
-  // - test: packages to test (Unipackage or 'foo'), per _determineLoadOrder
   // - minify: true to minify
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
@@ -453,8 +452,7 @@ _.extend(Target.prototype, {
 
     // Populate the list of builds to load
     self._determineLoadOrder({
-      packages: options.packages || [],
-      test: options.test || []
+      packages: options.packages || []
     });
 
     // Link JavaScript and set up self.js, etc.
@@ -495,8 +493,6 @@ _.extend(Target.prototype, {
   //   package name as a string (to include that package's default
   //   builds for this arch, or a string of the form 'package.build'
   //   to include a particular named build from a particular package.
-  // - test: an array of packages (as Unipackage objects or as name
-  //   strings) whose test builds should be included
   _determineLoadOrder: function (options) {
     var self = this;
     var packageLoader = self.packageLoader;
@@ -1661,8 +1657,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
- *   - testPackages: array of package objects or package names whose
- *     tests should be additionally included in this bundle
  *   - arch: the server architecture to target (defaults to archinfo.host())
  *
  * Returns an object with keys:
@@ -1716,7 +1710,6 @@ exports.bundle = function (options) {
 
       client.make({
         packages: [app],
-        test: buildOptions.testPackages || [],
         minify: buildOptions.minify,
         addCacheBusters: true
       });
@@ -1750,7 +1743,6 @@ exports.bundle = function (options) {
 
       server.make({
         packages: [app],
-        test: buildOptions.testPackages || [],
         minify: false
       });
 

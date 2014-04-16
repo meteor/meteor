@@ -1345,6 +1345,8 @@ main.registerCommand({
       // we are able to resolve the test package's dependency on the
       // main package. This is not ideal (I hate how this mutates global
       // state) but it'll do for now.
+      //
+      // XXX: What is our testing story here? Can't we just add the test package?
       var packageDir = path.resolve(p);
       var packageName = path.basename(packageDir);
       catalog.addLocalPackage(packageName, packageDir);
@@ -1373,17 +1375,14 @@ main.registerCommand({
   // dependencies. We are going to add them to the project and have the project
   // compute them for us. This means that right now, we are testing all packages
   // as they work together.
-  var buildMe = [];
   _.each(testPackages, function(name) {
     var versionRecord = catalog.getLatestVersion(name);
     if (versionRecord && versionRecord.testName) {
       project.addPackage(testRunnerAppDir, versionRecord.testName);
-      buildMe.push(versionRecord.testName);
     }
   });
 
   var buildOptions = {
-  // testPackages: buildMe,
     minify: options.production
   };
 
