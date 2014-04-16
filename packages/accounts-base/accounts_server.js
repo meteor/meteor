@@ -1034,7 +1034,10 @@ Meteor.publish(null, function() {
       {_id: this.userId},
       {fields: {profile: 1, username: 1, emails: 1}});
   } else {
-    return this.ready();
+    //we need to explicitly mark as current subscription is ready.
+    //otherwise meteor thinks, subscription is not ready
+    //  see related issues: #2060 & #1991
+    this.ready();
   }
 }, /*suppress autopublish warning*/{is_auto: true});
 
