@@ -1678,7 +1678,7 @@ Template.api.httpcall = {
   args: [
     {name: "method",
      type: "String",
-     descr: 'The HTTP method to use: "`GET`", "`POST`", "`PUT`", or "`DELETE`".'},
+     descr: 'The [HTTP method](http://en.wikipedia.org/wiki/HTTP_method) to use, such as "`GET`", "`POST`", or "`HEAD`".'},
     {name: "url",
      type: "String",
      descr: 'The URL to retrieve.'},
