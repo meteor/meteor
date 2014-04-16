@@ -1713,7 +1713,7 @@ Template.api.httpcall = {
      descr: "Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default."},
     {name: "followRedirects",
      type: "Boolean",
-     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."}
+     descr: "If `true`, transparently follow HTTP redirects. Cannot be set to `false` on the client. Default `true`."}
   ]
 };
 
