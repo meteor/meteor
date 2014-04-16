@@ -556,14 +556,14 @@ _.extend(Target.prototype, {
       // those edge. Because we did follow those edges in Phase 1, any unordered
       // builds were at some point in `needed` and will not be left out).
       compiler.eachUsedBuild(
-        build.uses, self.arch, packageLoader, {skipUnordered: true, id: build.id},
+        build.uses, self.arch, packageLoader, { skipUnordered: true },
         function (usedBuild, useOptions) {
           // If this is a weak dependency, and nothing else in the target had a
           // strong dependency on it, then ignore this edge.
           if (useOptions.weak && ! _.has(getsUsed, usedBuild.id))
             return;
           if (onStack[usedBuild.id]) {
-            buildmessage.error("Bundler: circular dependency between packages " +
+            buildmessage.error("circular dependency between packages " +
                                build.pkg.name + " and " + usedBuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
