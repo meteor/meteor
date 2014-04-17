@@ -16,7 +16,7 @@ var requestCredential = function (credentialRequestCompleteCallback) {
     return;
   }
 
-  var credentialToken = Random.id();
+  var credentialToken = Random.secret();
 
   var loginUrl =
         METEOR_DEVELOPER_URL + "/oauth2/authorize?" +

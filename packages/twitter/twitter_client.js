@@ -18,7 +18,7 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
     return;
   }
 
-  var credentialToken = Random.id();
+  var credentialToken = Random.secret();
   // We need to keep credentialToken across the next two 'steps' so we're adding
   // a credentialToken parameter to the url and the callback url that we'll be returned
   // to by oauth provider
