@@ -18,6 +18,10 @@
 * Add `Random.secret()` for generating security-critical secrets like
   login tokens.
 
+* `Meteor.logoutOtherClients` now calls the user callback when other
+  login tokens have actually been removed from the database, not when
+  they have been marked for eventual removal. Fixes #1915.
+
 * Upgraded dependencies:
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
