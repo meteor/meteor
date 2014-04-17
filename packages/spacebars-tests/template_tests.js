@@ -1877,3 +1877,24 @@ Tinytest.add(
   }
 );
 
+Tinytest.add("spacebars - templates - UI.toHTML", function (test) {
+  Template.spacebars_test_tohtml_basic.foo = "foo";
+  test.equal(canonicalizeHtml(
+    UI.toHTML(Template.spacebars_test_tohtml_basic)), "foo");
+
+  Template.spacebars_test_tohtml_if.foo = "foo";
+  test.equal(canonicalizeHtml(
+    UI.toHTML(Template.spacebars_test_tohtml_if)), "foo");
+
+  Template.spacebars_test_tohtml_with.foo = "foo";
+  test.equal(canonicalizeHtml(
+    UI.toHTML(Template.spacebars_test_tohtml_with)), "foo");
+
+  Template.spacebars_test_tohtml_each.foos = ["foo"];
+  test.equal(canonicalizeHtml(
+    UI.toHTML(Template.spacebars_test_tohtml_each)), "foo");
+
+  test.equal(canonicalizeHtml(
+    UI.toHTML(Template.spacebars_test_tohtml_inclusion)), "foo");
+});
+
