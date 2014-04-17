@@ -181,7 +181,7 @@ stopWithLater = function (instance) {
     if (Deps.active)
       instance.materialized();
     else
-      instance.data.stop();
+      instance.data && instance.data.stop();
   }
 };
 
