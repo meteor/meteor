@@ -36,45 +36,6 @@ AttributeHandler.prototype.update = function (element, oldValue, value) {
   }
 };
 
-// _assign is like _.extend or the upcoming Object.assign.
-// Copy src's own, enumerable properties onto tgt and return
-// tgt.
-var _assign = function (tgt, src) {
-  for (var k in src)
-    if (src.hasOwnProperty(k))
-      tgt[k] = src[k];
-  return tgt;
-};
-
-// return an array with the falsy elements removed
-var _arrayCompact = function (array) {
-  var result = [];
-  for (var i = 0; i < array.length; i++) {
-    var item = array[i];
-    if (item)
-      result.push(item);
-  }
-  return result;
-};
-
-var _arrayContains = function (array, item) {
-  for (var i = 0; i < array.length; i++) {
-    if (array[i] === item)
-      return true;
-  }
-  return false;
-};
-
-var _arrayWithout = function (array, item) {
-  var result = [];
-  for (var i = 0; i < array.length; i++) {
-    var x = array[i];
-    if (x !== item)
-      result.push(x);
-  }
-  return result;
-};
-
 AttributeHandler.extend = function (options) {
   var curType = this;
   var subType = function AttributeHandlerSubtype(/*arguments*/) {
@@ -83,7 +44,7 @@ AttributeHandler.extend = function (options) {
   subType.prototype = new curType;
   subType.extend = curType.extend;
   if (options)
-    _assign(subType.prototype, options);
+    _.extend(subType.prototype, options);
   return subType;
 };
 
@@ -93,22 +54,22 @@ var BaseClassHandler = AttributeHandler.extend({
     if (!this.getCurrentValue || !this.setValue)
       throw new Error("Missing methods in subclass of 'BaseClassHandler'");
 
-    var oldClasses = oldValue ? _arrayCompact(oldValue.split(' ')) : [];
-    var newClasses = value ? _arrayCompact(value.split(' ')) : [];
+    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
+    var newClasses = value ? _.compact(value.split(' ')) : [];
 
     // the current classes on the element, which we will mutate.
-    var classes = _arrayCompact(this.getCurrentValue(element).split(' '));
+    var classes = _.compact(this.getCurrentValue(element).split(' '));
 
     // optimize this later (to be asymptotically faster) if necessary
     for (var i = 0; i < oldClasses.length; i++) {
       var c = oldClasses[i];
-      if (! _arrayContains(newClasses, c))
-        classes = _arrayWithout(classes, c);
+      if (! _.contains(newClasses, c))
+        classes = _.without(classes, c);
     }
     for (var i = 0; i < newClasses.length; i++) {
       var c = newClasses[i];
-      if ((! _arrayContains(oldClasses, c)) &&
-          (! _arrayContains(classes, c)))
+      if ((! _.contains(oldClasses, c)) &&
+          (! _.contains(classes, c)))
         classes.push(c);
     }
 
