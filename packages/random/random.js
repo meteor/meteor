@@ -87,7 +87,7 @@ var Alea = function () {
 
 var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
 var BASE64_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-  "0123456789+/";
+  "0123456789-_";
 
 // If seeds are provided, then the alea PRNG will be used, since cryptographic
 // PRNGs (Node crypto and window.crypto.getRandomValues) don't allow us to
@@ -154,8 +154,8 @@ RandomGenerator.prototype._randomString = function (charsCount,
 
 RandomGenerator.prototype.id = function (charsCount) {
   var self = this;
-  // 17 characters is around 96 bits of entropy is the amount of state
-  // in the Alea PRNG.
+  // 17 characters is around 96 bits of entropy, which is the amount of
+  // state in the Alea PRNG.
   if (charsCount === undefined)
     charsCount = 17;
 
