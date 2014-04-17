@@ -404,7 +404,7 @@ Template.api.method_invocation_connection = {
 
 Template.api.error = {
   id: "meteor_error",
-  name: "new Meteor.Error(error, reason, details)",
+  name: "new Meteor.Error(error [, reason] [, details])",
   locus: "Anywhere",
   descr: ["This class represents a symbolic error thrown by a method."],
   args: [
