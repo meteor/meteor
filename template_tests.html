@@ -676,3 +676,28 @@ Hi there!
   <button type="button">button</button>
 </template>
 
+<template name="spacebars_test_tohtml_basic">
+  {{foo}}
+</template>
+
+<template name="spacebars_test_tohtml_if">
+  {{#if true}}
+    {{foo}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_tohtml_with">
+  {{#with foo}}
+    {{.}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_tohtml_each">
+  {{#each foos}}
+    {{.}}
+  {{/each}}
+</template>
+
+<template name="spacebars_test_tohtml_inclusion">
+  {{> spacebars_test_tohtml_basic}}
+</template>
