@@ -1991,7 +1991,8 @@ exports.buildJsImage = function (options) {
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
-    npmDir: options.npmDir
+    npmDir: options.npmDir,
+    dependencyVersions: options.dependencyVersions
   });
 
   var unipackage = compiler.compile(packageSource).unipackage;

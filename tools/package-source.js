@@ -229,6 +229,12 @@ var PackageSource = function () {
   // build. Required not just if we have npmDependencies, but if we
   // ever could have had them in the past.
   self.npmCacheDirectory = null;
+
+  // Dependency versions that we used last time that we built this package. If
+  // the constraint solver thinks that they are still a valid set of
+  // dependencies, we will use them again to build this package. This makes
+  // building packages slightly more efficient and ensures repeatable builds.
+  self.dependencyVersions = {dependencies: {}, plugins: {}};
 };
 
 
@@ -264,6 +270,7 @@ _.extend(PackageSource.prototype, {
   // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
   // - npmDir
+  // - dependencyVersions
   initFromOptions: function (name, options) {
     var self = this;
     self.name = name;
@@ -300,6 +307,8 @@ _.extend(PackageSource.prototype, {
       throw new Error("only one build, so how can consistency check fail?");
 
     self.defaultArches = {'os': [options.archName]};
+
+    self.dependencyVersions = options.dependencyVersions ||  {dependencies: {}, plugins: {}};
   },
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
@@ -847,6 +856,25 @@ _.extend(PackageSource.prototype, {
 
     // Default builds
     self.defaultArches = { browser: ['main'], 'os': ['main'] };
+
+    // If we have built this before, read the versions that we ended up using.
+    var versionsFile = path.join(self.sourceRoot, "versions.json");
+    if (fs.existsSync(versionsFile)) {
+      try {
+        var data = fs.readFileSync(versionsFile, 'utf8');
+        self.dependencyVersions = JSON.parse(data);
+      } catch (err) {
+        // We 'recover' by not reading the dependency versions. Log a line about
+        // it in case it is unexpected. We don't buildmessage because it doesn't
+        // really interrupt our workflow, but the user might want to know about
+        // it anyway. We shouldn't get here unless, for example, the user tried
+        // to manually edit the json file incorrectly, or there is some bizarre
+        // ondisk corruption.
+        console.log("Could not read versions file for " + self.name +
+                    ". Recomputing dependency versions from scratch.");
+      }
+    };
+
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
@@ -1065,6 +1093,49 @@ _.extend(PackageSource.prototype, {
     }
     return ret;
   },
+
+  // Record the versions of the dependencies that we used to actually build the
+  // package on disk and save them into the packageSource. Next time we build
+  // the package, we will look at them for optimization & repeatable builds.
+  //
+  // versions:
+  // - dependencies: results of running the constraint solver on the dependency
+  //   metadata of this package
+  // - plugins: results of running the constraint solver on the plugin
+  //   dependency data for this package.
+  recordDependencyVersions: function (versions) {
+    var self = this;
+
+    // There is always a possibility that we might want to change the format of
+    // this file, so let's keep track of what it is.
+    versions["format"] = "1.0";
+
+    // In case we need to rebuild from this package Source, it will be
+    // convenient to keep the results on hand and not reread from disk.
+    this.dependencyVersions = versions;
+
+    // Most of our disk i/o happens through the builder, so it makes sense to
+    // use it to write this to disk, even though we are neither bundling nor
+    // compiling this file right now.
+    try {
+      // Currently, unnamed packages are apps, and apps have a different
+      // versions file format and semantics. So, we don't need to and cannot
+      // record dependencyVersions for those, and that's OK for now.
+      //
+      // Uniload sets its sourceRoot to "/", which is a little strange. Uniload
+      // does not need to store dependency versions either.
+      if (self.name && self.sourceRoot !== "/") {
+        var versionsFile = path.join(self.sourceRoot, "versions.json");
+        fs.writeFileSync(versionsFile, JSON.stringify(versions, null, 2), 'utf8');
+      }
+    } catch (e) {
+      // We 'recover' by not saving the dependency versions. Log a line about it
+      // in case it is unexpected. We don't buildmessage because it doesn't
+      // really interrupt our workflow, but the user might want to know about it
+      // anyway.
+      console.log("Could not write versions file for ", self.name);
+    }
+ },
 
   // If dependencies aren't consistent across builds, return false and
   // also log a buildmessage error if inside a buildmessage job. Else

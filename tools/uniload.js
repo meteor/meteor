@@ -86,6 +86,8 @@ var load = function (options) {
       versions: null
     });
 
+    // XXX: Normally, we should pass in dependencyVersions, but we are planning
+    // to refactor this code in the next 48 hours.
     var image = bundler.buildJsImage({
       name: "load",
       packageLoader: loader,

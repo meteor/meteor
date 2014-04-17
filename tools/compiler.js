@@ -146,11 +146,15 @@ var determineBuildTimeDependencies = function (packageSource) {
   // XXX once we implement targets(), this is where we will add the
   // targeted packages!
 
+
+  var versions = packageSource.dependencyVersions.dependencies;
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
 
   ret.directDependencies = {};
-  _.each(resolver.resolve(constraints), function (version, packageName) {
+  var sourceDeps = resolver.resolve(constraints);
+
+  _.each(sourceDeps, function (version, packageName) {
     // Take only direct dependencies.
     if (_.has(constraints, packageName)) {
       ret.directDependencies[packageName] = version;
@@ -160,6 +164,7 @@ var determineBuildTimeDependencies = function (packageSource) {
   // -- Plugins --
 
   ret.pluginDependencies = {};
+  var pluginVersions = packageSource.dependencyVersions.plugins;
   _.each(packageSource.pluginInfo, function (info) {
     var constraints = {};
 
@@ -173,8 +178,18 @@ var determineBuildTimeDependencies = function (packageSource) {
     });
 
     var resolver = new constraintSolver.Resolver;
+    var pluginVersion = pluginVersions[info.name];
     ret.pluginDependencies[info.name] = resolver.resolve(constraints);
   });
+
+  // Every time we run the constraint solver, we record the results. This has
+  // two benefits -- first, it faciliatates repeatable builds, second,
+  // memorizing results makes the constraint solver more efficient.
+  var constraintResults = {
+    dependencies: sourceDeps,
+    plugins: ret.pluginDependencies
+  };
+  packageSource.recordDependencyVersions(constraintResults);
 
   return ret;
 };
@@ -662,7 +677,8 @@ compiler.compile = function (packageSource, options) {
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
         npmDir: path.resolve(path.join(packageSource.sourceRoot, '.npm',
-                                       'plugin', info.name))
+                                       'plugin', info.name)),
+        dependencyVersions: packageSource.dependencyVersions
       });
 
       // Add the plugin's sources to our list.
