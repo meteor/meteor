@@ -178,10 +178,14 @@ callReactiveFunction = function (func) {
 
 stopWithLater = function (instance) {
   if (instance.materialized && instance.materialized.isWith) {
-    if (Deps.active)
+    if (Deps.active) {
       instance.materialized();
-    else
-      instance.data && instance.data.stop();
+    } else {
+      if (instance.data) // `UI.With`
+        instance.data.stop();
+      else if (instance.v) // `Spacebars.With`
+        instance.v.stop();
+    }
   }
 };
 
