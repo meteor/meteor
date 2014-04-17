@@ -1273,30 +1273,14 @@ main.registerCommand({
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// test-packages
+// test
 ///////////////////////////////////////////////////////////////////////////////
 
-
-// XXX: What does test-packages do in the new world?  There are two sticking
-// points:
-// 1. Do we test non-local packages automatically? Probably not.
-// 2. What happens with no arguments? Test local packages.
-// 3. Do we test all  packages at once, or individually? Specifically:
-// 3a. If I call test-packages directly on foo:bar@1.0.0 and bar:foo@1.0.0 do we
-// test that they are compatible and their tests work, or do we test their tests
-// individually? I can see reason for both.
-// 3b. What if there are no arguments? Sleep on it.
 //
-// Why was this not an issue before? Well, before this we didn't have
-// dependencies. But now, if A depends on x@1.0 and B depends on x@1.1, testing
-// A&B together will give us A on x@1.1. I think that this is a good idea. Here
-// is why -- if I just want to test A, I can type in test-packages A and be
-// fine. But if I want to add both A and B to my app, and to make sure that they
-// have no strange interactions, it makes sense to test them together. So, now
-// test-packages provides some awesome user-relevant functionality, which is
-// kind of cool.
+// Test your local packages.
+//
 main.registerCommand({
-  name: 'test-packages',
+  name: 'test',
   maxArgs: Infinity,
   options: {
     port: { type: Number, short: "p", default: 3000 },
@@ -1317,10 +1301,7 @@ main.registerCommand({
   var testPackages;
   var localPackageNames = [];
   if (options.args.length === 0) {
-    // Only test local packages if no package is specified. We simply cannot
-    // try to test all packages from troposphere, so we are going to test the
-    // local stuff -- things you are probably developing and care about. If you
-    // want to test non-local stuff for some reason, enter it manually.
+    // Only test local packages if no package is specified.
     var packageList = getLocalPackages();
     if (! packageList) {
       // Couldn't load the package list, probably because some package
@@ -1345,8 +1326,6 @@ main.registerCommand({
       // we are able to resolve the test package's dependency on the
       // main package. This is not ideal (I hate how this mutates global
       // state) but it'll do for now.
-      //
-      // XXX: What is our testing story here? Can't we just add the test package?
       var packageDir = path.resolve(p);
       var packageName = path.basename(packageDir);
       catalog.addLocalPackage(packageName, packageDir);
@@ -1724,8 +1703,32 @@ main.registerCommand({
   // publish a new build.
 
   process.stdout.write('Bundling source...\n');
+
+  // We need to build the test package to get all of its sources.
+  var testFiles = [];
+  messages = buildmessage.capture(
+    { title: "getting test sources" },
+    function () {
+      var testName = packageSource.test;
+      if (testName) {
+        var testSource = new PackageSource;
+        testSource.initFromPackageDir(testName, options.packageDir);
+        if (buildmessage.jobHasMessages())
+          return; // already have errors, so skip the build
+
+        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
+        testFiles = testUnipackage.sources;
+      }
+    });
+
+  if (messages.hasMessages()) {
+    process.stdout.write(messages.formatMessages());
+    return 1;
+  }
+
+  var sources = _.union(compileResult.sources, testFiles);
   var bundleResult = packageClient.bundleSource(compileResult.unipackage,
-                                                compileResult.sources,
+                                                sources,
                                                 options.packageDir);
 
   process.stdout.write('Uploading source...\n');
