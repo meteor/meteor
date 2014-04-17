@@ -15,6 +15,9 @@
 * The oplog observe driver handles errors communicating with Mongo better and
   knows to re-poll all queries during Mongo failovers.
 
+* Add `Random.secret()` for generating security-critical secrets like
+  login tokens.
+
 * Upgraded dependencies:
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
