@@ -12,23 +12,25 @@ Weibo.requestCredential = function (options, credentialRequestCompleteCallback) 
     options = {};
   }
 
-  var config = ServiceConfiguration.configurations.findOne({service: 'weibo'});
-  if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
-    return;
-  }
+  Accounts.withLoginServiceConfiguration("weibo", function (config) {
+    if (!config) {
+      credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+        new ServiceConfiguration.ConfigError("Service not configured"));
+      return;
+    }
 
-  var credentialToken = Random.secret();
-  // XXX need to support configuring access_type and scope
-  var loginUrl =
-        'https://api.weibo.com/oauth2/authorize' +
-        '?response_type=code' +
-        '&client_id=' + config.clientId +
-        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/weibo?close', {replaceLocalhost: true}) +
-        '&state=' + credentialToken;
+    var credentialToken = Random.secret();
+    // XXX need to support configuring access_type and scope
+    var loginUrl =
+          'https://api.weibo.com/oauth2/authorize' +
+          '?response_type=code' +
+          '&client_id=' + config.clientId +
+          '&redirect_uri=' + Meteor.absoluteUrl('_oauth/weibo?close', {replaceLocalhost: true}) +
+          '&state=' + credentialToken;
 
-  Oauth.showPopup(
-    loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken)
-  );
+    Oauth.showPopup(
+      loginUrl,
+      _.bind(credentialRequestCompleteCallback, null, credentialToken)
+    );
+  });
 };
