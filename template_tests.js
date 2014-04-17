@@ -1878,23 +1878,36 @@ Tinytest.add(
 );
 
 Tinytest.add("spacebars - templates - UI.toHTML", function (test) {
-  Template.spacebars_test_tohtml_basic.foo = "foo";
-  test.equal(canonicalizeHtml(
-    UI.toHTML(Template.spacebars_test_tohtml_basic)), "foo");
+  // run once, verifying that autoruns are stopped
+  var once = function (tmplToRender, tmplForHelper, helper, val) {
+    var count = 0;
+    var R = new ReactiveVar;
+    var getR = function () {
+      count++;
+      return R.get();
+    };
 
-  Template.spacebars_test_tohtml_if.foo = "foo";
-  test.equal(canonicalizeHtml(
-    UI.toHTML(Template.spacebars_test_tohtml_if)), "foo");
+    R.set(val);
+    tmplForHelper[helper] = getR;
+    test.equal(canonicalizeHtml(UI.toHTML(tmplToRender)), "bar");
+    test.equal(count, 1);
+    R.set("");
+    Deps.flush();
+    test.equal(count, 1); // all autoruns stopped
+  };
 
-  Template.spacebars_test_tohtml_with.foo = "foo";
-  test.equal(canonicalizeHtml(
-    UI.toHTML(Template.spacebars_test_tohtml_with)), "foo");
+  once(Template.spacebars_test_tohtml_basic,
+       Template.spacebars_test_tohtml_basic, "foo", "bar");
+  once(Template.spacebars_test_tohtml_if,
+       Template.spacebars_test_tohtml_if, "foo", "bar");
+  once(Template.spacebars_test_tohtml_with,
+       Template.spacebars_test_tohtml_with, "foo", "bar");
+  once(Template.spacebars_test_tohtml_each,
+       Template.spacebars_test_tohtml_each, "foos", ["bar"]);
 
-  Template.spacebars_test_tohtml_each.foos = ["foo"];
-  test.equal(canonicalizeHtml(
-    UI.toHTML(Template.spacebars_test_tohtml_each)), "foo");
-
-  test.equal(canonicalizeHtml(
-    UI.toHTML(Template.spacebars_test_tohtml_inclusion)), "foo");
+  once(Template.spacebars_test_tohtml_include_with,
+       Template.spacebars_test_tohtml_with, "foo", "bar");
+  once(Template.spacebars_test_tohtml_include_each,
+       Template.spacebars_test_tohtml_each, "foos", ["bar"]);
 });
 
