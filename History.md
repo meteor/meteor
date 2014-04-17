@@ -22,6 +22,9 @@
   login tokens have actually been removed from the database, not when
   they have been marked for eventual removal. Fixes #1915.
 
+* Add `meteor list-sites` command for listing the sites that you have
+  deployed to meteor.com with your Meteor developer account.
+
 * Upgraded dependencies:
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
