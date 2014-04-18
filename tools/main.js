@@ -811,8 +811,7 @@ commandName + ": can only take one " + helpfulOptionName + " option.\n" +
       var value = values[0];
       if (value === null) {
         // This option requires a value and they didn't give it one
-        // (it was the last word on the command line, or it was
-        // a short option immediately followed by a non-number).
+        // (it was the last word on the command line).
         process.stderr.write(
 commandName + ": the " + helpfulOptionName + " option needs a value.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");
