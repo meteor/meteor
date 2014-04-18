@@ -58,7 +58,7 @@ _.extend(Proxy.prototype, {
 
     var fut = new Future;
     self.server.on('error', function (err) {
-      if (err.code == 'EADDRINUSE') {
+      if (err.code === 'EADDRINUSE') {
         var port = self.listenPort;
         runLog.log(
 "Can't listen on port " + port + ". Perhaps another Meteor is running?\n" +
@@ -66,6 +66,15 @@ _.extend(Proxy.prototype, {
 "Running two copies of Meteor in the same application directory\n" +
 "will not work. If something else is using port " + port + ", you can\n" +
 "specify an alternative port with --port <port>.");
+      } else if (self.listenHost &&
+                 (err.code === 'ENOTFOUND' || err.code === 'EADDRNOTAVAIL')) {
+        // This handles the case of "entered a DNS name that's unknown"
+        // (ENOTFOUND from getaddrinfo) and "entered some random IP that we
+        // can't bind to" (EADDRNOTAVAIL from listen).
+        runLog.log(
+"Can't listen on host " + self.listenHost + " (" + err.code + " from " +
+            err.syscall + ").");
+
       } else {
         runLog.log('' + err);
       }
