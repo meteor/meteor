@@ -51,6 +51,7 @@ var AppProcess = function (options) {
 
   self.bundlePath = options.bundlePath;
   self.port = options.port;
+  self.listenHost = options.listenHost;
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
@@ -168,12 +169,19 @@ _.extend(AppProcess.prototype, {
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
     env.MONGO_URL = self.mongoUrl;
-    if (self.oplogUrl)
+    if (self.oplogUrl) {
       env.MONGO_OPLOG_URL = self.oplogUrl;
-    if (self.settings)
+    }
+    if (self.settings) {
       env.METEOR_SETTINGS = self.settings;
-    else
+    } else {
       delete env.METEOR_SETTINGS;
+    }
+    if (self.listenHost) {
+      env.BIND_IP = self.listenHost;
+    } else {
+      delete env.BIND_IP;
+    }
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
@@ -306,6 +314,7 @@ var AppRunner = function (appDir, options) {
   self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
   // note: run-all.js updates port directly
   self.port = options.port;
+  self.listenHost = options.listenHost;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
   self.buildOptions = options.buildOptions;
@@ -444,6 +453,7 @@ _.extend(AppRunner.prototype, {
     var appProcess = new AppProcess({
       bundlePath: bundlePath,
       port: self.port,
+      listenHost: self.listenHost,
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,

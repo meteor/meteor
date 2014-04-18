@@ -2,13 +2,15 @@ var _ = require('underscore');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
 
-// options: listenPort, proxyToPort, onFailure
+// options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
   var self = this;
 
   self.listenPort = options.listenPort;
+  self.listenHost = options.listenHost;
   // note: run-all.js updates proxyToPort directly
   self.proxyToPort = options.proxyToPort;
+  self.proxyToHost = options.proxyToHost || '127.0.0.1';
   self.onFailure = options.onFailure || function () {};
 
   self.mode = "hold";
@@ -91,7 +93,7 @@ _.extend(Proxy.prototype, {
       }
     });
 
-    self.server.listen(self.listenPort, function () {
+    self.server.listen(self.listenPort, self.listenHost || '0.0.0.0', function () {
       if (self.server) {
         self.started = true;
       } else {
@@ -167,7 +169,7 @@ _.extend(Proxy.prototype, {
         c.res.end();
       } else {
         self.proxy.web(c.req, c.res, {
-          target: 'http://127.0.0.1:' + self.proxyToPort
+          target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
         });
       }
     }
@@ -178,7 +180,7 @@ _.extend(Proxy.prototype, {
 
       var c = self.websocketQueue.shift();
       self.proxy.ws(c.req, c.socket, c.head, {
-        target: 'http://127.0.0.1:' + self.proxyToPort
+        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
       });
     }
   },

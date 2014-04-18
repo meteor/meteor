@@ -153,8 +153,8 @@ main.registerCommand({
   name: 'run',
   requiresApp: true,
   options: {
-    port: { type: Number, short: "p", default: 3000 },
-    'app-port': { type: Number },
+    port: { type: String, short: "p", default: '3000' },
+    'app-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -166,6 +166,32 @@ main.registerCommand({
     once: { type: Boolean }
   }
 }, function (options) {
+  // XXX factor this out into a {type: host/port}?
+  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
+  if (!portMatch) {
+    process.stderr.write(
+"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+    return 1;
+  }
+  var proxyHost = portMatch[1] || null;
+  var proxyPort = parseInt(portMatch[2]);
+
+  var appHost, appPort;
+  if (options['app-port']) {
+    var appPortMatch = options['app-port'].match(/^(?:(.+):)?([0-9]+)?$/);
+    if (!appPortMatch) {
+      process.stderr.write(
+"run: --app-port must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+      return 1;
+    }
+    appHost = appPortMatch[1] || null;
+    // It's legit to specify `--app-port host:` and still let the port be
+    // randomized.
+    appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
+  }
+
   if (release.forced) {
     var appRelease = project.getMeteorReleaseVersion(options.appDir);
     if (release.current.name !== appRelease) {
@@ -182,8 +208,10 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    proxyPort: options.port,
-    appPort: options['app-port'],
+    proxyPort: proxyPort,
+    proxyHost: proxyHost,
+    appPort: appPort,
+    appHost: appHost,
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {

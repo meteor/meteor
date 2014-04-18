@@ -29,11 +29,19 @@ var Runner = function (appDir, options) {
   self.stopped = false;
   self.quiet = options.quiet;
   self.banner = options.banner || files.prettyPath(self.appDir);
-  self.rootUrl = options.rootUrl || ('http://localhost:' + listenPort + '/');
+  if (options.rootUrl) {
+    self.rootUrl = options.rootUrl;
+  } else if (options.proxyHost) {
+    self.rootUrl = 'http://' + options.proxyHost + ':' + listenPort + '/';
+  } else {
+    self.rootUrl = 'http://localhost:' + listenPort + '/';
+  }
 
   self.proxy = new Proxy({
     listenPort: listenPort,
+    listenHost: options.proxyHost,
     proxyToPort: self.appPort,
+    proxyToHost: options.appHost,
     onFailure: options.onFailure
   });
 
@@ -61,6 +69,7 @@ var Runner = function (appDir, options) {
   self.appRunner = new AppRunner(appDir, {
     appDirForVersionCheck: options.appDirForVersionCheck,
     port: self.appPort,
+    listenHost: options.appHost,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
     buildOptions: options.buildOptions,
