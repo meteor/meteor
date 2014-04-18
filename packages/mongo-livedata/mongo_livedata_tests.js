@@ -2676,3 +2676,21 @@ var waitUntilOplogCaughtUp = function () {
     oplogHandle.waitUntilCaughtUp();
 };
 
+
+Meteor.isServer && Tinytest.add("mongo-livedata - cursor dedup stop", function (test) {
+  var coll = new Meteor.Collection(Random.id());
+  _.times(100, function () {
+    coll.insert({foo: 'baz'});
+  });
+  var handler = coll.find({}).observeChanges({
+    added: function (id) {
+      coll.update(id, {$set: {foo: 'bar'}});
+    }
+  });
+  handler.stop();
+  // Previously, this would print
+  //    Exception in queued task: TypeError: Object.keys called on non-object
+  // Unfortunately, this test didn't fail before the bugfix, but it at least
+  // would print the error and no longer does.
+  // See https://github.com/meteor/meteor/issues/2070
+});
