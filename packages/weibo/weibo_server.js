@@ -1,6 +1,6 @@
 Weibo = {};
 
-Oauth.registerService('weibo', 2, null, function(query) {
+OAuth.registerService('weibo', 2, null, function(query) {
 
   var response = getTokenResponse(query);
   var uid = parseInt(response.uid, 10);
@@ -41,7 +41,7 @@ var getTokenResponse = function (query) {
       "https://api.weibo.com/oauth2/access_token", {params: {
         code: query.code,
         client_id: config.clientId,
-        client_secret: config.secret,
+        client_secret: OAuth.openSecret(config.secret),
         redirect_uri: Meteor.absoluteUrl("_oauth/weibo?close", {replaceLocalhost: true}),
         grant_type: 'authorization_code'
       }});
@@ -73,5 +73,5 @@ var getIdentity = function (accessToken, userId) {
 };
 
 Weibo.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+  return OAuth.retrieveCredential(credentialToken);
 };

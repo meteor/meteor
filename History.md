@@ -29,6 +29,13 @@
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
 
+* Rename `Oauth` to `OAuth`.  `Oauth` is now an alias for backwards
+  compatibility.
+
+* Add `oauth-encryption` package for encrypting sensitive account
+  credentials in the database.
+
+
 ## v0.8.0
 
 Meteor 0.8.0 introduces Blaze, a total rewrite of our live templating engine,

@@ -1,8 +1,8 @@
 var Fiber = Npm.require('fibers');
 var url = Npm.require('url');
 
-Oauth = {};
-OauthTest = {};
+OAuth = {};
+OAuthTest = {};
 
 RoutePolicy.declare('/_oauth/', 'network');
 
@@ -12,7 +12,7 @@ var registeredServices = {};
 // 'oauth1' and 'oauth2' packages manipulate this directly to register
 // for callbacks.
 //
-Oauth._requestHandlers = {};
+OAuth._requestHandlers = {};
 
 
 // Register a handler for an OAuth service. The handler will be called
@@ -31,7 +31,7 @@ Oauth._requestHandlers = {};
 //       up in the user's services[name] field
 //     - `null` if the user declined to give permissions
 //
-Oauth.registerService = function (name, version, urls, handleOauthRequest) {
+OAuth.registerService = function (name, version, urls, handleOauthRequest) {
   if (registeredServices[name])
     throw new Error("Already registered the " + name + " OAuth service");
 
@@ -44,13 +44,13 @@ Oauth.registerService = function (name, version, urls, handleOauthRequest) {
 };
 
 // For test cleanup.
-OauthTest.unregisterService = function (name) {
+OAuthTest.unregisterService = function (name) {
   delete registeredServices[name];
 };
 
 
-Oauth.retrieveCredential = function(credentialToken) {
-  return Oauth._retrievePendingCredential(credentialToken);
+OAuth.retrieveCredential = function(credentialToken) {
+  return OAuth._retrievePendingCredential(credentialToken);
 };
 
 
@@ -83,7 +83,7 @@ middleware = function (req, res, next) {
     // Make sure we're configured
     ensureConfigured(serviceName);
 
-    var handler = Oauth._requestHandlers[service.version];
+    var handler = OAuth._requestHandlers[service.version];
     if (!handler)
       throw new Error("Unexpected OAuth version " + service.version);
     handler(service, req.query, res);
@@ -96,7 +96,7 @@ middleware = function (req, res, next) {
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
     if (req.query.state && err instanceof Error)
-      Oauth._storePendingCredential(req.query.state, err);
+      OAuth._storePendingCredential(req.query.state, err);
 
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
@@ -113,7 +113,7 @@ middleware = function (req, res, next) {
   }
 };
 
-OauthTest.middleware = middleware;
+OAuthTest.middleware = middleware;
 
 // Handle /_oauth/* paths and extract the service name.
 //
@@ -142,11 +142,11 @@ var ensureConfigured = function(serviceName) {
 };
 
 // Internal: used by the oauth1 and oauth2 packages
-Oauth._renderOauthResults = function(res, query) {
+OAuth._renderOauthResults = function(res, query) {
   // We support ?close and ?redirect=URL. Any other query should
   // just serve a blank page
   if (query.error) {
-    Log.warn("Error in Oauth Server: " + query.error);
+    Log.warn("Error in OAuth Server: " + query.error);
     closePopup(res);
   } else if ('close' in query) { // check with 'in' because we don't set a value
     closePopup(res);
@@ -174,4 +174,52 @@ var closePopup = function(res) {
   var content =
         '<html><head><script>window.close()</script></head></html>';
   res.end(content, 'utf-8');
+};
+
+
+var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
+
+var usingOAuthEncryption = function () {
+  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
+};
+
+// Encrypt sensitive service data such as access tokens if the
+// "oauth-encryption" package is loaded and the oauth secret key has
+// been specified.  Returns the unencrypted plaintext otherwise.
+//
+// The user id is not specified because the user isn't known yet at
+// this point in the oauth authentication process.  After the oauth
+// authentication process completes the encrypted service data fields
+// will be re-encrypted with the user id as the AAD (additional
+// authenticated data) before inserting the service data into the user
+// document.
+//
+OAuth.sealSecret = function (plaintext) {
+  if (usingOAuthEncryption())
+    return OAuthEncryption.seal(plaintext);
+  else
+    return plaintext;
+}
+
+// Unencrypt a service data field, if the "oauth-encryption"
+// package is loaded and the field is encrypted.
+//
+// Throws an error if the "oauth-encryption" package is loaded and the
+// field is encrypted, but the oauth secret key hasn't been specified.
+//
+OAuth.openSecret = function (maybeSecret, userId) {
+  if (!Package["oauth-encryption"] || !OAuthEncryption.isSealed(maybeSecret))
+    return maybeSecret;
+
+  return OAuthEncryption.open(maybeSecret, userId);
+};
+
+// Unencrypt fields in the service data object.
+//
+OAuth.openSecrets = function (serviceData, userId) {
+  var result = {};
+  _.each(_.keys(serviceData), function (key) {
+    result[key] = OAuth.openSecret(serviceData[key], userId);
+  });
+  return result;
 };
