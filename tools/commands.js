@@ -182,7 +182,7 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    port: options.port,
+    proxyPort: options.port,
     appPort: options['app-port'],
     settingsFile: options.settings,
     program: options.program || undefined,

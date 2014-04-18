@@ -18,10 +18,10 @@ var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
 
-  if (! _.has(options, 'port'))
-    throw new Error("no port?");
+  if (! _.has(options, 'proxyPort'))
+    throw new Error("no proxyPort?");
 
-  var listenPort = options.port;
+  var listenPort = options.proxyPort;
   var mongoPort = listenPort + 1;
   self.specifiedAppPort = options.appPort;
   self.regenerateAppPort();
@@ -201,7 +201,7 @@ _.extend(Runner.prototype, {
 //
 // Options:
 //
-// - port: the port to connect to to access the application (we will
+// - proxyPort: the port to connect to to access the application (we will
 //   run a proxy here that proxies to the actual app process). required
 // - buildOptions: 'buildOptions' argument to bundler.bundle()
 // - settingsFile: path to file containing deploy-time settings
