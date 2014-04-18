@@ -37,17 +37,17 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    var requestTokenHolder = Oauth._retrieveRequestToken(query.state);
+    var requestTokenInfo = Oauth._retrieveRequestToken(query.state);
 
     // Verify user authorized access and the oauth_token matches
     // the requestToken from previous step
-    if (query.oauth_token && query.oauth_token === requestTokenHolder.requestToken) {
+    if (query.oauth_token && query.oauth_token === requestTokenInfo.requestToken) {
 
       // Prepare the login results before returning.  This way the
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      oauthBinding.prepareAccessToken(query, requestTokenHolder.requestTokenSecret);
+      oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);

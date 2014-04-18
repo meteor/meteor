@@ -66,13 +66,13 @@ Oauth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
 Oauth._retrieveRequestToken = function (key) {
   check(key, String);
 
-  var pendingRequestToken = Oauth._pendingRequestTokens.findOne({ key:key });
+  var pendingRequestToken = Oauth._pendingRequestTokens.findOne({ key: key });
   if (pendingRequestToken) {
     Oauth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {
       requestToken: pendingRequestToken.requestToken,
       requestTokenSecret: pendingRequestToken.requestTokenSecret
-    } ;
+    };
   } else {
     return undefined;
   }
