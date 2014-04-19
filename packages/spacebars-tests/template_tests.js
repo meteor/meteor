@@ -1877,7 +1877,7 @@ Tinytest.add(
   }
 );
 
-Tinytest.add("spacebars - templates - UI.toHTML", function (test) {
+Tinytest.add("spacebars - template - UI.toHTML", function (test) {
   // run once, verifying that autoruns are stopped
   var once = function (tmplToRender, tmplForHelper, helper, val) {
     var count = 0;
@@ -1919,3 +1919,24 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), '');
   }
 );
+
+// Originally reported at https://github.com/meteor/meteor/issues/2046
+Tinytest.add(
+  "spacebars - template - {{#with}} with mutated data context",
+  function (test) {
+    var tmpl = Template.spacebars_test_with_mutated_data_context;
+    var foo = {value: 0};
+    var dep = new Deps.Dependency;
+    tmpl.foo = function () {
+      dep.depend();
+      return foo;
+    };
+
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), '0');
+
+    foo.value = 1;
+    dep.changed();
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '1');
+  });

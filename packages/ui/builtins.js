@@ -38,7 +38,7 @@ UI.Unless = function (argFunc, contentBlock, elseContentBlock) {
 // (Because then, they may be equal references to an object that was mutated,
 // and we'll never know.  We save only a reference to the old object; we don't
 // do any deep-copying or diffing.)
-var safeEquals = function (a, b) {
+UI.safeEquals = function (a, b) {
   if (a !== b)
     return false;
   else
@@ -67,7 +67,7 @@ UI.With = function (argFunc, contentBlock) {
   };
 
   block.init = function () {
-    this.data = UI.emboxValue(argFunc, safeEquals);
+    this.data = UI.emboxValue(argFunc, UI.safeEquals);
   };
 
   block.materialized = function () {
