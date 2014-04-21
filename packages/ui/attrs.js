@@ -160,6 +160,82 @@ var isSVGElement = function (elem) {
   return 'ownerSVGElement' in elem;
 };
 
+var isUrlAttribute = function (tagName, attrName) {
+  // Compiled from http://www.w3.org/TR/REC-html40/index/attributes.html
+  // and
+  // http://www.w3.org/html/wg/drafts/html/master/index.html#attributes-1
+  var urlAttrs = {
+    FORM: ['action'],
+    BODY: ['background'],
+    BLOCKQUOTE: ['cite'],
+    Q: ['cite'],
+    DEL: ['cite'],
+    INS: ['cite'],
+    OBJECT: ['classid', 'codebase', 'data', 'usemap'],
+    APPLET: ['codebase'],
+    A: ['href'],
+    AREA: ['href'],
+    LINK: ['href'],
+    BASE: ['href'],
+    IMG: ['longdesc', 'src', 'usemap'],
+    FRAME: ['longdesc', 'src'],
+    IFRAME: ['longdesc', 'src'],
+    HEAD: ['profile'],
+    SCRIPT: ['src'],
+    INPUT: ['src', 'usemap', 'formaction'],
+    BUTTON: ['formaction'],
+    BASE: ['href'],
+    MENUITEM: ['icon'],
+    HTML: ['manifest'],
+    VIDEO: ['poster']
+  };
+
+  if (attrName === 'itemid') {
+    return true;
+  }
+
+  var urlAttrNames = urlAttrs[tagName] || [];
+  return _.contains(urlAttrNames, attrName);
+};
+
+// UrlHandler is an attribute handler for all HTML attributes that take
+// URL values. It disallows javascript: URLs, unless
+// UI._allowJavascriptUrls() has been called. To detect javascript:
+// urls, we set the attribute and then reads the attribute out of the
+// DOM, in order to avoid writing our own URL normalization code. (We
+// don't want to be fooled by ' javascript:alert(1)' or
+// 'jAvAsCrIpT:alert(1)'.) In future, when the URL interface is more
+// widely supported, we can use that, which will be
+// cleaner.  https://developer.mozilla.org/en-US/docs/Web/API/URL
+var origUpdate = AttributeHandler.prototype.update;
+var UrlHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    var self = this;
+    var args = arguments;
+    var isJavascriptProtocol = false;
+    origUpdate.apply(self, args);
+
+    if (! UI._javascriptUrlsAllowed()) {
+      // If we're updating an A tag, we can read the 'protocol' property
+      // of the element itself. Otherwise, get the string value of the
+      // attribute and look for 'javascript:' at the beginning.
+      if (element.tagName === 'A') {
+        isJavascriptProtocol = element.protocol &&
+          element.protocol === 'javascript:';
+      } else {
+        isJavascriptProtocol = element[self.name] &&
+          element[self.name].indexOf('javascript:') === 0;
+      }
+
+      if (isJavascriptProtocol) {
+        Meteor._debug("javascript: URLs are not allowed. " +
+                      "Use UI._allowJavascriptUrls() to enable them.");
+        origUpdate.apply(self, [element, value, null]);
+      }
+    }
+  }
+});
+
 // XXX make it possible for users to register attribute handlers!
 makeAttributeHandler = function (elem, name, value) {
   // generally, use setAttribute but certain attributes need to be set
@@ -180,6 +256,8 @@ makeAttributeHandler = function (elem, name, value) {
     return new ValueHandler(name, value);
   } else if (name.substring(0,6) === 'xlink:') {
     return new XlinkHandler(name.substring(6), value);
+  } else if (isUrlAttribute(elem.tagName, name)) {
+    return new UrlHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }
