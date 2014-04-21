@@ -16,13 +16,15 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
+    var callbackUrl = Meteor.absoluteUrl("_oauth/twitter?close&state=" +
+                                         query.state);
 
     // Get a request token to start auth process
-    oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
+    oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
     requestTokens[query.state] = {
-      requestToken: oauthBinding.requestToken, 
+      requestToken: oauthBinding.requestToken,
       requestTokenSecret: oauthBinding.requestTokenSecret
     };
 

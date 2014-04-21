@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v0.8.0.1
+
+* Fix security flaw in OAuth1 implementation. Clients can no longer
+  choose the callback_url for OAuth1 logins.
+
+
 ## v0.8.0
 
 Meteor 0.8.0 introduces Blaze, a total rewrite of our live templating engine,
