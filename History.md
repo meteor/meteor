@@ -29,6 +29,13 @@
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
 
+
+## v0.8.0.1
+
+* Fix security flaw in OAuth1 implementation. Clients can no longer
+  choose the callback_url for OAuth1 logins.
+
+
 ## v0.8.0
 
 Meteor 0.8.0 introduces Blaze, a total rewrite of our live templating engine,

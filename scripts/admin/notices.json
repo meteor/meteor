@@ -95,6 +95,9 @@
     "release": "0.7.2"
   },
   {
+    "release": "0.7.2.1"
+  },
+  {
     "release": "0.8.0",
     "notices": [
       "Meteor has a new live templating engine: Blaze!",
@@ -110,6 +113,9 @@
       "madewith": ["The madewith package has been removed.",
                    "http://madewith.meteor.com/ no longer supports app badges."]
     }
+  },
+  {
+    "release": "0.8.0.1"
   },
   {
     "release": "NEXT"
