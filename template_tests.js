@@ -1940,3 +1940,59 @@ Tinytest.add(
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '1');
   });
+
+Tinytest.add(
+  "spacebars - template - javascript scheme urls",
+  function (test) {
+    var tmpl = Template.spacebars_test_url_attribute;
+    var sessionKey = "foo-" + Random.id();
+    tmpl.foo = function () {
+      return Session.get(sessionKey);
+    };
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+
+    var checkAttrs = function (url, isJavascriptProtocol) {
+      Session.set(sessionKey, url);
+      Deps.flush();
+      _.each(
+        // [tag name, attr name, is a url attribute]
+        [["A", "href", true], ["FORM", "action", true],
+         ["IMG", "src", true], ["INPUT", "value", false]],
+        function (attrInfo) {
+
+          var normalizedUrl;
+          var elem = document.createElement(attrInfo[0]);
+          elem[attrInfo[1]] = url;
+          document.body.appendChild(elem);
+          normalizedUrl = elem[attrInfo[1]];
+          document.body.removeChild(elem);
+
+          _.each(
+            div.getElementsByTagName(attrInfo[0]),
+            function (elem) {
+              test.equal(
+                elem[attrInfo[1]],
+                isJavascriptProtocol && attrInfo[2] ? "" : normalizedUrl
+              );
+            }
+          );
+        }
+      );
+    };
+
+    test.equal(UI._javascriptUrlsAllowed(), false);
+    checkAttrs("http://www.meteor.com", false);
+    checkAttrs("javascript:alert(1)", true);
+    checkAttrs("jAvAsCrIpT:alert(1)", true);
+    checkAttrs("    javascript:alert(1)", true);
+    UI._allowJavascriptUrls();
+    test.equal(UI._javascriptUrlsAllowed(), true);
+    checkAttrs("http://www.meteor.com", false);
+    checkAttrs("javascript:alert(1)", false);
+    checkAttrs("jAvAsCrIpT:alert(1)", false);
+    checkAttrs("    javascript:alert(1)", false);
+    document.body.removeChild(div);
+  }
+);
