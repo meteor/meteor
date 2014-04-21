@@ -157,6 +157,11 @@ ConstraintSolver.Resolver.prototype.resolve =
     throw new Error(someError);
 
   throw new Error("Couldn't resolve, I am sorry");
+
+  function stateStringify (state) {
+    function toString(x) { return x.toString(); }
+    return "deps: " + state.dependencies.map(toString).join(" ") + " constraints: " + state.constraints.map(toString).join(" ") + "choices: " + state.choices.map(toString).join(" ")
+  }
 };
 
 // dependencies: [String] - remaining dependencies
