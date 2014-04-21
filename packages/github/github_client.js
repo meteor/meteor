@@ -14,7 +14,8 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
 
   var config = ServiceConfiguration.configurations.findOne({service: 'github'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
   var credentialToken = Random.secret();

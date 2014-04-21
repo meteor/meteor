@@ -14,7 +14,8 @@ Weibo.requestCredential = function (options, credentialRequestCompleteCallback) 
 
   var config = ServiceConfiguration.configurations.findOne({service: 'weibo'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
 

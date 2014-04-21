@@ -3,7 +3,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (!config) {
-    throw new ServiceConfiguration.ConfigError("Service " + service.serviceName + " not configured");
+    throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
 
   var urls = service.urls;

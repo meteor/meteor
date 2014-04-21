@@ -35,7 +35,7 @@ var getTokens = function (query) {
     service: 'meteor-developer'
   });
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {

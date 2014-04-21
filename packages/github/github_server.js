@@ -24,7 +24,7 @@ if (Meteor.release)
 var getAccessToken = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'github'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {

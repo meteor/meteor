@@ -38,7 +38,7 @@ Oauth.registerService('google', 2, null, function(query) {
 var getTokens = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {

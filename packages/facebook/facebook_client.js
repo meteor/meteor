@@ -15,7 +15,8 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
 
   var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
 

@@ -10,9 +10,7 @@ var requestCredential = function (credentialRequestCompleteCallback) {
   });
   if (!config) {
     credentialRequestCompleteCallback &&
-      credentialRequestCompleteCallback(
-        new ServiceConfiguration.ConfigError("Service not configured")
-      );
+      credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError());
     return;
   }
 
