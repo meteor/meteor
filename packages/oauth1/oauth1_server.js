@@ -1,8 +1,3 @@
-// A place to store request tokens pending verification
-var requestTokens = {};
-
-OAuth1Test = {requestTokens: requestTokens};
-
 // connect middleware
 Oauth._requestHandlers['1'] = function (service, query, res) {
 
@@ -21,10 +16,10 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
 
     // Keep track of request token so we can verify it on the next step
-    requestTokens[query.state] = {
-      requestToken: oauthBinding.requestToken,
-      requestTokenSecret: oauthBinding.requestTokenSecret
-    };
+    Oauth._storeRequestToken(query.state,
+      oauthBinding.requestToken,
+      oauthBinding.requestTokenSecret
+    );
 
     // support for scope/name parameters
     var redirectUrl = undefined;
@@ -42,19 +37,17 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    var requestToken = requestTokens[query.state].requestToken;
-    var requestTokenSecret = requestTokens[query.state].requestTokenSecret;
-    delete requestTokens[query.state];
+    var requestTokenInfo = Oauth._retrieveRequestToken(query.state);
 
     // Verify user authorized access and the oauth_token matches
     // the requestToken from previous step
-    if (query.oauth_token && query.oauth_token === requestToken) {
+    if (query.oauth_token && query.oauth_token === requestTokenInfo.requestToken) {
 
       // Prepare the login results before returning.  This way the
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      oauthBinding.prepareAccessToken(query, requestTokenSecret);
+      oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);
