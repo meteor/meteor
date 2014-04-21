@@ -10,12 +10,18 @@ Package.on_use(function (api) {
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 
-  api.export('Oauth');
-  api.export('OauthTest', 'server', {testOnly: true});
+  api.use('oauth-encryption', 'server', {weak: true});
+
+  api.export('OAuth');
+  api.export('OAuthTest', 'server', {testOnly: true});
 
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
   api.add_files('pending_credentials.js', 'server');
+
+  // XXX COMPAT WITH 0.8.0
+  api.export('Oauth');
+  api.add_files('deprecated.js', ['client', 'server']);
 });
 
 

@@ -23,7 +23,7 @@ var requestCredential = function (credentialRequestCompleteCallback) {
           "client_id=" + config.clientId +
           "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteor-developer?close");
 
-    Oauth.showPopup(
+    OAuth.showPopup(
       loginUrl,
       _.bind(credentialRequestCompleteCallback, null, credentialToken),
       {

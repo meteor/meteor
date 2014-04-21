@@ -1,5 +1,5 @@
 // connect middleware
-Oauth._requestHandlers['2'] = function (service, query, res) {
+OAuth._requestHandlers['2'] = function (service, query, res) {
   // check if user authorized access
   if (!query.error) {
     // Prepare the login results before returning.
@@ -9,15 +9,14 @@ Oauth._requestHandlers['2'] = function (service, query, res) {
 
     // Store the login result so it can be retrieved in another
     // browser tab by the result handler
-    Oauth._storePendingCredential(query.state, {
+    OAuth._storePendingCredential(query.state, {
       serviceName: service.serviceName,
       serviceData: oauthResult.serviceData,
       options: oauthResult.options
     });
-
   }
 
   // Either close the window, redirect, or render nothing
   // if all else fails
-  Oauth._renderOauthResults(res, query);
+  OAuth._renderOauthResults(res, query);
 };

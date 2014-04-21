@@ -28,7 +28,7 @@ Weibo.requestCredential = function (options, credentialRequestCompleteCallback) 
           '&redirect_uri=' + Meteor.absoluteUrl('_oauth/weibo?close', {replaceLocalhost: true}) +
           '&state=' + credentialToken;
 
-    Oauth.showPopup(
+    OAuth.showPopup(
       loginUrl,
       _.bind(credentialRequestCompleteCallback, null, credentialToken)
     );

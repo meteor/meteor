@@ -35,7 +35,7 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
           + encodeURIComponent(callbackUrl)
           + '&state=' + credentialToken;
 
-    Oauth.showPopup(
+    OAuth.showPopup(
       loginUrl,
       _.bind(credentialRequestCompleteCallback, null, credentialToken)
     );
