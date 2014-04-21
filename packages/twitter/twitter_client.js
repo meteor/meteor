@@ -23,14 +23,9 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   // a credentialToken parameter to the url and the callback url that we'll be returned
   // to by oauth provider
 
-  // url back to app, enters "step 2" as described in
-  // packages/accounts-oauth1-helper/oauth1_server.js
-  var callbackUrl = Meteor.absoluteUrl('_oauth/twitter?close&state=' + credentialToken);
-
   // url to app, enters "step 1" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
-  var loginUrl = '/_oauth/twitter/?requestTokenAndRedirect='
-        + encodeURIComponent(callbackUrl)
+  var loginUrl = '/_oauth/twitter/?requestTokenAndRedirect=true'
         + '&state=' + credentialToken;
 
   Oauth.showPopup(
