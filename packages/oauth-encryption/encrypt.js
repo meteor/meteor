@@ -122,23 +122,19 @@ OAuthEncryption.open = function (ciphertext, userId) {
       new Buffer(ciphertext.authTag, "base64")
     );
 
-    // If we can't parse the decrypted text, it's probably because we
-    // decrypted with the wrong key.  Check this before checking
-    // auth_ok because if decryption fails then auth_ok will also be
-    // false.
+    if (! result.auth_ok) {
+      if (Meteor._printDecryptionFailure) {
+        Meteor._debug("OAuth decryption unsuccessful");
+      }
+      throw new Error();
+    }
+
     var data;
     try {
       data = EJSON.parse(result.plaintext.toString());
     } catch (e) {
       if (e instanceof SyntaxError && Meteor._printDecryptionFailure) {
-        Meteor._debug("OAuth decryption unsuccessful: probably wrong key");
-      }
-      throw new Error();
-    }
-
-    if (! result.auth_ok) {
-      if (Meteor._printDecryptionFailure) {
-        Meteor._debug("userId does not match in OAuth decryption");
+        Meteor._debug("OAuth decryption unsuccessful");
       }
       throw new Error();
     }
