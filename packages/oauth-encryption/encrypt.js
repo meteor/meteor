@@ -150,10 +150,10 @@ OAuthEncryption.open = function (ciphertext, userId) {
 
 
 OAuthEncryption.isSealed = function (maybeCipherText) {
-   return maybeCipherText &&
-     OAuthEncryption._isBase64(maybeCipherText.iv) &&
-     OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
-     _.isString(maybeCipherText.algorithm);
+  return maybeCipherText &&
+    OAuthEncryption._isBase64(maybeCipherText.iv) &&
+    OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
+    _.isString(maybeCipherText.algorithm);
 };
 
 
