@@ -129,16 +129,17 @@ OAuthEncryption.open = function (ciphertext, userId) {
     var data;
     try {
       data = EJSON.parse(result.plaintext.toString());
-    }
-    catch (e) {
-      if (e instanceof SyntaxError && Meteor._printDecryptionFailure)
+    } catch (e) {
+      if (e instanceof SyntaxError && Meteor._printDecryptionFailure) {
         Meteor._debug("OAuth decryption unsuccessful: probably wrong key");
+      }
       throw new Error();
     }
 
     if (! result.auth_ok) {
-      if (Meteor._printDecryptionFailure)
+      if (Meteor._printDecryptionFailure) {
         Meteor._debug("userId does not match in OAuth decryption");
+      }
       throw new Error();
     }
 
