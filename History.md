@@ -18,13 +18,9 @@
 * Add `Random.secret()` for generating security-critical secrets like
   login tokens.
 
-* If any of the `Meteor.loginWith[ExternalService]` functions are called before
-  login service configuration is loaded, clients will wait for the configuration
-  to be ready rather than fail.  #1911 #2048.
-
 * `Meteor.logoutOtherClients` now calls the user callback when other
   login tokens have actually been removed from the database, not when
-  they have been marked for eventual removal. #1915.
+  they have been marked for eventual removal. Fixes #1915.
 
 * Add `meteor list-sites` command for listing the sites that you have
   deployed to meteor.com with your Meteor developer account.

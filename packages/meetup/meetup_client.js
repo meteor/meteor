@@ -11,34 +11,32 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
     options = {};
   }
 
-  Accounts.withLoginServiceConfiguration("meetup", function (config) {
-    if (!config) {
-      credentialRequestCompleteCallback && credentialRequestCompleteCallback(
-        new ServiceConfiguration.ConfigError("Service not configured"));
-      return;
-    }
-    var credentialToken = Random.secret();
+  var config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
+  if (!config) {
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    return;
+  }
+  var credentialToken = Random.secret();
 
-    var scope = (options && options.requestPermissions) || [];
-    var flatScope = _.map(scope, encodeURIComponent).join('+');
+  var scope = (options && options.requestPermissions) || [];
+  var flatScope = _.map(scope, encodeURIComponent).join('+');
 
-    var loginUrl =
-          'https://secure.meetup.com/oauth2/authorize' +
-          '?client_id=' + config.clientId +
-          '&response_type=code' +
-          '&scope=' + flatScope +
-          '&redirect_uri=' + Meteor.absoluteUrl('_oauth/meetup?close') +
-          '&state=' + credentialToken;
+  var loginUrl =
+        'https://secure.meetup.com/oauth2/authorize' +
+        '?client_id=' + config.clientId +
+        '&response_type=code' +
+        '&scope=' + flatScope +
+        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/meetup?close') +
+        '&state=' + credentialToken;
 
-    // meetup box gets taller when permissions requested.
-    var height = 620;
-    if (_.without(scope, 'basic').length)
-      height += 130;
+  // meetup box gets taller when permissions requested.
+  var height = 620;
+  if (_.without(scope, 'basic').length)
+    height += 130;
 
-    Oauth.showPopup(
-      loginUrl,
-      _.bind(credentialRequestCompleteCallback, null, credentialToken),
-      {width: 900, height: height}
-    );
-  });
+  Oauth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken),
+    {width: 900, height: height}
+  );
 };
