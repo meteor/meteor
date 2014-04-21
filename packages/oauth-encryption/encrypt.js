@@ -153,6 +153,7 @@ OAuthEncryption.isSealed = function (maybeCipherText) {
   return maybeCipherText &&
     OAuthEncryption._isBase64(maybeCipherText.iv) &&
     OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
+    OAuthEncryption._isBase64(maybeCipherText.authTag) &&
     _.isString(maybeCipherText.algorithm);
 };
 
