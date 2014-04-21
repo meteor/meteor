@@ -348,6 +348,7 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
+    "oauth-encryption",
     "random",
     "spiderable",
     "stylus",
