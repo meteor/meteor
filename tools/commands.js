@@ -1104,7 +1104,7 @@ main.registerCommand({
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
       appDirForVersionCheck: options.appDir,
-      port: options.port,
+      proxyPort: options.port,
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",

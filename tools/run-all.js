@@ -11,9 +11,10 @@ var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
 
-// options: port, buildOptions, settingsFile, banner, program,
-// onRunEnd, onFailure, watchForChanges, quiet, rootUrl, mongoUrl,
-// oplogUrl, disableOplog, appDirForVersionCheck
+// options: proxyPort, proxyHost, appPort, appHost, buildOptions,
+// settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
+// quiet, rootUrl, mongoUrl, oplogUrl, disableOplog,
+// appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
