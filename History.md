@@ -1,5 +1,13 @@
 ## v.NEXT
 
+## v0.7.2.1
+
+* Fix security flaw in OAuth1 implementation. Clients can no longer
+  choose the callback_url for OAuth1 logins.
+
+
+## v0.7.2
+
 * Support oplog tailing on queries with the `limit` option. All queries
   except those containing `$near` or `$where` selectors or the `skip`
   option can now be used with the oplog driver.
