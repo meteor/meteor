@@ -216,27 +216,29 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     };
 
     resolverOptions.estimateCostFunction = function (state, options) {
+      var totalCost = 0;
       var rootDeps = options.rootDependencies;
-      return _.chain(state.dependencies)
-              .reduce(function (sum, dep) {
-                if (!self.resolver.unitsVersions[dep])
-                  console.log("FAIL, no info about: ", dep) // xcxc
-                var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(),
-                                function (uv) { return unitVersionDoesntValidateConstraints(uv, state.constraints); });
+      state.dependencies.each(function (dep) {
+        if (!self.resolver.unitsVersions[dep])
+          console.log("FAIL, no info about: ", dep) // xcxc
+        var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(),
+                        function (uv) { return !state.constraints.violated(uv); });
 
-                if (! uv) {
-                  //console.log("FFFAIIIL", dep, state.constraints.map(function (x) { return x.toString() })) // xcxc
-                  return Infinity;
-                }
+        if (! uv) {
+          totalCost = Infinity;
+          return;
+        }
 
-                if (! _.contains(rootDeps, dep))
-                  return sum;
+        if (! _.contains(rootDeps, dep))
+          return;
 
-                var cost = semverToNum(self.resolver._latestVersion[uv.name]) -
-                  semverToNum(uv.version);
+        var cost = semverToNum(self.resolver._latestVersion[uv.name]) -
+          semverToNum(uv.version);
 
-                return cost + sum;
-              }, 0).value();
+        totalCost += cost;
+      });
+
+      return totalCost;
     };
 
     break;

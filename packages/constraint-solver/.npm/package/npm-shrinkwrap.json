@@ -2,6 +2,9 @@
   "dependencies": {
     "semver": {
       "version": "2.2.1"
+    },
+    "mori": {
+      "version": "0.2.6"
     }
   }
 }

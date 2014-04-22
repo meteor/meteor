@@ -5,15 +5,16 @@ Package.describe({
 });
 
 Npm.depends({
-  'semver': '2.2.1'
+  'semver': '2.2.1',
+  'mori': '0.2.6'
 });
 
 Package.on_use(function (api) {
   api.export('ConstraintSolver');
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random'], 'server');
-  api.add_files(['constraint-solver.js', 'resolver.js', 'priority-queue.js'],
-                ['server']);
+  api.add_files(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
+                 'dependencies-list.js', 'priority-queue.js'], ['server']);
 });
 
 Package.on_test(function (api) {
