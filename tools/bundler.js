@@ -503,9 +503,9 @@ _.extend(Target.prototype, {
         _.map(options.packages || [], function (p) {
           if (typeof p === "string") {
             return packageLoader.getBuilds(p, self.arch);
-          }
-          else
+          } else {
             return p.getDefaultBuilds(self.arch);
+          }
         })
       ]);
 

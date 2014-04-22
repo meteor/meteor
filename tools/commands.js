@@ -50,31 +50,7 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
-// Get all packages available. Returns a map from the package name the latest
-// version of the package.
-//
-// If problems happen while generating the list, print appropriate
-// messages to stderr and return null.
-var getPackages = function () {
-  var ret = {};
-
-  var messages = buildmessage.capture(function () {
-    var names = catalog.getAllPackageNames();
-    _.each(names, function (name) {
-      ret[name] = catalog.getLatestVersion(name);
-    });
-  });
-
-  if (messages.hasMessages()) {
-    process.stderr.write("=> Errors while scanning packages:\n\n");
-    process.stderr.write(messages.formatMessages());
-    return null;
-  } else {
-    return ret;
-  }
-};
-
-// Get all local packages available. Returns a map from the package name the
+// Get all local packages available. Returns a map from the package name to the
 // version record for that package.
 //
 // If problems happen while generating the list, print appropriate
@@ -82,22 +58,14 @@ var getPackages = function () {
 var getLocalPackages = function () {
   var ret = {};
 
-  var messages = buildmessage.capture(function () {
-    var names = catalog.getAllPackageNames();
-    _.each(names, function (name) {
-      if (catalog.isLocalPackage(name)) {
-        ret[name] = catalog.getLatestVersion(name);
-      }
-    });
+  var names = catalog.getAllPackageNames();
+  _.each(names, function (name) {
+    if (catalog.isLocalPackage(name)) {
+      ret[name] = catalog.getLatestVersion(name);
+    }
   });
 
-  if (messages.hasMessages()) {
-    process.stderr.write("=> Errors while scanning packages:\n\n");
-    process.stderr.write(messages.formatMessages());
-    return null;
-  } else {
-    return ret;
-  }
+  return ret;
 };
 
 

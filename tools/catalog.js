@@ -236,7 +236,7 @@ _.extend(Catalog.prototype, {
     // constraint solver.
     var packageSources = {}; // name to PackageSource
 
-    var initVersionRecordFromSource =  function (packageDir, name, test) {
+    var initVersionRecordFromSource =  function (packageDir, name) {
       var packageSource = new PackageSource;
       packageSource.initFromPackageDir(name, packageDir);
       packageSources[name] = packageSource;
@@ -314,18 +314,16 @@ _.extend(Catalog.prototype, {
       // Test packages are not allowed to have tests. Any time we recurse into
       // this function, it will be with test marked as true, so recursion
       // will terminate quickly.
-      if (!test && packageSource.test) {
+      if (!packageSource.isTest && packageSource.test) {
         self.effectiveLocalPackages[packageSource.test] = packageSource.sourceRoot;
-        initVersionRecordFromSource(packageSource.sourceRoot, packageSource.test, true);
+        initVersionRecordFromSource(packageSource.sourceRoot, packageSource.test);
       }
     };
 
     // Add the records for packages and their tests. With underscore, each only
     // runs on the original members of the collection, so it is safe to modify
     // effectiveLocalPackages in initPackageSource (to add test packages).
-    _.each(self.effectiveLocalPackages, function(dir, name) {
-      initVersionRecordFromSource(dir, name, false /* test-only package? */);
-    });
+    _.each(self.effectiveLocalPackages, initVersionRecordFromSource);
 
     // We have entered records for everything, and we are going to build lazily,
     // so we are done.
@@ -399,7 +397,7 @@ _.extend(Catalog.prototype, {
         var version = self._getLocalVersion(dep.version);
         var packageVersion =
             self._getLocalVersion(self.packageSources[dep.name].version);
-        if (version != packageVersion) {
+        if (version !== packageVersion) {
           throw new Error("unknown version for local package? " + name);
         }
       }

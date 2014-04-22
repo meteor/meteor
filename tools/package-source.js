@@ -355,15 +355,15 @@ _.extend(PackageSource.prototype, {
       // ever used it.
       describe: function (options) {
         _.each(options, function (value, key) {
-          if (key === "summary" || key === "internal")
+          if (key === "summary" || key === "internal") {
             self.metadata[key] = value;
-          else if (key === "version")
+          } else if (key === "version") {
             // XXX validate that version parses -- and that it doesn't
             // contain a +!
             self.version = value;
-          else if (key === "earliestCompatibleVersion")
+          } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
-          else if (key === "name") {
+          } else if (key === "name") {
             // Do nothing, actually. This tells us that we are not building a
             // test package, but that's roughly what we assumed anyway.
           }
@@ -374,9 +374,10 @@ _.extend(PackageSource.prototype, {
               self.test = value;
             }
           }
-          else
+          else {
             buildmessage.error("unknown attribute '" + key + "' " +
                                "in package description");
+          }
         });
       },
 

@@ -143,9 +143,6 @@ var determineBuildTimeDependencies = function (packageSource) {
     constraints[packageName] = info.constraint;
   });
 
-  // XXX once we implement targets(), this is where we will add the
-  // targeted packages!
-
 
   var versions = packageSource.dependencyVersions.dependencies;
   var constraintSolver = require('./constraint-solver.js');
@@ -196,10 +193,9 @@ var determineBuildTimeDependencies = function (packageSource) {
 
 compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 
-// inputBuild is a SourceBuild to compile. Process all source files
-// through the appropriate handlers and run the prelink phase on any
-// resulting JavaScript. Create a new UnipackageBuild and add it to
-// 'unipackage'.
+// inputSourceArch is a SourceArch to compile. Process all source files through
+// the appropriate handlers and run the prelink phase on any resulting
+// JavaScript. Create a new Build and add it to 'unipackage'.
 //
 // packageLoader is a PackageLoader that can load our build-time
 // direct dependencies at the correct versions. It is only used to
@@ -207,13 +203,13 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileBuild = function (unipackage, inputBuild, packageLoader,
+var compileBuild = function (unipackage, inputSourceArch, packageLoader,
                              nodeModulesPath, isPortable) {
-  var isApp = ! inputBuild.pkg.name;
+  var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
   var js = [];
   var sources = [];
-  var watchSet = inputBuild.watchSet.clone();
+  var watchSet = inputSourceArch.watchSet.clone();
 
   // *** Determine and load active plugins
 
@@ -234,7 +230,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
   // not some unrelated package in the target has a dependency. And we
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
-  _.each(inputBuild.uses, function (dependency) {
+  _.each(inputSourceArch.uses, function (dependency) {
     if (! dependency.weak && ! dependency.unordered &&
         dependency.package !== unipackage.name &&
         packageLoader.containsPlugins(dependency.package)) {
@@ -267,7 +263,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
           allHandlers[ext].toString() !== handler.toString()) {
         buildmessage.error(
           "conflict: two packages included in " +
-            (inputBuild.pkg.name || "the app") + ", " +
+            (inputSourceArch.pkg.name || "the app") + ", " +
             (allHandlers[ext].pkg.name || "the app") + " and " +
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
@@ -286,19 +282,19 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
   var sourceExtensions = _.keys(allHandlers);
-  var sourceItems = inputBuild.getSourcesFunc(sourceExtensions, watchSet);
+  var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
 
   // *** Process each source file
   var addAsset = function (contents, relPath, hash) {
     // XXX hack
-    if (! inputBuild.pkg.name)
+    if (! inputSourceArch.pkg.name)
       relPath = relPath.replace(/^(private|public)\//, '');
 
     resources.push({
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: path.join(inputBuild.pkg.serveRoot, relPath),
+      servePath: path.join(inputSourceArch.pkg.serveRoot, relPath),
       hash: hash
     });
 
@@ -308,7 +304,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
   _.each(sourceItems, function (source) {
     var relPath = source.relPath;
     var fileOptions = _.clone(source.fileOptions) || {};
-    var absPath = path.resolve(inputBuild.pkg.sourceRoot, relPath);
+    var absPath = path.resolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = path.basename(relPath);
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
@@ -455,19 +451,19 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
       _fullInputPath: absPath, // avoid, see above..
       // XXX duplicates _pathForSourceMap() in linker
       pathForSourceMap: (
-        inputBuild.pkg.name
-          ? inputBuild.pkg.name + "/" + relPath
+        inputSourceArch.pkg.name
+          ? inputSourceArch.pkg.name + "/" + relPath
           : path.basename(relPath)),
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
-      packageName: inputBuild.pkg.name,
-      rootOutputPath: inputBuild.pkg.serveRoot,
-      arch: inputBuild.arch, // XXX: what is the story with arch?
+      packageName: inputSourceArch.pkg.name,
+      rootOutputPath: inputSourceArch.pkg.serveRoot,
+      arch: inputSourceArch.arch, // XXX: what is the story with arch?
       archMatches: function (pattern) {
-        return archinfo.matches(inputBuild.arch, pattern);
+        return archinfo.matches(inputSourceArch.arch, pattern);
       },
       fileOptions: fileOptions,
-      declaredExports: _.pluck(inputBuild.declaredExports, 'name'),
+      declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
       read: function (n) {
         if (n === undefined || readOffset + n > contents.length)
           n = contents.length - readOffset;
@@ -476,7 +472,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
         return ret;
       },
       appendDocument: function (options) {
-        if (! archinfo.matches(inputBuild.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "browser"))
           throw new Error("Document sections can only be emitted to " +
                           "browser targets");
         if (options.section !== "head" && options.section !== "body")
@@ -489,7 +485,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
         });
       },
       addStylesheet: function (options) {
-        if (! archinfo.matches(inputBuild.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "browser"))
           throw new Error("Stylesheets can only be emitted to " +
                           "browser targets");
         if (typeof options.data !== "string")
@@ -497,7 +493,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
         resources.push({
           type: "css",
           data: new Buffer(options.data, 'utf8'),
-          servePath: path.join(inputBuild.pkg.serveRoot, options.path),
+          servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
           sourceMap: options.sourceMap
         });
       },
@@ -506,12 +502,12 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputBuild.arch, "browser"))
+        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "browser"))
           throw new Error("'bare' option may only be used for browser targets");
         js.push({
           source: options.data,
           sourcePath: options.sourcePath,
-          servePath: path.join(inputBuild.pkg.serveRoot, options.path),
+          servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
           bare: !! options.bare,
           sourceMap: options.sourceMap
         });
@@ -548,7 +544,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
   // js-analyze package, in which case never mind. (The js-analyze package's
   // default build is not allowed to depend on anything!)
   var jsAnalyze = null;
-  if (! _.isEmpty(js) && inputBuild.pkg.name !== "js-analyze") {
+  if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
     jsAnalyze = uniload.load({
       packages: ["js-analyze"]
     })["js-analyze"].JSAnalyze;
@@ -558,17 +554,17 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
     inputFiles: js,
     useGlobalNamespace: isApp,
     combinedServePath: isApp ? null :
-      "/packages/" + inputBuild.pkg.name +
-      (inputBuild.archName === "main" ? "" : (":" + inputBuild.archName)) + ".js",
-    name: inputBuild.pkg.name || null,
-    declaredExports: _.pluck(inputBuild.declaredExports, 'name'),
+      "/packages/" + inputSourceArch.pkg.name +
+      (inputSourceArch.archName === "main" ? "" : (":" + inputSourceArch.archName)) + ".js",
+    name: inputSourceArch.pkg.name || null,
+    declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
     jsAnalyze: jsAnalyze
   });
 
   // *** Determine captured variables
   var packageVariables = [];
   var packageVariableNames = {};
-  _.each(inputBuild.declaredExports, function (symbol) {
+  _.each(inputSourceArch.declaredExports, function (symbol) {
     if (_.has(packageVariableNames, symbol.name))
       return;
     packageVariables.push({
@@ -587,7 +583,7 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
   });
 
   // *** Consider npm dependencies and portability
-  var arch = inputBuild.arch;
+  var arch = inputSourceArch.arch;
   if (arch === "os" && ! isPortable) {
     // Contains non-portable npm module builds, so set arch correctly
     arch = archinfo.host();
@@ -599,10 +595,10 @@ var compileBuild = function (unipackage, inputBuild, packageLoader,
 
   // *** Output build object
   unipackage.addBuild({
-    name: inputBuild.archName,
-    arch: inputBuild.arch,
-    uses: inputBuild.uses,
-    implies: inputBuild.implies,
+    name: inputSourceArch.archName,
+    arch: inputSourceArch.arch,
+    uses: inputSourceArch.uses,
+    implies: inputSourceArch.implies,
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPath,
     prelinkFiles: results.files,
@@ -739,8 +735,7 @@ compiler.compile = function (packageSource, options) {
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies
   });
 
-  // Build builds. Might use our plugins, so needs to happen
-  // second.
+  // Compile builds. Might use our plugins, so needs to happen second.
   var packageLoader = new PackageLoader({
     versions: buildTimeDeps.directDependencies
   });
