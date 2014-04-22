@@ -4,6 +4,7 @@ var getContent = HTMLTools.Parse.getContent;
 var CharRef = HTML.CharRef;
 var Comment = HTML.Comment;
 var Special = HTMLTools.Special;
+var Attrs = HTML.Attrs;
 
 var BR = HTML.BR;
 var HR = HTML.HR;
@@ -23,7 +24,7 @@ Tinytest.add("html-tools - parser getContent", function (test) {
     var scanner = new Scanner(input.replace('^^^', ''));
     var result = getContent(scanner);
     test.equal(scanner.pos, endPos);
-    test.equal(HTML.toJS(result), HTML.toJS(expected));
+    test.equal(BlazeTools.toJS(result), BlazeTools.toJS(expected));
   };
 
   var fatal = function (input, messageContains) {
@@ -148,8 +149,8 @@ Tinytest.add("html-tools - parser getContent", function (test) {
 });
 
 Tinytest.add("html-tools - parseFragment", function (test) {
-  test.equal(HTML.toJS(HTMLTools.parseFragment("<div><p id=foo>Hello</p></div>")),
-             HTML.toJS(DIV(P({id:'foo'}, 'Hello'))));
+  test.equal(BlazeTools.toJS(HTMLTools.parseFragment("<div><p id=foo>Hello</p></div>")),
+             BlazeTools.toJS(DIV(P({id:'foo'}, 'Hello'))));
 
   _.each(['asdf</br>', '{{!foo}}</br>', '{{!foo}} </br>',
           'asdf</a>', '{{!foo}}</a>', '{{!foo}} </a>'], function (badFrag) {
@@ -260,7 +261,7 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
       result = String(e);
     }
     test.equal(scanner.pos, endPos);
-    test.equal(HTML.toJS(result), HTML.toJS(expected));
+    test.equal(BlazeTools.toJS(result), BlazeTools.toJS(expected));
   };
 
   var fatal = function (input, messageContains) {
@@ -303,10 +304,10 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
   succeed('<br x={ />', BR({x:'{'}));
   succeed('<br x={foo} />', BR({x:'{foo}'}));
 
-  succeed('<br {{x}}>', BR({$specials: [Special({stuff: 'x'})]}));
-  succeed('<br {{x}} {{y}}>', BR({$specials: [Special({stuff: 'x'}),
-                                              Special({stuff: 'y'})]}));
-  succeed('<br {{x}} y>', BR({$specials: [Special({stuff: 'x'})], y:''}));
+  succeed('<br {{x}}>', BR(Attrs(Special({stuff: 'x'}))));
+  succeed('<br {{x}} {{y}}>', BR(Attrs(Special({stuff: 'x'}),
+                                       Special({stuff: 'y'}))));
+  succeed('<br {{x}} y>', BR(Attrs({y: ''}, Special({stuff: 'x'}))));
   fatal('<br {{x}}y>');
   fatal('<br {{x}}=y>');
   succeed('<br x={{y}} z>', BR({x: Special({stuff: 'y'}), z: ''}));
@@ -326,10 +327,10 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
 
 
   // check tokenization of stache tags with spaces
-  succeed('<br {{x 1}}>', BR({$specials: [Special({stuff: 'x 1'})]}));
-  succeed('<br {{x 1}} {{y 2}}>', BR({$specials: [Special({stuff: 'x 1'}),
-                                                  Special({stuff: 'y 2'})]}));
-  succeed('<br {{x 1}} y>', BR({$specials: [Special({stuff: 'x 1'})], y:''}));
+  succeed('<br {{x 1}}>', BR(Attrs(Special({stuff: 'x 1'}))));
+  succeed('<br {{x 1}} {{y 2}}>', BR(Attrs(Special({stuff: 'x 1'}),
+                                           Special({stuff: 'y 2'}))));
+  succeed('<br {{x 1}} y>', BR(Attrs({y:''}, Special({stuff: 'x 1'}))));
   fatal('<br {{x 1}}y>');
   fatal('<br {{x 1}}=y>');
   succeed('<br x={{y 2}} z>', BR({x: Special({stuff: 'y 2'}), z: ''}));
