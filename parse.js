@@ -307,7 +307,8 @@ var convertCharRef = function (token) {
 // and maybe `Special` tokens.
 //
 // Output is null if there are zero attributes, and otherwise a
-// dictionary.  Each value in the dictionary is HTMLjs (e.g. a
+// dictionary, or an array of dictionaries and specials.
+// Each value in the dictionary is HTMLjs (e.g. a
 // string or an array of `Chars`, `CharRef`, and `Special`
 // nodes).
 //
@@ -316,6 +317,23 @@ var convertCharRef = function (token) {
 // with no template tags.
 var parseAttrs = function (attrs) {
   var result = null;
+
+  if (HTML.isArray(attrs)) {
+    // first element is nondynamic attrs, rest are specials
+    var nondynamicAttrs = parseAttrs(attrs[0]);
+    if (nondynamicAttrs) {
+      result = (result || []);
+      result.push(nondynamicAttrs);
+    }
+    for (var i = 1; i < attrs.length; i++) {
+      var token = attrs[i];
+      if (token.t !== 'Special')
+        throw new Error("Expected Special token");
+      result = (result || []);
+      result.push(HTMLTools.Special(token.v));
+    }
+    return HTML.Attrs.apply(null, result);
+  }
 
   for (var k in attrs) {
     if (! result)
@@ -334,16 +352,10 @@ var parseAttrs = function (attrs) {
       }
     }
 
-    if (k === '$specials') {
-      // the `$specials` pseudo-attribute should always get an
-      // array, even if there is only one Special.
-      result[k] = outParts;
-    } else {
-      var outValue = (inValue.length === 0 ? '' :
-                      (outParts.length === 1 ? outParts[0] : outParts));
-      var properKey = HTMLTools.properCaseAttributeName(k);
-      result[properKey] = outValue;
-    }
+    var outValue = (inValue.length === 0 ? '' :
+                    (outParts.length === 1 ? outParts[0] : outParts));
+    var properKey = HTMLTools.properCaseAttributeName(k);
+    result[properKey] = outValue;
   }
 
   return result;
