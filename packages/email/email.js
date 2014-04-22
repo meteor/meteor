@@ -71,9 +71,6 @@ EmailTest.restoreOutputStream = function () {
 var devModeSend = function (mc) {
   var devmode_mail_id = next_devmode_mail_id++;
 
-  // Make sure we use whatever stream was set at the time of the Email.send
-  // call even in the 'end' callback, in case there are multiple concurrent
-  // test runs.
   var stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.

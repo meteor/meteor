@@ -392,6 +392,7 @@ TestManager = function () {
   var self = this;
   self.tests = {};
   self.ordered_tests = [];
+  self.testQueue = new Meteor._SynchronousQueue();
 };
 
 _.extend(TestManager.prototype, {
@@ -444,8 +445,16 @@ _.extend(TestRun.prototype, {
 
   _runOne: function (test, onComplete, stop_at_offset) {
     var self = this;
-    var startTime = (+new Date);
-    if (self._prefixMatch(test.groupPath)) {
+
+    if (! self._prefixMatch(test.groupPath)) {
+      onComplete && onComplete();
+      return;
+    }
+
+    self.manager.testQueue.queueTask(function () {
+
+      var startTime = (+new Date);
+
       test.run(function (event) {
         /* onEvent */
         self._report(test, event);
@@ -469,46 +478,21 @@ _.extend(TestRun.prototype, {
 
         onComplete && onComplete();
       }, stop_at_offset);
-    } else {
-      onComplete && onComplete();
-    }
+    });
   },
 
   run: function (onComplete) {
     var self = this;
-    // create array of arrays of tests; synchronous tests in
-    // different groups are run in parallel on client, async tests or
-    // tests in different groups are run in sequence, as are all
-    // tests on server
-    var testGroups = _.values(
-      _.groupBy(self.manager.ordered_tests,
-                function(t) {
-                  if (Meteor.isServer)
-                    return "SERVER";
-                  if (t.async)
-                    return "ASYNC";
-                  return t.name.split(" - ")[0];
-                }));
+    var tests = _.clone(self.manager.ordered_tests);
 
-    if (! testGroups.length) {
-      onComplete();
-    } else {
-      var groupsDone = 0;
+    var runNext = function () {
+      if (tests.length)
+        self._runOne(tests.shift(), runNext);
+      else
+        onComplete && onComplete();
+    };
 
-      _.each(testGroups, function(tests) {
-        var runNext = function () {
-          if (tests.length) {
-            self._runOne(tests.shift(), runNext);
-          } else {
-            groupsDone++;
-            if (groupsDone >= testGroups.length)
-              onComplete();
-          }
-        };
-
-        runNext();
-      });
-    }
+    runNext();
   },
 
   // An alternative to run(). Given the 'cookie' attribute of a
