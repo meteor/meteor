@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "meteor": "1.0.0+local",
+    "underscore": "1.0.0+local",
+    "deps": "1.0.0+local",
+    "ejson": "1.0.0+local",
+    "json": "1.0.0+local"
+  },
+  "plugins": {},
+  "format": "1.0"
+}

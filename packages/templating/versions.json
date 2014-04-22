@@ -1,0 +1,41 @@
+{
+  "dependencies": {
+    "meteor": "1.0.0+local",
+    "underscore": "1.0.0+local",
+    "spark": "1.0.0+local",
+    "handlebars": "1.0.0+local",
+    "random": "1.0.0+local",
+    "domutils": "1.0.0+local",
+    "liverange": "1.0.0+local",
+    "universal-events": "1.0.0+local",
+    "ordered-dict": "1.0.0+local",
+    "deps": "1.0.0+local",
+    "ejson": "1.0.0+local",
+    "minimongo": "1.0.0+local",
+    "jquery": "1.0.0+local",
+    "json": "1.0.0+local",
+    "id-map": "1.0.0+local",
+    "geojson-utils": "1.0.0+local"
+  },
+  "plugins": {
+    "compileTemplates": {
+      "handlebars": "1.0.0+local",
+      "meteor": "1.0.0+local",
+      "underscore": "1.0.0+local",
+      "spark": "1.0.0+local",
+      "minimongo": "1.0.0+local",
+      "random": "1.0.0+local",
+      "domutils": "1.0.0+local",
+      "liverange": "1.0.0+local",
+      "universal-events": "1.0.0+local",
+      "ordered-dict": "1.0.0+local",
+      "deps": "1.0.0+local",
+      "ejson": "1.0.0+local",
+      "json": "1.0.0+local",
+      "id-map": "1.0.0+local",
+      "geojson-utils": "1.0.0+local",
+      "jquery": "1.0.0+local"
+    }
+  },
+  "format": "1.0"
+}
