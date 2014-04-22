@@ -1710,6 +1710,11 @@ example, to support GitHub login, run `$ meteor add accounts-github` and use the
         Session.set('errorMessage', err.reason || 'Unknown error');
     });
 
+Login service configuration is sent from the server to the client over DDP when
+your app starts up; you may not call the login function until the configuration
+is loaded. The function `Accounts.loginServicesConfigured()` is a reactive data
+source that will return true once the login service is configured; you should
+not make login buttons visible or active until it is true.
 
 
 {{> api_box currentUser}}
