@@ -1,6 +1,6 @@
 var materialize = UI.materialize;
 var toHTML = HTML.toHTML;
-var toCode = HTML.toJS;
+var toCode = BlazeTools.toJS;
 
 var P = HTML.P;
 var CharRef = HTML.CharRef;
@@ -14,6 +14,10 @@ var SPAN = HTML.SPAN;
 var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
+
+var evaluateAndFlattenAttributes = function (attrs) {
+  return HTML.flattenAttributes(UI.evaluateAttributes(attrs));
+};
 
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -237,7 +241,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'class': ['david gre', CharRef({html: '&euml;', str: '\u00eb'}), 'nspan'],
                          id: 'foo'});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanCode = SPAN(HTML.Attrs(function () { return R.get(); }));
 
     test.equal(toHTML(spanCode), '<span class="david gre&euml;nspan" id="foo"></span>');
 
@@ -279,7 +283,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
                          fff: [[]],
                          ggg: ['x', ['y', ['z']]]});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanCode = SPAN(HTML.Attrs(function () { return R.get(); }));
 
     test.equal(toHTML(spanCode), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),
@@ -411,10 +415,9 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
 
-  var spanCode = SPAN({
-    blah: function () { return R1.get(); },
-    $dynamic: [function () { return { blah: [function () { return R2.get(); }] }; }]
-  });
+  var spanCode = SPAN(HTML.Attrs(
+    { blah: function () { return R1.get(); } },
+    function () { return { blah: [function () { return R2.get(); }] }; }));
 
   var div = document.createElement("DIV");
   materialize(spanCode, div);
@@ -430,19 +433,19 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   R2.set([[]]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[[]]]`, which is nully.
-  test.equal(spanCode.evaluateAttributes().blah, ["foo"]);
+  test.equal(evaluateAndFlattenAttributes(spanCode.attrs).blah, ["foo"]);
   check('<span blah="foo"></span>');
 
   R2.set([['']]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[['']]]`, which is non-nully.
-  test.equal(spanCode.evaluateAttributes().blah, [[['']]]);
+  test.equal(evaluateAndFlattenAttributes(spanCode.attrs).blah, [[['']]]);
   check('<span blah=""></span>');
 
   R2.set(null);
   Deps.flush();
   // We combine `['foo']` with `[null]`, which is nully.
-  test.equal(spanCode.evaluateAttributes().blah, ['foo']);
+  test.equal(evaluateAndFlattenAttributes(spanCode.attrs).blah, ['foo']);
   check('<span blah="foo"></span>');
 
   R1.set([[], []]);
@@ -535,4 +538,23 @@ Tinytest.add("ui - UI.getDataContext", function (test) {
   var span = $(div).children('SPAN')[0];
   test.isTrue(span);
   test.equal(UI.getElementData(span), {foo: "bar"});
+});
+
+Tinytest.add("ui - attributes", function (test) {
+  var SPAN = HTML.SPAN;
+  var amp = HTML.CharRef({html: '&amp;', str: '&'});
+
+  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
+             '<span title="M&amp;Ms">M&amp;M candies</span>');
+
+  // test that evaluateAttributes calls functions in both normal and dynamic attributes
+  test.equal(evaluateAndFlattenAttributes({x: function () { return 'abc'; }}),
+             { x: 'abc' });
+  test.equal(evaluateAndFlattenAttributes([{x: function () { return 'abc'; } },
+                                    {}]),
+             { x: 'abc' });
+  test.equal(evaluateAndFlattenAttributes(
+    [{x: function () { return 'abc'; } },
+     function () { return { x: function () { return 'def'; } }; }]),
+             { x: 'def' });
 });

@@ -6,13 +6,9 @@ HTMLTools.Special = function (value) {
 
   this.value = value;
 };
-HTMLTools.Special.prototype.toJS = function (options) {
-  // XXX this is weird because toJS is defined in spacebars-compiler.
-  // Think about where HTMLTools.Special and toJS should go.
-  return HTML.Tag.prototype.toJS.call({tagName: 'HTMLTools.Special',
-                                       attrs: this.value,
-                                       children: []},
-                                      options);
+
+HTMLTools.Special.prototype.toJS = function (visitor) {
+  return visitor.generateCall('HTMLTools.Special', this.value);
 };
 
 // Parse a "fragment" of HTML, up to the end of the input or a particular
