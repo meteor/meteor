@@ -33,6 +33,9 @@
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
 
+* A validate login hook can now override the exception thrown from
+  `beginPasswordExchange` like it can for other login methods.
+
 
 ## v0.8.0.1
 
