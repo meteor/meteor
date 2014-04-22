@@ -45,30 +45,30 @@ OAuthEncryption.loadKey = function (key) {
 };
 
 
-var userIdToAAD = function (userId) {
-  if (userId !== undefined)
-    return new Buffer(EJSON.stringify({userId: userId}));
-  else
-    return new Buffer([]);
-};
-
-
 // Encrypt `data`, which may be any EJSON-compatible object, using the
 // previously loaded OAuth secret key.
 //
-// The `userId` argument is optional.  If specified, it is used as the
-// "additional authenticated data" (AAD).  The encrypted ciphertext
-// can only be decrypted by supplying the same user id, which prevents
-// user specific credentials such as access tokens from being used by
-// a different user.
+// The `userId` argument is optional. The data is encrypted as { data:
+// *, userId: * }. When the result of `seal` is passed to `open`, the
+// same user id must be supplied, which prevents user specific
+// credentials such as access tokens from being used by a different
+// user.
+//
+// We would actually like the user id to be AAD (additional
+// authenticated data), but the node crypto API does not currently have
+// support for specifying AAD.
 //
 OAuthEncryption.seal = function (data, userId) {
-  if (! gcmKey)
+  if (! gcmKey) {
     throw new Error("No OAuth encryption key loaded");
-  var plaintext = new Buffer(EJSON.stringify(data));
+  }
+
+  var plaintext = new Buffer(EJSON.stringify({
+    data: data,
+    userId: userId
+  }));
   var iv = crypto.randomBytes(12);
-  var aad = userIdToAAD(userId);
-  var result = gcm.encrypt(gcmKey, iv, plaintext, aad);
+  var result = gcm.encrypt(gcmKey, iv, plaintext, new Buffer([]) /* aad */);
   return {
     iv: iv.toString("base64"),
     ciphertext: result.ciphertext.toString("base64"),
@@ -118,7 +118,7 @@ OAuthEncryption.open = function (ciphertext, userId) {
       gcmKey,
       new Buffer(ciphertext.iv, "base64"),
       new Buffer(ciphertext.ciphertext, "base64"),
-      userIdToAAD(userId),
+      new Buffer([]),
       new Buffer(ciphertext.authTag, "base64")
     );
 
@@ -139,7 +139,11 @@ OAuthEncryption.open = function (ciphertext, userId) {
       throw new Error();
     }
 
-    return data;
+    if (data.userId !== userId) {
+      throw new Error();
+    }
+
+    return data.data;
   } catch (e) {
     throw new Error("decryption failed");
   }

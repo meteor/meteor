@@ -190,9 +190,8 @@ var usingOAuthEncryption = function () {
 // The user id is not specified because the user isn't known yet at
 // this point in the oauth authentication process.  After the oauth
 // authentication process completes the encrypted service data fields
-// will be re-encrypted with the user id as the AAD (additional
-// authenticated data) before inserting the service data into the user
-// document.
+// will be re-encrypted with the user id included before inserting the
+// service data into the user document.
 //
 OAuth.sealSecret = function (plaintext) {
   if (usingOAuthEncryption())
