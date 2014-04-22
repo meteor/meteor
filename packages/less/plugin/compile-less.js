@@ -3,7 +3,8 @@ var path = Npm.require('path');
 var less = Npm.require('less');
 var Future = Npm.require('fibers/future');
 
-Plugin.registerSourceHandler("less", function (compileStep) {
+Plugin.registerSourceHandler("less", {isStylesheet: true},
+  function (compileStep) {
   // XXX annoying that this is replicated in .css, .less, and .styl
   if (! compileStep.archMatches('browser')) {
     // XXX in the future, might be better to emit some kind of a
@@ -62,13 +63,13 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     data: css,
     sourceMap: sourceMap
   });
-});;
+});
 
 // Register import.less files with the dependency watcher, without actually
 // processing them. There is a similar rule in the stylus package.
-Plugin.registerSourceHandler("import.less", function () {
+Plugin.registerSourceHandler("import.less", {isStylesheet: true}, function () {
   // Do nothing
 });
 
 // Backward compatibility with Meteor 0.7
-Plugin.registerSourceHandler("lessimport", function () {});
+Plugin.registerSourceHandler("lessimport", {isStylesheet: true}, function () {});

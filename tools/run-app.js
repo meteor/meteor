@@ -407,7 +407,8 @@ _.extend(AppRunner.prototype, {
       appDir: self.appDir,
       outputPath: bundlePath,
       nodeModulesMode: "symlink",
-      buildOptions: self.buildOptions
+      buildOptions: self.buildOptions,
+      separateStylesheetsWatchSet: true
     });
     var watchSet = bundleResult.watchSet;
 

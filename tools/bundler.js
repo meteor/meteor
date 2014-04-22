@@ -448,7 +448,8 @@ _.extend(Target.prototype, {
     });
 
     // Link JavaScript and set up self.js, etc.
-    self._emitResources();
+    self._emitResources({
+      unwatchStylesheets: options.separateStylesheetsWatchSet });
 
     // Preprocess and concatenate CSS files for client targets.
     if (self instanceof ClientTarget) {
@@ -583,7 +584,7 @@ _.extend(Target.prototype, {
 
   // Process all of the sorted slices (which includes running the JavaScript
   // linker).
-  _emitResources: function () {
+  _emitResources: function (options) {
     var self = this;
 
     var isBrowser = archinfo.matches(self.arch, "browser");
@@ -688,6 +689,40 @@ _.extend(Target.prototype, {
 
         throw new Error("Unknown type " + resource.type);
       });
+
+      if (options.unwatchStylesheets) {
+        // xcxc do something differently
+      //console.log("\n>>>>>>  THE OLD ONE\n", JSON.stringify(slice.watchSet, null, " "));
+        // XXX probably should rather EJSON.clone the watchSet rather than
+        // modifying it even though it belongs to the slice.
+        var stylesheetExtRegExps =
+          slice.registeredStylesheetExtensionsRegExps();
+        var stylesheetExts = slice.registeredStylesheetExtensions();
+
+        // Don't watch registered stylesheets.
+        false && _.each(slice.watchSet.files, function (sha, path) {
+          var isStylesheet = _.any(stylesheetExtRegExps, function (regexp) {
+            return regexp.test(path);
+          });
+
+          if (isStylesheet)
+            delete slice.watchSet.files[path];
+        });
+
+        // Don't watch any other stylesheets.
+        false && _.each(slice.watchSet.directories, function (rules) {
+          rules.include = _.filter(rules.include || [], function (incl) {
+            return _.all(stylesheetExts, function (ext) {
+              if (incl.test("file." + ext))
+                console.log(incl, ext)
+              return ! incl.test("file." + ext);
+            });
+          });
+
+          //rules.exclude = (rules.exclude || []).concat(stylesheetExtRegExps);
+        });
+      //console.log("\n<<<<<<  THE NEW ONE\n", JSON.stringify(slice.watchSet, null, " "));
+      }
 
       // Depend on the source files that produced these resources.
       self.watchSet.merge(slice.watchSet);
@@ -1668,7 +1703,8 @@ exports.bundle = function (options) {
         packages: [app],
         test: buildOptions.testPackages || [],
         minify: buildOptions.minify,
-        addCacheBusters: true
+        addCacheBusters: true,
+        separateStylesheetsWatchSet: options.separateStylesheetsWatchSet
       });
 
       return client;

@@ -794,6 +794,26 @@ _.extend(Slice.prototype, {
     return ret;
   },
 
+  registeredStylesheetExtensions: function () {
+    var self = this;
+    var ret = ["css"];
+    _.each(self._allHandlers(), function (handler, extension) {
+      if (handler.isStylesheet) {
+        ret.push(extension);
+      }
+    });
+    return ret;
+  },
+
+  // Returns a list of RegExps matching files with extensions
+  // that indicate *stylesheet* source.
+  registeredStylesheetExtensionsRegExps: function () {
+    var self = this;
+    return _.map(self.registeredStylesheetExtensions(), function (ext) {
+      return new RegExp('\\.' + quotemeta(ext) + '$');
+    });
+  },
+
   // Find the function that should be used to handle a source file for
   // this slice, or return null if there isn't one. We'll use handlers
   // that are defined in this package and in its immediate dependencies.
@@ -1049,6 +1069,7 @@ _.extend(Package.prototype, {
 
         self.sourceHandlers[extension] = {
           handler: handler,
+          isStylesheet: !!options.isStylesheet,
           isTemplate: !!options.isTemplate
         };
       }
