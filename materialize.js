@@ -61,7 +61,7 @@ Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend({
     if (attrs instanceof Blaze.Var)
       attrs = attrs.get();
 
-    // call super
+    // call super (e.g. for case where `attrs` is an array)
     return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
   }
 });
