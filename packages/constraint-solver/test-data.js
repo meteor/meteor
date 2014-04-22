@@ -1,4 +1,8 @@
 railsGems = [
+  {"name":"rack-cache","number":"1.2.0","platform":"ruby","dependencies":[]},
+  {"name":"htmlentities","number":"4.0.0","platform":"ruby","dependencies":[]},
+  {"name":"hpricot","number":"0.10.0","platform":"ruby","dependencies":[]},
+  {"name":"hpricot","number":"1.10.0","platform":"ruby","dependencies":[]},
   {"name":"roauth","number":"0.5.0","platform":"ruby","dependencies":[]},
   {"name":"rack-accept","number":"1.5.0","platform":"ruby","dependencies":[]},
   {"name":"mini_portile","number":"0.5.0","platform":"ruby","dependencies":[]},
@@ -8431,6 +8435,13 @@ railsGems = [
   {"name":"xpath","number":"2.0.0","platform":"ruby","dependencies":[["nokogiri","~> 1.3"]]}];
 
 sinatraGems = [
+{"name":"launchy","number":"2.4.2","platform":"ruby","dependencies":[]},
+{"name":"launchy","number":"1.4.2","platform":"ruby","dependencies":[]},
+{"name":"launchy","number":"0.4.2","platform":"ruby","dependencies":[]},
+{"name":"rspec","number":"3.20.0","platform":"ruby","dependencies":[]},
+{"name":"rspec","number":"2.20.0","platform":"ruby","dependencies":[]},
+{"name":"rspec","number":"1.20.0","platform":"ruby","dependencies":[]},
+{"name":"rspec","number":"0.20.0","platform":"ruby","dependencies":[]},
 {"name":"rake","number":"12.0.0","platform":"ruby","dependencies":[]},
 {"name":"echoe","number":"1.0.0","platform":"ruby","dependencies":[]},
 {"name":"ffi","number":"0.6.3","platform":"ruby","dependencies":[]},
