@@ -337,6 +337,17 @@ Fiber(function () {
     process.exit(1);
   }
 
+  // This is a bit of a hack, but: if we don't check this in the tool, then the
+  // first time we do a unipackage.load, it will fail due to the check in the
+  // meteor package, and that'll look a lot uglier.
+  if (process.env.ROOT_URL) {
+    var parsedUrl = require('url').parse(process.env.ROOT_URL);
+    if (!parsedUrl.host) {
+      process.stderr.write('$ROOT_URL, if specified, must be an URL.\n');
+      process.exit(1);
+    }
+  }
+
   // Parse the arguments.
   //
   // We must first identify which options are boolean and which take
