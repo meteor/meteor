@@ -1493,6 +1493,7 @@ allConnections = [];
 DDP._allSubscriptionsReady = function () {
   return _.all(allConnections, function (conn) {
     return _.all(conn._subscriptions, function (sub) {
+      sub.readyDeps.depend();
       return sub.ready;
     });
   });
