@@ -12,28 +12,27 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
     options = {};
   }
 
-  Accounts.withLoginServiceConfiguration("github", function (config) {
-    if (!config) {
-      credentialRequestCompleteCallback && credentialRequestCompleteCallback(
-        new ServiceConfiguration.ConfigError("Service not configured"));
-      return;
-    }
-    var credentialToken = Random.secret();
+  var config = ServiceConfiguration.configurations.findOne({service: 'github'});
+  if (!config) {
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
+    return;
+  }
+  var credentialToken = Random.secret();
 
-    var scope = (options && options.requestPermissions) || [];
-    var flatScope = _.map(scope, encodeURIComponent).join('+');
+  var scope = (options && options.requestPermissions) || [];
+  var flatScope = _.map(scope, encodeURIComponent).join('+');
 
-    var loginUrl =
-          'https://github.com/login/oauth/authorize' +
-          '?client_id=' + config.clientId +
-          '&scope=' + flatScope +
-          '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
-          '&state=' + credentialToken;
+  var loginUrl =
+        'https://github.com/login/oauth/authorize' +
+        '?client_id=' + config.clientId +
+        '&scope=' + flatScope +
+        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
+        '&state=' + credentialToken;
 
-    OAuth.showPopup(
-      loginUrl,
-      _.bind(credentialRequestCompleteCallback, null, credentialToken),
-      {width: 900, height: 450}
-    );
-  });
+  OAuth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken),
+    {width: 900, height: 450}
+  );
 };

@@ -17,7 +17,7 @@ OAuth.registerService('meetup', 2, null, function(query) {
 var getAccessToken = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {

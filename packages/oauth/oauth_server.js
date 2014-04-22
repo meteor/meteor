@@ -137,7 +137,7 @@ var oauthServiceName = function (req) {
 // Make sure we're configured
 var ensureConfigured = function(serviceName) {
   if (!ServiceConfiguration.configurations.findOne({service: serviceName})) {
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
   }
 };
 

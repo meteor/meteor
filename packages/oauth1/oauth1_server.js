@@ -3,7 +3,7 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (!config) {
-    throw new ServiceConfiguration.ConfigError("Service " + service.serviceName + " not configured");
+    throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
 
   var urls = service.urls;
@@ -11,9 +11,11 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
+    var callbackUrl = Meteor.absoluteUrl("_oauth/twitter?close&state=" +
+                                         query.state);
 
     // Get a request token to start auth process
-    oauthBinding.prepareRequestToken(query.requestTokenAndRedirect);
+    oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
     Oauth._storeRequestToken(query.state,

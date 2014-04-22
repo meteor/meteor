@@ -18,16 +18,16 @@
 * Add `Random.secret()` for generating security-critical secrets like
   login tokens.
 
-* If any of the `Meteor.loginWith[ExternalService]` functions are called before
-  login service configuration is loaded, clients will wait for the configuration
-  to be ready rather than fail.  #1911 #2048.
-
 * `Meteor.logoutOtherClients` now calls the user callback when other
   login tokens have actually been removed from the database, not when
-  they have been marked for eventual removal. #1915.
+  they have been marked for eventual removal. Fixes #1915.
 
 * Add `meteor list-sites` command for listing the sites that you have
   deployed to meteor.com with your Meteor developer account.
+
+* Blaze no longer renders javascript: URLs in attribute values by
+  default, to help prevent cross-site scripting bugs. Use
+  `UI._allowJavascriptUrls()` to allow them.
 
 * Upgraded dependencies:
   - Node.js from 0.10.25 to 0.10.26.
@@ -38,6 +38,12 @@
 
 * Add `oauth-encryption` package for encrypting sensitive account
   credentials in the database.
+
+
+## v0.8.0.1
+
+* Fix security flaw in OAuth1 implementation. Clients can no longer
+  choose the callback_url for OAuth1 logins.
 
 
 ## v0.8.0

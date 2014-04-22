@@ -267,19 +267,6 @@ Accounts.loginServicesConfigured = function () {
   return loginServicesHandle.ready();
 };
 
-Accounts.withLoginServiceConfiguration = function (serviceName, callback) {
-  Deps.autorun(function (handle) {
-    if (Accounts.loginServicesConfigured()) {
-      handle.stop();
-      Deps.nonreactive(function () {
-        callback(
-          Package['service-configuration'].ServiceConfiguration.configurations.findOne(
-            {service: serviceName}));
-      });
-    }
-  });
-};
-
 ///
 /// HANDLEBARS HELPERS
 ///

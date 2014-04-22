@@ -13,11 +13,6 @@ Package.on_use(function(api) {
   api.use('random', 'client');
   api.use('underscore', 'server');
   api.use('service-configuration', ['client', 'server']);
-  // XXX We intended to keep this module separated from accounts-*. But
-  // service-configuration pulls in accounts-base anyway (for
-  // Accounts.connection), and accounts-base seemed like the best place to
-  // put Accounts.withLoginServiceConfiguration for now.
-  api.use('accounts-base', 'client');
 
   api.export('Twitter');
 

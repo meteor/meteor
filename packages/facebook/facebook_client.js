@@ -13,30 +13,28 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
     options = {};
   }
 
-  Accounts.withLoginServiceConfiguration("facebook", function (config) {
-    if (!config) {
-      credentialRequestCompleteCallback && credentialRequestCompleteCallback(
-        new ServiceConfiguration.ConfigError("Service not configured"));
-      return;
-    }
+  var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
+  if (!config) {
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
+    return;
+  }
 
-    var credentialToken = Random.secret();
-    var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(
-      navigator.userAgent);
-    var display = mobile ? 'touch' : 'popup';
+  var credentialToken = Random.secret();
+  var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent);
+  var display = mobile ? 'touch' : 'popup';
 
-    var scope = "email";
-    if (options && options.requestPermissions)
-      scope = options.requestPermissions.join(',');
+  var scope = "email";
+  if (options && options.requestPermissions)
+    scope = options.requestPermissions.join(',');
 
-    var loginUrl =
-          'https://www.facebook.com/dialog/oauth?client_id=' + config.appId +
-          '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
-          '&display=' + display + '&scope=' + scope + '&state=' + credentialToken;
+  var loginUrl =
+        'https://www.facebook.com/dialog/oauth?client_id=' + config.appId +
+        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
+        '&display=' + display + '&scope=' + scope + '&state=' + credentialToken;
 
-    OAuth.showPopup(
-      loginUrl,
-      _.bind(credentialRequestCompleteCallback, null, credentialToken)
-    );
-  });
+  OAuth.showPopup(
+    loginUrl,
+    _.bind(credentialRequestCompleteCallback, null, credentialToken)
+  );
 };
