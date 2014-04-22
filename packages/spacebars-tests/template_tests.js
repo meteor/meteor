@@ -1951,7 +1951,6 @@ Tinytest.add(
     };
 
     var div = renderToDiv(tmpl);
-    document.body.appendChild(div);
 
     var checkAttrs = function (url, isJavascriptProtocol) {
       Session.set(sessionKey, url);
@@ -1993,6 +1992,5 @@ Tinytest.add(
     checkAttrs("javascript:alert(1)", false);
     checkAttrs("jAvAsCrIpT:alert(1)", false);
     checkAttrs("    javascript:alert(1)", false);
-    document.body.removeChild(div);
   }
 );
