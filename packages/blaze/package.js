@@ -18,9 +18,8 @@ Package.on_use(function (api) {
     'domrange.js',
     'render.js',
     'component.js',
-    'materialize.js',
     'attrs.js',
-    'blaze.js'
+    'materialize.js'
   ], 'client');
 });
 
