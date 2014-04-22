@@ -198,6 +198,23 @@ var isUrlAttribute = function (tagName, attrName) {
   return _.contains(urlAttrNames, attrName);
 };
 
+// To get the protocol for a URL, we let the browser normalize it for
+// us, by setting it as the href for an anchor tag and then reading out
+// the 'protocol' property.
+if (Meteor.isClient) {
+  var anchorForNormalization = document.createElement('A');
+}
+
+var getProtocol = function (url) {
+  if (Meteor.isClient) {
+    anchorForNormalization.href = url;
+    return anchorForNormalization.protocol;
+  } else {
+    var parsed = Npm.require('url').parse(url);
+    return parsed.protocol;
+  }
+};
+
 // UrlHandler is an attribute handler for all HTML attributes that take
 // URL values. It disallows javascript: URLs, unless
 // UI._allowJavascriptUrls() has been called. To detect javascript:
@@ -212,25 +229,17 @@ var UrlHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
     var self = this;
     var args = arguments;
-    var isJavascriptProtocol = false;
-    origUpdate.apply(self, args);
 
-    if (! UI._javascriptUrlsAllowed()) {
-      // If we're updating an A tag, we can read the 'protocol' property
-      // of the element itself. Otherwise, get the string value of the
-      // attribute and look for 'javascript:' at the beginning.
-      if (element.tagName === 'A') {
-        isJavascriptProtocol = element.protocol &&
-          element.protocol === 'javascript:';
-      } else {
-        isJavascriptProtocol = element[self.name] &&
-          element[self.name].indexOf('javascript:') === 0;
-      }
-
+    if (UI._javascriptUrlsAllowed()) {
+      origUpdate.apply(self, args);
+    } else {
+      var isJavascriptProtocol = (getProtocol(value) === 'javascript:');
       if (isJavascriptProtocol) {
         Meteor._debug("javascript: URLs are not allowed. " +
                       "Use UI._allowJavascriptUrls() to enable them.");
-        origUpdate.apply(self, [element, value, null]);
+        origUpdate.apply(self, [element, oldValue, null]);
+      } else {
+        origUpdate.apply(self, args);
       }
     }
   }
