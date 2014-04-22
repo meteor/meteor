@@ -15,14 +15,14 @@ Accounts.onCreateUser(function (options, user) {
 });
 
 
-// connection id -> true
+// connection id -> action
 var invalidateLogins = {};
 
 
 Meteor.methods({
-  testInvalidateLogins: function (flag) {
-    if (flag)
-      invalidateLogins[this.connection.id] = true;
+  testInvalidateLogins: function (action) {
+    if (action)
+      invalidateLogins[this.connection.id] = action;
     else
       delete invalidateLogins[this.connection.id];
   }
@@ -30,9 +30,19 @@ Meteor.methods({
 
 
 Accounts.validateLoginAttempt(function (attempt) {
-  return ! (attempt &&
-            attempt.connection &&
-            invalidateLogins[attempt.connection.id]);
+  var action =
+    attempt &&
+    attempt.connection &&
+    invalidateLogins[attempt.connection.id];
+
+  if (! action)
+    return true;
+  else if (action === 'fail')
+    return false;
+  else if (action === 'hide')
+    throw new Meteor.Error(403, 'hide actual error');
+  else
+    throw new Error('unknown action: ' + action);
 });
 
 
