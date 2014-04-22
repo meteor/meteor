@@ -32,22 +32,16 @@ var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
 // Stores the key and credential in the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
-var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
-
-var usingOAuthEncryption = function () {
-  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
-};
-
-
-// Stores the token and credential in the _pendingCredentials collection
 //
 // @param key {string}
 // @param credential {string}   The credential to store
 //
 OAuth._storePendingCredential = function (key, credential) {
-  if (credential instanceof Error)
+  if (credential instanceof Error) {
     credential = storableError(credential);
+  } else {
+    credential = OAuth.sealSecret(credential);
+  }
 
   OAuth._pendingCredentials.insert({
     key: key,
@@ -70,7 +64,7 @@ OAuth._retrievePendingCredential = function (key) {
     if (pendingCredential.credential.error)
       return recreateError(pendingCredential.credential.error);
     else
-      return pendingCredential.credential;
+      return OAuth.openSecret(pendingCredential.credential);
   } else {
     return undefined;
   }

@@ -40,7 +40,6 @@ var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
 // Stores the key and request token in the _pendingRequestTokens collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
 // @param key {string}
 // @param requestToken {string}
@@ -49,8 +48,8 @@ var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 Oauth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
   Oauth._pendingRequestTokens.insert({
     key: key,
-    requestToken: requestToken,
-    requestTokenSecret: requestTokenSecret,
+    requestToken: OAuth.sealSecret(requestToken),
+    requestTokenSecret: OAuth.sealSecret(requestTokenSecret),
     createdAt: new Date()
   });
 };
@@ -58,8 +57,6 @@ Oauth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
 
 // Retrieves and removes a request token from the _pendingRequestTokens collection
 // Returns an object containing requestToken and requestTokenSecret properties
-//
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
 // @param key {string}
 //
@@ -70,8 +67,9 @@ Oauth._retrieveRequestToken = function (key) {
   if (pendingRequestToken) {
     Oauth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {
-      requestToken: pendingRequestToken.requestToken,
-      requestTokenSecret: pendingRequestToken.requestTokenSecret
+      requestToken: OAuth.openSecret(pendingRequestToken.requestToken),
+      requestTokenSecret: OAuth.openSecret(
+        pendingRequestToken.requestTokenSecret)
     };
   } else {
     return undefined;
