@@ -90,8 +90,6 @@ _.extend(Ticker.prototype, {
   }
 });
 
-HTML = Blaze.HTML;
-
 outerRange = Blaze.render(function () {
   return [HTML.DIV(
     {style: If(Blaze.Var(function () { return theNumber.get() % 3 === 0; }),

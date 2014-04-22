@@ -1,6 +1,6 @@
 # HTMLjs
 
-A small (500-line) library for expressing HTML trees in a concise
+A small library for expressing HTML trees in a concise
 syntax.  This library is used at compile time and run time by Meteor UI.
 
 ```
@@ -24,6 +24,8 @@ return an object representation that can be used to generate HTML, or,
 via other packages, be used to generate DOM (`ui`), be parsed from
 HTML (`html-tools`), or serve as the backbone of the intermediate
 representation for a template compiler (`spacebars-compiler`).
+
+# This document is out of date and will be revised soon.
 
 ## Syntax
 

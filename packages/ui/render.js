@@ -269,11 +269,11 @@ UI.InTemplateScope = function (tmplInstance, content) {
 };
 
 UI.InTemplateScope.prototype.toHTML = function (parentComponent) {
-  return HTML.toHTML(this.content, this.parentPtr);
+  return UI.toHTML(this.content, this.parentPtr);
 };
 
 UI.InTemplateScope.prototype.toText = function (textMode, parentComponent) {
-  return HTML.toText(this.content, textMode, this.parentPtr);
+  return UI.toText(this.content, textMode, this.parentPtr);
 };
 
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
@@ -351,12 +351,14 @@ var materialize = function (node, parent, before, parentComponent) {
         }
 
         try {
-          var attrs = HTML.evaluateAttributes(rawAttrs, parentComponent);
-          var stringAttrs = {};
-          if (attrs) {
-            for (var k in attrs) {
-              stringAttrs[k] = HTML.toText(attrs[k], HTML.TEXTMODE.STRING,
-                                           parentComponent);
+          var evaledAttrs = UI.evaluateAttributes(rawAttrs, parentComponent);
+          var flattenedAttrs = HTML.flattenAttributes(evaledAttrs);
+          if (flattenedAttrs) {
+            var stringAttrs = {};
+            for (var attrName in flattenedAttrs) {
+              stringAttrs[attrName] = UI.toText(flattenedAttrs[attrName],
+                                                HTML.TEXTMODE.STRING,
+                                                parentComponent);
             }
             attrUpdater.update(stringAttrs);
           }
@@ -422,10 +424,6 @@ UI.block = function (renderFunc) {
   return UI.Component.extend({ render: renderFunc });
 };
 
-UI.toHTML = function (content, parentComponent) {
-  return HTML.toHTML(content, parentComponent);
-};
-
 UI.toRawText = function (content, parentComponent) {
-  return HTML.toText(content, HTML.TEXTMODE.STRING, parentComponent);
+  return UI.toText(content, HTML.TEXTMODE.STRING, parentComponent);
 };

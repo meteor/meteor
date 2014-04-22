@@ -7,3 +7,5 @@ standard-app-packages
 autopublish
 insecure
 blaze
+htmljs
+blaze-tools

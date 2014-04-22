@@ -23,6 +23,7 @@ Package.on_use(function (api) {
                  'domrange.js'], 'client');
 
   api.add_files(['attrs.js',
+                 'old-tohtml.js',
                  'render.js',
                  'builtins.js',
                  'each.js',

@@ -481,9 +481,9 @@ var runWebAppServer = function () {
         });
         var boilerplateHtmlJs = boilerplateInstance.render();
         boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
-              HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+              UI.toHTML(boilerplateHtmlJs, boilerplateInstance);
       } catch (e) {
-        Log.error("Error running template: " + e);
+        Log.error("Error running template: " + e.stack);
         res.writeHead(500, headers);
         res.end();
         return undefined;

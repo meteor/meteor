@@ -8,11 +8,11 @@ Package.on_use(function (api) {
   api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('deps');
   api.use('underscore'); // only the subset in microscore.js
+  api.use('htmljs');
   //api.use('observe-sequence');
 
   api.add_files([
     'preamble.js',
-    'html.js',
     'sequence.js',
     'var.js',
     'domrange.js',

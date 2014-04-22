@@ -52,7 +52,7 @@ var rLineContinuation =
       /^\\(\r\n|[\u000A\u000D\u2028\u2029])/;
 
 
-parseNumber = function (scanner) {
+BlazeTools.parseNumber = function (scanner) {
   var startPos = scanner.pos;
 
   var isNegative = false;
@@ -77,7 +77,7 @@ parseNumber = function (scanner) {
   return { text: text, value: value };
 };
 
-parseIdentifierName = function (scanner) {
+BlazeTools.parseIdentifierName = function (scanner) {
   var startPos = scanner.pos;
   var rest = scanner.rest();
   var match = rIdentifierPrefix.exec(rest);
@@ -108,7 +108,7 @@ parseIdentifierName = function (scanner) {
   return scanner.input.substring(startPos, scanner.pos);
 };
 
-parseStringLiteral = function (scanner) {
+BlazeTools.parseStringLiteral = function (scanner) {
   var startPos = scanner.pos;
   var rest = scanner.rest();
   var match = rStringQuote.exec(rest);
@@ -174,11 +174,4 @@ parseStringLiteral = function (scanner) {
   var text = scanner.input.substring(startPos, scanner.pos);
   var value = JSON.parse(jsonLiteral);
   return { text: text, value: value };
-};
-
-// expose for testing
-Spacebars._$ = {
-  parseNumber: parseNumber,
-  parseIdentifierName: parseIdentifierName,
-  parseStringLiteral: parseStringLiteral
 };

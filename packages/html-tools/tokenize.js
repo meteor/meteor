@@ -20,7 +20,8 @@
 //   isEnd: Boolean (optional),
 //   isSelfClosing: Boolean (optional),
 //   n: String (tag name, in lowercase or camel case),
-//   attrs: { String: [zero or more 'Chars' or 'CharRef' objects] }
+//   attrs: dictionary of { String: [tokens] }
+//          OR [{ String: [tokens] }, special tokens...]
 //     (only for start tags; required)
 // }
 //
@@ -377,6 +378,8 @@ var getUnquotedAttributeValue = function (scanner) {
   }
 };
 
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
 getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
   if (! (scanner.peek() === '<' && scanner.rest().charAt(1) !== '!'))
     return null;
@@ -419,6 +422,7 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
     scanner.fatal("End tag can't have attributes");
 
   tag.attrs = {};
+  var nondynamicAttrs = tag.attrs;
 
   while (true) {
     // Note: at the top of this loop, we've already skipped any spaces.
@@ -434,8 +438,9 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
                                          TEMPLATE_TAG_POSITION.IN_START_TAG));
     if (special || (scanner.pos > curPos)) {
       if (special) {
-        tag.attrs.$specials = (tag.attrs.$specials || []);
-        tag.attrs.$specials.push({ t: 'Special', v: special });
+        if (tag.attrs === nondynamicAttrs)
+          tag.attrs = [nondynamicAttrs];
+        tag.attrs.push({ t: 'Special', v: special });
       } // else, must have scanned a `{{! comment}}`
 
       spacesRequiredAfter = true;
@@ -452,10 +457,10 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
         scanner.fatal("Unexpected `{` in attribute name.");
       attributeName = HTMLTools.properCaseAttributeName(attributeName);
 
-      if (tag.attrs.hasOwnProperty(attributeName))
+      if (hasOwnProperty.call(nondynamicAttrs, attributeName))
         scanner.fatal("Duplicate attribute in tag: " + attributeName);
 
-      tag.attrs[attributeName] = [];
+      nondynamicAttrs[attributeName] = [];
 
       skipSpaces(scanner);
 
@@ -480,9 +485,9 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
           scanner.fatal("Unexpected character after = in tag");
 
         if ((ch === '"') || (ch === "'"))
-          tag.attrs[attributeName] = getQuotedAttributeValue(scanner, ch);
+          nondynamicAttrs[attributeName] = getQuotedAttributeValue(scanner, ch);
         else
-          tag.attrs[attributeName] = getUnquotedAttributeValue(scanner);
+          nondynamicAttrs[attributeName] = getUnquotedAttributeValue(scanner);
 
         spacesRequiredAfter = true;
       }

@@ -88,7 +88,7 @@ TemplateTag.parse = function (scannerOrString) {
   };
 
   var scanIdentifier = function (isFirstInPath) {
-    var id = parseIdentifierName(scanner);
+    var id = BlazeTools.parseIdentifierName(scanner);
     if (! id)
       expected('IDENTIFIER');
     if (isFirstInPath &&
@@ -191,13 +191,13 @@ TemplateTag.parse = function (scannerOrString) {
   var scanArgValue = function () {
     var startPos = scanner.pos;
     var result;
-    if ((result = parseNumber(scanner))) {
+    if ((result = BlazeTools.parseNumber(scanner))) {
       return ['NUMBER', result.value];
-    } else if ((result = parseStringLiteral(scanner))) {
+    } else if ((result = BlazeTools.parseStringLiteral(scanner))) {
       return ['STRING', result.value];
     } else if (/^[\.\[]/.test(scanner.peek())) {
       return ['PATH', scanPath()];
-    } else if ((result = parseIdentifierName(scanner))) {
+    } else if ((result = BlazeTools.parseIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
         return ['NULL', null];
