@@ -131,7 +131,66 @@ var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
   return instance;
 };
 
-//---------- KNOWN ELEMENTS
+HTML.isNully = function (node) {
+  if (node == null)
+    // null or undefined
+    return true;
+
+  if (node instanceof Array) {
+    // is it an empty array or an array of all nully items?
+    for (var i = 0; i < node.length; i++)
+      if (! HTML.isNully(node[i]))
+        return false;
+    return true;
+  }
+
+  return false;
+};
+
+// The HTML spec and the DOM API (in particular `setAttribute`) have different
+// definitions of what characters are legal in an attribute.  The HTML
+// parser is extremely permissive (allowing, for example, `<a %=%>`), while
+// `setAttribute` seems to use something like the XML grammar for names (and
+// throws an error if a name is invalid, making that attribute unsettable).
+// If we knew exactly what grammar browsers used for `setAttribute`, we could
+// include various Unicode ranges in what's legal.  For now, allow ASCII chars
+// that are known to be valid XML, valid HTML, and settable via `setAttribute`:
+//
+// * Starts with `:`, `_`, `A-Z` or `a-z`
+// * Consists of any of those plus `-`, `.`, and `0-9`.
+//
+// See <http://www.w3.org/TR/REC-xml/#NT-Name> and
+// <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
+HTML.isValidAttributeName = function (name) {
+  return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
+};
+
+// If `attrs` is an array of attributes dictionaries, combines them
+// into one.  Removes attributes that are "nully."
+HTML.flattenAttributes = function (attrs) {
+  if (! attrs)
+    return attrs;
+
+  var isArray = (attrs instanceof Array);
+  if (attrs.length === 0)
+    return null;
+
+  var result = {};
+  for (var i = 0, N = (isArray ? attrs.length : 1); i < N; i++) {
+    var oneAttrs = (isArray ? attrs[i] : attrs);
+    for (var name in oneAttrs) {
+      if (! HTML.isValidAttributeName(name))
+        throw new Error("Illegal HTML attribute name: " + name);
+      var value = oneAttrs[name];
+      if (! HTML.isNully(value))
+        result[name] = value;
+    }
+  }
+
+  return result;
+};
+
+////////////////////////////// KNOWN ELEMENTS
 
 // These lists of known elements are public.  You can use them, for example, to
 // write a helper that determines the proper case for an SVG element name.
@@ -196,6 +255,8 @@ for (var i = 0; i < HTML.knownElementNames.length; i++)
   HTML.ensureTag(HTML.knownElementNames[i]);
 
 
+////////////////////////////// VISITORS
+
 // _assign is like _.extend or the upcoming Object.assign.
 // Copy src's own, enumerable properties onto tgt and return
 // tgt.
@@ -208,64 +269,6 @@ var _assign = function (tgt, src) {
   return tgt;
 };
 
-HTML.isNully = function (node) {
-  if (node == null)
-    // null or undefined
-    return true;
-
-  if (node instanceof Array) {
-    // is it an empty array or an array of all nully items?
-    for (var i = 0; i < node.length; i++)
-      if (! HTML.isNully(node[i]))
-        return false;
-    return true;
-  }
-
-  return false;
-};
-
-// The HTML spec and the DOM API (in particular `setAttribute`) have different
-// definitions of what characters are legal in an attribute.  The HTML
-// parser is extremely permissive (allowing, for example, `<a %=%>`), while
-// `setAttribute` seems to use something like the XML grammar for names (and
-// throws an error if a name is invalid, making that attribute unsettable).
-// If we knew exactly what grammar browsers used for `setAttribute`, we could
-// include various Unicode ranges in what's legal.  For now, allow ASCII chars
-// that are known to be valid XML, valid HTML, and settable via `setAttribute`:
-//
-// * Starts with `:`, `_`, `A-Z` or `a-z`
-// * Consists of any of those plus `-`, `.`, and `0-9`.
-//
-// See <http://www.w3.org/TR/REC-xml/#NT-Name> and
-// <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
-HTML.isValidAttributeName = function (name) {
-  return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
-};
-
-// If `attrs` is an array of attributes dictionaries, combines them
-// into one.  Removes attributes that are "nully."
-HTML.flattenAttributes = function (attrs) {
-  if (! attrs)
-    return attrs;
-
-  var isArray = (attrs instanceof Array);
-  if (attrs.length === 0)
-    return null;
-
-  var result = {};
-  for (var i = 0, N = (isArray ? attrs.length : 1); i < N; i++) {
-    var oneAttrs = (isArray ? attrs[i] : attrs);
-    for (var name in oneAttrs) {
-      if (! HTML.isValidAttributeName(name))
-        throw new Error("Illegal HTML attribute name: " + name);
-      var value = oneAttrs[name];
-      if (! HTML.isNully(value))
-        result[name] = value;
-    }
-  }
-
-  return result;
-};
 
 HTML.Visitor = function () {};
 
@@ -414,3 +417,160 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
     return this.visit.apply(this, args);
   }
 });
+
+////////////////////////////// TOHTML
+
+// Escaping modes for outputting text when generating HTML.
+HTML.TEXTMODE = {
+  STRING: 1,
+  RCDATA: 2,
+  ATTRIBUTE: 3
+};
+
+HTML.ToTextVisitor = HTML.Visitor.extend({
+  visitNull: function (nullOrUndefined) {
+    return '';
+  },
+  visitPrimitive: function (stringBooleanOrNumber) {
+    var str = String(stringBooleanOrNumber);
+    if (this.textMode === HTML.TEXTMODE.RCDATA) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    } else if (this.textMode === HTML.TEXTMODE.ATTRIBUTE) {
+      // escape `&` and `"` this time, not `&` and `<`
+      return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    } else {
+      return str;
+    }
+  },
+  visitArray: function (array) {
+    var parts = [];
+    for (var i = 0; i < array.length; i++)
+      parts.push(this.visit(array[i]));
+    return parts.join('');
+  },
+  visitComment: function (comment) {
+    throw new Error("Can't have a comment here");
+  },
+  visitCharRef: function (charRef) {
+    if (this.textMode === HTML.TEXTMODE.RCDATA ||
+        this.textMode === HTML.TEXTMODE.ATTRIBUTE) {
+      return charRef.html;
+    } else {
+      return charRef.str;
+    }
+  },
+  visitRaw: function (raw) {
+    return raw.value;
+  },
+  visitTag: function (tag) {
+    // Really we should just disallow Tags here.  However, at the
+    // moment it's useful to stringify any HTML we find.  In
+    // particular, when you include a template within `{{#markdown}}`,
+    // we render the template as text, and since there's currently
+    // no way to make the template be *parsed* as text (e.g. `<template
+    // type="text">`), we hackishly support HTML tags in markdown
+    // in templates by parsing them and stringifying them.
+    return this.visit(this.toHTML(tag));
+  },
+  visitObject: function (x) {
+    throw new Error("Unexpected object in htmljs in toText: " + x);
+  },
+  toHTML: function (node) {
+    return HTML.toHTML(node);
+  }
+});
+
+HTML.toText = function (content, textMode) {
+  if (! textMode)
+    throw new Error("textMode required for HTML.toText");
+  if (! (textMode === HTML.TEXTMODE.STRING ||
+         textMode === HTML.TEXTMODE.RCDATA ||
+         textMode === HTML.TEXTMODE.ATTRIBUTE))
+    throw new Error("Unknown textMode: " + textMode);
+
+  var visitor = new HTML.ToTextVisitor;
+  visitor.textMode = textMode;
+
+  return visitor.visit(content);
+};
+
+HTML.ToHTMLVisitor = HTML.Visitor.extend({
+  visitNull: function (nullOrUndefined) {
+    return '';
+  },
+  visitPrimitive: function (stringBooleanOrNumber) {
+    var str = String(stringBooleanOrNumber);
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  },
+  visitArray: function (array) {
+    var parts = [];
+    for (var i = 0; i < array.length; i++)
+      parts.push(this.visit(array[i]));
+    return parts.join('');
+  },
+  visitComment: function (comment) {
+    return '<!--' + comment.sanitizedValue + '-->';
+  },
+  visitCharRef: function (charRef) {
+    return charRef.html;
+  },
+  visitRaw: function (raw) {
+    return raw.value;
+  },
+  visitTag: function (tag) {
+    var attrStrs = [];
+
+    var attrs = tag.attrs;
+    if (attrs) {
+      for (var k in attrs) {
+        var v = this.toText(attrs[k], HTML.TEXTMODE.ATTRIBUTE);
+        attrStrs.push(' ' + k + '="' + v + '"');
+      }
+    }
+
+    var tagName = tag.tagName;
+    var startTag = '<' + tagName + attrStrs.join('') + '>';
+
+    var children = tag.children;
+    var childStrs = [];
+    var content;
+    if (tagName === 'textarea') {
+
+      for (var i = 0; i < children.length; i++)
+        childStrs.push(this.toText(children[i], HTML.TEXTMODE.RCDATA));
+
+      content = childStrs.join('');
+      if (content.slice(0, 1) === '\n')
+        // TEXTAREA will absorb a newline, so if we see one, add
+        // another one.
+        content = '\n' + content;
+
+    } else {
+      for (var i = 0; i < children.length; i++)
+        childStrs.push(this.visit(children[i]));
+
+      content = childStrs.join('');
+    }
+
+    var result = startTag + content;
+
+    if (children.length || ! HTML.isVoidElement(tagName)) {
+      // "Void" elements like BR are the only ones that don't get a close
+      // tag in HTML5.  They shouldn't have contents, either, so we could
+      // throw an error upon seeing contents here.
+      result += '</' + tagName + '>';
+    }
+
+    return result;
+  },
+  visitObject: function (x) {
+    throw new Error("Unexpected object in htmljs in toHTML: " + x);
+  },
+  toText: function (node, textMode) {
+    return HTML.toText(node, textMode);
+  }
+});
+
+HTML.toHTML = function (content) {
+  return (new HTML.ToHTMLVisitor).visit(content);
+};

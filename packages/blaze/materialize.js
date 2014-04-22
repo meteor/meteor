@@ -1,47 +1,9 @@
-//////////////////// Blaze.toText
+////////////////////////////// Blaze.toText
 
-// Escaping modes for outputting text when generating HTML.
-Blaze.TEXTMODE = {
-  ATTRIBUTE: 1,
-  RCDATA: 2,
-  STRING: 3
-};
-
-var ToTextVisitor = HTML.Visitor.extend({
-  visitNull: function (nullOrUndefined) {
-    return '';
-  },
-  visitPrimitive: function (stringBooleanOrNumber) {
-    return String(stringBooleanOrNumber);
-  },
-  visitArray: function (array) {
-    var parts = [];
-    for (var i = 0; i < array.length; i++)
-      parts.push(this.visit(array[i]));
-    return parts.join('');
-  },
-  visitComment: function (comment) {
-    throw new Error("Can't have a comment here");
-  },
-  visitCharRef: function (charRef) {
-    return charRef.str;
-  },
-  visitRaw: function (raw) {
-    return raw.value;
-  },
-  visitTag: function (tag) {
-    // Really we should just disallow Tags here.  However, at the
-    // moment it's useful to stringify any HTML we find.  In
-    // particular, when you include a template within `{{#markdown}}`,
-    // we render the template as text, and since there's currently
-    // no way to make the template be *parsed* as text (e.g. `<template
-    // type="text">`), we hackishly support HTML tags in markdown
-    // in templates by parsing them and stringifying them.
-    return this.visit(this.toHTML(tag));
-  },
+Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
   visitObject: function (x) {
     if (x instanceof Blaze.RenderPoint)
-      return x.toText();
+      return x.toText(HTML.TEXTMODE.STRING);
 
     throw new Error("Unexpected object in htmljs in toText: " + x);
   },
@@ -50,119 +12,23 @@ var ToTextVisitor = HTML.Visitor.extend({
   }
 });
 
-var ToRCDataVisitor = ToTextVisitor.extend({
-  visitPrimitive: function (stringBooleanOrNumber) {
-    var str = String(stringBooleanOrNumber);
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  },
-  visitCharRef: function (charRef) {
-    return charRef.html;
-  }
-});
-
-var ToAttributeTextVisitor = ToTextVisitor.extend({
-  visitPrimitive: function (stringBooleanOrNumber) {
-    var str = String(stringBooleanOrNumber);
-    // escape `&` and `"` this time, not `&` and `<`
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-  },
-  visitCharRef: function (charRef) {
-    return charRef.html;
-  }
-});
-
-Blaze.TEXTMODE.Visitors = {};
-Blaze.TEXTMODE.Visitors[Blaze.TEXTMODE.STRING] = ToTextVisitor;
-Blaze.TEXTMODE.Visitors[Blaze.TEXTMODE.RCDATA] = ToRCDataVisitor;
-Blaze.TEXTMODE.Visitors[Blaze.TEXTMODE.ATTRIBUTE] = ToAttributeTextVisitor;
-
 Blaze.toText = function (content, textMode) {
-  var visitor = Blaze.TEXTMODE.Visitors[textMode];
-  if (! visitor) {
-    if (! textMode)
-      throw new Error("textMode required for Blaze.toText");
+  if (! textMode)
+    throw new Error("textMode required for Blaze.toText");
+  if (! (textMode === HTML.TEXTMODE.STRING ||
+         textMode === HTML.TEXTMODE.RCDATA ||
+         textMode === HTML.TEXTMODE.ATTRIBUTE))
     throw new Error("Unknown textMode: " + textMode);
-  }
 
-  return (new visitor).visit(content);
+  var visitor = new Blaze.ToTextVisitor;
+  visitor.textMode = textMode;
+
+  return visitor.visit(content);
 };
 
+////////////////////////////// Blaze.toHTML
 
-
-//////////////////// Blaze.toHTML
-
-// This function is mainly for server-side rendering and is not in the normal
-// code path for client-side rendering.
-
-var ToHTMLVisitor = HTML.Visitor.extend({
-  visitNull: function (nullOrUndefined) {
-    return '';
-  },
-  visitPrimitive: function (stringBooleanOrNumber) {
-    var str = String(stringBooleanOrNumber);
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  },
-  visitArray: function (array) {
-    var parts = [];
-    for (var i = 0; i < array.length; i++)
-      parts.push(this.visit(array[i]));
-    return parts.join('');
-  },
-  visitComment: function (comment) {
-    return '<!--' + comment.sanitizedValue + '-->';
-  },
-  visitCharRef: function (charRef) {
-    return charRef.html;
-  },
-  visitRaw: function (raw) {
-    return raw.value;
-  },
-  visitTag: function (tag) {
-    var attrStrs = [];
-
-    var attrs = tag.attrs;
-    if (attrs) {
-      for (var k in attrs) {
-        var v = this.toText(attrs[k], Blaze.TEXTMODE.ATTRIBUTE);
-        attrStrs.push(' ' + k + '="' + v + '"');
-      }
-    }
-
-    var tagName = tag.tagName;
-    var startTag = '<' + tagName + attrStrs.join('') + '>';
-
-    var children = tag.children;
-    var childStrs = [];
-    var content;
-    if (tagName === 'textarea') {
-
-      for (var i = 0; i < children.length; i++)
-        childStrs.push(this.toText(children[i], Blaze.TEXTMODE.RCDATA));
-
-      content = childStrs.join('');
-      if (content.slice(0, 1) === '\n')
-        // TEXTAREA will absorb a newline, so if we see one, add
-        // another one.
-        content = '\n' + content;
-
-    } else {
-      for (var i = 0; i < children.length; i++)
-        childStrs.push(this.visit(children[i]));
-
-      content = childStrs.join('');
-    }
-
-    var result = startTag + content;
-
-    if (children.length || ! HTML.isVoidElement(tagName)) {
-      // "Void" elements like BR are the only ones that don't get a close
-      // tag in HTML5.  They shouldn't have contents, either, so we could
-      // throw an error upon seeing contents here.
-      result += '</' + tagName + '>';
-    }
-
-    return result;
-  },
+Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
   visitObject: function (x) {
     if (x instanceof Blaze.RenderPoint)
       return x.toHTML();
@@ -174,16 +40,16 @@ var ToHTMLVisitor = HTML.Visitor.extend({
   }
 });
 
+// This function is mainly for server-side rendering and is not in the normal
+// code path for client-side rendering.
 Blaze.toHTML = function (content) {
-  return (new ToHTMLVisitor).visit(content);
+  return (new Blaze.ToHTMLVisitor).visit(content);
 };
 
 
-//////////////////// evaluate
+////////////////////////////// Blaze.evaluate
 
-var IDENT = function (x) { return x; };
-
-var EvaluatingVisitor = HTML.TransformingVisitor.extend({
+Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend({
   visitObject: function (x) {
     if (x instanceof Blaze.RenderPoint)
       return x.evaluate();
@@ -202,16 +68,16 @@ var EvaluatingVisitor = HTML.TransformingVisitor.extend({
 
 // Expand all Vars and components, making the current computation depend on them.
 Blaze.evaluate = function (content) {
-  return (new EvaluatingVisitor).visit(content);
+  return (new Blaze.EvaluatingVisitor).visit(content);
 };
 
-Blaze._evaluateAttributes = function (attrs) {
-  return (new EvaluatingVisitor).visitAttributes(attrs);
+Blaze.evaluateAttributes = function (attrs) {
+  return (new Blaze.EvaluatingVisitor).visitAttributes(attrs);
 };
 
-//////////////////// Blaze.toDOM
+////////////////////////////// Blaze.toDOM
 
-var ToDOMVisitor = HTML.Visitor.extend({
+Blaze.ToDOMVisitor = HTML.Visitor.extend({
   visitNull: function (x, intoArray) {
     return intoArray;
   },
@@ -263,12 +129,12 @@ var ToDOMVisitor = HTML.Visitor.extend({
       var controller = Blaze.currentController;
       Blaze._onAutorun(Deps.autorun(function (c) {
         Blaze.withCurrentController(controller, function () {
-          var evaledAttrs = Blaze._evaluateAttributes(rawAttrs);
+          var evaledAttrs = Blaze.evaluateAttributes(rawAttrs);
           var flattenedAttrs = HTML.flattenAttributes(evaledAttrs);
           var stringAttrs = {};
           for (var attrName in flattenedAttrs) {
             stringAttrs[attrName] = Blaze.toText(flattenedAttrs[attrName],
-                                                 Blaze.TEXTMODE.STRING);
+                                                 HTML.TEXTMODE.STRING);
           }
           attrUpdater.update(stringAttrs);
         });
@@ -300,5 +166,5 @@ var ToDOMVisitor = HTML.Visitor.extend({
 });
 
 Blaze.toDOM = function (content) {
-  return (new ToDOMVisitor).visit(content, []);
+  return (new Blaze.ToDOMVisitor).visit(content, []);
 };
