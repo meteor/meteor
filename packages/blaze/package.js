@@ -10,8 +10,15 @@ Package.on_use(function (api) {
   //api.use('observe-sequence');
 
   api.add_files([
+    'preamble.js',
     'html.js',
     'microscore.js',
+    'sequence.js',
+    'var.js',
+    'domrange.js',
+    'render.js',
+    'component.js',
+    'materialize.js',
     'attrs.js',
     'blaze.js'
   ], 'client');
