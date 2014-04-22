@@ -115,11 +115,17 @@ var optimize = function (tree) {
 
       if (node.attrs && ! mustOptimize) {
         var attrs = node.attrs;
-        for (var k in attrs) {
-          if (doesAttributeValueHaveSpecials(attrs[k])) {
-            mustOptimize = true;
-            break;
+        var isArray = HTML.isArray(attrs);
+        for (var i = 0; i < (isArray ? attrs.length : 1); i++) {
+          var a = (isArray ? attrs[i] : attrs);
+          for (var k in a) {
+            if (doesAttributeValueHaveSpecials(a[k])) {
+              mustOptimize = true;
+              break;
+            }
           }
+          if (mustOptimize)
+            break;
         }
       }
 
@@ -178,15 +184,15 @@ Spacebars.isReservedName = function (name) {
 var codeGenTemplateTag = function (tag) {
   if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
     // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
-    return HTML.EmitCode('function () { return ' +
+    return BlazeTools.EmitCode('function () { return ' +
                          codeGenMustache(tag.path, tag.args, 'attrMustache')
                          + '; }');
   } else {
     if (tag.type === 'DOUBLE') {
-      return HTML.EmitCode('function () { return ' +
+      return BlazeTools.EmitCode('function () { return ' +
                            codeGenMustache(tag.path, tag.args) + '; }');
     } else if (tag.type === 'TRIPLE') {
-      return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
+      return BlazeTools.EmitCode('function () { return Spacebars.makeRaw(' +
                            codeGenMustache(tag.path, tag.args) + '); }');
     } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
       var path = tag.path;
@@ -214,7 +220,7 @@ var codeGenTemplateTag = function (tag) {
         if (elseContentBlock)
           callArgs.push(elseContentBlock);
 
-        return HTML.EmitCode(
+        return BlazeTools.EmitCode(
           builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
 
       } else {
@@ -243,7 +249,7 @@ var codeGenTemplateTag = function (tag) {
         if (dataFunc) {
           includeCode =
             'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
-            Spacebars.codeGen(HTML.EmitCode(includeCode)) + '))';
+            Spacebars.codeGen(BlazeTools.EmitCode(includeCode)) + '))';
         }
 
         if (path[0] === 'UI' &&
@@ -251,7 +257,7 @@ var codeGenTemplateTag = function (tag) {
           includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
         }
 
-        return HTML.EmitCode(includeCode);
+        return BlazeTools.EmitCode(includeCode);
       }
     } else {
       // Can't get here; TemplateTag validation should catch any
@@ -264,7 +270,7 @@ var codeGenTemplateTag = function (tag) {
 var makeObjectLiteral = function (obj) {
   var parts = [];
   for (var k in obj)
-    parts.push(toObjectLiteralKey(k) + ': ' + obj[k]);
+    parts.push(BlazeTools.toObjectLiteralKey(k) + ': ' + obj[k]);
   return '{' + parts.join(', ') + '}';
 };
 
@@ -295,7 +301,7 @@ var codeGenPath = function (path, opts) {
     return builtInLexicals[path[1]];
   }
 
-  var args = [toJSLiteral(path[0])];
+  var args = [BlazeTools.toJSLiteral(path[0])];
   var lookupMethod = 'lookup';
   if (opts && opts.lookupTemplate && path.length === 1)
     lookupMethod = 'lookupTemplate';
@@ -303,7 +309,7 @@ var codeGenPath = function (path, opts) {
 
   if (path.length > 1) {
     code = 'Spacebars.dot(' + code + ', ' +
-      _.map(path.slice(1), toJSLiteral).join(', ') + ')';
+      _.map(path.slice(1), BlazeTools.toJSLiteral).join(', ') + ')';
   }
 
   return code;
@@ -324,7 +330,7 @@ var codeGenArgValue = function (arg) {
   case 'NUMBER':
   case 'BOOLEAN':
   case 'NULL':
-    argCode = toJSLiteral(argValue);
+    argCode = BlazeTools.toJSLiteral(argValue);
     break;
   case 'PATH':
     argCode = codeGenPath(argValue);
@@ -436,39 +442,24 @@ var codeGenInclusionParts = function (tag) {
 // ============================================================
 // Main compiler
 
-var replaceSpecials = function (node) {
-  if (node instanceof HTML.Tag) {
-    // potential optimization: don't always create a new tag
-    var newChildren = _.map(node.children, replaceSpecials);
-    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-    var oldAttrs = node.attrs;
-    var newAttrs = null;
+var SpecialReplacer = HTML.TransformingVisitor.extend({
+  visitObject: function (x) {
+    if (x instanceof HTMLTools.Special)
+      return codeGenTemplateTag(x.value);
 
-    if (oldAttrs) {
-      _.each(oldAttrs, function (value, name) {
-        if (name.charAt(0) !== '$') {
-          newAttrs = (newAttrs || {});
-          newAttrs[name] = replaceSpecials(value);
-        }
-      });
+    return HTML.TransformingVisitor.prototype.visitObject.call(this, x);
+  },
+  visitAttributes: function (attrs) {
+    if (attrs instanceof HTMLTools.Special)
+      return codeGenTemplateTag(attrs.value);
 
-      if (oldAttrs.$specials && oldAttrs.$specials.length) {
-        newAttrs = (newAttrs || {});
-        newAttrs.$dynamic = _.map(oldAttrs.$specials, function (special) {
-          return codeGenTemplateTag(special.value);
-        });
-      }
-    }
-
-    newTag.attrs = newAttrs;
-    return newTag;
-  } else if (node instanceof Array) {
-    return _.map(node, replaceSpecials);
-  } else if (node instanceof HTMLTools.Special) {
-    return codeGenTemplateTag(node.value);
-  } else {
-    return node;
+    // call super (e.g. for case where `attrs` is an array)
+    return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
   }
+});
+
+var replaceSpecials = function (node) {
+  return (new SpecialReplacer).visit(node);
 };
 
 Spacebars.compile = function (input, options) {
@@ -500,7 +491,7 @@ Spacebars.codeGen = function (parseTree, options) {
     code += 'var template = this; ';
   }
   code += 'return ';
-  code += HTML.toJS(tree);
+  code += BlazeTools.toJS(tree);
   code += '; })';
 
   code = beautify(code);
