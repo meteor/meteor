@@ -11,13 +11,13 @@
 
 // Collection containing pending credentials of oauth credential requests
 // Has key, credential, and createdAt fields.
-Oauth._pendingCredentials = new Meteor.Collection(
+OAuth._pendingCredentials = new Meteor.Collection(
   "meteor_oauth_pendingCredentials", {
     _preventAutopublish: true
   });
 
-Oauth._pendingCredentials._ensureIndex('key', {unique: 1});
-Oauth._pendingCredentials._ensureIndex('createdAt');
+OAuth._pendingCredentials._ensureIndex('key', {unique: 1});
+OAuth._pendingCredentials._ensureIndex('createdAt');
 
 
 
@@ -26,22 +26,24 @@ var _cleanStaleResults = function() {
   // Remove credentials older than 1 minute
   var timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  Oauth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
 };
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
 // Stores the key and credential in the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
 // @param key {string}
 // @param credential {string}   The credential to store
 //
-Oauth._storePendingCredential = function (key, credential) {
-  if (credential instanceof Error)
+OAuth._storePendingCredential = function (key, credential) {
+  if (credential instanceof Error) {
     credential = storableError(credential);
+  } else {
+    credential = OAuth.sealSecret(credential);
+  }
 
-  Oauth._pendingCredentials.insert({
+  OAuth._pendingCredentials.insert({
     key: key,
     credential: credential,
     createdAt: new Date()
@@ -50,20 +52,19 @@ Oauth._storePendingCredential = function (key, credential) {
 
 
 // Retrieves and removes a credential from the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
 // @param key {string}
 //
-Oauth._retrievePendingCredential = function (key) {
+OAuth._retrievePendingCredential = function (key) {
   check(key, String);
 
-  var pendingCredential = Oauth._pendingCredentials.findOne({ key:key });
+  var pendingCredential = OAuth._pendingCredentials.findOne({ key:key });
   if (pendingCredential) {
-    Oauth._pendingCredentials.remove({ _id: pendingCredential._id });
+    OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
       return recreateError(pendingCredential.credential.error);
     else
-      return pendingCredential.credential;
+      return OAuth.openSecret(pendingCredential.credential);
   } else {
     return undefined;
   }

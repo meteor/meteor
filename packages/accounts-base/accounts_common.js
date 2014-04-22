@@ -53,6 +53,18 @@ Accounts.config = function(options) {
                   "server; some configuration options may not take effect.");
   }
 
+  // We need to validate the oauthSecretKey option at the time
+  // Accounts.config is called. We also deliberately don't store the
+  // oauthSecretKey in Accounts._options.
+  if (_.has(options, "oauthSecretKey")) {
+    if (Meteor.isClient)
+      throw new Error("The oauthSecretKey option may only be specified on the server");
+    if (! Package["oauth-encryption"])
+      throw new Error("The oauth-encryption package must be loaded to set oauthSecretKey");
+    Package["oauth-encryption"].OAuthEncryption.loadKey(options.oauthSecretKey);
+    options = _.omit(options, "oauthSecretKey");
+  }
+
   // validate option keys
   var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
                     "restrictCreationByEmailDomain", "loginExpirationInDays"];

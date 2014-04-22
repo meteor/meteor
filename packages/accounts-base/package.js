@@ -30,6 +30,8 @@ Package.on_use(function (api) {
   // it's loaded.
   api.use('autopublish', 'server', {weak: true});
 
+  api.use('oauth-encryption', 'server', {weak: true});
+
   api.export('Accounts');
 
   api.add_files('accounts_common.js', ['client', 'server']);
@@ -50,5 +52,6 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('random');
   api.use('test-helpers');
+  api.use('oauth-encryption');
   api.add_files('accounts_tests.js', 'server');
 });

@@ -1158,6 +1158,11 @@ Template.api.accounts_config = {
       name: "loginExpirationInDays",
       type: "Number",
       descr: "The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration."
+    },
+    {
+      name: "oauthSecretKey",
+      type: "String",
+      descr: "When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details."
     }
   ]
 };

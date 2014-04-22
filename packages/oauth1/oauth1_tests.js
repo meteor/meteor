@@ -1,4 +1,4 @@
-Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved", function (test) {
+var testPendingCredential = function (test) {
   var http = Npm.require('http');
   var twitterfooId = Random.id();
   var twitterfooName = 'nickname' + Random.id();
@@ -25,13 +25,13 @@ Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved", functi
 
   try {
     // register a fake login service
-    Oauth.registerService(serviceName, 1, urls, function (query) {
+    OAuth.registerService(serviceName, 1, urls, function (query) {
       return {
         serviceData: {
           id: twitterfooId,
           screenName: twitterfooName,
-          accessToken: twitterfooAccessToken,
-          accessTokenSecret: twitterfooAccessTokenSecret
+          accessToken: OAuth.sealSecret(twitterfooAccessToken),
+          accessTokenSecret: OAuth.sealSecret(twitterfooAccessTokenSecret)
         },
         options: {
           option1: twitterOption1
@@ -50,23 +50,37 @@ Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved", functi
         oauth_token: twitterfooAccessToken
       }
     };
-    OauthTest.middleware(req, new http.ServerResponse(req));
+    OAuthTest.middleware(req, new http.ServerResponse(req));
 
     // Test that the result for the token is available
-    var result = Oauth._retrievePendingCredential(credentialToken);
+    var result = OAuth._retrievePendingCredential(credentialToken);
+    var serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
-    test.equal(result.serviceData.id, twitterfooId);
-    test.equal(result.serviceData.screenName, twitterfooName);
-    test.equal(result.serviceData.accessToken, twitterfooAccessToken);
-    test.equal(result.serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
+    test.equal(serviceData.id, twitterfooId);
+    test.equal(serviceData.screenName, twitterfooName);
+    test.equal(serviceData.accessToken, twitterfooAccessToken);
+    test.equal(serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
     test.equal(result.options.option1, twitterOption1);
 
     // Test that pending credential is removed after being retrieved
-    result = Oauth._retrievePendingCredential(credentialToken);
+    result = OAuth._retrievePendingCredential(credentialToken);
     test.isUndefined(result);
 
   } finally {
-    OauthTest.unregisterService(serviceName);
+    OAuthTest.unregisterService(serviceName);
   }
+};
+
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (without oauth encryption)", function (test) {
+  OAuthEncryption.loadKey(null);
+  testPendingCredential(test);
 });
 
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", function (test) {
+  try {
+    OAuthEncryption.loadKey(new Buffer([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
+    testPendingCredential(test);
+  } finally {
+    OAuthEncryption.loadKey(null);
+  }
+});
