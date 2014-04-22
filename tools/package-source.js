@@ -308,7 +308,8 @@ _.extend(PackageSource.prototype, {
 
     self.defaultArches = {'os': [options.archName]};
 
-    self.dependencyVersions = options.dependencyVersions ||  {dependencies: {}, plugins: {}};
+    self.dependencyVersions = options.dependencyVersions ||
+        {dependencies: {}, plugins: {}};
   },
 
   // Initialize a PackageSource from a package.js-style package directory. Uses

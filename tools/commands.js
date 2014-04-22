@@ -1273,14 +1273,14 @@ main.registerCommand({
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// test
+// test-packages
 ///////////////////////////////////////////////////////////////////////////////
 
 //
 // Test your local packages.
 //
 main.registerCommand({
-  name: 'test',
+  name: 'test-packages',
   maxArgs: Infinity,
   options: {
     port: { type: Number, short: "p", default: 3000 },

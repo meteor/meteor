@@ -255,7 +255,6 @@ _.extend(Catalog.prototype, {
       // problem, we either will have made tools into a star, or we'll
       // have made Catalog be backed by a real database.
       var versionId = "local-" + Math.floor(Math.random() * 1000000000);
-      versionIds[name] = versionId;
 
       // Accurate version numbers are of supreme importance, because
       // we use version numbers (of build-time dependencies such as
@@ -308,25 +307,28 @@ _.extend(Catalog.prototype, {
         source: null,
         lastUpdated: null,
         published: null,
-        isTest: test,
+        isTest: packageSource.isTest,
         containsPlugins: packageSource.containsPlugins()
       });
+
+      // Test packages are not allowed to have tests. Any time we recurse into
+      // this function, it will be with test marked as true, so recursion
+      // will terminate quickly.
+      if (!test && packageSource.test) {
+        self.effectiveLocalPackages[packageSource.test] = packageSource.sourceRoot;
+        initVersionRecordFromSource(packageSource.sourceRoot, packageSource.test, true);
+      }
     };
 
-    var versionIds = {}; // name to _id of the created Version record
-
-    // First, we add the records for all the local packages.
-    _.each(self.effectiveLocalPackages, initVersionRecordFromSource);
-
-    // Sometimes, packages contain test packages. We treat them as separate
-    // packages. Add those packages to the catalog too.
-    _.each(packageSources, function (source) {
-      if (source.test) {
-        self.effectiveLocalPackages[source.test] = source.sourceRoot;
-        initVersionRecordFromSource(source.sourceRoot, source.test, true);
-      }
+    // Add the records for packages and their tests. With underscore, each only
+    // runs on the original members of the collection, so it is safe to modify
+    // effectiveLocalPackages in initPackageSource (to add test packages).
+    _.each(self.effectiveLocalPackages, function(dir, name) {
+      initVersionRecordFromSource(dir, name, false /* test-only package? */);
     });
 
+    // We have entered records for everything, and we are going to build lazily,
+    // so we are done.
     if (_setInitialized)
       self.initialized = true;
 
