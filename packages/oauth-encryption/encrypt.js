@@ -87,30 +87,12 @@ OAuthEncryption.seal = function (data, userId) {
 // To prevent an attacker from breaking the encryption key by
 // observing the result of sending manipulated ciphertexts, `open`
 // throws "decryption unsuccessful" on any error.
-//
-// For developers working on new code which uses oauth-encryption
-// (such as working on a new login service), it's painful not to be
-// able to see the actual cause of failure.  Setting
-// `Meteor._printDecryptionFailure` displays the reason the decryption
-// failed.  This should never be set in production.  (Developers who
-// are simply using existing oauth and accounts packages wouldn't need
-// to use this).
-//
-// XXX `Meteor._printDecryptionFailure` parallels livedata's
-// `Meteor._printSentDDP` and `Meteor._printReceivedDDP`: debugging
-// utilities very useful for development but ones we wouldn't want to
-// run in production.  We might like to have an API such as
-// `Meteor.dev` which would be guaranteed to be an empty
-// object in production.
-//
 OAuthEncryption.open = function (ciphertext, userId) {
   if (! gcmKey)
     throw new Error("No OAuth encryption key loaded");
 
   try {
     if (ciphertext.algorithm !== "aes-128-gcm") {
-      if (Meteor._printDecryptionFailure)
-        Meteor._debug("unsupported algorithm in OAuth ciphertext");
       throw new Error();
     }
 
@@ -118,32 +100,32 @@ OAuthEncryption.open = function (ciphertext, userId) {
       gcmKey,
       new Buffer(ciphertext.iv, "base64"),
       new Buffer(ciphertext.ciphertext, "base64"),
-      new Buffer([]),
+      new Buffer([]), /* aad */
       new Buffer(ciphertext.authTag, "base64")
     );
 
     if (! result.auth_ok) {
-      if (Meteor._printDecryptionFailure) {
-        Meteor._debug("OAuth decryption unsuccessful");
-      }
       throw new Error();
     }
 
+    var err;
     var data;
+
     try {
       data = EJSON.parse(result.plaintext.toString());
     } catch (e) {
-      if (e instanceof SyntaxError && Meteor._printDecryptionFailure) {
-        Meteor._debug("OAuth decryption unsuccessful");
-      }
-      throw new Error();
+      err = new Error();
     }
 
     if (data.userId !== userId) {
-      throw new Error();
+      err = new Error();
     }
 
-    return data.data;
+    if (err) {
+      throw err;
+    } else {
+      return data.data;
+    }
   } catch (e) {
     throw new Error("decryption failed");
   }
