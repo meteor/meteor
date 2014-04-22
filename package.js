@@ -1,0 +1,21 @@
+Package.describe({
+  summary: "Compile-time tools for Blaze",
+  internal: true
+});
+
+Package.on_use(function (api) {
+  api.export('BlazeTools');
+
+  api.use('htmljs');
+  api.use('underscore');
+
+  api.add_files(['preamble.js',
+                 'tokens.js',
+                 'tojs.js']);
+});
+
+Package.on_test(function (api) {
+  api.use('blaze-tools');
+  api.use('tinytest');
+  api.use('underscore');
+});
