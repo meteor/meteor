@@ -1,5 +1,6 @@
 
 HTML = {};
+Blaze.HTML = HTML;
 
 var IDENTITY = function (x) { return x; };
 var SLICE = Array.prototype.slice;
