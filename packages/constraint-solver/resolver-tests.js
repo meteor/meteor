@@ -34,7 +34,7 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   A100.addConstraint(resolver.getConstraint("F", "1.1.0"));
 
   test.equal(A100.exactTransitiveDependenciesVersions(resolver), [B100, C100]);
-  test.equal(A100.inexactTransitiveDependencies(resolver), ["D", "F"]);
+  test.equal(A100.inexactTransitiveDependencies(resolver).toArray(), ["D", "F"]);
   test.equal(resolver.resolve(["A"]), [A100, B100, C100, D100, E100, F100]);
 });
 
@@ -80,7 +80,7 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
       var distanceA = A ? semver2number(A.version) : 0;
       return 1000000000 - distanceC - distanceA;
     }
-  });
+  }).sort();
 
   test.equal(AnBSolution, [A100, B100, C120]);
 });
@@ -118,7 +118,7 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
         return sum + 100;
       }, 0);
     }
-  });
+  }).sort();
 
   test.equal(solution, [A110, B100, C100]);
 });
