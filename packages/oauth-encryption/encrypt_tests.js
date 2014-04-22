@@ -91,6 +91,35 @@ Tinytest.add("oauth-encryption - open with wrong userId", function (test) {
   OAuthEncryption.loadKey(null);
 });
 
+Tinytest.add("oauth-encryption - seal and open with no userId", function (test) {
+  OAuthEncryption.loadKey(
+    new Buffer([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]).
+    toString("base64")
+  );
+  var ciphertext = OAuthEncryption.seal({a: 1, b: 2});
+  var decrypted = OAuthEncryption.open(ciphertext);
+  test.equal(decrypted, {a: 1, b: 2});
+});
+
+Tinytest.add("oauth-encryption - open modified ciphertext", function (test) {
+  OAuthEncryption.loadKey(
+    new Buffer([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]).
+    toString("base64")
+  );
+  var ciphertext = OAuthEncryption.seal({a: 1, b: 2});
+
+  var b = new Buffer(ciphertext.ciphertext, "base64");
+  b[0] = b[0] ^ 1;
+  ciphertext.ciphertext = b.toString("base64");
+
+  test.throws(
+    function () {
+      OAuthEncryption.open(ciphertext);
+    },
+    "decryption failed"
+  );
+});
+
 
 Tinytest.add("oauth-encryption - isSealed", function (test) {
   OAuthEncryption.loadKey(
