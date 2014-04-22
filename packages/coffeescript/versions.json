@@ -38,8 +38,6 @@
     "universal-events": "1.0.0+local",
     "jquery": "1.0.0+local"
   },
-  "plugins": {
-    "compileCoffeescript": {}
-  },
+  "plugins": {},
   "format": "1.0"
 }

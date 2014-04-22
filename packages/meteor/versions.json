@@ -37,8 +37,6 @@
     "templating": "1.0.0+local",
     "handlebars": "1.0.0+local"
   },
-  "plugins": {
-    "basicFileTypes": {}
-  },
+  "plugins": {},
   "format": "1.0"
 }

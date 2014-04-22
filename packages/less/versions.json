@@ -38,8 +38,6 @@
     "templating": "1.0.0+local",
     "handlebars": "1.0.0+local"
   },
-  "plugins": {
-    "compileLess": {}
-  },
+  "plugins": {},
   "format": "1.0"
 }

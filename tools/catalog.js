@@ -679,17 +679,11 @@ _.extend(Catalog.prototype, {
     }
 
     var versionRecord =  _.findWhere(self.versions, { packageName: name,
-        version: version });
+                                                      version: version });
     if (!versionRecord) {
-      versionRecord = _.findWhere(self.versions, {packageName: name});
-      if (versionRecord) {
-        versionRecord.version = version;
-        return versionRecord;
-      }
       return null;
     }
-    return _.findWhere(self.versions, { packageName: name,
-                                        version: version });
+    return versionRecord;
   },
 
   // As getVersion, but returns info on the latest version of the

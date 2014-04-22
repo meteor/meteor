@@ -834,15 +834,21 @@ main.registerCommand({
     // nessessary versions and write them to disk.
     project.generatePackageLoader(options.appDir);
     var packages = project.getDirectDependencies(options.appDir);
-    _.each(packages.appDeps, function (version, name) {
-      var versionInfo = catalog.getVersion(name, version);
-      if (!versionInfo) {
-        process.stderr.write("Cannot process package list. Unknown: " + name +
+    var messages = buildmessage.capture(function () {
+      _.each(packages.appDeps, function (version, name) {
+        var versionInfo = catalog.getVersion(name, version);
+        if (!versionInfo) {
+          buildmessage.error("Cannot process package list. Unknown: " + name +
                              " at version " + version + "\n");
-        process.exit(1);
-      }
-      items.push({ name: name, description: versionInfo.description });
+          return;
+        }
+        items.push({ name: name, description: versionInfo.description });
+      });
     });
+    if (messages.hasMessages()) {
+      process.stdout.write("\n" + messages.formatMessages());
+      return 1;
+    }
   } else {
     _.each(catalog.getAllPackageNames(), function (name) {
       var versionInfo = catalog.getLatestVersion(name);
@@ -1279,27 +1285,40 @@ main.registerCommand({
     }
     testPackages = _.keys(packageList);
   } else {
-    testPackages = _.map(options.args, function (p) {
-      // If it's a package name, just pass it through.
-      if (p.indexOf('/') === -1)
-        return p;
+    var messages = buildmessage.capture(function () {
+      testPackages = _.map(options.args, function (p) {
+        // If it's a package name, just pass it through.
+        if (p.indexOf('/') === -1) {
+          if (p.indexOf('@') !== -1) {
+            buildmessage.error(
+              "You may not specify versions for local packages: " + p );
+            // Recover by returning p anyway.
+          }
+          return p;
+        }
 
-      // Otherwise it's a directory; load it into a Package now. Use
-      // path.resolve to strip trailing slashes, so that packageName doesn't
-      // have a trailing slash.
-      //
-      // Why use addLocalPackage instead of just loading the packages
-      // and passing Unipackage objects to the bundler? Because we
-      // actually need the Catalog to know about the package, so that
-      // we are able to resolve the test package's dependency on the
-      // main package. This is not ideal (I hate how this mutates global
-      // state) but it'll do for now.
-      var packageDir = path.resolve(p);
-      var packageName = path.basename(packageDir);
-      catalog.addLocalPackage(packageName, packageDir);
-      localPackageNames.push(packageName);
-      return packageName;
+        // Otherwise it's a directory; load it into a Package now. Use
+        // path.resolve to strip trailing slashes, so that packageName doesn't
+        // have a trailing slash.
+        //
+        // Why use addLocalPackage instead of just loading the packages
+        // and passing Unipackage objects to the bundler? Because we
+        // actually need the Catalog to know about the package, so that
+        // we are able to resolve the test package's dependency on the
+        // main package. This is not ideal (I hate how this mutates global
+        // state) but it'll do for now.
+        var packageDir = path.resolve(p);
+        var packageName = path.basename(packageDir);
+        catalog.addLocalPackage(packageName, packageDir);
+        localPackageNames.push(packageName);
+        return packageName;
+      });
     });
+
+    if (messages.hasMessages()) {
+      process.stdout.write("\n" + messages.formatMessages());
+      return 1;
+    }
   }
 
   // Make a temporary app dir (based on the test runner app). This will be

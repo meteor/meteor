@@ -434,6 +434,13 @@ _.extend(PackageSource.prototype, {
       // - npmDependencies: map from npm package name to required
       //   version (string)
       _transitional_registerBuildPlugin: function (options) {
+        // Tests don't have plugins; plugins initialized in the control file
+        // belong to the package and not to the test. (This will be less
+        // confusing in the new control file format).
+        if (self.isTest) {
+          return;
+        }
+
         if (! ('name' in options)) {
           buildmessage.error("build plugins require a name",
                              { useMyCaller: true });
