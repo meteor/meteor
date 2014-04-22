@@ -205,13 +205,12 @@ if (Meteor.isClient) {
   var anchorForNormalization = document.createElement('A');
 }
 
-var getProtocol = function (url) {
+var normalizeUrl = function (url) {
   if (Meteor.isClient) {
     anchorForNormalization.href = url;
-    return anchorForNormalization.protocol;
+    return anchorForNormalization.href;
   } else {
-    var parsed = Npm.require('url').parse(url);
-    return parsed.protocol;
+    throw new Error('normalizeUrl not implemented on the server');
   }
 };
 
@@ -233,7 +232,8 @@ var UrlHandler = AttributeHandler.extend({
     if (UI._javascriptUrlsAllowed()) {
       origUpdate.apply(self, args);
     } else {
-      var isJavascriptProtocol = (getProtocol(value) === 'javascript:');
+      var isJavascriptProtocol =
+            (normalizeUrl(value).indexOf('javascript:') === 0);
       if (isJavascriptProtocol) {
         Meteor._debug("javascript: URLs are not allowed. " +
                       "Use UI._allowJavascriptUrls() to enable them.");
