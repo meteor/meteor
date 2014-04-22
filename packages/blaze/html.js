@@ -131,12 +131,16 @@ var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
   return instance;
 };
 
+HTML.isArray = function (x) {
+  return (x instanceof Array);
+};
+
 HTML.isNully = function (node) {
   if (node == null)
     // null or undefined
     return true;
 
-  if (node instanceof Array) {
+  if (HTML.isArray(node)) {
     // is it an empty array or an array of all nully items?
     for (var i = 0; i < node.length; i++)
       if (! HTML.isNully(node[i]))
@@ -171,7 +175,7 @@ HTML.flattenAttributes = function (attrs) {
   if (! attrs)
     return attrs;
 
-  var isArray = (attrs instanceof Array);
+  var isArray = HTML.isArray(attrs);
   if (attrs.length === 0)
     return null;
 
@@ -306,7 +310,7 @@ _assign(HTML.Visitor.prototype, {
         }
       }
 
-      if (content instanceof Array)
+      if (HTML.isArray(content))
         return this.visitArray.apply(this, arguments);
 
       return this.visitObject.apply(this, arguments);
@@ -373,7 +377,7 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
     return newTag;
   },
   visitAttributes: function (attrs/*, ...*/) {
-    if (attrs instanceof Array) {
+    if (HTML.isArray(attrs)) {
       var argsCopy = SLICE.call(arguments);
       var result = attrs;
       for (var i = 0; i < attrs.length; i++) {
