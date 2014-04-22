@@ -29,6 +29,10 @@
 * Add `meteor list-sites` command for listing the sites that you have
   deployed to meteor.com with your Meteor developer account.
 
+* Blaze no longer renders javascript: URLs in attribute values by
+  default, to help prevent cross-site scripting bugs. Use
+  `UI._allowJavascriptUrls()` to allow them.
+
 * Upgraded dependencies:
   - Node.js from 0.10.25 to 0.10.26.
   - MongoDB driver from 1.3.19 to 1.4.1
