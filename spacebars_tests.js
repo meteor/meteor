@@ -225,22 +225,22 @@ Tinytest.add("spacebars - Spacebars.dot", function (test) {
 //////////////////////////////////////////////////
 
 Tinytest.add("spacebars - parse", function (test) {
-  test.equal(HTML.toJS(Spacebars.parse('{{foo}}')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('{{foo}}')),
              'HTMLTools.Special({type: "DOUBLE", path: ["foo"]})');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{!foo}}')), 'null');
-  test.equal(HTML.toJS(Spacebars.parse('x{{!foo}}y')), '"xy"');
+  test.equal(BlazeTools.toJS(Spacebars.parse('{{!foo}}')), 'null');
+  test.equal(BlazeTools.toJS(Spacebars.parse('x{{!foo}}y')), '"xy"');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{!--foo--}}')), 'null');
-  test.equal(HTML.toJS(Spacebars.parse('x{{!--foo--}}y')), '"xy"');
+  test.equal(BlazeTools.toJS(Spacebars.parse('{{!--foo--}}')), 'null');
+  test.equal(BlazeTools.toJS(Spacebars.parse('x{{!--foo--}}y')), '"xy"');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{#foo}}x{{/foo}}')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('{{#foo}}x{{/foo}}')),
              'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
              'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: HTMLTools.Special({type: "BLOCKOPEN", path: ["bar"]})})');
 
-  test.equal(HTML.toJS(Spacebars.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
              '[HTML.DIV("hello"), " ", HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.DIV(HTMLTools.Special({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
 
 
@@ -263,22 +263,22 @@ Tinytest.add("spacebars - parse", function (test) {
     Spacebars.parse('<a {{> x}}></a>');
   });
 
-  test.equal(HTML.toJS(Spacebars.parse('<a {{! x--}} b=c{{! x}} {{! x}}></a>')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<a {{! x--}} b=c{{! x}} {{! x}}></a>')),
              'HTML.A({b: "c"})');
 
-  test.equal(HTML.toJS(Spacebars.parse('<a {{!-- x--}} b=c{{ !-- x --}} {{!-- x -- }}></a>')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<a {{!-- x--}} b=c{{ !-- x --}} {{!-- x -- }}></a>')),
              'HTML.A({b: "c"})');
 
   // currently, if there are only comments, the attribute is truthy.  This is
   // because comments are stripped during tokenization.  If we include
   // comments in the token stream, these cases will become falsy for selected.
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}>')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<input selected={{!foo}}>')),
              'HTML.INPUT({selected: ""})');
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}{{!bar}}>')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<input selected={{!foo}}{{!bar}}>')),
              'HTML.INPUT({selected: ""})');
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!--foo--}}>')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<input selected={{!--foo--}}>')),
     'HTML.INPUT({selected: ""})');
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!--foo--}}{{!--bar--}}>')),
+  test.equal(BlazeTools.toJS(Spacebars.parse('<input selected={{!--foo--}}{{!--bar--}}>')),
     'HTML.INPUT({selected: ""})');
 
 });
