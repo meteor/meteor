@@ -37,6 +37,10 @@ toObjectLiteralKey = function (k) {
 };
 BlazeTools.toObjectLiteralKey = toObjectLiteralKey;
 
+var hasToJS = function (x) {
+  return x.toJS && (typeof (x.toJS) === 'function');
+};
+
 ToJSVisitor = HTML.Visitor.extend({
   visitNull: function (nullOrUndefined) {
     return 'null';
@@ -64,8 +68,11 @@ ToJSVisitor = HTML.Visitor.extend({
     return this.generateCall('HTML.Raw', null, [raw.value]);
   },
   visitObject: function (x) {
-    if (x instanceof BlazeTools.EmitCode)
+    if (x instanceof BlazeTools.EmitCode) {
       return x.value;
+    } else if (x.toJS && (typeof (x.toJS) === 'function')) {
+      return x.toJS(this);
+    }
 
     throw new Error("Unexpected object in HTMLjs in toJS: " + x);
   },
@@ -79,27 +86,39 @@ ToJSVisitor = HTML.Visitor.extend({
       tagSymbol = 'HTML.getTag(' + toJSLiteral(name) + ')';
     }
 
-    var attrsStr = null;
+    var attrsArray = null;
     if (attrs) {
+      attrsArray = [];
+      var needsHTMLAttrs = false;
       if (HTML.isArray(attrs)) {
         var attrsArray = [];
         for (var i = 0; i < attrs.length; i++) {
-          if (attrs[i] instanceof BlazeTools.EmitCode) {
-            attrsArray.push(attrs[i].value);
+          var a = attrs[i];
+          if (a instanceof BlazeTools.EmitCode) {
+            attrsArray.push(a.value);
+            needsHTMLAttrs = true;
+          } else if (hasToJS(a)) {
+            attrsArray.push(a.toJS(this));
+            needsHTMLAttrs = true;
           } else {
             var attrsObjStr = this.generateAttrsDictionary(attrs[i]);
             if (attrsObjStr !== null)
               attrsArray.push(attrsObjStr);
           }
         }
-        // Array of one attrs object still uses `HTML.Attrs`
-        // in case it is something besides a plain object and thus
-        // would not be treated as an attrs argument by the
-        // constructor.
-        if (attrsArray.length)
-          attrsStr = 'HTML.Attrs(' + attrsArray.join(', ') + ')';
+      } else if (hasToJS(attrs)) {
+        attrsArray.push(attrs.toJS(this));
+        needsHTMLAttrs = true;
       } else {
-        attrsStr = this.generateAttrsDictionary(attrs);
+        attrsArray.push(this.generateAttrsDictionary(attrs));
+      }
+    }
+    var attrsStr = null;
+    if (attrsArray && attrsArray.length) {
+      if (attrsArray.length === 1 && ! needsHTMLAttrs) {
+        attrsStr = attrsArray[0];
+      } else {
+        attrsStr = 'HTML.Attrs(' + attrsArray.join(', ') + ')';
       }
     }
 
@@ -115,6 +134,11 @@ ToJSVisitor = HTML.Visitor.extend({
     return tagSymbol + '(' + argStrs.join(', ') + ')';
   },
   generateAttrsDictionary: function (attrsDict) {
+    if (attrsDict.toJS && (typeof (attrsDict.toJS) === 'function')) {
+      // not an attrs dictionary, but something else!  Like a template tag.
+      return attrsDict.toJS(this);
+    }
+
     var kvStrs = [];
     for (var k in attrsDict) {
       if (! HTML.isNully(attrsDict[k]))
