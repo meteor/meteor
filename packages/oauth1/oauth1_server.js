@@ -18,7 +18,7 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
-    Oauth._storeRequestToken(query.state,
+    OAuth._storeRequestToken(query.state,
       oauthBinding.requestToken,
       oauthBinding.requestTokenSecret
     );
@@ -39,7 +39,7 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    var requestTokenInfo = Oauth._retrieveRequestToken(query.state);
+    var requestTokenInfo = OAuth._retrieveRequestToken(query.state);
 
     // Verify user authorized access and the oauth_token matches
     // the requestToken from previous step

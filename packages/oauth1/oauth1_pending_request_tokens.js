@@ -19,13 +19,13 @@
 
 // Collection containing pending request tokens
 // Has key, requestToken, requestTokenSecret, and createdAt fields.
-Oauth._pendingRequestTokens = new Meteor.Collection(
+OAuth._pendingRequestTokens = new Meteor.Collection(
   "meteor_oauth_pendingRequestTokens", {
     _preventAutopublish: true
   });
 
-Oauth._pendingRequestTokens._ensureIndex('key', {unique: 1});
-Oauth._pendingRequestTokens._ensureIndex('createdAt');
+OAuth._pendingRequestTokens._ensureIndex('key', {unique: 1});
+OAuth._pendingRequestTokens._ensureIndex('createdAt');
 
 
 
@@ -34,7 +34,7 @@ var _cleanStaleResults = function() {
   // Remove request tokens older than 5 minute
   var timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 5);
-  Oauth._pendingRequestTokens.remove({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingRequestTokens.remove({ createdAt: { $lt: timeCutoff } });
 };
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
@@ -45,8 +45,8 @@ var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param requestToken {string}
 // @param requestTokenSecret {string}
 //
-Oauth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
-  Oauth._pendingRequestTokens.insert({
+OAuth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
+  OAuth._pendingRequestTokens.insert({
     key: key,
     requestToken: OAuth.sealSecret(requestToken),
     requestTokenSecret: OAuth.sealSecret(requestTokenSecret),
@@ -60,12 +60,12 @@ Oauth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
 //
 // @param key {string}
 //
-Oauth._retrieveRequestToken = function (key) {
+OAuth._retrieveRequestToken = function (key) {
   check(key, String);
 
-  var pendingRequestToken = Oauth._pendingRequestTokens.findOne({ key: key });
+  var pendingRequestToken = OAuth._pendingRequestTokens.findOne({ key: key });
   if (pendingRequestToken) {
-    Oauth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
+    OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {
       requestToken: OAuth.openSecret(pendingRequestToken.requestToken),
       requestTokenSecret: OAuth.openSecret(
