@@ -173,7 +173,8 @@ a:hover {
 /** Main pane **/
 
 #main {
-    margin: 10px;
+    margin: 10px 10px 10px 60px;
+    /*margin-left: 70px;*/
     line-height: 1.3;
     color: #333333;
 }
@@ -407,10 +408,34 @@ dl.callbacks {
 
 /** layout control **/
 
-/* default to no sidebar */
-#nav {
+#menu-ico {
+    font-size: 30px;
+    float: right;
+    position: fixed;
+    top: 3px;
+    left: 6px;
+}
+
+#menu-ico.hidden {
     display: none;
 }
+
+/* default to no sidebar */
+#nav {
+    display: block;
+    background: #FFF;
+    position: fixed;
+    width: 260px;
+    height: 100%;
+    top: 0;
+    left: -220px;
+}
+
+#nav.show {
+    left: 0;
+    overflow: auto;
+}
+
 .github-ribbon {
     display: none;
 }
@@ -438,6 +463,10 @@ pre {
 .main-headline {
     display: none;
 }
+
+#menu-ico {
+    display: none;
+}
 }
 
 @media (min-width: 1024px) {
@@ -451,5 +480,8 @@ pre {
 }
 .github-ribbon {
     display: block;
+}
+#menu-ico {
+    display: none;
 }
 }
