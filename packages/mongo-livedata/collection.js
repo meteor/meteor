@@ -465,11 +465,8 @@ _.each(["insert", "update", "remove"], function (name) {
         throwIfSelectorIsNotId(args[0], name);
       }
 
-      options = {};
-      options.returnStubValue = true;
-
       ret = chooseReturnValueFromCollectionResult(
-        self._connection.apply(self._prefix + name, args, options, wrappedCallback)
+        self._connection.apply(self._prefix + name, args, {returnStubValue: true}, wrappedCallback)
       );
 
     } else {
