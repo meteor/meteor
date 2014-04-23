@@ -386,10 +386,6 @@ _.each(["insert", "update", "remove"], function (name) {
             generateId = false;
           }
         }
-        // Transforms require an ID always
-        if (!self._transform) {
-          generateId = true;
-        }
         if (generateId) {
           insertId = args[0]._id = self._makeNewID();
         }
