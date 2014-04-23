@@ -1,4 +1,4 @@
-Tinytest.add("spacebars - token parsers", function (test) {
+Tinytest.add("blaze-tools - token parsers", function (test) {
 
   var run = function (func, input, expected) {
     var scanner = new HTMLTools.Scanner('z' + input);
@@ -23,9 +23,9 @@ Tinytest.add("spacebars - token parsers", function (test) {
     run(func, input, expected);
   };
 
-  var parseNumber = Spacebars._$.parseNumber;
-  var parseIdentifierName = Spacebars._$.parseIdentifierName;
-  var parseStringLiteral = Spacebars._$.parseStringLiteral;
+  var parseNumber = BlazeTools.parseNumber;
+  var parseIdentifierName = BlazeTools.parseIdentifierName;
+  var parseStringLiteral = BlazeTools.parseStringLiteral;
 
   runValue(parseNumber, "0", 0);
   runValue(parseNumber, "-0", 0);

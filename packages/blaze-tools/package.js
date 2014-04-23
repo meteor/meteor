@@ -18,4 +18,7 @@ Package.on_test(function (api) {
   api.use('blaze-tools');
   api.use('tinytest');
   api.use('underscore');
+  api.use('html-tools');
+
+  api.add_files(['token_tests.js']);
 });

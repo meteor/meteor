@@ -43,6 +43,8 @@ UI.EvaluatingVisitor = HTML.TransformingVisitor.extend({
       var content = instance.render('STATIC');
       stopWithLater(instance);
       return this.visit(content, instance);
+    } else if (node instanceof UI.InTemplateScope) {
+      return this.visit(node.content, node.parentPtr);
     }
 
     // this will throw an error; other objects are not allowed!
@@ -71,10 +73,24 @@ UI.evaluateAttributes = function (attrs, parentComponent) {
   return (new UI.EvaluatingVisitor).visitAttributes(attrs, parentComponent);
 };
 
+UI.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
+  toText: function (node, textMode) {
+    return UI.toText(node, textMode);
+  }
+});
+
+UI.ToTextVisitor = HTML.ToTextVisitor.extend({
+  toHTML: function (node) {
+    return UI.toHTML(node);
+  }
+});
+
 UI.toHTML = function (content, parentComponent) {
-  return HTML.toHTML(UI.evaluate(content, parentComponent));
+  return (new UI.ToHTMLVisitor).visit(
+    UI.evaluate(content, parentComponent));
 };
 
 UI.toText = function (content, textMode, parentComponent) {
-  return HTML.toText(UI.evaluate(content, parentComponent), textMode);
+  return (new UI.ToTextVisitor({textMode: textMode})).visit(
+    UI.evaluate(content, parentComponent));
 };

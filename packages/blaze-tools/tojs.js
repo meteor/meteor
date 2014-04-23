@@ -9,6 +9,9 @@ BlazeTools.EmitCode = function (value) {
 
   this.value = value;
 };
+BlazeTools.EmitCode.prototype.toJS = function (visitor) {
+  return this.value;
+};
 
 // Turns any JSONable value into a JavaScript literal.
 toJSLiteral = function (obj) {
@@ -68,9 +71,7 @@ ToJSVisitor = HTML.Visitor.extend({
     return this.generateCall('HTML.Raw', null, [raw.value]);
   },
   visitObject: function (x) {
-    if (x instanceof BlazeTools.EmitCode) {
-      return x.value;
-    } else if (x.toJS && (typeof (x.toJS) === 'function')) {
+    if (hasToJS(x)) {
       return x.toJS(this);
     }
 
@@ -94,10 +95,7 @@ ToJSVisitor = HTML.Visitor.extend({
         var attrsArray = [];
         for (var i = 0; i < attrs.length; i++) {
           var a = attrs[i];
-          if (a instanceof BlazeTools.EmitCode) {
-            attrsArray.push(a.value);
-            needsHTMLAttrs = true;
-          } else if (hasToJS(a)) {
+          if (hasToJS(a)) {
             attrsArray.push(a.toJS(this));
             needsHTMLAttrs = true;
           } else {

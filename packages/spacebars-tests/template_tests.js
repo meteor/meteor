@@ -1284,7 +1284,7 @@ Tinytest.add('spacebars - templates - nully attributes', function (test) {
       test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
     }
 
-    var html = HTML.toHTML(templateWithData);
+    var html = UI.toHTML(templateWithData);
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
     test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
   };
