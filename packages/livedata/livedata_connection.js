@@ -682,13 +682,12 @@ _.extend(Connection.prototype, {
     // use a random seed on the server.  In that case, we don't pass the
     // randomSeed to save bandwidth, and we don't even generate it to save a
     // bit of CPU and to avoid consuming entropy.
-    var randomSeedGenerator = {};
-    randomSeedGenerator.generate = function () {
-      var self = randomSeedGenerator;
-      if (!self.generated) {
-        self.generated = makeRpcSeed(enclosing, name);
+    var randomSeed = null;
+    var randomSeedGenerator = function () {
+      if (randomSeed === null) {
+        randomSeed = makeRpcSeed(enclosing, name);
       }
-      return self.generated;
+      return randomSeed;
     };
 
     // Run the stub, if we have one. The stub is supposed to make some
@@ -713,7 +712,7 @@ _.extend(Connection.prototype, {
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
-        randomSeed: function () { return randomSeedGenerator.generate(); }
+        randomSeed: function () { return randomSeedGenerator(); }
       });
 
       if (!alreadyInSimulation)
@@ -796,8 +795,8 @@ _.extend(Connection.prototype, {
     };
 
     // Send the randomSeed only if we used it
-    if (randomSeedGenerator.generated) {
-      message.randomSeed = randomSeedGenerator.generated;
+    if (randomSeed !== null) {
+      message.randomSeed = randomSeed;
     }
 
     var methodInvoker = new MethodInvoker({
