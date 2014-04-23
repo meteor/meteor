@@ -36,8 +36,6 @@ MethodInvocation = function (options) {
   this.randomSeed = options.randomSeed;
 
   // This is set by RandomStream.get; and holds the random stream state
-  // We declare it here because setting a property from another class is not
-  // great coding style, but there's not really a great alternative.
   this.randomStream = null;
 };
 
