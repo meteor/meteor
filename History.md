@@ -1,9 +1,11 @@
 ## v.NEXT
 
+#### Meteor Accounts
+
 * Log out a user's other sessions when they change their password.
 
-* Move boilerplate HTML from tools to webapp. Changes internal
-  Webapp.addHtmlAttributeHook API incompatibly.
+* XXX emily: does remove-users-observe warrant an entry here? or is this what
+  the previous thing is?
 
 * Store pending OAuth login results in the database instead of
   in-memory, so that an OAuth flow succeeds even if different requests
@@ -12,9 +14,6 @@
 * When validateLoginAttempt callbacks return false, don't override a more
   specific error message.
 
-* The oplog observe driver handles errors communicating with Mongo better and
-  knows to re-poll all queries during Mongo failovers.
-
 * Add `Random.secret()` for generating security-critical secrets like
   login tokens.
 
@@ -22,22 +21,78 @@
   login tokens have actually been removed from the database, not when
   they have been marked for eventual removal. Fixes #1915.
 
-* Add `meteor list-sites` command for listing the sites that you have
-  deployed to meteor.com with your Meteor developer account.
-
-* Blaze no longer renders javascript: URLs in attribute values by
-  default, to help prevent cross-site scripting bugs. Use
-  `UI._allowJavascriptUrls()` to allow them.
-
-* Upgraded dependencies:
-  - Node.js from 0.10.25 to 0.10.26.
-  - MongoDB driver from 1.3.19 to 1.4.1
-
 * Rename `Oauth` to `OAuth`.  `Oauth` is now an alias for backwards
   compatibility.
 
 * Add `oauth-encryption` package for encrypting sensitive account
   credentials in the database.
+
+#### Blaze
+
+* Blaze no longer renders javascript: URLs in attribute values by
+  default, to help prevent cross-site scripting bugs. Use
+  `UI._allowJavascriptUrls()` to allow them.
+
+* Fix `UI.toHTML` on templates containing `{{#with}}`
+
+* Fix {{#with}} over a data context that is mutated
+
+* Properly clean up autoruns on `UI.toHTML`
+
+* Add support for `{{!-- block comments --}}` in Spacebars. Block comments may
+  contain `}}`, so they are more useful than `{{! normal comments}}` for
+  commenting out sections of Spacebars templates.
+  XXX shouldn't this be in spacebars/README.md?
+
+* Kill TBODY special case in DomRange (XXX 45ac9b1a6d needs a better
+  description)
+
+* Do not ignore jquery-event extra parameters (? XXX b2193f5)
+
+
+#### DDP and Mongo
+
+* DDP heartbeats
+
+* The oplog observe driver handles errors communicating with Mongo better and
+  knows to re-poll all queries during Mongo failovers.
+
+* Fix bugs involving mutating DDP method arguments.
+
+
+#### meteor command-line tool
+
+* Move boilerplate HTML from tools to webapp. Changes internal
+  Webapp.addHtmlAttributeHook API incompatibly.
+
+* Add `meteor list-sites` command for listing the sites that you have
+  deployed to meteor.com with your Meteor developer account.
+
+* Third-party template languages can request that their generated source loads
+  before other JavaScript files, just like *.html files, by passing the
+  isTemplate option to Plugin.registerSourceHandler.
+
+* You can specify a particular interface for the dev mode runner to bind to with
+  `meteor -p host:port`.
+
+* Don't include proprietary tar tags in bundle tarballs.
+
+* Convert relative urls to absolute url when merging CSS files
+
+
+#### Upgraded dependencies
+
+* Node.js from 0.10.25 to 0.10.26.
+* MongoDB driver from 1.3.19 to 1.4.1
+* stylus: 0.42.3 (from 0.42.2)
+* showdown: XXX (from XXX)
+* css-parse: an unreleased version (from 1.7.0)
+* css-stringify: an unreleased version (from 1.4.1)
+
+
+Patches contributed by GitHub users aldeed, apendua, arbesfeld, awwx, dandv,
+davegonzalez, justinsb, mquandalle, Neftedollar, Pent, sdarnell, and timhaines.
+
 
 
 ## v0.8.0.1
