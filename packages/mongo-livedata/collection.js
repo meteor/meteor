@@ -663,8 +663,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
           if (method === "insert") {
             // Ensure that we have an id on an insert
             if (!_.has(arguments[0], '_id')) {
-              // shallow-copy the document and generate an ID
-              arguments[0] = _.extend({}, arguments[0]);
               arguments[0]._id = self._makeNewID();
             }
           }
