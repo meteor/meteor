@@ -595,10 +595,10 @@ _.extend(Session.prototype, {
       var self = this;
 
       // reject malformed messages
-      // We silently ignore unknown attributes, for forwards compatability.
+      // We silently ignore unknown attributes, for forwards compatibility.
       // When adding randomSeed functionality, we added an attribute.
       // If old server versions raised errors on the unknown attribute
-      // that would have made the compatability story much more complicated.
+      // that would have made the compatibility story much more complicated.
       // This worked because the value was optional, though.
       // When we must add an attribute that cannot be ignored,
       // we should probably do that by checking that our counterparty's
