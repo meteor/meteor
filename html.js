@@ -273,7 +273,9 @@ var _assign = function (tgt, src) {
 };
 
 
-HTML.Visitor = function () {};
+HTML.Visitor = function (props) {
+  _assign(this, props);
+};
 
 HTML.Visitor.extend = function (options) {
   var curType = this;
@@ -497,9 +499,7 @@ HTML.toText = function (content, textMode) {
          textMode === HTML.TEXTMODE.ATTRIBUTE))
     throw new Error("Unknown textMode: " + textMode);
 
-  var visitor = new HTML.ToTextVisitor;
-  visitor.textMode = textMode;
-
+  var visitor = new HTML.ToTextVisitor({textMode: textMode});;
   return visitor.visit(content);
 };
 
@@ -531,6 +531,7 @@ HTML.ToHTMLVisitor = HTML.Visitor.extend({
 
     var attrs = tag.attrs;
     if (attrs) {
+      attrs = HTML.flattenAttributes(attrs);
       for (var k in attrs) {
         var v = this.toText(attrs[k], HTML.TEXTMODE.ATTRIBUTE);
         attrStrs.push(' ' + k + '="' + v + '"');
