@@ -2306,7 +2306,7 @@ _.each( [collectionInsert, collectionUpsert,
          functionChain2Insert, functionChain2Upsert], function (fn) {
 _.each( [1, 3], function (repetitions) {
 _.each( [1, 3], function (collectionCount) {
-_.each( [undefined, 'STRING', 'MONGO'], function (idGeneration) {
+_.each( ['STRING', 'MONGO'], function (idGeneration) {
 
   testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
     var collectionOptions = { idGeneration: idGeneration, };
