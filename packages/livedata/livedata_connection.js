@@ -622,13 +622,17 @@ _.extend(Connection.prototype, {
   //   onResultReceived: Function - a callback to call as soon as the method
   //                                result is received. the data written by
   //                                the method may not yet be in the cache!
-  //   returnStubValue: Boolean - If true, we will return the stub function's
-  //                              return value. Normally, we return undefined;
-  //                              you shouldn't normally be using the return
-  //                              value.  However, consistent id generation
-  //                              does require the stub return value (as
-  //                              it is otherwise difficult to get the id).
-  //                              Try to avoid using this option!
+  //   returnStubValue: Boolean - If true then in cases where we would have
+  //                              otherwise discarded the stub's return value
+  //                              and returned undefined, instead we go ahead
+  //                              and return it.  Specifically, this is any
+  //                              time other than when (a) we are already
+  //                              inside a stub or (b) we are in Node and no
+  //                              callback was provided.  Currently we require
+  //                              this flag to be explicitly passed to reduce
+  //                              the likelihood that stub return values will
+  //                              be confused with server return values; we
+  //                              may improve this in future.
   // @param callback {Optional Function}
   apply: function (name, args, options, callback) {
     var self = this;
