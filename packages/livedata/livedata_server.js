@@ -605,7 +605,7 @@ _.extend(Session.prototype, {
         return;
       }
 
-      var randomSeed = msg['randomSeed'] || null;
+      var randomSeed = msg.randomSeed || null;
 
       // set up to mark the method as satisfied once all observers
       // (and subscriptions) have reacted to any writes that were
