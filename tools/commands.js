@@ -52,9 +52,6 @@ var hostedWithGalaxy = function (site) {
 
 // Get all local packages available. Returns a map from the package name to the
 // version record for that package.
-//
-// If problems happen while generating the list, print appropriate
-// messages to stderr and return null.
 var getLocalPackages = function () {
   var ret = {};
 
@@ -1401,7 +1398,10 @@ main.registerCommand({
     var programsDir = project.getProgramsDirectory(options.appDir);
     var programsSubdirs = project.getProgramsSubdirs(options.appDir);
     _.each(programsSubdirs, function (program) {
-      files.rm_recursive(path.join(programsDir, program, '.build'));
+      // The implementation of this part of the function might change once we
+      // change the control file format to explicitly specify packages and
+      // programs instead of just loading everything in the programs directory?
+      files.rm_recursive(path.join(programsDir, program, '.build.' + program));
     });
   }
 
@@ -1674,8 +1674,6 @@ main.registerCommand({
   var buildTimeDeps = compiler.determineBuildTimeDependencies(packageSource);
   var uploadInfo = conn.call('createPackageVersion', {
     packageName: packageSource.name,
-    testName: packageSource.testName,
-    isTest: packageSource.isTest,
     version: version,
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
@@ -1696,7 +1694,7 @@ main.registerCommand({
   messages = buildmessage.capture(
     { title: "getting test sources" },
     function () {
-      var testName = packageSource.test;
+      var testName = packageSource.testName;
       if (testName) {
         var testSource = new PackageSource;
         testSource.initFromPackageDir(testName, options.packageDir);

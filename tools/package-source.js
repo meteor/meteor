@@ -235,6 +235,15 @@ var PackageSource = function () {
   // dependencies, we will use them again to build this package. This makes
   // building packages slightly more efficient and ensures repeatable builds.
   self.dependencyVersions = {dependencies: {}, plugins: {}};
+
+  // If this package has a corresponding test package (for example,
+  // underscore-test), defined in the same package.js file, store its value
+  // here.
+  self.testName = null;
+
+  // Test packages are dealt with differently in the linker (and not published
+  // to the catalog), so we need to keep track of them.
+  self.isTest = false;
 };
 
 
@@ -371,7 +380,7 @@ _.extend(PackageSource.prototype, {
             if (name === value) {
               self.isTest = true;
             } else {
-              self.test = value;
+              self.testName = value;
             }
           }
           else {
@@ -632,10 +641,6 @@ _.extend(PackageSource.prototype, {
         //
         // options can include:
         //
-        // - role: DEPRECATED. defaults to "use", but you could pass something
-        //   like "test" if for some reason you wanted to include a
-        //   package's tests (XXX: OK to remove this?)
-        //
         // - unordered: if true, don't require this package to load
         //   before us -- just require it to be loaded anytime. Also
         //   don't bring this package's imports into our
@@ -681,8 +686,6 @@ _.extend(PackageSource.prototype, {
 
           _.each(names, function (name) {
             _.each(where, function (w) {
-              if (options.role && options.role !== "use")
-                throw new Error("Role override is no longer supported");
               uses[w].push(_.extend(utils.parseSpec(name), {
                 unordered: options.unordered || false,
                 weak: options.weak || false
@@ -754,23 +757,6 @@ _.extend(PackageSource.prototype, {
               exports[w].push({name: symbol, testOnly: !!options.testOnly});
             });
           });
-        },
-        // XXX COMPAT WITH 0.6.4
-        error: function () {
-          // I would try to support this but I don't even know what
-          // its signature was supposed to be anymore
-          buildmessage.error(
-            "api.error(), ironically, is no longer supported",
-            { useMyCaller: true });
-          // recover by ignoring
-        },
-        // XXX COMPAT WITH 0.6.4
-        registered_extensions: function () {
-          buildmessage.error(
-            "api.registered_extensions() is no longer supported",
-            { useMyCaller: true });
-          // recover by returning dummy value
-          return [];
         }
       };
 
@@ -779,8 +765,8 @@ _.extend(PackageSource.prototype, {
       } catch (e) {
         buildmessage.exception(e);
         // Recover by ignoring all of the source files in the
-        // packages and any remaining role handlers. It violates the
-        // principle of least surprise to half-run a role handler
+        // packages and any remaining handlers. It violates the
+        // principle of least surprise to half-run a handler
         // and then continue.
         sources = {client: [], server: []};
         fileAndDepLoader = null;
@@ -830,7 +816,7 @@ _.extend(PackageSource.prototype, {
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
       // XXX add a better API for js-analyze to declare itself here
-      if (! (name === "meteor" && !self.isTest) && name !== "js-analyze") {
+      if (name !== "meteor" && name !== "js-analyze") {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
         // we'd add here. This is necessary to resolve the circular dependency

@@ -297,7 +297,7 @@ _.extend(Catalog.prototype, {
       self.versions.push({
         _id: versionId,
         packageName: name,
-        testName: packageSource.test,
+        testName: packageSource.testName,
         version: version,
         publishedBy: null,
         earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
@@ -314,9 +314,9 @@ _.extend(Catalog.prototype, {
       // Test packages are not allowed to have tests. Any time we recurse into
       // this function, it will be with test marked as true, so recursion
       // will terminate quickly.
-      if (!packageSource.isTest && packageSource.test) {
-        self.effectiveLocalPackages[packageSource.test] = packageSource.sourceRoot;
-        initVersionRecordFromSource(packageSource.sourceRoot, packageSource.test);
+      if (!packageSource.isTest && packageSource.testName) {
+        self.effectiveLocalPackages[packageSource.testName] = packageSource.sourceRoot;
+        initVersionRecordFromSource(packageSource.sourceRoot, packageSource.testName);
       }
     };
 
