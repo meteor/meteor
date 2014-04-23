@@ -2309,7 +2309,7 @@ _.each( [1, 3], function (collectionCount) {
 _.each( ['STRING', 'MONGO'], function (idGeneration) {
 
   testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
-    var collectionOptions = { idGeneration: idGeneration, };
+    var collectionOptions = { idGeneration: idGeneration };
 
     var collections = [];
 
