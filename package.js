@@ -25,5 +25,4 @@ Package.on_test(function (api) {
   api.use('blaze-tools');
   api.add_files('spacebars_tests.js');
   api.add_files('compile_tests.js');
-  api.add_files('token_tests.js');
 });
