@@ -722,7 +722,7 @@ _.extend(Connection.prototype, {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var ret = DDP._CurrentInvocation.withValue(invocation, function () {
+        var stubReturnValue = DDP._CurrentInvocation.withValue(invocation, function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.
@@ -748,12 +748,12 @@ _.extend(Connection.prototype, {
     // we'll end up returning undefined.
     if (alreadyInSimulation) {
       if (callback) {
-        callback(exception, ret);
+        callback(exception, stubReturnValue);
         return undefined;
       }
       if (exception)
         throw exception;
-      return ret;
+      return stubReturnValue;
     }
 
     // If an exception occurred in a stub, and we're ignoring it
@@ -831,7 +831,7 @@ _.extend(Connection.prototype, {
     if (future) {
       return future.wait();
     }
-    return options.returnStubValue ? ret : undefined;
+    return options.returnStubValue ? stubReturnValue : undefined;
   },
 
   // Before calling a method stub, prepare all stores to track changes and allow
