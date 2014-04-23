@@ -676,7 +676,7 @@ _.extend(Connection.prototype, {
     // The random streams only have utility if they're used on both the client
     // and the server; if the client doesn't generate any 'random' values
     // then we don't expect the server to generate any either.
-    // Less commonly, the server may perform different actions to the client,
+    // Less commonly, the server may perform different actions from the client,
     // and may in fact generate values where the client did not, but we don't
     // have any client-side values to match, so even here we may as well just
     // use a random seed on the server.  In that case, we don't pass the
