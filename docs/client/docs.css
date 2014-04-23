@@ -8,15 +8,15 @@ small, strike, strong, sub, sup, tt, var,
 dl, dt, dd, ol, ul, li,
 fieldset, form, label, legend,
 table, caption, tbody, tfoot, thead, tr, th, td {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    outline: 0;
-    font-weight: inherit;
-    font-style: inherit;
-    font-family: inherit;
-    font-size: 100%;
-    vertical-align: baseline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  font-weight: inherit;
+  font-style: inherit;
+  font-family: inherit;
+  font-size: 100%;
+  vertical-align: baseline;
 }
 body {
   line-height: 1;
@@ -31,234 +31,233 @@ a img {
 }
 
 /** Basics **/
-
 body {
-    font-family: 'Helvetica Neue', Helvetica, Arial;
+  font-family: 'Helvetica Neue', Helvetica, Arial;
 }
 
 pre {
-    font-family: monospace;
+  font-family: monospace;
 }
 
 code {
-    font-family: monospace;
-    font-size: 1.1em;
-    white-space: pre;
+  font-family: monospace;
+  font-size: 1.1em;
+  white-space: pre;
 }
 
 ul {
-    list-style-type: disc;
-    margin-top: 1em;
-    margin-bottom: 1em;
-    padding-left: 40px;
+  list-style-type: disc;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding-left: 40px;
 }
 
 dl {
-    margin-top: 1em;
-    margin-bottom: 1em;
+  margin-top: 1em;
+  margin-bottom: 1em;
 }
 
 dd {
-    margin-left: 40px;
+  margin-left: 40px;
 }
 
 h1, h2, h3, h4 {
-    color: black;
-    font-weight: bold;
+  color: black;
+  font-weight: bold;
 }
 
 h1 {
-    font-size: 2em;
-    letter-spacing: -1px;
+  font-size: 2em;
+  letter-spacing: -1px;
 }
 
 h1 {
-    margin: 1.5em 0 .67em 0;
+  margin: 1.5em 0 .67em 0;
 }
 
 h2 {
-    font-size: 1.5em;
-    margin: 1.25em 0 .5em 0;
-    letter-spacing: -1px;
+  font-size: 1.5em;
+  margin: 1.25em 0 .5em 0;
+  letter-spacing: -1px;
 }
 
 h3 {
-    font-size: 1.17em;
-    margin: 1em 0 1em 0;
-    letter-spacing: -1px;
+  font-size: 1.17em;
+  margin: 1em 0 1em 0;
+  letter-spacing: -1px;
 }
 
 h4 {
 }
 
 p {
-    margin-bottom: 1em;
+  margin-bottom: 1em;
 }
 
 em {
-    font-style: italic;
+  font-style: italic;
 }
 
 a:hover {
-    background-color: yellow;
+  background-color: yellow;
 }
 
 /** Section nav **/
 
 #nav {
-    line-height: 1.2;
-    border-width: 1px;
-    border-color: black;
-    border-style: none dotted none none;
+  line-height: 1.2;
+  border-width: 1px;
+  border-color: black;
+  border-style: none dotted none none;
 }
 
 #nav-inner {
-    padding-left: 30px;
-    padding-right: 30px;
-    padding-top: -10px;
-    padding-bottom: 30px;
+  padding-left: 30px;
+  padding-right: 30px;
+  padding-top: -10px;
+  padding-bottom: 30px;
 }
 
 #nav a {
-    text-decoration: none;
-    color: black;
+  text-decoration: none;
+  color: black;
 }
 
 #nav a:hover {
-    margin: 0px -5px 0px -5px;
-    padding: 2px 5px 2px 5px;
+  margin: 0px -5px 0px -5px;
+  padding: 2px 5px 2px 5px;
 }
 
 #nav h1 {
-    font-size: 1.8em;
-    margin: 1.2em 0 .2em 0;
+  font-size: 1.8em;
+  margin: 1.2em 0 .2em 0;
 }
 
 #nav h2 {
-    font-size: 1.33em;
-    font-weight: normal;
-    margin: .6em 0 .3em 0;
+  font-size: 1.33em;
+  font-weight: normal;
+  margin: .6em 0 .3em 0;
 }
 
 #nav h3 {
-    font-size: .8em;
-    font-weight: normal;
-    margin: 4px 0px 4px 0px;
-    padding-left: 10px;
-    color: #333333;
-    letter-spacing: 0px;
+  font-size: .8em;
+  font-weight: normal;
+  margin: 4px 0px 4px 0px;
+  padding-left: 10px;
+  color: #333333;
+  letter-spacing: 0px;
 }
 
 #nav h4 {
-    font-size: .8em;
-    font-weight: normal;
-    margin: 4px 0px 4px 0px;
-    padding-left: 20px;
-    color: #333333;
-    letter-spacing: 0px;
+  font-size: .8em;
+  font-weight: normal;
+  margin: 4px 0px 4px 0px;
+  padding-left: 20px;
+  color: #333333;
+  letter-spacing: 0px;
 }
 
 #nav .spacer {
-    height: .33em;
+  height: .33em;
 }
 
 #nav .noncode {
-    font-style: italic;
+  font-style: italic;
 }
 
 #nav .current {
-    color: red;
+  color: red;
 }
 
 /** Main pane **/
 
 #main {
-    margin: 10px 10px 10px 60px;
-    /*margin-left: 70px;*/
-    line-height: 1.3;
-    color: #333333;
+  margin: 10px 10px 10px 60px;
+  /*margin-left: 70px;*/
+  line-height: 1.3;
+  color: #333333;
 }
 
 #main strong {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 #main h1 {
-    border-style: solid none none none;
-    border-color: #999;
-    border-width: 2px;
+  border-style: solid none none none;
+  border-color: #999;
+  border-width: 2px;
 }
 
 #main h2 span {
-    background-color: yellow;
-    margin: 0px -5px 0px -5px;
-    padding: 2px 5px 2px 5px;
+  background-color: yellow;
+  margin: 0px -5px 0px -5px;
+  padding: 2px 5px 2px 5px;
 }
 
 #main a:link, #main a:visited {
-    text-decoration: none;
-    border-bottom: 1px dashed #000;
-    color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed #000;
+  color: inherit;
 }
 
 #main code a:link, #main code a:visited {
-    border: none;
+  border: none;
 }
 
 dl.involved {
-    padding-left: 10px;
+  padding-left: 10px;
 }
 
 dl.involved dt {
-    text-transform: uppercase;
-    font-weight: bold;
+  text-transform: uppercase;
+  font-weight: bold;
 }
 
 dl.involved dt span {
-    background-color: yellow;
+  background-color: yellow;
 }
 
 dl.involved dd {
-    margin-left: 20px;
-    margin-bottom: 1em;
+  margin-left: 20px;
+  margin-bottom: 1em;
 }
 
 dl.involved a {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 dl.involved code {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 dl.example dt {
-    font-weight: bold;
-    margin-left: 10px;
+  font-weight: bold;
+  margin-left: 10px;
 }
 
 dl.example dd {
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 
 dl.objdesc dt {
-    margin-top: 1em;
-    margin-left: 1.5em;
+  margin-top: 1em;
+  margin-left: 1.5em;
 }
 
 dl.objdesc dt .name {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 dl.objdesc dt .type {
-    margin-left: 15px;
-    font-size: .9em;
-    font-weight: 200;
-    color: black;
+  margin-left: 15px;
+  font-size: .9em;
+  font-weight: 200;
+  color: black;
 }
 
 dl.objdesc dd {
-    margin-bottom: 1em;
-    margin-left: 1.5em;
+  margin-bottom: 1em;
+  margin-left: 1.5em;
 }
 
 dl.callbacks dt .name, dl.methods dt .name {
@@ -272,7 +271,7 @@ dl.callbacks {
 }
 
 #main dd p {
-    margin-top: 0.5em;
+  margin-top: 0.5em;
 }
 
 
@@ -280,118 +279,118 @@ dl.callbacks {
 /** API **/
 
 .warning {
-    border-width: 0px 0px 0px 3px;
-    border-style: solid;
-    border-color: red;
-    margin: 21px 0px 21px 10px;
-    padding-left: 15px;
-    font-weight: bold;
-    color: red;
+  border-width: 0px 0px 0px 3px;
+  border-style: solid;
+  border-color: red;
+  margin: 21px 0px 21px 10px;
+  padding-left: 15px;
+  font-weight: bold;
+  color: red;
 }
 
 .note {
-    border-width: 0px 0px 0px 2px;
-    border-style: solid;
-    border-color: black;
-    margin: 21px 0px 21px 10px;
-    padding-left: 15px;
-    font-style: italic;
-    color: black;
+  border-width: 0px 0px 0px 2px;
+  border-style: solid;
+  border-color: black;
+  margin: 21px 0px 21px 10px;
+  padding-left: 15px;
+  font-style: italic;
+  color: black;
 }
 
 .locus {
-    font-style: italic;
+  font-style: italic;
 }
 
 .api {
-    border-width: 0px 0px 2px 0px;
-    border-style: dashed;
-    border-color: #ccc;
-    padding-top: 2em;
-    margin-bottom: 1em;
+  border-width: 0px 0px 2px 0px;
+  border-style: dashed;
+  border-color: #ccc;
+  padding-top: 2em;
+  margin-bottom: 1em;
 }
 
 .bareapi {
-    border-width: 0;
+  border-width: 0;
 }
 
 .api h3 {
-    margin: 0px 0px 1.33em 0px;
-    border-width: 2px 0px 2px 0px;
-    border-style: solid;
-    border-color: black;
-    padding-bottom: 1px;
+  margin: 0px 0px 1.33em 0px;
+  border-width: 2px 0px 2px 0px;
+  border-style: solid;
+  border-color: black;
+  padding-bottom: 1px;
 }
 
 .api h4 {
-    font-weight: normal;
-    font-style: italic;
-    margin-bottom: .25em;
-    text-decoration: underline;
-    margin-left: 20px;
+  font-weight: normal;
+  font-style: italic;
+  margin-bottom: .25em;
+  text-decoration: underline;
+  margin-left: 20px;
 }
 
 .api dl {
-    margin-top: .25em;
+  margin-top: .25em;
 }
 
 .api dl.args {
-    margin-left:  40px;
+  margin-left:  40px;
 }
 
 .api dl.constants {
-    margin-left:  20px;
+  margin-left:  20px;
 }
 
 .api dt {
-    margin-top: 1em;
+  margin-top: 1em;
 }
 
 .api dt .name {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .api dt .type {
-    margin-left: 15px;
-    font-size: .9em;
-    font-weight: 200;
-    color: black;
+  margin-left: 15px;
+  font-size: .9em;
+  font-weight: 200;
+  color: black;
 }
 
 .api dd {
-    margin-bottom: 1em;
-    margin-left: 0;
+  margin-bottom: 1em;
+  margin-left: 0;
 }
 
 .api .desc {
-    margin: 1em 0 1em 20px;
+  margin: 1em 0 1em 20px;
 }
 
 .api .locus {
-    float: right;
-    font-weight: normal;
-    padding-right: 5px;
+  float: right;
+  font-weight: normal;
+  padding-right: 5px;
 }
 
 .or {
-    font-size: .9em;
-    text-decoration: underline;
-    font-style: italic;
+  font-size: .9em;
+  text-decoration: underline;
+  font-style: italic;
 }
 
 #main pre {
-    -moz-border-radius: 10px;
-    -webkit-border-radius: 10px;
-    -o-border-radius: 10px;
-    -ms-border-radius: 10px;
-    -khtml-border-radius: 10px;
-    border-radius: 10px;
-    border-color: #777;
-    border-style: solid;
-    background-color: white;
-    border-width: 1px;
-    padding: 5px;
-    margin: 1em 0 1em 0;
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  -o-border-radius: 10px;
+  -ms-border-radius: 10px;
+  -khtml-border-radius: 10px;
+  border-radius: 10px;
+  border-color: #777;
+  border-style: solid;
+  background-color: white;
+  border-width: 1px;
+  padding: 5px;
+  margin: 1em 0 1em 0;
 }
 
 #main pre, #main pre code { /* override inline code font and white-space*/
@@ -409,49 +408,49 @@ dl.callbacks {
 /** layout control **/
 
 #menu-ico {
-    font-size: 30px;
-    float: right;
-    position: fixed;
-    top: 3px;
-    left: 6px;
+  font-size: 30px;
+  float: right;
+  position: fixed;
+  top: 3px;
+  left: 6px;
 }
 
 #menu-ico.hidden {
-    display: none;
+  display: none;
 }
 
 /* default to no sidebar */
 #nav {
-    display: block;
-    background: #FFF;
-    position: fixed;
-    width: 260px;
-    height: 100%;
-    top: 0;
-    left: -220px;
+  display: block;
+  background: #FFF;
+  position: fixed;
+  width: 260px;
+  height: 100%;
+  top: 0;
+  left: -220px;
 }
 
 #nav.show {
-    left: 0;
-    overflow: auto;
+  left: 0;
+  overflow: auto;
 }
 
 .github-ribbon {
-    display: none;
+  display: none;
 }
 pre {
-    white-space: pre-wrap;
+  white-space: pre-wrap;
 }
 
 @media (min-width: 768px) {
-/* ipad portrait or better */
-#main {
+  /* ipad portrait or better */
+  #main {
     width: 440px;
     height: 100%;
     margin-left: 260px; /* nav width + padding */
     padding: 30px;
-}
-#nav {
+  }
+  #nav {
     display: block;
     width: 200px;
     position: fixed;
@@ -459,29 +458,29 @@ pre {
     height: 100%;
     top: 0;
     left: 0;
-}
-.main-headline {
+  }
+  .main-headline {
     display: none;
-}
+  }    
 
-#menu-ico {
+  #menu-ico {
     display: none;
-}
+  }
 }
 
 @media (min-width: 1024px) {
-/* ipad landscape and desktop */
-#main {
+  /* ipad landscape and desktop */
+  #main {
     width: 610px;
     margin-left: 330px; /* nav width + padding */
-}
-#nav {
+  }
+  #nav {
     width: 270px;
-}
-.github-ribbon {
+  }
+  .github-ribbon {
     display: block;
-}
-#menu-ico {
+  }
+  #menu-ico {
     display: none;
-}
+  }
 }
