@@ -40,13 +40,15 @@ Meteor.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      return new Meteor.Collection.ObjectID();
+      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      return new Meteor.Collection.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
     self._makeNewID = function () {
-      return Random.id();
+      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      return src.id();
     };
     break;
   }
@@ -374,7 +376,19 @@ _.each(["insert", "update", "remove"], function (name) {
               || insertId instanceof Meteor.Collection.ObjectID))
           throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
-        insertId = args[0]._id = self._makeNewID();
+        var generateId = true;
+        // Don't generate the id if we're the client and the 'outermost' call
+        // This optimization saves us passing both the randomSeed and the id
+        // Passing both is redundant.
+        if (self._connection && self._connection !== Meteor.server) {
+          var enclosing = DDP._CurrentInvocation.get();
+          if (!enclosing) {
+            generateId = false;
+          }
+        }
+        if (generateId) {
+          insertId = args[0]._id = self._makeNewID();
+        }
       }
     } else {
       args[0] = Meteor.Collection._rewriteSelector(args[0]);
@@ -401,10 +415,14 @@ _.each(["insert", "update", "remove"], function (name) {
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
     var chooseReturnValueFromCollectionResult = function (result) {
-      if (name === "insert")
+      if (name === "insert") {
+        if (!insertId && result) {
+          insertId = result;
+        }
         return insertId;
-      else
+      } else {
         return result;
+      }
     };
 
     var wrappedCallback;
@@ -444,7 +462,7 @@ _.each(["insert", "update", "remove"], function (name) {
       }
 
       ret = chooseReturnValueFromCollectionResult(
-        self._connection.apply(self._prefix + name, args, wrappedCallback)
+        self._connection.apply(self._prefix + name, args, {returnStubValue: true}, wrappedCallback)
       );
 
     } else {
@@ -638,6 +656,13 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
         try {
+          if (method === "insert") {
+            // Ensure that we have an id on an insert
+            if (!_.has(arguments[0], '_id')) {
+              arguments[0]._id = self._makeNewID();
+            }
+          }
+
           if (this.isSimulation) {
 
             // In a client simulation, you can do any mutation (even with a

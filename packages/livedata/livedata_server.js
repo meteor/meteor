@@ -595,13 +595,17 @@ _.extend(Session.prototype, {
       var self = this;
 
       // reject malformed messages
-      // XXX should also reject messages with unknown attributes?
+      // For now, we silently ignore unknown attributes,
+      // for forwards compatibility.
       if (typeof (msg.id) !== "string" ||
           typeof (msg.method) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array))) {
+          (('params' in msg) && !(msg.params instanceof Array)) ||
+          (('randomSeed' in msg) && (typeof msg.randomSeed !== "string"))) {
         self.sendError("Malformed method invocation", msg);
         return;
       }
+
+      var randomSeed = msg.randomSeed || null;
 
       // set up to mark the method as satisfied once all observers
       // (and subscriptions) have reacted to any writes that were
@@ -637,7 +641,8 @@ _.extend(Session.prototype, {
         userId: self.userId,
         setUserId: setUserId,
         unblock: unblock,
-        connection: self.connectionHandle
+        connection: self.connectionHandle,
+        randomSeed: randomSeed
       });
       try {
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
@@ -1394,7 +1399,8 @@ _.extend(Server.prototype, {
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
-        connection: connection
+        connection: connection,
+        randomSeed: makeRpcSeed(currentInvocation, name)
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {

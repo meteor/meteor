@@ -52,7 +52,14 @@
 
 #### DDP and Mongo
 
-* DDP heartbeats
+* DDP heartbeats XXX
+
+* Generalize the mechanism by which client-side inserts generated IDs to support
+  latency compensation of generation of multiple random values. For example,
+  calling `insert` inside a method body will now return consistent IDs on the
+  client and the server.  Code that wants a random stream that is consistent
+  between method stub and real method execution can get one with
+  `DDP.randomStream`.
 
 * The oplog observe driver handles errors communicating with Mongo better and
   knows to re-poll all queries during Mongo failovers.
