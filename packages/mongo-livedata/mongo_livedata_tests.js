@@ -2314,7 +2314,6 @@ _.each( ['STRING', 'MONGO'], function (idGeneration) {
     var collections = [];
 
     for (var i = 0; i < collectionCount; i++) {
-      //var fn = this[fnName];
       var collectionName = "consistentid_" + Random.id();
       if (Meteor.isClient) {
         Meteor.call('createInsecureCollection', collectionName, collectionOptions);
