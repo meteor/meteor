@@ -285,12 +285,12 @@ _.extend(TestCaseResults.prototype, {
   },
 
   // XXX should change to lengthOf to match vowsjs
-  length: function (obj, expected_length) {
+  length: function (obj, expected_length, msg) {
     if (obj.length === expected_length)
       this.ok();
     else
       this.fail({type: "length", expected: expected_length,
-                 actual: obj.length});
+                 actual: obj.length, message: msg});
   },
 
   // EXPERIMENTAL way to compare two strings that results in
