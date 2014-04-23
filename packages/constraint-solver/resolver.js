@@ -61,6 +61,12 @@ ConstraintSolver.Resolver.prototype.getConstraint =
     new ConstraintSolver.Constraint(name, versionConstraint);
 };
 
+// options: Object:
+// - costFunction: function (choices) - given a state evaluates its cost
+// - estimateCostFunction: function (state) - given a state, evaluates the
+// estimated cost of the best path from state to a final state
+// - combineCostFunction: function (cost, cost) - given two costs (obtained by
+// evaluating states with costFunction and estimateCostFunction)
 ConstraintSolver.Resolver.prototype.resolve =
   function (dependencies, constraints, choices, options) {
   var self = this;
@@ -71,6 +77,9 @@ ConstraintSolver.Resolver.prototype.resolve =
     costFunction: function (choices) { return 0; },
     estimateCostFunction: function (state) {
       return 0;
+    },
+    combineCostFunction: function (cost, anotherCost) {
+      return cost + anotherCost;
     }
   }, options);
 
@@ -98,8 +107,13 @@ ConstraintSolver.Resolver.prototype.resolve =
   var opts = { rootDependencies: rootDependencies };
   var costFunction = options.costFunction;
   var estimateCostFunction = options.estimateCostFunction;
+  var combineCostFunction = options.combineCostFunction;
 
-  pq.push(startState, [estimateCostFunction(startState, opts), 0]);
+  var estimatedStartingCost =
+    combineCostFunction(costFunction(startState.choices, opts),
+                        estimateCostFunction(startState, opts));
+
+  pq.push(startState, [estimatedStartingCost, 0]);
 
   var someError = null;
   var solution = null;
@@ -124,8 +138,8 @@ ConstraintSolver.Resolver.prototype.resolve =
     } else {
       _.each(neighborsObj.neighbors, function (state) {
         var tentativeCost =
-          costFunction(state.choices, opts) +
-          estimateCostFunction(state, opts);
+          combineCostFunction(costFunction(state.choices, opts),
+                              estimateCostFunction(state, opts));
 
         pq.push(state, [tentativeCost, -state.choices.length]);
       });

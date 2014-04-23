@@ -201,49 +201,70 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var resolverOptions = {};
   switch (options.mode) {
   case "LATEST":
+    // XXX reuse this code for "UPDATE" and "MINOR_UPDATE" and "FORCE"
     resolverOptions.costFunction = function (choices, options) {
-      var rootDeps = options.rootDependencies;
-      return _.chain(choices)
-              .reduce(function (sum, uv) {
-                if (! _.contains(rootDeps, uv.name))
-                  return sum;
+      var rootDeps = options.rootDependencies || [];
+      var prevSol = options.previousSolution || [];
 
-                var cost = semverToNum(self.resolver._latestVersion[uv.name]) -
-                  semverToNum(uv.version);
+      var isRootDep = {};
+      var prevSolMapping = {};
 
-                return cost + sum;
-              }, 0).value();
+      // XXX this is recalculated over and over again and can be cached
+      _.each(rootDeps, function (dep) { isRootDep[dep] = true; });
+      _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
+
+      // very major, major, medium, minor costs
+      // XXX maybe these can be calculated lazily?
+      var cost = [0, 0, 0, 0];
+      var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;
+
+      _.each(choices, function (uv) {
+        if (_.has(prevSolMapping, uv.name)) {
+          // The package was present in the previous solution
+          var prev = prevSolMapping[uv.name];
+          var versionsDistance =
+            semverToNum(uv.version) -
+            semverToNum(prev.version);
+
+          var isCompatible =
+            semver.gte(prev.version, uv.earliestCompatibleVersion) ||
+            semver.gte(uv.version, prev.earliestCompatibleVersion);
+
+          // XXX this is correct for root deps, branch out for transitive deps
+          if (versionsDistance < 0 || ! isCompatible) {
+            // the new pick is older or is incompatible with the prev. solution
+            // i.e. can have breaking changes
+            cost[VMAJOR]++;
+          } else {
+            // compatible but possibly newer
+            cost[MEDIUM] += versionsDistance;
+          }
+        } else {
+          // xcxc new to the solution
+        }
+
+        var latestDistance =
+          semverToNum(self.resolver._latestVersion[uv.name]) -
+          semverToNum(uv.version);
+
+        cost[MAJOR] += latestDistance;
+      });
+
+      return cost;
     };
 
     resolverOptions.estimateCostFunction = function (state, options) {
-      var totalCost = 0;
-      var rootDeps = options.rootDependencies;
-      state.dependencies.each(function (dep) {
-        if (!self.resolver.unitsVersions[dep])
-          console.log("FAIL, no info about: ", dep) // xcxc
-        var uv = _.find(_.clone(self.resolver.unitsVersions[dep]).reverse(),
-                        function (uv) { return !state.constraints.violated(uv); });
+      // xcxc fill me in with something smart
+    };
 
-        if (! uv) {
-          totalCost = Infinity;
-          return;
-        }
-
-        if (! _.contains(rootDeps, dep))
-          return;
-
-        var cost = semverToNum(self.resolver._latestVersion[uv.name]) -
-          semverToNum(uv.version);
-
-        totalCost += cost;
-      });
-
-      return totalCost;
+    resolverOptions.combineCostFunction = function (costA, costB) {
+      // xcxc fill me in with something smart
     };
 
     break;
 
   case "CONSERVATIVE":
+    // XXX this is not used anywhere but tests?
     resolverOptions.costFunction = function (choices) {
       return _.reduce(choices, function (sum, uv) {
         return semverToNum(uv.version) + sum;
