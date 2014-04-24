@@ -152,10 +152,10 @@ html_scanner = {
         if (! name)
           throwParseError("Template has no 'name' attribute");
 
-        if (Spacebars.isReservedName(name))
+        if (SpacebarsCompiler.isReservedName(name))
           throwParseError("Template can't be named \"" + name + "\"");
 
-        var renderFuncCode = Spacebars.compile(
+        var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isTemplate: true,
             sourceName: 'Template "' + name + '"'
@@ -168,7 +168,7 @@ html_scanner = {
         if (hasAttribs)
           throwParseError("Attributes on <body> not supported");
 
-        var renderFuncCode = Spacebars.compile(
+        var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isBody: true,
             sourceName: "<body>"
