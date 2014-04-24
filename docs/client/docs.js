@@ -95,6 +95,11 @@ Meteor.startup(function () {
   });
 });
 
+var hideMenu = function () {
+  $('#nav').removeClass('show');
+  $('#menu-ico').removeClass('hidden');
+};
+
 var toc = [
   {name: "Meteor " + Template.headline.release(), id: "top"}, [
     "Quick start",
@@ -421,20 +426,11 @@ Template.nav_section.depthIs = function (n) {
   return this.depth === n;
 };
 
-var showMenu = function () {
-  $('#nav').addClass('show');
-  $('#menu-ico').addClass('hidden');
-};
-
-var hideMenu = function () {
-  $('#nav').removeClass('show');
-  $('#menu-ico').removeClass('hidden');
-};
-
 // Show hidden TOC when menu icon is tapped
 Template.nav.events({
   'click #menu-ico' : function () {
-    showMenu();
+    $('#nav').addClass('show');
+    $('#menu-ico').addClass('hidden');
   },
   // Hide TOC when selecting an item 
   'click a' : function () {

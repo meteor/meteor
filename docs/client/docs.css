@@ -173,7 +173,6 @@ a:hover {
 
 #main {
   margin: 10px 10px 10px 60px;
-  /*margin-left: 70px;*/
   line-height: 1.3;
   color: #333333;
 }
@@ -413,6 +412,7 @@ dl.callbacks {
   position: fixed;
   top: 3px;
   left: 6px;
+  cursor: pointer;
 }
 
 #menu-ico.hidden {
