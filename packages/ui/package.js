@@ -20,6 +20,7 @@ Package.on_use(function (api) {
   api.add_files(['exceptions.js', 'base.js']);
 
   api.add_files(['dombackend.js',
+                 'events.js',
                  'domrange.js'], 'client');
 
   api.add_files(['attrs.js',

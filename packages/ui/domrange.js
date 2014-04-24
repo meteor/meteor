@@ -130,7 +130,7 @@ var rangeRemoved = function (range) {
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
 
-    // XXX clean up events in $_uievents
+    // XXX clean up events
 
     // notify component of removal
     if (range.removed)
@@ -830,137 +830,17 @@ DomRange.prototype.$ = function (selector) {
   return results;
 };
 
-
-///// EVENTS
-
-// List of events to always delegate, never capture.
-// Since jQuery fakes bubbling for certain events in
-// certain browsers (like `submit`), we don't want to
-// get in its way.
-//
-// We could list all known bubbling
-// events here to avoid creating speculative capturers
-// for them, but it would only be an optimization.
-var eventsToDelegate = {
-  blur: 1, change: 1, click: 1, focus: 1, focusin: 1,
-  focusout: 1, reset: 1, submit: 1
-};
-
-var EVENT_MODE_TBD = 0;
-var EVENT_MODE_BUBBLING = 1;
-var EVENT_MODE_CAPTURING = 2;
-
-var HandlerRec = function (elem, type, selector, handler, $ui) {
-  this.elem = elem;
-  this.type = type;
-  this.selector = selector;
-  this.handler = handler;
-  this.$ui = $ui;
-
-  this.mode = EVENT_MODE_TBD;
-
-  // It's important that delegatedHandler be a different
-  // instance for each handlerRecord, because its identity
-  // is used to remove it.
-  //
-  // It's also important that the closure have access to
-  // `this` when it is not called with it set.
-  this.delegatedHandler = (function (h) {
-    return function (evt) {
-      if ((! h.selector) && evt.currentTarget !== evt.target)
-        // no selector means only fire on target
-        return;
-      if (! h.$ui.contains(evt.currentTarget))
-        return;
-      return h.handler.apply(h.$ui, arguments);
-    };
-  })(this);
-
-  // WHY CAPTURE AND DELEGATE: jQuery can't delegate
-  // non-bubbling events, because
-  // event capture doesn't work in IE 8.  However, there
-  // are all sorts of new-fangled non-bubbling events
-  // like "play" and "touchenter".  We delegate these
-  // events using capture in all browsers except IE 8.
-  // IE 8 doesn't support these events anyway.
-
-  var tryCapturing = elem.addEventListener &&
-        (! eventsToDelegate.hasOwnProperty(
-          DomBackend.parseEventType(type)));
-
-  if (tryCapturing) {
-    this.capturingHandler = (function (h) {
-      return function (evt) {
-        if (h.mode === EVENT_MODE_TBD) {
-          // must be first time we're called.
-          if (evt.bubbles) {
-            // this type of event bubbles, so don't
-            // get called again.
-            h.mode = EVENT_MODE_BUBBLING;
-            DomBackend.unbindEventCapturer(
-              h.elem, h.type, h.capturingHandler);
-            return;
-          } else {
-            // this type of event doesn't bubble,
-            // so unbind the delegation, preventing
-            // it from ever firing.
-            h.mode = EVENT_MODE_CAPTURING;
-            DomBackend.undelegateEvents(
-              h.elem, h.type, h.delegatedHandler);
-          }
-        }
-
-        h.delegatedHandler(evt);
-      };
-    })(this);
-
-  } else {
-    this.mode = EVENT_MODE_BUBBLING;
-  }
-};
-
-HandlerRec.prototype.bind = function () {
-  // `this.mode` may be EVENT_MODE_TBD, in which case we bind both. in
-  // this case, 'capturingHandler' is in charge of detecting the
-  // correct mode and turning off one or the other handlers.
-  if (this.mode !== EVENT_MODE_BUBBLING) {
-    DomBackend.bindEventCapturer(
-      this.elem, this.type, this.selector || '*',
-      this.capturingHandler);
-  }
-
-  if (this.mode !== EVENT_MODE_CAPTURING)
-    DomBackend.delegateEvents(
-      this.elem, this.type,
-      this.selector || '*', this.delegatedHandler);
-};
-
-HandlerRec.prototype.unbind = function () {
-  if (this.mode !== EVENT_MODE_BUBBLING)
-    DomBackend.unbindEventCapturer(this.elem, this.type,
-                                   this.capturingHandler);
-
-  if (this.mode !== EVENT_MODE_CAPTURING)
-    DomBackend.undelegateEvents(this.elem, this.type,
-                                this.delegatedHandler);
-};
-
-
 // XXX could write the form of arguments for this function
 // in several different ways, including simply as an event map.
 DomRange.prototype.on = function (events, selector, handler) {
-  var parentNode = this.parentNode();
+  var self = this;
+  var parentNode = self.parentNode();
   if (! parentNode)
     // if we're not in the DOM, silently fail.
     return;
   // haven't been added yet; error
   if (parentNode.$_uiIsOffscreen)
     throw new Error("Can't bind events before DomRange is inserted");
-
-  var eventTypes = [];
-  events.replace(/[^ /]+/g, function (e) {
-    eventTypes.push(e);
-  });
 
   if (! handler && (typeof selector === 'function')) {
     // omitted `selector`
@@ -971,65 +851,40 @@ DomRange.prototype.on = function (events, selector, handler) {
     selector = null;
   }
 
-  for (var i = 0, N = eventTypes.length; i < N; i++) {
-    var type = eventTypes[i];
-
-    var eventDict = parentNode.$_uievents;
-    if (! eventDict)
-      eventDict = (parentNode.$_uievents = {});
-
-    var info = eventDict[type];
-    if (! info) {
-      info = eventDict[type] = {};
-      info.handlers = [];
-    }
-    var handlerList = info.handlers;
-    var handlerRec = new HandlerRec(
-      parentNode, type, selector, handler, this);
-    handlerRec.bind();
-    handlerList.push(handlerRec);
-    // move handlers of enclosing ranges to end
-    for (var r = this.owner; r; r = r.owner) {
-      // r is an enclosing DomRange
-      for (var j = 0, Nj = handlerList.length;
-           j < Nj; j++) {
-        var h = handlerList[j];
-        if (h.$ui === r) {
-          h.unbind();
-          h.bind();
-          handlerList.splice(j, 1); // remove handlerList[j]
-          handlerList.push(h);
-          j--; // account for removed handler
-          Nj--; // don't visit appended handlers
-        }
-      }
-    }
-  }
+  UI.EventSupport.listen(
+    parentNode, events, selector,
+    function (evt) {
+      if (! self.contains(evt.currentTarget))
+        return;
+      return handler.apply(this, arguments);
+    }, self, function (r) {
+      return r.owner;
+    });
 };
 
-  // Returns true if element a contains node b and is not node b.
-  var elementContains = function (a, b) {
-    if (a.nodeType !== 1) // ELEMENT
+// Returns true if element a contains node b and is not node b.
+var elementContains = function (a, b) {
+  if (a.nodeType !== 1) // ELEMENT
+    return false;
+  if (a === b)
+    return false;
+
+  if (a.compareDocumentPosition) {
+    return a.compareDocumentPosition(b) & 0x10;
+  } else {
+    // Should be only old IE and maybe other old browsers here.
+    // Modern Safari has both functions but seems to get contains() wrong.
+    // IE can't handle b being a text node.  We work around this
+    // by doing a direct parent test now.
+    b = b.parentNode;
+    if (! (b && b.nodeType === 1)) // ELEMENT
       return false;
     if (a === b)
-      return false;
+      return true;
 
-    if (a.compareDocumentPosition) {
-      return a.compareDocumentPosition(b) & 0x10;
-    } else {
-          // Should be only old IE and maybe other old browsers here.
-          // Modern Safari has both functions but seems to get contains() wrong.
-          // IE can't handle b being a text node.  We work around this
-          // by doing a direct parent test now.
-      b = b.parentNode;
-      if (! (b && b.nodeType === 1)) // ELEMENT
-        return false;
-      if (a === b)
-        return true;
-
-      return a.contains(b);
-    }
-  };
+    return a.contains(b);
+  }
+};
 
 
 UI.DomRange = DomRange;
