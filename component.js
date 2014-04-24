@@ -15,8 +15,6 @@ _.extend(Blaze.Controller.prototype, {
     var range = Blaze.withCurrentController(self, function () {
       return self.renderToDOM();
     });
-    if (! range)
-      debugger;
     range.controller = self;
     self.domrange = range;
     return range;
