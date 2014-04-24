@@ -57,21 +57,6 @@ _.extend(Blaze.DOMRange, {
 
 
 _.extend(Blaze.DOMRange.prototype, {
-  _memberIn: function (m) {
-    if (m instanceof Blaze.DOMRange)
-      m.parentRange = this;
-    else if (m.nodeType === 1) // DOM Element
-      m.$blaze_range = this;
-  },
-  _memberOut: function (m) {
-    // old members are almost always GCed immediately.
-    // to avoid the potentialy performance hit of deleting
-    // a property, we simple null it out.
-    if (m instanceof Blaze.DOMRange)
-      m.parentRange = null;
-    else if (m.nodeType === 1) // DOM Element
-      m.$blaze_range = null;
-  },
   attach: function (parentElement, nextNode) {
     // This method is called to insert the DOMRange into the DOM for
     // the first time, but it's also used internally when
@@ -138,6 +123,9 @@ _.extend(Blaze.DOMRange.prototype, {
     return (m instanceof Blaze.DOMRange) ? m.lastNode() : m;
   },
   detach: function () {
+    if (! this.attached)
+      throw new Error("Must be attached");
+
     var members = this.members;
     if (members.length) {
       for (var i = 0; i < members.length; i++) {
@@ -209,5 +197,94 @@ _.extend(Blaze.DOMRange.prototype, {
     if (this.stopCallbacks === _emptyArray)
       this.stopCallbacks = [];
     this.stopCallbacks.push(cb);
+  },
+  _memberIn: function (m) {
+    if (m instanceof Blaze.DOMRange)
+      m.parentRange = this;
+    else if (m.nodeType === 1) // DOM Element
+      m.$blaze_range = this;
+  },
+  _memberOut: function (m) {
+    // old members are almost always GCed immediately.
+    // to avoid the potentialy performance hit of deleting
+    // a property, we simple null it out.
+    if (m instanceof Blaze.DOMRange)
+      m.parentRange = null;
+    else if (m.nodeType === 1) // DOM Element
+      m.$blaze_range = null;
+  },
+  containsElement: function (elem) {
+    if (! this.attached)
+      throw new Error("Must be attached");
+
+    // An element is contained in this DOMRange if it's possible to
+    // reach it by walking parent pointers, first through the DOM and
+    // then parentRange pointers.  In other words, the element or some
+    // ancestor of it is at our level of the DOM (a child of our
+    // parentElement), and this element is one of our members or
+    // is a member of a descendant Range.
+
+    if (! Blaze._elementContains(this.parentElement, elem))
+      return false;
+
+    while (elem.parentNode !== this.parentElement)
+      elem = elem.parentElement;
+
+    var range = elem.$blaze_range;
+    while (range && range !== this)
+      range = range.parentRange;
+
+    return range === this;
+  },
+  containsRange: function (range) {
+    if (! this.attached)
+      throw new Error("Must be attached");
+
+    if (! range.attached)
+      return false;
+
+    // A DOMRange is contained in this DOMRange if it's possible
+    // to reach this range by following parent pointers.  If the
+    // DOMRange has the same parentElement, then it should be
+    // a member, or a member of a member etc.  Otherwise, we must
+    // contain its parentElement.
+
+    if (range.parentElement !== this.parentElement)
+      return this.containsElement(range.parentElement);
+
+    if (range === this)
+      return false; // don't contain self
+
+    while (range && range !== this)
+      range = range.parentRange;
+
+    return range === this;
   }
 });
+
+// Returns true if element a contains node b and is not node b.
+//
+// The restriction that `a` be an element (not a document fragment,
+// say) is based on what's easy to implement cross-browser.
+Blaze._elementContains = function (a, b) {
+  if (a.nodeType !== 1) // ELEMENT
+    return false;
+  if (a === b)
+    return false;
+
+  if (a.compareDocumentPosition) {
+    return a.compareDocumentPosition(b) & 0x10;
+  } else {
+    // Should be only old IE and maybe other old browsers here.
+    // Modern Safari has both functions but seems to get contains() wrong.
+    // IE can't handle b being a text node.  We work around this
+    // by doing a direct parent test now.
+    b = b.parentNode;
+    if (! (b && b.nodeType === 1)) // ELEMENT
+      return false;
+    if (a === b)
+      return true;
+
+    return a.contains(b);
+  }
+};
