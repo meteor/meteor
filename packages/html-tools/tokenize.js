@@ -294,10 +294,13 @@ var handleEndOfTag = function (scanner, tag) {
   return null;
 };
 
-var getQuotedAttributeValue = function (scanner, quote) {
-  if (scanner.peek() !== quote)
-    return null;
-  scanner.pos++;
+// Scan a quoted or unquoted attribute value (omit `quote` for unquoted).
+var getAttributeValue = function (scanner, quote) {
+  if (quote) {
+    if (scanner.peek() !== quote)
+      return null;
+    scanner.pos++;
+  }
 
   var tokens = [];
   var charsTokenToExtend = null;
@@ -307,23 +310,24 @@ var getQuotedAttributeValue = function (scanner, quote) {
     var ch = scanner.peek();
     var special;
     var curPos = scanner.pos;
-    if (ch === quote) {
+    if (quote && ch === quote) {
       scanner.pos++;
       return tokens;
+    } else if ((! quote) && (HTML_SPACE.test(ch) || ch === '>')) {
+      return tokens;
     } else if (! ch) {
-      scanner.fatal("Unclosed quoted attribute in tag");
-    } else if (ch === '\u0000') {
-      scanner.fatal("Unexpected NULL character in attribute value");
-    } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, quote))) {
+      scanner.fatal("Unclosed attribute in tag");
+    } else if (quote ? ch === '\u0000' : ('\u0000"\'<=`'.indexOf(ch) >= 0)) {
+      scanner.fatal("Unexpected character in attribute value");
+    } else if (ch === '&' &&
+               (charRef = getCharacterReference(scanner, true,
+                                                quote || '>'))) {
       tokens.push(charRef);
       charsTokenToExtend = null;
     } else if (scanner.getSpecialTag &&
                ((special = scanner.getSpecialTag(scanner,
                                                  TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
                 scanner.pos > curPos /* `{{! comment}}` */)) {
-      // note: this code is messy because it turns out to be annoying for getSpecialTag
-      // to return `null` when it scans a comment.  Also, this code should be de-duped
-      // with getUnquotedAttributeValue
       if (special) {
         tokens.push({t: 'Special', v: special});
         charsTokenToExtend = null;
@@ -335,45 +339,8 @@ var getQuotedAttributeValue = function (scanner, quote) {
       }
       charsTokenToExtend.v += (ch === '\r' ? '\n' : ch);
       scanner.pos++;
-      if (ch === '\r' && scanner.peek() === '\n')
+      if (quote && ch === '\r' && scanner.peek() === '\n')
         scanner.pos++;
-    }
-  }
-};
-
-var getUnquotedAttributeValue = function (scanner) {
-  var tokens = [];
-  var charsTokenToExtend = null;
-
-  var charRef;
-  while (true) {
-    var ch = scanner.peek();
-    var special;
-    var curPos = scanner.pos;
-    if (HTML_SPACE.test(ch) || ch === '>') {
-      return tokens;
-    } else if (! ch) {
-      scanner.fatal("Unclosed attribute in tag");
-    } else if ('\u0000"\'<=`'.indexOf(ch) >= 0) {
-      scanner.fatal("Unexpected character in attribute value");
-    } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, '>'))) {
-      tokens.push(charRef);
-      charsTokenToExtend = null;
-    } else if (scanner.getSpecialTag &&
-               ((special = scanner.getSpecialTag(scanner,
-                                                 TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
-                scanner.pos > curPos /* `{{! comment}}` */)) {
-      if (special) {
-        tokens.push({t: 'Special', v: special});
-        charsTokenToExtend = null;
-      }
-    } else {
-      if (! charsTokenToExtend) {
-        charsTokenToExtend = { t: 'Chars', v: '' };
-        tokens.push(charsTokenToExtend);
-      }
-      charsTokenToExtend.v += ch;
-      scanner.pos++;
     }
   }
 };
@@ -485,9 +452,9 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
           scanner.fatal("Unexpected character after = in tag");
 
         if ((ch === '"') || (ch === "'"))
-          nondynamicAttrs[attributeName] = getQuotedAttributeValue(scanner, ch);
+          nondynamicAttrs[attributeName] = getAttributeValue(scanner, ch);
         else
-          nondynamicAttrs[attributeName] = getUnquotedAttributeValue(scanner);
+          nondynamicAttrs[attributeName] = getAttributeValue(scanner);
 
         spacesRequiredAfter = true;
       }
