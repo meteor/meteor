@@ -1,6 +1,5 @@
-// ============================================================
-// Optimizer for optimizing HTMLjs into raw HTML string when
-// it doesn't contain template tags.
+// Optimize parts of an HTMLjs tree into raw HTML strings when they don't
+// contain template tags.
 
 var constant = function (value) {
   return function () { return value; };
@@ -12,6 +11,17 @@ var OPTIMIZABLE = {
   FULL: 2
 };
 
+// We can only turn content into an HTML string if it contains no template
+// tags and no "tricky" HTML tags.  If we can optimize the entire content
+// into a string, we return OPTIMIZABLE.FULL.  If the we are given an
+// unoptimizable node, we return OPTIMIZABLE.NONE.  If we are given a tree
+// that contains an unoptimizable node somewhere, we return OPTIMIZABLE.PARTS.
+//
+// For example, we always create SVG elements programmatically, since SVG
+// doesn't have innerHTML.  If we are given an SVG element, we return NONE.
+// However, if we are given a big tree that contains SVG somewhere, we
+// return PARTS so that the optimizer can descend into the tree and optimize
+// other parts of it.
 var CanOptimizeVisitor = HTML.Visitor.extend({
   visitNull: constant(OPTIMIZABLE.FULL),
   visitPrimitive: constant(OPTIMIZABLE.FULL),

@@ -387,6 +387,9 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
   visitChildren: function (children/*, ...*/) {
     return this.visitArray.apply(this, arguments);
   },
+  // Transform the `.attrs` property of a tag, which may be a dictionary,
+  // an array, or in some uses, a foreign object (such as
+  // a template tag).
   visitAttributes: function (attrs/*, ...*/) {
     if (HTML.isArray(attrs)) {
       var argsCopy = SLICE.call(arguments);
@@ -432,6 +435,8 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
 
     return newAttrs;
   },
+  // Transform the value of one attribute name/value in an
+  // attributes dictionary.
   visitAttribute: function (name, value, tag/*, ...*/) {
     var args = SLICE.call(arguments, 2);
     args[0] = value;
