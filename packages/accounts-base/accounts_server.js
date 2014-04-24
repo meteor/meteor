@@ -309,6 +309,8 @@ Accounts._reportLoginFailure = function (methodInvocation, methodName, methodArg
 
   validateLogin(methodInvocation.connection, attempt);
   failedLogin(methodInvocation.connection, attempt);
+  // validateLogin may mutate attempt to set a new error message. Return
+  // the modified version.
   return attempt;
 };
 
