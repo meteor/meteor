@@ -105,11 +105,27 @@
 </div>
 </template>
 
+<template name="test_capture_events">
+  <video class='video1'>
+    <source id='mp4'
+      src="http://media.w3.org/2010/05/sintel/trailer.mp4"
+      type='video/mp4'>
+  </video>
+  <video class='video2'>
+    <source id='mp4'
+      src="http://media.w3.org/2010/05/sintel/trailer.mp4"
+      type='video/mp4'>
+  </video>
+  <video class='video2'>
+    <source id='mp4'
+      src="http://media.w3.org/2010/05/sintel/trailer.mp4"
+      type='video/mp4'>
+  </video>
+</template>
+
 <template name="test_safestring_a">
   {{foo}} {{{foo}}} {{bar}} {{{bar}}}
-  {{#foo}}{{/foo}} {{#bar}}{{/bar}}
   {{fooprop}} {{{fooprop}}} {{barprop}} {{{barprop}}}
-  {{#fooprop}}{{/fooprop}} {{#barprop}}{{/barprop}}
 </template>
 
 <template name="test_helpers_a">
@@ -178,15 +194,6 @@
   (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
 </template>
 
-<template name="test_helpers_i">
-  (uppercase apple={{#uppercase}}apple{{/uppercase}})
-  (altered banana={{#tr a="o" n="d"}}banana{{/tr}})
-  (nokeys={{#arg_and_dict "foo" x="foo"}}{{/arg_and_dict}})
-  (nokeys={{#arg_and_dict tree x="foo"}}{{/arg_and_dict}})
-  (biggie={{#get_arg helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}}{{/get_arg}})
-  (twoArgBlock={{#two_args "foo" "foo"}}{{/two_args}})
-</template>
-
 <template name="test_render_a">
   {{foo}}<br><hr>
 </template>
@@ -199,55 +206,8 @@
   <br><hr>
 </template>
 
-<template name="test_branches_a">
-  <span>{{var}}</span>
-  {{#myConstant}}<hr/>{{/myConstant}}
-  {{#if 1}}
-    {{#myConstant}}<hr/>{{/myConstant}}
-  {{/if}}
-  {{#myConstant}}<hr/>{{/myConstant}}
-</template>
-
-<template name="test_listmatching_a0">
-  <span>{{var}}</span>
-  <p>
-    {{#each c}}
-      {{> test_listmatching_a1}}
-    {{/each}}
-  </p>
-</template>
-
-<template name="test_listmatching_a1">
-  {{letter}}
-</template>
-
-<template name="test_isolate_a">
-  {{helper 1}}
-  {{#isolate}}
-    {{helper 2}}
-    {{#isolate}}
-      {{helper 3}}
-      {{#isolate}}
-        {{helper 4}}
-      {{/isolate}}
-    {{/isolate}}
-  {{/isolate}}
-</template>
-
 <template name="test_template_arg_a">
   <b>Foo</b> <i>Bar</i> <u>Baz</u>
-</template>
-
-<template name="test_template_preserve_a">
-  <span class="a">x</span>
-  <span class="b">x</span>
-  <span class="c">x</span>
-  <span class="d">x</span>
-  <span class="y">x</span>
-  <span class="e">x</span>
-  <span class="z">x</span>
-  <span class="f">x</span>
-  <u>{{var}}</u>
 </template>
 
 <template name="test_template_helpers_a">
@@ -259,7 +219,7 @@
 </template>
 
 <template name="test_template_helpers_c">
-  {{name}}{{arity}}{{toString}}{{length}}{{var}}x
+  {{name}}{{arity}}{{length}}{{var}}x
 </template>
 
 <template name="test_template_events_a">
@@ -274,81 +234,9 @@
   <b>foo</b><u>bar</u><i>baz</i>
 </template>
 
-<template name="test_template_eachrender_a">
-  {{#each entries}}
-    <div>{{x}}</div>
-  {{/each}}
-</template>
-
-<template name="test_template_eachrender_b">
-  {{#each entries}}
-    <div>{{x}}</div>
-  {{/each}}
-</template>
-
-<template name="test_template_landmarks_a">
-  {{LM}}{{{LM}}}{{LM}}{{{LM}}}{{v}}
-</template>
-
-<template name="test_template_bare_each_a">
-  {{#each abc}}
-    {{LM}}
-  {{/each}}
-  {{v}}
-</template>
-
-<template name="test_template_labels_a0">
-  {{{stuff}}}
-</template>
-
-<template name="test_template_labels_a1">
-  <hr>
-</template>
-
-<template name="test_template_labels_a2">
-  <hr>
-</template>
-
-<template name="test_template_labels_a3">
-  <hr>
-</template>
-
-<template name="test_unlabeled_cursor_a0">
-  {{#each this}}{{> test_unlabeled_cursor_a1}}{{/each}}
-</template>
-
-<template name="test_unlabeled_cursor_a1">
-  <div>foo</div>
-</template>
-
-<template name="test_constant_text_a0">
-  <div><p>preserved P:{{v}}</p>{{#constant}}text{{/constant}}</div>
-</template>
-
-
 <!-- Test for Issue 617 - Type casting for helpers -->
 <template name="test_type_casting">
-{{testTypeCasting 'true' 'false' true false 0 1 -1 10 -10 1asdf -1asdf}}
-</template>
-
-<!-- Test for issue #724 - template branches are labeled wrong -->
-
-<template name="test_template_trickylabels_a0">
-  {{#unless loading}}
-    {{> test_template_trickylabels_a1}}
-  {{/unless}}
-</template>
-
-<template name="test_template_trickylabels_a1">
-  {{#isolate}}
-    {{> test_template_trickylabels_a2}}
-    {{v}}
-  {{/isolate}}
-  <div>bar</div>
-</template>
-
-<template name="test_template_trickylabels_a2">
-  <div>foo</div>
+{{testTypeCasting 'true' 'false' true false 0 1 -1 10 -10}}
 </template>
 
 <!-- Test for issue #801 - Each handling of falsy values eg. [1, 2, null, undefined] -->
@@ -356,7 +244,3 @@
 {{#each values}}{{this}}{{/each}}
 </template>
 
-<!-- Test for issue #770 - falsy value for with. (newlines break this test on IE8) -->
-<template name="test_template_issue770">
-{{# with value1}}{{this}}{{else}}xxx{{/with}}{{# with value2}}{{this}}{{else}}xxx{{/with}}{{# with value1}}{{this}}{{/with}}{{# with value2}}{{this}}{{/with}}
-</template>
