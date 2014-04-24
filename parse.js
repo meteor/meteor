@@ -1,16 +1,4 @@
 
-HTMLTools.Special = function (value) {
-  if (! (this instanceof HTMLTools.Special))
-    // called without `new`
-    return new HTMLTools.Special(value);
-
-  this.value = value;
-};
-
-HTMLTools.Special.prototype.toJS = function (visitor) {
-  return visitor.generateCall('HTMLTools.Special', this.value);
-};
-
 // Parse a "fragment" of HTML, up to the end of the input or a particular
 // template tag (using the "shouldStop" option).
 HTMLTools.parseFragment = function (input, options) {
@@ -19,18 +7,18 @@ HTMLTools.parseFragment = function (input, options) {
     scanner = new Scanner(input);
   else
     // input can be a scanner.  We'd better not have a different
-    // value for the "getSpecialTag" option as when the scanner
+    // value for the "getTemplateTag" option as when the scanner
     // was created, because we don't do anything special to reset
     // the value (which is attached to the scanner).
     scanner = input;
 
   // ```
-  // { getSpecialTag: function (scanner, templateTagPosition) {
+  // { getTemplateTag: function (scanner, templateTagPosition) {
   //     if (templateTagPosition === HTMLTools.TEMPLATE_TAG_POSITION.ELEMENT) {
   //       ...
   // ```
-  if (options && options.getSpecialTag)
-    scanner.getSpecialTag = options.getSpecialTag;
+  if (options && options.getTemplateTag)
+    scanner.getTemplateTag = options.getTemplateTag;
 
   // function (scanner) -> boolean
   var shouldStop = options && options.shouldStop;
@@ -58,7 +46,7 @@ HTMLTools.parseFragment = function (input, options) {
     try {
       var endTag = getHTMLToken(scanner);
     } catch (e) {
-      // ignore errors from getSpecialTag
+      // ignore errors from getTemplateTag
     }
 
     // XXX we make some assumptions about shouldStop here, like that it
@@ -133,9 +121,8 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
       items.push(convertCharRef(token));
     } else if (token.t === 'Comment') {
       items.push(HTML.Comment(token.v));
-    } else if (token.t === 'Special') {
-      // token.v is an object `{ ... }`
-      items.push(HTMLTools.Special(token.v));
+    } else if (token.t === 'TemplateTag') {
+      items.push(token.v);
     } else if (token.t === 'Tag') {
       if (token.isEnd) {
         // Stop when we encounter an end tag at the top level.
@@ -234,9 +221,8 @@ getRCData = HTMLTools.Parse.getRCData = function (scanner, tagName, shouldStopFu
       pushOrAppendString(items, token.v);
     } else if (token.t === 'CharRef') {
       items.push(convertCharRef(token));
-    } else if (token.t === 'Special') {
-      // token.v is an object `{ ... }`
-      items.push(HTMLTools.Special(token.v));
+    } else if (token.t === 'TemplateTag') {
+      items.push(token.v);
     } else {
       // (can't happen)
       scanner.fatal("Unknown or unexpected token type: " + token.t);
@@ -270,9 +256,8 @@ var getRawText = function (scanner, tagName, shouldStopFunc) {
 
     if (token.t === 'Chars') {
       pushOrAppendString(items, token.v);
-    } else if (token.t === 'Special') {
-      // token.v is an object `{ ... }`
-      items.push(HTMLTools.Special(token.v));
+    } else if (token.t === 'TemplateTag') {
+      items.push(token.v);
     } else {
       // (can't happen)
       scanner.fatal("Unknown or unexpected token type: " + token.t);
@@ -300,12 +285,12 @@ var convertCharRef = function (token) {
 
 // Input is always a dictionary (even if zero attributes) and each
 // value in the dictionary is an array of `Chars`, `CharRef`,
-// and maybe `Special` tokens.
+// and maybe `TemplateTag` tokens.
 //
 // Output is null if there are zero attributes, and otherwise a
-// dictionary, or an array of dictionaries and specials.
+// dictionary, or an array of dictionaries and template tags.
 // Each value in the dictionary is HTMLjs (e.g. a
-// string or an array of `Chars`, `CharRef`, and `Special`
+// string or an array of `Chars`, `CharRef`, and `TemplateTag`
 // nodes).
 //
 // An attribute value with no input tokens is represented as "",
@@ -315,7 +300,7 @@ var parseAttrs = function (attrs) {
   var result = null;
 
   if (HTML.isArray(attrs)) {
-    // first element is nondynamic attrs, rest are specials
+    // first element is nondynamic attrs, rest are template tags
     var nondynamicAttrs = parseAttrs(attrs[0]);
     if (nondynamicAttrs) {
       result = (result || []);
@@ -323,10 +308,10 @@ var parseAttrs = function (attrs) {
     }
     for (var i = 1; i < attrs.length; i++) {
       var token = attrs[i];
-      if (token.t !== 'Special')
-        throw new Error("Expected Special token");
+      if (token.t !== 'TemplateTag')
+        throw new Error("Expected TemplateTag token");
       result = (result || []);
-      result.push(HTMLTools.Special(token.v));
+      result.push(token.v);
     }
     return HTML.Attrs.apply(null, result);
   }
@@ -341,8 +326,8 @@ var parseAttrs = function (attrs) {
       var token = inValue[i];
       if (token.t === 'CharRef') {
         outParts.push(convertCharRef(token));
-      } else if (token.t === 'Special') {
-        outParts.push(HTMLTools.Special(token.v));
+      } else if (token.t === 'TemplateTag') {
+        outParts.push(token.v);
       } else if (token.t === 'Chars') {
         pushOrAppendString(outParts, token.v);
       }

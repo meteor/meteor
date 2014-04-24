@@ -13,6 +13,7 @@ Package.on_use(function (api) {
                  'scanner.js',
                  'charref.js',
                  'tokenize.js',
+                 'templatetag.js',
                  'parse.js']);
 });
 
