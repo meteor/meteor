@@ -21,12 +21,15 @@ var EVENT_MODE = EventSupport.EVENT_MODE = {
   CAPTURING: 2
 };
 
+var NEXT_HANDLERREC_ID = 1;
+
 var HandlerRec = function (elem, type, selector, handler, recipient) {
   this.elem = elem;
   this.type = type;
   this.selector = selector;
   this.handler = handler;
   this.recipient = recipient;
+  this.id = (NEXT_HANDLERREC_ID++);
 
   this.mode = EVENT_MODE.TBD;
 
@@ -122,6 +125,7 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
     eventTypes.push(e);
   });
 
+  var newHandlerRecs = [];
   for (var i = 0, N = eventTypes.length; i < N; i++) {
     var type = eventTypes[i];
 
@@ -137,6 +141,7 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
     var handlerList = info.handlers;
     var handlerRec = new HandlerRec(
       element, type, selector, handler, recipient);
+    newHandlerRecs.push(handlerRec);
     handlerRec.bind();
     handlerList.push(handlerRec);
     // move handlers of enclosing ranges to end
@@ -159,4 +164,24 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
       }
     }
   }
+
+  return {
+    stop: function () {
+      // newHandlerRecs has only one item unless you specify multiple
+      // event types.  If this code is slow, it's because we have to
+      // iterate over handlerList here.  Clearing a whole handlerList
+      // via stop() methods is O(N^2) in the number of handlers on
+      // an element.
+      for (var i = 0; i < newHandlerRecs.length; i++) {
+        var handlerToRemove = newHandlerRecs[i];
+        for (var j = handlerList.length - 1; j >= 0; j--) {
+          if (handlerList[j] === handlerToRemove) {
+            handlerToRemove.unbind();
+            handlerList.splice(j, 1); // remove handlerList[j]
+          }
+        }
+      }
+      newHandlerRecs.length = 0;
+    }
+  };
 };

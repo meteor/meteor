@@ -130,7 +130,15 @@ var rangeRemoved = function (range) {
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
 
-    // XXX clean up events
+    // remove events
+    if (range.stopHandles) {
+      for (var i = 0; i < range.stopHandles.length; i++) {
+        if (! range.stopHandles[i])
+          debugger;
+        range.stopHandles[i].stop();
+      }
+      range.stopHandles = null;
+    }
 
     // notify component of removal
     if (range.removed)
@@ -851,7 +859,7 @@ DomRange.prototype.on = function (events, selector, handler) {
     selector = null;
   }
 
-  UI.EventSupport.listen(
+  var handle = UI.EventSupport.listen(
     parentNode, events, selector,
     function (evt) {
       if (! self.contains(evt.currentTarget))
@@ -860,6 +868,9 @@ DomRange.prototype.on = function (events, selector, handler) {
     }, self, function (r) {
       return r.owner;
     });
+
+  this.stopHandles = (this.stopHandles || []);
+  this.stopHandles.push(handle);
 };
 
 // Returns true if element a contains node b and is not node b.
