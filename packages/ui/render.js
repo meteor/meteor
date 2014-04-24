@@ -393,7 +393,8 @@ var materialize = function (node, parent, before, parentComponent) {
     var htmlNodes = UI.DomBackend.parseHTML(node.value);
     for (var i = 0; i < htmlNodes.length; i++)
       insert(htmlNodes[i], parent, before);
-  } else if (Package['html-tools'] && (node instanceof Package['html-tools'].HTMLTools.Special)) {
+  } else if (Package['html-tools'] &&
+             (node instanceof Package['html-tools'].HTMLTools.TemplateTag)) {
     throw new Error("Can't materialize Special tag, it's just an intermediate rep");
   } else if (node instanceof UI.InTemplateScope) {
     materialize(node.content, parent, before, node.parentPtr);

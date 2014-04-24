@@ -21,7 +21,7 @@
 //   isSelfClosing: Boolean (optional),
 //   n: String (tag name, in lowercase or camel case),
 //   attrs: dictionary of { String: [tokens] }
-//          OR [{ String: [tokens] }, special tokens...]
+//          OR [{ String: [tokens] }, TemplateTag tokens...]
 //     (only for start tags; required)
 // }
 //
@@ -38,8 +38,8 @@
 // Most named entities and all numeric character references are one codepoint
 // (e.g. "&amp;" is [38]), but a few are two codepoints.
 //
-// { t: 'Special',
-//   v: { ... anything ... }
+// { t: 'TemplateTag',
+//   v: HTMLTools.TemplateTag
 // }
 
 // The HTML tokenization spec says to preprocess the input stream to replace
@@ -200,33 +200,39 @@ getDoctype = HTMLTools.Parse.getDoctype = function (scanner) {
 // of a Chars, so that we have a chance to detect template tags.
 var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 
+var assertIsTemplateTag = function (x) {
+  if (! (x instanceof HTMLTools.TemplateTag))
+    throw new Error("Expected an instance of HTMLTools.TemplateTag");
+  return x;
+};
+
 // Returns the next HTML token, or `null` if we reach EOF.
 //
-// Note that if we have a `getSpecialTag` function that sometimes
+// Note that if we have a `getTemplateTag` function that sometimes
 // consumes characters and emits nothing (e.g. in the case of template
 // comments), we may go from not-at-EOF to at-EOF and return `null`,
 // while otherwise we always find some token to return.
 getHTMLToken = HTMLTools.Parse.getHTMLToken = function (scanner, dataMode) {
   var result = null;
-  if (scanner.getSpecialTag) {
+  if (scanner.getTemplateTag) {
     var lastPos = -1;
-    // Try to parse a "special tag" by calling out to the provided
-    // `getSpecialTag` function.  If the function returns `null` but
+    // Try to parse a template tag by calling out to the provided
+    // `getTemplateTag` function.  If the function returns `null` but
     // consumes characters, it must have parsed a comment or something,
     // so we loop and try it again.  If it ever returns `null` without
     // consuming anything, that means it didn't see anything interesting
     // so we look for a normal token.  If it returns a truthy value,
-    // the value must be an object.  We wrap it in a Special token.
+    // the value must be instanceof HTMLTools.TemplateTag.
     while ((! result) && scanner.pos > lastPos) {
       lastPos = scanner.pos;
-      result = scanner.getSpecialTag(
+      result = scanner.getTemplateTag(
         scanner,
         (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
          (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
           TEMPLATE_TAG_POSITION.ELEMENT)));
     }
     if (result)
-      return { t: 'Special', v: result };
+      return { t: 'TemplateTag', v: assertIsTemplateTag(result) };
   }
 
   var chars = getChars(scanner);
@@ -308,7 +314,7 @@ var getAttributeValue = function (scanner, quote) {
   var charRef;
   while (true) {
     var ch = scanner.peek();
-    var special;
+    var templateTag;
     var curPos = scanner.pos;
     if (quote && ch === quote) {
       scanner.pos++;
@@ -324,12 +330,13 @@ var getAttributeValue = function (scanner, quote) {
                                                 quote || '>'))) {
       tokens.push(charRef);
       charsTokenToExtend = null;
-    } else if (scanner.getSpecialTag &&
-               ((special = scanner.getSpecialTag(scanner,
-                                                 TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
+    } else if (scanner.getTemplateTag &&
+               ((templateTag = scanner.getTemplateTag(
+                 scanner, TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
                 scanner.pos > curPos /* `{{! comment}}` */)) {
-      if (special) {
-        tokens.push({t: 'Special', v: special});
+      if (templateTag) {
+        tokens.push({t: 'TemplateTag',
+                     v: assertIsTemplateTag(templateTag)});
         charsTokenToExtend = null;
       }
     } else {
@@ -398,16 +405,17 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
     // require spaces (or else an end of tag, i.e. `>` or `/>`).
     var spacesRequiredAfter = false;
 
-    // first, try for a special tag.
+    // first, try for a template tag.
     var curPos = scanner.pos;
-    var special = (scanner.getSpecialTag &&
-                   scanner.getSpecialTag(scanner,
-                                         TEMPLATE_TAG_POSITION.IN_START_TAG));
-    if (special || (scanner.pos > curPos)) {
-      if (special) {
+    var templateTag = (scanner.getTemplateTag &&
+                       scanner.getTemplateTag(
+                         scanner, TEMPLATE_TAG_POSITION.IN_START_TAG));
+    if (templateTag || (scanner.pos > curPos)) {
+      if (templateTag) {
         if (tag.attrs === nondynamicAttrs)
           tag.attrs = [nondynamicAttrs];
-        tag.attrs.push({ t: 'Special', v: special });
+        tag.attrs.push({ t: 'TemplateTag',
+                         v: assertIsTemplateTag(templateTag) });
       } // else, must have scanned a `{{! comment}}`
 
       spacesRequiredAfter = true;
@@ -459,8 +467,8 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
         spacesRequiredAfter = true;
       }
     }
-    // now we are in the "post-attribute" position, whether it was a special attribute
-    // (like `{{x}}`) or a normal one (like `x` or `x=y`).
+    // now we are in the "post-attribute" position, whether it was a template tag
+    // attribute (like `{{x}}`) or a normal one (like `x` or `x=y`).
 
     if (handleEndOfTag(scanner, tag))
       return tag;

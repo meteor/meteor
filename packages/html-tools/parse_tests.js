@@ -3,7 +3,7 @@ var getContent = HTMLTools.Parse.getContent;
 
 var CharRef = HTML.CharRef;
 var Comment = HTML.Comment;
-var Special = HTMLTools.Special;
+var TemplateTag = HTMLTools.TemplateTag;
 var Attrs = HTML.Attrs;
 
 var BR = HTML.BR;
@@ -218,17 +218,17 @@ Tinytest.add("html-tools - parseFragment", function (test) {
   });
 });
 
-Tinytest.add("html-tools - getSpecialTag", function (test) {
+Tinytest.add("html-tools - getTemplateTag", function (test) {
 
   // match a simple tag consisting of `{{`, an optional `!`, one
   // or more ASCII letters, spaces or html tags, and a closing `}}`.
   var mustache = /^\{\{(!?[a-zA-Z 0-9</>]+)\}\}/;
 
-  // This implementation of `getSpecialTag` looks for "{{" and if it
+  // This implementation of `getTemplateTag` looks for "{{" and if it
   // finds it, it will match the regex above or fail fatally trying.
   // The object it returns is opaque to the tokenizer/parser and can
   // be anything we want.
-  var getSpecialTag = function (scanner, position) {
+  var getTemplateTag = function (scanner, position) {
     if (! (scanner.peek() === '{' && // one-char peek is just an optimization
            scanner.rest().slice(0, 2) === '{{'))
       return null;
@@ -242,7 +242,7 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
     if (match[1].charAt(0) === '!')
       return null; // `{{!foo}}` is like a comment
 
-    return { stuff: match[1] };
+    return TemplateTag({ stuff: match[1] });
   };
 
 
@@ -253,7 +253,7 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
       endPos = input.length;
 
     var scanner = new Scanner(input.replace('^^^', ''));
-    scanner.getSpecialTag = getSpecialTag;
+    scanner.getTemplateTag = getTemplateTag;
     var result;
     try {
       result = getContent(scanner);
@@ -266,7 +266,7 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
 
   var fatal = function (input, messageContains) {
     var scanner = new Scanner(input);
-    scanner.getSpecialTag = getSpecialTag;
+    scanner.getTemplateTag = getTemplateTag;
     var error;
     try {
       getContent(scanner);
@@ -279,16 +279,16 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
   };
 
 
-  succeed('{{foo}}', Special({stuff: 'foo'}));
+  succeed('{{foo}}', TemplateTag({stuff: 'foo'}));
 
   succeed('<a href=http://www.apple.com/>{{foo}}</a>',
-          A({href: "http://www.apple.com/"}, Special({stuff: 'foo'})));
+          A({href: "http://www.apple.com/"}, TemplateTag({stuff: 'foo'})));
 
   // tags not parsed in comments
   succeed('<!--{{foo}}-->', Comment("{{foo}}"));
   succeed('<!--{{foo-->', Comment("{{foo"));
 
-  succeed('&am{{foo}}p;', ['&am', Special({stuff: 'foo'}), 'p;']);
+  succeed('&am{{foo}}p;', ['&am', TemplateTag({stuff: 'foo'}), 'p;']);
 
   // can't start a mustache and not finish it
   fatal('{{foo');
@@ -304,51 +304,51 @@ Tinytest.add("html-tools - getSpecialTag", function (test) {
   succeed('<br x={ />', BR({x:'{'}));
   succeed('<br x={foo} />', BR({x:'{foo}'}));
 
-  succeed('<br {{x}}>', BR(Attrs(Special({stuff: 'x'}))));
-  succeed('<br {{x}} {{y}}>', BR(Attrs(Special({stuff: 'x'}),
-                                       Special({stuff: 'y'}))));
-  succeed('<br {{x}} y>', BR(Attrs({y: ''}, Special({stuff: 'x'}))));
+  succeed('<br {{x}}>', BR(Attrs(TemplateTag({stuff: 'x'}))));
+  succeed('<br {{x}} {{y}}>', BR(Attrs(TemplateTag({stuff: 'x'}),
+                                       TemplateTag({stuff: 'y'}))));
+  succeed('<br {{x}} y>', BR(Attrs({y: ''}, TemplateTag({stuff: 'x'}))));
   fatal('<br {{x}}y>');
   fatal('<br {{x}}=y>');
-  succeed('<br x={{y}} z>', BR({x: Special({stuff: 'y'}), z: ''}));
-  succeed('<br x=y{{z}}w>', BR({x: ['y', Special({stuff: 'z'}), 'w']}));
-  succeed('<br x="y{{z}}w">', BR({x: ['y', Special({stuff: 'z'}), 'w']}));
-  succeed('<br x="y {{z}}{{w}} v">', BR({x: ['y ', Special({stuff: 'z'}),
-                                             Special({stuff: 'w'}), ' v']}));
+  succeed('<br x={{y}} z>', BR({x: TemplateTag({stuff: 'y'}), z: ''}));
+  succeed('<br x=y{{z}}w>', BR({x: ['y', TemplateTag({stuff: 'z'}), 'w']}));
+  succeed('<br x="y{{z}}w">', BR({x: ['y', TemplateTag({stuff: 'z'}), 'w']}));
+  succeed('<br x="y {{z}}{{w}} v">', BR({x: ['y ', TemplateTag({stuff: 'z'}),
+                                             TemplateTag({stuff: 'w'}), ' v']}));
   // Slash is parsed as part of unquoted attribute!  This is consistent with
   // the HTML tokenization spec.  It seems odd for some inputs but is probably
   // for cases like `<a href=http://foo.com/>` or `<a href=/foo/>`.
-  succeed('<br x={{y}}/>', BR({x: [Special({stuff: 'y'}), '/']}));
-  succeed('<br x={{z}}{{w}}>', BR({x: [Special({stuff: 'z'}),
-                                       Special({stuff: 'w'})]}));
+  succeed('<br x={{y}}/>', BR({x: [TemplateTag({stuff: 'y'}), '/']}));
+  succeed('<br x={{z}}{{w}}>', BR({x: [TemplateTag({stuff: 'z'}),
+                                       TemplateTag({stuff: 'w'})]}));
   fatal('<br x="y"{{z}}>');
 
   succeed('<br x=&amp;>', BR({x:CharRef({html: '&amp;', str: '&'})}));
 
 
   // check tokenization of stache tags with spaces
-  succeed('<br {{x 1}}>', BR(Attrs(Special({stuff: 'x 1'}))));
-  succeed('<br {{x 1}} {{y 2}}>', BR(Attrs(Special({stuff: 'x 1'}),
-                                           Special({stuff: 'y 2'}))));
-  succeed('<br {{x 1}} y>', BR(Attrs({y:''}, Special({stuff: 'x 1'}))));
+  succeed('<br {{x 1}}>', BR(Attrs(TemplateTag({stuff: 'x 1'}))));
+  succeed('<br {{x 1}} {{y 2}}>', BR(Attrs(TemplateTag({stuff: 'x 1'}),
+                                           TemplateTag({stuff: 'y 2'}))));
+  succeed('<br {{x 1}} y>', BR(Attrs({y:''}, TemplateTag({stuff: 'x 1'}))));
   fatal('<br {{x 1}}y>');
   fatal('<br {{x 1}}=y>');
-  succeed('<br x={{y 2}} z>', BR({x: Special({stuff: 'y 2'}), z: ''}));
-  succeed('<br x=y{{z 3}}w>', BR({x: ['y', Special({stuff: 'z 3'}), 'w']}));
-  succeed('<br x="y{{z 3}}w">', BR({x: ['y', Special({stuff: 'z 3'}), 'w']}));
-  succeed('<br x="y {{z 3}}{{w 4}} v">', BR({x: ['y ', Special({stuff: 'z 3'}),
-                                                 Special({stuff: 'w 4'}), ' v']}));
-  succeed('<br x={{y 2}}/>', BR({x: [Special({stuff: 'y 2'}), '/']}));
-  succeed('<br x={{z 3}}{{w 4}}>', BR({x: [Special({stuff: 'z 3'}),
-                                           Special({stuff: 'w 4'})]}));
+  succeed('<br x={{y 2}} z>', BR({x: TemplateTag({stuff: 'y 2'}), z: ''}));
+  succeed('<br x=y{{z 3}}w>', BR({x: ['y', TemplateTag({stuff: 'z 3'}), 'w']}));
+  succeed('<br x="y{{z 3}}w">', BR({x: ['y', TemplateTag({stuff: 'z 3'}), 'w']}));
+  succeed('<br x="y {{z 3}}{{w 4}} v">', BR({x: ['y ', TemplateTag({stuff: 'z 3'}),
+                                                 TemplateTag({stuff: 'w 4'}), ' v']}));
+  succeed('<br x={{y 2}}/>', BR({x: [TemplateTag({stuff: 'y 2'}), '/']}));
+  succeed('<br x={{z 3}}{{w 4}}>', BR({x: [TemplateTag({stuff: 'z 3'}),
+                                           TemplateTag({stuff: 'w 4'})]}));
 
   succeed('<p></p>', P());
 
-  succeed('x{{foo}}{{bar}}y', ['x', Special({stuff: 'foo'}),
-                               Special({stuff: 'bar'}), 'y']);
+  succeed('x{{foo}}{{bar}}y', ['x', TemplateTag({stuff: 'foo'}),
+                               TemplateTag({stuff: 'bar'}), 'y']);
   succeed('x{{!foo}}{{!bar}}y', 'xy');
-  succeed('x{{!foo}}{{bar}}y', ['x', Special({stuff: 'bar'}), 'y']);
-  succeed('x{{foo}}{{!bar}}y', ['x', Special({stuff: 'foo'}), 'y']);
+  succeed('x{{!foo}}{{bar}}y', ['x', TemplateTag({stuff: 'bar'}), 'y']);
+  succeed('x{{foo}}{{!bar}}y', ['x', TemplateTag({stuff: 'foo'}), 'y']);
   succeed('<div>{{!foo}}{{!bar}}</div>', DIV());
   succeed('<div>{{!foo}}<br />{{!bar}}</div>', DIV(BR()));
   succeed('<div> {{!foo}} {{!bar}} </div>', DIV("   "));

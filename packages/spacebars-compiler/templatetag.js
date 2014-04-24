@@ -37,7 +37,11 @@
 
 var TEMPLATE_TAG_POSITION = HTMLTools.TEMPLATE_TAG_POSITION;
 
-TemplateTag = Spacebars.TemplateTag = function () {};
+TemplateTag = Spacebars.TemplateTag = function () {
+  HTMLTools.TemplateTag.apply(this, arguments);
+};
+TemplateTag.prototype = new HTMLTools.TemplateTag;
+TemplateTag.prototype.constructorName = 'Spacebars.TemplateTag';
 
 var makeStacheTagStartRegex = function (r) {
   return new RegExp(r.source + /(?![{>!#/])/.source,
@@ -361,7 +365,7 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
         textMode = HTML.TEXTMODE.RCDATA;
       }
       var parserOptions = {
-        getSpecialTag: TemplateTag.parseCompleteTag,
+        getTemplateTag: TemplateTag.parseCompleteTag,
         shouldStop: isAtBlockCloseOrElse,
         textMode: textMode
       };
