@@ -885,12 +885,12 @@ Tinytest.add('spacebars - templates - block helpers in attribute', function (tes
 
   var shouldBe = function (className) {
     Deps.flush();
-    test.equal(div.innerHTML, "Hello");
+    test.equal(div.innerHTML, "Smurf");
     test.equal(div.className, className);
     var result = canonicalizeHtml(containerDiv.innerHTML);
-    if (result === '<div>Hello</div>')
-      result = '<div class="">Hello</div>'; // e.g. IE 9 and 10
-    test.equal(result, '<div class="' + className + '">Hello</div>');
+    if (result === '<div>Smurf</div>')
+      result = '<div class="">Smurf</div>'; // e.g. IE 9 and 10
+    test.equal(result, '<div class="' + className + '">Smurf</div>');
   };
 
   shouldBe('donut frankfurter noodle');
