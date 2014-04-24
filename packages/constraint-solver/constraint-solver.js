@@ -230,24 +230,38 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             semver.gte(prev.version, uv.earliestCompatibleVersion) ||
             semver.gte(uv.version, prev.earliestCompatibleVersion);
 
-          // XXX this is correct for root deps, branch out for transitive deps
-          if (versionsDistance < 0 || ! isCompatible) {
-            // the new pick is older or is incompatible with the prev. solution
-            // i.e. can have breaking changes
-            cost[VMAJOR]++;
+          if (isRootDep[uv.name]) {
+            // root dependency
+            if (versionsDistance < 0 || ! isCompatible) {
+              // the new pick is older or is incompatible with the prev. solution
+              // i.e. can have breaking changes, prefer not to do this
+              cost[VMAJOR]++;
+            } else {
+              // compatible but possibly newer
+              // prefer the version closest to the older solution
+              cost[MEDIUM] += versionsDistance;
+            }
           } else {
-            // compatible but possibly newer
-            cost[MEDIUM] += versionsDistance;
+            // transitive dependency
+            // prefer to have less changed transitive dependencies
+            cost[MINOR] += versionsDistance === 0 ? 1 : 0;
           }
         } else {
-          // xcxc new to the solution
+          var latestDistance =
+            semverToNum(self.resolver._latestVersion[uv.name]) -
+            semverToNum(uv.version);
+
+          if (isRootDep[uv.name]) {
+            // root dependency
+            // preferably latest
+            cost[MAJOR] += latestDistance;
+          } else {
+            // transitive dependency
+            // prefarable earliest possible to be conservative
+            // xcxc XXX but for now prefering the latest is OK too
+            cost[MINOR] += latestDistance;
+          }
         }
-
-        var latestDistance =
-          semverToNum(self.resolver._latestVersion[uv.name]) -
-          semverToNum(uv.version);
-
-        cost[MAJOR] += latestDistance;
       });
 
       return cost;
@@ -255,10 +269,19 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
     resolverOptions.estimateCostFunction = function (state, options) {
       // xcxc fill me in with something smart
+      return [0, 0, 0, 0];
     };
 
     resolverOptions.combineCostFunction = function (costA, costB) {
-      // xcxc fill me in with something smart
+      if (costA.length !== costB.length)
+        throw new Error("Different cost types");
+
+      var arr = [];
+      _.each(costA, function (l, i) {
+        arr.push(l + costB[i]);
+      });
+
+      return arr;
     };
 
     break;
