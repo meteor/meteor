@@ -309,6 +309,7 @@ Accounts._reportLoginFailure = function (methodInvocation, methodName, methodArg
 
   validateLogin(methodInvocation.connection, attempt);
   failedLogin(methodInvocation.connection, attempt);
+  return attempt;
 };
 
 
