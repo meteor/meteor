@@ -655,20 +655,31 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
       m[self._prefix + method] = function (/* ... */) {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
+        var args = _.toArray(arguments);
         try {
-          if (method === "insert") {
-            // Ensure that we have an id on an insert
-            if (!_.has(arguments[0], '_id')) {
-              arguments[0]._id = self._makeNewID();
-            }
+          // For an insert, if the client didn't specify an _id, generate one
+          // now; because this uses DDP.randomStream, it will be consistent with
+          // what the client generated. We generate it now rather than later so
+          // that if (eg) an allow/deny rule does an insert to the same
+          // collection (not that it really should), the generated _id will
+          // still be the first use of the stream and will be consistent.
+          //
+          // However, we don't actually stick the _id onto the document yet,
+          // because we want allow/deny rules to be able to differentiate
+          // between arbitrary client-specified _id fields and merely
+          // client-controlled-via-randomSeed fields.
+          var generatedId = null;
+          if (method === "insert" && !_.has(args[0], '_id')) {
+            generatedId = self._makeNewID();
           }
 
           if (this.isSimulation) {
-
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
+            if (generatedId !== null)
+              args[0]._id = generatedId;
             return self._collection[method].apply(
-              self._collection, _.toArray(arguments));
+              self._collection, args);
           }
 
           // This is the server receiving a method call from the client.
@@ -676,7 +687,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
           // We don't allow arbitrary selectors in mutations from the client: only
           // single-ID selectors.
           if (method !== 'insert')
-            throwIfSelectorIsNotId(arguments[0], method);
+            throwIfSelectorIsNotId(args[0], method);
 
           if (self._restricted) {
             // short circuit if there is no way it will pass.
@@ -688,12 +699,14 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 
             var validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
-            var argsWithUserId = [this.userId].concat(_.toArray(arguments));
-            return self[validatedMethodName].apply(self, argsWithUserId);
+            args.unshift(this.userId);
+            generatedId !== null && args.push(generatedId);
+            return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
+            if (generatedId !== null)
+              args[0]._id = generatedId;
             // In insecure mode, allow any mutation (with a simple selector).
-            return self._collection[method].apply(self._collection,
-                                                  _.toArray(arguments));
+            return self._collection[method].apply(self._collection, args);
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
@@ -738,29 +751,45 @@ Meteor.Collection.prototype._isInsecure = function () {
   return self._insecure;
 };
 
-var docToValidate = function (validator, doc) {
+var docToValidate = function (validator, doc, generatedId) {
   var ret = doc;
-  if (validator.transform)
-    ret = validator.transform(EJSON.clone(doc));
+  if (validator.transform) {
+    ret = EJSON.clone(doc);
+    // If you set a server-side transform on your collection, then you don't get
+    // to tell the difference between "client specified the ID" and "server
+    // generated the ID", because transforms expect to get _id.  If you want to
+    // do that check, you can do it with a specific
+    // `C.allow({insert: f, transform: null})` validator.
+    if (generatedId !== null) {
+      ret._id = generatedId;
+    }
+    ret = validator.transform(ret);
+  }
   return ret;
 };
 
-Meteor.Collection.prototype._validatedInsert = function(userId, doc) {
+Meteor.Collection.prototype._validatedInsert = function (userId, doc,
+                                                         generatedId) {
   var self = this;
 
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.insert.deny, function(validator) {
-    return validator(userId, docToValidate(validator, doc));
+    return validator(userId, docToValidate(validator, doc, generatedId));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.insert.allow, function(validator) {
-    return !validator(userId, docToValidate(validator, doc));
+    return !validator(userId, docToValidate(validator, doc, generatedId));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+
+  // If we generated an ID above, insert it now: after the validation, but
+  // before actually inserting.
+  if (generatedId !== null)
+    doc._id = generatedId;
 
   self._collection.insert.call(self._collection, doc);
 };
