@@ -16,6 +16,7 @@ Package.on_use(function (api) {
     'sequence.js',
     'var.js',
     'domrange.js',
+    'events.js',
     'render.js',
     'component.js',
     'attrs.js',

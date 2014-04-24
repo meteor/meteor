@@ -30,12 +30,31 @@ With = function (dataVar, func) {
     // called without new
     return new With(dataVar, func);
 
+  Blaze.Controller.call(this);
+
   this.data = dataVar;
   this.func = func;
 };
 Blaze.__extends(With, Blaze.Controller);
-
 _.extend(With.prototype, {
+  render: function () {
+    var func = this.func;
+    return func();
+  }
+});
+
+Events = function (eventMap, func) {
+  if (! (this instanceof Events))
+    // called without new
+    return new Events(eventMap, func);
+
+  Blaze.Controller.call(this);
+
+  //// when do I call listen()?  When the DOMRange is attached, somehow?
+  this.func = func;
+};
+Blaze.__extends(Events, Blaze.Controller);
+_.extend(Events.prototype, {
   render: function () {
     var func = this.func;
     return func();
@@ -102,17 +121,23 @@ outerRange = Blaze.render(function () {
     }, function () {
       return "odd";
     }), "."),
-          HTML.UL(Repeat(theNumber,
+          HTML.UL(
+            Repeat(theNumber,
+                   function () {
+                     return With(Blaze.Var(123), function () {
+                       return Events(
+                         {'click li': function () { console.log('click li'); }},
                          function () {
-                           return With(Blaze.Var(123), function () {
-                             return HTML.LI(
-                               Blaze.Isolate(function () {
-                                 console.log('Context:', Blaze.currentController.data.get());
-                                 return theNumber.get(); }),
-                               " - ", new Ticker
-                             );
-                           });
-                         }))];
+                           return HTML.LI(
+                             Blaze.Isolate(function () {
+                               debugger;
+                               console.log('Context:', Blaze.currentController.data.get());
+                               return theNumber.get(); }),
+                             " - ", new Ticker
+                           );
+                         });
+                     });
+                   }))];
 
 });
 outerRange.attach(document.body);
