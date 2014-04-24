@@ -620,7 +620,7 @@ var runWebAppServer = function () {
     });
 
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
-    var boilerplateRenderCode = Spacebars.compile(
+    var boilerplateRenderCode = SpacebarsCompiler.compile(
       boilerplateTemplateSource, { isBody: true });
 
     // Note that we are actually depending on eval's local environment capture

@@ -1,7 +1,7 @@
 
 
 
-Spacebars.parse = function (input) {
+SpacebarsCompiler.parse = function (input) {
 
   var tree = HTMLTools.parseFragment(
     input,
@@ -30,7 +30,7 @@ var builtInLexicals = {
 
 // A "reserved name" can't be used as a <template> name.  This
 // function is used by the template file scanner.
-Spacebars.isReservedName = function (name) {
+SpacebarsCompiler.isReservedName = function (name) {
   return builtInBlockHelpers.hasOwnProperty(name);
 };
 
@@ -102,7 +102,7 @@ var codeGenTemplateTag = function (tag) {
         if (dataFunc) {
           includeCode =
             'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
-            Spacebars.codeGen(BlazeTools.EmitCode(includeCode)) + '))';
+            SpacebarsCompiler.codeGen(BlazeTools.EmitCode(includeCode)) + '))';
         }
 
         if (path[0] === 'UI' &&
@@ -251,11 +251,11 @@ var codeGenInclusionParts = function (tag) {
 
   if ('content' in tag) {
     ret.content = (
-      'UI.block(' + Spacebars.codeGen(tag.content) + ')');
+      'UI.block(' + SpacebarsCompiler.codeGen(tag.content) + ')');
   }
   if ('elseContent' in tag) {
     ret.elseContent = (
-      'UI.block(' + Spacebars.codeGen(tag.elseContent) + ')');
+      'UI.block(' + SpacebarsCompiler.codeGen(tag.elseContent) + ')');
   }
 
   var dataFuncCode = null;
@@ -315,12 +315,12 @@ var replaceTemplateTags = function (node) {
   return (new TemplateTagReplacer).visit(node);
 };
 
-Spacebars.compile = function (input, options) {
-  var tree = Spacebars.parse(input);
-  return Spacebars.codeGen(tree, options);
+SpacebarsCompiler.compile = function (input, options) {
+  var tree = SpacebarsCompiler.parse(input);
+  return SpacebarsCompiler.codeGen(tree, options);
 };
 
-Spacebars.codeGen = function (parseTree, options) {
+SpacebarsCompiler.codeGen = function (parseTree, options) {
   // is this a template, rather than a block passed to
   // a block helper, say
   var isTemplate = (options && options.isTemplate);
@@ -331,7 +331,7 @@ Spacebars.codeGen = function (parseTree, options) {
   if (isTemplate || (options && options.isBody)) {
     // optimizing fragments would require being smarter about whether we are
     // in a TEXTAREA, say.
-    tree = optimize(tree);
+    tree = SpacebarsCompiler.optimize(tree);
   }
 
   tree = replaceTemplateTags(tree);
@@ -373,4 +373,4 @@ var beautify = function (code) {
 };
 
 // expose for compiler output tests
-Spacebars._beautify = beautify;
+SpacebarsCompiler._beautify = beautify;

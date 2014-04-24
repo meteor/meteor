@@ -7,7 +7,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       var msg = '';
       test.throws(function () {
         try {
-          Spacebars.compile(input);
+          SpacebarsCompiler.compile(input);
         } catch (e) {
           msg = e.message;
           throw e;
@@ -16,7 +16,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       test.equal(msg.slice(0, expectedMessage.length),
                  expectedMessage);
     } else {
-      var output = Spacebars.compile(input);
+      var output = SpacebarsCompiler.compile(input);
       var postProcess = function (string) {
         // remove initial and trailing parens
         string = string.replace(/^\(([\S\s]*)\)$/, '$1');
@@ -37,7 +37,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       test._stringEqual(
         postProcess(output.toString()),
         postProcess(
-          Spacebars._beautify('(' + expected.toString() + ')')),
+          SpacebarsCompiler._beautify('(' + expected.toString() + ')')),
         input);
     }
   };
@@ -255,7 +255,7 @@ Tinytest.add("spacebars - compiler errors", function (test) {
 
   var getError = function (input) {
     try {
-      Spacebars.compile(input);
+      SpacebarsCompiler.compile(input);
     } catch (e) {
       return e.message;
     }

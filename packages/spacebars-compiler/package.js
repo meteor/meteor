@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  // (TODO: make SpacebarsCompiler a separate symbol)
+  api.export('SpacebarsCompiler');
 
   api.use('spacebars');
   api.imply('spacebars');
