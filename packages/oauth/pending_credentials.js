@@ -31,19 +31,27 @@ var _cleanStaleResults = function() {
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
-// Stores the key and credential in the _pendingCredentials collection
+// Stores the key and credential in the _pendingCredentials collection.
+// Will throw an exception if `key` is not a string.
 //
 // @param key {string}
 // @param credential {string}   The credential to store
 //
 OAuth._storePendingCredential = function (key, credential) {
+  check(key, String);
+
   if (credential instanceof Error) {
     credential = storableError(credential);
   } else {
     credential = OAuth.sealSecret(credential);
   }
 
-  OAuth._pendingCredentials.insert({
+  // We do an upsert here instead of an insert in case the user happens
+  // to somehow send the same `state` parameter twice during an OAuth
+  // login; we don't want a duplicate key error.
+  OAuth._pendingCredentials.upsert({
+    key: key
+  }, {
     key: key,
     credential: credential,
     createdAt: new Date()

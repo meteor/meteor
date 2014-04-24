@@ -84,3 +84,27 @@ Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (with oa
     OAuthEncryption.loadKey(null);
   }
 });
+
+Tinytest.add("oauth1 - duplicate key for request token", function (test) {
+  var key = Random.id();
+  var token = Random.id();
+  var secret = Random.id();
+  OAuth._storeRequestToken(key, token, secret);
+  var newToken = Random.id();
+  var newSecret = Random.id();
+  OAuth._storeRequestToken(key, newToken, newSecret);
+  var result = OAuth._retrieveRequestToken(key);
+  test.equal(result.requestToken, newToken);
+  test.equal(result.requestTokenSecret, newSecret);
+});
+
+Tinytest.add("oauth1 - null, undefined key for request token", function (test) {
+  var token = Random.id();
+  var secret = Random.id();
+  test.throws(function () {
+    OAuth._storeRequestToken(null, token, secret);
+  });
+  test.throws(function () {
+    OAuth._storeRequestToken(undefined, token, secret);
+  });
+});

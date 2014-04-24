@@ -28,3 +28,22 @@ Tinytest.add("oauth - pendingCredential handles Meteor.Errors", function (test) 
   test.equal(result.stack, testError.stack);
   test.isUndefined(result.meteorError);
 });
+
+Tinytest.add("oauth - null, undefined key for pendingCredential", function (test) {
+  var cred = Random.id();
+  test.throws(function () {
+    OAuth._storePendingCredential(null, cred);
+  });
+  test.throws(function () {
+    OAuth._storePendingCredential(undefined, cred);
+  });
+});
+
+Tinytest.add("oauth - pendingCredential handles duplicate key", function (test) {
+  var key = Random.id();
+  var cred = Random.id();
+  OAuth._storePendingCredential(key, cred);
+  var newCred = Random.id();
+  OAuth._storePendingCredential(key, newCred);
+  test.equal(OAuth._retrievePendingCredential(key), newCred);
+});

@@ -15,7 +15,8 @@
 // For this reason, the _pendingRequestTokens are stored in the database
 // so they can be shared across Meteor App servers.
 //
-
+// XXX This code is fairly similar to oauth/pending_credentials.js --
+// maybe we can combine them somehow.
 
 // Collection containing pending request tokens
 // Has key, requestToken, requestTokenSecret, and createdAt fields.
@@ -39,14 +40,22 @@ var _cleanStaleResults = function() {
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
-// Stores the key and request token in the _pendingRequestTokens collection
+// Stores the key and request token in the _pendingRequestTokens collection.
+// Will throw an exception if `key` is not a string.
 //
 // @param key {string}
 // @param requestToken {string}
 // @param requestTokenSecret {string}
 //
 OAuth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
-  OAuth._pendingRequestTokens.insert({
+  check(key, String);
+
+  // We do an upsert here instead of an insert in case the user happens
+  // to somehow send the same `state` parameter twice during an OAuth
+  // login; we don't want a duplicate key error.
+  OAuth._pendingRequestTokens.upsert({
+    key: key
+  }, {
     key: key,
     requestToken: OAuth.sealSecret(requestToken),
     requestTokenSecret: OAuth.sealSecret(requestTokenSecret),
