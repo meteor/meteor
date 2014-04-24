@@ -366,11 +366,12 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
   visitCharRef: IDENTITY,
   visitRaw: IDENTITY,
   visitObject: IDENTITY,
+  visitFunction: IDENTITY,
   visitTag: function (tag/*, ...*/) {
     var oldChildren = tag.children;
     var argsCopy = SLICE.call(arguments);
     argsCopy[0] = oldChildren;
-    var newChildren = this.visit.apply(this, argsCopy);
+    var newChildren = this.visitChildren.apply(this, argsCopy);
 
     var oldAttrs = tag.attrs;
     argsCopy[0] = oldAttrs;
@@ -382,6 +383,9 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
     var newTag = HTML.getTag(tag.tagName).apply(null, newChildren);
     newTag.attrs = newAttrs;
     return newTag;
+  },
+  visitChildren: function (children/*, ...*/) {
+    return this.visitArray.apply(this, arguments);
   },
   visitAttributes: function (attrs/*, ...*/) {
     if (HTML.isArray(attrs)) {
@@ -399,6 +403,12 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
         }
       }
       return result;
+    }
+
+    if (attrs && (attrs.constructor !== Object)) {
+      throw new Error("The basic HTML.TransformingVisitor does not support " +
+                      "foreign objects in attributes.  Define a custom " +
+                      "visitAttributes for this case.");
     }
 
     var oldAttrs = attrs;
