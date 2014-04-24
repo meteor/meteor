@@ -11,6 +11,7 @@ TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
   self.stop_at_offset = stop_at_offset;
   self.onException = onException;
   self.id = Random.id();
+  self.extraDetails = {};
 };
 
 _.extend(TestCaseResults.prototype, {
@@ -40,6 +41,8 @@ _.extend(TestCaseResults.prototype, {
       // string. Don't do this!
       doc = { type: "fail", message: doc };
     }
+
+    doc = _.extend({}, doc, self.extraDetails);
 
     if (self.stop_at_offset === 0) {
       if (Meteor.isClient) {
