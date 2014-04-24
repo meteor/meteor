@@ -226,7 +226,7 @@ Tinytest.add("spacebars - Spacebars.dot", function (test) {
 
 Tinytest.add("spacebars - parse", function (test) {
   test.equal(BlazeTools.toJS(Spacebars.parse('{{foo}}')),
-             'HTMLTools.Special({type: "DOUBLE", path: ["foo"]})');
+             'Spacebars.TemplateTag({type: "DOUBLE", path: ["foo"]})');
 
   test.equal(BlazeTools.toJS(Spacebars.parse('{{!foo}}')), 'null');
   test.equal(BlazeTools.toJS(Spacebars.parse('x{{!foo}}y')), '"xy"');
@@ -235,13 +235,13 @@ Tinytest.add("spacebars - parse", function (test) {
   test.equal(BlazeTools.toJS(Spacebars.parse('x{{!--foo--}}y')), '"xy"');
 
   test.equal(BlazeTools.toJS(Spacebars.parse('{{#foo}}x{{/foo}}')),
-             'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
+             'Spacebars.TemplateTag({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
 
   test.equal(BlazeTools.toJS(Spacebars.parse('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
-             'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: HTMLTools.Special({type: "BLOCKOPEN", path: ["bar"]})})');
+             'Spacebars.TemplateTag({type: "BLOCKOPEN", path: ["foo"], content: Spacebars.TemplateTag({type: "BLOCKOPEN", path: ["bar"]})})');
 
   test.equal(BlazeTools.toJS(Spacebars.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
-             '[HTML.DIV("hello"), " ", HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.DIV(HTMLTools.Special({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
+             '[HTML.DIV("hello"), " ", Spacebars.TemplateTag({type: "BLOCKOPEN", path: ["foo"], content: HTML.DIV(Spacebars.TemplateTag({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
 
 
   test.throws(function () {

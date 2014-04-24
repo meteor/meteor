@@ -5,7 +5,7 @@ Spacebars.parse = function (input) {
 
   var tree = HTMLTools.parseFragment(
     input,
-    { getSpecialTag: TemplateTag.parseCompleteTag });
+    { getTemplateTag: TemplateTag.parseCompleteTag });
 
   return tree;
 };
@@ -29,7 +29,7 @@ var optimize = function (tree) {
     return (html.indexOf('&') < 0 && html.indexOf('<') < 0);
   };
 
-  // Returns `null` if no specials are found in the array, so that the
+  // Returns `null` if no template tags are found in the array, so that the
   // parent can perform the actual optimization.  Otherwise, returns
   // an array of parts which have been optimized as much as possible.
   // `forceOptimize` forces the latter case.
@@ -40,9 +40,9 @@ var optimize = function (tree) {
     for (var i = 0, N = array.length; i < N; i++) {
       var part = optimizePartsFunc(array[i]);
       if (part !== null) {
-        // something special found
+        // template tag found somewhere
         if (result === null) {
-          // This is our first special item.  Stringify the other parts.
+          // This is our first template tag.  Stringify the other parts.
           result = [];
           for (var j = 0; j < i; j++)
             pushRawHTML(result, HTML.toHTML(array[j]));
@@ -51,7 +51,7 @@ var optimize = function (tree) {
       } else {
         // just plain HTML found
         if (result !== null) {
-          // we've already found something special, so convert this to Raw
+          // we've already found a template tag, so convert this to Raw
           pushRawHTML(result, HTML.toHTML(array[i]));
         }
       }
@@ -68,15 +68,15 @@ var optimize = function (tree) {
     return result;
   };
 
-  var doesAttributeValueHaveSpecials = function (v) {
-    if (v instanceof HTMLTools.Special)
+  var doesAttributeValueHaveTemplateTags = function (v) {
+    if (v instanceof HTMLTools.TemplateTag)
       return true;
     if (typeof v === 'function')
       return true;
 
     if (v instanceof Array) {
       for (var i = 0; i < v.length; i++)
-        if (doesAttributeValueHaveSpecials(v[i]))
+        if (doesAttributeValueHaveTemplateTags(v[i]))
           return true;
       return false;
     }
@@ -85,13 +85,13 @@ var optimize = function (tree) {
   };
 
   var optimizeParts = function (node) {
-    // If we have nothing special going on, returns `null` (so that the
+    // If we have no template tags anywhere, returns `null` (so that the
     // parent can optimize).  Otherwise returns a replacement for `node`
     // with optimized parts.
     if ((node == null) || (typeof node === 'string') ||
         (node instanceof HTML.CharRef) || (node instanceof HTML.Comment) ||
         (node instanceof HTML.Raw)) {
-      // not special; let parent decide how whether to optimize
+      // no template tags; let parent decide how whether to optimize
       return null;
     } else if (node instanceof HTML.Tag) {
       var tagName = node.tagName;
@@ -119,7 +119,7 @@ var optimize = function (tree) {
         for (var i = 0; i < (isArray ? attrs.length : 1); i++) {
           var a = (isArray ? attrs[i] : attrs);
           for (var k in a) {
-            if (doesAttributeValueHaveSpecials(a[k])) {
+            if (doesAttributeValueHaveTemplateTags(a[k])) {
               mustOptimize = true;
               break;
             }
@@ -442,24 +442,24 @@ var codeGenInclusionParts = function (tag) {
 // ============================================================
 // Main compiler
 
-var SpecialReplacer = HTML.TransformingVisitor.extend({
+var TemplateTagReplacer = HTML.TransformingVisitor.extend({
   visitObject: function (x) {
-    if (x instanceof HTMLTools.Special)
-      return codeGenTemplateTag(x.value);
+    if (x instanceof HTMLTools.TemplateTag)
+      return codeGenTemplateTag(x);
 
     return HTML.TransformingVisitor.prototype.visitObject.call(this, x);
   },
   visitAttributes: function (attrs) {
-    if (attrs instanceof HTMLTools.Special)
-      return codeGenTemplateTag(attrs.value);
+    if (attrs instanceof HTMLTools.TemplateTag)
+      return codeGenTemplateTag(attrs);
 
     // call super (e.g. for case where `attrs` is an array)
     return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
   }
 });
 
-var replaceSpecials = function (node) {
-  return (new SpecialReplacer).visit(node);
+var replaceTemplateTags = function (node) {
+  return (new TemplateTagReplacer).visit(node);
 };
 
 Spacebars.compile = function (input, options) {
@@ -481,7 +481,7 @@ Spacebars.codeGen = function (parseTree, options) {
     tree = optimize(tree);
   }
 
-  tree = replaceSpecials(tree);
+  tree = replaceTemplateTags(tree);
 
   var code = '(function () { var self = this; ';
   if (isTemplate) {
