@@ -98,7 +98,8 @@
 
 
 Patches contributed by GitHub users aldeed, apendua, arbesfeld, awwx, dandv,
-davegonzalez, justinsb, mquandalle, Neftedollar, Pent, sdarnell, and timhaines.
+davegonzalez, emgee3, justinsb, mquandalle, Neftedollar, Pent, sdarnell,
+and timhaines.
 
 
 * A validate login hook can now override the exception thrown from
