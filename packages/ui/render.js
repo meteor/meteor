@@ -366,7 +366,7 @@ var materialize = function (node, parent, before, parentComponent) {
           reportUIException(e);
         }
       });
-      UI.DomBackend.onRemoveElement(elem, function () {
+      UI.DOMBackend.onRemoveElement(elem, function () {
         attrComp.stop();
       });
     }
@@ -390,7 +390,7 @@ var materialize = function (node, parent, before, parentComponent) {
   } else if (node instanceof HTML.Raw) {
     // Get an array of DOM nodes by using the browser's HTML parser
     // (like innerHTML).
-    var htmlNodes = UI.DomBackend.parseHTML(node.value);
+    var htmlNodes = UI.DOMBackend.parseHTML(node.value);
     for (var i = 0; i < htmlNodes.length; i++)
       insert(htmlNodes[i], parent, before);
   } else if (Package['html-tools'] &&

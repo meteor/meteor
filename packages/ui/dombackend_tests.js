@@ -18,7 +18,7 @@ var runDivSpanBTest = function (func) {
   func(div, span, b, buf, func1, func2, func3, func4);
 };
 
-var DomBackend =  UI.DomBackend;
+var DOMBackend =  UI.DOMBackend;
 
 // Essentially test that the `node` argument has been removed from the
 // DOM. The caveat is that in IE8, calling `removeChild` leaves the
@@ -34,37 +34,37 @@ var isDetachedSingleNode = function (test, node) {
   }
 };
 
-Tinytest.add("ui - DomBackend - element removal", function (test) {
+Tinytest.add("ui - DOMBackend - element removal", function (test) {
   // Test that calling removeElement on a detached element calls onRemoveElement
   // on it and its descendents. For jQuery, `removeElement` runs `$(elem).remove()`,
   // so it tests detecting a jQuery removal, as well as the stronger condition
   // that clean-up still happens on the DOM tree in the detached case.
   runDivSpanBTest(function (div, span, b, buf, func1, func2, func3, func4) {
-    DomBackend.onRemoveElement(div, func1);
-    DomBackend.onRemoveElement(span, func2);
-    DomBackend.onRemoveElement(b, func3);
+    DOMBackend.onRemoveElement(div, func1);
+    DOMBackend.onRemoveElement(span, func2);
+    DOMBackend.onRemoveElement(b, func3);
     // test second callback on same element
-    DomBackend.onRemoveElement(div, func4);
+    DOMBackend.onRemoveElement(div, func4);
 
-    DomBackend.removeElement(div); // "remove" the (parentless) DIV
+    DOMBackend.removeElement(div); // "remove" the (parentless) DIV
 
     buf.sort();
     test.equal(buf, ["B3", "DIV1", "DIV4", "SPAN2"]);
 
     buf.length = 0;
-    DomBackend.removeElement(div);
+    DOMBackend.removeElement(div);
     test.equal(buf.length, 0);
   });
 
   // Test that `removeElement` actually removes the element
   // (and fires appropriate callbacks).
   runDivSpanBTest(function (div, span, b, buf, func1, func2, func3, func4) {
-    DomBackend.onRemoveElement(div, func1);
-    DomBackend.onRemoveElement(span, func2);
-    DomBackend.onRemoveElement(b, func3);
-    DomBackend.onRemoveElement(div, func4);
+    DOMBackend.onRemoveElement(div, func1);
+    DOMBackend.onRemoveElement(span, func2);
+    DOMBackend.onRemoveElement(b, func3);
+    DOMBackend.onRemoveElement(div, func4);
 
-    DomBackend.removeElement(span); // remove the SPAN
+    DOMBackend.removeElement(span); // remove the SPAN
 
     test.equal(div.childNodes.length, 0);
     isDetachedSingleNode(test, span);
@@ -73,20 +73,20 @@ Tinytest.add("ui - DomBackend - element removal", function (test) {
     test.equal(buf, ["B3", "SPAN2"]);
 
     buf.length = 0;
-    DomBackend.removeElement(div); // remove the DIV
+    DOMBackend.removeElement(div); // remove the DIV
     test.equal(buf, ["DIV1", "DIV4"]);
   });
 
 });
 
-Tinytest.add("ui - DomBackend - element removal (jQuery)", function (test) {
+Tinytest.add("ui - DOMBackend - element removal (jQuery)", function (test) {
 
   // Test with `$(elem).remove()`.
   runDivSpanBTest(function (div, span, b, buf, func1, func2, func3, func4) {
-    DomBackend.onRemoveElement(div, func1);
-    DomBackend.onRemoveElement(span, func2);
-    DomBackend.onRemoveElement(b, func3);
-    DomBackend.onRemoveElement(div, func4);
+    DOMBackend.onRemoveElement(div, func1);
+    DOMBackend.onRemoveElement(span, func2);
+    DOMBackend.onRemoveElement(b, func3);
+    DOMBackend.onRemoveElement(div, func4);
 
     $(span).remove(); // remove the SPAN
 
@@ -103,10 +103,10 @@ Tinytest.add("ui - DomBackend - element removal (jQuery)", function (test) {
 
   // Test that `$(elem).detach()` is NOT considered a removal.
   runDivSpanBTest(function (div, span, b, buf, func1, func2, func3, func4) {
-    DomBackend.onRemoveElement(div, func1);
-    DomBackend.onRemoveElement(span, func2);
-    DomBackend.onRemoveElement(b, func3);
-    DomBackend.onRemoveElement(div, func4);
+    DOMBackend.onRemoveElement(div, func1);
+    DOMBackend.onRemoveElement(span, func2);
+    DOMBackend.onRemoveElement(b, func3);
+    DOMBackend.onRemoveElement(div, func4);
 
     $(span).detach(); // detach the SPAN
 

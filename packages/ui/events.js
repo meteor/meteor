@@ -1,6 +1,6 @@
 var EventSupport = UI.EventSupport = {};
 
-var DomBackend = UI.DomBackend;
+var DOMBackend = UI.DOMBackend;
 
 // List of events to always delegate, never capture.
 // Since jQuery fakes bubbling for certain events in
@@ -55,7 +55,7 @@ var HandlerRec = function (elem, type, selector, handler, recipient) {
 
   var tryCapturing = elem.addEventListener &&
         (! eventsToDelegate.hasOwnProperty(
-          DomBackend.parseEventType(type)));
+          DOMBackend.Events.parseEventType(type)));
 
   if (tryCapturing) {
     this.capturingHandler = (function (h) {
@@ -66,7 +66,7 @@ var HandlerRec = function (elem, type, selector, handler, recipient) {
             // this type of event bubbles, so don't
             // get called again.
             h.mode = EVENT_MODE.BUBBLING;
-            DomBackend.unbindEventCapturer(
+            DOMBackend.Events.unbindEventCapturer(
               h.elem, h.type, h.capturingHandler);
             return;
           } else {
@@ -74,7 +74,7 @@ var HandlerRec = function (elem, type, selector, handler, recipient) {
             // so unbind the delegation, preventing
             // it from ever firing.
             h.mode = EVENT_MODE.CAPTURING;
-            DomBackend.undelegateEvents(
+            DOMBackend.Events.undelegateEvents(
               h.elem, h.type, h.delegatedHandler);
           }
         }
@@ -94,24 +94,24 @@ HandlerRec.prototype.bind = function () {
   // this case, 'capturingHandler' is in charge of detecting the
   // correct mode and turning off one or the other handlers.
   if (this.mode !== EVENT_MODE.BUBBLING) {
-    DomBackend.bindEventCapturer(
+    DOMBackend.Events.bindEventCapturer(
       this.elem, this.type, this.selector || '*',
       this.capturingHandler);
   }
 
   if (this.mode !== EVENT_MODE.CAPTURING)
-    DomBackend.delegateEvents(
+    DOMBackend.Events.delegateEvents(
       this.elem, this.type,
       this.selector || '*', this.delegatedHandler);
 };
 
 HandlerRec.prototype.unbind = function () {
   if (this.mode !== EVENT_MODE.BUBBLING)
-    DomBackend.unbindEventCapturer(this.elem, this.type,
+    DOMBackend.Events.unbindEventCapturer(this.elem, this.type,
                                    this.capturingHandler);
 
   if (this.mode !== EVENT_MODE.CAPTURING)
-    DomBackend.undelegateEvents(this.elem, this.type,
+    DOMBackend.Events.undelegateEvents(this.elem, this.type,
                                 this.delegatedHandler);
 };
 

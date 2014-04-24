@@ -4,7 +4,7 @@
 // - Quick remove/add (mark "leaving" members; needs UI hooks)
 // - Event removal on removal
 
-var DomBackend = UI.DomBackend;
+var DOMBackend = UI.DOMBackend;
 
 var removeNode = function (n) {
 //  if (n.nodeType === 1 &&
@@ -105,7 +105,7 @@ var rangeParented = function (range) {
       range._rangeDict = rangeDict;
 
       // get jQuery to tell us when this node is removed
-      DomBackend.onRemoveElement(parentNode, function () {
+      DOMBackend.onRemoveElement(parentNode, function () {
         rangeRemoved(range);
       });
     }
@@ -147,7 +147,7 @@ var nodeRemoved = function (node, viaBackend) {
       rangeRemoved(comps[i]);
 
     if (! viaBackend)
-      DomBackend.removeElement(node);
+      DOMBackend.removeElement(node);
   }
 };
 
@@ -167,7 +167,7 @@ var nextGuid = 1;
 var DomRange = function () {
   var start = createMarkerNode();
   var end = createMarkerNode();
-  var fragment = DomBackend.newFragment([start, end]);
+  var fragment = DOMBackend.newFragment([start, end]);
   fragment.$_uiIsOffscreen = true;
 
   this.start = start;
@@ -792,7 +792,7 @@ DomRange.prototype.$ = function (selector) {
       parentNode.$_uiIsOffscreen)
     throw new Error("Can't use $ on an offscreen component");
 
-  var results = DomBackend.findBySelector(selector, parentNode);
+  var results = DOMBackend.findBySelector(selector, parentNode);
 
   // We don't assume `results` has jQuery API; a plain array
   // should do just as well.  However, if we do have a jQuery
