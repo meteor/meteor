@@ -188,10 +188,6 @@ Template.todo_item.done_class = function () {
   return this.done ? 'done' : '';
 };
 
-Template.todo_item.done_checkbox = function () {
-  return this.done ? 'checked="checked"' : '';
-};
-
 Template.todo_item.editing = function () {
   return Session.equals('editing_itemname', this._id);
 };

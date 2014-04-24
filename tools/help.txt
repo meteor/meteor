@@ -34,6 +34,7 @@ the .meteor directory in the root of the project.
 Options:
   --port, -p    Port to listen on (instead of the default 3000). Also
                 uses port N+1 and a port specified by --app-port.
+                Specify as --port=host:port to bind to a specific interface.
   --production  Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs    Run without parsing logs from stdout and stderr.
   --settings    Set optional data for Meteor.settings on the server
@@ -365,6 +366,16 @@ Usage: meteor admin grant [XXX]
 
 Not yet implemented
 
+
 >>> publish
 Publish a package
 Usage: meteor publish --versionString <semver>
+
+
+>>> list-sites
+List sites for which you are authorized.
+Usage: meteor list-sites
+
+List the sites that you have deployed with 'meteor deploy', and sites
+for which other users have authorized you with the 'meteor authorized'
+command.

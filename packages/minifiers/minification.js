@@ -95,6 +95,13 @@ traverse.page = function(node) {
     + emit('}');
 };
 
+traverse['font-face'] = function(node){
+  return emit('@font-face', node.position, true)
+    + emit('{')
+    + mapVisit(node.declarations)
+    + emit('}');
+};
+
 traverse.rule = function(node) {
   var decls = node.declarations;
   if (!decls.length) return '';

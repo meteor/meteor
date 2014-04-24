@@ -46,7 +46,7 @@ cat > "$OUTDIR/release.json-$PLATFORM" <<ENDOFMANIFEST
   "packages": {
 $MANIFEST_PACKAGE_CHUNK
   },
-  "upgraders": ["app-packages"]
+  "upgraders": ["app-packages", "no-preserve-inputs"]
 }
 ENDOFMANIFEST
 

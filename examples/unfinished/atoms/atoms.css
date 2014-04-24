@@ -1,0 +1,12 @@
+g[class=atom] circle {
+  stroke: black;
+  stroke-width: 3px;
+}
+
+g[class=atom] text {
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  fill: black;
+  font-weight: bold;
+  text-anchor: middle;
+}

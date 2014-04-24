@@ -1,5 +1,4 @@
-=> Meteor 0.7.2: Support limit queries in the oplog tailing driver. Add
-   hooks to customize the login process.
+=> Meteor 0.8.0.1: Fix security problem in Twitter OAuth flow.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.7.2 by running 'meteor update'.
+   project to Meteor 0.8.0.1 by running 'meteor update'.

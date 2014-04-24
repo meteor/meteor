@@ -27,7 +27,7 @@
           </div>
           <div class="span5">
             <div style="float: right">
-              {{loginButtons align="right"}}
+              {{> loginButtons align="right"}}
             </div>
           </div>
         </div>
@@ -54,13 +54,11 @@
 
 <template name="map">
   <div class="map">
-    {{#constant}}
-      <svg width="500" height="500">
-        <circle class="callout" cx=-100 cy=-100></circle>
-        <g class="circles"></g>
-        <g class="labels"></g>
-      </svg>
-    {{/constant}}
+    <svg width="500" height="500">
+      <circle class="callout" cx=-100 cy=-100></circle>
+      <g class="circles"></g>
+      <g class="labels"></g>
+    </svg>
     <div>
       <small class="attribution muted">&copy;
         <a href="http://www.openstreetmap.org/?lat=37.78212&lon=-122.40146&zoom=15&layers=M"

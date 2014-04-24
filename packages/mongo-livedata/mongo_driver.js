@@ -113,6 +113,7 @@ MongoConnection = function (url, options) {
   options = options || {};
   self._connectCallbacks = [];
   self._observeMultiplexers = {};
+  self._onFailoverHook = new Hook;
 
   var mongoOptions = {db: {safe: true}, server: {}, replSet: {}};
 
@@ -144,18 +145,42 @@ MongoConnection = function (url, options) {
     mongoOptions.replSet.poolSize = options.poolSize;
   }
 
-  MongoDB.connect(url, mongoOptions, function(err, db) {
+  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
     if (err)
       throw err;
     self.db = db;
+    // We keep track of the ReplSet's primary, so that we can trigger hooks when
+    // it changes.  The Node driver's joined callback seems to fire way too
+    // often, which is why we need to track it ourselves.
+    self._primary = null;
+    // First, figure out what the current primary is, if any.
+    if (self.db.serverConfig._state.master)
+      self._primary = self.db.serverConfig._state.master.name;
+    self.db.serverConfig.on(
+      'joined', Meteor.bindEnvironment(function (kind, doc) {
+        if (kind === 'primary') {
+          if (doc.primary !== self._primary) {
+            self._primary = doc.primary;
+            self._onFailoverHook.each(function (callback) {
+              callback();
+              return true;
+            });
+          }
+        } else if (doc.me === self._primary) {
+          // The thing we thought was primary is now something other than
+          // primary.  Forget that we thought it was primary.  (This means that
+          // if a server stops being primary and then starts being primary again
+          // without another server becoming primary in the middle, we'll
+          // correctly count it as a failover.)
+          self._primary = null;
+        }
+    }));
 
-    Fiber(function () {
-      // drain queue of pending callbacks
-      _.each(self._connectCallbacks, function (c) {
-        c(db);
-      });
-    }).run();
-  });
+    // drain queue of pending callbacks
+    _.each(self._connectCallbacks, function (c) {
+      c(db);
+    });
+  }));
 
   self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
@@ -227,6 +252,12 @@ MongoConnection.prototype._maybeBeginWrite = function () {
     return fence.beginWrite();
   else
     return {committed: function () {}};
+};
+
+// Internal interface: adds a callback which is called when the Mongo primary
+// changes. Returns a stop handle.
+MongoConnection.prototype._onFailover = function (callback) {
+  return this._onFailoverHook.register(callback);
 };
 
 

@@ -5,8 +5,8 @@ var Future = require(path.join("fibers", "future"));
 var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
-// This code is duplicated in tools/meteor.js.
-var MIN_NODE_VERSION = 'v0.10.25';
+// This code is duplicated in tools/main.js.
+var MIN_NODE_VERSION = 'v0.10.26';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(

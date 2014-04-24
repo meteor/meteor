@@ -6,7 +6,9 @@ Accounts.registerLoginHandler(function (options) {
 
   check(options.oauth, {credentialToken: String});
 
-  if (!Oauth.hasCredential(options.oauth.credentialToken)) {
+  var result = OAuth.retrieveCredential(options.oauth.credentialToken);
+
+  if (!result) {
     // OAuth credentialToken is not recognized, which could be either
     // because the popup was closed by the user before completion, or
     // some sort of error where the oauth provider didn't talk to our
@@ -26,7 +28,7 @@ Accounts.registerLoginHandler(function (options) {
                Accounts.LoginCancelledError.numericError,
                "No matching login attempt found") };
   }
-  var result = Oauth.retrieveCredential(options.oauth.credentialToken);
+
   if (result instanceof Error)
     // We tried to login, but there was a fatal error. Report it back
     // to the user.

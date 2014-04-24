@@ -1,0 +1,28 @@
+<head>
+  <title>Atoms</title>
+</head>
+
+<body>
+  <div id="atoms">
+    <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500">
+      {{#atom x=100 y=100 color="#ffff00"}}O{{/atom}}
+      {{> hydrogen x=150 y=100}}
+      {{#giantatom x=250 y=100 color="#ff9999"}}My{{/giantatom}}
+    </svg>
+  </div>
+</body>
+
+<template name="atom">
+  <g class="atom">
+    <circle style="fill: {{#if color}}{{color}}{{else}}white{{/if}}" cx={{x}} cy={{y}} r={{#if r}}{{r}}{{else}}20{{/if}} />
+    <text x={{x}} y={{textY}}>{{> UI.contentBlock}}</text>
+  </g>
+</template>
+
+<template name="hydrogen">
+  {{#atom x=x y=y r=r color="#00ffff"}}H{{/atom}}
+</template>
+
+<template name="giantatom">
+  {{#atom x=x y=y r=50 color=color}}{{> UI.contentBlock}}{{/atom}}
+</template>

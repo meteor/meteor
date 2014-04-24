@@ -82,7 +82,7 @@ paths_for_word = function (board, word) {
 
     for (var i = 0; i < positions_to_try.length; i++) {
       var pos = positions_to_try[i];
-      if (board[pos] === word[0] && path.indexOf(pos) === -1)
+      if (board[pos] === word[0] && _.indexOf(path, pos) === -1)
         check_path(word.slice(1),      // cdr of word
                    path.concat([pos]), // append matching loc to path
                    ADJACENCIES[pos]);  // only look at surrounding tiles

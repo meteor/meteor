@@ -30,6 +30,9 @@ _.extend(StubStream.prototype, {
     // no-op
   },
 
+  _lostConnection: function () {
+    // no-op
+  },
 
   // Methods for tests
   receive: function (data) {

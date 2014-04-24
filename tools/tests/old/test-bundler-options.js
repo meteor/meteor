@@ -15,6 +15,12 @@ var tmpDir = function () {
 };
 
 var runTest = function () {
+  var readManifest = function (tmpOutputDir) {
+    return JSON.parse(fs.readFileSync(
+      path.join(tmpOutputDir, "programs", "client", "program.json"),
+      "utf8")).manifest;
+  };
+
   console.log("nodeModules: 'skip'");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
@@ -38,10 +44,13 @@ var runTest = function () {
            .isDirectory());
 
     // verify that contents are minified
-    var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
-                                            "client", "app.html"), 'utf8');
-    assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml));
-    assert(!(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages/.test(appHtml)));
+    var manifest = readManifest(tmpOutputDir);
+    _.each(manifest, function (item) {
+      if (item.type !== 'js')
+        return;
+      // Just a hash, and no "packages/".
+      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path));
+    });
   });
 
   console.log("nodeModules: 'skip', no minify");
@@ -58,14 +67,25 @@ var runTest = function () {
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
                        bundler._mainJsContents);
+
     // verify that contents are not minified
-    var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
-                                            "client", "app.html"), 'utf8');
-    assert(!(/src=\"##BUNDLED_JS_CSS_PREFIX##\/[0-9a-f]{40,40}.js\"/.test(appHtml)));
-    assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages\/meteor/.test(appHtml));
-    assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages\/deps/.test(appHtml));
-    // verify that tests aren't included
-    assert(!(/src=\"##BUNDLED_JS_CSS_PREFIX##\/package-tests\/meteor/.test(appHtml)));
+    var manifest = readManifest(tmpOutputDir);
+    var foundMeteor = false;
+    var foundDeps = false;
+    _.each(manifest, function (item) {
+      if (item.type !== 'js')
+        return;
+      // No minified hash.
+      assert(!/^[0-9a-f]{40,40}\.js$/.test(item.path));
+      // No tests.
+      assert(!/:tests/.test(item.path));
+      if (item.path === 'packages/meteor.js')
+        foundMeteor = true;
+      if (item.path === 'packages/deps.js')
+        foundDeps = true;
+    });
+    assert(foundMeteor);
+    assert(foundDeps);
   });
 
   console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
@@ -82,10 +102,12 @@ var runTest = function () {
     // sanity check -- main.js has expected contents.
     assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
                        bundler._mainJsContents);
+
     // verify that tests for the meteor package are included
-    var appHtml = fs.readFileSync(path.join(tmpOutputDir, "programs",
-                                            "client", "app.html"));
-    assert(/src=\"##BUNDLED_JS_CSS_PREFIX##\/packages\/meteor:tests\.js/.test(appHtml));
+    var manifest = readManifest(tmpOutputDir);
+    assert(_.find(manifest, function (item) {
+      return item.type === 'js' && item.path === 'packages/meteor:tests.js';
+    }));
   });
 
   console.log("nodeModules: 'copy'");

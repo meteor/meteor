@@ -73,12 +73,19 @@ var validateLogin = function (connection, attempt) {
     }
     catch (e) {
       attempt.allowed = false;
+      // XXX this means the last thrown error overrides previous error
+      // messages. Maybe this is surprising to users and we should make
+      // overriding errors more explicit. (see
+      // https://github.com/meteor/meteor/issues/1960)
       attempt.error = e;
       return true;
     }
     if (! ret) {
       attempt.allowed = false;
-      attempt.error = new Meteor.Error(403, "Login forbidden");
+      // don't override a specific error provided by a previous
+      // validator or the initial attempt (eg "incorrect password").
+      if (!attempt.error)
+        attempt.error = new Meteor.Error(403, "Login forbidden");
     }
     return true;
   });
@@ -302,6 +309,9 @@ Accounts._reportLoginFailure = function (methodInvocation, methodName, methodArg
 
   validateLogin(methodInvocation.connection, attempt);
   failedLogin(methodInvocation.connection, attempt);
+  // validateLogin may mutate attempt to set a new error message. Return
+  // the modified version.
+  return attempt;
 };
 
 
@@ -424,6 +434,17 @@ Meteor.methods({
   // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
   // immediately instead of using a delay.
   //
+  // XXX COMPAT WITH 0.7.2
+  // This single `logoutOtherClients` method has been replaced with two
+  // methods, one that you call to get a new token, and another that you
+  // call to remove all tokens except your own. The new design allows
+  // clients to know when other clients have actually been logged
+  // out. (The `logoutOtherClients` method guarantees the caller that
+  // the other clients will be logged out at some point, but makes no
+  // guarantees about when.) This method is left in for backwards
+  // compatibility, especially since application code might be calling
+  // this method directly.
+  //
   // @returns {Object} Object with token and tokenExpires keys.
   logoutOtherClients: function () {
     var self = this;
@@ -441,7 +462,7 @@ Meteor.methods({
       var tokens = user.services.resume.loginTokens;
       var newToken = Accounts._generateStampedLoginToken();
       var userId = self.userId;
-      Meteor.users.update(self.userId, {
+      Meteor.users.update(userId, {
         $set: {
           "services.resume.loginTokensToDelete": tokens,
           "services.resume.haveLoginTokensToDelete": true
@@ -462,8 +483,60 @@ Meteor.methods({
         tokenExpires: Accounts._tokenExpiration(newToken.when)
       };
     } else {
-      throw new Error("You are not logged in.");
+      throw new Meteor.Error("You are not logged in.");
     }
+  },
+
+  // Generates a new login token with the same expiration as the
+  // connection's current token and saves it to the database. Associates
+  // the connection with this new token and returns it. Throws an error
+  // if called on a connection that isn't logged in.
+  //
+  // @returns Object
+  //   If successful, returns { token: <new token>, id: <user id>,
+  //   tokenExpires: <expiration date> }.
+  getNewToken: function () {
+    var self = this;
+    var user = Meteor.users.findOne(self.userId, {
+      fields: { "services.resume.loginTokens": 1 }
+    });
+    if (! self.userId || ! user) {
+      throw new Meteor.Error("You are not logged in.");
+    }
+    // Be careful not to generate a new token that has a later
+    // expiration than the curren token. Otherwise, a bad guy with a
+    // stolen token could use this method to stop his stolen token from
+    // ever expiring.
+    var currentHashedToken = Accounts._getLoginToken(self.connection.id);
+    var currentStampedToken = _.find(
+      user.services.resume.loginTokens,
+      function (stampedToken) {
+        return stampedToken.hashedToken === currentHashedToken;
+      }
+    );
+    if (! currentStampedToken) { // safety belt: this should never happen
+      throw new Meteor.Error("Invalid login token");
+    }
+    var newStampedToken = Accounts._generateStampedLoginToken();
+    newStampedToken.when = currentStampedToken.when;
+    Accounts._insertLoginToken(self.userId, newStampedToken);
+    return loginUser(self, self.userId, newStampedToken);
+  },
+
+  // Removes all tokens except the token associated with the current
+  // connection. Throws an error if the connection is not logged
+  // in. Returns nothing on success.
+  removeOtherTokens: function () {
+    var self = this;
+    if (! self.userId) {
+      throw new Meteor.Error("You are not logged in.");
+    }
+    var currentToken = Accounts._getLoginToken(self.connection.id);
+    Meteor.users.update(self.userId, {
+      $pull: {
+        "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
+      }
+    });
   }
 });
 
@@ -753,7 +826,7 @@ Accounts.registerLoginHandler("resume", function(options) {
 // (Also used by Meteor Accounts server and tests).
 //
 Accounts._generateStampedLoginToken = function () {
-  return {token: Random.id(), when: (new Date)};
+  return {token: Random.secret(), when: (new Date)};
 };
 
 ///
@@ -815,6 +888,67 @@ maybeStopExpireTokensInterval = function () {
 expireTokenInterval = Meteor.setInterval(expireTokens,
                                          EXPIRE_TOKENS_INTERVAL_MS);
 
+
+///
+/// OAuth Encryption Support
+///
+
+var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
+
+
+var usingOAuthEncryption = function () {
+  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
+};
+
+
+// OAuth service data is temporarily stored in the pending credentials
+// collection during the oauth authentication process.  Sensitive data
+// such as access tokens are encrypted without the user id because
+// we don't know the user id yet.  We re-encrypt these fields with the
+// user id included when storing the service data permanently in
+// the users collection.
+//
+var pinEncryptedFieldsToUser = function (serviceData, userId) {
+  _.each(_.keys(serviceData), function (key) {
+    var value = serviceData[key];
+    if (OAuthEncryption && OAuthEncryption.isSealed(value))
+      value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
+    serviceData[key] = value;
+  });
+};
+
+
+// Encrypt unencrypted login service secrets when oauth-encryption is
+// added.
+//
+// XXX For the oauthSecretKey to be available here at startup, the
+// developer must call Accounts.config({oauthSecretKey: ...}) at load
+// time, instead of in a Meteor.startup block, because the startup
+// block in the app code will run after this accounts-base startup
+// block.  Perhaps we need a post-startup callback?
+
+Meteor.startup(function () {
+  if (!usingOAuthEncryption())
+    return;
+
+  var ServiceConfiguration =
+    Package['service-configuration'].ServiceConfiguration;
+
+  ServiceConfiguration.configurations.find( {$and: [
+      { secret: {$exists: true} },
+      { "secret.algorithm": {$exists: false} }
+    ] } ).
+    forEach(function (config) {
+      ServiceConfiguration.configurations.update(
+        config._id,
+        { $set: {
+          secret: OAuthEncryption.seal(config.secret)
+        } }
+      );
+    });
+});
+
+
 ///
 /// CREATE USER HOOKS
 ///
@@ -850,6 +984,11 @@ Accounts.insertUserDoc = function (options, user) {
   // one that gets called after (in which you should change other
   // collections)
   user = _.extend({createdAt: new Date(), _id: Random.id()}, user);
+
+  if (user.services)
+    _.each(user.services, function (serviceData) {
+      pinEncryptedFieldsToUser(serviceData, user._id);
+    });
 
   var fullUser;
   if (onCreateUserHook) {
@@ -986,6 +1125,8 @@ Accounts.updateOrCreateUserFromExternalService = function(
   var user = Meteor.users.findOne(selector);
 
   if (user) {
+    pinEncryptedFieldsToUser(serviceData, user._id);
+
     // We *don't* process options (eg, profile) for update, but we do replace
     // the serviceData (eg, so that we keep an unexpired access token and
     // don't cache old email addresses in serviceData.email).
@@ -1122,6 +1263,10 @@ Meteor.methods({
       Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
+
+    if (_.has(options, "secret") && usingOAuthEncryption())
+      options.secret = OAuthEncryption.seal(options.secret);
+
     ServiceConfiguration.configurations.insert(options);
   }
 });

@@ -1,6 +1,6 @@
 DDP = {};
 
-SUPPORTED_DDP_VERSIONS = [ 'pre1' ];
+SUPPORTED_DDP_VERSIONS = [ 'pre2', 'pre1' ];
 
 LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
 
@@ -31,6 +31,12 @@ MethodInvocation = function (options) {
 
   // On the server, the connection this method call came in on.
   this.connection = options.connection;
+
+  // The seed for randomStream value generation
+  this.randomSeed = options.randomSeed;
+
+  // This is set by RandomStream.get; and holds the random stream state
+  this.randomStream = null;
 };
 
 _.extend(MethodInvocation.prototype, {

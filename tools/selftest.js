@@ -891,6 +891,12 @@ _.extend(Run.prototype, {
     }
 
     self.fakeMongoConnection.write(JSON.stringify(command) + "\n");
+    // If we told it to exit, then we should close our end and connect again if
+    // asked to send more.
+    if (command.exit) {
+      self.fakeMongoConnection.end();
+      self.fakeMongoConnection = null;
+    }
   })
 });
 

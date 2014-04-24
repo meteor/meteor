@@ -76,7 +76,7 @@ cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.25
+git checkout v0.10.26
 
 ./configure --prefix="$DIR"
 make -j4
@@ -107,6 +107,7 @@ npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
+npm install node-aes-gcm@0.1.3
 npm install heapdump@0.2.5
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
@@ -141,7 +142,7 @@ cd ../..
 # particular version of openssl on the host system.
 
 cd "$DIR/build"
-OPENSSL="openssl-1.0.1f"
+OPENSSL="openssl-1.0.1g"
 OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
 wget $OPENSSL_URL || curl -O $OPENSSL_URL
 tar xzf $OPENSSL.tar.gz
