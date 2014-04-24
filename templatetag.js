@@ -1,3 +1,5 @@
+SpacebarsCompiler = {};
+
 // A TemplateTag is the result of parsing a single `{{...}}` tag.
 //
 // The `.type` of a TemplateTag is one of:
@@ -37,11 +39,11 @@
 
 var TEMPLATE_TAG_POSITION = HTMLTools.TEMPLATE_TAG_POSITION;
 
-TemplateTag = Spacebars.TemplateTag = function () {
+TemplateTag = SpacebarsCompiler.TemplateTag = function () {
   HTMLTools.TemplateTag.apply(this, arguments);
 };
 TemplateTag.prototype = new HTMLTools.TemplateTag;
-TemplateTag.prototype.constructorName = 'Spacebars.TemplateTag';
+TemplateTag.prototype.constructorName = 'SpacebarsCompiler.TemplateTag';
 
 var makeStacheTagStartRegex = function (r) {
   return new RegExp(r.source + /(?![{>!#/])/.source,
@@ -66,7 +68,7 @@ var ends = {
 
 // Parse a tag from the provided scanner or string.  If the input
 // doesn't start with `{{`, returns null.  Otherwise, either succeeds
-// and returns a Spacebars.TemplateTag, or throws an error (using
+// and returns a SpacebarsCompiler.TemplateTag, or throws an error (using
 // `scanner.fatal` if a scanner is provided).
 TemplateTag.parse = function (scannerOrString) {
   var scanner = scannerOrString;
@@ -294,7 +296,7 @@ TemplateTag.parse = function (scannerOrString) {
   return tag;
 };
 
-// Returns a Spacebars.TemplateTag parsed from `scanner`, leaving scanner
+// Returns a SpacebarsCompiler.TemplateTag parsed from `scanner`, leaving scanner
 // at its original position.
 //
 // An error will still be thrown if there is not a valid template tag at
