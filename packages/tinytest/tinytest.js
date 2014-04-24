@@ -1,3 +1,7 @@
+var Future;
+if (Meteor.isServer)
+  Future = Npm.require('fibers/future');
+
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
@@ -317,11 +321,10 @@ _.extend(TestCaseResults.prototype, {
 /* TestCase                                                                   */
 /******************************************************************************/
 
-TestCase = function (name, func, async) {
+TestCase = function (name, func) {
   var self = this;
   self.name = name;
   self.func = func;
-  self.async = async || false;
 
   var nameParts = _.map(name.split(" - "), function(s) {
     return s.replace(/^\s*|\s*$/g, ""); // trim
@@ -366,16 +369,10 @@ _.extend(TestCase.prototype, {
 
     Meteor.defer(function () {
       try {
-        if (self.async) {
-          self.func(results, function () {
-            if (markComplete())
-              onComplete();
-          });
-        } else {
-          self.func(results);
+        self.func(results, function () {
           if (markComplete())
             onComplete();
-        }
+        });
       } catch (e) {
         if (markComplete())
           onException(e);
@@ -392,7 +389,7 @@ TestManager = function () {
   var self = this;
   self.tests = {};
   self.ordered_tests = [];
-  self.testQueue = new Meteor._SynchronousQueue();
+  self.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
 };
 
 _.extend(TestManager.prototype, {
@@ -443,6 +440,49 @@ _.extend(TestRun.prototype, {
     return true;
   },
 
+  _runTest: function (test, onComplete, stop_at_offset) {
+    var self = this;
+
+    var startTime = (+new Date);
+
+    test.run(function (event) {
+      /* onEvent */
+      // Ignore result callbacks if the test has already been reported
+      // as timed out.
+      if (test.timedOut)
+        return;
+      self._report(test, event);
+    }, function () {
+      /* onComplete */
+      if (test.timedOut)
+        return;
+      var totalTime = (+new Date) - startTime;
+      self._report(test, {type: "finish", timeMs: totalTime});
+      onComplete();
+    }, function (exception) {
+      /* onException */
+      if (test.timedOut)
+        return;
+
+      // XXX you want the "name" and "message" fields on the
+      // exception, to start with..
+      self._report(test, {
+        type: "exception",
+        details: {
+          message: exception.message, // XXX empty???
+          stack: exception.stack // XXX portability
+        }
+      });
+
+      onComplete();
+    }, stop_at_offset);
+  },
+
+  // Run a single test.  On the server, ensure that only one test runs
+  // at a time, even with multiple clients submitting tests.  However,
+  // time out the test after three minutes to avoid locking up the
+  // server if a test fails to complete.
+  //
   _runOne: function (test, onComplete, stop_at_offset) {
     var self = this;
 
@@ -451,34 +491,45 @@ _.extend(TestRun.prototype, {
       return;
     }
 
-    self.manager.testQueue.queueTask(function () {
-
-      var startTime = (+new Date);
-
-      test.run(function (event) {
-        /* onEvent */
-        self._report(test, event);
-      }, function () {
-        /* onComplete */
-        var totalTime = (+new Date) - startTime;
-        self._report(test, {type: "finish", timeMs: totalTime});
-        onComplete && onComplete();
-      }, function (exception) {
-        /* onException */
-
-        // XXX you want the "name" and "message" fields on the
-        // exception, to start with..
-        self._report(test, {
-          type: "exception",
-          details: {
-            message: exception.message, // XXX empty???
-            stack: exception.stack // XXX portability
-          }
-        });
-
+    if (Meteor.isServer) {
+      // On the server, ensure that only one test runs at a time, even
+      // with multiple clients.
+      self.manager.testQueue.queueTask(function () {
+        // The future resolves when the test completes or times out.
+        var future = new Future();
+        Meteor.setTimeout(
+          function () {
+            if (future.isResolved())
+              // If the future has resolved the test has completed.
+              return;
+            test.timedOut = true;
+            self._report(test, {
+              type: "exception",
+              details: {
+                message: "test timed out"
+              }
+            });
+            future['return']();
+          },
+          3 * 60 * 1000  // 3 minutes
+        );
+        self._runTest(test, function () {
+          // The test can complete after it has timed out (it might
+          // just be slow), so only resolve the future if the test
+          // hasn't timed out.
+          if (! future.isResolved())
+            future['return']();
+        }, stop_at_offset);
+        // Wait for the test to complete or time out.
+        future.wait();
+        onComplete & onComplete();
+      });
+    } else {
+      // client
+      self._runTest(test, function () {
         onComplete && onComplete();
       }, stop_at_offset);
-    });
+    }
   },
 
   run: function (onComplete) {
@@ -526,12 +577,15 @@ _.extend(TestRun.prototype, {
 
 Tinytest = {};
 
-Tinytest.add = function (name, func) {
+Tinytest.addAsync = function (name, func) {
   TestManager.addCase(new TestCase(name, func));
 };
 
-Tinytest.addAsync = function (name, func) {
-  TestManager.addCase(new TestCase(name, func, true));
+Tinytest.add = function (name, func) {
+  Tinytest.addAsync(name, function (test, onComplete) {
+    func(test);
+    onComplete();
+  });
 };
 
 // Run every test, asynchronously. Runs the test in the current
