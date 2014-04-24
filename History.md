@@ -4,9 +4,6 @@
 
 * Log out a user's other sessions when they change their password.
 
-* XXX emily: does remove-users-observe warrant an entry here? or is this what
-  the previous thing is?
-
 * Store pending OAuth login results in the database instead of
   in-memory, so that an OAuth flow succeeds even if different requests
   go to different server processes.
@@ -26,6 +23,13 @@
 
 * Add `oauth-encryption` package for encrypting sensitive account
   credentials in the database.
+
+* A validate login hook can now override the exception thrown from
+  `beginPasswordExchange` like it can for other login methods.
+
+* Remove an expensive observe over all users in the `accounts-base`
+  package.
+
 
 #### Blaze
 
@@ -100,10 +104,6 @@
 Patches contributed by GitHub users aldeed, apendua, arbesfeld, awwx, dandv,
 davegonzalez, emgee3, justinsb, mquandalle, Neftedollar, Pent, sdarnell,
 and timhaines.
-
-
-* A validate login hook can now override the exception thrown from
-  `beginPasswordExchange` like it can for other login methods.
 
 
 ## v0.8.0.1
