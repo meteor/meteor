@@ -33,7 +33,12 @@ if (Meteor.isClient) (function () {
     }, 10 * 1000, 100);
   };
   var invalidateLoginsStep = function (test, expect) {
-    Meteor.call("testInvalidateLogins", true, expect(function (error) {
+    Meteor.call("testInvalidateLogins", 'fail', expect(function (error) {
+      test.isFalse(error);
+    }));
+  };
+  var hideActualLoginErrorStep = function (test, expect) {
+    Meteor.call("testInvalidateLogins", 'hide', expect(function (error) {
       test.isFalse(error);
     }));
   };
@@ -613,6 +618,28 @@ if (Meteor.isClient) (function () {
         expect(function (error) {
           test.isTrue(error);
           test.equal(error.reason, "Login forbidden");
+        })
+      );
+    },
+    validateLoginsStep,
+    function (test, expect) {
+      Meteor.loginWithPassword(
+        "no such user",
+        "some password",
+        expect(function (error) {
+          test.isTrue(error);
+          test.equal(error.reason, 'User not found');
+        })
+      );
+    },
+    hideActualLoginErrorStep,
+    function (test, expect) {
+      Meteor.loginWithPassword(
+        "no such user",
+        "some password",
+        expect(function (error) {
+          test.isTrue(error);
+          test.equal(error.reason, 'hide actual error');
         })
       );
     },

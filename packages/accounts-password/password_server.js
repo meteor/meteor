@@ -73,12 +73,13 @@ Meteor.methods({beginPasswordExchange: function (request) {
     // the second step method ('login') is called. If a user calls
     // 'beginPasswordExchange' but then never calls the second step
     // 'login' method, no login hook will fire.
-    Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
+    // The validate login hooks can mutate the exception to be thrown.
+    var attempt = Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
       type: 'password',
       error: err,
       userId: user && user._id
     });
-    throw err;
+    throw attempt.error;
   }
 
   // Save results so we can verify them later.
