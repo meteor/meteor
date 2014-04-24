@@ -95,8 +95,16 @@ middleware = function (req, res, next) {
     // is still open at this point, ignoring the 'close' or 'redirect'
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
-    if (req.query.state && err instanceof Error)
-      OAuth._storePendingCredential(req.query.state, err);
+    if (req.query.state && err instanceof Error) {
+      try { // catch any exceptions to avoid crashing runner
+        OAuth._storePendingCredential(req.query.state, err);
+      } catch (err) {
+        // Ignore the error and just give up. If we failed to store the
+        // error, then the login will just fail with a generic error.
+        Log.warn("Error in OAuth Server while storing pending login result.\n" +
+                 err.stack || err.message);
+      }
+    }
 
     // XXX the following is actually wrong. if someone wants to
     // redirect rather than close once we are done with the OAuth
