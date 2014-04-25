@@ -23,7 +23,7 @@ StreamServer = function () {
     log: function() {},
     // this is the default, but we code it explicitly because we depend
     // on it in stream_client:HEARTBEAT_TIMEOUT
-    heartbeat_delay: 25000,
+    heartbeat_delay: 45000,
     // The default disconnect_delay is 5 seconds, but if the server ends up CPU
     // bound for that much time, SockJS might not notice that the user has
     // reconnected because the timer (of disconnect_delay ms) can fire before

@@ -68,7 +68,7 @@
 <template name="_configureLoginServiceDialog">
   {{#if visible}}
     <div id="configure-login-service-dialog" class="accounts-dialog accounts-centered-dialog">
-      {{{configurationSteps}}}
+      {{> configurationSteps}}
 
       <p>
         Now, copy over some details.
@@ -97,12 +97,10 @@
         </div>
         <a class="accounts-close configure-login-service-dismiss-button">&times;</a>
 
-        {{#isolate}}
-          <div class="login-button login-button-configure {{#if saveDisabled}}login-button-disabled{{/if}}"
+        <div class="login-button login-button-configure {{#if saveDisabled}}login-button-disabled{{/if}}"
              id="configure-login-service-dialog-save-configuration">
-            Save Configuration
-          </div>
-        {{/isolate}}
+          Save Configuration
+        </div>
       </div>
     </div>
   {{/if}}

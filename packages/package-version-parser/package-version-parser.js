@@ -11,10 +11,10 @@ PackageVersion.parseVersionConstraint = function (versionString) {
     return versionDesc;
   }
 
-  if (versionString.charAt(0) === '=') {
+/*  if (versionString.charAt(0) === '=') {
     versionDesc.exact = true;
     versionString = versionString.substr(1);
-  }
+  } */
 
   // XXX check for a dash in the version in case of foo@1.2.3-rc0
 

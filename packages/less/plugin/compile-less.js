@@ -15,6 +15,7 @@ Plugin.registerSourceHandler("less", function (compileStep) {
 
   var source = compileStep.read().toString('utf8');
   var options = {
+    filename: compileStep.inputPath,
     // Use fs.readFileSync to process @imports. This is the bundler, so
     // that's not going to cause concurrency issues, and it means that (a)
     // we don't have to use Futures and (b) errors thrown by bugs in less

@@ -113,6 +113,7 @@ MongoConnection = function (url, options) {
   options = options || {};
   self._connectCallbacks = [];
   self._observeMultiplexers = {};
+  self._onFailoverHook = new Hook;
 
   var mongoOptions = {db: {safe: true}, server: {}, replSet: {}};
 
@@ -144,18 +145,42 @@ MongoConnection = function (url, options) {
     mongoOptions.replSet.poolSize = options.poolSize;
   }
 
-  MongoDB.connect(url, mongoOptions, function(err, db) {
+  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
     if (err)
       throw err;
     self.db = db;
+    // We keep track of the ReplSet's primary, so that we can trigger hooks when
+    // it changes.  The Node driver's joined callback seems to fire way too
+    // often, which is why we need to track it ourselves.
+    self._primary = null;
+    // First, figure out what the current primary is, if any.
+    if (self.db.serverConfig._state.master)
+      self._primary = self.db.serverConfig._state.master.name;
+    self.db.serverConfig.on(
+      'joined', Meteor.bindEnvironment(function (kind, doc) {
+        if (kind === 'primary') {
+          if (doc.primary !== self._primary) {
+            self._primary = doc.primary;
+            self._onFailoverHook.each(function (callback) {
+              callback();
+              return true;
+            });
+          }
+        } else if (doc.me === self._primary) {
+          // The thing we thought was primary is now something other than
+          // primary.  Forget that we thought it was primary.  (This means that
+          // if a server stops being primary and then starts being primary again
+          // without another server becoming primary in the middle, we'll
+          // correctly count it as a failover.)
+          self._primary = null;
+        }
+    }));
 
-    Fiber(function () {
-      // drain queue of pending callbacks
-      _.each(self._connectCallbacks, function (c) {
-        c(db);
-      });
-    }).run();
-  });
+    // drain queue of pending callbacks
+    _.each(self._connectCallbacks, function (c) {
+      c(db);
+    });
+  }));
 
   self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
@@ -227,6 +252,12 @@ MongoConnection.prototype._maybeBeginWrite = function () {
     return fence.beginWrite();
   else
     return {committed: function () {}};
+};
+
+// Internal interface: adds a callback which is called when the Mongo primary
+// changes. Returns a stop handle.
+MongoConnection.prototype._onFailover = function (callback) {
+  return this._onFailoverHook.register(callback);
 };
 
 
@@ -995,28 +1026,52 @@ MongoConnection.prototype._observeChanges = function (
   var observeHandle = new ObserveHandle(multiplexer, callbacks);
 
   if (firstHandle) {
-    var driverClass = PollingObserveDriver;
-    var matcher;
-    if (self._oplogHandle && !ordered && !callbacks._testOnlyPollCallback) {
-      try {
-        matcher = new Minimongo.Matcher(cursorDescription.selector);
-      } catch (e) {
-        // Ignore and avoid oplog driver. eg, maybe we're trying to compile some
-        // newfangled $selector that minimongo doesn't support yet.
-        // XXX make all compilation errors MinimongoError or something
-        //     so that this doesn't ignore unrelated exceptions
-      }
-      if (matcher
-          && OplogObserveDriver.cursorSupported(cursorDescription, matcher)) {
-        driverClass = OplogObserveDriver;
-      }
-    }
+    var matcher, sorter;
+    var canUseOplog = _.all([
+      function () {
+        // At a bare minimum, using the oplog requires us to have an oplog, to
+        // want unordered callbacks, and to not want a callback on the polls
+        // that won't happen.
+        return self._oplogHandle && !ordered &&
+          !callbacks._testOnlyPollCallback;
+      }, function () {
+        // We need to be able to compile the selector. Fall back to polling for
+        // some newfangled $selector that minimongo doesn't support yet.
+        try {
+          matcher = new Minimongo.Matcher(cursorDescription.selector);
+          return true;
+        } catch (e) {
+          // XXX make all compilation errors MinimongoError or something
+          //     so that this doesn't ignore unrelated exceptions
+          return false;
+        }
+      }, function () {
+        // ... and the selector itself needs to support oplog.
+        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+      }, function () {
+        // And we need to be able to compile the sort, if any.  eg, can't be
+        // {$natural: 1}.
+        if (!cursorDescription.options.sort)
+          return true;
+        try {
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
+                                        { matcher: matcher });
+          return true;
+        } catch (e) {
+          // XXX make all compilation errors MinimongoError or something
+          //     so that this doesn't ignore unrelated exceptions
+          return false;
+        }
+      }], function (f) { return f(); });  // invoke each function
+
+    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,
       multiplexer: multiplexer,
       ordered: ordered,
       matcher: matcher,  // ignored by polling
+      sorter: sorter,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 

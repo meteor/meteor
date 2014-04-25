@@ -15,6 +15,73 @@ Accounts.onCreateUser(function (options, user) {
 });
 
 
+// connection id -> action
+var invalidateLogins = {};
+
+
+Meteor.methods({
+  testInvalidateLogins: function (action) {
+    if (action)
+      invalidateLogins[this.connection.id] = action;
+    else
+      delete invalidateLogins[this.connection.id];
+  }
+});
+
+
+Accounts.validateLoginAttempt(function (attempt) {
+  var action =
+    attempt &&
+    attempt.connection &&
+    invalidateLogins[attempt.connection.id];
+
+  if (! action)
+    return true;
+  else if (action === 'fail')
+    return false;
+  else if (action === 'hide')
+    throw new Meteor.Error(403, 'hide actual error');
+  else
+    throw new Error('unknown action: ' + action);
+});
+
+
+// connection id -> [{successful: boolean, attempt: object}]
+var capturedLogins = {};
+
+Meteor.methods({
+  testCaptureLogins: function () {
+    capturedLogins[this.connection.id] = [];
+  },
+
+  testFetchCapturedLogins: function () {
+    if (capturedLogins[this.connection.id]) {
+      var logins = capturedLogins[this.connection.id];
+      delete capturedLogins[this.connection.id];
+      return logins;
+    }
+    else
+      return [];
+  }
+});
+
+Accounts.onLogin(function (attempt) {
+  if (capturedLogins[attempt.connection.id])
+    capturedLogins[attempt.connection.id].push({
+      successful: true,
+      attempt: _.omit(attempt, 'connection')
+    });
+});
+
+Accounts.onLoginFailure(function (attempt) {
+  if (capturedLogins[attempt.connection.id]) {
+    capturedLogins[attempt.connection.id].push({
+      successful: false,
+      attempt: _.omit(attempt, 'connection')
+    });
+  }
+});
+
 // Because this is global state that affects every client, we can't turn
 // it on and off during the tests. Doing so would mean two simultaneous
 // test runs could collide with each other.

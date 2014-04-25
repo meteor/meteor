@@ -56,7 +56,7 @@ LocalCollection._modify = function (doc, mod, options) {
         var target = findModTarget(newDoc, keyparts, {
           noCreate: NO_CREATE_MODIFIERS[op],
           forbidArray: (op === "$rename"),
-          arrayIndex: options.arrayIndex
+          arrayIndices: options.arrayIndices
         });
         var field = keyparts.pop();
         modFunc(target, field, arg, keypath, newDoc);
@@ -96,7 +96,8 @@ LocalCollection._modify = function (doc, mod, options) {
 //
 // if forbidArray is true, return null if the keypath goes through an array.
 //
-// if options.arrayIndex is defined, use this for the (first) '$' in the path.
+// if options.arrayIndices is set, use its first element for the (first) '$' in
+// the path.
 var findModTarget = function (doc, keyparts, options) {
   options = options || {};
   var usedArrayIndex = false;
@@ -118,11 +119,11 @@ var findModTarget = function (doc, keyparts, options) {
       if (keypart === '$') {
         if (usedArrayIndex)
           throw MinimongoError("Too many positional (i.e. '$') elements");
-        if (options.arrayIndex === undefined) {
+        if (!options.arrayIndices || !options.arrayIndices.length) {
           throw MinimongoError("The positional operator did not find the " +
                                "match needed from the query");
         }
-        keypart = options.arrayIndex;
+        keypart = options.arrayIndices[0];
         usedArrayIndex = true;
       } else if (isNumericKey(keypart)) {
         keypart = parseInt(keypart);
@@ -248,7 +249,7 @@ var MODIFIERS = {
       // actually an extension of the Node driver, so it won't work
       // server-side. Could be confusing!
       // XXX is it correct that we don't do geo-stuff here?
-      sortFunction = new Sorter(arg.$sort).getComparator();
+      sortFunction = new Minimongo.Sorter(arg.$sort).getComparator();
       for (var i = 0; i < toPush.length; i++) {
         if (LocalCollection._f._type(toPush[i]) !== 3) {
           throw MinimongoError("$push like modifiers using $sort " +

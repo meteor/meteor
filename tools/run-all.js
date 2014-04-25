@@ -5,23 +5,24 @@ var files = require('./files.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var release = require('./release.js');
 
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 var Proxy = require('./run-proxy.js').Proxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
 
-// options: port, buildOptions, settingsFile, banner, program,
-// onRunEnd, onFailure, watchForChanges, quiet, rootUrl, mongoUrl,
-// oplogUrl, disableOplog, appDirForVersionCheck
+// options: proxyPort, proxyHost, appPort, appHost, buildOptions,
+// settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
+// quiet, rootUrl, mongoUrl, oplogUrl, disableOplog,
+// appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
 
-  if (! _.has(options, 'port'))
-    throw new Error("no port?");
+  if (! _.has(options, 'proxyPort'))
+    throw new Error("no proxyPort?");
 
-  var listenPort = options.port;
+  var listenPort = options.proxyPort;
   var mongoPort = listenPort + 1;
   self.specifiedAppPort = options.appPort;
   self.regenerateAppPort();
@@ -29,11 +30,19 @@ var Runner = function (appDir, options) {
   self.stopped = false;
   self.quiet = options.quiet;
   self.banner = options.banner || files.prettyPath(self.appDir);
-  self.rootUrl = options.rootUrl || ('http://localhost:' + listenPort + '/');
+  if (options.rootUrl) {
+    self.rootUrl = options.rootUrl;
+  } else if (options.proxyHost) {
+    self.rootUrl = 'http://' + options.proxyHost + ':' + listenPort + '/';
+  } else {
+    self.rootUrl = 'http://localhost:' + listenPort + '/';
+  }
 
   self.proxy = new Proxy({
     listenPort: listenPort,
+    listenHost: options.proxyHost,
     proxyToPort: self.appPort,
+    proxyToHost: options.appHost,
     onFailure: options.onFailure
   });
 
@@ -46,12 +55,14 @@ var Runner = function (appDir, options) {
     self.mongoRunner = new MongoRunner({
       appDir: self.appDir,
       port: mongoPort,
-      onFailure: options.onFailure
+      onFailure: options.onFailure,
+      // For testing mongod failover, run with 3 mongod if the env var is
+      // set. Note that data is not preserved from one run to the next.
+      multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
     });
 
-    mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
-    oplogUrl = (options.disableOplog ? null :
-                "mongodb://127.0.0.1:" + mongoPort + "/local");
+    mongoUrl = self.mongoRunner.mongoUrl();
+    oplogUrl = options.disableOplog ? null : self.mongoRunner.oplogUrl();
   }
 
   self.updater = new Updater;
@@ -59,6 +70,7 @@ var Runner = function (appDir, options) {
   self.appRunner = new AppRunner(appDir, {
     appDirForVersionCheck: options.appDirForVersionCheck,
     port: self.appPort,
+    listenHost: options.appHost,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
     buildOptions: options.buildOptions,
@@ -199,7 +211,7 @@ _.extend(Runner.prototype, {
 //
 // Options:
 //
-// - port: the port to connect to to access the application (we will
+// - proxyPort: the port to connect to to access the application (we will
 //   run a proxy here that proxies to the actual app process). required
 // - buildOptions: 'buildOptions' argument to bundler.bundle()
 // - settingsFile: path to file containing deploy-time settings
@@ -242,8 +254,11 @@ exports.run = function (appDir, options) {
           result.outcome === "wrong-release" ||
           (result.outcome === "terminated" &&
            result.signal === undefined && result.code === undefined)) {
-        runner.stop();
-        fut.isResolved() || fut['return'](result);
+        // Allow run() to continue (and call runner.stop()) only once the
+        // AppRunner has processed our "return false"; otherwise we deadlock.
+        process.nextTick(function () {
+          fut.isResolved() || fut['return'](result);
+        });
         return false;  // stop restarting
       }
       runner.regenerateAppPort();

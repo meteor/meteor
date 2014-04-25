@@ -13,7 +13,7 @@ var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 var packageClient = require('./package-client.js');
 var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
@@ -61,6 +61,8 @@ var getPackages = function () {
   process.stderr.write(result.messages.formatMessages());
   return null;
 };
+
+var XXX_DEPLOY_ARCH = 'os.linux.x86_64';
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -159,8 +161,8 @@ main.registerCommand({
   name: 'run',
   requiresApp: true,
   options: {
-    port: { type: Number, short: "p", default: 3000 },
-    'app-port': { type: Number },
+    port: { type: String, short: "p", default: '3000' },
+    'app-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -172,6 +174,32 @@ main.registerCommand({
     once: { type: Boolean }
   }
 }, function (options) {
+  // XXX factor this out into a {type: host/port}?
+  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
+  if (!portMatch) {
+    process.stderr.write(
+"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+    return 1;
+  }
+  var proxyHost = portMatch[1] || null;
+  var proxyPort = parseInt(portMatch[2]);
+
+  var appHost, appPort;
+  if (options['app-port']) {
+    var appPortMatch = options['app-port'].match(/^(?:(.+):)?([0-9]+)?$/);
+    if (!appPortMatch) {
+      process.stderr.write(
+"run: --app-port must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+      return 1;
+    }
+    appHost = appPortMatch[1] || null;
+    // It's legit to specify `--app-port host:` and still let the port be
+    // randomized.
+    appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
+  }
+
   if (release.forced) {
     var appRelease = project.getMeteorReleaseVersion(options.appDir);
     if (release.current.name !== appRelease) {
@@ -188,8 +216,10 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    port: options.port,
-    appPort: options['app-port'],
+    proxyPort: proxyPort,
+    proxyHost: proxyHost,
+    appPort: appPort,
+    appHost: appHost,
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
@@ -549,7 +579,7 @@ main.registerCommand({
 
 
 var getVersionFromVersionConstraint = function(constraint) {
-  if (constraint[0] === "=") {
+  if (constraint && constraint[0] === "=") {
     return constraint.split("=")[1];
   }
   return constraint;
@@ -607,6 +637,7 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
       // Add the package to the list of packages that we use directly.
       usingDirectly[constraint.packageName] = constraint.versionConstraint;
       var usingIndirectly = project.getDepsAsObj(project.getIndirectDependencies(options.appDir));
+      console.log(usingDirectly);
 
       // Call the constraint solver.
       var ConstraintSolver = unipackage.load({
@@ -615,7 +646,10 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         release: release.current.name
       })['constraint-solver'].ConstraintSolver;
 
+      console.log("Going to init constraint resolver");
       var resolver = new ConstraintSolver.Resolver(cat);
+      console.log("Initialized constraint resolver");
+
       var newVersions = resolver.resolve(usingDirectly,
                                          usingIndirectly,
                                          { optionsGoHere : false });
@@ -640,7 +674,9 @@ constraint.packageName + "@" + constraint.versionConstraint  + ": no such versio
         // system. (Later we may also need to download more builds to be able to
         // deploy to another architecture.)
         var available = tropohouse.maybeDownloadPackageForArchitectures(
-          versionInfo, ['browser', archinfo.host()]);
+          // XXX we also download the deploy arch now, because we don't run the
+          // constraint solver / downloader anywhere other than add-package yet.
+          versionInfo, ['browser', archinfo.host(), XXX_DEPLOY_ARCH]);
         if (! available) {
           // XXX maybe we shouldn't be letting the constraint solver choose
           // things that don't have the right arches?
@@ -778,7 +814,8 @@ main.registerCommand({
     outputPath: bundlePath,
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     buildOptions: {
-      minify: ! options.debug
+      minify: ! options.debug,
+      arch: XXX_DEPLOY_ARCH  // XXX should do this in deploy instead but it's easier to test with bundle
     }
   });
   if (bundleResult.errors) {
@@ -1209,7 +1246,7 @@ main.registerCommand({
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
       appDirForVersionCheck: options.appDir,
-      port: options.port,
+      proxyPort: options.port,
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",
@@ -1445,15 +1482,15 @@ main.registerCommand({
 
   // XXX Prettify error messages
 
-  // We load the package with `forceRebuild` to avoid loading the
-  // package from a built unipackage. If we load from unipackage, then
-  // we can't go through the build process to retrieve the sources that
-  // we used to build the package, and we need the source list to
-  // compile the source tarball.
   release.current.library.override(path.basename(options.packageDir), options.packageDir);
 
   var pkg;
   var messages = buildmessage.capture(function () {
+    // We load the package with `forceRebuild` to avoid loading the
+    // package from a built unipackage. If we load from unipackage, then
+    // we can't go through the build process to retrieve the sources that
+    // we used to build the package, and we need the source list to
+    // compile the source tarball.
     pkg = release.current.library.get(path.basename(
       options.packageDir
     ), {
@@ -1471,7 +1508,7 @@ main.registerCommand({
 
   if (! version) {
     process.stderr.write(
-"That package cannot be published because it doesn't have a version.\n");
+     "That package cannot be published because it doesn't have a version.\n");
     return 1;
   }
 
@@ -1592,6 +1629,26 @@ main.registerCommand({
 
   return 0;
 });
+
+///////////////////////////////////////////////////////////////////////////////
+// list-sites
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'list-sites',
+  minArgs: 0,
+  maxArgs: 0
+}, function (options) {
+  auth.pollForRegistrationCompletion();
+  if (! auth.isLoggedIn()) {
+    process.stderr.write(
+      "You must be logged in for that. Try 'meteor login'.\n");
+    return 1;
+  }
+
+  return deploy.listSites();
+});
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // dummy

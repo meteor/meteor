@@ -289,7 +289,7 @@ var Sandbox = function (options) {
   fs.mkdirSync(self.home, 0755);
   self.cwd = self.home;
   self.env = {};
-  self.fakeMongo = options.fakeMongo
+  self.fakeMongo = options.fakeMongo;
 
   if (_.has(options, 'warehouse')) {
     // Make a directory to hold our new warehouse
@@ -891,6 +891,12 @@ _.extend(Run.prototype, {
     }
 
     self.fakeMongoConnection.write(JSON.stringify(command) + "\n");
+    // If we told it to exit, then we should close our end and connect again if
+    // asked to send more.
+    if (command.exit) {
+      self.fakeMongoConnection.end();
+      self.fakeMongoConnection = null;
+    }
   })
 });
 

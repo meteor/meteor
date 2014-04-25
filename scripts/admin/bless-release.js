@@ -248,11 +248,28 @@ var main = function () {
   _.each(notices, function (record) {
     if (!record.release)
       die("An element of notices.json lacks a release.");
-    _.each(record.notices, function (line) {
-      if (line.length + record.release.length + 2 > 80) {
-        die("notices.json: notice line too long: " + line);
+
+    var checkNotices = function (lines) {
+      if (!(lines instanceof Array)) {
+        die("notices.json: notice not array");
       }
-    });
+
+      _.each(lines, function (line) {
+        if (line.length + record.release.length + 2 > 80) {
+          die("notices.json: notice line too long: " + line);
+        }
+      });
+    };
+
+    if (record.notices) {
+      checkNotices(record.notices);
+    }
+
+    if (record.packageNotices) {
+      _.each(record.packageNotices, function (lines, pkg) {
+        checkNotices(lines);
+      });
+    }
   });
 
   var bannerFilename = path.resolve(__dirname, 'banner.txt');

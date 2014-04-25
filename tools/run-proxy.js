@@ -1,14 +1,16 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 
-// options: listenPort, proxyToPort, onFailure
+// options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
   var self = this;
 
   self.listenPort = options.listenPort;
+  self.listenHost = options.listenHost;
   // note: run-all.js updates proxyToPort directly
   self.proxyToPort = options.proxyToPort;
+  self.proxyToHost = options.proxyToHost || '127.0.0.1';
   self.onFailure = options.onFailure || function () {};
 
   self.mode = "hold";
@@ -56,7 +58,7 @@ _.extend(Proxy.prototype, {
 
     var fut = new Future;
     self.server.on('error', function (err) {
-      if (err.code == 'EADDRINUSE') {
+      if (err.code === 'EADDRINUSE') {
         var port = self.listenPort;
         runLog.log(
 "Can't listen on port " + port + ". Perhaps another Meteor is running?\n" +
@@ -64,6 +66,15 @@ _.extend(Proxy.prototype, {
 "Running two copies of Meteor in the same application directory\n" +
 "will not work. If something else is using port " + port + ", you can\n" +
 "specify an alternative port with --port <port>.");
+      } else if (self.listenHost &&
+                 (err.code === 'ENOTFOUND' || err.code === 'EADDRNOTAVAIL')) {
+        // This handles the case of "entered a DNS name that's unknown"
+        // (ENOTFOUND from getaddrinfo) and "entered some random IP that we
+        // can't bind to" (EADDRNOTAVAIL from listen).
+        runLog.log(
+"Can't listen on host " + self.listenHost + " (" + err.code + " from " +
+            err.syscall + ").");
+
       } else {
         runLog.log('' + err);
       }
@@ -91,7 +102,7 @@ _.extend(Proxy.prototype, {
       }
     });
 
-    self.server.listen(self.listenPort, function () {
+    self.server.listen(self.listenPort, self.listenHost || '0.0.0.0', function () {
       if (self.server) {
         self.started = true;
       } else {
@@ -167,7 +178,7 @@ _.extend(Proxy.prototype, {
         c.res.end();
       } else {
         self.proxy.web(c.req, c.res, {
-          target: 'http://127.0.0.1:' + self.proxyToPort
+          target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
         });
       }
     }
@@ -178,7 +189,7 @@ _.extend(Proxy.prototype, {
 
       var c = self.websocketQueue.shift();
       self.proxy.ws(c.req, c.socket, c.head, {
-        target: 'http://127.0.0.1:' + self.proxyToPort
+        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
       });
     }
   },

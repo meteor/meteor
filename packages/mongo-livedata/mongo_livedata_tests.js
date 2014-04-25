@@ -2,6 +2,10 @@
 // the selector (or inserted document) contains fail: true.
 
 var TRANSFORMS = {};
+
+// We keep track of the collections, so we can refer to them by name
+var COLLECTIONS = {};
+
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
@@ -15,6 +19,7 @@ if (Meteor.isServer) {
         options.transform = TRANSFORMS[options.transformName];
       }
       var c = new Meteor.Collection(name, options);
+      COLLECTIONS[name] = c;
       c._insecure = true;
       Meteor.publish('c-' + name, function () {
         return c.find();
@@ -22,6 +27,32 @@ if (Meteor.isServer) {
     }
   });
 }
+
+// We store the generated id, keyed by collection, for each insert
+// This is so we can test the stub and the server generate the same id
+var INSERTED_IDS = {};
+
+Meteor.methods({
+  insertObjects: function (collectionName, doc, count) {
+    var c = COLLECTIONS[collectionName];
+    var ids = [];
+    for (var i = 0; i < count; i++) {
+      var id = c.insert(doc);
+      INSERTED_IDS[collectionName] = (INSERTED_IDS[collectionName] || []).concat([id]);
+      ids.push(id);
+    }
+    return ids;
+  },
+  upsertObject: function (collectionName, selector, modifier) {
+    var c = COLLECTIONS[collectionName];
+    return c.upsert(selector, modifier);
+  },
+  doMeteorCall: function (name /*, arguments */) {
+    var args = Array.prototype.slice.call(arguments);
+
+    return Meteor.call.apply(null, args);
+  }
+});
 
 var runInFence = function (f) {
   if (Meteor.isClient) {
@@ -795,6 +826,8 @@ if (Meteor.isServer) {
     };
     // tests '_id' subfields for all documents in oplog buffer
     var testOplogBufferIds = function (ids) {
+      if (!usesOplog)
+        return;
       var bufferIds = [];
       o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(function (x, id) {
         bufferIds.push(id);
@@ -803,29 +836,42 @@ if (Meteor.isServer) {
       test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
     };
     var testSafeAppendToBufferFlag = function (expected) {
-      if (expected)
-        test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
-      else
-        test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+      if (!usesOplog)
+        return;
+      test.equal(o.handle._multiplexer._observeDriver._safeAppendToBuffer,
+                 expected);
     };
+
+    // We'll describe our state as follows.  5:1 means "the document with
+    // _id=docId1 and bar=5".  We list documents as
+    //   [ currently published | in the buffer ] outside the buffer
+    // If safeToAppendToBuffer is true, we'll say ]! instead.
 
     // Insert a doc and start observing.
     var docId1 = ins({foo: 22, bar: 5});
+    waitUntilOplogCaughtUp();
+
+    // State: [ 5:1 | ]!
     var o = observer();
     var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
     // Initial add.
     test.length(o.output, 1);
     test.equal(o.output.shift(), {added: docId1});
+    testSafeAppendToBufferFlag(true);
 
     // Insert another doc (blocking until observes have fired).
+    // State: [ 5:1 6:2 | ]!
     var docId2 = ins({foo: 22, bar: 6});
     // Observed add.
     test.length(o.output, 1);
     test.equal(o.output.shift(), {added: docId2});
+    testSafeAppendToBufferFlag(true);
 
     var docId3 = ins({ foo: 22, bar: 3 });
+    // State: [ 3:3 5:1 6:2 | ]!
     test.length(o.output, 1);
     test.equal(o.output.shift(), {added: docId3});
+    testSafeAppendToBufferFlag(true);
 
     // Add a non-matching document
     ins({ foo: 13 });
@@ -834,46 +880,54 @@ if (Meteor.isServer) {
 
     // Add something that matches but is too big to fit in
     var docId4 = ins({ foo: 22, bar: 7 });
-    // It shouldn't be added
+    // State: [ 3:3 5:1 6:2 | 7:4 ]!
+    // It shouldn't be added but should end up in the buffer.
     test.length(o.output, 0);
+    testOplogBufferIds([docId4]);
+    testSafeAppendToBufferFlag(true);
 
     // Let's add something small enough to fit in
     var docId5 = ins({ foo: 22, bar: -1 });
+    // State: [ -1:5 3:3 5:1 | 6:2 7:4 ]!
     // We should get an added and a removed events
     test.length(o.output, 2);
     // doc 2 was removed from the published set as it is too big to be in
     test.isTrue(setsEqual(o.output, [{added: docId5}, {removed: docId2}]));
     clearOutput(o);
+    testOplogBufferIds([docId2, docId4]);
+    testSafeAppendToBufferFlag(true);
 
     // Now remove something and that doc 2 should be right back
     rem(docId5);
+    // State: [ 3:3 5:1 6:2 | 7:4 ]!
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId5}, {added: docId2}]));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([docId4]);
-    usesOplog && testSafeAppendToBufferFlag(true);
+    testOplogBufferIds([docId4]);
+    testSafeAppendToBufferFlag(true);
 
-    // Current state is [3 5 6 | 7]
     // Add some negative numbers overflowing the buffer.
     // New documents will take the published place, [3 5 6] will take the buffer
     // and 7 will be outside of the buffer in MongoDB.
     var docId6 = ins({ foo: 22, bar: -1 });
     var docId7 = ins({ foo: 22, bar: -2 });
     var docId8 = ins({ foo: 22, bar: -3 });
+    // State: [ -3:8 -2:7 -1:6 | 3:3 5:1 6:2 ] 7:4
     test.length(o.output, 6);
     var expected = [{added: docId6}, {removed: docId2},
                     {added: docId7}, {removed: docId1},
                     {added: docId8}, {removed: docId3}];
-
     test.isTrue(setsEqual(o.output, expected));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([docId1, docId2, docId3]);
-    usesOplog && testSafeAppendToBufferFlag(false);
+    testOplogBufferIds([docId1, docId2, docId3]);
+    testSafeAppendToBufferFlag(false);
 
-    // Now the state is [-3 -2 -1 | 3 5 6] 7
     // If we update first 3 docs (increment them by 20), it would be
     // interesting.
     upd({ bar: { $lt: 0 }}, { $inc: { bar: 20 } }, { multi: true });
+    // State: [ 3:3 5:1 6:2 | ] 7:4 17:8 18:7 19:6
+    //   which triggers re-poll leaving us at
+    // State: [ 3:3 5:1 6:2 | 7:4 17:8 18:7 ] 19:6
 
     // The updated documents can't find their place in published and they can't
     // be buffered as we are not aware of the situation outside of the buffer.
@@ -889,14 +943,13 @@ if (Meteor.isServer) {
 
     test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([docId4, docId7, docId8]);
-    usesOplog && testSafeAppendToBufferFlag(false);
+    testOplogBufferIds([docId4, docId7, docId8]);
+    testSafeAppendToBufferFlag(false);
 
-    // The new arrangement is [3 5 6 | 7 17 18] 19
-    // By ids: [docId3, docId1, docId2] docId4] docId6 docId7 docId8
     // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
     // schedule a repoll.
     rem({ bar: { $lt: 10 } });
+    // State: [ 17:8 18:7 19:6 | ]!
 
     // XXX the oplog code analyzes the events one by one: one remove after
     // another. Poll-n-diff code, on the other side, analyzes the batch action
@@ -918,53 +971,55 @@ if (Meteor.isServer) {
 
     test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([]);
-    usesOplog && testSafeAppendToBufferFlag(true);
+    testOplogBufferIds([]);
+    testSafeAppendToBufferFlag(true);
 
-    // The new arrangement is [17 18 19] or [docId6 docId7 docId8]
     var docId9 = ins({ foo: 22, bar: 21 });
     var docId10 = ins({ foo: 22, bar: 31 });
     var docId11 = ins({ foo: 22, bar: 41 });
     var docId12 = ins({ foo: 22, bar: 51 });
+    // State: [ 17:8 18:7 19:6 | 21:9 31:10 41:11 ] 51:12
 
-    // Becomes [17 18 19 | 21 31 41] 51
-    usesOplog && testOplogBufferIds([docId9, docId10, docId11]);
-    usesOplog && testSafeAppendToBufferFlag(false);
+    testOplogBufferIds([docId9, docId10, docId11]);
+    testSafeAppendToBufferFlag(false);
     test.length(o.output, 0);
     upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
-    // Becomes [21 22 23 | 24 31 41] 51
+    // State: [ 21:9 22:8 23:7 | 24:6 31:10 41:11 ] 51:12
     test.length(o.output, 4);
     test.isTrue(setsEqual(o.output, [{removed: docId6},
                                      {added: docId9},
                                      {changed: docId7},
                                      {changed: docId8}]));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([docId6, docId10, docId11]);
-    usesOplog && testSafeAppendToBufferFlag(false);
+    testOplogBufferIds([docId6, docId10, docId11]);
+    testSafeAppendToBufferFlag(false);
 
     rem(docId9);
-    // Becomes [22 23 24 | 31 41] 51
+    // State: [ 22:8 23:7 24:6 | 31:10 41:11 ] 51:12
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId9}, {added: docId6}]));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([docId10, docId11]);
-    usesOplog && testSafeAppendToBufferFlag(false);
+    testOplogBufferIds([docId10, docId11]);
+    testSafeAppendToBufferFlag(false);
 
     upd({ bar: { $gt: 25 } }, { $inc: { bar: -7.5 } }, { multi: true });
-    // Becomes [22 23 23.5 | 24] 33.5 43.5 - 33.5 doesn't update in-place in
-    // buffer, because it the driver is not sure it can do it and there is no a
-    // different doc which is less than 33.5.
+    // State: [ 22:8 23:7 23.5:10 | 24:6 ] 33.5:11 43.5:12
+    // 33.5 doesn't update in-place in buffer, because it the driver is not sure
+    // it can do it: because the buffer does not have the safe append flag set,
+    // for all it knows there is a different doc which is less than 33.5.
     test.length(o.output, 2);
     test.isTrue(setsEqual(o.output, [{removed: docId6}, {added: docId10}]));
     clearOutput(o);
-    usesOplog && testOplogBufferIds([docId6]);
-    usesOplog && testSafeAppendToBufferFlag(false);
+    testOplogBufferIds([docId6]);
+    testSafeAppendToBufferFlag(false);
 
     // Force buffer objects to be moved into published set so we can check them
     rem(docId7);
     rem(docId8);
     rem(docId10);
-    // Becomes [24 33.5 43.5]
+    // State: [ 24:6 | ] 33.5:11 43.5:12
+    //    triggers repoll
+    // State: [ 24:6 33.5:11 43.5:12 | ]!
     test.length(o.output, 6);
     test.isTrue(setsEqual(o.output, [{removed: docId7}, {removed: docId8},
                                      {removed: docId10}, {added: docId6},
@@ -975,8 +1030,27 @@ if (Meteor.isServer) {
     test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
     test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
     clearOutput(o);
-    usesOplog && testOplogBufferIds([]);
-    usesOplog && testSafeAppendToBufferFlag(true);
+    testOplogBufferIds([]);
+    testSafeAppendToBufferFlag(true);
+
+    var docId13 = ins({ foo: 22, bar: 50 });
+    var docId14 = ins({ foo: 22, bar: 51 });
+    var docId15 = ins({ foo: 22, bar: 52 });
+    var docId16 = ins({ foo: 22, bar: 53 });
+    // State: [ 24:6 33.5:11 43.5:12 | 50:13 51:14 52:15 ] 53:16
+    test.length(o.output, 0);
+    testOplogBufferIds([docId13, docId14, docId15]);
+    testSafeAppendToBufferFlag(false);
+
+    // Update something that's outside the buffer to be in the buffer, writing
+    // only to the sort key.
+    upd(docId16, {$set: {bar: 10}});
+    // State: [ 10:16 24:6 33.5:11 | 43.5:12 50:13 51:14 ] 52:15
+    test.length(o.output, 2);
+    test.isTrue(setsEqual(o.output, [{removed: docId12}, {added: docId16}]));
+    clearOutput(o);
+    testOplogBufferIds([docId12, docId13, docId14]);
+    testSafeAppendToBufferFlag(false);
 
     o.handle.stop();
     onComplete();
@@ -1113,6 +1187,10 @@ if (Meteor.isServer) {
       ids[i] = ins({ x: x, y: i });
     });
 
+    // Ensure that we are past all the 'i' entries before we run the query, so
+    // that we get the expected phase transitions.
+    waitUntilOplogCaughtUp();
+
     var o = observer();
     var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
     //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
@@ -1192,7 +1270,7 @@ testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
     var self = this;
     var collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
+      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
       Meteor.subscribe('c-' + collectionName);
     }
 
@@ -2078,6 +2156,193 @@ testAsyncMulti('mongo-livedata - specified _id', [
   }
 ]);
 
+
+// Consistent id generation tests
+function collectionInsert (test, expect, coll, index) {
+  var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
+    test.equal(id, clientSideId);
+    var o = coll.findOne(id);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function collectionUpsert (test, expect, coll, index) {
+  var upsertId = '123456' + index;
+
+  coll.upsert(upsertId, {$set: {name: "foo"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, upsertId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(upsertId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function collectionUpsertExisting (test, expect, coll, index) {
+  var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
+    test.equal(id, clientSideId);
+
+    var o = coll.findOne(id);
+    test.isTrue(_.isObject(o));
+    // We're not testing sequencing/visibility rules here, so skip this check
+    // test.equal(o.name, 'foo');
+  }));
+
+  coll.upsert(clientSideId, {$set: {name: "bar"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, clientSideId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(clientSideId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'bar');
+  }));
+};
+
+function functionCallsInsert (test, expect, coll, index) {
+  Meteor.call("insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+    var stubId = INSERTED_IDS[coll._name][index];
+
+    test.equal(ids.length, 1);
+    test.equal(ids[0], stubId);
+
+    var o = coll.findOne(stubId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function functionCallsUpsert (test, expect, coll, index) {
+  var upsertId = '123456' + index;
+  Meteor.call("upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, upsertId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(upsertId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function functionCallsUpsertExisting (test, expect, coll, index) {
+  var id = coll.insert({name: "foo"});
+
+  var o = coll.findOne(id);
+  test.notEqual(null, o);
+  test.equal(o.name, 'foo');
+
+  Meteor.call("upsertObject", coll._name, id, {$set:{name: "bar"}}, expect(function (err1, result) {
+    test.equal(result.numberAffected, 1);
+    test.equal(result.insertedId, undefined);
+
+    var o = coll.findOne(id);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'bar');
+  }));
+};
+
+function functionCalls3Inserts (test, expect, coll, index) {
+  Meteor.call("insertObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+    test.equal(ids.length, 3);
+
+    for (var i = 0; i < 3; i++) {
+      var stubId = INSERTED_IDS[coll._name][(3 * index) + i];
+      test.equal(ids[i], stubId);
+
+      var o = coll.findOne(stubId);
+      test.isTrue(_.isObject(o));
+      test.equal(o.name, 'foo');
+    }
+  }));
+};
+
+function functionChainInsert (test, expect, coll, index) {
+  Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+    var stubId = INSERTED_IDS[coll._name][index];
+
+    test.equal(ids.length, 1);
+    test.equal(ids[0], stubId);
+
+    var o = coll.findOne(stubId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function functionChain2Insert (test, expect, coll, index) {
+  Meteor.call("doMeteorCall", "doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
+    var stubId = INSERTED_IDS[coll._name][index];
+
+    test.equal(ids.length, 1);
+    test.equal(ids[0], stubId);
+
+    var o = coll.findOne(stubId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+function functionChain2Upsert (test, expect, coll, index) {
+  var upsertId = '123456' + index;
+  Meteor.call("doMeteorCall", "doMeteorCall", "upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
+    test.equal(result.insertedId, upsertId);
+    test.equal(result.numberAffected, 1);
+
+    var o = coll.findOne(upsertId);
+    test.isTrue(_.isObject(o));
+    test.equal(o.name, 'foo');
+  }));
+};
+
+_.each( [collectionInsert, collectionUpsert,
+         functionCallsInsert, functionCallsUpsert, functionCallsUpsertExisting,
+         functionCalls3Inserts,
+         functionChainInsert,
+         functionChain2Insert, functionChain2Upsert], function (fn) {
+_.each( [1, 3], function (repetitions) {
+_.each( [1, 3], function (collectionCount) {
+_.each( ['STRING', 'MONGO'], function (idGeneration) {
+
+  testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
+    var collectionOptions = { idGeneration: idGeneration };
+
+    var collections = [];
+
+    for (var i = 0; i < collectionCount; i++) {
+      var collectionName = "consistentid_" + Random.id();
+      if (Meteor.isClient) {
+        Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+        Meteor.subscribe('c-' + collectionName);
+      }
+
+      var coll = new Meteor.Collection(collectionName, collectionOptions);
+      COLLECTIONS[collectionName] = coll;
+
+      collections.push(coll);
+    }
+
+    // Reset state before actual test
+    INSERTED_IDS = {};
+
+    for (var i = 0; i < repetitions; i++) {
+      for (var j = 0; j < collectionCount; j++) {
+        fn(test, expect, collections[j], i);
+      }
+    }
+  }]);
+
+});
+});
+});
+});
+
+
+
 testAsyncMulti('mongo-livedata - empty string _id', [
   function (test, expect) {
     var self = this;
@@ -2366,8 +2631,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var output = [];
   var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
@@ -2409,8 +2673,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   var cursor = coll.find({}, {transform: function (doc) {
     return doc.x;
@@ -2472,8 +2735,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
 
   // Wait until we've processed the insert oplog entry, so that we are in a
   // steady state (and we don't see the dropped docs because we are FETCHING).
-  var oplog = MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
-  oplog && oplog.waitUntilCaughtUp();
+  waitUntilOplogCaughtUp();
 
   // Drop the collection. Should remove all docs.
   runInFence(function () {
@@ -2623,3 +2885,30 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
     self.handle.stop();
   }
 ]);
+
+
+var waitUntilOplogCaughtUp = function () {
+  var oplogHandle =
+        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+  if (oplogHandle)
+    oplogHandle.waitUntilCaughtUp();
+};
+
+
+Meteor.isServer && Tinytest.add("mongo-livedata - cursor dedup stop", function (test) {
+  var coll = new Meteor.Collection(Random.id());
+  _.times(100, function () {
+    coll.insert({foo: 'baz'});
+  });
+  var handler = coll.find({}).observeChanges({
+    added: function (id) {
+      coll.update(id, {$set: {foo: 'bar'}});
+    }
+  });
+  handler.stop();
+  // Previously, this would print
+  //    Exception in queued task: TypeError: Object.keys called on non-object
+  // Unfortunately, this test didn't fail before the bugfix, but it at least
+  // would print the error and no longer does.
+  // See https://github.com/meteor/meteor/issues/2070
+});

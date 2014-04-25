@@ -1,10 +1,4 @@
-<!--
-    NOTE: You shouldn't use these templates directly. Instead, use the global
-    {{loginButtons}} template. For positioning on the right side of your app,
-    try {{loginButtons align="right"}}
-  -->
-
-<template name="_loginButtons">
+<template name="loginButtons">
   <div id="login-buttons" class="login-buttons-dropdown-align-{{align}}">
     {{#if currentUser}}
       {{#if loggingIn}}
@@ -86,6 +80,6 @@
     </div>
   {{else}}
     {{! just add some padding }}
-    <div class="login-buttons-padding" />
+    <div class="login-buttons-padding"></div>
   {{/unless}}
 </template>

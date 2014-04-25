@@ -86,6 +86,8 @@ var Alea = function () {
 };
 
 var UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
+var BASE64_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+  "0123456789-_";
 
 // If seeds are provided, then the alea PRNG will be used, since cryptographic
 // PRNGs (Node crypto and window.crypto.getRandomValues) don't allow us to
@@ -109,6 +111,8 @@ RandomGenerator.prototype.fraction = function () {
     var array = new Uint32Array(1);
     window.crypto.getRandomValues(array);
     return array[0] * 2.3283064365386963e-10; // 2^-32
+  } else {
+    throw new Error('No random generator available');
   }
 };
 
@@ -137,15 +141,34 @@ RandomGenerator.prototype.hexString = function (digits) {
     return hexDigits.join('');
   }
 };
-RandomGenerator.prototype.id = function () {
-  var digits = [];
+
+RandomGenerator.prototype._randomString = function (charsCount,
+                                                    alphabet) {
   var self = this;
-  // Length of 17 preserves around 96 bits of entropy, which is the
-  // amount of state in the Alea PRNG.
-  for (var i = 0; i < 17; i++) {
-    digits[i] = self.choice(UNMISTAKABLE_CHARS);
+  var digits = [];
+  for (var i = 0; i < charsCount; i++) {
+    digits[i] = self.choice(alphabet);
   }
   return digits.join("");
+};
+
+RandomGenerator.prototype.id = function (charsCount) {
+  var self = this;
+  // 17 characters is around 96 bits of entropy, which is the amount of
+  // state in the Alea PRNG.
+  if (charsCount === undefined)
+    charsCount = 17;
+
+  return self._randomString(charsCount, UNMISTAKABLE_CHARS);
+};
+
+RandomGenerator.prototype.secret = function (charsCount) {
+  var self = this;
+  // Default to 256 bits of entropy, or 43 characters at 6 bits per
+  // character.
+  if (charsCount === undefined)
+    charsCount = 43;
+  return self._randomString(charsCount, BASE64_CHARS);
 };
 
 RandomGenerator.prototype.choice = function (arrayOrString) {
@@ -187,6 +210,9 @@ if (nodeCrypto ||
 else
   Random = new RandomGenerator([new Date(), height, width, agent, Math.random()]);
 
-Random.create = function () {
+Random.createWithSeeds = function () {
+  if (arguments.length === 0) {
+    throw new Error('No seeds were provided');
+  }
   return new RandomGenerator(arguments);
 };

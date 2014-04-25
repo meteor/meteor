@@ -2,7 +2,6 @@ Template.headline.release = function () {
   return Meteor.release || "(checkout)";
 };
 
-
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
   // broken before the multi-page layout because it had illegible
@@ -89,7 +88,17 @@ Meteor.startup(function () {
 
   // Make external links open in a new tab.
   $('a:not([href^="#"])').attr('target', '_blank');
+
+  // Hide menu by tapping on background
+  $('#main').on('click', function () {
+    hideMenu();
+  });
 });
+
+var hideMenu = function () {
+  $('#nav').removeClass('show');
+  $('#menu-ico').removeClass('hidden');
+};
 
 var toc = [
   {name: "Meteor " + Template.headline.release(), id: "top"}, [
@@ -102,8 +111,7 @@ var toc = [
     "Structuring your app",
     "Data and security",
     "Reactivity",
-    "Live HTML",
-    "Templates",
+    "Live HTML templates",
     "Using packages",
     "Namespacing",
     "Deploying",
@@ -211,7 +219,10 @@ var toc = [
       "Accounts.config",
       "Accounts.ui.config",
       "Accounts.validateNewUser",
-      "Accounts.onCreateUser"
+      "Accounts.onCreateUser",
+      "Accounts.validateLoginAttempt",
+      "Accounts.onLogin",
+      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"}
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [
@@ -230,13 +241,12 @@ var toc = [
     ],
 
     {name: "Templates", id: "templates_api"}, [
-      {prefix: "Template", instance: "myTemplate", id: "template_call"}, [
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"},
+      {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
         {name: "events", id: "template_events"},
         {name: "helpers", id: "template_helpers"},
-        {name: "preserve", id: "template_preserve"}
+        {name: "rendered", id: "template_rendered"},
+        {name: "created", id: "template_created"},
+        {name: "destroyed", id: "template_destroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "this", name: "findAll", id: "template_findAll"},
@@ -245,12 +255,15 @@ var toc = [
         {instance: "this", name: "lastNode", id: "template_lastNode"},
         {instance: "this", name: "data", id: "template_data"}
       ],
-      "Meteor.render",
-      "Meteor.renderList",
+      "UI", [
+        "UI.registerHelper",
+        "UI.body",
+        "UI.render",
+        "UI.renderWithData",
+        "UI.insert"
+      ],
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"},
-      {name: "Constant regions", style: "noncode", id: "constant"},
-      {name: "Reactivity isolation", style: "noncode", id: "isolate"}
+      {name: "Event maps", style: "noncode"}
      ],
 
     "Match", [
@@ -345,6 +358,7 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
+    "oauth-encryption",
     "random",
     "spiderable",
     "stylus",
@@ -377,6 +391,10 @@ Template.nav.sections = function () {
   var ret = [];
   var walk = function (items, depth) {
     _.each(items, function (item) {
+      // Work around (eg) accidental trailing commas leading to spurious holes
+      // in IE8.
+      if (!item)
+        return;
       if (item instanceof Array)
         walk(item, depth + 1);
       else {
@@ -398,159 +416,38 @@ Template.nav.sections = function () {
 
 Template.nav.type = function (what) {
   return this.type === what;
-}
+};
 
 Template.nav.maybe_current = function () {
   return Session.equals("section", this.id) ? "current" : "";
 };
 
-Handlebars.registerHelper('warning', function(fn) {
-  return Template.warning_helper(fn(this));
-});
+Template.nav_section.depthIs = function (n) {
+  return this.depth === n;
+};
 
-Handlebars.registerHelper('note', function(fn) {
-  return Template.note_helper(fn(this));
-});
-
-// "name" argument may be provided as part of options.hash instead.
-Handlebars.registerHelper('dtdd', function(name, options) {
-  if (options && options.hash) {
-    // {{#dtdd name}}
-    options.hash.name = name;
-  } else {
-    // {{#dtdd name="foo" type="bar"}}
-    options = name;
+// Show hidden TOC when menu icon is tapped
+Template.nav.events({
+  'click #menu-ico' : function () {
+    $('#nav').addClass('show');
+    $('#menu-ico').addClass('hidden');
+  },
+  // Hide TOC when selecting an item
+  'click a' : function () {
+    hideMenu();
   }
-
-  return Template.dtdd_helper({descr: options.fn(this),
-                               name: options.hash.name,
-                               type: options.hash.type});
 });
 
-Handlebars.registerHelper('better_markdown', function(fn) {
-  var converter = new Showdown.converter();
-  var input = fn(this);
-
-  ///////
-  // Make Markdown *actually* skip over block-level elements when
-  // processing a string.
-  //
-  // Official Markdown doesn't descend into
-  // block elements written out as HTML (divs, tables, etc.), BUT
-  // it doesn't skip them properly either.  It assumes they are
-  // either pretty-printed with their contents indented, or, failing
-  // that, it just scans for a close tag with the same name, and takes
-  // it regardless of whether it is the right one.  As a hack to work
-  // around Markdown's hacks, we find the block-level elements
-  // using a proper recursive method and rewrite them to be indented
-  // with the final close tag on its own line.
-  ///////
-
-  // Open-block tag should be at beginning of line,
-  // and not, say, in a string literal in example code, or in a pre block.
-  // Tag must be followed by a non-word-char so that we match whole tag, not
-  // eg P for PRE.  All regexes we wish to use when scanning must have
-  // 'g' flag so that they respect (and set) lastIndex.
-  // Assume all tags are lowercase.
-  var rOpenBlockTag = /^\s{0,2}<(p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|script|noscript|form|fieldset|iframe|math|ins|del)(?=\W)/mg;
-  var rTag = /<(\/?\w+)/g;
-  var idx = 0;
-  var newParts = [];
-  var blockBuf = [];
-  // helper function to execute regex `r` starting at idx and putting
-  // the end index back into idx; accumulate the intervening string
-  // into an array; and return the regex's first capturing group.
-  var rcall = function(r, inBlock) {
-    var lastIndex = idx;
-    r.lastIndex = lastIndex;
-    var match = r.exec(input);
-    var result = null;
-    if (! match) {
-      idx = input.length;
-    } else {
-      idx = r.lastIndex;
-      result = match[1];
-    }
-    (inBlock ? blockBuf : newParts).push(input.substring(lastIndex, idx));
-    return result;
-  };
-
-  // This is a tower of terrible hacks.
-  // Replace Spark annotations <$...> ... </$...> with HTML comments, and
-  // space out the comments on their own lines.  This keeps them from
-  // interfering with Markdown's paragraph parsing.
-  // Really, running Markdown multiple times on the same string is just a
-  // bad idea.
-  input = input.replace(/<(\/?\$.*?)>/g, '<!--$1-->');
-  input = input.replace(/<!--.*?-->/g, '\n\n$&\n\n');
-
-  var hashedBlocks = {};
-  var numHashedBlocks = 0;
-
-  var nestedTags = [];
-  while (idx < input.length) {
-    var blockTag = rcall(rOpenBlockTag, false);
-    if (blockTag) {
-      nestedTags.push(blockTag);
-      while (nestedTags.length) {
-        var tag = rcall(rTag, true);
-        if (! tag) {
-          throw new Error("Expected </"+nestedTags[nestedTags.length-1]+
-                          "> but found end of string");
-        } else if (tag.charAt(0) === '/') {
-          // close tag
-          var tagToPop = tag.substring(1);
-          var tagPopped = nestedTags.pop();
-          if (tagPopped !== tagToPop)
-            throw new Error(("Mismatched close tag, expected </"+tagPopped+
-                             "> but found </"+tagToPop+">: "+
-                             input.substr(idx-50,50)+"{HERE}"+
-                             input.substr(idx,50)).replace(/\n/g,'\\n'));
-        } else {
-          // open tag
-          nestedTags.push(tag);
-        }
-      }
-      var newBlock = blockBuf.join('');
-      var openTagFinish = newBlock.indexOf('>') + 1;
-      var closeTagLoc = newBlock.lastIndexOf('<');
-
-      var key = ++numHashedBlocks;
-      hashedBlocks[key] = newBlock.slice(openTagFinish, closeTagLoc);
-      newParts.push(newBlock.slice(0, openTagFinish),
-                    '!!!!HTML:'+key+'!!!!',
-                    newBlock.slice(closeTagLoc));
-      blockBuf.length = 0;
-    }
-  }
-
-  var newInput = newParts.join('');
-  var output = converter.makeHtml(newInput);
-
-  output = output.replace(/!!!!HTML:(.*?)!!!!/g, function(z, a) {
-    return hashedBlocks[a];
-  });
-
-  output = output.replace(/<!--(\/?\$.*?)-->/g, '<$1>');
-
-  return output;
-});
-
-Handlebars.registerHelper('dstache', function() {
+UI.registerHelper('dstache', function() {
   return '{{';
 });
 
-Handlebars.registerHelper('tstache', function() {
+UI.registerHelper('tstache', function() {
   return '{{{';
 });
 
-Handlebars.registerHelper('api_section', function(id, nameFn) {
-  return Template.api_section_helper(
-    {name: nameFn(this), id:id}, true);
-});
-
-Handlebars.registerHelper('api_box_inline', function(box, fn) {
-  return Template.api_box(_.extend(box, {body: fn(this)}), true);
+UI.registerHelper('lt', function () {
+  return '<';
 });
 
 Template.api_box.bare = function() {
@@ -559,7 +456,7 @@ Template.api_box.bare = function() {
           (this.options && this.options.length)) ? "" : "bareapi";
 };
 
-var check_links = function() {
+check_links = function() {
   var body = document.body.innerHTML;
 
   var id_set = {};

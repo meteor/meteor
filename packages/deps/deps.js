@@ -15,10 +15,23 @@ var setCurrentComputation = function (c) {
   Deps.active = !! c;
 };
 
+// _assign is like _.extend or the upcoming Object.assign.
+// Copy src's own, enumerable properties onto tgt and return
+// tgt.
+var _hasOwnProperty = Object.prototype.hasOwnProperty;
+var _assign = function (tgt, src) {
+  for (var k in src) {
+    if (_hasOwnProperty.call(src, k))
+      tgt[k] = src[k];
+  }
+  return tgt;
+};
+
 var _debugFunc = function () {
   // lazy evaluation because `Meteor` does not exist right away
   return (typeof Meteor !== "undefined" ? Meteor._debug :
-          ((typeof console !== "undefined") && console.log ? console.log :
+          ((typeof console !== "undefined") && console.log ?
+           function () { console.log.apply(console, arguments); } :
            function () {}));
 };
 
@@ -28,6 +41,20 @@ var _throwOrLog = function (from, e) {
   } else {
     _debugFunc()("Exception from Deps " + from + " function:",
                  e.stack || e.message);
+  }
+};
+
+// Like `Meteor._noYieldsAllowed(function () { f(comp); })` but shorter,
+// and doesn't clutter the stack with an extra frame on the client,
+// where `_noYieldsAllowed` is a no-op.  `f` may be a computation
+// function or an onInvalidate callback.
+var callWithNoYieldsAllowed = function (f, comp) {
+  if ((typeof Meteor === 'undefined') || Meteor.isClient) {
+    f(comp);
+  } else {
+    Meteor._noYieldsAllowed(function () {
+      f(comp);
+    });
   }
 };
 
@@ -46,7 +73,7 @@ var inCompute = false;
 // `true` if the `_throwFirstError` option was passed in to the call
 // to Deps.flush that we are in. When set, throw rather than log the
 // first error encountered while flushing. Before throwing the error,
-// finish flushing (from a catch block), logging any subsequent
+// finish flushing (from a finally block), logging any subsequent
 // errors.
 var throwFirstError = false;
 
@@ -102,7 +129,7 @@ Deps.Computation = function (f, parent) {
   }
 };
 
-_.extend(Deps.Computation.prototype, {
+_assign(Deps.Computation.prototype, {
 
   // http://docs.meteor.com/#computation_oninvalidate
   onInvalidate: function (f) {
@@ -111,18 +138,13 @@ _.extend(Deps.Computation.prototype, {
     if (typeof f !== 'function')
       throw new Error("onInvalidate requires a function");
 
-    var g = function () {
+    if (self.invalidated) {
       Deps.nonreactive(function () {
-        return Meteor._noYieldsAllowed(function () {
-          f(self);
-        });
+        callWithNoYieldsAllowed(f, self);
       });
-    };
-
-    if (self.invalidated)
-      g();
-    else
-      self._onInvalidateCallbacks.push(g);
+    } else {
+      self._onInvalidateCallbacks.push(f);
+    }
   },
 
   // http://docs.meteor.com/#computation_invalidate
@@ -140,8 +162,11 @@ _.extend(Deps.Computation.prototype, {
 
       // callbacks can't add callbacks, because
       // self.invalidated === true.
-      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++)
-        f(); // already bound with self as argument
+      for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++) {
+        Deps.nonreactive(function () {
+          callWithNoYieldsAllowed(f, self);
+        });
+      }
       self._onInvalidateCallbacks = [];
     }
   },
@@ -163,7 +188,7 @@ _.extend(Deps.Computation.prototype, {
     var previousInCompute = inCompute;
     inCompute = true;
     try {
-      self._func(self);
+      callWithNoYieldsAllowed(self._func, self);
     } finally {
       setCurrentComputation(previous);
       inCompute = false;
@@ -201,7 +226,7 @@ Deps.Dependency = function () {
   this._dependentsById = {};
 };
 
-_.extend(Deps.Dependency.prototype, {
+_assign(Deps.Dependency.prototype, {
   // http://docs.meteor.com/#dependency_depend
   //
   // Adds `computation` to this set if it is not already
@@ -243,9 +268,12 @@ _.extend(Deps.Dependency.prototype, {
   }
 });
 
-_.extend(Deps, {
+_assign(Deps, {
   // http://docs.meteor.com/#deps_flush
   flush: function (_opts) {
+    // XXX What part of the comment below is still true? (We no longer
+    // have Spark)
+    //
     // Nested flush could plausibly happen if, say, a flush causes
     // DOM mutation, which causes a "blur" event, which runs an
     // app event handler that calls Deps.flush.  At the moment
@@ -264,6 +292,7 @@ _.extend(Deps, {
     willFlush = true;
     throwFirstError = !! (_opts && _opts._throwFirstError);
 
+    var finishedTry = false;
     try {
       while (pendingComputations.length ||
              afterFlushCallbacks.length) {
@@ -285,11 +314,13 @@ _.extend(Deps, {
           }
         }
       }
-    } catch (e) {
-      inFlush = false; // needed before calling `Deps.flush()` again
-      Deps.flush({_throwFirstError: false}); // finish flushing
-      throw e;
+      finishedTry = true;
     } finally {
+      if (! finishedTry) {
+        // we're erroring
+        inFlush = false; // needed before calling `Deps.flush()` again
+        Deps.flush({_throwFirstError: false}); // finish flushing
+      }
       willFlush = false;
       inFlush = false;
     }
@@ -309,9 +340,7 @@ _.extend(Deps, {
       throw new Error('Deps.autorun requires a function argument');
 
     constructingComputation = true;
-    var c = new Deps.Computation(function (c) {
-      Meteor._noYieldsAllowed(_.bind(f, this, c));
-    }, Deps.currentComputation);
+    var c = new Deps.Computation(f, Deps.currentComputation);
 
     if (Deps.active)
       Deps.onInvalidate(function () {
@@ -335,23 +364,6 @@ _.extend(Deps, {
     } finally {
       setCurrentComputation(previous);
     }
-  },
-
-  // Wrap `f` so that it is always run nonreactively.
-  _makeNonreactive: function (f) {
-    if (f.$isNonreactive) // avoid multiple layers of wrapping.
-      return f;
-    var nonreactiveVersion = function (/*arguments*/) {
-      var self = this;
-      var args = _.toArray(arguments);
-      var ret;
-      Deps.nonreactive(function () {
-        ret = f.apply(self, args);
-      });
-      return ret;
-    };
-    nonreactiveVersion.$isNonreactive = true;
-    return nonreactiveVersion;
   },
 
   // http://docs.meteor.com/#deps_oninvalidate

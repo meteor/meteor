@@ -11,6 +11,7 @@ TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
   self.stop_at_offset = stop_at_offset;
   self.onException = onException;
   self.id = Random.id();
+  self.extraDetails = {};
 };
 
 _.extend(TestCaseResults.prototype, {
@@ -40,6 +41,8 @@ _.extend(TestCaseResults.prototype, {
       // string. Don't do this!
       doc = { type: "fail", message: doc };
     }
+
+    doc = _.extend({}, doc, self.extraDetails);
 
     if (self.stop_at_offset === 0) {
       if (Meteor.isClient) {
@@ -168,22 +171,34 @@ _.extend(TestCaseResults.prototype, {
                  actual: actual, regexp: regexp.toString()});
   },
 
-  // XXX nodejs assert.throws can take an expected error, as a class,
-  // regular expression, or predicate function.  However, with its
-  // implementation if a constructor (class) is passed in and `actual`
-  // fails the instanceof test, the constructor is then treated as
-  // a predicate and called with `actual` (!)
-  //
   // expected can be:
   //  undefined: accept any exception.
-  //  regexp: accept an exception with message passing the regexp.
+  //  string: pass if the string is a substring of the exception message.
+  //  regexp: pass if the exception message passes the regexp.
   //  function: call the function as a predicate with the exception.
+  //
+  // Note: Node's assert.throws also accepts a constructor to test
+  // whether the error is of the expected class.  But since
+  // JavaScript can't distinguish between constructors and plain
+  // functions and Node's assert.throws also accepts a predicate
+  // function, if the error fails the instanceof test with the
+  // constructor then the constructor is then treated as a predicate
+  // and called (!)
+  //
+  // The upshot is, if you want to test whether an error is of a
+  // particular class, use a predicate function.
+  //
   throws: function (f, expected) {
     var actual, predicate;
 
     if (expected === undefined)
       predicate = function (actual) {
         return true;
+      };
+    else if (_.isString(expected))
+      predicate = function (actual) {
+        return _.isString(actual.message) &&
+               actual.message.indexOf(expected) !== -1;
       };
     else if (expected instanceof RegExp)
       predicate = function (actual) {
@@ -192,7 +207,7 @@ _.extend(TestCaseResults.prototype, {
     else if (typeof expected === 'function')
       predicate = expected;
     else
-      throw new Error('expected should be a predicate function or regexp');
+      throw new Error('expected should be a string, regexp, or predicate function');
 
     try {
       f();
@@ -201,9 +216,14 @@ _.extend(TestCaseResults.prototype, {
     }
 
     if (actual && predicate(actual))
-      this.ok({message: actual.message});
+      this.ok();
     else
-      this.fail({type: "throws"});
+      this.fail({
+        type: "throws",
+        message: actual ?
+          "wrong error thrown: " + actual.message :
+          "did not throw an error as expected"
+      });
   },
 
   isTrue: function (v, msg) {

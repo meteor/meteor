@@ -31,12 +31,13 @@ testAsyncMulti("accounts emails - reset password flow", [
         test.equal(error, undefined);
         test.notEqual(result, undefined);
         test.equal(result.length, 2); // the first is the email verification
-        var content = result[1];
+        var options = result[1];
 
-        var match = content.match(
-          new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)"));
+        var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)")
+        var match = options.text.match(re);
         test.isTrue(match);
         resetPasswordToken = match[1];
+        test.isTrue(options.html.match(re));
       }));
   },
   function (test, expect) {
@@ -71,12 +72,13 @@ var getVerifyEmailToken = function (email, test, expect) {
       test.equal(error, undefined);
       test.notEqual(result, undefined);
       test.equal(result.length, 1);
-      var content = result[0];
+      var options = result[0];
 
-      var match = content.match(
-        new RegExp(Meteor.absoluteUrl() + "#/verify-email/(\\S*)"));
+      var re = new RegExp(Meteor.absoluteUrl() + "#/verify-email/(\\S*)");
+      var match = options.text.match(re);
       test.isTrue(match);
       verifyEmailToken = match[1];
+      test.isTrue(options.html.match(re));
     }));
 };
 
@@ -164,12 +166,13 @@ var getEnrollAccountToken = function (email, test, expect) {
       test.equal(error, undefined);
       test.notEqual(result, undefined);
       test.equal(result.length, 1);
-      var content = result[0];
+      var options = result[0];
 
-      var match = content.match(
-        new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)"));
+      var re = new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)")
+      var match = options.text.match(re);
       test.isTrue(match);
       enrollAccountToken = match[1];
+      test.isTrue(options.html.match(re));
     }));
 };
 

@@ -16,15 +16,16 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
 
   var config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
 
-  var credentialToken = Random.id();
+  var credentialToken = Random.secret();
 
   // always need this to get user id from google.
-  var requiredScope = ['https://www.googleapis.com/auth/userinfo.profile'];
-  var scope = ['https://www.googleapis.com/auth/userinfo.email'];
+  var requiredScope = ['profile'];
+  var scope = ['email'];
   if (options.requestPermissions)
     scope = options.requestPermissions;
   scope = _.union(scope, requiredScope);
@@ -53,7 +54,7 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     loginUrl += '&hd=' + encodeURIComponent(Accounts._options.restrictCreationByEmailDomain);
   }
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken),
     { height: 406 }

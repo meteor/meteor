@@ -7,7 +7,10 @@
 </body>
 
 <template name="radio">
-  <span class="radio"><input id="{{key}}:{{value}}" {{{maybeChecked}}} type="radio" name="{{key}}" value="{{value}}" />{{! no whitespace}}<label for="{{key}}:{{value}}">{{label}}</label></span>
+  <span class="radio">
+    <input id="{{key}}:{{value}}" {{maybeChecked}} type="radio" name="{{key}}" value="{{value}}" />
+    <label for="{{key}}:{{value}}">{{label}}</label>
+  </span>
 </template>
 
 <template name="button">
@@ -18,92 +21,92 @@
   <div id="controlpane">
     <div class="group">
       <h3>Dropdown align edge:</h3>
-      {{radio "alignRight" "false" "Left"}}
-      {{radio "alignRight" "true" "Right"}}
+      {{> radio key="alignRight" value="false" label="Left"}}
+      {{> radio key="alignRight" value="true" label="Right"}}
     </div>
     <div class="group">
       <h3>Positioning:</h3>
-      {{radio "positioning" "relative" "Relative"}}
-      {{radio "positioning" "absolute" "Absolute"}}
-      {{radio "positioning" "floatRight" "Float:right"}}
-      {{radio "positioning" "inline" "Inline"}}
+      {{> radio key="positioning" value="relative" label="Relative"}}
+      {{> radio key="positioning" value="absolute" label="Absolute"}}
+      {{> radio key="positioning" value="floatRight" label="Float:right"}}
+      {{> radio key="positioning" value="inline" label="Inline"}}
     </div>
     <div class="group">
       <h3>How many third-party services?</h3>
-      {{radio "numServices" "0" "0"}}
-      {{radio "numServices" "1" "1"}}
-      {{radio "numServices" "2" "2"}}
-      {{radio "numServices" "3" "3"}}
+      {{> radio key="numServices" value="0" label="0"}}
+      {{> radio key="numServices" value="1" label="1"}}
+      {{> radio key="numServices" value="2" label="2"}}
+      {{> radio key="numServices" value="3" label="3"}}
     </div>
     <div class="group">
       <h3>Has password accounts?</h3>
-      {{radio "hasPasswords" "false" "No"}}
-      {{radio "hasPasswords" "true" "Yes"}}
+      {{> radio key="hasPasswords" value="false" label="No"}}
+      {{> radio key="hasPasswords" value="true" label="Yes"}}
     </div>
     <div class="group">
       <h3>Password sign-up fields:</h3>
-      {{radio "signupFields" "EMAIL_ONLY" "Email"}}
-      {{radio "signupFields" "USERNAME_ONLY" "Username"}}
-      {{radio "signupFields" "USERNAME_AND_EMAIL" "Username & Email"}}
-      {{radio "signupFields" "USERNAME_AND_OPTIONAL_EMAIL" "Username & Optional Email"}}
+      {{> radio key="signupFields" value="EMAIL_ONLY" label="Email"}}
+      {{> radio key="signupFields" value="USERNAME_ONLY" label="Username"}}
+      {{> radio key="signupFields" value="USERNAME_AND_EMAIL" label="Username & Email"}}
+      {{> radio key="signupFields" value="USERNAME_AND_OPTIONAL_EMAIL" label="Username & Optional Email"}}
     </div>
     <div class="group">
       <h3>Fake-Configure:</h3>
-      {{button "fakeConfig" "facebook" "Facebook"}}
-      {{button "fakeConfig" "github" "GitHub"}}
-      {{button "fakeConfig" "google" "Google"}}
+      {{> button key="fakeConfig" value="facebook" label="Facebook"}}
+      {{> button key="fakeConfig" value="github" label="GitHub"}}
+      {{> button key="fakeConfig" value="google" label="Google"}}
     </div>
     <div class="group">
       <h3>Show Configure Dialog:</h3>
-      {{button "showConfig" "facebook" "Facebook"}}
-      {{button "showConfig" "github" "GitHub"}}
-      {{button "showConfig" "google" "Google"}}
+      {{> button key="showConfig" value="facebook" label="Facebook"}}
+      {{> button key="showConfig" value="github" label="GitHub"}}
+      {{> button key="showConfig" value="google" label="Google"}}
     </div>
     <div class="group">
       <h3>Unconfigure:</h3>
-      {{button "unconfig" "facebook" "Facebook"}}
-      {{button "unconfig" "github" "GitHub"}}
-      {{button "unconfig" "google" "Google"}}
+      {{> button key="unconfig" value="facebook" label="Facebook"}}
+      {{> button key="unconfig" value="github" label="GitHub"}}
+      {{> button key="unconfig" value="google" label="Google"}}
     </div>
     <div class="group">
       <h3>Messages:</h3>
-      {{button "messages" "error" "Error"}}
-      {{button "messages" "info" "Info"}}
-      {{button "messages" "clear" "Clear"}}
+      {{> button key="messages" value="error" label="Error"}}
+      {{> button key="messages" value="info" label="Info"}}
+      {{> button key="messages" value="clear" label="Clear"}}
     </div>
     <div class="group">
       <h3>Signing in/out</h3>
-      {{button "sign" "in" "Fake sign-in"}}
-      {{button "sign" "out" "Sign out"}}
+      {{> button key="sign" value="in" label="Fake sign-in"}}
+      {{> button key="sign" value="out" label="Sign out"}}
     </div>
     <div class="group">
       <h3>Logged-out Views</h3>
-      {{button "lov" "signIn" "Sign In"}}
-      {{button "lov" "createAccount" "Create Account"}}
-      {{button "lov" "forgotPassword" "Forgot Password"}}
+      {{> button key="lov" value="signIn" label="Sign In"}}
+      {{> button key="lov" value="createAccount" label="Create Account"}}
+      {{> button key="lov" value="forgotPassword" label="Forgot Password"}}
     </div>
     <div class="group">
       <h3>Logged-in Views</h3>
-      {{button "liv" "accountButtons" "Account Buttons"}}
-      {{button "liv" "changePassword" "Change Password"}}
-      {{button "liv" "messageOnly" "Message Only"}}
+      {{> button key="liv" value="accountButtons" label="Account Buttons"}}
+      {{> button key="liv" value="changePassword" label="Change Password"}}
+      {{> button key="liv" value="messageOnly" label="Message Only"}}
     </div>
     <div class="group">
       <h3>Other Modals</h3>
-      {{button "modals" "resetPassword" "Reset Password"}}
-      {{button "modals" "enrollAccount" "Enroll Account"}}
-      {{button "modals" "justVerifiedEmail" "Verified Email"}}
+      {{> button key="modals" value="resetPassword" label="Reset Password"}}
+      {{> button key="modals" value="enrollAccount" label="Enroll Account"}}
+      {{> button key="modals" value="justVerifiedEmail" label="Verified Email"}}
     </div>
     <div class="group">
       <h3>Logging-in Spinner</h3>
-      {{radio "fakeLoggingIn" "false" "Off"}}
-      {{radio "fakeLoggingIn" "true" "Pretend loggingIn=true"}}
+      {{> radio key="fakeLoggingIn" value="false" label="Off"}}
+      {{> radio key="fakeLoggingIn" value="true" label="Pretend loggingIn=true"}}
     </div>
     <div class="group">
       <h3>Background Color</h3>
-      {{radio "bgcolor" "white" "White"}}
-      {{radio "bgcolor" "black" "Black"}}
-      {{radio "bgcolor" "red" "Red"}}
+      {{> radio key="bgcolor" value="white" label="White"}}
+      {{> radio key="bgcolor" value="black" label="Black"}}
+      {{> radio key="bgcolor" value="red" label="Red"}}
     </div>
   </div>
   {{#with settings}}
@@ -112,7 +115,7 @@
       {{#if match "positioning:inline"}}
         Here is a place to sign in, yay!
       {{/if}}
-      {{loginButtons align=dropdownAlign}}
+      {{> loginButtons align=dropdownAlign}}
       {{#if match "positioning:inline"}}
         Isn't that great?
       {{/if}}

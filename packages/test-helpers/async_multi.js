@@ -116,11 +116,14 @@ testAsyncMulti = function (name, funcs) {
   Tinytest.addAsync(name, function (test, onComplete) {
     var remaining = _.clone(funcs);
     var context = {};
+    var i = 0;
 
     var runNext = function () {
       var func = remaining.shift();
-      if (!func)
+      if (!func) {
+        delete test.extraDetails.asyncBlock;
         onComplete();
+      }
       else {
         var em = new ExpectationManager(test, function () {
           Meteor.clearTimeout(timer);
@@ -135,6 +138,7 @@ testAsyncMulti = function (name, funcs) {
           return;
         }, timeout);
 
+        test.extraDetails.asyncBlock = i++;
         try {
           func.apply(context, [test, _.bind(em.expect, em)]);
         } catch (exception) {

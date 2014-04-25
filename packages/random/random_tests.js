@@ -7,7 +7,7 @@ Tinytest.add('random', function (test) {
   // algorithm being used and it starts generating a different
   // sequence for a seed, as long as the sequence is consistent for
   // a particular release.
-  var random = Random.create(0);
+  var random = Random.createWithSeeds(0);
   test.equal(random.id(), "cp9hWvhg8GSvuZ9os");
   test.equal(random.id(), "3f3k6Xo7rrHCifQhR");
   test.equal(random.id(), "shxDnjWWmnKPEoLhM");
@@ -19,6 +19,7 @@ Tinytest.add('random', function (test) {
 Tinytest.add('random - format', function (test) {
   var idLen = 17;
   test.equal(Random.id().length, idLen);
+  test.equal(Random.id(29).length, 29);
   var numDigits = 9;
   var hexStr = Random.hexString(numDigits);
   test.equal(hexStr.length, numDigits);
@@ -26,4 +27,24 @@ Tinytest.add('random - format', function (test) {
   var frac = Random.fraction();
   test.isTrue(frac < 1.0);
   test.isTrue(frac >= 0.0);
+
+  test.equal(Random.secret().length, 43);
+  test.equal(Random.secret(13).length, 13);
+});
+
+Tinytest.add('random - Alea is last resort', function (test) {
+  if (Meteor.isServer) {
+    test.isTrue(Random.alea === undefined);
+  }
+  if (Meteor.isClient) {
+    var useGetRandomValues = !!(typeof window !== "undefined" &&
+        window.crypto && window.crypto.getRandomValues);
+    test.equal(Random.alea === undefined, useGetRandomValues);
+  }
+});
+
+Tinytest.add('random - createWithSeeds requires parameters', function (test) {
+  test.throws(function () {
+    Random.createWithSeeds();
+  });
 });

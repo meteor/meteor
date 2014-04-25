@@ -44,6 +44,13 @@ Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
   });
 };
 
+// Minimongo.Sorter gets a similar method, which delegates to a Matcher it made
+// for this exact purpose.
+Minimongo.Sorter.prototype.affectedByModifier = function (modifier) {
+  var self = this;
+  return self._selectorForAffectedByModifier.affectedByModifier(modifier);
+};
+
 // @param modifier - Object: MongoDB-styled modifier with `$set`s and `$unsets`
 //                           only. (assumed to come from oplog)
 // @returns - Boolean: if after applying the modifier, selector can start

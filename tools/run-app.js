@@ -10,7 +10,7 @@ var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var inFiber = require('./fiber-helpers.js').inFiber;
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -51,6 +51,7 @@ var AppProcess = function (options) {
 
   self.bundlePath = options.bundlePath;
   self.port = options.port;
+  self.listenHost = options.listenHost;
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
@@ -168,12 +169,19 @@ _.extend(AppProcess.prototype, {
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
     env.MONGO_URL = self.mongoUrl;
-    if (self.oplogUrl)
+    if (self.oplogUrl) {
       env.MONGO_OPLOG_URL = self.oplogUrl;
-    if (self.settings)
+    }
+    if (self.settings) {
       env.METEOR_SETTINGS = self.settings;
-    else
+    } else {
       delete env.METEOR_SETTINGS;
+    }
+    if (self.listenHost) {
+      env.BIND_IP = self.listenHost;
+    } else {
+      delete env.BIND_IP;
+    }
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
@@ -266,11 +274,9 @@ _.extend(AppProcess.prototype, {
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
 //   proxy
 //
-// To use, construct an instance of AppRunner, and then call start()
-// to start it running. Call stop() at any time to shut it down and
-// clean it up. You should call stop() to clean up even if you return
-// false from onRunEnd(); this stops the restarting but doesn't
-// destroy the AppRunner instance.
+// To use, construct an instance of AppRunner, and then call start() to start it
+// running. To stop it, either return false from onRunEnd, or call stop().  (But
+// don't call stop() from inside onRunEnd: that causes a deadlock.)
 //
 // The 'result' argument to onRunEnd is an object with keys:
 //
@@ -308,6 +314,7 @@ var AppRunner = function (appDir, options) {
   self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
   // note: run-all.js updates port directly
   self.port = options.port;
+  self.listenHost = options.listenHost;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
   self.buildOptions = options.buildOptions;
@@ -324,6 +331,7 @@ var AppRunner = function (appDir, options) {
   self.startFuture = null;
   self.runFuture = null;
   self.exitFuture = null;
+  self.watchFuture = null;
 };
 
 _.extend(AppRunner.prototype, {
@@ -338,7 +346,8 @@ _.extend(AppRunner.prototype, {
     self.startFuture = new Future;
     self.fiber = new Fiber(function () {
       self._fiber();
-    }).run();
+    });
+    self.fiber.run();
     self.startFuture.wait();
     self.startFuture = null;
   },
@@ -360,6 +369,7 @@ _.extend(AppRunner.prototype, {
     self.exitFuture = new Future;
 
     self._runFutureReturn({ outcome: 'stopped' });
+    self._watchFutureReturn();
 
     self.exitFuture.wait();
     self.exitFuture = null;
@@ -443,6 +453,7 @@ _.extend(AppRunner.prototype, {
     var appProcess = new AppProcess({
       bundlePath: bundlePath,
       port: self.port,
+      listenHost: self.listenHost,
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,
@@ -503,6 +514,15 @@ _.extend(AppRunner.prototype, {
     var runFuture = self.runFuture;
     self.runFuture = null;
     runFuture['return'](value);
+  },
+
+  _watchFutureReturn: function () {
+    var self = this;
+    if (!self.watchFuture)
+      return;
+    var watchFuture = self.watchFuture;
+    self.watchFuture = null;
+    watchFuture.return();
   },
 
   _fiber: function () {
@@ -574,13 +594,20 @@ _.extend(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        var fut = new Future;
+        self.watchFuture = new Future;
         var watcher = new watch.Watcher({
           watchSet: runResult.bundleResult.watchSet,
-          onChange: function () { fut['return'](); }
+          onChange: function () {
+            self._watchFutureReturn();
+          }
         });
         self.proxy.setMode("errorpage");
-        fut.wait();
+        // If onChange wasn't called synchronously (clearing watchFuture), wait
+        // on it.
+        self.watchFuture && self.watchFuture.wait();
+        // While we were waiting, did somebody stop() us?
+        if (self.exitFuture)
+          break;
         runLog.log("=> Modified -- restarting.");
         continue;
       }

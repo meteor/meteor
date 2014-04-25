@@ -1,3 +1,4 @@
+
 Tinytest.add("minifiers - simple css minification", function (test) {
   var t = function (css, expected, desc) {
     test.equal(CssTools.minifyCss(css), expected, desc);
@@ -18,4 +19,3 @@ Tinytest.add("minifiers - simple css minification", function (test) {
   'a{font:12px Helvetica,Arial,Nautica;background:url("/some/nice/picture.png")}',  'removing quotes in font and url (if possible)');
   t('/* no comments */ a { color: red; }', 'a{color:red}', 'remove comments');
 });
-
