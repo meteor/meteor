@@ -1,5 +1,8 @@
 Package.describe({
+  name: "spacebars",
+  test: "spacebars-test",
   summary: "Handlebars-like template language for Meteor",
+  version: '1.0.0',
   internal: true
 });
 
