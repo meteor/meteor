@@ -1,3 +1,18 @@
+// A Controller is a RenderPoint that participates in the Controller
+// stack (Blaze.currentController, Controller#parentController).
+// It's a superclass of Component.  Unlike a Component, it can be
+// used in attribute maps (which are constructed once and evaluated
+// multiple times), so it's suitable for control structures like
+// #if, #with, and #each.  The contents are not isolated by default.
+//
+// A Component has contents that are isolated by default.  Because it
+// has a Computation, the reactivity of its contents is contained and
+// can be stopped.  Components are meant to be instantiated by user
+// code as `new FooComponent(...)` as part of an HTMLjs tree, which
+// must only be rendered once.  Components have a well-defined lifecycle,
+// while Controllers straddle the gap between Components and the
+// timeless RenderPoints which keep no instance state.
+
 Blaze.Controller = function () {
   this.parentController = Blaze.currentController;
 };
