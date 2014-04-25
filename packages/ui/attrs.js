@@ -236,7 +236,7 @@ var UrlHandler = AttributeHandler.extend({
             (normalizeUrl(value).indexOf('javascript:') === 0);
       if (isJavascriptProtocol) {
         Meteor._debug("URLs that use the 'javascript:' protocol are not " +
-                      "allowed in attribute values. " +
+                      "allowed in URL attribute values. " +
                       "Call UI._allowJavascriptUrls() " +
                       "to enable them.");
         origUpdate.apply(self, [element, oldValue, null]);
