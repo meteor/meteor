@@ -866,7 +866,11 @@ _.extend(PackageSource.prototype, {
     if (fs.existsSync(versionsFile)) {
       try {
         var data = fs.readFileSync(versionsFile, 'utf8');
-        self.dependencyVersions = JSON.parse(data);
+        var dependencyData = JSON.parse(data);
+        self.dependencyVersions = {
+          "plugins": _.object(dependencyData.plugins),
+          "dependencies": _.object(dependencyData.dependencies)
+          };
       } catch (err) {
         // We 'recover' by not reading the dependency versions. Log a line about
         // it in case it is unexpected. We don't buildmessage because it doesn't
@@ -1120,11 +1124,27 @@ _.extend(PackageSource.prototype, {
 
     // In case we need to rebuild from this package Source, it will be
     // convenient to keep the results on hand and not reread from disk.
-    this.dependencyVersions = versions;
+    self.dependencyVersions = versions;
 
-    // Most of our disk i/o happens through the builder, so it makes sense to
-    // use it to write this to disk, even though we are neither bundling nor
-    // compiling this file right now.
+    // When we write versions to disk, we want to alphabetize by package name,
+    // both for readability and also for consistency (so two packages built with
+    // the same versions have the exact same versions file).
+    //
+    // This takes in an object mapping key to value and returns an array of
+    // <key, value> pairs, alphabetized by key.
+    var alphabetize = function (object) {
+      return _.sortBy(_.pairs(object),
+        function (pair) {
+           return pair[0];
+        });
+    };
+
+    // Both plugins and direct dependencies are objects mapping package name to
+    // version number. When we write them on disk, we will convert them to
+    // arrays of <packageName, version> and alphabetized by packageName.
+    versions["dependencies"] = alphabetize(versions["dependencies"]);
+    versions["plugins"] = alphabetize(versions["plugins"]);
+
     try {
       // Currently, unnamed packages are apps, and apps have a different
       // versions file format and semantics. So, we don't need to and cannot
