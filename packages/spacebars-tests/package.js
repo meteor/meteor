@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
+  version: '1.0.0',
   internal: true
 });
 

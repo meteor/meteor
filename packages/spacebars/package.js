@@ -1,5 +1,6 @@
 Package.describe({
   summary: "Handlebars-like template language for Meteor",
+  version: '1.0.0',
   internal: true
 });
 

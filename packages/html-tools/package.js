@@ -1,6 +1,7 @@
 
 Package.describe({
   summary: "Standards-compliant HTML tools",
+  version: '1.0.0',
   internal: true
 });
 
