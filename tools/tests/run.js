@@ -12,7 +12,7 @@ var MONGO_LISTENING =
 var SIMPLE_WAREHOUSE = {
   v1: { tools: 'tools1' },
   v2: { tools: 'tools1', latest: true },
-  v3: { tools: 'tools1' },
+  v3: { tools: 'tools1' }
 };
 
 selftest.define("run", function () {
@@ -49,7 +49,9 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("is crashing");
   s.unlink("crash.js");
+  run.waitSecs(5);
   run.match("Modified");
+  run.waitSecs(5);
   run.match("restarted");
   s.write("empty.js", "");
   run.waitSecs(5);
@@ -63,6 +65,7 @@ selftest.define("run", function () {
   // Bundle failure
   s.unlink("crash.js");
   s.write("junk.js", "]");
+  run.waitSecs(5);
   run.match("Modified");
   run.match("prevented startup");
   run.match("Unexpected token");
@@ -70,6 +73,7 @@ selftest.define("run", function () {
 
   // Back to working
   s.unlink("junk.js");
+  run.waitSecs(5);
   run.match("restarted");
 
   // Crash just once, then restart successfully
@@ -85,6 +89,7 @@ selftest.define("run", function () {
 "}\n");
   run.waitSecs(5);
   run.match("with code: 137");
+  run.waitSecs(5);
   run.match("restarted");
   run.stop();
 
@@ -98,6 +103,7 @@ selftest.define("run", function () {
   run.match("Unexpected token");
   run.match("file change");
   s.unlink("junk.js");
+  run.waitSecs(5);
   run.match("restarted");
   run.stop();
 
@@ -286,4 +292,47 @@ selftest.define("update during run", ["checkout"], function () {
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");
+});
+
+selftest.define("run with mongo crash", ["checkout"], function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+
+  // Kill mongod three times.  See that it gives up and quits.
+  run = s.run();
+  run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(2);
+  run.match('localhost:3000/\n');
+  run.tellMongo({exit: 23});
+  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  run.tellMongo({exit: 46});
+  run.read('Unexpected mongo exit code 46. Restarting.\n');
+  run.tellMongo({exit: 47});
+  run.read('Unexpected mongo exit code 47. Restarting.\n');
+  run.read("Can't start Mongo server.\n");
+  run.read("MongoDB exited due to excess clock skew\n");
+  run.expectEnd();
+  run.expectExit(254);
+
+  // Now create a build failure. Make sure that killing mongod three times
+  // *also* successfully quits even if we're waiting on file change.
+  s.write('bad.js', ']');
+  run = s.run();
+  run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(2);
+  run.match("prevented startup");
+  run.match("file change.\n");
+  run.tellMongo({exit: 23});
+  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  run.tellMongo({exit: 46});
+  run.read('Unexpected mongo exit code 46. Restarting.\n');
+  run.tellMongo({exit: 47});
+  run.read('Unexpected mongo exit code 47. Restarting.\n');
+  run.read("Can't start Mongo server.\n");
+  run.read("MongoDB exited due to excess clock skew\n");
+  run.expectEnd();
+  run.expectExit(254);
 });

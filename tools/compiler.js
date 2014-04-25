@@ -243,7 +243,9 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
 
   // *** Assemble the list of source file handlers from the plugins
   var allHandlers = {};
+  var sourceExtensions = {};  // maps source extensions to isTemplate
 
+  sourceExtensions['js'] = false;
   allHandlers['js'] = function (compileStep) {
     // This is a hardcoded handler for *.js files. Since plugins
     // are written in JavaScript we have to start somewhere.
@@ -258,9 +260,10 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   };
 
   _.each(activePluginPackages, function (otherPkg) {
-    _.each(otherPkg.getSourceHandlers(), function (handler, ext) {
+    _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
+      // XXX comparing function text here seems wrong.
       if (ext in allHandlers &&
-          allHandlers[ext].toString() !== handler.toString()) {
+          allHandlers[ext].toString() !== sourceHandler.handler.toString()) {
         buildmessage.error(
           "conflict: two packages included in " +
             (inputSourceArch.pkg.name || "the app") + ", " +
@@ -269,7 +272,8 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
             "are both trying to handle ." + ext);
         // Recover by just going with the first handler we saw
       } else {
-        allHandlers[ext] = handler;
+        allHandlers[ext] = sourceHandler.handler;
+        sourceExtensions[ext] = !!sourceHandler.isTemplate;
       }
     });
   });
@@ -281,7 +285,6 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // things that the getSourcesFunc consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  var sourceExtensions = _.keys(allHandlers);
   var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
 
   // *** Process each source file

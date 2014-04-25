@@ -18,8 +18,14 @@ ServiceConfiguration.configurations = new Meteor.Collection(
 
 
 // Thrown when trying to use a login service which is not configured
-ServiceConfiguration.ConfigError = function(description) {
-  this.message = description;
+ServiceConfiguration.ConfigError = function (serviceName) {
+  if (Meteor.isClient && !Accounts.loginServicesConfigured()) {
+    this.message = "Login service configuration not yet loaded";
+  } else if (serviceName) {
+    this.message = "Service " + serviceName + " not configured";
+  } else {
+    this.message = "Service not configured";
+  }
 };
 ServiceConfiguration.ConfigError.prototype = new Error();
 ServiceConfiguration.ConfigError.prototype.name = 'ServiceConfiguration.ConfigError';

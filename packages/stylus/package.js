@@ -15,9 +15,9 @@ Package._transitional_registerBuildPlugin({
 });
 
 Package.on_test(function (api) {
-  api.use(['tinytest', 'stylus', 'test-helpers']);
-  api.use('spark');
+  api.use(['tinytest', 'stylus', 'test-helpers', 'templating']);
   api.add_files([
+    'stylus_tests.html',
     'stylus_tests.styl',
     'stylus_tests.import.styl',
     'stylus_tests.js'

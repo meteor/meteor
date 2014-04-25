@@ -364,9 +364,18 @@ _.extend(Unipackage.prototype, {
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
+      // 'options' can be elided. The only known option is 'isTemplate', which
+      // is a bit of a hack meaning "in an app, these files should be loaded
+      // before non-templates".
+      //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
-      registerSourceHandler: function (extension, handler) {
+      registerSourceHandler: function (extension, options, handler) {
+        if (!handler) {
+          handler = options;
+          options = {};
+        }
+
         if (_.has(self.sourceHandlers, extension)) {
           buildmessage.error("duplicate handler for '*." +
                              extension + "'; may only have one per Plugin",
@@ -375,7 +384,10 @@ _.extend(Unipackage.prototype, {
           return;
         }
 
-        self.sourceHandlers[extension] = handler;
+        self.sourceHandlers[extension] = {
+          handler: handler,
+          isTemplate: !!options.isTemplate
+        };
       }
     };
 

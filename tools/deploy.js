@@ -34,7 +34,7 @@ var project = require('./project.js');
 //
 // Options include:
 // - method: GET, POST, or DELETE. default GET
-// - operation: "info", "logs", "mongo", "deploy"
+// - operation: "info", "logs", "mongo", "deploy", "authorized-apps"
 // - site: site name
 // - expectPayload: an array of key names. if present, then we expect
 //   the server to return JSON content on success and to return an
@@ -68,7 +68,8 @@ var deployRpc = function (options) {
 
   try {
     var result = httpHelpers.request(_.extend(options, {
-      url: config.getDeployUrl() + '/' + options.operation + '/' + options.site,
+      url: config.getDeployUrl() + '/' + options.operation +
+        (options.site ? ('/' + options.site) : ''),
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
       useAuthHeader: true,
@@ -712,6 +713,32 @@ site + ": " + "successfully transferred to your account.\n" +
   return 0;
 };
 
+var listSites = function () {
+  var result = deployRpc({
+    method: "GET",
+    operation: "authorized-apps",
+    promptIfAuthFails: true,
+    expectPayload: ["sites"]
+  });
+
+  if (result.errorMessage) {
+    process.stderr.write("Couldn't list sites: " +
+                         result.errorMessage + "\n");
+    return 1;
+  }
+
+  if (! result.payload ||
+      ! result.payload.sites ||
+      ! result.payload.sites.length) {
+    process.stdout.write("You don't have any sites yet.\n");
+  } else {
+    _.each(result.payload.sites, function (site) {
+      process.stdout.write(site + "\n");
+    });
+  }
+  return 0;
+};
+
 
 exports.bundleAndDeploy = bundleAndDeploy;
 exports.deleteApp = deleteApp;
@@ -720,3 +747,4 @@ exports.logs = logs;
 exports.listAuthorized = listAuthorized;
 exports.changeAuthorized = changeAuthorized;
 exports.claim = claim;
+exports.listSites = listSites;

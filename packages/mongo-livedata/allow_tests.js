@@ -132,7 +132,8 @@ if (Meteor.isServer) {
         }
       }, {
         insert: function(userId, doc) {
-          return doc.cantInsert2;
+          // Don't allow explicit ID to be set by the client.
+          return _.has(doc, '_id');
         },
         update: function(userId, doc, fields, modifier) {
           return -1 !== _.indexOf(fields, 'verySecret');
@@ -560,7 +561,7 @@ if (Meteor.isClient) {
           // insert with one allow and other deny. denied.
           function (test, expect) {
             collection.insert(
-              {canInsert: true, cantInsert2: true},
+              {canInsert: true, _id: Random.id()},
               expect(function (err, res) {
                 test.equal(err.error, 403);
                 test.equal(collection.find().count(), 0);

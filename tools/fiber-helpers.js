@@ -46,3 +46,33 @@ exports.firstTimeResolver = function (fut) {
     resolver(err, val);
   };
 };
+
+// Waits for one future given as an argument to be resolved. Throws if it threw,
+// otherwise returns whichever one returns first.  (Because of this, you
+// probably want at most one of the futures to be capable of returning, and have
+// the other be throw-only.)
+exports.waitForOne = function (/* futures */) {
+  var fiber = Fiber.current;
+  if (!fiber)
+    throw Error("Can't waitForOne without a fiber");
+  if (arguments.length === 0)
+    throw Error("Must wait for at least one future");
+
+  var combinedFuture = new Future;
+  for (var i = 0; i < arguments.length; ++i) {
+    var f = arguments[i];
+    if (f.isResolved()) {
+      // Move its value into combinedFuture.
+      f.resolve(combinedFuture.resolver());
+      break;
+    }
+    // Otherwise, this function will be invoked when the future is resolved.
+    f.resolve(function (err, result) {
+      if (!combinedFuture.isResolved()) {
+        combinedFuture.resolver()(err, result);
+      }
+    });
+  }
+
+  return combinedFuture.wait();
+};

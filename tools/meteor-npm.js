@@ -13,7 +13,7 @@ var files = require(path.join(__dirname, 'files.js'));
 var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var utils = require('./utils.js');
-var runLog = require('./run-log.js').runLog;
+var runLog = require('./run-log.js');
 var _ = require('underscore');
 
 var meteorNpm = exports;

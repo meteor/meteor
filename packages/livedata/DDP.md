@@ -7,7 +7,7 @@ DDP is a protocol between a client and a server that supports two operations:
    client informed about the contents of those documents as they change over
    time.
 
-This document specifies the version "pre1" of DDP. It's a rough description of
+This document specifies the version "pre2" of DDP. It's a rough description of
 the protocol and not intended to be entirely definitive.
 
 ## General Message Structure:
@@ -70,6 +70,23 @@ negotiated with the server and begin with that version in future
 connections. The client can rely on the server sending a `failed`
 message if a better version is possible as a result of the client or
 the server having been upgraded.
+
+## Heartbeats
+
+### Messages:
+
+ * `ping`
+   - `id`: optional string (identifier used to correlate with response)
+ * `pong`
+   - `id`: optional string (same as received in the `ping` message)
+
+### Procedure:
+
+At any time after the connection is established either side may send a `ping`
+message. The sender may chose to include an `id` field in the `ping`
+message. When the other side receives a `ping` it must immediately respond with
+a `pong` message. If the received `ping` message includes an `id` field, the
+`pong` message must include the same `id` field.
 
 ## Managing Data:
 
@@ -170,6 +187,8 @@ the server having been upgraded.
    - `method`: string (method name)
    - `params`: optional array of EJSON items (parameters to the method)
    - `id`: string (an arbitrary client-determined identifier for this method call)
+   - `randomSeed`: optional JSON value (an arbitrary client-determined seed
+     for pseudo-random generators)
  * `result` (server -> client):
    - `id`: string (the id passed to 'method')
    - `error`: optional Error (an error thrown by the method (or method-not-found)
@@ -192,6 +211,19 @@ the server having been upgraded.
 
  * There is no particular required ordering between `result` and `updated`
    messages for a method call.
+
+ * The client may provide a randomSeed JSON value.  If provided, this value is
+   used to seed pseudo-random number generation.  By using the same seed with
+   the same algorithm, the same pseudo-random values can be generated on the
+   client and the server.  In particular, this is used for generating ids for
+   newly created documents.  If randomSeed is not provided, then values
+   generated on the server and the client will not be identical.
+
+ * Currently randomSeed is expected to be a string, and the algorithm by which
+   values are produced from this is not yet documented.  It will likely be
+   formally specified in future when we are confident that the complete
+   requirements are known, or when a compatible implementation requires this
+   to be specified.
 
 ## Errors:
 
@@ -260,3 +292,35 @@ of EJSON should not rely on key order, if possible.
 
 > MongoDB relies on key order.  When using EJSON with MongoDB, the
 > implementation of EJSON must preserve key order.
+
+
+## Appendix 2: randomSeed backward/forward compatibility
+
+randomSeed was added into DDP pre2, but it does not break backward or forward
+compatibility.
+
+If the client stub and the server produce documents that are different in any
+way, Meteor will reconcile this difference. This may cause 'flicker' in the UI
+as the values change on the client to reflect what happened on the server, but
+the final result will be correct: the server and the client will agree.
+
+Consistent id generation / randomSeed does not alter the syncing process, and
+thus will (at worst) be the same:
+
+* If neither the server nor the client support randomSeed, we will get the
+classical/flicker behavior.
+
+* If the client supports randomSeed, but the server does not, the server will
+ignore randomSeed, as it ignores any unknown properties in a DDP method call.
+Different ids will be generated, but this will be fixed by syncing.
+
+* If the server supports randomSeed, but the client does not, the server will
+generate unseeded random values (providing a randomSeed is optional); different
+ids will be generated; and again this will be fixed by syncing.
+
+* If both client and server support randomSeed, but different ids are
+generated, either because the generation procedure is buggy, or the stub
+behaves differently to the server, then syncing will fix this.
+
+* If both client and server support randomSeed, in the normal case the ids
+generated will be the same, and syncing will be a no-op.

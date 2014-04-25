@@ -1,5 +1,5 @@
 <template name="pkg_spiderable">
-{{#better_markdown}}
+{{#markdown}}
 ## `spiderable`
 
 
@@ -33,6 +33,14 @@ If you deploy your application with `meteor bundle`, you must install
 `$PATH`. If you use `meteor deploy` this is already taken care of.
 {{/warning}}
 
+{{#warning}}
+When running your page, `spiderable` will wait for all publications
+to be ready. Make sure that all of your [`publish functions`](#meteor_publish)
+either return a cursor (or an array of cursors), or eventually call
+[`this.ready()`](#publish_ready). Otherwise, the `phantomjs` executions
+will fail.
+{{/warning}}
 
-{{/better_markdown}}
+
+{{/markdown}}
 </template>

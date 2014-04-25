@@ -87,28 +87,26 @@
 <template name="testTable">
   <div class="row-fluid"><div class="span12">
   <div class="test_table">
-    {{#each data}}
-      {{> test_group this}}
+    {{#each testdata}}
+      {{> test_group thisWithDep}}
     {{/each}}
   </div>
   </div></div>
 </template>
 
 <template name="test_group">
-  {{groupDep}}
   <div class="group">
     <div class="groupname"><a>{{name}}</a></div>
     {{#each tests}}
-      {{> test}}
+      {{> test thisWithDep}}
     {{/each}}
     {{#each groups}}
-      {{> test_group}}
+      {{> test_group thisWithDep}}
     {{/each}}
   </div>
 </template>
 
 <template name="test">
-  {{testDep}}
   <div class="test {{test_class}}">
     <div class="testrow">
       <div class="teststatus">

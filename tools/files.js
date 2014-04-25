@@ -451,11 +451,8 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
-  var reader = fstream.Reader({
-    path: dirPath,
-    type: 'Directory'
-  });
-  return reader.pipe(tar.Pack()).pipe(zlib.createGzip());
+  return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
+    tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
 };
 
 // Tar-gzips a directory into a tarball on disk, synchronously.

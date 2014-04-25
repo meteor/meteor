@@ -1,9 +1,9 @@
 Package.describe({
-  summary: "Automatically preserve form fields with a unique id",
-  version: "1.0.0"
+  summary: "Deprecated package (now empty)",
+  version: "1.0.0",
+  internal: true
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'spark']);
-  api.add_files("preserve-inputs.js", "client");
+  api.add_files('deprecated.js', 'server');
 });

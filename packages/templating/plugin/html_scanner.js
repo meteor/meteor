@@ -19,19 +19,16 @@ html_scanner = {
       index += amount;
     };
 
-    var throwParseError = function (msg, atIndex, lineOffset) {
-      atIndex = atIndex || index;
-      lineOffset = lineOffset || 0;
-
+    var throwParseError = function (msg, overrideIndex) {
       var ret = new html_scanner.ParseError;
       ret.message = msg || "bad formatting in HTML template";
       ret.file = source_name;
-      ret.line = contents.substring(0, atIndex).split('\n').length + lineOffset;
+      var theIndex = (typeof overrideIndex === 'number' ? overrideIndex : index);
+      ret.line = contents.substring(0, theIndex).split('\n').length;
       throw ret;
     };
 
     var results = html_scanner._initResults();
-
     var rOpenTag = /^((<(template|head|body)\b)|(<!--)|(<!DOCTYPE|{{!)|$)/i;
 
     while (rest) {
@@ -100,12 +97,14 @@ html_scanner = {
         throwParseError("unclosed <"+tagName+">");
       var tagContents = rest.slice(0, end.index);
       var contentsStartIndex = index;
-      advance(end.index + end[0].length);
 
       // act on the tag
       html_scanner._handleTag(results, tagName, tagAttribs, tagContents,
                               throwParseError, contentsStartIndex,
                               tagStartIndex);
+
+      // advance afterwards, so that line numbers in errors are correct
+      advance(end.index + end[0].length);
     }
 
     return results;
@@ -146,39 +145,45 @@ html_scanner = {
 
 
     // <body> or <template>
+
     try {
-      var ast = Handlebars.to_json_ast(contents);
-    } catch (e) {
-      if (e instanceof Handlebars.ParseError) {
-        if (typeof(e.line) === "number")
-          // subtract one from e.line because it is one-based but we
-          // need it to be an offset from contentsStartIndex
-          throwParseError(e.message, contentsStartIndex, e.line - 1);
-        else
-          // No line number available from Handlebars parser, so
-          // generate the parse error at the <template> tag itself
-          throwParseError("error in template: " + e.message, tagStartIndex);
+      if (tag === "template") {
+        var name = attribs.name;
+        if (! name)
+          throwParseError("Template has no 'name' attribute");
+
+        if (Spacebars.isReservedName(name))
+          throwParseError("Template can't be named \"" + name + "\"");
+
+        var renderFuncCode = Spacebars.compile(
+          contents, {
+            isTemplate: true,
+            sourceName: 'Template "' + name + '"'
+          });
+
+        results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
+          ", " + renderFuncCode + ");\n";
+      } else {
+        // <body>
+        if (hasAttribs)
+          throwParseError("Attributes on <body> not supported");
+
+        var renderFuncCode = Spacebars.compile(
+          contents, {
+            isBody: true,
+            sourceName: "<body>"
+          });
+
+        // We may be one of many `<body>` tags.
+        results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });\n";
       }
-      else
+    } catch (e) {
+      if (e.scanner) {
+        // The error came from Spacebars
+        throwParseError(e.message, contentsStartIndex + e.offset);
+      } else {
         throw e;
-    }
-    var code = 'Package.handlebars.Handlebars.json_ast_to_func(' +
-          JSON.stringify(ast) + ')';
-
-    if (tag === "template") {
-      var name = attribs.name;
-      if (! name)
-        throwParseError("Template has no 'name' attribute");
-
-      results.js += "Template.__define__(" + JSON.stringify(name) + ","
-        + code + ");\n";
-    } else {
-      // <body>
-      if (hasAttribs)
-        throwParseError("Attributes on <body> not supported");
-      results.js += "Meteor.startup(function(){" +
-        "document.body.appendChild(Spark.render(" +
-        "Template.__define__(null," + code + ")));});";
+      }
     }
   }
 };

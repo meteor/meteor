@@ -22,12 +22,17 @@ Tinytest.add("templating - html scanner", function (test) {
     test.fail("Parse error didn't throw exception");
   };
 
-  var BODY_PREAMBLE = "Meteor.startup(function(){" +
-        "document.body.appendChild(Spark.render(" +
-        "Template.__define__(null,";
-  var BODY_POSTAMBLE = ")));});";
-  var TEMPLATE_PREAMBLE = "Template.__define__(";
-  var TEMPLATE_POSTAMBLE = ");\n";
+  // returns the appropriate code to put content in the body,
+  // where content is something simple like the string "Hello"
+  // (passed in as a source string including the quotes).
+  var simpleBody = function (content) {
+    return "\nUI.body.contentParts.push(UI.Component.extend({render: (function() {\n  var self = this;\n  return " + content + ";\n})}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });\n";
+  };
+
+  // arguments are quoted strings like '"hello"'
+  var simpleTemplate = function (templateName, content) {
+    return '\nTemplate.__define__(' + templateName + ', (function() {\n  var self = this;\n  var template = this;\n  return ' + content + ';\n}));\n';
+  };
 
   var checkResults = function(results, expectJs, expectHead) {
     test.equal(results.body, '');
@@ -42,73 +47,65 @@ Tinytest.add("templating - html scanner", function (test) {
   // body all on one line
   checkResults(
     html_scanner.scan("<body>Hello</body>"),
-    BODY_PREAMBLE+'Package.handlebars.Handlebars.json_ast_to_func(["Hello"])'+BODY_POSTAMBLE);
+    simpleBody('"Hello"'));
 
   // multi-line body, contents trimmed
   checkResults(
     html_scanner.scan("\n\n\n<body>\n\nHello\n\n</body>\n\n\n"),
-    BODY_PREAMBLE+'Package.handlebars.Handlebars.json_ast_to_func(["Hello"])'+BODY_POSTAMBLE);
+    simpleBody('"Hello"'));
 
   // same as previous, but with various HTML comments
   checkResults(
     html_scanner.scan("\n<!--\n\nfoo\n-->\n<!-- -->\n"+
                       "<body>\n\nHello\n\n</body>\n\n<!----\n>\n\n"),
-    BODY_PREAMBLE+'Package.handlebars.Handlebars.json_ast_to_func(["Hello"])'+BODY_POSTAMBLE);
+    simpleBody('"Hello"'));
 
   // head and body
   checkResults(
     html_scanner.scan("<head>\n<title>Hello</title>\n</head>\n\n<body>World</body>\n\n"),
-    BODY_PREAMBLE+'Package.handlebars.Handlebars.json_ast_to_func(["World"])'+BODY_POSTAMBLE,
+    simpleBody('"World"'),
     "<title>Hello</title>");
 
   // head and body with tag whitespace
   checkResults(
     html_scanner.scan("<head\n>\n<title>Hello</title>\n</head  >\n\n<body>World</body\n\n>\n\n"),
-    BODY_PREAMBLE+'Package.handlebars.Handlebars.json_ast_to_func(["World"])'+BODY_POSTAMBLE,
+    simpleBody('"World"'),
     "<title>Hello</title>");
 
   // head, body, and template
   checkResults(
     html_scanner.scan("<head>\n<title>Hello</title>\n</head>\n\n<body>World</body>\n\n"+
                       '<template name="favoritefood">\n  pizza\n</template>\n'),
-    BODY_PREAMBLE+'Package.handlebars.Handlebars.json_ast_to_func(["World"])'+BODY_POSTAMBLE+
-      TEMPLATE_PREAMBLE+'"favoritefood",Package.handlebars.Handlebars.json_ast_to_func(["pizza"])'+
-      TEMPLATE_POSTAMBLE,
+    simpleBody('"World"') + simpleTemplate('"favoritefood"', '"pizza"'),
     "<title>Hello</title>");
 
   // one-line template
   checkResults(
     html_scanner.scan('<template name="favoritefood">pizza</template>'),
-    TEMPLATE_PREAMBLE+'"favoritefood",Package.handlebars.Handlebars.json_ast_to_func(["pizza"])'+
-      TEMPLATE_POSTAMBLE);
+    simpleTemplate('"favoritefood"', '"pizza"'));
 
   // template with other attributes
   checkResults(
     html_scanner.scan('<template foo="bar" name="favoritefood" baz="qux">'+
                       'pizza</template>'),
-    TEMPLATE_PREAMBLE+'"favoritefood",Package.handlebars.Handlebars.json_ast_to_func(["pizza"])'+
-      TEMPLATE_POSTAMBLE);
+    simpleTemplate('"favoritefood"', '"pizza"'));
 
   // whitespace around '=' in attributes and at end of tag
   checkResults(
     html_scanner.scan('<template foo = "bar" name  ="favoritefood" baz= "qux"  >'+
                       'pizza</template\n\n>'),
-    TEMPLATE_PREAMBLE+'"favoritefood",Package.handlebars.Handlebars.json_ast_to_func(["pizza"])'+
-      TEMPLATE_POSTAMBLE);
+    simpleTemplate('"favoritefood"', '"pizza"'));
 
   // whitespace around template name
   checkResults(
     html_scanner.scan('<template name=" favoritefood  ">pizza</template>'),
-    TEMPLATE_PREAMBLE+'"favoritefood",Package.handlebars.Handlebars.json_ast_to_func(["pizza"])'+
-      TEMPLATE_POSTAMBLE);
+    simpleTemplate('"favoritefood"', '"pizza"'));
 
   // single quotes around template name
   checkResults(
     html_scanner.scan('<template name=\'the "cool" template\'>'+
                       'pizza</template>'),
-    TEMPLATE_PREAMBLE+'"the \\"cool\\" template",'+
-      'Package.handlebars.Handlebars.json_ast_to_func(["pizza"])'+
-      TEMPLATE_POSTAMBLE);
+    simpleTemplate('"the \\"cool\\" template"', '"pizza"'));
 
   // error cases; exact line numbers are not critical, these just reflect
   // the current implementation
@@ -154,12 +151,12 @@ Tinytest.add("templating - html scanner", function (test) {
   // attributes on body not supported
   checkError(function() {
     return html_scanner.scan('<body foo="bar">\n  Hello\n</body>');
-  }, "<body>", 3);
+  }, "<body>", 1);
 
   // attributes on head not supported
   checkError(function() {
     return html_scanner.scan('<head foo="bar">\n  Hello\n</head>');
-  }, "<head>", 3);
+  }, "<head>", 1);
 
   // can't mismatch quotes
   checkError(function() {

@@ -5,7 +5,7 @@ Template.configureLoginServiceDialogForTwitter.siteUrl = function () {
 
 Template.configureLoginServiceDialogForTwitter.fields = function () {
   return [
-    {property: 'consumerKey', label: 'Consumer key'},
-    {property: 'secret', label: 'Consumer secret'}
+    {property: 'consumerKey', label: 'API key'},
+    {property: 'secret', label: 'API secret'}
   ];
 };

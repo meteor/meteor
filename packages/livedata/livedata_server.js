@@ -216,7 +216,7 @@ _.extend(SessionCollectionView.prototype, {
 /* Session                                                                    */
 /******************************************************************************/
 
-var Session = function (server, version, socket) {
+var Session = function (server, version, socket, options) {
   var self = this;
   self.id = Random.id();
 
@@ -262,13 +262,16 @@ var Session = function (server, version, socket) {
   // temporary and will go away in the near future.
   self._socketUrl = socket.url;
 
+  // Allow tests to disable responding to pings.
+  self._respondToPings = options.respondToPings;
+
   // This object is the public interface to the session. In the public
   // API, it is called the `connection` object.  Internally we call it
   // a `connectionHandle` to avoid ambiguity.
   self.connectionHandle = {
     id: self.id,
     close: function () {
-      self.server._closeSession(self);
+      self.close();
     },
     onClose: function (fn) {
       var cb = Meteor.bindEnvironment(fn, "connection onClose callback");
@@ -289,6 +292,20 @@ var Session = function (server, version, socket) {
   Fiber(function () {
     self.startUniversalSubs();
   }).run();
+
+  if (version !== 'pre1' && options.heartbeatInterval !== 0) {
+    self.heartbeat = new Heartbeat({
+      heartbeatInterval: options.heartbeatInterval,
+      heartbeatTimeout: options.heartbeatTimeout,
+      onTimeout: function () {
+        self.destroy();
+      },
+      sendPing: function () {
+        self.send({msg: 'ping'});
+      }
+    });
+    self.heartbeat.start();
+  }
 
   Package.facts && Package.facts.Facts.incrementServerFact(
     "livedata", "sessions", 1);
@@ -391,6 +408,15 @@ _.extend(Session.prototype, {
   destroy: function () {
     var self = this;
 
+    // Already destroyed.
+    if (!self.inQueue)
+      return;
+
+    if (self.heartbeat) {
+      self.heartbeat.stop();
+      self.heartbeat = null;
+    }
+
     if (self.socket) {
       self.socket.close();
       self.socket._meteorSession = null;
@@ -415,6 +441,19 @@ _.extend(Session.prototype, {
         callback();
       });
     });
+  },
+
+  // Destroy this session and unregister it at the server.
+  close: function () {
+    var self = this;
+
+    // Unconditionally destroy this session, even if it's not
+    // registered at the server.
+    self.destroy();
+
+    // Unregister the session.  This will also call `destroy`, but
+    // that's OK because `destroy` is idempotent.
+    self.server._closeSession(self);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
@@ -456,6 +495,32 @@ _.extend(Session.prototype, {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
+
+    // Respond to ping and pong messages immediately without queuing.
+    // If the negotiated DDP version is "pre1" which didn't support
+    // pings, preserve the "pre1" behavior of responding with a "bad
+    // request" for the unknown messages.
+    //
+    // Fibers are needed because heartbeat uses Meteor.setTimeout, which
+    // needs a Fiber. We could actually use regular setTimeout and avoid
+    // these new fibers, but it is easier to just make everything use
+    // Meteor.setTimeout and not think too hard.
+    if (self.version !== 'pre1' && msg_in.msg === 'ping') {
+      if (self._respondToPings)
+        self.send({msg: "pong", id: msg_in.id});
+      if (self.heartbeat)
+        Fiber(function () {
+          self.heartbeat.pingReceived();
+        }).run();
+      return;
+    }
+    if (self.version !== 'pre1' && msg_in.msg === 'pong') {
+      if (self.heartbeat)
+        Fiber(function () {
+          self.heartbeat.pongReceived();
+        }).run();
+      return;
+    }
 
     self.inQueue.push(msg_in);
     if (self.workerRunning)
@@ -530,13 +595,17 @@ _.extend(Session.prototype, {
       var self = this;
 
       // reject malformed messages
-      // XXX should also reject messages with unknown attributes?
+      // For now, we silently ignore unknown attributes,
+      // for forwards compatibility.
       if (typeof (msg.id) !== "string" ||
           typeof (msg.method) !== "string" ||
-          (('params' in msg) && !(msg.params instanceof Array))) {
+          (('params' in msg) && !(msg.params instanceof Array)) ||
+          (('randomSeed' in msg) && (typeof msg.randomSeed !== "string"))) {
         self.sendError("Malformed method invocation", msg);
         return;
       }
+
+      var randomSeed = msg.randomSeed || null;
 
       // set up to mark the method as satisfied once all observers
       // (and subscriptions) have reacted to any writes that were
@@ -572,7 +641,8 @@ _.extend(Session.prototype, {
         userId: self.userId,
         setUserId: setUserId,
         unblock: unblock,
-        connection: self.connectionHandle
+        connection: self.connectionHandle,
+        randomSeed: randomSeed
       });
       try {
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
@@ -1047,8 +1117,19 @@ _.extend(Subscription.prototype, {
 /* Server                                                                     */
 /******************************************************************************/
 
-Server = function () {
+Server = function (options) {
   var self = this;
+
+  // The default heartbeat interval is 30 seconds on the server and 35
+  // seconds on the client.  Since the client doesn't need to send a
+  // ping as long as it is receiving pings, this means that pings
+  // normally go from the server to the client.
+  self.options = _.defaults(options || {}, {
+    heartbeatInterval: 30000,
+    heartbeatTimeout: 15000,
+    // For testing, allow responding to pings to be disabled.
+    respondToPings: true
+  });
 
   // Map of callbacks to call when a new connection comes in to the
   // server and completes DDP version negotiation. Use an object instead
@@ -1120,7 +1201,7 @@ Server = function () {
     socket.on('close', function () {
       if (socket._meteorSession) {
         Fiber(function () {
-          self._closeSession(socket._meteorSession);
+          socket._meteorSession.close();
         }).run();
       }
     });
@@ -1142,7 +1223,7 @@ _.extend(Server.prototype, {
 
     if (msg.version === version) {
       // Creating a new session
-      socket._meteorSession = new Session(self, version, socket);
+      socket._meteorSession = new Session(self, version, socket, self.options);
       self.sessions[socket._meteorSession.id] = socket._meteorSession;
       self.onConnectionHook.each(function (callback) {
         if (socket._meteorSession)
@@ -1318,12 +1399,14 @@ _.extend(Server.prototype, {
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
-        connection: connection
+        connection: connection,
+        randomSeed: makeRpcSeed(currentInvocation, name)
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {
           return maybeAuditArgumentChecks(
-            handler, invocation, args, "internal call to '" + name + "'");
+            handler, invocation, EJSON.clone(args), "internal call to '" +
+              name + "'");
         });
       } catch (e) {
         exception = e;

@@ -32,47 +32,56 @@ var earliestCompatible = function (version) {
   return m[1] + ".0.0";
 };
 
-// A sort comparator to order files into load order.
-var loadOrderSort = function (a, b) {
-  // XXX HUGE HACK --
-  // push html (template) files ahead of everything else. this is
-  // important because the user wants to be able to say
-  // Template.foo.events = { ... }
-  //
-  // maybe all of the templates should go in one file? packages should
-  // probably have a way to request this treatment (load order
-  // dependency tags?) .. who knows.
-  var ishtml_a = path.extname(a) === '.html';
-  var ishtml_b = path.extname(b) === '.html';
-  if (ishtml_a !== ishtml_b) {
-    return (ishtml_a ? -1 : 1);
-  }
+// Returns a sort comparator to order files into load order.
+// templateExtensions should be a list of extensions like 'html'
+// which should be loaded before other extensions.
+var loadOrderSort = function (templateExtensions) {
+  var templateExtnames = {};
+  _.each(templateExtensions, function (extension) {
+    templateExtnames['.' + extension] = true;
+  });
 
-  // main.* loaded last
-  var ismain_a = (path.basename(a).indexOf('main.') === 0);
-  var ismain_b = (path.basename(b).indexOf('main.') === 0);
-  if (ismain_a !== ismain_b) {
-    return (ismain_a ? 1 : -1);
-  }
+  return function (a, b) {
+    // XXX MODERATELY SIZED HACK --
+    // push template files ahead of everything else. this is
+    // important because the user wants to be able to say
+    //   Template.foo.events = { ... }
+    // in a JS file and not have to worry about ordering it
+    // before the corresponding .html file.
+    //
+    // maybe all of the templates should go in one file?
+    var isTemplate_a = _.has(templateExtnames, path.extname(a));
+    var isTemplate_b = _.has(templateExtnames, path.extname(b));
+    if (isTemplate_a !== isTemplate_b) {
+      return (isTemplate_a ? -1 : 1);
+    }
 
-  // /lib/ loaded first
-  var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
-                 a.indexOf('lib' + path.sep) === 0);
-  var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
-                 b.indexOf('lib' + path.sep) === 0);
-  if (islib_a !== islib_b) {
-    return (islib_a ? -1 : 1);
-  }
+    // main.* loaded last
+    var ismain_a = (path.basename(a).indexOf('main.') === 0);
+    var ismain_b = (path.basename(b).indexOf('main.') === 0);
+    if (ismain_a !== ismain_b) {
+      return (ismain_a ? 1 : -1);
+    }
 
-  // deeper paths loaded first.
-  var len_a = a.split(path.sep).length;
-  var len_b = b.split(path.sep).length;
-  if (len_a !== len_b) {
-    return (len_a < len_b ? 1 : -1);
-  }
+    // /lib/ loaded first
+    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   a.indexOf('lib' + path.sep) === 0);
+    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
+                   b.indexOf('lib' + path.sep) === 0);
+    if (islib_a !== islib_b) {
+      return (islib_a ? -1 : 1);
+    }
 
-  // otherwise alphabetical
-  return (a < b ? -1 : 1);
+    // deeper paths loaded first.
+    var len_a = a.split(path.sep).length;
+    var len_b = b.split(path.sep).length;
+    if (len_a !== len_b) {
+      return (len_a < len_b ? 1 : -1);
+    }
+
+    // otherwise alphabetical
+    return (a < b ? -1 : 1);
+  };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -904,7 +913,7 @@ _.extend(PackageSource.prototype, {
       build.getSourcesFunc = function (extensions, watchSet) {
         var sourceInclude = _.map(
           extensions,
-          function (ext) {
+          function (isTemplate, ext) {
             return new RegExp('\\.' + quotemeta(ext) + '$');
           }
         );
@@ -990,7 +999,11 @@ _.extend(PackageSource.prototype, {
         }
 
         // We've found all the source files. Sort them!
-        sources.sort(loadOrderSort);
+        var templateExtensions = [];
+        _.each(extensions, function (isTemplate, ext) {
+          isTemplate && templateExtensions.push(ext);
+        });
+        sources.sort(loadOrderSort(templateExtensions));
 
         // Convert into relPath/fileOptions objects.
         sources = _.map(sources, function (relPath) {
