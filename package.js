@@ -1,5 +1,8 @@
 Package.describe({
+  name: "spacebars-tests",
+  test: "spacebars-tests-test",
   summary: "Additional tests for Spacebars",
+  version: '1.0.0',
   internal: true
 });
 
