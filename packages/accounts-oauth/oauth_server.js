@@ -4,9 +4,17 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.oauth)
     return undefined; // don't handle
 
-  check(options.oauth, {credentialToken: String});
+  check(options.oauth, {
+    credentialToken: String,
+    // When an error occurs while retrieving the access token, we store
+    // the error in the pending credentials table, with a secret of
+    // null. The client can call the login method with a secret of null
+    // to retrieve the error.
+    credentialSecret: Match.OneOf(null, String)
+  });
 
-  var result = OAuth.retrieveCredential(options.oauth.credentialToken);
+  var result = OAuth.retrieveCredential(options.oauth.credentialToken,
+                                        options.oauth.credentialSecret);
 
   if (!result) {
     // OAuth credentialToken is not recognized, which could be either
