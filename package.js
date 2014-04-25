@@ -1,5 +1,8 @@
 Package.describe({
-  summary: "Compiler for Spacebars template language"
+  name: "spacebars-compiler",
+  test: "spacebars-compiler-test",
+  summary: "Compiler for Spacebars template language",
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
