@@ -130,7 +130,12 @@ var rangeRemoved = function (range) {
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
 
-    // XXX clean up events in $_uievents
+    // clean up events
+    if (range.stopHandles) {
+      for (var i = 0; i < range.stopHandles.length; i++)
+        range.stopHandles[i].stop();
+      range.stopHandles = null;
+    }
 
     // notify component of removal
     if (range.removed)
@@ -183,6 +188,8 @@ var DomRange = function () {
 
   this.isParented = false;
   this.isRemoved = false;
+
+  this.stopHandles = null;
 };
 
 _extend(DomRange.prototype, {
@@ -971,6 +978,7 @@ DomRange.prototype.on = function (events, selector, handler) {
     selector = null;
   }
 
+  var newHandlerRecs = [];
   for (var i = 0, N = eventTypes.length; i < N; i++) {
     var type = eventTypes[i];
 
@@ -986,6 +994,7 @@ DomRange.prototype.on = function (events, selector, handler) {
     var handlerList = info.handlers;
     var handlerRec = new HandlerRec(
       parentNode, type, selector, handler, this);
+    newHandlerRecs.push(handlerRec);
     handlerRec.bind();
     handlerList.push(handlerRec);
     // move handlers of enclosing ranges to end
@@ -1005,6 +1014,31 @@ DomRange.prototype.on = function (events, selector, handler) {
       }
     }
   }
+
+  this.stopHandles = (this.stopHandles || []);
+  this.stopHandles.push({
+    // closes over just `parentNode` and `newHandlerRecs`
+    stop: function () {
+      var eventDict = parentNode.$_uievents;
+      if (! eventDict)
+        return;
+
+      for (var i = 0; i < newHandlerRecs.length; i++) {
+        var handlerToRemove = newHandlerRecs[i];
+        var info = eventDict[handlerToRemove].type;
+        if (! info)
+          continue;
+        var handlerList = info.handlers;
+        for (var j = handlerList.length - 1; j >= 0; j--) {
+          if (handlerList[j] === handlerToRemove) {
+            handlerToRemove.unbind();
+            handlerList.splice(j, 1); // remove handlerList[j]
+          }
+        }
+      }
+      newHandlerRecs.length = 0;
+    }
+  });
 };
 
   // Returns true if element a contains node b and is not node b.
