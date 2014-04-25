@@ -1,0 +1,58 @@
+{
+  "dependencies": [
+    [
+      "deps",
+      "1.0.0+local"
+    ],
+    [
+      "ejson",
+      "1.0.0+local"
+    ],
+    [
+      "geojson-utils",
+      "1.0.0+local"
+    ],
+    [
+      "htmljs",
+      "1.0.0+local"
+    ],
+    [
+      "id-map",
+      "1.0.0+local"
+    ],
+    [
+      "jquery",
+      "1.0.0+local"
+    ],
+    [
+      "json",
+      "1.0.0+local"
+    ],
+    [
+      "meteor",
+      "1.0.0+local"
+    ],
+    [
+      "minimongo",
+      "1.0.0+local"
+    ],
+    [
+      "observe-sequence",
+      "1.0.0+local"
+    ],
+    [
+      "ordered-dict",
+      "1.0.0+local"
+    ],
+    [
+      "random",
+      "1.0.0+local"
+    ],
+    [
+      "underscore",
+      "1.0.0+local"
+    ]
+  ],
+  "plugins": [],
+  "format": "1.0"
+}

@@ -1,0 +1,19 @@
+{
+  "dependencies": [
+    [
+      "meteor",
+      "1.0.0+local"
+    ],
+    [
+      "underscore",
+      "1.0.0+local"
+    ]
+  ],
+  "plugins": [
+    [
+      "compileCoffeescript",
+      {}
+    ]
+  ],
+  "format": "1.0"
+}

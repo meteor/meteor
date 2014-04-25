@@ -1171,7 +1171,7 @@ _.extend(PackageSource.prototype, {
   // Returns the name of the file containing the version lock for this package
   _versionsFileName : function () {
     var self = this;
-    return self.name + "-versions-built-with.json";
+    return self.name + "-versions.json";
   },
 
   // If dependencies aren't consistent across builds, return false and
