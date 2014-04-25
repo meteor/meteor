@@ -336,6 +336,15 @@ appear in the compiled template code or the generated HTML.
 </div>
 ```
 
+Comment tags also come in a "block comment" form.  Block comments may contain `{{` and `}}`:
+
+```
+{{!-- This is a block comment.
+We can write {{foo}} and it doesn't matter.
+{{#with x}}This code is commented out.{{/with}}
+--}}
+```
+
 Comment tags can be used wherever other template tags are allowed.
 
 ## HTML Dialect
