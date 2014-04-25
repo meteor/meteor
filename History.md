@@ -47,8 +47,7 @@
   contain `}}`, so they are more useful than `{{! normal comments}}` for
   commenting out sections of Spacebars templates.
 
-* Stop automatically wrapping elements in a table with a TBODY
-  element.
+* Don't dynamically insert `<tbody>` tags in reactive tables
 
 * When handling a custom jQuery event, additional arguments are
   no longer lost -- they now come after the template instance
