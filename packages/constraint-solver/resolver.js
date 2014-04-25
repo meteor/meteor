@@ -119,12 +119,6 @@ ConstraintSolver.Resolver.prototype.resolve =
   var solution = null;
   while (! pq.empty()) {
     var currentState = pq.pop();
-    var tentativeCost =
-      costFunction(currentState.choices, opts) +
-      estimateCostFunction(currentState, opts);
-
-    if (tentativeCost === Infinity)
-      break;
 
     if (currentState.dependencies.isEmpty()) {
       solution = currentState.choices;
