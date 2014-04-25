@@ -33,48 +33,52 @@
 
 #### Blaze
 
-* Blaze no longer renders javascript: URLs in attribute values by
-  default, to help prevent cross-site scripting bugs. Use
-  `UI._allowJavascriptUrls()` to allow them.
+* Disallow javascript: URLs in attribute values by default, to help
+  prevent cross-site scripting bugs. Call `UI._allowJavascriptUrls()`
+  to allow them.
 
-* Fix `UI.toHTML` on templates containing `{{#with}}`
+* Fix `UI.toHTML` on templates containing `{{#with}}`.
 
-* Fix {{#with}} over a data context that is mutated
+* Fix `{{#with}}` over a data context that is mutated.  #2046
 
-* Properly clean up autoruns on `UI.toHTML`
+* Clean up autoruns when calling `UI.toHTML`.
 
 * Add support for `{{!-- block comments --}}` in Spacebars. Block comments may
   contain `}}`, so they are more useful than `{{! normal comments}}` for
   commenting out sections of Spacebars templates.
-  XXX shouldn't this be in spacebars/README.md?
 
-* Kill TBODY special case in DomRange (XXX 45ac9b1a6d needs a better
-  description)
+* Stop automatically wrapping elements in a table with a TBODY
+  element.
 
-* Do not ignore jquery-event extra parameters (? XXX b2193f5)
+* When handling a custom jQuery event, additional arguments are
+  no longer lost -- they now come after the template instance
+  argument.  #1988
 
 
-#### DDP and Mongo
+#### DDP and MongoDB
 
 * DDP heartbeats XXX
 
-* Generalize the mechanism by which client-side inserts generated IDs to support
-  latency compensation of generation of multiple random values. For example,
-  calling `insert` inside a method body will now return consistent IDs on the
-  client and the server.  Code that wants a random stream that is consistent
-  between method stub and real method execution can get one with
-  `DDP.randomStream`.
+* Extend latency compensation to support an arbitrary sequence of
+  inserts in methods.  Previously, documents created inside a method
+  stub on the client would eventually be replaced by new documents
+  from the server, causing the screen to flicker.  Calling `insert`
+  inside a method body now generates the same ID on the client (inside
+  the method stub) and on the server.  A sequence of inserts also
+  generates the same sequence of IDs.  Code that wants a random stream
+  that is consistent between method stub and real method execution can
+  get one with `DDP.randomStream`.
 
-* The oplog observe driver handles errors communicating with Mongo better and
-  knows to re-poll all queries during Mongo failovers.
+* The oplog observe driver handles errors communicating with MongoDB
+  better and knows to re-poll all queries after a MongoDB failover.
 
 * Fix bugs involving mutating DDP method arguments.
 
 
 #### meteor command-line tool
 
-* Move boilerplate HTML from tools to webapp. Changes internal
-  Webapp.addHtmlAttributeHook API incompatibly.
+* Move boilerplate HTML from tools to webapp.  Change internal
+  `Webapp.addHtmlAttributeHook` API.
 
 * Add `meteor list-sites` command for listing the sites that you have
   deployed to meteor.com with your Meteor developer account.
@@ -88,7 +92,7 @@
 
 * Don't include proprietary tar tags in bundle tarballs.
 
-* Convert relative urls to absolute url when merging CSS files
+* Convert relative URLs to absolute URLs when merging CSS files.
 
 
 #### Upgraded dependencies
