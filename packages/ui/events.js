@@ -144,7 +144,9 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
     newHandlerRecs.push(handlerRec);
     handlerRec.bind();
     handlerList.push(handlerRec);
-    // move handlers of enclosing ranges to end
+    // Move handlers of enclosing ranges to end, by unbinding and rebinding
+    // them.  In jQuery (or other DOMBackend) this causes them to fire
+    // later when the backend dispatches event handlers.
     if (getParentRecipient) {
       for (var r = getParentRecipient(recipient); r;
            r = getParentRecipient(r)) {
