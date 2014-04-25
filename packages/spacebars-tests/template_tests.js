@@ -1950,9 +1950,13 @@ Tinytest.add(
       return Session.get(sessionKey);
     };
 
+    var numUrlAttrs = 4;
     var div = renderToDiv(tmpl);
 
     var checkAttrs = function (url, isJavascriptProtocol) {
+      if (isJavascriptProtocol) {
+        Meteor._suppress_log(numUrlAttrs);
+      }
       Session.set(sessionKey, url);
       Deps.flush();
       _.each(
