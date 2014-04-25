@@ -631,9 +631,7 @@ var Run = function (execPath, options) {
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
 
-  console.log("XXX: Allow syncing with server option");
   var opts = options.args || [];
-  opts.push('--no-net');
   self.args.apply(self, opts || []);
 
   self.fakeMongoPort = null;

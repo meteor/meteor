@@ -701,17 +701,17 @@ Fiber(function () {
   // Initialize the singleton Catalog. Only after this point is the
   // Catalog (and therefore unipackage.load) usable.
   //
-  // If the --no-net option is set, the catalog will be offline and will never
+  // If the --offline-catalog option is set, the catalog will be offline and will never
   // attempt to contact the server for more recent data. Otherwise, the catalog
   // will attempt to synchronize with the remote package server.
   catalog.initialize({
     bootstrapLocalPackageDirs: bootstrapPackageDirs,
     localPackageDirs: localPackageDirs,
-    offline: _.has(rawOptions, '--no-net')
+    offline: _.has(rawOptions, '--offline-catalog')
   });
   // We need to delete the option or we will throw an error.
   // XXX: This seems like a hack?
-  delete rawOptions['--no-net'];
+  delete rawOptions['--offline-catalog'];
 
   // Check for the '--help' option.
   var showHelp = false;

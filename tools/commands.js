@@ -396,6 +396,10 @@ main.registerCommand({
   // update' is how you fix apps that don't have a release.
   requiresRelease: false
 }, function (options) {
+
+  // Refresh the catalog, cacheing the remote package data on the server.
+  catalog.catalog.refresh(true);
+
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
     process.stderr.write(
@@ -602,6 +606,9 @@ main.registerCommand({
 
   var failed = false;
 
+  // Refresh the catalog, cacheing the remote package data on the server.
+  catalog.refresh(true);
+
   // Read in existing package dependencies.
   var packages = project.getDirectDependencies(options.appDir);
 
@@ -773,6 +780,11 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
+  // Refresh the catalog, checking the remote package data on the
+  // server. Technically, we don't need to do this, since it is unlikely that
+  // new data will change our constraint solver decisions. But as a user, I
+  // would expect this command to update the local catalog.
+  catalog.refresh(true);
 
   // Read in existing package dependencies.
   var packages = project.getDirectDependencies(options.appDir);
@@ -854,6 +866,13 @@ main.registerCommand({
   }
 }, function (options) {
   var items = [];
+
+  // Refresh the catalog, checking the remote package data on the server. If we
+  // are only calling 'using', this is not nessessary, but, once again, as a
+  // user, I would not be surprised to see this contact the server. In the
+  // future, we should move this call to sync somewhere in the background.
+  catalog.refresh(true);
+
   if (options.using) {
     // Generate a package loader for this project. This will also compute the
     // nessessary versions and write them to disk.
@@ -1627,6 +1646,11 @@ main.registerCommand({
   requiresPackage: true
 }, function (options) {
 
+  // Refresh the catalog, caching the remote package data on the server. We can
+  // optimize the workflow by using this data to weed out obviously incorrect
+  // submissions before they ever hit the wire.
+  catalog.refresh(true);
+
   // XXX Prettify error messages
 
   var packageSource, compileResult;
@@ -1767,6 +1791,10 @@ main.registerCommand({
     name: { type: String, required: true }
   }
 }, function (options) {
+
+  // Refresh the catalog, cacheing the remote package data on the server.
+  catalog.refresh(true);
+
   if (! catalog.getPackage(options.name)) {
     process.stderr.write('No package named ' + options.name);
     return 1;

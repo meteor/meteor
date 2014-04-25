@@ -162,19 +162,20 @@ selftest.define("add packages", function () {
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
 
-  run = s.run("add", "accounts-base");
+  console.log("XXX: this assumes that we are running from checkout");
+  run = s.run("add", "accounts-base", "--offline-catalog");
   run.match("Successfully added");
   checkPackages(s,
                 ["accounts-base", "standard-app-packages"]);
 
   run = s.run("--once");
 
-  run = s.run("add", "say-something");
+  run = s.run("add", "say-something", "--offline-catalog");
   run.match("Successfully added");
   checkPackages(s,
                 ["accounts-base",  "say-something@1.0.0+local", "standard-app-packages"]);
 
-  run = s.run("add", "depends-on-plugin");
+  run = s.run("add", "depends-on-plugin", "--offline-catalog");
   run.match("Successfully added");
   checkPackages(s,
                 ["accounts-base",  "depends-on-plugin@1.0.0+local",
@@ -185,7 +186,7 @@ selftest.define("add packages", function () {
                  "say-something",  "standard-app-packages",
                  "contains-plugin@1.1.0+local"]);
 
-  run = s.run("remove", "say-something");
+  run = s.run("remove", "say-something", "--offline-catalog");
   run.match("Removed say-something");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
@@ -193,7 +194,7 @@ selftest.define("add packages", function () {
                  "contains-plugin"]);
 
 
-  run = s.run("remove", "depends-on-plugin");
+  run = s.run("remove", "depends-on-plugin", "--offline-catalog");
   run.match("removed dependency on contains-plugin");
   run.match("Removed depends-on-plugin");
 
@@ -201,7 +202,7 @@ selftest.define("add packages", function () {
                 ["accounts-base",
                  "standard-app-packages"]);
 
-  run = s.run("list", "--using");
+  run = s.run("list", "--using", "--offline-catalog");
   run.match("accounts-base");
   run.match("standard-app-packages");
 
@@ -210,7 +211,7 @@ selftest.define("add packages", function () {
   copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
 
   // Don't add the file to packages.
-  run = s.run("list", "--using");
+  run = s.run("list", "--using", "--offline-catalog");
   run.match("accounts-base");
   run.match("standard-app-packages");
 

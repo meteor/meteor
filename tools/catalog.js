@@ -116,6 +116,7 @@ _.extend(Catalog.prototype, {
     // server before we load them.
     self.localPackageDirs = allLocalPackageDirs;
     self._recomputeEffectiveLocalPackages();
+
     // We don't need to call _addLocalPackageOverrides here; that will
     // be called as part of catalog initialization, which is the next
     // step.
@@ -126,16 +127,19 @@ _.extend(Catalog.prototype, {
     // We should to figure out if we are intending to connect to the package
     // server.
     self.offline = options.offline ? options.offline : false;
-    self._refresh(true /* load server packages */);
+    self.refresh(false /* don't load server packages yet */);
   },
 
+  // Refresh the packages in the catalog.
+  //
   // If sync is false, this will not synchronize with the remote server, even if
-  // the catalog is not in offline mode. This is an optimization for loading
-  // local packages. (An offline catalog will not sync with the server even if
-  // sync is true.)
+  // the catalog is not in offline mode. (An offline catalog will not sync with
+  // the server even if sync is true.) For a lot of meteor commands, we don't
+  // need to contact the server. When we do, we can call thsi function manually
+  // on the catalog.
   //
   // Prints a warning if `sync` is true and we can't contact the package server.
-  _refresh: function (sync) {
+  refresh: function (sync) {
     var self = this;
     self._requireInitialized();
 
@@ -507,11 +511,11 @@ _.extend(Catalog.prototype, {
     self.localPackages[name] = resolvedPath;
 
     // If we were making lots of calls to addLocalPackage, we would
-    // want to coalesce the calls to _refresh somehow, but I don't
+    // want to coalesce the calls to refresh somehow, but I don't
     // think we'll actually be doing that so this should be fine.
     // #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
-    self._refresh(false /* sync */);
+    self.refresh(false /* sync */);
   },
 
   // Reverse the effect of addLocalPackage.
@@ -525,7 +529,7 @@ _.extend(Catalog.prototype, {
 
     // see #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
-    self._refresh(false /* sync */);
+    self.refresh(false /* sync */);
   },
 
   // True if `name` is a local package (is to be loaded via
