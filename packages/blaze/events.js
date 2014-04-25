@@ -144,7 +144,9 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
     newHandlerRecs.push(handlerRec);
     handlerRec.bind();
     handlerList.push(handlerRec);
-    // move handlers of enclosing ranges to end
+    // Move handlers of enclosing ranges to end, by unbinding and rebinding
+    // them.  In jQuery (or other DOMBackend) this causes them to fire
+    // later when the backend dispatches event handlers.
     if (getParentRecipient) {
       for (var r = getParentRecipient(recipient); r;
            r = getParentRecipient(r)) {
@@ -166,7 +168,11 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
   }
 
   return {
+    // closes over just `element` and `newHandlerRecs`
     stop: function () {
+      var eventDict = element.$blaze_events;
+      if (! eventDict)
+        return;
       // newHandlerRecs has only one item unless you specify multiple
       // event types.  If this code is slow, it's because we have to
       // iterate over handlerList here.  Clearing a whole handlerList
@@ -174,6 +180,10 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
       // an element.
       for (var i = 0; i < newHandlerRecs.length; i++) {
         var handlerToRemove = newHandlerRecs[i];
+        var info = eventDict[handlerToRemove].type;
+        if (! info)
+          continue;
+        var handlerList = info.handlers;
         for (var j = handlerList.length - 1; j >= 0; j--) {
           if (handlerList[j] === handlerToRemove) {
             handlerToRemove.unbind();

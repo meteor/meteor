@@ -168,7 +168,11 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
   }
 
   return {
+    // closes over just `element` and `newHandlerRecs`
     stop: function () {
+      var eventDict = element.$blaze_events;
+      if (! eventDict)
+        return;
       // newHandlerRecs has only one item unless you specify multiple
       // event types.  If this code is slow, it's because we have to
       // iterate over handlerList here.  Clearing a whole handlerList
@@ -176,6 +180,10 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
       // an element.
       for (var i = 0; i < newHandlerRecs.length; i++) {
         var handlerToRemove = newHandlerRecs[i];
+        var info = eventDict[handlerToRemove].type;
+        if (! info)
+          continue;
+        var handlerList = info.handlers;
         for (var j = handlerList.length - 1; j >= 0; j--) {
           if (handlerList[j] === handlerToRemove) {
             handlerToRemove.unbind();
