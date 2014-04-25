@@ -25,6 +25,7 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
   this.parentElement = null;
   this.parentRange = null;
   this.stopCallbacks = _emptyArray;
+  this.augmenters = _emptyArray;
 };
 
 // static methods
@@ -74,6 +75,9 @@ _.extend(Blaze.DOMRange.prototype, {
     }
     this.attached = true;
     this.parentElement = parentElement;
+
+    for(var i = 0; i < this.augmenters.length; i++)
+      this.augmenters[i].attach(parentElement);
   },
   setMembers: function (newNodeAndRangeArray) {
     var newMembers = newNodeAndRangeArray;
@@ -138,6 +142,9 @@ _.extend(Blaze.DOMRange.prototype, {
     }
     this.attached = false;
     this.parentElement = null;
+
+    for(var i = 0; i < this.augmenters.length; i++)
+      this.augmenters[i].detach();
   },
   addMember: function (newMember, atIndex) {
     var members = this.members;
@@ -259,8 +266,33 @@ _.extend(Blaze.DOMRange.prototype, {
       range = range.parentRange;
 
     return range === this;
+  },
+  addDOMAugmenter: function (augmenter) {
+    if (this.augmenters === _emptyArray)
+      this.augmenters = [];
+    this.augmenters.push(augmenter);
   }
 });
+
+Blaze.DOMAugmenter = function () {};
+_.extend(Blaze.DOMAugmenter, {
+  attach: function (element) {},
+  detach: function () {}
+});
+
+Blaze.EventAugmenter = function (eventMap) {
+  this.eventMap = eventMap;
+};
+Blaze.EventAugmenter.prototype = new Blaze.DOMAugmenter;
+_.extend(Blaze.EventAugmenter.prototype, {
+  attach: function (element) {
+    // XXX TODO
+  },
+  detach: function () {
+    // XXX TODO
+  }
+});
+
 
 // Returns true if element a contains node b and is not node b.
 //
