@@ -132,11 +132,8 @@ var rangeRemoved = function (range) {
 
     // remove events
     if (range.stopHandles) {
-      for (var i = 0; i < range.stopHandles.length; i++) {
-        if (! range.stopHandles[i])
-          debugger;
+      for (var i = 0; i < range.stopHandles.length; i++)
         range.stopHandles[i].stop();
-      }
       range.stopHandles = null;
     }
 
