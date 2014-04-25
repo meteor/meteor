@@ -16,7 +16,7 @@
 
 * `Meteor.logoutOtherClients` now calls the user callback when other
   login tokens have actually been removed from the database, not when
-  they have been marked for eventual removal. Fixes #1915.
+  they have been marked for eventual removal.  #1915
 
 * Rename `Oauth` to `OAuth`.  `Oauth` is now an alias for backwards
   compatibility.
