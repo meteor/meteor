@@ -33,9 +33,9 @@
 
 #### Blaze
 
-* Disallow javascript: URLs in attribute values by default, to help
-  prevent cross-site scripting bugs. Call `UI._allowJavascriptUrls()`
-  to allow them.
+* Disallow `javascript:` URLs in URL attribute values by default, to
+  help prevent cross-site scripting bugs. Call
+  `UI._allowJavascriptUrls()` to allow them.
 
 * Fix `UI.toHTML` on templates containing `{{#with}}`.
 
@@ -68,6 +68,7 @@
   generates the same sequence of IDs.  Code that wants a random stream
   that is consistent between method stub and real method execution can
   get one with `DDP.randomStream`.
+  https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
 
 * The oplog observe driver handles errors communicating with MongoDB
   better and knows to re-poll all queries after a MongoDB failover.
