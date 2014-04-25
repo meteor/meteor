@@ -862,7 +862,7 @@ _.extend(PackageSource.prototype, {
     self.defaultArches = { browser: ['main'], 'os': ['main'] };
 
     // If we have built this before, read the versions that we ended up using.
-    var versionsFile = path.join(self.sourceRoot, "versions.json");
+    var versionsFile = path.join(self.sourceRoot,  self._versionsFileName());
     if (fs.existsSync(versionsFile)) {
       try {
         var data = fs.readFileSync(versionsFile, 'utf8');
@@ -1118,13 +1118,16 @@ _.extend(PackageSource.prototype, {
   recordDependencyVersions: function (versions) {
     var self = this;
 
-    // There is always a possibility that we might want to change the format of
-    // this file, so let's keep track of what it is.
-    versions["format"] = "1.0";
+    // If nothing has changed, don't bother rewriting the versions file.
+    if (self.dependencyVersions === versions) return;
 
     // In case we need to rebuild from this package Source, it will be
     // convenient to keep the results on hand and not reread from disk.
     self.dependencyVersions = versions;
+
+    // There is always a possibility that we might want to change the format of
+    // this file, so let's keep track of what it is.
+    versions["format"] = "1.0";
 
     // When we write versions to disk, we want to alphabetize by package name,
     // both for readability and also for consistency (so two packages built with
@@ -1153,7 +1156,7 @@ _.extend(PackageSource.prototype, {
       // Uniload sets its sourceRoot to "/", which is a little strange. Uniload
       // does not need to store dependency versions either.
       if (self.name && self.sourceRoot !== "/") {
-        var versionsFile = path.join(self.sourceRoot, "versions.json");
+        var versionsFile = path.join(self.sourceRoot, self._versionsFileName());
         fs.writeFileSync(versionsFile, JSON.stringify(versions, null, 2), 'utf8');
       }
     } catch (e) {
@@ -1164,6 +1167,12 @@ _.extend(PackageSource.prototype, {
       console.log("Could not write versions file for ", self.name);
     }
  },
+
+  // Returns the name of the file containing the version lock for this package
+  _versionsFileName : function () {
+    var self = this;
+    return self.name + "-versions-built-with.json";
+  },
 
   // If dependencies aren't consistent across builds, return false and
   // also log a buildmessage error if inside a buildmessage job. Else

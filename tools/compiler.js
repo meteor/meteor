@@ -147,10 +147,9 @@ var determineBuildTimeDependencies = function (packageSource) {
   var versions = packageSource.dependencyVersions.dependencies;
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
-
-  ret.directDependencies = {};
   var sourceDeps = resolver.resolve(constraints);
 
+  ret.directDependencies = {};
   _.each(sourceDeps, function (version, packageName) {
     // Take only direct dependencies.
     if (_.has(constraints, packageName)) {
@@ -186,6 +185,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     dependencies: sourceDeps,
     plugins: ret.pluginDependencies
   };
+
   packageSource.recordDependencyVersions(constraintResults);
 
   return ret;
