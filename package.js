@@ -1,6 +1,9 @@
 
 Package.describe({
+  name: "html-tools",
+  test: "html-tools-test",
   summary: "Standards-compliant HTML tools",
+  version: '1.0.0',
   internal: true
 });
 
