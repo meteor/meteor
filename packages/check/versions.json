@@ -28,13 +28,15 @@
     "ordered-dict": "1.0.0+local",
     "geojson-utils": "1.0.0+local",
     "follower-livedata": "1.0.0+local",
+    "spacebars-compiler": "1.0.0+local",
+    "spacebars": "1.0.0+local",
+    "htmljs": "1.0.0+local",
+    "ui": "1.0.0+local",
     "templating": "1.0.0+local",
-    "spark": "1.0.0+local",
-    "handlebars": "1.0.0+local",
-    "domutils": "1.0.0+local",
-    "liverange": "1.0.0+local",
-    "universal-events": "1.0.0+local",
-    "jquery": "1.0.0+local"
+    "html-tools": "1.0.0+local",
+    "minifiers": "1.0.0+local",
+    "jquery": "1.0.0+local",
+    "observe-sequence": "1.0.0+local"
   },
   "plugins": {},
   "format": "1.0"
