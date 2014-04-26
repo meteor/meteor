@@ -1,38 +1,137 @@
+///!README
+
+/**
+ * # HTMLjs
+ *
+ * HTMLjs is a small library for expressing HTML trees with a concise
+ * syntax.  It is used to render content in Blaze and to represent
+ * templates during compilation.
+ *
+```
+var UL = HTML.UL, LI = HTML.LI, B = HTML.B;
+
+HTML.toHTML(
+  UL({id: 'mylist'},
+     LI({'class': 'item'}, "Hello ", B("world"), "!"),
+     LI({'class': 'item'}, "Goodbye, world")))
+```
+
+```
+<ul id="mylist">
+  <li class="item">Hello <b>world</b>!</li>
+  <li class="item">Goodbye, world</li>
+</ul>
+```
+ *
+ * The functions `UL`, `LI`, and `B` are constructors which
+ * return instances of `HTML.Tag`.  These tag objects can
+ * then be converted to an HTML string or directly into DOM nodes.
+ *
+ * The flexible structure of HTMLjs allows different kinds of Blaze
+ * directives to be embedded in the tree.  HTMLjs does not know about
+ * these directives, which are considered "foreign objects."
+ *
+ * # Built-in Types
+ *
+ * The following types are built into HTMLjs.  Built-in methods like
+ * `HTML.toHTML` expect a tree consisting only of these types.
+ *
+ * * __`null`, `undefined`__ - Render to nothing.
+ *
+ * * __boolean, number__ - Render to the string form of the boolean or number.
+ *
+ * * __string__ - Renders to a text node (or part of an attribute value).  All characters are safe, and no HTML injection is possible.  The string `"<a>"` renders `&lt;a>` in HTML, and `document.createTextNode("<a>")` in DOM.
+ *
+ * * __Array__ - Renders to its elements in order.  An array may be empty.  Arrays are detected using `HTML.isArray(...)`.
+ *
+ * * __`HTML.Tag`__ - Renders to an HTML element (including start tag, contents, and end tag).
+ *
+ * * __`HTML.CharRef({html: ..., str: ...})`__ - Renders to a character reference (such as `&nbsp`) when generating HTML.
+ *
+ * * __`HTML.Comment(text)`__ - Renders to an HTML comment.
+ *
+ * * __`HTML.Raw(html)`__ - Renders to a string of HTML to include verbatim.
+ *
+ * The `new` keyword is not required before constructors of HTML object types.
+ *
+ * All objects and arrays should be considered immutable.  Their properties
+ * are public, but they should only be read, not written.  Arrays should not
+ * be spliced in place.  This convention allows for clean patterns of
+ * processing and transforming HTMLjs trees.
+ */
 
 HTML = {};
 
 var IDENTITY = function (x) { return x; };
 var SLICE = Array.prototype.slice;
 
-// Tag instances are `instanceof HTML.Tag`.
-//
-// Tag objects should be considered immutable.
-//
-// This is a private constructor of an abstract class; don't call it.
+/**
+ * ## HTML.Tag
+ *
+ * An `HTML.Tag` is created using a tag-specific constructor, like
+ * `HTML.P` for a `<p>` tag or `HTML.INPUT` for an `<input>` tag.  The
+ * resulting object is `instanceof HTML.Tag`.  (The `HTML.Tag`
+ * constructor should not be called directly.)
+ *
+ * Tag constructors take an optional attributes dictionary followed
+ * by zero or more children:
+ *
+ * ```
+ * HTML.HR()
+ *
+ * HTML.DIV(HTML.P("First paragraph"),
+ *          HTML.P("Second paragraph"))
+ *
+ * HTML.INPUT({type: "text"})
+ *
+ * HTML.SPAN({'class': "foo"}, "Some text")
+ * ```
+ *
+ * ### Tag properties
+ *
+ * Tags have the following properties:
+ *
+ * * `tagName` - The tag name in lowercase (or camelCase)
+ * * `children` - An array of children (always present)
+ * * `attrs` - An attributes dictionary, `null`, or an array (see below)
+ *
+ * ### Special forms of attributes
+ *
+ * The attributes of a Tag may be an array of dictionaries.  In order
+ * for a tag constructor to recognize an array as the attributes argument,
+ * it must be written as `HTML.Attrs(attrs1, attrs2, ...)`, as in this
+ * example:
+ *
+ * ```
+ * var extraAttrs = {'class': "container"};
+ *
+ * var div = HTML.DIV(HTML.Attrs({id: "main"}, extraAttrs),
+ *                    "This is the content.");
+ *
+ * div.attrs // => [{id: "main"}, {'class': "container"}]
+ * ```
+ *
+ * `HTML.Attrs` may also be used to pass a foreign object in place of
+ * an attributes dictionary of a tag.
+ *
+ * ### Foreign objects
+ *
+ * Arbitrary objects are allowed in HTMLjs trees, which is useful for
+ * adapting HTMLjs to a wide variety of uses.  Such objects are called
+ * foreign objects.
+ *
+ * The one restriction on foreign objects is that they must be
+ * instances of a class -- so-called "constructed objects" (see
+ * `HTML.isConstructedObject`) -- so that they can be distinguished
+ * from the vanilla JS objects that represent attributes dictionaries
+ * when constructing Tags.
+ */
+
 HTML.Tag = function () {};
 HTML.Tag.prototype.tagName = ''; // this will be set per Tag subclass
 HTML.Tag.prototype.attrs = null;
 HTML.Tag.prototype.children = Object.freeze ? Object.freeze([]) : [];
 HTML.Tag.prototype.htmljsType = HTML.Tag.htmljsType = ['Tag'];
-
-// Given "p", create and assign `HTML.P` if it doesn't already exist.
-// Then return it.  `tagName` must have proper case (usually all lowercase).
-HTML.getTag = function (tagName) {
-  var symbolName = HTML.getSymbolName(tagName);
-  if (symbolName === tagName) // all-caps tagName
-    throw new Error("Use the lowercase or camelCase form of '" + tagName + "' here");
-
-  if (! HTML[symbolName])
-    HTML[symbolName] = makeTagConstructor(tagName);
-
-  return HTML[symbolName];
-};
-
-// Given "p", make sure `HTML.P` exists.  `tagName` must have proper case
-// (usually all lowercase).
-HTML.ensureTag = function (tagName) {
-  HTML.getTag(tagName); // don't return it
-};
 
 // Given "p" create the function `HTML.P`.
 var makeTagConstructor = function (tagName) {
@@ -46,7 +145,8 @@ var makeTagConstructor = function (tagName) {
     var i = 0;
     var attrs = arguments.length && arguments[0];
     if (attrs && (typeof attrs === 'object')) {
-      if (attrs.constructor === Object) {
+      // Treat vanilla JS object as an attributes dictionary.
+      if (! HTML.isConstructedObject(attrs)) {
         instance.attrs = attrs;
         i++;
       } else if (attrs instanceof HTML.Attrs) {
@@ -75,6 +175,25 @@ var makeTagConstructor = function (tagName) {
   HTMLTag.prototype.tagName = tagName;
 
   return HTMLTag;
+};
+
+// Given "p", create and assign `HTML.P` if it doesn't already exist.
+// Then return it.  `tagName` must have proper case (usually all lowercase).
+HTML.getTag = function (tagName) {
+  var symbolName = HTML.getSymbolName(tagName);
+  if (symbolName === tagName) // all-caps tagName
+    throw new Error("Use the lowercase or camelCase form of '" + tagName + "' here");
+
+  if (! HTML[symbolName])
+    HTML[symbolName] = makeTagConstructor(tagName);
+
+  return HTML[symbolName];
+};
+
+// Given "p", make sure `HTML.P` exists.  `tagName` must have proper case
+// (usually all lowercase).
+HTML.ensureTag = function (tagName) {
+  HTML.getTag(tagName); // don't return it
 };
 
 var CharRef = HTML.CharRef = function (attrs) {
@@ -132,6 +251,12 @@ var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
 
 HTML.isArray = function (x) {
   return (x instanceof Array);
+};
+
+HTML.isConstructedObject = function (x) {
+  return (x && (typeof x === 'object') &&
+          (x.constructor !== Object) &&
+          (! Object.prototype.hasOwnProperty.call(x, 'constructor')));
 };
 
 HTML.isNully = function (node) {
@@ -408,7 +533,7 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
       return result;
     }
 
-    if (attrs && (attrs.constructor !== Object)) {
+    if (attrs && HTML.isConstructedObject(attrs)) {
       throw new Error("The basic HTML.TransformingVisitor does not support " +
                       "foreign objects in attributes.  Define a custom " +
                       "visitAttributes for this case.");
