@@ -201,6 +201,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var resolverOptions = {};
   switch (options.mode) {
   case "LATEST":
+    // Poorman's enum
+    var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;
+
     // XXX reuse this code for "UPDATE" and "MINOR_UPDATE" and "FORCE"
     resolverOptions.costFunction = function (choices, options) {
       var rootDeps = options.rootDependencies || [];
@@ -216,7 +219,6 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       // very major, major, medium, minor costs
       // XXX maybe these can be calculated lazily?
       var cost = [0, 0, 0, 0];
-      var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;
 
       _.each(choices, function (uv) {
         if (_.has(prevSolMapping, uv.name)) {
@@ -268,8 +270,56 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     };
 
     resolverOptions.estimateCostFunction = function (state, options) {
-      // xcxc fill me in with something smart
-      return [0, 0, 0, 0];
+      var dependencies = state.dependencies;
+      var constraints = state.constraints;
+      var rootDeps = options.rootDependencies || [];
+      var prevSol = options.previousSolution || [];
+
+      var isRootDep = {};
+      var prevSolMapping = {};
+
+      // XXX this is recalculated over and over again and can be cached
+      _.each(rootDeps, function (dep) { isRootDep[dep] = true; });
+      _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
+
+      var cost = [0, 0, 0, 0];
+      return cost;
+
+      dependencies.each(function (dep) {
+        if (_.has(prevSolMapping, dep)) {
+          // was used in previous solution
+          // XXX do something smart here
+        } else {
+          var versions = self.resolver.unitsVersions[dep];
+          var latestFitting = null;
+
+          for (var i = versions.length - 1; i >= 0; i--) {
+            if (! constraints.violated(versions[i])) {
+              latestFitting = versions[i];
+              break;
+            }
+          }
+
+          if (! latestFitting) {
+            cost[MAJOR] = Infinity;
+            return;
+          }
+
+          var latestDistance =
+            semverToNum(self.resolver._latestVersion[dep]) -
+            semverToNum(latestFitting.version);
+
+          if (isRootDep[dep]) {
+            cost[MAJOR] += latestDistance;
+          } else {
+            // one of the transitive dependencies
+            // XXX should really be a distance from the earlies fitting
+            cost[MINOR] += latestDistance;
+          }
+        }
+      });
+
+      return cost;
     };
 
     resolverOptions.combineCostFunction = function (costA, costB) {
