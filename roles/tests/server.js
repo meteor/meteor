@@ -669,6 +669,93 @@
       test.equal(Roles.getRolesForUser(userObj, 'group1'), ['editor'])
       test.equal(Roles.getRolesForUser(userObj), ['editor'])
     })
+    
+  Tinytest.add(
+    'roles - can get all groups for user', 
+    function (test) {
+      reset()
+
+    var userId = users.eve,
+        userObj
+
+    Roles.addUsersToRoles([users.eve], ['editor'], 'group1')
+    Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'group2')
+
+    // by userId
+    test.equal(Roles.getGroupsForUser(userId), ['group1', 'group2'])
+
+    // by user object
+    userObj = Meteor.users.findOne({_id: userId})
+    test.equal(Roles.getGroupsForUser(userObj), ['group1', 'group2'])
+  })
+  
+  Tinytest.add(
+    'roles - can get all groups for user by role', 
+    function (test) {
+      reset()
+
+    var userId = users.eve,
+        userObj
+
+    Roles.addUsersToRoles([users.eve], ['editor'], 'group1')
+    Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'group2')
+
+    // by userId
+    test.equal(Roles.getGroupsForUser(userId, 'user'), ['group2'])
+    test.equal(Roles.getGroupsForUser(userId, 'editor'), ['group1', 'group2'])
+    test.equal(Roles.getGroupsForUser(userId, 'admin'), [])
+
+    // by user object
+    userObj = Meteor.users.findOne({_id: userId})
+    test.equal(Roles.getGroupsForUser(userObj, 'user'), ['group2'])
+    test.equal(Roles.getGroupsForUser(userObj, 'editor'), ['group1', 'group2'])
+    test.equal(Roles.getGroupsForUser(userObj, 'admin'), [])
+  })
+  
+  Tinytest.add(
+    'roles - getGroupsForUser returns [] when not using groups', 
+    function (test) {
+      reset()
+
+    var userId = users.eve,
+        userObj
+
+    Roles.addUsersToRoles([users.eve], ['editor', 'user'])
+
+    // by userId
+    test.equal(Roles.getGroupsForUser(userId), [])
+    test.equal(Roles.getGroupsForUser(userId, 'editor'), [])
+
+    // by user object
+    userObj = Meteor.users.findOne({_id: userId})
+    test.equal(Roles.getGroupsForUser(userObj), [])
+    test.equal(Roles.getGroupsForUser(userObj, 'editor'), [])
+  })
+  
+  
+  Tinytest.add(
+    'roles - getting all groups for user does not include GLOBAL_GROUP', 
+    function (test) {
+      reset()
+
+    var userId = users.eve,
+        userObj
+
+    Roles.addUsersToRoles([users.eve], ['editor'], 'group1')
+    Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'group2')
+    Roles.addUsersToRoles([users.eve], ['editor', 'user', 'admin'], Roles.GLOBAL_GROUP)
+
+    // by userId
+    test.equal(Roles.getGroupsForUser(userId, 'user'), ['group2'])
+    test.equal(Roles.getGroupsForUser(userId, 'editor'), ['group1', 'group2'])
+    test.equal(Roles.getGroupsForUser(userId, 'admin'), [])
+
+    // by user object
+    userObj = Meteor.users.findOne({_id: userId})
+    test.equal(Roles.getGroupsForUser(userObj, 'user'), ['group2'])
+    test.equal(Roles.getGroupsForUser(userObj, 'editor'), ['group1', 'group2'])
+    test.equal(Roles.getGroupsForUser(userObj, 'admin'), [])
+  })
 
 
   Tinytest.add(
