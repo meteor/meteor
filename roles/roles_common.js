@@ -489,8 +489,8 @@ _.extend(Roles, {
    * @method getGroupsForUser
    * @param {String|Object} user User Id or actual user object
    * @param {String} [role] Optional name of roles to restrict groups to.
-   *                         User's Roles.GLOBAL_GROUP will also be included.
-   * @return {Array} Array of user's groups, unsorted.
+   *
+   * @return {Array} Array of user's groups, unsorted. Roles.GLOBAL_GROUP will be omitted
    */
   getGroupsForUser: function (user, role) {
     var userGroups = [];
