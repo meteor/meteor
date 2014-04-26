@@ -253,6 +253,13 @@ var PackageSource = function () {
   // Test packages are dealt with differently in the linker (and not published
   // to the catalog), so we need to keep track of them.
   self.isTest = false;
+
+  // If this is set, it should be set to an array of package names. We will take
+  // the currently running git checkout and bundle the meteor tool from it
+  // inside this package as a tool. We will include built unipackages for all
+  // the packages in this array as well as their transitive (strong)
+  // dependencies.
+  self.includeTool = null;
 };
 
 
@@ -482,6 +489,19 @@ _.extend(PackageSource.prototype, {
 
         // XXX probably want further type checking
         self.pluginInfo[options.name] = options;
+      },
+
+      includeTool: function (packages) {
+        if (!files.inCheckout()) {
+          buildmessage.error("Package.includeTool() can only be used with a " +
+                             "checkout of meteor");
+          return;
+        }
+        if (self.includeTool) {
+          buildmessage.error("Duplicate includeTool call");
+          return;
+        }
+        self.includeTool = packages;
       }
     };
 

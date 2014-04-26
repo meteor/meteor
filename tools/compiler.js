@@ -735,7 +735,8 @@ compiler.compile = function (packageSource, options) {
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
-    buildTimePluginDependencies: buildTimeDeps.pluginDependencies
+    buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
+    includeTool: packageSource.includeTool
   });
 
   // Compile builds. Might use our plugins, so needs to happen second.

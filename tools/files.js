@@ -538,6 +538,18 @@ files.run = function (command /*, arguments */) {
   return future.wait();
 };
 
+files.runGitInCheckout = function (/* arguments */) {
+  var args = _.toArray(arguments);
+  args.unshift('git',
+               '--git-dir=' + path.join(files.getCurrentToolsDir(), '.git'));
+  var ret = files.run.apply(files, args);
+  if (ret === null) {
+    // XXX files.run really ought to give us some actual context
+    throw new Error("error running git " + args[2]);
+  }
+  return ret;
+};
+
 // Return the result of evaluating `code` using
 // `runInThisContext`. `code` will be wrapped in a closure. You can
 // pass additional values to bind in the closure in `options.symbols`,

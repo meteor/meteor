@@ -10,6 +10,8 @@ var bundler = require('./bundler.js');
 var watch = require('./watch.js');
 var PackageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
+var files = require('./files.js');
+var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -254,6 +256,9 @@ var Unipackage = function () {
   // (without a dot) to a handler function that takes a
   // CompileStep. Valid only when _pluginsInitialized is true.
   self.sourceHandlers = null;
+
+  // See description in PackageSource.
+  self.includeTool = null;
 };
 
 _.extend(Unipackage.prototype, {
@@ -279,6 +284,7 @@ _.extend(Unipackage.prototype, {
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
+    self.includeTool = options.includeTool;
   },
 
   // Programmatically add a build to this Unipackage. Should only be
@@ -856,6 +862,12 @@ _.extend(Unipackage.prototype, {
         });
       });
 
+      if (self.includeTool) {
+        console.log(builder.buildPath)
+        var toolsJson = self._writeTool(builder);
+        mainJson.tools = toolsJson;
+      }
+
       builder.writeJson("unipackage.json", mainJson);
       builder.writeJson("buildinfo.json", buildInfoJson);
       builder.complete();
@@ -863,6 +875,48 @@ _.extend(Unipackage.prototype, {
       builder.abort();
       throw e;
     }
+  },
+
+  _writeTool: function (builder) {
+    var self = this;
+
+    var pathsToCopy = files.runGitInCheckout(
+      'ls-tree',
+      '-r',  // recursive
+      '--name-only',
+      '--full-tree',
+      'HEAD',
+      // The actual trees to copy!
+      'tools', 'examples', 'LICENSE.txt', 'meteor',
+      // This script is not actually used, but it's nice to distribute it for
+      // users (it's what ends up at /usr/local/bin/meteor).
+      'scripts/admin/launch-meteor');
+
+    // Trim blank line and unnecessary examples.
+    pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
+      return f && !f.match(/^examples\/other/) &&
+        !f.match(/^examples\/unfinished/);
+    });
+
+    var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
+
+
+    var toolPath = 'meteor-tool-' + archinfo.host();
+    builder = builder.enter(toolPath);
+    builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
+
+    builder.copyDirectory({
+      from: files.getCurrentToolsDir(),
+      to: '',
+      specificFiles: pathsToCopy
+    });
+    builder.copyDirectory({
+      from: path.join(files.getDevBundle()),
+      to: 'dev_bundle',
+      ignore: bundler.ignoreFiles
+    });
+
+    process.exit(251)
   },
 
   // Computes a hash of the versions of all the package's dependencies

@@ -171,7 +171,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
-var ignoreFiles = [
+exports.ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,
     /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
     /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
@@ -1414,7 +1414,7 @@ _.extend(ServerTarget.prototype, {
       builder.copyDirectory({
         from: path.join(files.getDevBundle(), 'lib', 'node_modules'),
         to: 'node_modules',
-        ignore: ignoreFiles
+        ignore: exports.ignoreFiles
       });
     }
 
@@ -1719,7 +1719,8 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Unipackage object that represents the app
-      var app = packageCache.packageCache.loadAppAtPath(appDir, ignoreFiles);
+      var app = packageCache.packageCache.loadAppAtPath(
+        appDir, exports.ignoreFiles);
 
       // Client
       var client = makeClientTarget(app);

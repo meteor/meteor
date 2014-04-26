@@ -304,6 +304,7 @@ _.extend(Builder.prototype, {
   //   ignore (they may still be visible in the output bundle if
   //   symlinks are being used).  Like with WatchSets, they match against
   //   entries that end with a slash if it's a directory.
+  // - specificFiles: just copy these paths (specified as relative to 'to').
   copyDirectory: function (options) {
     var self = this;
     options = options || {};
@@ -314,6 +315,10 @@ _.extend(Builder.prototype, {
 
     var absPathTo = path.join(self.buildPath, normOptionsTo);
     if (self.shouldSymlink) {
+      if (options.specificFiles) {
+        throw new Error("can't copy only specific paths with a single symlink");
+      }
+
       var canSymlink = true;
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
@@ -343,6 +348,16 @@ _.extend(Builder.prototype, {
     }
 
     var ignore = options.ignore || [];
+    var specificPaths = null;
+    if (options.specificFiles) {
+      specificPaths = {};
+      _.each(options.specificFiles, function (f) {
+        while (f !== '.') {
+          specificPaths[path.join(normOptionsTo, f)] = true;
+          f = path.dirname(f);
+        }
+      });
+    }
 
     var walk = function (absFrom, relTo) {
       self._ensureDirectory(relTo);
@@ -350,6 +365,10 @@ _.extend(Builder.prototype, {
       _.each(fs.readdirSync(absFrom), function (item) {
         var thisAbsFrom = path.resolve(absFrom, item);
         var thisRelTo = path.join(relTo, item);
+
+        if (specificPaths && !_.has(specificPaths, thisRelTo)) {
+          return;
+        }
 
         var fileStatus = fs.statSync(thisAbsFrom);
         var isDir = fileStatus.isDirectory();
