@@ -2326,8 +2326,6 @@ _.each( ['STRING', 'MONGO'], function (idGeneration) {
       collections.push(coll);
     }
 
-    // Reset state before actual test
-    INSERTED_IDS = {};
 
     for (var i = 0; i < repetitions; i++) {
       for (var j = 0; j < collectionCount; j++) {
