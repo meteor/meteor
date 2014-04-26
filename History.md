@@ -56,8 +56,6 @@
 
 #### DDP and MongoDB
 
-* DDP heartbeats XXX
-
 * Extend latency compensation to support an arbitrary sequence of
   inserts in methods.  Previously, documents created inside a method
   stub on the client would eventually be replaced by new documents
@@ -68,6 +66,14 @@
   that is consistent between method stub and real method execution can
   get one with `DDP.randomStream`.
   https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
+
+* DDP now has an implementation of bidirectional heartbeats which is consistent
+  across SockJS and websocket transports. This enables connection keepalive and
+  allows servers and clients to more consistently and efficiently detect
+  disconnection.
+
+* The DDP protocol version number has been incremented to "pre2" (adding
+  randomSeed and heartbeats).
 
 * The oplog observe driver handles errors communicating with MongoDB
   better and knows to re-poll all queries after a MongoDB failover.
