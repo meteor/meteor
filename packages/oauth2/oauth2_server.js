@@ -7,16 +7,20 @@ Oauth._requestHandlers['2'] = function (service, query, res) {
 
     // Run service-specific handler.
     var oauthResult = service.handleOauthRequest(query);
+    var credentialSecret = Random.id();
 
     // Add the login result to the result map
     Oauth._loginResultForCredentialToken[query.state] = {
-          serviceName: service.serviceName,
-          serviceData: oauthResult.serviceData,
-          options: oauthResult.options
-        };
+      credentialSecret: credentialSecret,
+      result: {
+        serviceName: service.serviceName,
+        serviceData: oauthResult.serviceData,
+        options: oauthResult.options
+      }
+    };
   }
 
   // Either close the window, redirect, or render nothing
   // if all else fails
-  Oauth._renderOauthResults(res, query);
+  Oauth._renderOauthResults(res, query, credentialSecret);
 };

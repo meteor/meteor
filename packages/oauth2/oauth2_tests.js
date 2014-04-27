@@ -24,11 +24,11 @@ Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test)
 
     // Test that the login result for that user is prepared
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceName, serviceName);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, foobookId);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceData.id, foobookId);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].options.option1, foobookOption1);
+      Oauth._loginResultForCredentialToken[credentialToken].result.options.option1, foobookOption1);
 
   } finally {
     OauthTest.unregisterService(serviceName);

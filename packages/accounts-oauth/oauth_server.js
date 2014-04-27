@@ -4,7 +4,14 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.oauth)
     return undefined; // don't handle
 
-  check(options.oauth, {credentialToken: String});
+  check(options.oauth, {
+    credentialToken: String,
+    // When an error occurs while retrieving the access token, we store
+    // the error in the pending credentials table, with a secret of
+    // null. The client can call the login method with a secret of null
+    // to retrieve the error.
+    credentialSecret: Match.OneOf(null, String)
+  });
 
   if (!Oauth.hasCredential(options.oauth.credentialToken)) {
     // OAuth credentialToken is not recognized, which could be either
@@ -25,7 +32,8 @@ Accounts.registerLoginHandler(function (options) {
              error: new Meteor.Error(
                Accounts.LoginCancelledError.numericError, "Login canceled") };
   }
-  var result = Oauth.retrieveCredential(options.oauth.credentialToken);
+  var result = Oauth.retrieveCredential(options.oauth.credentialToken,
+                                        options.oauth.credentialSecret);
   if (result instanceof Error)
     // We tried to login, but there was a fatal error. Report it back
     // to the user.

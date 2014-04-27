@@ -56,20 +56,19 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
 
     // Test that right data is placed on the loginResult map
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceName, serviceName);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, twitterfooId);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceData.id, twitterfooId);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.screenName, twitterfooName);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceData.screenName, twitterfooName);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessToken, twitterfooAccessToken);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceData.accessToken, twitterfooAccessToken);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
+      Oauth._loginResultForCredentialToken[credentialToken].result.serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
     test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].options.option1, twitterOption1);
+      Oauth._loginResultForCredentialToken[credentialToken].result.options.option1, twitterOption1);
 
   } finally {
     OauthTest.unregisterService(serviceName);
   }
 });
-
