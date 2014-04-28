@@ -1941,24 +1941,24 @@ if (Meteor.isClient) {
     var collName = "livedata_upsert_collection_"+run;
     Meteor.call("createInsecureCollection", collName, collectionOptions);
     coll = new Meteor.Collection(collName, collectionOptions);
-    Meteor.subscribe("c-" + collName);
-
-    coll.insert({ _id: "foo" });
-    coll.insert({ _id: "bar" });
-    coll.update({ _id: "foo" }, { $set: { foo: 1 } }, { multi: true }, function (err, result) {
-      test.isFalse(err);
-      test.equal(result, 1);
-      coll.update({ _id: "foo" }, { _id: "foo", foo: 2 }, function (err, result) {
+    Meteor.subscribe("c-" + collName, function () {
+      coll.insert({ _id: "foo" });
+      coll.insert({ _id: "bar" });
+      coll.update({ _id: "foo" }, { $set: { foo: 1 } }, { multi: true }, function (err, result) {
         test.isFalse(err);
         test.equal(result, 1);
-        coll.update({ _id: "baz" }, { $set: { foo: 1 } }, function (err, result) {
+        coll.update({ _id: "foo" }, { _id: "foo", foo: 2 }, function (err, result) {
           test.isFalse(err);
-          test.equal(result, 0);
-          coll.remove({ _id: "foo" }, function (err, result) {
-            test.equal(result, 1);
-            coll.remove({ _id: "baz" }, function (err, result) {
-              test.equal(result, 0);
-              onComplete();
+          test.equal(result, 1);
+          coll.update({ _id: "baz" }, { $set: { foo: 1 } }, function (err, result) {
+            test.isFalse(err);
+            test.equal(result, 0);
+            coll.remove({ _id: "foo" }, function (err, result) {
+              test.equal(result, 1);
+              coll.remove({ _id: "baz" }, function (err, result) {
+                test.equal(result, 0);
+                onComplete();
+              });
             });
           });
         });
