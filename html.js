@@ -34,7 +34,7 @@ HTML.toHTML(
  * # Built-in Types
  *
  * The following types are built into HTMLjs.  Built-in methods like
- * `HTML.toHTML` expect a tree consisting only of these types.
+ * `HTML.toHTML` require a tree consisting only of these types.
  *
  * * __`null`, `undefined`__ - Render to nothing.
  *
@@ -94,38 +94,8 @@ var SLICE = Array.prototype.slice;
  * * `tagName` - The tag name in lowercase (or camelCase)
  * * `children` - An array of children (always present)
  * * `attrs` - An attributes dictionary, `null`, or an array (see below)
- *
- * ### Special forms of attributes
- *
- * The attributes of a Tag may be an array of dictionaries.  In order
- * for a tag constructor to recognize an array as the attributes argument,
- * it must be written as `HTML.Attrs(attrs1, attrs2, ...)`, as in this
- * example:
- *
- * ```
- * var extraAttrs = {'class': "container"};
- *
- * var div = HTML.DIV(HTML.Attrs({id: "main"}, extraAttrs),
- *                    "This is the content.");
- *
- * div.attrs // => [{id: "main"}, {'class': "container"}]
- * ```
- *
- * `HTML.Attrs` may also be used to pass a foreign object in place of
- * an attributes dictionary of a tag.
- *
- * ### Foreign objects
- *
- * Arbitrary objects are allowed in HTMLjs trees, which is useful for
- * adapting HTMLjs to a wide variety of uses.  Such objects are called
- * foreign objects.
- *
- * The one restriction on foreign objects is that they must be
- * instances of a class -- so-called "constructed objects" (see
- * `HTML.isConstructedObject`) -- so that they can be distinguished
- * from the vanilla JS objects that represent attributes dictionaries
- * when constructing Tags.
  */
+
 
 HTML.Tag = function () {};
 HTML.Tag.prototype.tagName = ''; // this will be set per Tag subclass
@@ -177,8 +147,93 @@ var makeTagConstructor = function (tagName) {
   return HTMLTag;
 };
 
-// Given "p", create and assign `HTML.P` if it doesn't already exist.
-// Then return it.  `tagName` must have proper case (usually all lowercase).
+/**
+ * ### Special forms of attributes
+ *
+ * The attributes of a Tag may be an array of dictionaries.  In order
+ * for a tag constructor to recognize an array as the attributes argument,
+ * it must be written as `HTML.Attrs(attrs1, attrs2, ...)`, as in this
+ * example:
+ *
+ * ```
+ * var extraAttrs = {'class': "container"};
+ *
+ * var div = HTML.DIV(HTML.Attrs({id: "main"}, extraAttrs),
+ *                    "This is the content.");
+ *
+ * div.attrs // => [{id: "main"}, {'class': "container"}]
+ * ```
+ *
+ * `HTML.Attrs` may also be used to pass a foreign object in place of
+ * an attributes dictionary of a tag.
+ *
+ */
+// Not an HTMLjs node, but a wrapper to pass multiple attrs dictionaries
+// to a tag (for the purpose of implementing dynamic attributes).
+var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
+  // Work with or without `new`.  If not called with `new`,
+  // perform instantiation by recursively calling this constructor.
+  // We can't pass varargs, so pass no args.
+  var instance = (this instanceof Attrs) ? this : new Attrs;
+
+  instance.value = SLICE.call(arguments);
+
+  return instance;
+};
+
+/**
+ * ### Normalized Case for Tag Names
+ *
+ * The `tagName` field is always in "normalized case," which is the
+ * official case for that particular element name (usually lowercase).
+ * For example, `HTML.DIV().tagName` is `"div"`.  For some elements
+ * used in inline SVG graphics, the correct case is "camelCase."  For
+ * example, there is an element named `clipPath`.
+ *
+ * Web browsers have a confusing policy about case.  They perform case
+ * normalization when parsing HTML, but not when creating SVG elements
+ * at runtime; the correct case is required.
+ *
+ * Therefore, in order to avoid ever having to normalize case at
+ * runtime, the policy of HTMLjs is to put the burden on the caller
+ * of functions like `HTML.ensureTag` -- for example, a template
+ * engine -- of supplying correct normalized case.
+ *
+ * Briefly put, normlized case is usually lowercase, except for certain
+ * elements where it is camelCase.
+ */
+
+////////////////////////////// KNOWN ELEMENTS
+
+/**
+ * ### Known Elements
+ *
+ * HTMLjs comes preloaded with constructors for all "known" HTML and
+ * SVG elements.  You can use `HTML.P`, `HTML.DIV`, and so on out of
+ * the box.  If you want to create a tag like `<foo>` for some reason,
+ * you have to tell HTMLjs to create the `HTML.FOO` constructor for you
+ * using `HTML.ensureTag` or `HTML.getTag`.
+ *
+ * HTMLjs's lists of known elements are public because they are useful to
+ * other packages that provide additional functions not found here, like
+ * functions for normalizing case.
+ *
+ */
+
+/**
+ * ### HTML.getTag(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Creates a tag constructor for `tagName`, assigns it to the `HTML`
+ * namespace object, and returns it.
+ *
+ * For example, `HTML.getTag("p")` returns `HTML.P`.  `HTML.getTag("foo")`
+ * will create and return `HTML.FOO`.
+ *
+ * It's very important that `tagName` be in normalized case, or else
+ * an incorrect tag constructor will be registered and used henceforth.
+ */
 HTML.getTag = function (tagName) {
   var symbolName = HTML.getSymbolName(tagName);
   if (symbolName === tagName) // all-caps tagName
@@ -190,12 +245,160 @@ HTML.getTag = function (tagName) {
   return HTML[symbolName];
 };
 
-// Given "p", make sure `HTML.P` exists.  `tagName` must have proper case
-// (usually all lowercase).
+/**
+ * ### HTML.ensureTag(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Ensures that a tag constructor (like `HTML.FOO`) exists for a tag
+ * name (like `"foo"`), creating it if necessary.  Like `HTML.getTag`
+ * but does not return the tag constructor.
+ */
 HTML.ensureTag = function (tagName) {
   HTML.getTag(tagName); // don't return it
 };
 
+/**
+ * ### HTML.isTagEnsured(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Returns whether a particular tag is guaranteed to be available on
+ * the `HTML` object (under the name returned by `HTML.getSymbolName`).
+ *
+ * Useful for code generators.
+ */
+HTML.isTagEnsured = function (tagName) {
+  return HTML.isKnownElement(tagName);
+};
+
+/**
+ * ### HTML.getSymbolName(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Returns the name of the all-caps constructor (like `"FOO"`) for a
+ * tag name in normalized case (like `"foo"`).
+ *
+ * In addition to converting `tagName` to all-caps, hyphens (`-`) in
+ * tag names are converted to underscores (`_`).
+ *
+ * Useful for code generators.
+ */
+HTML.getSymbolName = function (tagName) {
+  // "foo-bar" -> "FOO_BAR"
+  return tagName.toUpperCase().replace(/-/g, '_');
+};
+
+
+/**
+ * ### HTML.knownElementNames
+ *
+ * An array of all known HTML5 and SVG element names in normalized case.
+ */
+HTML.knownElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol optgroup option p param pre q s samp script select small span strike strong style sub sup table tbody td textarea tfoot th thead title tr tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
+// (we add the SVG ones below)
+
+/**
+ * ### HTML.knownSVGElementNames
+ *
+ * An array of all known SVG element names in normalized case.
+ *
+ * The `"a"` element is not included because it is primarily a non-SVG
+ * element.
+ */
+HTML.knownSVGElementNames = 'altGlyph altGlyphDef altGlyphItem animate animateColor animateMotion animateTransform circle clipPath color-profile cursor defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph path pattern polygon polyline radialGradient rect script set stop style svg switch symbol text textPath title tref tspan use view vkern'.split(' ');
+// Append SVG element names to list of known element names
+HTML.knownElementNames = HTML.knownElementNames.concat(HTML.knownSVGElementNames);
+
+/**
+ * ### HTML.voidElementNames
+ *
+ * An array of all "void" element names in normalized case.  Void
+ * elements are elements with a start tag and no end tag, such as BR,
+ * HR, IMG, and INPUT.
+ *
+ * The HTML spec defines a closed class of void elements.
+ */
+HTML.voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
+
+// Speed up search through lists of known elements by creating internal "sets"
+// of strings.
+var YES = {yes:true};
+var makeSet = function (array) {
+  var set = {};
+  for (var i = 0; i < array.length; i++)
+    set[array[i]] = YES;
+  return set;
+};
+var voidElementSet = makeSet(HTML.voidElementNames);
+var knownElementSet = makeSet(HTML.knownElementNames);
+var knownSVGElementSet = makeSet(HTML.knownSVGElementNames);
+
+/**
+ * ### HTML.isKnownElement(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Returns whether `tagName` is a known HTML5 or SVG element.
+ */
+HTML.isKnownElement = function (tagName) {
+  return knownElementSet[tagName] === YES;
+};
+
+/**
+ * ### HTML.isKnownSVGElement(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Returns whether `tagName` is the name of a known SVG element.
+ */
+HTML.isKnownSVGElement = function (tagName) {
+  return knownSVGElementSet[tagName] === YES;
+};
+
+/**
+ * ### HTML.isVoidElement(tagName)
+ *
+ * * `tagName` - A string in normalized case
+ *
+ * Returns whether `tagName` is the name of a void element.
+ */
+HTML.isVoidElement = function (tagName) {
+  return voidElementSet[tagName] === YES;
+};
+
+
+// Ensure tags for all known elements
+for (var i = 0; i < HTML.knownElementNames.length; i++)
+  HTML.ensureTag(HTML.knownElementNames[i]);
+
+
+/**
+ * ## HTML.CharRef({html: ..., str: ...})
+ *
+ * Represents a character reference like `&nbsp;`.
+ *
+ * A CharRef is not required for escaping special characters like `<`,
+ * which are automatically escaped by HTMLjs.  For example,
+ * `HTML.toHTML("<")` is `"&lt;"`.  Also, now that browsers speak
+ * Unicode, non-ASCII characters typically do not need to be expressed
+ * as character references either.  The purpose of `CharRef` is offer
+ * control over the generated HTML, allowing template engines to
+ * preserve any character references that they come across.
+ *
+ * Constructing a CharRef requires two strings, the uninterpreted
+ * "HTML" form and the interpreted "string" form.  Both are required
+ * to be present, and it is up to the caller to make sure the
+ * information is accurate.
+ *
+ * Examples of valid CharRefs:
+ *
+ * * `HTML.CharRef({html: '&amp;', str: '&'})`
+ * * `HTML.CharRef({html: '&nbsp;', str: '\u00A0'})
+ *
+ * Instance properties: `.html`, `.str`
+ */
 var CharRef = HTML.CharRef = function (attrs) {
   if (! (this instanceof CharRef))
     // called without `new`
@@ -210,6 +413,7 @@ var CharRef = HTML.CharRef = function (attrs) {
 };
 CharRef.prototype.htmljsType = CharRef.htmljsType = ['CharRef'];
 
+/// ## HTML.Comment(value)
 var Comment = HTML.Comment = function (value) {
   if (! (this instanceof Comment))
     // called without `new`
@@ -224,6 +428,7 @@ var Comment = HTML.Comment = function (value) {
 };
 Comment.prototype.htmljsType = Comment.htmljsType = ['Comment'];
 
+/// ## HTML.Raw(value)
 var Raw = HTML.Raw = function (value) {
   if (! (this instanceof Raw))
     // called without `new`
@@ -236,18 +441,6 @@ var Raw = HTML.Raw = function (value) {
 };
 Raw.prototype.htmljsType = Raw.htmljsType = ['Raw'];
 
-// Not an HTMLjs node, but a wrapper to pass multiple attrs dictionaries
-// to a tag (for the purpose of implementing dynamic attributes).
-var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
-  // Work with or without `new`.  If not called with `new`,
-  // perform instantiation by recursively calling this constructor.
-  // We can't pass varargs, so pass no args.
-  var instance = (this instanceof Attrs) ? this : new Attrs;
-
-  instance.value = SLICE.call(arguments);
-
-  return instance;
-};
 
 HTML.isArray = function (x) {
   return (x instanceof Array);
@@ -318,69 +511,21 @@ HTML.flattenAttributes = function (attrs) {
   return result;
 };
 
-////////////////////////////// KNOWN ELEMENTS
 
-// These lists of known elements are public.  You can use them, for example, to
-// write a helper that determines the proper case for an SVG element name.
-// Such helpers that may not be needed at runtime are not provided here.
+/**
+ * ## Foreign objects
+ *
+ * Arbitrary objects are allowed in HTMLjs trees, which is useful for
+ * adapting HTMLjs to a wide variety of uses.  Such objects are called
+ * foreign objects.
+ *
+ * The one restriction on foreign objects is that they must be
+ * instances of a class -- so-called "constructed objects" (see
+ * `HTML.isConstructedObject`) -- so that they can be distinguished
+ * from the vanilla JS objects that represent attributes dictionaries
+ * when constructing Tags.
+ */
 
-HTML.knownElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol optgroup option p param pre q s samp script select small span strike strong style sub sup table tbody td textarea tfoot th thead title tr tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
-
-// omitted because also an HTML element: "a"
-HTML.knownSVGElementNames = 'altGlyph altGlyphDef altGlyphItem animate animateColor animateMotion animateTransform circle clipPath color-profile cursor defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph path pattern polygon polyline radialGradient rect script set stop style svg switch symbol text textPath title tref tspan use view vkern'.split(' ');
-// Append SVG element names to list of known element names
-HTML.knownElementNames = HTML.knownElementNames.concat(HTML.knownSVGElementNames);
-
-HTML.voidElementNames = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
-
-// Speed up search through lists of known elements by creating internal "sets"
-// of strings.
-var YES = {yes:true};
-var makeSet = function (array) {
-  var set = {};
-  for (var i = 0; i < array.length; i++)
-    set[array[i]] = YES;
-  return set;
-};
-var voidElementSet = makeSet(HTML.voidElementNames);
-var knownElementSet = makeSet(HTML.knownElementNames);
-var knownSVGElementSet = makeSet(HTML.knownSVGElementNames);
-
-// Is the given element (in proper case) a known HTML element?
-// This includes SVG elements.
-HTML.isKnownElement = function (name) {
-  return knownElementSet[name] === YES;
-};
-
-// Is the given element (in proper case) an element with no end tag
-// in HTML, like "br", "hr", or "input"?
-HTML.isVoidElement = function (name) {
-  return voidElementSet[name] === YES;
-};
-
-// Is the given element (in proper case) a known SVG element?
-HTML.isKnownSVGElement = function (name) {
-  return knownSVGElementSet[name] === YES;
-};
-
-// For code generators, is a particular tag (in proper case) guaranteed
-// to be available on the HTML object (under the name returned by
-// getSymbolName)?
-HTML.isTagEnsured = function (t) {
-  return HTML.isKnownElement(t);
-};
-
-// For code generators, take a tagName like "p" and return an uppercase
-// symbol name like "P" which is available on the "HTML" object for
-// known elements or after calling getTag or ensureTag.
-HTML.getSymbolName = function (tagName) {
-  // "foo-bar" -> "FOO_BAR"
-  return tagName.toUpperCase().replace(/-/g, '_');
-};
-
-// Ensure tags for all known elements
-for (var i = 0; i < HTML.knownElementNames.length; i++)
-  HTML.ensureTag(HTML.knownElementNames[i]);
 
 
 ////////////////////////////// VISITORS
