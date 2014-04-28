@@ -54,7 +54,7 @@ HTML.toHTML(
  *
  * The `new` keyword is not required before constructors of HTML object types.
  *
- * All objects and arrays should be considered immutable.  Their properties
+ * All objects and arrays should be considered immutable.  Instance properties
  * are public, but they should only be read, not written.  Arrays should not
  * be spliced in place.  This convention allows for clean patterns of
  * processing and transforming HTMLjs trees.
@@ -82,7 +82,7 @@ HTML.toHTML(
  * HTML.SPAN({'class': "foo"}, "Some text")
  * ```
  *
- * ### Tag properties
+ * ### Instance properties
  *
  * Tags have the following properties:
  *
@@ -424,6 +424,17 @@ CharRef.prototype.htmljsType = CharRef.htmljsType = ['CharRef'];
 
 /**
  * ## HTML.Comment(value)
+ *
+ * * `value` - String
+ *
+ * Represents an HTML Comment.  For example, `HTML.Comment("foo")` represents
+ * the comment `<!--foo-->`.
+ *
+ * The value string should not contain two consecutive hyphens (`--`) or start
+ * or end with a hyphen.  If it does, the offending hyphens will be stripped
+ * before generating HTML.
+ *
+ * Instance properties: `value`
  */
 var Comment = HTML.Comment = function (value) {
   if (! (this instanceof Comment))
@@ -441,6 +452,21 @@ Comment.prototype.htmljsType = Comment.htmljsType = ['Comment'];
 
 /**
  * ## HTML.Raw(value)
+ *
+ * * `value` - String
+ *
+ * Represents HTML code to be inserted verbatim.  `value` must consist
+ * of a valid, complete fragment of HTML, with all tags closed and
+ * all required end tags present.
+ *
+ * No security checks are performed, and no special characters are
+ * escaped.  `Raw` should not be used if there are other ways of
+ * accomplishing the same result.  HTML supplied by an application
+ * user should not be rendered unless the user is trusted, and even
+ * then, there could be strange results if required end tags are
+ * missing.
+ *
+ * Instance properties: `value`
  */
 var Raw = HTML.Raw = function (value) {
   if (! (this instanceof Raw))
@@ -457,13 +483,46 @@ Raw.prototype.htmljsType = Raw.htmljsType = ['Raw'];
 
 /**
  * ## HTML.isArray(x)
+ *
+ * Returns whether `x` is considered an array for the purposes of
+ * HTMLjs.  An array is an object created using `[...]` or
+ * `new Array`.
+ *
+ * This function is provided because there are several common ways to
+ * determine whether an object should be treated as an array in
+ * JavaScript.
  */
 HTML.isArray = function (x) {
+  // could change this to use the more convoluted Object.prototype.toString
+  // approach that works when objects are passed between frames, but does
+  // it matter?
   return (x instanceof Array);
 };
 
 /**
  * ## HTML.isConstructedObject(x)
+ *
+ * Returns whether `x` is a "constructed object," which is (loosely
+ * speaking) an object that was created with `new Foo` (for some `Foo`)
+ * rather than with `{...}` (a vanilla object).  Vanilla objects are used
+ * as attribute dictionaries when constructing tags, while constructed
+ * objects are used as children.
+ *
+ * For example, in `HTML.DIV({id:"foo"})`, `{id:"foo"}` is a vanilla
+ * object.  In `HTML.DIV(HTML.SPAN("text"))`, the `HTML.SPAN` is a
+ * constructed object.
+ *
+ * A simple constructed object can be created as follows:
+ *
+ * ```
+ * var Foo = function () {};
+ * var x = new Foo; // x is a constructed object
+ * ```
+ *
+ * In particular, the test is that `x` is an object and `x.constructor`
+ * is set, but on a prototype of the object, not the object itself.
+ * The above example works because JavaScript sets
+ * `Foo.prototype.constructor = Foo` when you create a function `Foo`.
  */
 HTML.isConstructedObject = function (x) {
   return (x && (typeof x === 'object') &&
@@ -473,6 +532,9 @@ HTML.isConstructedObject = function (x) {
 
 /**
  * ## HTML.isNully(content)
+ *
+ * Returns true if `content` is `null`, `undefined`, an empty array,
+ * or an array of only "nully" elements.
  */
 HTML.isNully = function (node) {
   if (node == null)
@@ -492,27 +554,44 @@ HTML.isNully = function (node) {
 
 /**
  * ## HTML.isValidAttributeName(name)
+ *
+ * Returns whether `name` is a valid name for an attribute of an HTML tag
+ * or element.  `name` must:
+ *
+ * * Start with `:`, `_`, `A-Z` or `a-z`
+ * * Consist only of those characters plus `-`, `.`, and `0-9`.
+ *
+ * Discussion: The HTML spec and the DOM API (`setAttribute`) have different
+ * definitions of what characters are legal in an attribute.  The HTML
+ * parser is extremely permissive (allowing, for example, `<a %=%>`), while
+ * `setAttribute` seems to use something like the XML grammar for names (and
+ * throws an error if a name is invalid, making that attribute unsettable).
+ * If we knew exactly what grammar browsers used for `setAttribute`, we could
+ * include various Unicode ranges in what's legal.  For now, we allow ASCII chars
+ * that are known to be valid XML, valid HTML, and settable via `setAttribute`.
+ *
+ * See <http://www.w3.org/TR/REC-xml/#NT-Name> and
+ * <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
  */
-// The HTML spec and the DOM API (in particular `setAttribute`) have different
-// definitions of what characters are legal in an attribute.  The HTML
-// parser is extremely permissive (allowing, for example, `<a %=%>`), while
-// `setAttribute` seems to use something like the XML grammar for names (and
-// throws an error if a name is invalid, making that attribute unsettable).
-// If we knew exactly what grammar browsers used for `setAttribute`, we could
-// include various Unicode ranges in what's legal.  For now, allow ASCII chars
-// that are known to be valid XML, valid HTML, and settable via `setAttribute`:
-//
-// * Starts with `:`, `_`, `A-Z` or `a-z`
-// * Consists of any of those plus `-`, `.`, and `0-9`.
-//
-// See <http://www.w3.org/TR/REC-xml/#NT-Name> and
-// <http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
 HTML.isValidAttributeName = function (name) {
   return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
 };
 
 /**
  * ## HTML.flattenAttributes(attrs)
+ *
+ * If `attrs` is an array, the attribute dictionaries in the array are
+ * combined into a single attributes dictionary, which is returned.
+ * Any "nully" attribute values (see `HTML.isNully`) are ignored in
+ * the process.  If `attrs` is a single attribute dictionary, a copy
+ * is returned with any nully attributes removed.  If `attrs` is
+ * equal to null or an empty array, `null` is returned.
+ *
+ * Attribute dictionaries are combined by assigning the name/value
+ * pairs in array order, with later values overwriting previous
+ * values.
+ *
+ * `attrs` must not contain any foreign objects.
  */
 // If `attrs` is an array of attributes dictionaries, combines them
 // into one.  Removes attributes that are "nully."
