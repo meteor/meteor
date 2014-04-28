@@ -6,7 +6,9 @@ Package.describe({
 Package.on_use(function (api) {
   api.export('HTML');
 
-  api.add_files(['html.js']);
+  api.add_files(['preamble.js',
+                 'visitors.js',
+                 'html.js']);
 });
 
 Package.on_test(function (api) {

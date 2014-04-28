@@ -145,7 +145,20 @@ functions for normalizing case.
 
 
 
-### HTML.getTag(tagName)
+## Foreign objects
+
+Arbitrary objects are allowed in HTMLjs trees, which is useful for
+adapting HTMLjs to a wide variety of uses.  Such objects are called
+foreign objects.
+
+The one restriction on foreign objects is that they must be
+instances of a class -- so-called "constructed objects" (see
+`HTML.isConstructedObject`) -- so that they can be distinguished
+from the vanilla JS objects that represent attributes dictionaries
+when constructing Tags.
+
+
+## HTML.getTag(tagName)
 
 * `tagName` - A string in normalized case
 
@@ -159,7 +172,7 @@ It's very important that `tagName` be in normalized case, or else
 an incorrect tag constructor will be registered and used henceforth.
 
 
-### HTML.ensureTag(tagName)
+## HTML.ensureTag(tagName)
 
 * `tagName` - A string in normalized case
 
@@ -168,7 +181,7 @@ name (like `"foo"`), creating it if necessary.  Like `HTML.getTag`
 but does not return the tag constructor.
 
 
-### HTML.isTagEnsured(tagName)
+## HTML.isTagEnsured(tagName)
 
 * `tagName` - A string in normalized case
 
@@ -178,7 +191,7 @@ the `HTML` object (under the name returned by `HTML.getSymbolName`).
 Useful for code generators.
 
 
-### HTML.getSymbolName(tagName)
+## HTML.getSymbolName(tagName)
 
 * `tagName` - A string in normalized case
 
@@ -191,12 +204,12 @@ tag names are converted to underscores (`_`).
 Useful for code generators.
 
 
-### HTML.knownElementNames
+## HTML.knownElementNames
 
 An array of all known HTML5 and SVG element names in normalized case.
 
 
-### HTML.knownSVGElementNames
+## HTML.knownSVGElementNames
 
 An array of all known SVG element names in normalized case.
 
@@ -204,7 +217,7 @@ The `"a"` element is not included because it is primarily a non-SVG
 element.
 
 
-### HTML.voidElementNames
+## HTML.voidElementNames
 
 An array of all "void" element names in normalized case.  Void
 elements are elements with a start tag and no end tag, such as BR,
@@ -213,21 +226,21 @@ HR, IMG, and INPUT.
 The HTML spec defines a closed class of void elements.
 
 
-### HTML.isKnownElement(tagName)
+## HTML.isKnownElement(tagName)
 
 * `tagName` - A string in normalized case
 
 Returns whether `tagName` is a known HTML5 or SVG element.
 
 
-### HTML.isKnownSVGElement(tagName)
+## HTML.isKnownSVGElement(tagName)
 
 * `tagName` - A string in normalized case
 
 Returns whether `tagName` is the name of a known SVG element.
 
 
-### HTML.isVoidElement(tagName)
+## HTML.isVoidElement(tagName)
 
 * `tagName` - A string in normalized case
 
@@ -259,18 +272,28 @@ Examples of valid CharRefs:
 Instance properties: `.html`, `.str`
 
 
-## HTML.Comment(value)
+* ## HTML.Comment(value)
 
-## HTML.Raw(value)
 
-## Foreign objects
+* ## HTML.Raw(value)
 
-Arbitrary objects are allowed in HTMLjs trees, which is useful for
-adapting HTMLjs to a wide variety of uses.  Such objects are called
-foreign objects.
 
-The one restriction on foreign objects is that they must be
-instances of a class -- so-called "constructed objects" (see
-`HTML.isConstructedObject`) -- so that they can be distinguished
-from the vanilla JS objects that represent attributes dictionaries
-when constructing Tags.
+* ## HTML.isArray(x)
+
+
+* ## HTML.isConstructedObject(x)
+
+
+* ## HTML.isNully(content)
+
+
+* ## HTML.isValidAttributeName(name)
+
+
+* ## HTML.flattenAttributes(attrs)
+
+
+* ## HTML.toText(content, textMode)
+
+
+* ## HTML.toHTML(content)
