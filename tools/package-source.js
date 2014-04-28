@@ -484,13 +484,16 @@ _.extend(PackageSource.prototype, {
         if (!files.inCheckout()) {
           buildmessage.error("Package.includeTool() can only be used with a " +
                              "checkout of meteor");
-          return;
-        }
-        if (self.includeTool) {
+        } else if (self.includeTool) {
           buildmessage.error("Duplicate includeTool call");
-          return;
+        } else if (!_.isArray(packages)) {
+          buildmessage.error("Argument to Package.includeTool must be array");
+        } else if (!_.all(packages, _.isString)) {
+          buildmessage.error(
+            "Elements of array passed to Package.includeTool must be strings");
+        } else {
+          self.includeTool = packages;
         }
-        self.includeTool = packages;
       }
     };
 

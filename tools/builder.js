@@ -221,6 +221,10 @@ _.extend(Builder.prototype, {
   // be directories). Calling this twice on the same relPath will
   // given an exception.
   //
+  // Returns the *current* (temporary!) path to where the file or directory
+  // lives. This is so you could use non-builder code to write into a reserved
+  // directory.
+  //
   // options:
   // - directory: set to true to reserve this relPath to be a
   //   directory rather than a file.
@@ -251,6 +255,9 @@ _.extend(Builder.prototype, {
         self.usedAsFile[soFar] = true;
       }
     }
+
+    // Return the path we reserved.
+    return path.join(self.buildPath, relPath);
   },
 
   // Generate and reserve a unique name for a file based on `relPath`,

@@ -478,6 +478,9 @@ _.extend(Target.prototype, {
   // Determine the packages to load, create Builds for
   // them, put them in load order, save in builds.
   //
+  // (Note: this is also called directly by
+  // bundler.iterateOverAllUsedUnipackages, kinda hackily.)
+  //
   // options include:
   // - packages: an array of packages (or, properly speaking, builds)
   //   to include. Each element should either be a Unipackage object or a
@@ -1977,4 +1980,17 @@ exports.buildJsImage = function (options) {
 // file (eg, program.json).
 exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
+};
+
+// Given an array of unipackage names, invokes the callback with each
+// corresponding Unipackage object, plus all of their transitive dependencies,
+// with a topological sort.
+exports.iterateOverAllUsedUnipackages = function (packageLoader, arch,
+                                                  packageNames, callback) {
+  var target = new Target({packageLoader: packageLoader,
+                           arch: arch});
+  target._determineLoadOrder({packages: packageNames});
+  _.each(target.builds, function (build) {
+    callback(build.pkg);
+  });
 };

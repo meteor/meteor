@@ -932,5 +932,17 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     return false;
   }
 
+  // XXX We don't actually pay attention to includeTool here. Changes that would
+  // affect the output of includeTool never cause us to rebuild. We think we
+  // will just force a rebuild any time we're actually publishing meteor-tool.
+  //
+  // We aren't bothering to do this because the code to check-up-to-date would
+  // be pretty intricate (it has to check that none of the tools files from git
+  // changed as well as *all transitive dependencies* of the packages we
+  // include), and there's not much of an advantage to ensuring that the built
+  // tool is up to date unless we're about to publish it anyway, since we don't
+  // actually run the built tool during development. (And there would be a
+  // runtime performance overhead to this extra check.)
+
   return true;
 };

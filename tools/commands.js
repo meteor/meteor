@@ -1763,6 +1763,10 @@ main.registerCommand({
     return 1;
   }
 
+  // XXX prevent people from directly publishing meteor-tool outside of the
+  // release publishing process (since we don't automatically rebuild the tool
+  // package)
+
   var sources = _.union(compileResult.sources, testFiles);
   var bundleResult = packageClient.bundleSource(compileResult.unipackage,
                                                 sources,

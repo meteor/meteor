@@ -861,6 +861,7 @@ _.extend(Unipackage.prototype, {
 
     var toolPath = 'meteor-tool-' + archinfo.host();
     builder = builder.enter(toolPath);
+    var unipath = builder.reserve('unipackages', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
@@ -874,7 +875,20 @@ _.extend(Unipackage.prototype, {
       ignore: bundler.ignoreFiles
     });
 
-    process.exit(251)
+    // We only want to load local packages.
+    var localPackageLoader = new PackageLoader({versions: null});
+    bundler.iterateOverAllUsedUnipackages(
+      localPackageLoader, archinfo.host(), self.includeTool,
+      function (unipkg) {
+        // XXX assert that each name shows up once
+        unipkg.saveToPath(path.join(unipath, unipkg.name));
+      });
+
+    return [{
+      name: 'meteor',
+      arch: archinfo.host(),
+      path: toolPath
+    }];
   },
 
   // Computes a hash of the versions of all the package's dependencies
