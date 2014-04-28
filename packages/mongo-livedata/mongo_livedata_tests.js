@@ -1273,7 +1273,8 @@ testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
   }, function (test, expect) {
-    var coll = this.coll = new Meteor.Collection(this.collectionName, collectionOptions);
+    var self = this;
+    var coll = self.coll = new Meteor.Collection(self.collectionName, collectionOptions);
 
     coll.insert({foo: 'x', length: 0}, expect(function (err, id) {
       test.isFalse(err);
@@ -1284,7 +1285,8 @@ testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
     }));
   },
   function (test, expect) {
-    var coll = this.coll;
+    var self = this;
+    var coll = self.coll;
     coll.update(self.docId, {$set: {length: 5}}, expect(function (err) {
       test.isFalse(err);
       test.equal(coll.findOne(self.docId),
@@ -1323,7 +1325,7 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
       return doc;
     };
     TRANSFORMS["seconds"] = seconds;
-    var collectionOptions = {
+    self.collectionOptions = {
       idGeneration: idGeneration,
       transform: seconds,
       transformName: "seconds"
@@ -1335,12 +1337,12 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
     }
   }, function (test, expect) {
     var self = this;
-    self.coll = new Meteor.Collection(self.collectionName, collectionOptions);
+    self.coll = new Meteor.Collection(self.collectionName, self.collectionOptions);
     var obs;
     var expectAdd = expect(function (doc) {
       test.equal(doc.seconds(), 50);
     });
-    var expectRemove = expect (function (doc) {
+    var expectRemove = expect(function (doc) {
       test.equal(doc.seconds(), 50);
       obs.stop();
     });
@@ -1405,17 +1407,18 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
   }
 ]);
 
+var bin = EJSONTest.base64Decode(
+  "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
+    "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
+    "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
+    "IG1pbmQsIHRoYXQgYnkgYSBwZXJzZXZlcmFuY2Ugb2YgZGVsaWdo" +
+    "dCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdl" +
+    "bmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9y" +
+    "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
+
 testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
   function (test, expect) {
     // XXX probably shouldn't use EJSON's private test symbols
-    var bin = EJSONTest.base64Decode(
-      "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
-        "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
-        "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
-        "IG1pbmQsIHRoYXQgYnkgYSBwZXJzZXZlcmFuY2Ugb2YgZGVsaWdo" +
-        "dCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdl" +
-        "bmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9y" +
-        "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
     this.collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
