@@ -88,21 +88,13 @@ _.extend(PackageLoader.prototype, {
     return catalog.catalog.getLoadPathForPackage(name, version);
   },
 
-  // Given a build set spec -- either a package name like "ddp", or a particular
-  // build within the package like "ddp/client", or a parsed object like
-  // {package: "ddp", build: "client"} -- return the list of matching builds (as
-  // an array of Build objects) for a given architecture.
-  getBuilds: function (spec, arch) {
+  // Given a package name like "ddp" and an architecture, get the build of that
+  // package at the right architecture.
+  getBuild: function (packageName, arch) {
     var self = this;
 
-    if (typeof spec === "string")
-      spec = utils.parseSpec(spec);
-
-    var pkg = self.getPackage(spec.package, { throwOnError: true });
-    if (spec.build)
-      return [pkg.getSingleBuild(spec.build, arch)];
-    else
-      return pkg.getDefaultBuilds(arch);
+    var pkg = self.getPackage(packageName, { throwOnError: true });
+    return pkg.getBuildAtArch(arch);
   }
 });
 

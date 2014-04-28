@@ -105,7 +105,7 @@ var SourceArch = function (pkg, options) {
   self.pkg = pkg;
 
   // Name for this sourceArchitecture. At the moment, there are really two
-  // options -- main and plugin.
+  // options -- main and plugin. We use these in linking
   self.archName = options.name;
 
   // The architecture (fully or partially qualified) that can use this
@@ -120,7 +120,6 @@ var SourceArch = function (pkg, options) {
   // - package: the package name
   // - constraint: the constraint on the version of the package to use,
   //   as a string (may be null)
-  // - build: the build name (optional)
   // - unordered: If true, we don't want the package's imports and we
   //   don't want to force the package to load before us. We just want
   //   to ensure that it loads if we load.
@@ -213,12 +212,6 @@ var PackageSource = function () {
   // Available architectures of this package. Array of SourceArch.
   self.architectures = [];
 
-  // Map from a system architecture to the list of SourceArch names that
-  // should be included by default if this package is used without specifying an
-  // architecture by default. (eg: "ddp" vs "ddp.server"). The most specific
-  // sourceArch will be used.
-  self.defaultArches = {};
-
   // The information necessary to build the plugins in this
   // package. Map from plugin name to object with keys 'name', 'use',
   // 'sources', and 'npmDependencies'.
@@ -269,7 +262,6 @@ _.extend(PackageSource.prototype, {
   initEmpty: function (name) {
     var self = this;
     self.name = name;
-    self.defaultArches = {'': []};
   },
 
   // Programmatically initialize a PackageSource from scratch.
@@ -290,7 +282,6 @@ _.extend(PackageSource.prototype, {
   // Options:
   // - sourceRoot (required if sources present)
   // - serveRoot (required if sources present)
-  // - archName
   // - use
   // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
@@ -318,7 +309,7 @@ _.extend(PackageSource.prototype, {
       return source;
     });
 
-    var build = new SourceArch(self, {
+    var sourceArch = new SourceArch(self, {
       name: options.archName,
       arch: "os",
       uses: _.map(options.use, utils.parseSpec),
@@ -326,12 +317,10 @@ _.extend(PackageSource.prototype, {
       nodeModulesPath: nodeModulesPath
     });
 
-    self.architectures.push(build);
+    self.architectures.push(sourceArch);
 
     if (! self._checkCrossBuildVersionConstraints())
       throw new Error("only one build, so how can consistency check fail?");
-
-    self.defaultArches = {'os': [options.archName]};
 
     self.dependencyVersions = options.dependencyVersions ||
         {dependencies: {}, plugins: {}};
@@ -878,9 +867,6 @@ _.extend(PackageSource.prototype, {
       }));
     });
 
-    // Default builds
-    self.defaultArches = { browser: ['main'], 'os': ['main'] };
-
     // If we have built this before, read the versions that we ended up using.
     var versionsFile = path.join(self.sourceRoot,  self._versionsFileName());
     if (fs.existsSync(versionsFile)) {
@@ -919,22 +905,22 @@ _.extend(PackageSource.prototype, {
       var arch = archName === "server" ? "os" : "browser";
 
       // Create build
-      var build = new SourceArch(self, {
+      var sourceArch = new SourceArch(self, {
         name: archName,
         arch: arch,
         uses: _.map(names, utils.parseSpec)
       });
-      self.architectures.push(build);
+      self.architectures.push(sourceArch);
 
       // Watch control files for changes
       // XXX this read has a race with the actual reads that are used
       _.each([path.join(appDir, '.meteor', 'packages'),
               path.join(appDir, '.meteor', 'release')], function (p) {
-                watch.readAndWatchFile(build.watchSet, p);
+                watch.readAndWatchFile(sourceArch.watchSet, p);
               });
 
       // Determine source files
-      build.getSourcesFunc = function (extensions, watchSet) {
+      sourceArch.getSourcesFunc = function (extensions, watchSet) {
         var sourceInclude = _.map(
           extensions,
           function (isTemplate, ext) {
@@ -1096,8 +1082,6 @@ _.extend(PackageSource.prototype, {
       // different constraints for different builds
       throw new Error("conflicting constraints in a package?");
     }
-
-    self.defaultArches = { browser: ['client'], 'os': ['server'] };
   },
 
   // True if the package defines any plugins.
@@ -1217,10 +1201,10 @@ _.extend(PackageSource.prototype, {
     var allConstraints = {}; // for error reporting. package name to array
     var failed = false;
 
-    _.each(self.architectures, function (build) {
+    _.each(self.architectures, function (arch) {
       // We need to iterate over both uses and implies, since implied packages
       // also constitute dependencies.
-      _.each(_.union(build.uses, build.implies), function (use) {
+      _.each(_.union(arch.uses, arch.implies), function (use) {
         // We can't really have a weak implies (what does that even mean?) but
         // we check for that elsewhere.
         if ((use.weak && options.skipWeak) ||
@@ -1247,9 +1231,7 @@ _.extend(PackageSource.prototype, {
         }
 
         d.references.push({
-          build: build.archName,
-          arch: archinfo.withoutSpecificOs(build.arch),
-          targetBuild: use.build,  // usually undefined, for "default builds"
+          arch: archinfo.withoutSpecificOs(arch.arch),
           weak: use.weak,
           unordered: use.unordered
         });

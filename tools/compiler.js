@@ -58,25 +58,23 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
     usesToProcess.push(use);
   });
 
-
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var builds =
-      packageLoader.getBuilds(_.pick(use, 'package', 'spec'),
-                                    arch);
-    _.each(builds, function (build) {
-      if (_.has(processedBuildId, build.id))
-        return;
-      processedBuildId[build.id] = true;
-      callback(build, {
-        unordered: !!use.unordered,
-        weak: !!use.weak
-      });
+    var build =
+          packageLoader.getBuild(use["package"], arch);
 
-      _.each(build.implies, function (implied) {
-        usesToProcess.push(implied);
-      });
+    if (_.has(processedBuildId, build.id))
+      continue;
+    processedBuildId[build.id] = true;
+
+    callback(build, {
+      unordered: !!use.unordered,
+      weak: !!use.weak
+    });
+
+    _.each(build.implies, function (implied) {
+      usesToProcess.push(implied);
     });
   }
 };
@@ -556,6 +554,9 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   var results = linker.prelink({
     inputFiles: js,
     useGlobalNamespace: isApp,
+    // I was confused about this, so I am leaving a comment -- the
+    // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
+    // XXX: If we change this, we can get rid of source arch names!
     combinedServePath: isApp ? null :
       "/packages/" + inputSourceArch.pkg.name +
       (inputSourceArch.archName === "main" ? "" : (":" + inputSourceArch.archName)) + ".js",
@@ -730,7 +731,6 @@ compiler.compile = function (packageSource, options) {
     metadata: packageSource.metadata,
     version: packageSource.version,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-    defaultBuilds: packageSource.defaultArches,
     isTest: packageSource.isTest,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,

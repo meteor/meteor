@@ -39,8 +39,6 @@ var Build = function (unipackage, options) {
   options = options || {};
   self.pkg = unipackage;
 
-  // These have the same meaning as they do in SourceArch.
-  self.buildName = options.name;
   self.arch = options.arch;
 
   self.uses = options.uses;
@@ -58,7 +56,7 @@ var Build = function (unipackage, options) {
   // to keep track of Builds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
-  self.id = unipackage.name + "." + self.buildName + "@" + self.arch + "#" +
+  self.id = unipackage.name + "." + self.pkg.name + "@" + self.arch + "#" +
     (nextBuildId ++);
 
   // Prelink output.
@@ -208,7 +206,6 @@ var Unipackage = function () {
   self.metadata = {};
   self.version = null;
   self.earliestCompatibleVersion = null;
-  self.defaultBuilds = {};
   self.isTest = false;
 
   // Builds, an array of class Build.
@@ -267,7 +264,6 @@ _.extend(Unipackage.prototype, {
   initEmpty: function (name) {
     var self = this;
     self.name = name;
-    self.defaultBuilds = {'': []};
   },
 
   // This is primarily intended to be used by the compiler. After
@@ -278,7 +274,6 @@ _.extend(Unipackage.prototype, {
     self.metadata = options.metadata;
     self.version = options.version;
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
-    self.defaultBuilds = options.defaultBuilds;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
     self.pluginWatchSet = options.pluginWatchSet;
@@ -301,38 +296,14 @@ _.extend(Unipackage.prototype, {
     return _.uniq(_.pluck(self.builds, 'arch')).sort();
   },
 
-  // Return the build of the package to use for a given build name
-  // (eg, 'main' or 'test') and target architecture (eg,
-  // 'os.linux.x86_64' or 'browser'), or throw an exception if
-  // that packages can't be loaded under these circumstances.
-  getSingleBuild: function (name, arch) {
+  // Return the build of the package to use for a given target architecture (eg,
+  // 'os.linux.x86_64' or 'browser'), or throw an exception if that packages
+  // can't be loaded under these circumstances.
+  getBuildAtArch: function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(
-      arch, _.pluck(_.where(self.builds, { buildName: name }), 'arch'));
-
-    if (! chosenArch) {
-      // XXX need improvement. The user should get a graceful error
-      // message, not an exception.
-      throw new Error((self.name || "this app") +
-                      " does not have a build named '" + name +
-                      "' that runs on architecture '" + arch + "'");
-    }
-
-    return _.where(self.builds, { buildName: name, arch: chosenArch })[0];
-  },
-
-  // Return the builds that should be used on a given arch if the
-  // package is named without any qualifiers (eg, 'ddp' rather than
-  // 'ddp.client').
-  //
-  // On error, throw an exception, or if inside
-  // buildmessage.capture(), log a build error and return [].
-  getDefaultBuilds: function (arch) {
-    var self = this;
-
-    var chosenArch = archinfo.mostSpecificMatch(arch,
-                                                _.keys(self.defaultBuilds));
+      arch, _.pluck(self.builds, 'arch'));
 
     if (! chosenArch) {
       buildmessage.error(
@@ -340,12 +311,9 @@ _.extend(Unipackage.prototype, {
           " is not compatible with architecture '" + arch + "'",
         { secondary: true });
       // recover by returning by no builds
-      return [];
+      return null;
     }
-
-    return _.map(self.defaultBuilds[chosenArch], function (name) {
-      return self.getSingleBuild(name, arch);
-    });
+    return _.where(self.builds, { arch: chosenArch })[0];
   },
 
   // Load this package's plugins into memory, if they haven't already
@@ -512,11 +480,6 @@ _.extend(Unipackage.prototype, {
       self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
       self.isTest = mainJson.isTest;
     }
-    // If multiple sub-unipackages specify defaultBuilds or testBuilds for the
-    // same arch, just take the answer from the first sub-unipackage.
-    self.defaultBuilds = _.extend(mainJson.defaultBuilds,
-                                  self.defaultBuilds || {});
-
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
 
@@ -539,8 +502,7 @@ _.extend(Unipackage.prototype, {
 
       // Skip builds we already have.
       var alreadyHaveBuild = _.find(self.builds, function (build) {
-        return build.buildName === buildMeta.name &&
-          build.arch === buildMeta.arch;
+        return build.arch === buildMeta.arch;
       });
       if (alreadyHaveBuild)
         return;
@@ -653,7 +615,6 @@ _.extend(Unipackage.prototype, {
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
         builds: [],
-        defaultBuilds: self.defaultBuilds,
         plugins: []
       };
 
@@ -710,16 +671,13 @@ _.extend(Unipackage.prototype, {
       // Builds
       _.each(self.builds, function (build) {
         // Make up a filename for this build
-        var baseBuildName =
-          (build.buildName === "main" ? "" : (build.buildName + ".")) +
-          build.arch;
+        var baseBuildName = build.arch;
         var buildDir =
           builder.generateFilename(baseBuildName, { directory: true });
         var buildJsonFile =
           builder.generateFilename(baseBuildName + ".json");
 
         mainJson.builds.push({
-          name: build.buildName,
           arch: build.arch,
           path: buildJsonFile
         });

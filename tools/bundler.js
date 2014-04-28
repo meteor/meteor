@@ -490,15 +490,13 @@ _.extend(Target.prototype, {
 
     // Find the roots
     var rootBuilds =
-      _.flatten([
         _.map(options.packages || [], function (p) {
           if (typeof p === "string") {
-            return packageLoader.getBuilds(p, self.arch);
+            return packageLoader.getBuild(p, self.arch);
           } else {
-            return p.getDefaultBuilds(self.arch);
+            return p.getBuildAtArch(self.arch);
           }
-        })
-      ]);
+        });
 
     // PHASE 1: Which builds will be used?
     //
@@ -659,7 +657,7 @@ _.extend(Target.prototype, {
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: path.join(
-                    'npm', build.pkg.name, build.buildName, 'node_modules')
+                    'npm', build.pkg.name, 'node_modules')
                 });
                 self.nodeModulesDirectories[build.nodeModulesPath] = nmd;
               }
