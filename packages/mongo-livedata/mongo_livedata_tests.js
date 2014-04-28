@@ -1247,13 +1247,13 @@ if (Meteor.isServer) {
 
 testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
-
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
+  }, function (test, expect) {
+    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
 
     coll.insert({}, expect(function (err, id) {
       test.isFalse(err);
@@ -1267,28 +1267,27 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
 // See https://github.com/meteor/meteor/issues/594.
 testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
   function (test, expect) {
-    var self = this;
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
+  }, function (test, expect) {
+    var coll = this.coll = new Meteor.Collection(this.collectionName, collectionOptions);
 
-    self.coll = new Meteor.Collection(collectionName, collectionOptions);
-
-    self.coll.insert({foo: 'x', length: 0}, expect(function (err, id) {
+    coll.insert({foo: 'x', length: 0}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
       self.docId = id;
-      test.equal(self.coll.findOne(self.docId),
+      test.equal(coll.findOne(self.docId),
                  {_id: self.docId, foo: 'x', length: 0});
     }));
   },
   function (test, expect) {
-    var self = this;
-    self.coll.update(self.docId, {$set: {length: 5}}, expect(function (err) {
+    var coll = this.coll;
+    coll.update(self.docId, {$set: {length: 5}}, expect(function (err) {
       test.isFalse(err);
-      test.equal(self.coll.findOne(self.docId),
+      test.equal(coll.findOne(self.docId),
                  {_id: self.docId, foo: 'x', length: 5});
     }));
   }
@@ -1296,13 +1295,14 @@ testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
   function (test, expect) {
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
+  }, function (test, expect) {
 
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
+    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
     var docId;
     coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
       test.isFalse(err);
@@ -1328,13 +1328,14 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
       transform: seconds,
       transformName: "seconds"
     };
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
-
-    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+  }, function (test, expect) {
+    var self = this;
+    self.coll = new Meteor.Collection(self.collectionName, collectionOptions);
     var obs;
     var expectAdd = expect(function (doc) {
       test.equal(doc.seconds(), 50);
@@ -1388,12 +1389,14 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
       transform: justId,
       transformName: "justId"
     };
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
-    self.coll = new Meteor.Collection(collectionName, collectionOptions);
+  }, function (test, expect) {
+    var self = this;
+    self.coll = new Meteor.Collection(this.collectionName, collectionOptions);
     self.coll.insert({}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
@@ -1413,13 +1416,13 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
         "dCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdl" +
         "bmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9y" +
         "dCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=");
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
-
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
+  }, function (test, expect) {
+    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
     var docId;
     coll.insert({b: bin}, expect(function (err, id) {
       test.isFalse(err);
@@ -1436,13 +1439,13 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
 
 testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, [
   function (test, expect) {
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
-
-    var coll = new Meteor.Collection(collectionName, collectionOptions);
+  }, function (test, expect) {
+    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
     var docId;
     // Dog is implemented at the top of the file, outside of the idGeneration
     // loop (so that we only call EJSON.addType once).
@@ -2135,17 +2138,18 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
 
 testAsyncMulti('mongo-livedata - specified _id', [
   function (test, expect) {
-    var collectionName = Random.id();
+    this.collectionName = Random.id();
     if (Meteor.isClient) {
-      Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.call('createInsecureCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
     }
+  }, function (test, expect) {
     var expectError = expect(function (err, result) {
       test.isTrue(err);
       var doc = coll.findOne();
       test.equal(doc.name, "foo");
     });
-    var coll = new Meteor.Collection(collectionName);
+    var coll = new Meteor.Collection(this.collectionName);
     coll.insert({_id: "foo", name: "foo"}, expect(function (err1, id) {
       test.equal(id, "foo");
       var doc = coll.findOne();
@@ -2342,7 +2346,7 @@ testAsyncMulti('mongo-livedata - empty string _id', [
     self.collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', self.collectionName);
-      Meteor.subscribe('c-' + self.collectionName);
+      Meteor.subscribe('c-' + self.collectionName, expect());
     }
     self.coll = new Meteor.Collection(self.collectionName);
     try {
@@ -2537,7 +2541,7 @@ testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
     var collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.subscribe('c-' + collectionName, expect());
     }
 
     self.collection = new Meteor.Collection(collectionName);
@@ -2790,7 +2794,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
     var collectionName = "ejson" + Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName);
+      Meteor.subscribe('c-' + collectionName, expect());
     }
 
     self.collection = new Meteor.Collection(collectionName);
