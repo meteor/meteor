@@ -33,7 +33,7 @@ these directives, which are considered "foreign objects."
 # Built-in Types
 
 The following types are built into HTMLjs.  Built-in methods like
-`HTML.toHTML` expect a tree consisting only of these types.
+`HTML.toHTML` require a tree consisting only of these types.
 
 * __`null`, `undefined`__ - Render to nothing.
 
@@ -88,6 +88,7 @@ Tags have the following properties:
 * `children` - An array of children (always present)
 * `attrs` - An attributes dictionary, `null`, or an array (see below)
 
+
 ### Special forms of attributes
 
 The attributes of a Tag may be an array of dictionaries.  In order
@@ -107,7 +108,162 @@ div.attrs // => [{id: "main"}, {'class': "container"}]
 `HTML.Attrs` may also be used to pass a foreign object in place of
 an attributes dictionary of a tag.
 
-### Foreign objects
+
+
+### Normalized Case for Tag Names
+
+The `tagName` field is always in "normalized case," which is the
+official case for that particular element name (usually lowercase).
+For example, `HTML.DIV().tagName` is `"div"`.  For some elements
+used in inline SVG graphics, the correct case is "camelCase."  For
+example, there is an element named `clipPath`.
+
+Web browsers have a confusing policy about case.  They perform case
+normalization when parsing HTML, but not when creating SVG elements
+at runtime; the correct case is required.
+
+Therefore, in order to avoid ever having to normalize case at
+runtime, the policy of HTMLjs is to put the burden on the caller
+of functions like `HTML.ensureTag` -- for example, a template
+engine -- of supplying correct normalized case.
+
+Briefly put, normlized case is usually lowercase, except for certain
+elements where it is camelCase.
+
+
+### Known Elements
+
+HTMLjs comes preloaded with constructors for all "known" HTML and
+SVG elements.  You can use `HTML.P`, `HTML.DIV`, and so on out of
+the box.  If you want to create a tag like `<foo>` for some reason,
+you have to tell HTMLjs to create the `HTML.FOO` constructor for you
+using `HTML.ensureTag` or `HTML.getTag`.
+
+HTMLjs's lists of known elements are public because they are useful to
+other packages that provide additional functions not found here, like
+functions for normalizing case.
+
+
+
+### HTML.getTag(tagName)
+
+* `tagName` - A string in normalized case
+
+Creates a tag constructor for `tagName`, assigns it to the `HTML`
+namespace object, and returns it.
+
+For example, `HTML.getTag("p")` returns `HTML.P`.  `HTML.getTag("foo")`
+will create and return `HTML.FOO`.
+
+It's very important that `tagName` be in normalized case, or else
+an incorrect tag constructor will be registered and used henceforth.
+
+
+### HTML.ensureTag(tagName)
+
+* `tagName` - A string in normalized case
+
+Ensures that a tag constructor (like `HTML.FOO`) exists for a tag
+name (like `"foo"`), creating it if necessary.  Like `HTML.getTag`
+but does not return the tag constructor.
+
+
+### HTML.isTagEnsured(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether a particular tag is guaranteed to be available on
+the `HTML` object (under the name returned by `HTML.getSymbolName`).
+
+Useful for code generators.
+
+
+### HTML.getSymbolName(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns the name of the all-caps constructor (like `"FOO"`) for a
+tag name in normalized case (like `"foo"`).
+
+In addition to converting `tagName` to all-caps, hyphens (`-`) in
+tag names are converted to underscores (`_`).
+
+Useful for code generators.
+
+
+### HTML.knownElementNames
+
+An array of all known HTML5 and SVG element names in normalized case.
+
+
+### HTML.knownSVGElementNames
+
+An array of all known SVG element names in normalized case.
+
+The `"a"` element is not included because it is primarily a non-SVG
+element.
+
+
+### HTML.voidElementNames
+
+An array of all "void" element names in normalized case.  Void
+elements are elements with a start tag and no end tag, such as BR,
+HR, IMG, and INPUT.
+
+The HTML spec defines a closed class of void elements.
+
+
+### HTML.isKnownElement(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether `tagName` is a known HTML5 or SVG element.
+
+
+### HTML.isKnownSVGElement(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether `tagName` is the name of a known SVG element.
+
+
+### HTML.isVoidElement(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether `tagName` is the name of a void element.
+
+
+## HTML.CharRef({html: ..., str: ...})
+
+Represents a character reference like `&nbsp;`.
+
+A CharRef is not required for escaping special characters like `<`,
+which are automatically escaped by HTMLjs.  For example,
+`HTML.toHTML("<")` is `"&lt;"`.  Also, now that browsers speak
+Unicode, non-ASCII characters typically do not need to be expressed
+as character references either.  The purpose of `CharRef` is offer
+control over the generated HTML, allowing template engines to
+preserve any character references that they come across.
+
+Constructing a CharRef requires two strings, the uninterpreted
+"HTML" form and the interpreted "string" form.  Both are required
+to be present, and it is up to the caller to make sure the
+information is accurate.
+
+Examples of valid CharRefs:
+
+* `HTML.CharRef({html: '&amp;', str: '&'})`
+* `HTML.CharRef({html: '&nbsp;', str: '\u00A0'})
+
+Instance properties: `.html`, `.str`
+
+
+## HTML.Comment(value)
+
+## HTML.Raw(value)
+
+## Foreign objects
 
 Arbitrary objects are allowed in HTMLjs trees, which is useful for
 adapting HTMLjs to a wide variety of uses.  Such objects are called
