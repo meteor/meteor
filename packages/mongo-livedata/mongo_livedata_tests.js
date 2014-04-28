@@ -1764,6 +1764,8 @@ var asyncUpsertTestName = function (useNetwork, useDirectCollection,
 // collections, and run the tests for both the Meteor.Collection and the
 // LocalCollection. On the server, we test mongo-backed collections, for both
 // the Meteor.Collection and the MongoConnection.
+//
+// XXX Rewrite with testAsyncMulti, that would simplify things a lot!
 _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
   _.each(useNetwork ? [false] : [true, false], function (useDirectCollection) {
     _.each([true, false], function (useUpdate) {
@@ -1774,10 +1776,16 @@ _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
               (useUpdate ? "_update_" : "") +
               (useNetwork ? "_network_" : "") +
               (useDirectCollection ? "_direct_" : "");
+
+        var next0 = function () {
+          // Test starts here.
+          upsert(coll, useUpdate, {_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
+        };
+
         if (useNetwork) {
           Meteor.call("createInsecureCollection", collName, collectionOptions);
           coll = new Meteor.Collection(collName, collectionOptions);
-          Meteor.subscribe("c-" + collName);
+          Meteor.subscribe("c-" + collName, next0);
         } else {
           var opts = _.clone(collectionOptions);
           if (Meteor.isClient)
@@ -1799,8 +1807,9 @@ _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
           upsert(coll, useUpdate, {_id: 'foo'}, {foo: 'baz'}, next2);
         };
 
-        // Test starts here.
-        upsert(coll, useUpdate, {_id: 'foo'}, {_id: 'foo', foo: 'bar'}, next1);
+        if (! useNetwork) {
+          next0();
+        }
 
         var t1, t2, result2;
         var next2 = function (err, result) {
