@@ -2310,35 +2310,16 @@ _.each( ['STRING', 'MONGO'], function (idGeneration) {
 
   testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
     var collectionOptions = { idGeneration: idGeneration };
-    var collections = this.collections = [];
 
-    var subscriptionHandles = [];
-
-    for (var i = 0; i < collectionCount; i++) {
+    this.collections = _.times(collectionCount, function () {
       var collectionName = "consistentid_" + Random.id();
       if (Meteor.isClient) {
         Meteor.call('createInsecureCollection', collectionName, collectionOptions);
-        subscriptionHandles.push(Meteor.subscribe('c-' + collectionName));
+        Meteor.subscribe('c-' + collectionName, expect());
       }
 
-      var coll = new Meteor.Collection(collectionName, collectionOptions);
-      COLLECTIONS[collectionName] = coll;
-
-      collections.push(coll);
-    }
-
-    // wait for all subscriptions to be ready (on client only -- on
-    // the server we don't subscribe)
-    if (Meteor.isClient) {
-      var allSubsReady = expect();
-
-      Deps.autorun(function (c) {
-        if (_.all(_.invoke(subscriptionHandles, 'ready'), _.identity)) {
-          c.stop();
-          allSubsReady();
-        }
-      });
-    }
+      return (COLLECTIONS[collectionName] = new Meteor.Collection(collectionName, collectionOptions));
+    });
   }, function (test, expect) {
     // now run the actual test
     for (var i = 0; i < repetitions; i++) {
