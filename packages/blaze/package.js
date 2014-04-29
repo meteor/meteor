@@ -15,6 +15,7 @@ Package.on_use(function (api) {
     'preamble.js',
     'sequence.js',
     'var.js',
+    'dombackend.js',
     'domrange.js',
     'events.js',
     'render.js',

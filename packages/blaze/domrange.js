@@ -77,7 +77,7 @@ _.extend(Blaze.DOMRange.prototype, {
     this.parentElement = parentElement;
 
     for(var i = 0; i < this.augmenters.length; i++)
-      this.augmenters[i].attach(parentElement);
+      this.augmenters[i].attach(this, parentElement);
   },
   setMembers: function (newNodeAndRangeArray) {
     var newMembers = newNodeAndRangeArray;
@@ -130,6 +130,7 @@ _.extend(Blaze.DOMRange.prototype, {
     if (! this.attached)
       throw new Error("Must be attached");
 
+    var oldParentElement = this.parentElement;
     var members = this.members;
     if (members.length) {
       for (var i = 0; i < members.length; i++) {
@@ -144,7 +145,7 @@ _.extend(Blaze.DOMRange.prototype, {
     this.parentElement = null;
 
     for(var i = 0; i < this.augmenters.length; i++)
-      this.augmenters[i].detach();
+      this.augmenters[i].detach(this, oldParentElement);
   },
   addMember: function (newMember, atIndex) {
     var members = this.members;
@@ -276,20 +277,50 @@ _.extend(Blaze.DOMRange.prototype, {
 
 Blaze.DOMAugmenter = function () {};
 _.extend(Blaze.DOMAugmenter, {
-  attach: function (element) {},
-  detach: function () {}
+  attach: function (range, element) {},
+  // arguments are same as were passed to `attach`
+  detach: function (range, element) {}
 });
 
 Blaze.EventAugmenter = function (eventMap) {
   this.eventMap = eventMap;
+  this.handles = [];
 };
 Blaze.EventAugmenter.prototype = new Blaze.DOMAugmenter;
 _.extend(Blaze.EventAugmenter.prototype, {
-  attach: function (element) {
-    // XXX TODO
+  attach: function (range, element) {
+    var self = this;
+    var eventMap = self.eventMap;
+    var handles = self.handles;
+
+    _.each(eventMap, function (handler, spec) {
+      var clauses = spec.split(/,\s+/);
+      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var newEvents = parts.shift();
+        var selector = parts.join(' ');
+        handles.push(Blaze.EventSupport.listen(
+          element, newEvents, selector,
+          function (evt) {
+            if (! range.containsElement(evt.currentTarget))
+              return;
+            return handler.apply(this, arguments);
+          },
+          range, function (r) {
+            return r.parentRange;
+          }));
+      });
+    });
   },
   detach: function () {
-    // XXX TODO
+    _.each(this.handles, function (h) {
+      h.stop();
+    });
+    this.handles.length = 0;
   }
 });
 

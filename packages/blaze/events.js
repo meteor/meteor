@@ -180,7 +180,7 @@ EventSupport.listen = function (element, events, selector, handler, recipient, g
       // an element.
       for (var i = 0; i < newHandlerRecs.length; i++) {
         var handlerToRemove = newHandlerRecs[i];
-        var info = eventDict[handlerToRemove].type;
+        var info = eventDict[type];
         if (! info)
           continue;
         var handlerList = info.handlers;

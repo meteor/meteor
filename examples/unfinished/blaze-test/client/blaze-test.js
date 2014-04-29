@@ -50,7 +50,7 @@ Events = function (eventMap, func) {
 
   Blaze.Controller.call(this);
 
-  //// when do I call listen()?  When the DOMRange is attached, somehow?
+  this.eventMap = eventMap;
   this.func = func;
 };
 Blaze.__extends(Events, Blaze.Controller);
@@ -58,6 +58,11 @@ _.extend(Events.prototype, {
   render: function () {
     var func = this.func;
     return func();
+  },
+  renderToDOM: function () {
+    var range = Blaze.Controller.prototype.renderToDOM.call(this);
+    range.addDOMAugmenter(new Blaze.EventAugmenter(this.eventMap));
+    return range;
   }
 });
 
@@ -130,8 +135,7 @@ outerRange = Blaze.render(function () {
                          function () {
                            return HTML.LI(
                              Blaze.Isolate(function () {
-                               debugger;
-                               console.log('Context:', Blaze.currentController.data.get());
+                               console.log('Context:', Blaze.currentController.parentController.data.get());
                                return theNumber.get(); }),
                              " - ", new Ticker
                            );
