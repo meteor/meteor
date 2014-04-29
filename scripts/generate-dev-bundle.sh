@@ -71,12 +71,13 @@ umask 022
 mkdir build
 cd build
 
-git clone git://github.com/joyent/node.git
+# Note: this is our fork!
+git clone git://github.com/meteor/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.26
+git checkout v0.10.26-uncorrupt-npm-cache
 
 ./configure --prefix="$DIR"
 make -j4
