@@ -98,7 +98,7 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
   visitRaw: function (raw, intoArray) {
     // Get an array of DOM nodes by using the browser's HTML parser
     // (like innerHTML).
-    var nodes = DOMBackend.parseHTML(raw.value);
+    var nodes = Blaze.DOMBackend.parseHTML(raw.value);
     for (var i = 0; i < nodes.length; i++)
       intoArray.push(nodes[i]);
 
