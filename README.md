@@ -10,15 +10,15 @@ templates during compilation.
 var UL = HTML.UL, LI = HTML.LI, B = HTML.B;
 
 HTML.toHTML(
- UL({id: 'mylist'},
-    LI({'class': 'item'}, "Hello ", B("world"), "!"),
-    LI({'class': 'item'}, "Goodbye, world")))
+  UL({id: 'mylist'},
+     LI({'class': 'item'}, "Hello ", B("world"), "!"),
+     LI({'class': 'item'}, "Goodbye, world")))
 ```
 
 ```
 <ul id="mylist">
- <li class="item">Hello <b>world</b>!</li>
- <li class="item">Goodbye, world</li>
+  <li class="item">Hello <b>world</b>!</li>
+  <li class="item">Goodbye, world</li>
 </ul>
 ```
 
