@@ -1464,66 +1464,6 @@ main.registerCommand({
   }
 });
 
-
-///////////////////////////////////////////////////////////////////////////////
-// run-command
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'run-command',
-  hidden: true,
-  minArgs: 1,
-  maxArgs: Infinity
-}, function (options) {
-  if (! fs.existsSync(options.args[0]) ||
-      ! fs.statSync(options.args[0]).isDirectory()) {
-    process.stderr.write(options.args[0] + ": not a directory\n");
-    return 1;
-  }
-
-  // Build and load the package
-  var world, packageName;
-  var messages = buildmessage.capture(
-    { title: "building the program" }, function () {
-      // Make the directory visible as a package. Derive the last
-      // package name from the last component of the directory, and
-      // bail out if that creates a conflict.
-      var packageDir = path.resolve(options.args[0]);
-      packageName = path.basename(packageDir) + "-tool";
-      if (catalog.getPackage(packageName)) {
-        buildmessage.error("'" + packageName +
-                           "' conflicts with the name " +
-                           "of a package in the catalog");
-      }
-      catalog.addLocalPackage(packageName, packageDir);
-
-      world = uniload.load({
-        packages: [ packageName ],
-        release: release.current.name
-      });
-    });
-  if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
-  if (typeof world[packageName].main !== "function") {
-    process.stderr.write("Package does not define a main() function.\n");
-    return 1;
-  }
-
-  var ret = world[packageName].main(options.args.slice(1));
-  // let exceptions propagate and get printed by node
-  if (ret === undefined)
-    ret = 0;
-  if (typeof ret !== "number")
-    ret = 1;
-  ret = +ret; // cast to integer
-
-  catalog.removeLocalPackage(packageName);
-  return ret;
-});
-
 ///////////////////////////////////////////////////////////////////////////////
 // login
 ///////////////////////////////////////////////////////////////////////////////
