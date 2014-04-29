@@ -1953,6 +1953,10 @@ Tinytest.add(
     var numUrlAttrs = 4;
     var div = renderToDiv(tmpl);
 
+    // [tag name, attr name, is a url attribute]
+    var attrsList = [["A", "href", true], ["FORM", "action", true],
+                     ["IMG", "src", true], ["INPUT", "value", false]];
+
     var checkAttrs = function (url, isJavascriptProtocol) {
       if (isJavascriptProtocol) {
         Meteor._suppress_log(numUrlAttrs);
@@ -1960,14 +1964,23 @@ Tinytest.add(
       Session.set(sessionKey, url);
       Deps.flush();
       _.each(
-        // [tag name, attr name, is a url attribute]
-        [["A", "href", true], ["FORM", "action", true],
-         ["IMG", "src", true], ["INPUT", "value", false]],
+        attrsList,
         function (attrInfo) {
-
           var normalizedUrl;
           var elem = document.createElement(attrInfo[0]);
-          elem[attrInfo[1]] = url;
+          try {
+            elem[attrInfo[1]] = url;
+          } catch (err) {
+            // IE throws an exception if you set an img src to a
+            // javascript: URL. Blaze can't override this behavior;
+            // whether you've called UI._javascriptUrlsAllowed() or not,
+            // you won't be able to set a javascript: URL in an img
+            // src. So we only test img tags in other browsers.
+            if (attrInfo[0] === "IMG") {
+              return;
+            }
+            throw err;
+          }
           document.body.appendChild(elem);
           normalizedUrl = elem[attrInfo[1]];
           document.body.removeChild(elem);
