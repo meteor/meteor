@@ -2315,16 +2315,20 @@ function functionChain2Upsert (test, expect, coll, index) {
   }));
 };
 
-_.each( [collectionInsert, collectionUpsert,
-         functionCallsInsert, functionCallsUpsert, functionCallsUpsertExisting,
-         functionCalls3Inserts,
-         functionChainInsert,
-         functionChain2Insert, functionChain2Upsert], function (fn) {
+_.each( {collectionInsert: collectionInsert,
+         collectionUpsert: collectionUpsert,
+         functionCallsInsert: functionCallsInsert,
+         functionCallsUpsert: functionCallsUpsert,
+         functionCallsUpsertExisting: functionCallsUpsertExisting,
+         functionCalls3Insert: functionCalls3Inserts,
+         functionChainInsert: functionChainInsert,
+         functionChain2Insert: functionChain2Insert,
+         functionChain2Upsert: functionChain2Upsert}, function (fn, name) {
 _.each( [1, 3], function (repetitions) {
 _.each( [1, 3], function (collectionCount) {
 _.each( ['STRING', 'MONGO'], function (idGeneration) {
 
-  testAsyncMulti('mongo-livedata - consistent _id generation ' + fn.name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
+  testAsyncMulti('mongo-livedata - consistent _id generation ' + name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
     var collectionOptions = { idGeneration: idGeneration };
 
     this.collections = _.times(collectionCount, function () {
