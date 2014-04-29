@@ -622,6 +622,27 @@ HTML.flattenAttributes = function (attrs) {
 
 ////////////////////////////// TOHTML
 
+/**
+ * ## HTML.toHTML(content)
+ *
+ * * `content` - any HTMLjs content
+ *
+ * Returns a string of HTML generated from `content`.
+ *
+ * For example:
+ *
+ * ```
+ * HTML.toHTML(HTML.HR()) // => "<hr>"
+ * ```
+ *
+ * Foreign objects are not allowed in `content`.  To generate HTML
+ * containing foreign objects, create a subclass of
+ * `HTML.ToHTMLVisitor` and override `visitObject`.
+ */
+HTML.toHTML = function (content) {
+  return (new HTML.ToHTMLVisitor).visit(content);
+};
+
 // Escaping modes for outputting text when generating HTML.
 HTML.TEXTMODE = {
   STRING: 1,
@@ -631,6 +652,31 @@ HTML.TEXTMODE = {
 
 /**
  * ## HTML.toText(content, textMode)
+ *
+ * * `content` - any HTMLjs content
+ * * `textMode` - the type of text to generate; one of
+ *   `HTML.TEXTMODE.STRING`, `HTML.TEXTMODE.RCDATA`, or
+ *   `HTML.TEXTMODE.ATTRIBUTE`
+ *
+ * Generating HTML or DOM from HTMLjs content requires generating text
+ * for attribute values and for the contents of TEXTAREA elements,
+ * among others.  The input content may contain strings, arrays,
+ * booleans, numbers, nulls, and CharRefs.  Behavior on other types
+ * is undefined.
+ *
+ * The required `textMode` argument specifies the type of text to
+ * generate:
+ *
+ * * `HTML.TEXTMODE.STRING` - a string with no special
+ *   escaping or encoding performed, suitable for passing to
+ *   `setAttribute` or `document.createTextNode`.
+ * * `HTML.TEXTMODE.RCDATA` - a string with `<` and `&` encoded
+ *   as character references (and CharRefs included in their
+ *   "HTML" form), suitable for including in a string of HTML
+ * * `HTML.TEXTMODE.ATTRIBUTE` - a string with `"` and `&` encoded
+ *   as character references (and CharRefs included in their
+ *   "HTML" form), suitable for including in an HTML attribute
+ *   value surrounded by double quotes
  */
 
 HTML.toText = function (content, textMode) {
@@ -643,11 +689,4 @@ HTML.toText = function (content, textMode) {
 
   var visitor = new HTML.ToTextVisitor({textMode: textMode});;
   return visitor.visit(content);
-};
-
-/**
- * ## HTML.toHTML(content)
- */
-HTML.toHTML = function (content) {
-  return (new HTML.ToHTMLVisitor).visit(content);
 };
