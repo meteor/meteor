@@ -25,14 +25,11 @@ var files = require('./files.js');
 // be, but using a different release name will flush the cache
 // completely.
 //
-// XXX XXX currently only local packages (eg, checkout packages) can
-// be loaded. This means that uniload.load is completely
-// nonfunctional on release builds, breaking quite a lot of tool
-// functionality. We have several options here. We could make the tool
-// into a star and eliminate uniload.load completely. Or we could
-// make a static list of versions when we build a release and put that
-// in the root of the tools directory and use that to create the
-// PackageLoader.
+// When run from a checkout, uniload only loads local (from the checkout)
+// packages: never packages from troposphere. When run from a release build,
+// uniload only loads pre-built unipackages that are distributed alongside the
+// tool: never local packages or packages from troposphere (so in this mode, it
+// never compiles the source of a real package).
 //
 // Options:
 // - packages: The packages to load, as an array of strings. Each
