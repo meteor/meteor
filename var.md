@@ -53,7 +53,7 @@ a.set(2); // => LOG: 4
 a.set(10), b.set(10); // => LOG: 20 (printed once)
 ```
 
-To use a Var with an initializer function, an outer autorun is necessary
+To use a Var with an initializer function, an outer Computation is necessary
 and is used to stop the recomputation.
 
 Example:
@@ -62,7 +62,7 @@ Example:
 var a = Blaze.Var(1);
 var b = Blaze.Var(1);
 
-var handle = Deps.autorun(function () {
+var handle = Deps.autorun(function () { // wrapper Computation
   var c = Blaze.Var(function () {
     return a.get() + b.get();
   });
@@ -81,6 +81,17 @@ a.set(10), b.set(10); // => LOG: 20 (printed once)
 handle.stop();
 a.set(1); // nothing printed
 ```
+
+The "wrapper Computation" in the example above is not necessary when
+writing rendering code in Blaze, which is always invoked in a
+Computation.
+
+As in the above example, the correct place to read a Var is typically
+from an autorun that exists alongside the Var.  Creating a Var and
+then getting its value (from the same Computation or an enclosing one)
+is an antipattern, because when the Var changes, it will trigger its
+own destruction and (usually) recreation.  While the result may be
+correct, extra computation and data access will be performed.
 
 
 ## Blaze.Var#get()
