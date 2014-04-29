@@ -144,8 +144,11 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    return fs.readFileSync(
-      path.join(files.getCurrentToolsDir(), '.tools_version.txt'), 'utf8');
+    var unipackageJson = fs.readFileSync(
+      path.join(files.getCurrentToolsDir(),
+                '..',  // get out of tool, back to package
+                'unipackage.json'));
+    return JSON.parse(unipackageJson).version;
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
@@ -154,10 +157,7 @@ files.getToolsVersion = function () {
 // Return the root of dev_bundle (probably /usr/local/meteor in an
 // install, or (checkout root)/dev_bundle in a checkout.).
 files.getDevBundle = function () {
-  if (files.inCheckout())
-    return path.join(files.getCurrentToolsDir(), 'dev_bundle');
-  else
-    return files.getCurrentToolsDir();
+  return path.join(files.getCurrentToolsDir(), 'dev_bundle');
 };
 
 // Return the top-level directory for this meteor install or checkout

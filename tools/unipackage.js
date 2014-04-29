@@ -821,7 +821,6 @@ _.extend(Unipackage.prototype, {
       });
 
       if (self.includeTool) {
-        console.log(builder.buildPath)
         var toolsJson = self._writeTool(builder);
         mainJson.tools = toolsJson;
       }

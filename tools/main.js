@@ -295,6 +295,10 @@ var longHelp = function (commandName) {
 //   us to use when restarting (this functions exactly like --release
 //   and will cause release.forced to be true).
 var springboard = function (toolsVersion, releaseOverride) {
+  // The new way of building tools doesn't support springboarding yet.
+  console.log("SPRINGBOARDING DISABLED");
+  return;
+
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);

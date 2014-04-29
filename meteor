@@ -97,14 +97,10 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
-
-    DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/tools/main.js"
-else
-    # In an install
-    DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/tools/main.js"
 fi
+
+DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
+METEOR="$SCRIPT_DIR/tools/main.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a
