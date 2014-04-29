@@ -2,7 +2,7 @@
  * ## [new] Blaze.Var(initializer[, equalsFunc])
  *
  * A reactive mutable variable which may be initialized with a value
- * or with a function to immediately autorun.
+ * or with a function which is immediately autorun.
  *
  * * `initializer` - A function or a non-function value to use to
  *   initialize the Var.  If a function is given, it is called in
