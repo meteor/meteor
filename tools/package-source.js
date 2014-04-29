@@ -167,6 +167,9 @@ var SourceArch = function (pkg, options) {
   // but only control files such as package.js and .meteor/packages,
   // since the rest are not determined until compile time.
   self.watchSet = options.watchSet || new watch.WatchSet;
+
+  // See the field of the same name in PackageSource.
+  self.noSources = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -253,6 +256,13 @@ var PackageSource = function () {
   // the packages in this array as well as their transitive (strong)
   // dependencies.
   self.includeTool = null;
+
+  // If this is true, then this package has no source files. (But the converse
+  // is not true: this is only set to true by one particular constructor.) This
+  // is specifically so that a few pieces of code can detect the wrapper "load"
+  // package that uniload uses and not do extra work that doesn't make sense in
+  // the uniload context.
+  self.noSources = false;
 };
 
 
@@ -291,7 +301,7 @@ _.extend(PackageSource.prototype, {
     var self = this;
     self.name = name;
 
-    if (options.sources && ! _.isEmpty(options.sources.length) &&
+    if (options.sources && ! _.isEmpty(options.sources) &&
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
@@ -316,6 +326,11 @@ _.extend(PackageSource.prototype, {
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
+
+    if (!sources.length) {
+      self.noSources = true;
+      sourceArch.noSources = true;
+    }
 
     self.architectures.push(sourceArch);
 

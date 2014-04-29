@@ -509,13 +509,15 @@ _.extend(Target.prototype, {
 
     // What builds will be used in the target? Built in Phase 1, read in
     // Phase 2.
-    var getsUsed = {};  // Map from build.id to Build.
+    var usedBuilds = {};  // Map from build.id to Build.
+    var usedPackages = {};  // Map from package name to true;
     var addToGetsUsed = function (build) {
-      if (_.has(getsUsed, build.id))
+      if (_.has(usedBuilds, build.id))
         return;
-      getsUsed[build.id] = build;
-      compiler.eachUsedBuild(build.uses, self.arch, packageLoader,
-                          {skipWeak: true}, addToGetsUsed);
+      usedBuilds[build.id] = build;
+      usedPackages[build.pkg.name] = true;
+      compiler.eachUsedBuild(
+        build.uses, self.arch, packageLoader, addToGetsUsed);
     };
     _.each(rootBuilds, addToGetsUsed);
 
@@ -530,7 +532,7 @@ _.extend(Target.prototype, {
     // XXX The topological sort code here is duplicated in catalog.js.
 
     // What builds have not yet been added to self.builds?
-    var needed = _.clone(getsUsed);  // Map from build.id to Build.
+    var needed = _.clone(usedBuilds);  // Map from build.id to Build.
     // Builds that we are in the process of adding; used to detect circular
     // ordered dependencies.
     var onStack = {};  // Map from build.id to true.
@@ -547,13 +549,14 @@ _.extend(Target.prototype, {
       // will depend on `build` and need to be added after it. So we ignore
       // those edge. Because we did follow those edges in Phase 1, any unordered
       // builds were at some point in `needed` and will not be left out).
+      //
+      // eachUsedBuild does follow weak edges (ie, they affect the ordering),
+      // but only if they point to a package in usedPackages (ie, a package that
+      // SOMETHING uses strongly).
       compiler.eachUsedBuild(
-        build.uses, self.arch, packageLoader, { skipUnordered: true },
-        function (usedBuild, useOptions) {
-          // If this is a weak dependency, and nothing else in the target had a
-          // strong dependency on it, then ignore this edge.
-          if (useOptions.weak && ! _.has(getsUsed, usedBuild.id))
-            return;
+        build.uses, self.arch, packageLoader,
+        { skipUnordered: true, acceptableWeakPackages: usedPackages},
+        function (usedBuild) {
           if (onStack[usedBuild.id]) {
             buildmessage.error("circular dependency between packages " +
                                build.pkg.name + " and " + usedBuild.pkg.name);

@@ -138,7 +138,7 @@ _.extend(Build.prototype, {
     compiler.eachUsedBuild(
       self.uses,
       bundleArch, packageLoader,
-      {skipWeak: true, skipUnordered: true}, function (depBuild) {
+      {skipUnordered: true}, function (depBuild) {
         _.each(depBuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||

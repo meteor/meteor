@@ -36,8 +36,18 @@ compiler.BUILT_BY = 'meteor/11';
 // referenced by that dependency list. This includes directly used
 // builds, and builds that are transitively "implied" by used
 // builds. (But not builds that are used by builds that we use!)
-// Options are skipWeak and skipUnordered, meaning to ignore direct
-// "uses" that are weak or unordered.
+//
+// Options are:
+//  - skipUnordered: ignore direct dependencies that are unordered
+//  - acceptableWeakPackages: if set, include direct weak dependencies
+//    that are on one of these packages (it's an object mapping
+//    package name -> true). Otherwise skip all weak dependencies.
+//
+// (Why does we need to list acceptable weak packages here rather than just
+// implement a skipWeak flag and allow the caller to filter the ones they care
+// about? Well, we want to avoid even calling packageLoader.getBuild on
+// dependencies that aren't going to get included, because in the uniload case,
+// the weak dependency might not even be there at all.)
 //
 // packageLoader is the PackageLoader that should be used to resolve
 // the dependencies.
@@ -47,13 +57,14 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
     callback = options;
     options = {};
   }
+  var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
   var processedBuildId = {};
   var usesToProcess = [];
   _.each(dependencies, function (use) {
     if (options.skipUnordered && use.unordered)
       return;
-    if (options.skipWeak && use.weak)
+    if (use.weak && !_.has(acceptableWeakPackages, use.package))
       return;
     usesToProcess.push(use);
   });
@@ -61,8 +72,7 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var build =
-          packageLoader.getBuild(use["package"], arch);
+    var build = packageLoader.getBuild(use["package"], arch);
 
     if (_.has(processedBuildId, build.id))
       continue;
@@ -106,6 +116,15 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
 var determineBuildTimeDependencies = function (packageSource) {
   var ret = {};
 
+  // There are some special cases where we know that the package has no source
+  // files, which means it can't have any build-time dependencies. Specifically,
+  // the top-level wrapper package used by uniload (via bundler.buildJsImage)
+  // works this way. This early return avoid calling the constraint solver for
+  // uniload, which makes sense because it's supposed to only look at the
+  // prebuilt packages.
+  if (packageSource.noSources)
+    return ret;
+
   // XXX If in any of these cases the constraint solver fails to find
   // a solution, we should emit a nice buildmessage and maybe find a
   // way to continue. For example, the pre-constraint-solver version
@@ -133,6 +152,9 @@ var determineBuildTimeDependencies = function (packageSource) {
     // better approach would proabably be to actually have this
     // function return null and make the caller do a better job of
     // recovering.
+    //
+    // XXX This is totally wrong: this function doesn't return a PackageLoader
+    // any more!
     return new PackageLoader({ });
   }
 
@@ -228,14 +250,20 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // not some unrelated package in the target has a dependency. And we
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
-  _.each(inputSourceArch.uses, function (dependency) {
-    if (! dependency.weak && ! dependency.unordered &&
-        dependency.package !== unipackage.name &&
-        packageLoader.containsPlugins(dependency.package)) {
-      activePluginPackages.push(
-        packageLoader.getPackage(dependency.package));
-    }
-  });
+  //
+  // Avoid even calling containsPlugins if we know there are no sources;
+  // specifically, this avoids calling containsPlugins in the uniload case
+  // because uniload doesn't know how to check to see if a package has plugins.
+  if (!inputSourceArch.noSources) {
+    _.each(inputSourceArch.uses, function (dependency) {
+      if (! dependency.weak && ! dependency.unordered &&
+          dependency.package !== unipackage.name &&
+          packageLoader.containsPlugins(dependency.package)) {
+        activePluginPackages.push(
+          packageLoader.getPackage(dependency.package));
+      }
+    });
+  }
 
   activePluginPackages = _.uniq(activePluginPackages);
 

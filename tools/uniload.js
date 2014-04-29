@@ -4,7 +4,7 @@ var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
 var PackageLoader = require("./package-loader.js");
 var packageCache = require("./package-cache.js");
-
+var files = require('./files.js');
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
@@ -83,7 +83,8 @@ var load = function (options) {
   }, function () {
     // Load the code
     var loader = new PackageLoader({
-      versions: null
+      versions: null,
+      uniloadDir: files.getUniloadDir()
     });
 
     // XXX: Normally, we should pass in dependencyVersions, but we are planning

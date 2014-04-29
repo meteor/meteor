@@ -1,3 +1,5 @@
+var fs = require('fs');
+var path = require('path');
 var _ = require('underscore');
 var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
@@ -8,9 +10,13 @@ var Unipackage = require('./unipackage.js');
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
 //    use local packages and ignore the package versions.
+//  - uniloadDir: if specified, versions should be null, and this loader will
+//    *only* load packages that are already unipackages and are in this
+//    directory
 var PackageLoader = function (options) {
   var self = this;
-  self.versions = options.versions;
+  self.versions = options.versions || null;
+  self.uniloadDir = options.uniloadDir;
 };
 
 _.extend(PackageLoader.prototype, {
@@ -51,6 +57,13 @@ _.extend(PackageLoader.prototype, {
   containsPlugins: function (name) {
     var self = this;
 
+    // We don't want to ever look at the catalog in the uniload case. We
+    // shouldn't ever care about plugins anyway, since uniload should never
+    // compile real packages from source (it sorta compiles the wrapper "load"
+    // package, which should avoid calling this function).
+    if (self.uniloadDir)
+      throw Error("called containsPlugins for uniload?");
+
     var versionRecord;
     if (self.versions === null) {
       versionRecord = catalog.catalog.getLatestVersion(name);
@@ -73,6 +86,14 @@ _.extend(PackageLoader.prototype, {
   // getPackageLoadPath / getPackageVersionLoadPath?
   getLoadPathForPackage: function (name) {
     var self = this;
+
+    if (self.uniloadDir) {
+      var packagePath = path.join(self.uniloadDir, name);
+      if (!fs.existsSync(path.join(packagePath, 'unipackage.json'))) {
+        return null;
+      }
+      return packagePath;
+    }
 
     if (self.versions && ! _.has(self.versions, name)) {
       throw new Error("no version chosen for package " + name + "?");
