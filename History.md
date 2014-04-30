@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v0.8.1
+
 #### Meteor Accounts
 
 * Log out a user's other sessions when they change their password.
