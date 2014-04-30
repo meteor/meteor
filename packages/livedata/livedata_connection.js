@@ -31,10 +31,13 @@ var Connection = function (url, options) {
     onDDPVersionNegotiationFailure: function (description) {
       Meteor._debug(description);
     },
+    heartbeatInterval: 35000,
+    heartbeatTimeout: 15000,
     // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
-    retry: true
+    retry: true,
+    respondToPings: true
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -63,6 +66,9 @@ var Connection = function (url, options) {
   self._methodHandlers = {}; // name -> func
   self._nextMethodId = 1;
   self._supportedDDPVersions = options.supportedDDPVersions;
+
+  self._heartbeatInterval = options.heartbeatInterval;
+  self._heartbeatTimeout = options.heartbeatTimeout;
 
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
@@ -224,6 +230,17 @@ var Connection = function (url, options) {
         options.onDDPVersionNegotiationFailure(description);
       }
     }
+    else if (msg.msg === 'ping') {
+      if (options.respondToPings)
+        self._send({msg: "pong", id: msg.id});
+      if (self._heartbeat)
+        self._heartbeat.pingReceived();
+    }
+    else if (msg.msg === 'pong') {
+      if (self._heartbeat) {
+        self._heartbeat.pongReceived();
+      }
+    }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
     else if (msg.msg === 'nosub')
@@ -291,12 +308,21 @@ var Connection = function (url, options) {
     });
   };
 
+  var onDisconnect = function () {
+    if (self._heartbeat) {
+      self._heartbeat.stop()
+      self._heartbeat = null;
+    }
+  };
+
   if (Meteor.isServer) {
     self._stream.on('message', Meteor.bindEnvironment(onMessage, Meteor._debug));
     self._stream.on('reset', Meteor.bindEnvironment(onReset, Meteor._debug));
+    self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, Meteor._debug));
   } else {
     self._stream.on('message', onMessage);
     self._stream.on('reset', onReset);
+    self._stream.on('disconnect', onDisconnect);
   }
 };
 
@@ -493,7 +519,7 @@ _.extend(Connection.prototype, {
       self._subscriptions[id] = {
         id: id,
         name: name,
-        params: params,
+        params: EJSON.clone(params),
         inactive: false,
         ready: false,
         readyDeps: (typeof Deps !== "undefined") && new Deps.Dependency,
@@ -596,6 +622,17 @@ _.extend(Connection.prototype, {
   //   onResultReceived: Function - a callback to call as soon as the method
   //                                result is received. the data written by
   //                                the method may not yet be in the cache!
+  //   returnStubValue: Boolean - If true then in cases where we would have
+  //                              otherwise discarded the stub's return value
+  //                              and returned undefined, instead we go ahead
+  //                              and return it.  Specifically, this is any
+  //                              time other than when (a) we are already
+  //                              inside a stub or (b) we are in Node and no
+  //                              callback was provided.  Currently we require
+  //                              this flag to be explicitly passed to reduce
+  //                              the likelihood that stub return values will
+  //                              be confused with server return values; we
+  //                              may improve this in future.
   // @param callback {Optional Function}
   apply: function (name, args, options, callback) {
     var self = this;
@@ -618,6 +655,10 @@ _.extend(Connection.prototype, {
       );
     }
 
+    // Keep our args safe from mutation (eg if we don't send the message for a
+    // while because of a wait method).
+    args = EJSON.clone(args);
+
     // Lazily allocate method ID once we know that it'll be needed.
     var methodId = (function () {
       var id;
@@ -627,6 +668,27 @@ _.extend(Connection.prototype, {
         return id;
       };
     })();
+
+    var enclosing = DDP._CurrentInvocation.get();
+    var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+    // Lazily generate a randomSeed, only if it is requested by the stub.
+    // The random streams only have utility if they're used on both the client
+    // and the server; if the client doesn't generate any 'random' values
+    // then we don't expect the server to generate any either.
+    // Less commonly, the server may perform different actions from the client,
+    // and may in fact generate values where the client did not, but we don't
+    // have any client-side values to match, so even here we may as well just
+    // use a random seed on the server.  In that case, we don't pass the
+    // randomSeed to save bandwidth, and we don't even generate it to save a
+    // bit of CPU and to avoid consuming entropy.
+    var randomSeed = null;
+    var randomSeedGenerator = function () {
+      if (randomSeed === null) {
+        randomSeed = makeRpcSeed(enclosing, name);
+      }
+      return randomSeed;
+    };
 
     // Run the stub, if we have one. The stub is supposed to make some
     // temporary writes to the database to give the user a smooth experience
@@ -640,18 +702,17 @@ _.extend(Connection.prototype, {
     // to do a RPC, so we use the return value of the stub as our return
     // value.
 
-    var enclosing = DDP._CurrentInvocation.get();
-    var alreadyInSimulation = enclosing && enclosing.isSimulation;
-
     var stub = self._methodHandlers[name];
     if (stub) {
       var setUserId = function(userId) {
         self.setUserId(userId);
       };
+
       var invocation = new MethodInvocation({
         isSimulation: true,
         userId: self.userId(),
-        setUserId: setUserId
+        setUserId: setUserId,
+        randomSeed: function () { return randomSeedGenerator(); }
       });
 
       if (!alreadyInSimulation)
@@ -660,11 +721,12 @@ _.extend(Connection.prototype, {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var ret = DDP._CurrentInvocation.withValue(invocation, function () {
+        var stubReturnValue = DDP._CurrentInvocation.withValue(invocation, function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.
             return Meteor._noYieldsAllowed(function () {
+              // re-clone, so that the stub can't affect our caller's values
               return stub.apply(invocation, EJSON.clone(args));
             });
           } else {
@@ -685,12 +747,12 @@ _.extend(Connection.prototype, {
     // we'll end up returning undefined.
     if (alreadyInSimulation) {
       if (callback) {
-        callback(exception, ret);
+        callback(exception, stubReturnValue);
         return undefined;
       }
       if (exception)
         throw exception;
-      return ret;
+      return stubReturnValue;
     }
 
     // If an exception occurred in a stub, and we're ignoring it
@@ -725,18 +787,25 @@ _.extend(Connection.prototype, {
     // Send the RPC. Note that on the client, it is important that the
     // stub have finished before we send the RPC, so that we know we have
     // a complete list of which local documents the stub wrote.
+    var message = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: methodId()
+    };
+
+    // Send the randomSeed only if we used it
+    if (randomSeed !== null) {
+      message.randomSeed = randomSeed;
+    }
+
     var methodInvoker = new MethodInvoker({
       methodId: methodId(),
       callback: callback,
       connection: self,
       onResultReceived: options.onResultReceived,
       wait: !!options.wait,
-      message: {
-        msg: 'method',
-        method: name,
-        params: args,
-        id: methodId()
-      }
+      message: message
     });
 
     if (options.wait) {
@@ -761,7 +830,7 @@ _.extend(Connection.prototype, {
     if (future) {
       return future.wait();
     }
-    return undefined;
+    return options.returnStubValue ? stubReturnValue : undefined;
   },
 
   // Before calling a method stub, prepare all stores to track changes and allow
@@ -834,6 +903,14 @@ _.extend(Connection.prototype, {
     self._stream.send(stringifyDDP(obj));
   },
 
+  // We detected via DDP-level heartbeats that we've lost the
+  // connection.  Unlike `disconnect` or `close`, a lost connection
+  // will be automatically retried.
+  _lostConnection: function () {
+    var self = this;
+    self._stream._lostConnection();
+  },
+
   status: function (/*passthrough args*/) {
     var self = this;
     return self._stream.status.apply(self._stream, arguments);
@@ -892,6 +969,28 @@ _.extend(Connection.prototype, {
 
   _livedata_connected: function (msg) {
     var self = this;
+
+    if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
+      self._heartbeat = new Heartbeat({
+        heartbeatInterval: self._heartbeatInterval,
+        heartbeatTimeout: self._heartbeatTimeout,
+        onTimeout: function () {
+          if (Meteor.isClient) {
+            // only print on the client. this message is useful on the
+            // browser console to see that we've lost connection. on the
+            // server (eg when doing server-to-server DDP), it gets
+            // kinda annoying. also this matches the behavior with
+            // sockjs timeouts.
+            Meteor._debug("Connection timeout. No DDP heartbeat received.");
+          }
+          self._lostConnection();
+        },
+        sendPing: function () {
+          self._send({msg: 'ping'});
+        }
+      });
+      self._heartbeat.start();
+    }
 
     // If this is a reconnect, we'll have to reset all stores.
     if (self._lastSessionId)

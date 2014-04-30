@@ -29,6 +29,10 @@ var optimize = function (tree) {
     return (html.indexOf('&') < 0 && html.indexOf('<') < 0);
   };
 
+  // Returns `null` if no specials are found in the array, so that the
+  // parent can perform the actual optimization.  Otherwise, returns
+  // an array of parts which have been optimized as much as possible.
+  // `forceOptimize` forces the latter case.
   var optimizeArrayParts = function (array, optimizePartsFunc, forceOptimize) {
     var result = null;
     if (forceOptimize)
@@ -102,7 +106,14 @@ var optimize = function (tree) {
 
       var mustOptimize = false;
 
-      if (node.attrs) {
+      // Avoid ever producing HTML containing `<table><tr>...`, because the
+      // browser will insert a TBODY.  If we just `createElement("table")` and
+      // `createElement("tr")`, on the other hand, no TBODY is necessary
+      // (assuming IE 8+).
+      if (tagName === 'table')
+        mustOptimize = true;
+
+      if (node.attrs && ! mustOptimize) {
         var attrs = node.attrs;
         for (var k in attrs) {
           if (doesAttributeValueHaveSpecials(attrs[k])) {

@@ -1,4 +1,4 @@
-Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test) {
+var testPendingCredential = function (test) {
   var http = Npm.require('http');
   var foobookId = Random.id();
   var foobookOption1 = Random.id();
@@ -9,9 +9,12 @@ Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test)
 
   try {
     // register a fake login service
-    Oauth.registerService(serviceName, 2, null, function (query) {
+    OAuth.registerService(serviceName, 2, null, function (query) {
       return {
-        serviceData: {id: foobookId},
+        serviceData: {
+          id: foobookId,
+          secretStuff: OAuth.sealSecret("confidential")
+        },
         options: {option1: foobookOption1}
       };
     });
@@ -19,18 +22,55 @@ Tinytest.add("oauth2 - loginResultForCredentialToken is stored", function (test)
     // simulate logging in using foobook
     var req = {method: "POST",
                url: "/_oauth/" + serviceName + "?close",
-               query: {state: credentialToken}};
-    OauthTest.middleware(req, new http.ServerResponse(req));
+               query: {
+                 state: credentialToken,
+                 close: 1,
+                 only_credential_secret_for_test: 1
+               }};
+    var res = new http.ServerResponse(req);
+    var write = res.write;
+    var end = res.write;
+    var respData = "";
+    res.write = function (data, encoding, callback) {
+      respData += data;
+      return write.apply(this, arguments);
+    };
+    res.end = function (data) {
+      respData += data;
+      return end.apply(this, arguments);
+    };
 
-    // Test that the login result for that user is prepared
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, foobookId);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].options.option1, foobookOption1);
+    OAuthTest.middleware(req, res);
+    var credentialSecret = respData;
+
+    // Test that the result for the token is available
+    var result = OAuth._retrievePendingCredential(credentialToken,
+                                                  credentialSecret);
+    var serviceData = OAuth.openSecrets(result.serviceData);
+    test.equal(result.serviceName, serviceName);
+    test.equal(serviceData.id, foobookId);
+    test.equal(serviceData.secretStuff, 'confidential');
+    test.equal(result.options.option1, foobookOption1);
+
+    // Test that pending credential is removed after being retrieved
+    result = OAuth._retrievePendingCredential(credentialToken);
+    test.isUndefined(result);
 
   } finally {
-    OauthTest.unregisterService(serviceName);
+    OAuthTest.unregisterService(serviceName);
+  }
+};
+
+Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", function (test) {
+  OAuthEncryption.loadKey(null);
+  testPendingCredential(test);
+});
+
+Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", function (test) {
+  try {
+    OAuthEncryption.loadKey(new Buffer([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
+    testPendingCredential(test);
+  } finally {
+    OAuthEncryption.loadKey(null);
   }
 });

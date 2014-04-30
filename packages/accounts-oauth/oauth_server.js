@@ -4,9 +4,19 @@ Accounts.registerLoginHandler(function (options) {
   if (!options.oauth)
     return undefined; // don't handle
 
-  check(options.oauth, {credentialToken: String});
+  check(options.oauth, {
+    credentialToken: String,
+    // When an error occurs while retrieving the access token, we store
+    // the error in the pending credentials table, with a secret of
+    // null. The client can call the login method with a secret of null
+    // to retrieve the error.
+    credentialSecret: Match.OneOf(null, String)
+  });
 
-  if (!Oauth.hasCredential(options.oauth.credentialToken)) {
+  var result = OAuth.retrieveCredential(options.oauth.credentialToken,
+                                        options.oauth.credentialSecret);
+
+  if (!result) {
     // OAuth credentialToken is not recognized, which could be either
     // because the popup was closed by the user before completion, or
     // some sort of error where the oauth provider didn't talk to our
@@ -23,9 +33,10 @@ Accounts.registerLoginHandler(function (options) {
     // XXX we want `type` to be the service name such as "facebook"
     return { type: "oauth",
              error: new Meteor.Error(
-               Accounts.LoginCancelledError.numericError, "Login canceled") };
+               Accounts.LoginCancelledError.numericError,
+               "No matching login attempt found") };
   }
-  var result = Oauth.retrieveCredential(options.oauth.credentialToken);
+
   if (result instanceof Error)
     // We tried to login, but there was a fatal error. Report it back
     // to the user.

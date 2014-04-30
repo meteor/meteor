@@ -14,11 +14,12 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
 
   var config = ServiceConfiguration.configurations.findOne({service: 'twitter'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
 
-  var credentialToken = Random.id();
+  var credentialToken = Random.secret();
   // We need to keep credentialToken across the next two 'steps' so we're adding
   // a credentialToken parameter to the url and the callback url that we'll be returned
   // to by oauth provider
@@ -28,7 +29,7 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   var loginUrl = '/_oauth/twitter/?requestTokenAndRedirect=true'
         + '&state=' + credentialToken;
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken)
   );

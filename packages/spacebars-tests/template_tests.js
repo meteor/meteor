@@ -1832,3 +1832,182 @@ Tinytest.add(
     document.body.removeChild(div);
   }
 );
+
+Tinytest.add("spacebars - template - tables", function (test) {
+  var tmpl1 = Template.spacebars_test_tables1;
+
+  var div = renderToDiv(tmpl1);
+  test.equal(_.pluck(div.querySelectorAll('*'), 'tagName'),
+             ['TABLE', 'TR', 'TD']);
+  divRendersTo(test, div, '<table><tr><td>Foo</td></tr></table>');
+
+  var tmpl2 = Template.spacebars_test_tables2;
+  tmpl2.foo = 'Foo';
+  div = renderToDiv(tmpl2);
+  test.equal(_.pluck(div.querySelectorAll('*'), 'tagName'),
+             ['TABLE', 'TR', 'TD']);
+  divRendersTo(test, div, '<table><tr><td>Foo</td></tr></table>');
+});
+
+Tinytest.add(
+  "spacebars - template - jQuery.trigger extraParameters are passed to the event callback",
+  function (test) {
+    var tmpl = Template.spacebars_test_jquery_events;
+    var captured = false;
+    var args = ["param1", "param2", {option: 1}, 1, 2, 3];
+
+    tmpl.events({
+      'someCustomEvent': function (event, template) {
+        var i;
+        for (i=0; i<args.length; i++) {
+          // expect the arguments to be just after template
+          test.equal(arguments[i+2], args[i]);
+        }
+        captured = true;
+      }
+    });
+
+    tmpl.rendered = function () {
+      $(this.find('button')).trigger('someCustomEvent', args);
+    };
+
+    renderToDiv(tmpl);
+    Deps.flush();
+    test.equal(captured, true);
+  }
+);
+
+Tinytest.add("spacebars - template - UI.toHTML", function (test) {
+  // run once, verifying that autoruns are stopped
+  var once = function (tmplToRender, tmplForHelper, helper, val) {
+    var count = 0;
+    var R = new ReactiveVar;
+    var getR = function () {
+      count++;
+      return R.get();
+    };
+
+    R.set(val);
+    tmplForHelper[helper] = getR;
+    test.equal(canonicalizeHtml(UI.toHTML(tmplToRender)), "bar");
+    test.equal(count, 1);
+    R.set("");
+    Deps.flush();
+    test.equal(count, 1); // all autoruns stopped
+  };
+
+  once(Template.spacebars_test_tohtml_basic,
+       Template.spacebars_test_tohtml_basic, "foo", "bar");
+  once(Template.spacebars_test_tohtml_if,
+       Template.spacebars_test_tohtml_if, "foo", "bar");
+  once(Template.spacebars_test_tohtml_with,
+       Template.spacebars_test_tohtml_with, "foo", "bar");
+  once(Template.spacebars_test_tohtml_each,
+       Template.spacebars_test_tohtml_each, "foos", ["bar"]);
+
+  once(Template.spacebars_test_tohtml_include_with,
+       Template.spacebars_test_tohtml_with, "foo", "bar");
+  once(Template.spacebars_test_tohtml_include_each,
+       Template.spacebars_test_tohtml_each, "foos", ["bar"]);
+});
+
+Tinytest.add(
+  "spacebars - template - block comments should not be displayed",
+  function (test) {
+    var tmpl = Template.spacebars_test_block_comment;
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), '');
+  }
+);
+
+// Originally reported at https://github.com/meteor/meteor/issues/2046
+Tinytest.add(
+  "spacebars - template - {{#with}} with mutated data context",
+  function (test) {
+    var tmpl = Template.spacebars_test_with_mutated_data_context;
+    var foo = {value: 0};
+    var dep = new Deps.Dependency;
+    tmpl.foo = function () {
+      dep.depend();
+      return foo;
+    };
+
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), '0');
+
+    foo.value = 1;
+    dep.changed();
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '1');
+  });
+
+Tinytest.add(
+  "spacebars - template - javascript scheme urls",
+  function (test) {
+    var tmpl = Template.spacebars_test_url_attribute;
+    var sessionKey = "foo-" + Random.id();
+    tmpl.foo = function () {
+      return Session.get(sessionKey);
+    };
+
+    var numUrlAttrs = 4;
+    var div = renderToDiv(tmpl);
+
+    // [tag name, attr name, is a url attribute]
+    var attrsList = [["A", "href", true], ["FORM", "action", true],
+                     ["IMG", "src", true], ["INPUT", "value", false]];
+
+    var checkAttrs = function (url, isJavascriptProtocol) {
+      if (isJavascriptProtocol) {
+        Meteor._suppress_log(numUrlAttrs);
+      }
+      Session.set(sessionKey, url);
+      Deps.flush();
+      _.each(
+        attrsList,
+        function (attrInfo) {
+          var normalizedUrl;
+          var elem = document.createElement(attrInfo[0]);
+          try {
+            elem[attrInfo[1]] = url;
+          } catch (err) {
+            // IE throws an exception if you set an img src to a
+            // javascript: URL. Blaze can't override this behavior;
+            // whether you've called UI._javascriptUrlsAllowed() or not,
+            // you won't be able to set a javascript: URL in an img
+            // src. So we only test img tags in other browsers.
+            if (attrInfo[0] === "IMG") {
+              return;
+            }
+            throw err;
+          }
+          document.body.appendChild(elem);
+          normalizedUrl = elem[attrInfo[1]];
+          document.body.removeChild(elem);
+
+          _.each(
+            div.getElementsByTagName(attrInfo[0]),
+            function (elem) {
+              test.equal(
+                elem[attrInfo[1]],
+                isJavascriptProtocol && attrInfo[2] ? "" : normalizedUrl
+              );
+            }
+          );
+        }
+      );
+    };
+
+    test.equal(UI._javascriptUrlsAllowed(), false);
+    checkAttrs("http://www.meteor.com", false);
+    checkAttrs("javascript:alert(1)", true);
+    checkAttrs("jAvAsCrIpT:alert(1)", true);
+    checkAttrs("    javascript:alert(1)", true);
+    UI._allowJavascriptUrls();
+    test.equal(UI._javascriptUrlsAllowed(), true);
+    checkAttrs("http://www.meteor.com", false);
+    checkAttrs("javascript:alert(1)", false);
+    checkAttrs("jAvAsCrIpT:alert(1)", false);
+    checkAttrs("    javascript:alert(1)", false);
+  }
+);

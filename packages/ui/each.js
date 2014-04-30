@@ -95,7 +95,7 @@ UI.EachImpl = Component.extend({
         var renderedItem = UI.render(content.extend({data: dataFunc}), self);
         range.add(id, renderedItem.dom, beforeId);
       },
-      removed: function (id, item) {
+      removedAt: function (id, item) {
         addToCount(-1);
         range.remove(LocalCollection._idStringify(id));
       },
@@ -104,7 +104,7 @@ UI.EachImpl = Component.extend({
           LocalCollection._idStringify(id),
           beforeId && LocalCollection._idStringify(beforeId));
       },
-      changed: function (id, newItem) {
+      changedAt: function (id, newItem, atIndex) {
         range.get(LocalCollection._idStringify(id)).component.data.$set(newItem);
       }
     });

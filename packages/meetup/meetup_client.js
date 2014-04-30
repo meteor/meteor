@@ -13,9 +13,15 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
 
   var config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
+
+  // For some reason, meetup converts underscores to spaces in the state
+  // parameter when redirecting back to the client, so we use
+  // `Random.id()` here (alphanumerics) instead of `Random.secret()`
+  // (base 64 characters).
   var credentialToken = Random.id();
 
   var scope = (options && options.requestPermissions) || [];
@@ -34,7 +40,7 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
   if (_.without(scope, 'basic').length)
     height += 130;
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken),
     {width: 900, height: height}

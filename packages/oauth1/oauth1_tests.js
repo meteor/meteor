@@ -1,4 +1,4 @@
-Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test) {
+var testPendingCredential = function (test) {
   var http = Npm.require('http');
   var twitterfooId = Random.id();
   var twitterfooName = 'nickname' + Random.id();
@@ -25,13 +25,13 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
 
   try {
     // register a fake login service
-    Oauth.registerService(serviceName, 1, urls, function (query) {
+    OAuth.registerService(serviceName, 1, urls, function (query) {
       return {
         serviceData: {
           id: twitterfooId,
           screenName: twitterfooName,
-          accessToken: twitterfooAccessToken,
-          accessTokenSecret: twitterfooAccessTokenSecret
+          accessToken: OAuth.sealSecret(twitterfooAccessToken),
+          accessTokenSecret: OAuth.sealSecret(twitterfooAccessTokenSecret)
         },
         options: {
           option1: twitterOption1
@@ -40,36 +40,87 @@ Tinytest.add("oauth1 - loginResultForCredentialToken is stored", function (test)
     });
 
     // simulate logging in using twitterfoo
-    OAuth1Test.requestTokens[credentialToken] = {
-      requestToken: twitterfooAccessToken
-    };
+    Oauth._storeRequestToken(credentialToken, twitterfooAccessToken);
 
     var req = {
       method: "POST",
       url: "/_oauth/" + serviceName + "?close",
       query: {
         state: credentialToken,
-        oauth_token: twitterfooAccessToken
+        oauth_token: twitterfooAccessToken,
+        close: 1,
+        only_credential_secret_for_test: 1
       }
     };
-    OauthTest.middleware(req, new http.ServerResponse(req));
+    var res = new http.ServerResponse(req);
+    var write = res.write;
+    var end = res.write;
+    var respData = "";
+    res.write = function (data, encoding, callback) {
+      respData += data;
+      return write.apply(this, arguments);
+    };
+    res.end = function (data) {
+      respData += data;
+      return end.apply(this, arguments);
+    };
+    OAuthTest.middleware(req, res);
+    var credentialSecret = respData;
 
-    // Test that right data is placed on the loginResult map
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceName, serviceName);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.id, twitterfooId);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.screenName, twitterfooName);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessToken, twitterfooAccessToken);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
-    test.equal(
-      Oauth._loginResultForCredentialToken[credentialToken].options.option1, twitterOption1);
+    // Test that the result for the token is available
+    var result = OAuth._retrievePendingCredential(credentialToken,
+                                                  credentialSecret);
+    var serviceData = OAuth.openSecrets(result.serviceData);
+    test.equal(result.serviceName, serviceName);
+    test.equal(serviceData.id, twitterfooId);
+    test.equal(serviceData.screenName, twitterfooName);
+    test.equal(serviceData.accessToken, twitterfooAccessToken);
+    test.equal(serviceData.accessTokenSecret, twitterfooAccessTokenSecret);
+    test.equal(result.options.option1, twitterOption1);
+
+    // Test that pending credential is removed after being retrieved
+    result = OAuth._retrievePendingCredential(credentialToken);
+    test.isUndefined(result);
 
   } finally {
-    OauthTest.unregisterService(serviceName);
+    OAuthTest.unregisterService(serviceName);
+  }
+};
+
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (without oauth encryption)", function (test) {
+  OAuthEncryption.loadKey(null);
+  testPendingCredential(test);
+});
+
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", function (test) {
+  try {
+    OAuthEncryption.loadKey(new Buffer([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
+    testPendingCredential(test);
+  } finally {
+    OAuthEncryption.loadKey(null);
   }
 });
 
+Tinytest.add("oauth1 - duplicate key for request token", function (test) {
+  var key = Random.id();
+  var token = Random.id();
+  var secret = Random.id();
+  OAuth._storeRequestToken(key, token, secret);
+  var newToken = Random.id();
+  var newSecret = Random.id();
+  OAuth._storeRequestToken(key, newToken, newSecret);
+  var result = OAuth._retrieveRequestToken(key);
+  test.equal(result.requestToken, newToken);
+  test.equal(result.requestTokenSecret, newSecret);
+});
+
+Tinytest.add("oauth1 - null, undefined key for request token", function (test) {
+  var token = Random.id();
+  var secret = Random.id();
+  test.throws(function () {
+    OAuth._storeRequestToken(null, token, secret);
+  });
+  test.throws(function () {
+    OAuth._storeRequestToken(undefined, token, secret);
+  });
+});

@@ -151,6 +151,13 @@ OplogObserveDriver = function (options) {
     }
   ));
 
+  // When Mongo fails over, we need to repoll the query, in case we processed an
+  // oplog entry that got rolled back.
+  self._stopHandles.push(self._mongoHandle._onFailover(finishIfNeedToPollQuery(
+    function () {
+      self._needToPollQuery();
+    })));
+
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
   Meteor.defer(finishIfNeedToPollQuery(function () {
@@ -424,7 +431,6 @@ _.extend(OplogObserveDriver.prototype, {
         var thisGeneration = ++self._fetchGeneration;
         self._needToFetch = new LocalCollection._IdMap;
         var waiting = 0;
-        var anyError = null;
         var fut = new Future;
         // This loop is safe, because _currentlyFetching will not be updated
         // during this loop (in fact, it is never mutated).
@@ -435,8 +441,15 @@ _.extend(OplogObserveDriver.prototype, {
             finishIfNeedToPollQuery(function (err, doc) {
               try {
                 if (err) {
-                  if (!anyError)
-                    anyError = err;
+                  Meteor._debug("Got exception while fetching documents: " +
+                                err);
+                  // If we get an error from the fetcher (eg, trouble connecting
+                  // to Mongo), let's just abandon the fetch phase altogether
+                  // and fall back to polling. It's not like we're getting live
+                  // updates anyway.
+                  if (self._phase !== PHASE.QUERYING) {
+                    self._needToPollQuery();
+                  }
                 } else if (!self._stopped && self._phase === PHASE.FETCHING
                            && self._fetchGeneration === thisGeneration) {
                   // We re-check the generation in case we've had an explicit
@@ -456,15 +469,15 @@ _.extend(OplogObserveDriver.prototype, {
             }));
         });
         fut.wait();
-        // XXX do this even if we've switched to PHASE.QUERYING?
-        if (anyError)
-          throw anyError;
         // Exit now if we've had a _pollQuery call (here or in another fiber).
         if (self._phase === PHASE.QUERYING)
           return;
         self._currentlyFetching = null;
       }
-      self._beSteady();
+      // We're done fetching, so we can be steady, unless we've had a _pollQuery
+      // call (here or in another fiber).
+      if (self._phase !== PHASE.QUERYING)
+        self._beSteady();
     }));
   },
   _beSteady: function () {
@@ -599,22 +612,40 @@ _.extend(OplogObserveDriver.prototype, {
 
   _runQuery: function () {
     var self = this;
-    var newResults = new LocalCollection._IdMap;
-    var newBuffer = new LocalCollection._IdMap;
+    var newResults, newBuffer;
 
-    // Query 2x documents as the half excluded from the original query will go
-    // into unpublished buffer to reduce additional Mongo lookups in cases when
-    // documents are removed from the published set and need a replacement.
-    // XXX needs more thought on non-zero skip
-    // XXX 2 is a "magic number" meaning there is an extra chunk of docs for
-    // buffer if such is needed.
-    var cursor = self._cursorForQuery({ limit: self._limit * 2 });
-    cursor.forEach(function (doc, i) {
-      if (!self._limit || i < self._limit)
-        newResults.set(doc._id, doc);
-      else
-        newBuffer.set(doc._id, doc);
-    });
+    // This while loop is just to retry failures.
+    while (true) {
+      // If we've been stopped, we don't have to run anything any more.
+      if (self._stopped)
+        return;
+
+      newResults = new LocalCollection._IdMap;
+      newBuffer = new LocalCollection._IdMap;
+
+      // Query 2x documents as the half excluded from the original query will go
+      // into unpublished buffer to reduce additional Mongo lookups in cases
+      // when documents are removed from the published set and need a
+      // replacement.
+      // XXX needs more thought on non-zero skip
+      // XXX 2 is a "magic number" meaning there is an extra chunk of docs for
+      // buffer if such is needed.
+      var cursor = self._cursorForQuery({ limit: self._limit * 2 });
+      try {
+        cursor.forEach(function (doc, i) {
+          if (!self._limit || i < self._limit)
+            newResults.set(doc._id, doc);
+          else
+            newBuffer.set(doc._id, doc);
+        });
+        break;
+      } catch (e) {
+        // During failover (eg) if we get an exception we should log and retry
+        // instead of crashing.
+        Meteor._debug("Got exception while polling query: " + e);
+        Meteor._sleepForMs(100);
+      }
+    }
 
     self._publishNewResults(newResults, newBuffer);
   },
@@ -846,4 +877,4 @@ var modifierCanBeDirectlyApplied = function (modifier) {
   });
 };
 
-MongoTest.OplogObserveDriver = OplogObserveDriver;
+MongoInternals.OplogObserveDriver = OplogObserveDriver;

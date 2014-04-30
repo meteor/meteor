@@ -73,12 +73,19 @@ var validateLogin = function (connection, attempt) {
     }
     catch (e) {
       attempt.allowed = false;
+      // XXX this means the last thrown error overrides previous error
+      // messages. Maybe this is surprising to users and we should make
+      // overriding errors more explicit. (see
+      // https://github.com/meteor/meteor/issues/1960)
       attempt.error = e;
       return true;
     }
     if (! ret) {
       attempt.allowed = false;
-      attempt.error = new Meteor.Error(403, "Login forbidden");
+      // don't override a specific error provided by a previous
+      // validator or the initial attempt (eg "incorrect password").
+      if (!attempt.error)
+        attempt.error = new Meteor.Error(403, "Login forbidden");
     }
     return true;
   });
@@ -227,6 +234,9 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   if (!result)
     throw new Error("result is required");
 
+  // XXX A programming error in a login handler can lead to this occuring, and
+  // then we don't call onLogin or onLoginFailure callbacks. Should
+  // tryLoginMethod catch this case and turn it into an error?
   if (!result.userId && !result.error)
     throw new Error("A login method must specify a userId or an error");
 
@@ -245,6 +255,9 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   if (user)
     attempt.user = user;
 
+  // validateLogin may mutate `attempt` by adding an error and changing allowed
+  // to false, but that's the only change it can make (and the user's callbacks
+  // only get a clone of `attempt`).
   validateLogin(methodInvocation.connection, attempt);
 
   if (attempt.allowed) {
@@ -296,6 +309,9 @@ Accounts._reportLoginFailure = function (methodInvocation, methodName, methodArg
 
   validateLogin(methodInvocation.connection, attempt);
   failedLogin(methodInvocation.connection, attempt);
+  // validateLogin may mutate attempt to set a new error message. Return
+  // the modified version.
+  return attempt;
 };
 
 
@@ -418,6 +434,17 @@ Meteor.methods({
   // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
   // immediately instead of using a delay.
   //
+  // XXX COMPAT WITH 0.7.2
+  // This single `logoutOtherClients` method has been replaced with two
+  // methods, one that you call to get a new token, and another that you
+  // call to remove all tokens except your own. The new design allows
+  // clients to know when other clients have actually been logged
+  // out. (The `logoutOtherClients` method guarantees the caller that
+  // the other clients will be logged out at some point, but makes no
+  // guarantees about when.) This method is left in for backwards
+  // compatibility, especially since application code might be calling
+  // this method directly.
+  //
   // @returns {Object} Object with token and tokenExpires keys.
   logoutOtherClients: function () {
     var self = this;
@@ -435,7 +462,7 @@ Meteor.methods({
       var tokens = user.services.resume.loginTokens;
       var newToken = Accounts._generateStampedLoginToken();
       var userId = self.userId;
-      Meteor.users.update(self.userId, {
+      Meteor.users.update(userId, {
         $set: {
           "services.resume.loginTokensToDelete": tokens,
           "services.resume.haveLoginTokensToDelete": true
@@ -456,8 +483,60 @@ Meteor.methods({
         tokenExpires: Accounts._tokenExpiration(newToken.when)
       };
     } else {
-      throw new Error("You are not logged in.");
+      throw new Meteor.Error("You are not logged in.");
     }
+  },
+
+  // Generates a new login token with the same expiration as the
+  // connection's current token and saves it to the database. Associates
+  // the connection with this new token and returns it. Throws an error
+  // if called on a connection that isn't logged in.
+  //
+  // @returns Object
+  //   If successful, returns { token: <new token>, id: <user id>,
+  //   tokenExpires: <expiration date> }.
+  getNewToken: function () {
+    var self = this;
+    var user = Meteor.users.findOne(self.userId, {
+      fields: { "services.resume.loginTokens": 1 }
+    });
+    if (! self.userId || ! user) {
+      throw new Meteor.Error("You are not logged in.");
+    }
+    // Be careful not to generate a new token that has a later
+    // expiration than the curren token. Otherwise, a bad guy with a
+    // stolen token could use this method to stop his stolen token from
+    // ever expiring.
+    var currentHashedToken = Accounts._getLoginToken(self.connection.id);
+    var currentStampedToken = _.find(
+      user.services.resume.loginTokens,
+      function (stampedToken) {
+        return stampedToken.hashedToken === currentHashedToken;
+      }
+    );
+    if (! currentStampedToken) { // safety belt: this should never happen
+      throw new Meteor.Error("Invalid login token");
+    }
+    var newStampedToken = Accounts._generateStampedLoginToken();
+    newStampedToken.when = currentStampedToken.when;
+    Accounts._insertLoginToken(self.userId, newStampedToken);
+    return loginUser(self, self.userId, newStampedToken);
+  },
+
+  // Removes all tokens except the token associated with the current
+  // connection. Throws an error if the connection is not logged
+  // in. Returns nothing on success.
+  removeOtherTokens: function () {
+    var self = this;
+    if (! self.userId) {
+      throw new Meteor.Error("You are not logged in.");
+    }
+    var currentToken = Accounts._getLoginToken(self.connection.id);
+    Meteor.users.update(self.userId, {
+      $pull: {
+        "services.resume.loginTokens": { hashedToken: { $ne: currentToken } }
+      }
+    });
   }
 });
 
@@ -492,7 +571,7 @@ Accounts._setAccountData = function (connectionId, field, value) {
 Meteor.server.onConnection(function (connection) {
   accountData[connection.id] = {connection: connection};
   connection.onClose(function () {
-    removeConnectionFromToken(connection.id);
+    removeTokenFromConnection(connection.id);
     delete accountData[connection.id];
   });
 });
@@ -551,26 +630,32 @@ Accounts._clearAllLoginTokens = function (userId) {
   );
 };
 
-
-// hashed token -> list of connection ids
-var connectionsByLoginToken = {};
+// connection id -> observe handle for the login token that this
+// connection is currently associated with, or null. Null indicates that
+// we are in the process of setting up the observe.
+var userObservesForConnections = {};
 
 // test hook
-Accounts._getTokenConnections = function (token) {
-  return connectionsByLoginToken[token];
+Accounts._getUserObserve = function (connectionId) {
+  return userObservesForConnections[connectionId];
 };
 
-// Remove the connection from the list of open connections for the connection's
-// token.
-var removeConnectionFromToken = function (connectionId) {
-  var token = Accounts._getLoginToken(connectionId);
-  if (token) {
-    connectionsByLoginToken[token] = _.without(
-      connectionsByLoginToken[token],
-      connectionId
-    );
-    if (_.isEmpty(connectionsByLoginToken[token]))
-      delete connectionsByLoginToken[token];
+// Clean up this connection's association with the token: that is, stop
+// the observe that we started when we associated the connection with
+// this token.
+var removeTokenFromConnection = function (connectionId) {
+  if (_.has(userObservesForConnections, connectionId)) {
+    var observe = userObservesForConnections[connectionId];
+    if (observe === null) {
+      // We're in the process of setting up an observe for this
+      // connection. We can't clean up that observe yet, but if we
+      // delete the null placeholder for this connection, then the
+      // observe will get cleaned up as soon as it has been set up.
+      delete userObservesForConnections[connectionId];
+    } else {
+      delete userObservesForConnections[connectionId];
+      observe.stop();
+    }
   }
 };
 
@@ -580,61 +665,75 @@ Accounts._getLoginToken = function (connectionId) {
 
 // newToken is a hashed token.
 Accounts._setLoginToken = function (userId, connection, newToken) {
-  removeConnectionFromToken(connection.id);
+  removeTokenFromConnection(connection.id);
   Accounts._setAccountData(connection.id, 'loginToken', newToken);
 
   if (newToken) {
-    if (! _.has(connectionsByLoginToken, newToken))
-      connectionsByLoginToken[newToken] = [];
-    connectionsByLoginToken[newToken].push(connection.id);
-
-    // Now that we've added the connection to the
-    // connectionsByLoginToken map for the token, the connection will
-    // be closed if the token is removed from the database.  However
-    // at this point the token might have already been deleted, which
-    // wouldn't have closed the connection because it wasn't in the
-    // map yet.
+    // Set up an observe for this token. If the token goes away, we need
+    // to close the connection.  We defer the observe because there's
+    // no need for it to be on the critical path for login; we just need
+    // to ensure that the connection will get closed at some point if
+    // the token gets deleted.
     //
-    // We also did need to first add the connection to the map above
-    // (and now remove it here if the token was deleted), because we
-    // could be getting a response from the database that the token
-    // still exists, but then it could be deleted in another fiber
-    // before our `findOne` call returns... and then that other fiber
-    // would need for the connection to be in the map for it to close
-    // the connection.
-    //
-    // We defer this check because there's no need for it to be on the critical
-    // path for login; we just need to ensure that the connection will get
-    // closed at some point if the token has been deleted.
+    // Initially, we set the observe for this connection to null; this
+    // signifies to other code (which might run while we yield) that we
+    // are in the process of setting up an observe for this
+    // connection. Once the observe is ready to go, we replace null with
+    // the real observe handle (unless the placeholder has been deleted,
+    // signifying that the connection was closed already -- in this case
+    // we just clean up the observe that we started).
+    userObservesForConnections[connection.id] = null;
     Meteor.defer(function () {
-      if (! Meteor.users.findOne({
+      var foundMatchingUser;
+      // Because we upgrade unhashed login tokens to hashed tokens at
+      // login time, sessions will only be logged in with a hashed
+      // token. Thus we only need to observe hashed tokens here.
+      var observe = Meteor.users.find({
         _id: userId,
-        "services.resume.loginTokens.hashedToken": newToken
-      })) {
-        removeConnectionFromToken(connection.id);
+        'services.resume.loginTokens.hashedToken': newToken
+      }, { fields: { _id: 1 } }).observeChanges({
+        added: function () {
+          foundMatchingUser = true;
+        },
+        removed: function () {
+          connection.close();
+          // The onClose callback for the connection takes care of
+          // cleaning up the observe handle and any other state we have
+          // lying around.
+        }
+      });
+
+      // If the user ran another login or logout command we were waiting for
+      // the defer or added to fire, then we let the later one win (start an
+      // observe, etc) and just stop our observe now.
+      //
+      // Similarly, if the connection was already closed, then the onClose
+      // callback would have called removeTokenFromConnection and there won't be
+      // an entry in userObservesForConnections. We can stop the observe.
+      if (Accounts._getAccountData(connection.id, 'loginToken') !== newToken ||
+          !_.has(userObservesForConnections, connection.id)) {
+        observe.stop();
+        return;
+      }
+
+      if (userObservesForConnections[connection.id] !== null) {
+        throw new Error("Non-null user observe for connection " +
+                        connection.id + " while observe was being set up?");
+      }
+
+      userObservesForConnections[connection.id] = observe;
+
+      if (! foundMatchingUser) {
+        // We've set up an observe on the user associated with `newToken`,
+        // so if the new token is removed from the database, we'll close
+        // the connection. But the token might have already been deleted
+        // before we set up the observe, which wouldn't have closed the
+        // connection because the observe wasn't running yet.
         connection.close();
       }
     });
   }
 };
-
-// Close all open connections associated with any of the tokens in
-// `tokens`.
-var closeConnectionsForTokens = function (tokens) {
-  _.each(tokens, function (token) {
-    if (_.has(connectionsByLoginToken, token)) {
-      // safety belt. close should defer potentially yielding callbacks.
-      Meteor._noYieldsAllowed(function () {
-        _.each(connectionsByLoginToken[token], function (connectionId) {
-          var connection = Accounts._getAccountData(connectionId, 'connection');
-          if (connection)
-            connection.close();
-        });
-      });
-    }
-  });
-};
-
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler("resume", function(options) {
@@ -735,7 +834,7 @@ Accounts.registerLoginHandler("resume", function(options) {
 // (Also used by Meteor Accounts server and tests).
 //
 Accounts._generateStampedLoginToken = function () {
-  return {token: Random.id(), when: (new Date)};
+  return {token: Random.secret(), when: (new Date)};
 };
 
 ///
@@ -797,6 +896,67 @@ maybeStopExpireTokensInterval = function () {
 expireTokenInterval = Meteor.setInterval(expireTokens,
                                          EXPIRE_TOKENS_INTERVAL_MS);
 
+
+///
+/// OAuth Encryption Support
+///
+
+var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
+
+
+var usingOAuthEncryption = function () {
+  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
+};
+
+
+// OAuth service data is temporarily stored in the pending credentials
+// collection during the oauth authentication process.  Sensitive data
+// such as access tokens are encrypted without the user id because
+// we don't know the user id yet.  We re-encrypt these fields with the
+// user id included when storing the service data permanently in
+// the users collection.
+//
+var pinEncryptedFieldsToUser = function (serviceData, userId) {
+  _.each(_.keys(serviceData), function (key) {
+    var value = serviceData[key];
+    if (OAuthEncryption && OAuthEncryption.isSealed(value))
+      value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
+    serviceData[key] = value;
+  });
+};
+
+
+// Encrypt unencrypted login service secrets when oauth-encryption is
+// added.
+//
+// XXX For the oauthSecretKey to be available here at startup, the
+// developer must call Accounts.config({oauthSecretKey: ...}) at load
+// time, instead of in a Meteor.startup block, because the startup
+// block in the app code will run after this accounts-base startup
+// block.  Perhaps we need a post-startup callback?
+
+Meteor.startup(function () {
+  if (!usingOAuthEncryption())
+    return;
+
+  var ServiceConfiguration =
+    Package['service-configuration'].ServiceConfiguration;
+
+  ServiceConfiguration.configurations.find( {$and: [
+      { secret: {$exists: true} },
+      { "secret.algorithm": {$exists: false} }
+    ] } ).
+    forEach(function (config) {
+      ServiceConfiguration.configurations.update(
+        config._id,
+        { $set: {
+          secret: OAuthEncryption.seal(config.secret)
+        } }
+      );
+    });
+});
+
+
 ///
 /// CREATE USER HOOKS
 ///
@@ -832,6 +992,11 @@ Accounts.insertUserDoc = function (options, user) {
   // one that gets called after (in which you should change other
   // collections)
   user = _.extend({createdAt: new Date(), _id: Random.id()}, user);
+
+  if (user.services)
+    _.each(user.services, function (serviceData) {
+      pinEncryptedFieldsToUser(serviceData, user._id);
+    });
 
   var fullUser;
   if (onCreateUserHook) {
@@ -968,6 +1133,8 @@ Accounts.updateOrCreateUserFromExternalService = function(
   var user = Meteor.users.findOne(selector);
 
   if (user) {
+    pinEncryptedFieldsToUser(serviceData, user._id);
+
     // We *don't* process options (eg, profile) for update, but we do replace
     // the serviceData (eg, so that we keep an unexpired access token and
     // don't cache old email addresses in serviceData.email).
@@ -1104,6 +1271,10 @@ Meteor.methods({
       Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
+
+    if (_.has(options, "secret") && usingOAuthEncryption())
+      options.secret = OAuthEncryption.seal(options.secret);
+
     ServiceConfiguration.configurations.insert(options);
   }
 });
@@ -1179,45 +1350,4 @@ Meteor.startup(function () {
   users.forEach(function (user) {
     deleteSavedTokens(user._id, user.services.resume.loginTokensToDelete);
   });
-});
-
-///
-/// LOGGING OUT DELETED USERS
-///
-
-// When login tokens are removed from the database, close any sessions
-// logged in with those tokens.
-//
-// Because we upgrade unhashed login tokens to hashed tokens at login
-// time, sessions will only be logged in with a hashed token.  Thus we
-// only need to pull out hashed tokens here.
-var closeTokensForUser = function (userTokens) {
-  closeConnectionsForTokens(_.compact(_.pluck(userTokens, "hashedToken")));
-};
-
-// Like _.difference, but uses EJSON.equals to compute which values to return.
-var differenceObj = function (array1, array2) {
-  return _.filter(array1, function (array1Value) {
-    return ! _.some(array2, function (array2Value) {
-      return EJSON.equals(array1Value, array2Value);
-    });
-  });
-};
-
-Meteor.users.find({}, { fields: { "services.resume": 1 }}).observe({
-  changed: function (newUser, oldUser) {
-    var removedTokens = [];
-    if (newUser.services && newUser.services.resume &&
-        oldUser.services && oldUser.services.resume) {
-      removedTokens = differenceObj(oldUser.services.resume.loginTokens || [],
-                                    newUser.services.resume.loginTokens || []);
-    } else if (oldUser.services && oldUser.services.resume) {
-      removedTokens = oldUser.services.resume.loginTokens || [];
-    }
-    closeTokensForUser(removedTokens);
-  },
-  removed: function (oldUser) {
-    if (oldUser.services && oldUser.services.resume)
-      closeTokensForUser(oldUser.services.resume.loginTokens || []);
-  }
 });

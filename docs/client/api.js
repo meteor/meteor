@@ -58,12 +58,18 @@ Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
   locus: "Anywhere",
-  descr: ["`Meteor.settings` contains deployment-specific configuration options. " +
-          "You can initialize settings by passing the `--settings` option (which takes a file containing JSON data) to " +
-          "`meteor run` or `meteor deploy`, " +
-          "or by setting your server process's `METEOR_SETTINGS` environment variable to a JSON string. " +
-          "If you don't provide any settings, `Meteor.settings` will be an empty object.  If the settings object contains a key named `public`, then " +
-          "`Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server."]
+  descr: ["`Meteor.settings` contains deployment-specific configuration " +
+          "options. You can initialize settings by passing the `--settings` " +
+          "option (which takes the name of a file containing JSON data) to " +
+          "`meteor run` or `meteor deploy`. When running your server " +
+          "directly (e.g. from a bundle), you instead specify settings by " +
+          "putting the JSON directly into the `METEOR_SETTINGS` environment " +
+          "variable. " +
+          "If you don't provide any settings, `Meteor.settings` will be an " +
+          "empty object.  If the settings object contains a key named " +
+          "`public`, then `Meteor.settings.public` will be available on the " +
+          "client as well as the server.  All other properties of " +
+          "`Meteor.settings` are only defined on the server."]
 };
 
 Template.api.release = {
@@ -1158,6 +1164,11 @@ Template.api.accounts_config = {
       name: "loginExpirationInDays",
       type: "Number",
       descr: "The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration."
+    },
+    {
+      name: "oauthSecretKey",
+      type: "String",
+      descr: "When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details."
     }
   ]
 };
@@ -1678,7 +1689,7 @@ Template.api.httpcall = {
   args: [
     {name: "method",
      type: "String",
-     descr: 'The HTTP method to use: "`GET`", "`POST`", "`PUT`", or "`DELETE`".'},
+     descr: 'The [HTTP method](http://en.wikipedia.org/wiki/HTTP_method) to use, such as "`GET`", "`POST`", or "`HEAD`".'},
     {name: "url",
      type: "String",
      descr: 'The URL to retrieve.'},
@@ -1713,7 +1724,7 @@ Template.api.httpcall = {
      descr: "Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default."},
     {name: "followRedirects",
      type: "Boolean",
-     descr: "If true, transparently follow HTTP redirects.  Cannot be set to false on the client."}
+     descr: "If `true`, transparently follow HTTP redirects. Cannot be set to `false` on the client. Default `true`."}
   ]
 };
 

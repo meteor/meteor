@@ -3,7 +3,7 @@ SeededRandom = function(seed) { // seed may be a string or any type
     return new SeededRandom(seed);
 
   seed = seed || "seed";
-  this.gen = Random.create(seed).alea; // from random.js
+  this.gen = Random.createWithSeeds(seed).alea; // from random.js
 };
 SeededRandom.prototype.next = function() {
   return this.gen();

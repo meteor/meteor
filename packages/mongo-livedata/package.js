@@ -13,9 +13,7 @@ Package.describe({
 });
 
 Npm.depends({
-  // 1.3.19, plus a patch to add oplogReplay flag:
-  // https://github.com/mongodb/node-mongodb-native/pull/1108
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/779bbac916a751f305d84c727a6cc7dfddab7924"
+  mongodb: "1.4.1"
 });
 
 Package.on_use(function (api) {
@@ -45,6 +43,8 @@ Package.on_use(function (api) {
 
   // If the facts package is loaded, publish some statistics.
   api.use('facts', 'server', {weak: true});
+
+  api.use('callback-hook', 'server');
 
   // Stuff that should be exposed via a real API, but we haven't yet.
   api.export('MongoInternals', 'server');

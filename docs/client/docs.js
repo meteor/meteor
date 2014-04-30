@@ -88,7 +88,17 @@ Meteor.startup(function () {
 
   // Make external links open in a new tab.
   $('a:not([href^="#"])').attr('target', '_blank');
+
+  // Hide menu by tapping on background
+  $('#main').on('click', function () {
+    hideMenu();
+  });
 });
+
+var hideMenu = function () {
+  $('#nav').removeClass('show');
+  $('#menu-ico').removeClass('hidden');
+};
 
 var toc = [
   {name: "Meteor " + Template.headline.release(), id: "top"}, [
@@ -348,6 +358,7 @@ var toc = [
     "force-ssl",
     "jquery",
     "less",
+    "oauth-encryption",
     "random",
     "spiderable",
     "stylus",
@@ -405,7 +416,7 @@ Template.nav.sections = function () {
 
 Template.nav.type = function (what) {
   return this.type === what;
-}
+};
 
 Template.nav.maybe_current = function () {
   return Session.equals("section", this.id) ? "current" : "";
@@ -414,6 +425,18 @@ Template.nav.maybe_current = function () {
 Template.nav_section.depthIs = function (n) {
   return this.depth === n;
 };
+
+// Show hidden TOC when menu icon is tapped
+Template.nav.events({
+  'click #menu-ico' : function () {
+    $('#nav').addClass('show');
+    $('#menu-ico').addClass('hidden');
+  },
+  // Hide TOC when selecting an item
+  'click a' : function () {
+    hideMenu();
+  }
+});
 
 UI.registerHelper('dstache', function() {
   return '{{';

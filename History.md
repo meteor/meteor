@@ -1,5 +1,130 @@
 ## v.NEXT
 
+#### Meteor Accounts
+
+* Fix a security flaw in OAuth1 and OAuth2 implementations. If you are
+  using any OAuth accounts packages (such as `accounts-google` or
+  `accounts-twitter`), we recommend that you update immediately and log
+  out your users' current sessions with the following MongoDB command:
+
+    $ db.users.update({}, { $set: { 'services.resume.loginTokens': [] } }, { multi: true });
+
+* OAuth redirect URLs are now required to be on the same origin as your app.
+
+* Log out a user's other sessions when they change their password.
+
+* Store pending OAuth login results in the database instead of
+  in-memory, so that an OAuth flow succeeds even if different requests
+  go to different server processes.
+
+* When validateLoginAttempt callbacks return false, don't override a more
+  specific error message.
+
+* Add `Random.secret()` for generating security-critical secrets like
+  login tokens.
+
+* `Meteor.logoutOtherClients` now calls the user callback when other
+  login tokens have actually been removed from the database, not when
+  they have been marked for eventual removal.  #1915
+
+* Rename `Oauth` to `OAuth`.  `Oauth` is now an alias for backwards
+  compatibility.
+
+* Add `oauth-encryption` package for encrypting sensitive account
+  credentials in the database.
+
+* A validate login hook can now override the exception thrown from
+  `beginPasswordExchange` like it can for other login methods.
+
+* Remove an expensive observe over all users in the `accounts-base`
+  package.
+
+
+#### Blaze
+
+* Disallow `javascript:` URLs in URL attribute values by default, to
+  help prevent cross-site scripting bugs. Call
+  `UI._allowJavascriptUrls()` to allow them.
+
+* Fix `UI.toHTML` on templates containing `{{#with}}`.
+
+* Fix `{{#with}}` over a data context that is mutated.  #2046
+
+* Clean up autoruns when calling `UI.toHTML`.
+
+* Add support for `{{!-- block comments --}}` in Spacebars. Block comments may
+  contain `}}`, so they are more useful than `{{! normal comments}}` for
+  commenting out sections of Spacebars templates.
+
+* Don't dynamically insert `<tbody>` tags in reactive tables
+
+* When handling a custom jQuery event, additional arguments are
+  no longer lost -- they now come after the template instance
+  argument.  #1988
+
+
+#### DDP and MongoDB
+
+* Extend latency compensation to support an arbitrary sequence of
+  inserts in methods.  Previously, documents created inside a method
+  stub on the client would eventually be replaced by new documents
+  from the server, causing the screen to flicker.  Calling `insert`
+  inside a method body now generates the same ID on the client (inside
+  the method stub) and on the server.  A sequence of inserts also
+  generates the same sequence of IDs.  Code that wants a random stream
+  that is consistent between method stub and real method execution can
+  get one with `DDP.randomStream`.
+  https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
+
+* DDP now has an implementation of bidirectional heartbeats which is consistent
+  across SockJS and websocket transports. This enables connection keepalive and
+  allows servers and clients to more consistently and efficiently detect
+  disconnection.
+
+* The DDP protocol version number has been incremented to "pre2" (adding
+  randomSeed and heartbeats).
+
+* The oplog observe driver handles errors communicating with MongoDB
+  better and knows to re-poll all queries after a MongoDB failover.
+
+* Fix bugs involving mutating DDP method arguments.
+
+
+#### meteor command-line tool
+
+* Move boilerplate HTML from tools to webapp.  Change internal
+  `Webapp.addHtmlAttributeHook` API.
+
+* Add `meteor list-sites` command for listing the sites that you have
+  deployed to meteor.com with your Meteor developer account.
+
+* Third-party template languages can request that their generated source loads
+  before other JavaScript files, just like *.html files, by passing the
+  isTemplate option to Plugin.registerSourceHandler.
+
+* You can specify a particular interface for the dev mode runner to bind to with
+  `meteor -p host:port`.
+
+* Don't include proprietary tar tags in bundle tarballs.
+
+* Convert relative URLs to absolute URLs when merging CSS files.
+
+
+#### Upgraded dependencies
+
+* Node.js from 0.10.25 to 0.10.26.
+* MongoDB driver from 1.3.19 to 1.4.1
+* stylus: 0.42.3 (from 0.42.2)
+* showdown: 0.3.1
+* css-parse: an unreleased version (from 1.7.0)
+* css-stringify: an unreleased version (from 1.4.1)
+
+
+Patches contributed by GitHub users aldeed, apendua, arbesfeld, awwx, dandv,
+davegonzalez, emgee3, justinsb, mquandalle, Neftedollar, Pent, sdarnell,
+and timhaines.
+
+
 ## v0.8.0.1
 
 * Fix security flaw in OAuth1 implementation. Clients can no longer

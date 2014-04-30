@@ -15,10 +15,23 @@ var setCurrentComputation = function (c) {
   Deps.active = !! c;
 };
 
+// _assign is like _.extend or the upcoming Object.assign.
+// Copy src's own, enumerable properties onto tgt and return
+// tgt.
+var _hasOwnProperty = Object.prototype.hasOwnProperty;
+var _assign = function (tgt, src) {
+  for (var k in src) {
+    if (_hasOwnProperty.call(src, k))
+      tgt[k] = src[k];
+  }
+  return tgt;
+};
+
 var _debugFunc = function () {
   // lazy evaluation because `Meteor` does not exist right away
   return (typeof Meteor !== "undefined" ? Meteor._debug :
-          ((typeof console !== "undefined") && console.log ? console.log :
+          ((typeof console !== "undefined") && console.log ?
+           function () { console.log.apply(console, arguments); } :
            function () {}));
 };
 
@@ -36,7 +49,7 @@ var _throwOrLog = function (from, e) {
 // where `_noYieldsAllowed` is a no-op.  `f` may be a computation
 // function or an onInvalidate callback.
 var callWithNoYieldsAllowed = function (f, comp) {
-  if (Meteor.isClient) {
+  if ((typeof Meteor === 'undefined') || Meteor.isClient) {
     f(comp);
   } else {
     Meteor._noYieldsAllowed(function () {
@@ -60,7 +73,7 @@ var inCompute = false;
 // `true` if the `_throwFirstError` option was passed in to the call
 // to Deps.flush that we are in. When set, throw rather than log the
 // first error encountered while flushing. Before throwing the error,
-// finish flushing (from a catch block), logging any subsequent
+// finish flushing (from a finally block), logging any subsequent
 // errors.
 var throwFirstError = false;
 
@@ -116,7 +129,7 @@ Deps.Computation = function (f, parent) {
   }
 };
 
-_.extend(Deps.Computation.prototype, {
+_assign(Deps.Computation.prototype, {
 
   // http://docs.meteor.com/#computation_oninvalidate
   onInvalidate: function (f) {
@@ -213,7 +226,7 @@ Deps.Dependency = function () {
   this._dependentsById = {};
 };
 
-_.extend(Deps.Dependency.prototype, {
+_assign(Deps.Dependency.prototype, {
   // http://docs.meteor.com/#dependency_depend
   //
   // Adds `computation` to this set if it is not already
@@ -255,7 +268,7 @@ _.extend(Deps.Dependency.prototype, {
   }
 });
 
-_.extend(Deps, {
+_assign(Deps, {
   // http://docs.meteor.com/#deps_flush
   flush: function (_opts) {
     // XXX What part of the comment below is still true? (We no longer
@@ -279,6 +292,7 @@ _.extend(Deps, {
     willFlush = true;
     throwFirstError = !! (_opts && _opts._throwFirstError);
 
+    var finishedTry = false;
     try {
       while (pendingComputations.length ||
              afterFlushCallbacks.length) {
@@ -300,11 +314,13 @@ _.extend(Deps, {
           }
         }
       }
-    } catch (e) {
-      inFlush = false; // needed before calling `Deps.flush()` again
-      Deps.flush({_throwFirstError: false}); // finish flushing
-      throw e;
+      finishedTry = true;
     } finally {
+      if (! finishedTry) {
+        // we're erroring
+        inFlush = false; // needed before calling `Deps.flush()` again
+        Deps.flush({_throwFirstError: false}); // finish flushing
+      }
       willFlush = false;
       inFlush = false;
     }

@@ -173,5 +173,12 @@ _.extend(RunLog.prototype, {
   }
 });
 
-// Export a singleton instance of RunLog.
-exports.runLog = new RunLog;
+// Create a singleton instance of RunLog. Expose its public methods on the
+// object you get with require('./run-log.js').
+var runLogInstance = new RunLog;
+_.each(
+  ['log', 'logTemporary', 'logRestart', 'logAppOutput', 'setRawLogs',
+   'finish', 'clearLog', 'getLog'],
+  function (method) {
+    exports[method] = _.bind(runLogInstance[method], runLogInstance);
+  });

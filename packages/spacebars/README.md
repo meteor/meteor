@@ -262,9 +262,13 @@ context) if there are zero items in the sequence at any time.
 
 When the argument to `#each` changes, the DOM is always updated to reflect the new sequence, but it's sometimes significant exactly how that is achieved.  When the argument is a Meteor live cursor, the `#each` has access to fine-grained updates to the sequence -- add, remove, move, and change callbacks -- and the items are all documents identified by unique ids.  As long as the cursor itself remains constant (i.e. the query doesn't change), it is very easy to reason about how the DOM will be updated as the contents of the cursor change.  The rendered content for each document persists as long as the document is in the cursor, and when documents are re-ordered, the DOM is re-ordered.
 
-Things are more complicated if the argument to the `#each` reactively changes between different cursor objects, or between arrays of plain JavaScript objects that may not be identified clearly.  The implementation of `#each` tries to be intelligent without doing too much expensive work.
+Things are more complicated if the argument to the `#each` reactively changes between different cursor objects, or between arrays of plain JavaScript objects that may not be identified clearly.  The implementation of `#each` tries to be intelligent without doing too much expensive work. Specifically, it tries to identify items between the old and new array or cursor with the following strategy:
 
-XXX explain more
+1. For objects with an `_id` field, use that field as the identification key
+2. For objects with no `_id` field, use the array index as the identification key. In this case, appends are fast but prepends are slower.
+3. For numbers or strings, use their value as the identification key.
+
+Regardless of the strategy used, keys are deduplicated so that arrays with repeating items work fine.
 
 ## Custom Block Helpers
 
@@ -330,6 +334,15 @@ appear in the compiled template code or the generated HTML.
 <div class="section">
   ...
 </div>
+```
+
+Comment tags also come in a "block comment" form.  Block comments may contain `{{` and `}}`:
+
+```
+{{!-- This is a block comment.
+We can write {{foo}} and it doesn't matter.
+{{#with x}}This code is commented out.{{/with}}
+--}}
 ```
 
 Comment tags can be used wherever other template tags are allowed.

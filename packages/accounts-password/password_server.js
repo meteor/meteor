@@ -73,12 +73,13 @@ Meteor.methods({beginPasswordExchange: function (request) {
     // the second step method ('login') is called. If a user calls
     // 'beginPasswordExchange' but then never calls the second step
     // 'login' method, no login hook will fire.
-    Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
+    // The validate login hooks can mutate the exception to be thrown.
+    var attempt = Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
       type: 'password',
       error: err,
       userId: user && user._id
     });
-    throw err;
+    throw attempt.error;
   }
 
   // Save results so we can verify them later.
@@ -198,10 +199,20 @@ Meteor.methods({changePassword: function (options) {
   if (!verifier)
     throw new Meteor.Error(400, "Invalid verifier");
 
-  // XXX this should invalidate all login tokens other than the current one
-  // (or it should assign a new login token, replacing existing ones)
-  Meteor.users.update({_id: this.userId},
-                      {$set: {'services.password.srp': verifier}});
+  // It would be better if this removed ALL existing tokens and replaced
+  // the token for the current connection with a new one, but that would
+  // be tricky, so we'll settle for just replacing all tokens other than
+  // the one for the current connection.
+  var currentToken = Accounts._getLoginToken(this.connection.id);
+  Meteor.users.update(
+    { _id: this.userId },
+    {
+      $set: { 'services.password.srp': verifier },
+      $pull: {
+        'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
+      }
+    }
+  );
 
   var ret = {passwordChanged: true};
   if (serialized)
@@ -253,7 +264,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
     throw new Error("No such email for user.");
 
-  var token = Random.id();
+  var token = Random.secret();
   var when = new Date();
   Meteor.users.update(userId, {$set: {
     "services.password.reset": {
@@ -302,7 +313,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     throw new Error("No such email for user.");
 
 
-  var token = Random.id();
+  var token = Random.secret();
   var when = new Date();
   Meteor.users.update(userId, {$set: {
     "services.password.reset": {
@@ -313,14 +324,14 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   }});
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-  
+
   var options = {
     to: email,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.enrollAccount.subject(user),
     text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
   };
-  
+
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
@@ -425,7 +436,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
 
 
   var tokenRecord = {
-    token: Random.id(),
+    token: Random.secret(),
     address: address,
     when: new Date()};
   Meteor.users.update(
@@ -433,14 +444,14 @@ Accounts.sendVerificationEmail = function (userId, address) {
     {$push: {'services.email.verificationTokens': tokenRecord}});
 
   var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
-  
+
   var options = {
     to: address,
     from: Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.verifyEmail.subject(user),
     text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
   };
-  
+
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
       Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);

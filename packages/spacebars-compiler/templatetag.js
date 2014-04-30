@@ -48,6 +48,7 @@ var starts = {
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
+  BLOCKCOMMENT: makeStacheTagStartRegex(/^\{\{\s*!--/),
   COMMENT: makeStacheTagStartRegex(/^\{\{\s*!/),
   INCLUSION: makeStacheTagStartRegex(/^\{\{\s*>\s*(?!\s)/),
   BLOCKOPEN: makeStacheTagStartRegex(/^\{\{\s*#\s*(?!\s)/),
@@ -226,6 +227,7 @@ TemplateTag.parse = function (scannerOrString) {
   if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
+  else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
   else if (run(starts.COMMENT)) type = 'COMMENT';
   else if (run(starts.INCLUSION)) type = 'INCLUSION';
   else if (run(starts.BLOCKOPEN)) type = 'BLOCKOPEN';
@@ -236,7 +238,12 @@ TemplateTag.parse = function (scannerOrString) {
   var tag = new TemplateTag;
   tag.type = type;
 
-  if (type === 'COMMENT') {
+  if (type === 'BLOCKCOMMENT') {
+    var result = run(/^[\s\S]*?--\s*?\}\}/);
+    if (! result)
+      error("Unclosed block comment");
+    tag.value = result.slice(0, result.lastIndexOf('--'));
+  } else if (type === 'COMMENT') {
     var result = run(/^[\s\S]*?\}\}/);
     if (! result)
       error("Unclosed comment");
@@ -319,6 +326,9 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
   var result = TemplateTag.parse(scannerOrString);
   if (! result)
     return result;
+
+  if (result.type === 'BLOCKCOMMENT')
+    return null;
 
   if (result.type === 'COMMENT')
     return null;

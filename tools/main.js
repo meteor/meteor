@@ -330,11 +330,22 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.25';
+  var MIN_NODE_VERSION = 'v0.10.26';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
     process.exit(1);
+  }
+
+  // This is a bit of a hack, but: if we don't check this in the tool, then the
+  // first time we do a unipackage.load, it will fail due to the check in the
+  // meteor package, and that'll look a lot uglier.
+  if (process.env.ROOT_URL) {
+    var parsedUrl = require('url').parse(process.env.ROOT_URL);
+    if (!parsedUrl.host) {
+      process.stderr.write('$ROOT_URL, if specified, must be an URL.\n');
+      process.exit(1);
+    }
   }
 
   // Parse the arguments.
@@ -811,8 +822,7 @@ commandName + ": can only take one " + helpfulOptionName + " option.\n" +
       var value = values[0];
       if (value === null) {
         // This option requires a value and they didn't give it one
-        // (it was the last word on the command line, or it was
-        // a short option immediately followed by a non-number).
+        // (it was the last word on the command line).
         process.stderr.write(
 commandName + ": the " + helpfulOptionName + " option needs a value.\n" +
 "Try 'meteor help " + commandName + "' for help.\n");

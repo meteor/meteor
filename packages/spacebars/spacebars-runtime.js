@@ -216,7 +216,7 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
 Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
   return UI.Component.extend({
     init: function () {
-      this.v = UI.emboxValue(argFunc);
+      this.v = UI.emboxValue(argFunc, UI.safeEquals);
     },
     render: function () {
       return UI.If(this.v, UI.With(this.v, contentBlock), elseContentBlock);

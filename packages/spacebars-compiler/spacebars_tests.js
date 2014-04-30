@@ -32,6 +32,12 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{! asdf }}', {type: 'COMMENT', value: ' asdf '});
   run('{{ ! asdf }}', {type: 'COMMENT', value: ' asdf '});
   run('{{ ! asdf }asdf', "Unclosed");
+  run('{{!-- asdf --}}', {type: 'BLOCKCOMMENT', value: ' asdf '});
+  run('{{ !-- asdf -- }}', {type: 'BLOCKCOMMENT', value: ' asdf '});
+  run('{{ !-- {{asdf}} -- }}', {type: 'BLOCKCOMMENT', value: ' {{asdf}} '});
+  run('{{ !-- {{as--df}} --}}', {type: 'BLOCKCOMMENT', value: ' {{as--df}} '});
+  run('{{ !-- asdf }asdf', "Unclosed");
+  run('{{ !-- asdf --}asdf', "Unclosed");
   run('{{else}}', {type: 'ELSE'});
   run('{{ else }}', {type: 'ELSE'});
   run('{{else x}}', "Expected");
@@ -225,6 +231,9 @@ Tinytest.add("spacebars - parse", function (test) {
   test.equal(HTML.toJS(Spacebars.parse('{{!foo}}')), 'null');
   test.equal(HTML.toJS(Spacebars.parse('x{{!foo}}y')), '"xy"');
 
+  test.equal(HTML.toJS(Spacebars.parse('{{!--foo--}}')), 'null');
+  test.equal(HTML.toJS(Spacebars.parse('x{{!--foo--}}y')), '"xy"');
+
   test.equal(HTML.toJS(Spacebars.parse('{{#foo}}x{{/foo}}')),
              'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
 
@@ -254,7 +263,10 @@ Tinytest.add("spacebars - parse", function (test) {
     Spacebars.parse('<a {{> x}}></a>');
   });
 
-  test.equal(HTML.toJS(Spacebars.parse('<a {{! x}} b=c{{! x}} {{! x}}></a>')),
+  test.equal(HTML.toJS(Spacebars.parse('<a {{! x--}} b=c{{! x}} {{! x}}></a>')),
+             'HTML.A({b: "c"})');
+
+  test.equal(HTML.toJS(Spacebars.parse('<a {{!-- x--}} b=c{{ !-- x --}} {{!-- x -- }}></a>')),
              'HTML.A({b: "c"})');
 
   // currently, if there are only comments, the attribute is truthy.  This is
@@ -264,5 +276,9 @@ Tinytest.add("spacebars - parse", function (test) {
              'HTML.INPUT({selected: ""})');
   test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}{{!bar}}>')),
              'HTML.INPUT({selected: ""})');
+  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!--foo--}}>')),
+    'HTML.INPUT({selected: ""})');
+  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!--foo--}}{{!--bar--}}>')),
+    'HTML.INPUT({selected: ""})');
 
 });

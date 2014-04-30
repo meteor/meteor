@@ -49,6 +49,7 @@ Package.on_use(function (api) {
   // _idParse, _idStringify.
   api.use('minimongo', ['client', 'server']);
 
+  api.add_files('heartbeat.js', ['client', 'server']);
 
   api.add_files('livedata_server.js', 'server');
 
@@ -56,6 +57,7 @@ Package.on_use(function (api) {
   api.add_files('crossbar.js', 'server');
 
   api.add_files('livedata_common.js', ['client', 'server']);
+  api.add_files('random_stream.js', ['client', 'server']);
 
   api.add_files('livedata_connection.js', ['client', 'server']);
 
@@ -77,6 +79,7 @@ Package.on_test(function (api) {
   api.add_files('livedata_test_service.js', ['client', 'server']);
   api.add_files('session_view_tests.js', ['server']);
   api.add_files('crossbar_tests.js', ['server']);
+  api.add_files('random_stream_tests.js', ['client', 'server']);
 
   api.use('http', 'client');
   api.add_files(['stream_tests.js'], 'client');

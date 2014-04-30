@@ -101,6 +101,9 @@ StarTranslator._writeClientProg = function (bundlePath, clientProgPath) {
   var clientManifest = {
     "format": "browser-program-pre1",
     "manifest": origClientManifest.manifest,
+    // XXX Haven't updated this for the app.html -> head/body change, but
+    //     surely we don't need to because code in pre-star apps doesn't
+    //     even read this file?
     "page": "app.html",
     "static": "static",
     "staticCacheable": "static_cacheable"
