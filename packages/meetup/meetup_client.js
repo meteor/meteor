@@ -17,7 +17,12 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
       new ServiceConfiguration.ConfigError());
     return;
   }
-  var credentialToken = Random.secret();
+
+  // For some reason, meetup converts underscores to spaces in the state
+  // parameter when redirecting back to the client, so we use
+  // `Random.id()` here (alphanumerics) instead of `Random.secret()`
+  // (base 64 characters).
+  var credentialToken = Random.id();
 
   var scope = (options && options.requestPermissions) || [];
   var flatScope = _.map(scope, encodeURIComponent).join('+');

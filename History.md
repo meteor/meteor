@@ -2,6 +2,15 @@
 
 #### Meteor Accounts
 
+* Fix a security flaw in OAuth1 and OAuth2 implementations. If you are
+  using any OAuth accounts packages (such as `accounts-google` or
+  `accounts-twitter`), we recommend that you update immediately and log
+  out your users' current sessions with the following MongoDB command:
+
+    $ db.users.update({}, { $set: { 'services.resume.loginTokens': [] } }, { multi: true });
+
+* OAuth redirect URLs are now required to be on the same origin as your app.
+
 * Log out a user's other sessions when they change their password.
 
 * Store pending OAuth login results in the database instead of
@@ -56,8 +65,6 @@
 
 #### DDP and MongoDB
 
-* DDP heartbeats XXX
-
 * Extend latency compensation to support an arbitrary sequence of
   inserts in methods.  Previously, documents created inside a method
   stub on the client would eventually be replaced by new documents
@@ -68,6 +75,14 @@
   that is consistent between method stub and real method execution can
   get one with `DDP.randomStream`.
   https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
+
+* DDP now has an implementation of bidirectional heartbeats which is consistent
+  across SockJS and websocket transports. This enables connection keepalive and
+  allows servers and clients to more consistently and efficiently detect
+  disconnection.
+
+* The DDP protocol version number has been incremented to "pre2" (adding
+  randomSeed and heartbeats).
 
 * The oplog observe driver handles errors communicating with MongoDB
   better and knows to re-poll all queries after a MongoDB failover.
@@ -100,7 +115,7 @@
 * Node.js from 0.10.25 to 0.10.26.
 * MongoDB driver from 1.3.19 to 1.4.1
 * stylus: 0.42.3 (from 0.42.2)
-* showdown: XXX (from XXX)
+* showdown: 0.3.1
 * css-parse: an unreleased version (from 1.7.0)
 * css-stringify: an unreleased version (from 1.4.1)
 

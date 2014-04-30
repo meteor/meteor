@@ -644,8 +644,8 @@ Accounts._getUserObserve = function (connectionId) {
 // the observe that we started when we associated the connection with
 // this token.
 var removeTokenFromConnection = function (connectionId) {
-  var observe = userObservesForConnections[connectionId];
-  if (observe !== undefined) {
+  if (_.has(userObservesForConnections, connectionId)) {
+    var observe = userObservesForConnections[connectionId];
     if (observe === null) {
       // We're in the process of setting up an observe for this
       // connection. We can't clean up that observe yet, but if we
@@ -703,17 +703,25 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
         }
       });
 
-      if (_.has(userObservesForConnections, connection.id)) {
-        if (userObservesForConnections[connection.id] !== null) {
-          throw new Error("Non-null user observe for connection " +
-                          connection.id + " while observe was being set up?");
-        }
-        userObservesForConnections[connection.id] = observe;
-      } else {
-        // Oops, this connection was closed while we were setting up the
-        // observe. Clean it up now.
+      // If the user ran another login or logout command we were waiting for
+      // the defer or added to fire, then we let the later one win (start an
+      // observe, etc) and just stop our observe now.
+      //
+      // Similarly, if the connection was already closed, then the onClose
+      // callback would have called removeTokenFromConnection and there won't be
+      // an entry in userObservesForConnections. We can stop the observe.
+      if (Accounts._getAccountData(connection.id, 'loginToken') !== newToken ||
+          !_.has(userObservesForConnections, connection.id)) {
         observe.stop();
+        return;
       }
+
+      if (userObservesForConnections[connection.id] !== null) {
+        throw new Error("Non-null user observe for connection " +
+                        connection.id + " while observe was being set up?");
+      }
+
+      userObservesForConnections[connection.id] = observe;
 
       if (! foundMatchingUser) {
         // We've set up an observe on the user associated with `newToken`,

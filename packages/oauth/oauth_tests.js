@@ -47,3 +47,15 @@ Tinytest.add("oauth - pendingCredential handles duplicate key", function (test) 
   OAuth._storePendingCredential(key, newCred);
   test.equal(OAuth._retrievePendingCredential(key), newCred);
 });
+
+Tinytest.add(
+  "oauth - pendingCredential requires credential secret",
+  function (test) {
+    var key = Random.id();
+    var cred = Random.id();
+    var secret = Random.id();
+    OAuth._storePendingCredential(key, cred, secret);
+    test.equal(OAuth._retrievePendingCredential(key), undefined);
+    test.equal(OAuth._retrievePendingCredential(key, secret), cred);
+  }
+);

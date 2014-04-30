@@ -118,6 +118,18 @@
     "release": "0.8.0.1"
   },
   {
+    "release": "0.8.1",
+    "notices": [
+      "We closed a security hole in our OAuth client. If you are using",
+      "OAuth-based accounts (such as the `accounts-google` or",
+      "`accounts-twitter` packages), we recommend that you log out",
+      "all your users by running this command from a MongoDB shell:",
+      "",
+      "  $ db.users.update({}, { $set: { 'services.resume.loginTokens':",
+      "    [] } }, { multi: true });"
+    ]
+  },
+  {
     "release": "NEXT"
   }
 ]
