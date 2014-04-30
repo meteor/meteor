@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v0.8.1
+
 #### Meteor Accounts
 
 * Fix a security flaw in OAuth1 and OAuth2 implementations. If you are
