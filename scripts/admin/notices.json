@@ -125,8 +125,8 @@
       "`accounts-twitter` packages), we recommend that you log out",
       "all your users by running this command from a MongoDB shell:",
       "",
-      "  $ db.users.update({}, { $set: { 'services.resume.loginTokens': [] } },",
-      "    { multi: true });"
+      "  $ db.users.update({}, { $set: { 'services.resume.loginTokens':",
+      "    [] } }, { multi: true });"
     ]
   },
   {
