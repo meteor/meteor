@@ -459,17 +459,18 @@ var installNpmModule = function (name, version, dir) {
   // how to silence all output (specifically the installed tree which
   // is printed out with `console.log`)
   //
-  // We use --force, because the NPM cache is broken! See
-  // https://github.com/isaacs/npm/issues/3265 Basically, switching
+  // We used to use --force here, because the NPM cache is broken! See
+  // https://github.com/npm/npm/issues/3265 Basically, switching
   // back and forth between a tarball fork of version X and the real
-  // version X can confuse NPM. But the main reason to use tarball
+  // version X could confuse NPM. But the main reason to use tarball
   // URLs is to get a fork of the latest version with some fix, so
-  // it's easy to trigger this! So instead, always use --force. (Even
-  // with --force, we still WRITE to the cache, so we can corrupt the
-  // cache for other invocations of npm... ah well.)
+  // it was easy to trigger this!
+  //
+  // We now use a forked version of npm with our PR
+  // https://github.com/npm/npm/pull/5137 to work around this.
   var result =
     meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["install", "--force", installArg],
+                            ["install", installArg],
                             {cwd: dir});
 
   if (! result.success) {
@@ -498,11 +499,10 @@ var installFromShrinkwrap = function (dir) {
 
   ensureConnected();
 
-  // `npm install`, which reads npm-shrinkwrap.json.  See above for why
-  // --force.
+  // `npm install`, which reads npm-shrinkwrap.json.
   var result =
     meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["install", "--force"], {cwd: dir});
+                            ["install"], {cwd: dir});
 
   if (! result.success) {
     // XXX include this in the buildmessage.error instead
