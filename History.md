@@ -2,6 +2,15 @@
 
 #### Meteor Accounts
 
+* Fix a security flaw in OAuth1 and OAuth2 implementations. If you are
+  using any OAuth accounts packages (such as `accounts-google` or
+  `accounts-twitter`), we recommend that you update immediately and log
+  out your users' current sessions with the following MongoDB command:
+
+    $ db.users.update({}, { $set: { 'services.resume.loginTokens': [] } }, { multi: true });
+
+* OAuth redirect URLs are now required to be on the same origin as your app.
+
 * Log out a user's other sessions when they change their password.
 
 * Store pending OAuth login results in the database instead of
