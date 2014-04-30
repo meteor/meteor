@@ -561,6 +561,13 @@ html5: https://github.com/aredridel/html5
 Copyright (c) 2010 Aria Stewart <aredridel@nbtsc.org>
 
 
+----------
+node-aes-gcm: https://github.com/xorbit/node-aes-gcm
+----------
+
+Copyright (c) 2013 Patrick Van Oosterwijck
+
+
 
 ==============
 Apache License
