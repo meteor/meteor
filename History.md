@@ -106,7 +106,7 @@
 * Node.js from 0.10.25 to 0.10.26.
 * MongoDB driver from 1.3.19 to 1.4.1
 * stylus: 0.42.3 (from 0.42.2)
-* showdown: XXX (from XXX)
+* showdown: 0.3.1
 * css-parse: an unreleased version (from 1.7.0)
 * css-stringify: an unreleased version (from 1.4.1)
 
