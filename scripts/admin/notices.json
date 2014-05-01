@@ -118,6 +118,12 @@
     "release": "0.8.0.1"
   },
   {
+    "release": "0.8.1"
+  },
+  {
+    "release": "0.8.1.1"
+  },
+  {
     "release": "NEXT"
   }
 ]

@@ -1,4 +1,7 @@
-=> Meteor 0.8.0.1: Fix security problem in Twitter OAuth flow.
+=> Meteor 0.8.1.1: OAuth security fix, bug fixes and new features for
+   Blaze, improved latency compensation, and more.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.8.0.1 by running 'meteor update'.
+   project to Meteor 0.8.1.1 by running 'meteor update'. If you haven't
+   yet upgraded to 0.8.x, we've backported the security fix to a new
+   0.7.2.2 release as well.
