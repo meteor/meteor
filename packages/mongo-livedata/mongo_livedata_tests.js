@@ -2954,3 +2954,12 @@ testAsyncMulti("mongo-livedata - undefined find options", [
     test.equal(result, self.doc);
   }
 ]);
+
+// We're not sure if this should be supported, but it was broken in
+// 0.8.1 and we decided to make a quick
+// fix. https://github.com/meteor/meteor/issues/2095
+Meteor.isServer && Tinytest.add("mongo-livedata - insert and retrieve EJSON user-defined type as document", function (test) {
+  var coll = new Meteor.Collection(Random.id());
+  coll.insert(new Meteor.Collection.ObjectID());
+  console.log(coll.find({}).fetch());
+});

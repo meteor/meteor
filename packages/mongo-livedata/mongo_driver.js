@@ -17,7 +17,10 @@ MongoTest = {};
 
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
-    if (_.isArray(thing)) {
+    // XXX This condition should match our `looksLikeArray` condition in
+    // underscore. (A Buffer might not be the only thing that should be
+    // treated as an array.)
+    if (_.isArray(thing) || thing instanceof Buffer) {
       return _.map(thing, _.bind(replaceNames, null, filter));
     }
     var ret = {};
