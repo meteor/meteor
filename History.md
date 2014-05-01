@@ -12,6 +12,16 @@
 Patches contributed by GitHub users awwx
 
 
+## v0.8.1.1
+
+* Fix 0.8.1 regression preventing clients from specifying `_id` on insert. #2097
+
+* Fix handling of malformed URLs when merging CSS files. #2103, #2093
+
+* Loosen the checks on the `options` argument to `Collection.find` to
+  allow undefined values.
+
+
 ## v0.8.1
 
 #### Meteor Accounts

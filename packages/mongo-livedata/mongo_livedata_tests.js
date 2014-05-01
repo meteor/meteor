@@ -2925,3 +2925,41 @@ Meteor.isServer && Tinytest.add("mongo-livedata - cursor dedup stop", function (
   // would print the error and no longer does.
   // See https://github.com/meteor/meteor/issues/2070
 });
+
+testAsyncMulti("mongo-livedata - undefined find options", [
+  function (test, expect) {
+    var self = this;
+    self.collName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call("createInsecureCollection", self.collName);
+      Meteor.subscribe("c-" + self.collName, expect());
+    }
+  },
+  function (test, expect) {
+    var self = this;
+    self.coll = new Meteor.Collection(self.collName);
+    self.doc = { foo: 1, bar: 2, _id: "foobar" };
+    self.coll.insert(self.doc, expect(function (err, id) {
+      test.isFalse(err);
+    }));
+  },
+  function (test, expect) {
+    var self = this;
+    var result = self.coll.findOne({ foo: 1 }, {
+      fields: undefined,
+      sort: undefined,
+      limit: undefined,
+      skip: undefined
+    });
+    test.equal(result, self.doc);
+  }
+]);
+
+// We're not sure if this should be supported, but it was broken in
+// 0.8.1 and we decided to make a quick
+// fix. https://github.com/meteor/meteor/issues/2095
+Meteor.isServer && Tinytest.add("mongo-livedata - insert and retrieve EJSON user-defined type as document", function (test) {
+  var coll = new Meteor.Collection(Random.id());
+  coll.insert(new Meteor.Collection.ObjectID());
+  coll.find({}).fetch();
+});
