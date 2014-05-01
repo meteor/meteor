@@ -210,11 +210,11 @@ _.extend(Meteor.Collection.prototype, {
       return { transform: self._transform };
     } else {
       check(args[1], Match.Optional(Match.ObjectIncluding({
-        fields: Match.Optional(Object),
-        sort: Match.Optional(Match.OneOf(Object, Array)),
-        limit: Match.Optional(Number),
-        skip: Match.Optional(Number)
-      })));
+        fields: Match.Optional(Match.OneOf(Object, undefined)),
+        sort: Match.Optional(Match.OneOf(Object, Array, undefined)),
+        limit: Match.Optional(Match.OneOf(Number, undefined)),
+        skip: Match.Optional(Match.OneOf(Number, undefined))
+     })));
 
       return _.extend({
         transform: self._transform
@@ -700,7 +700,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             var validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             args.unshift(this.userId);
-            generatedId !== null && args.push(generatedId);
+            method === 'insert' && args.push(generatedId);
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null)

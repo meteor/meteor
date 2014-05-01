@@ -50,7 +50,7 @@ if (Meteor.isServer) {
     // totally locked down collection
     var lockedDownCollection = defineCollection(
       "collection-locked-down", false /*insecure*/);
-    // resticted collection with same allowed modifications, both with and
+    // restricted collection with same allowed modifications, both with and
     // without the `insecure` package
     var restrictedCollectionDefaultSecure = defineCollection(
       "collection-restrictedDefaultSecure", false /*insecure*/);
@@ -71,7 +71,9 @@ if (Meteor.isServer) {
         return doc.a;
       });
     var restrictedCollectionForInvalidTransformTest = defineCollection(
-      "collection-restictedForInvalidTransform", false /*insecure*/);
+      "collection-restrictedForInvalidTransform", false /*insecure*/);
+    var restrictedCollectionForClientIdTest = defineCollection(
+      "collection-restrictedForClientIdTest", false /*insecure*/);
 
     if (needToConfigure) {
       restrictedCollectionWithTransform.allow({
@@ -96,6 +98,11 @@ if (Meteor.isServer) {
       restrictedCollectionForInvalidTransformTest.allow({
         // transform must return an object which is not a mongo id
         transform: function (doc) { return doc._id; },
+        insert: function () { return true; }
+      });
+      restrictedCollectionForClientIdTest.allow({
+        // This test just requires the collection to trigger the restricted
+        // case.
         insert: function () { return true; }
       });
 
@@ -241,7 +248,7 @@ if (Meteor.isClient) {
     // totally locked down collection
     var lockedDownCollection = defineCollection("collection-locked-down");
 
-    // resticted collection with same allowed modifications, both with and
+    // restricted collection with same allowed modifications, both with and
     // without the `insecure` package
     var restrictedCollectionDefaultSecure = defineCollection(
       "collection-restrictedDefaultSecure");
@@ -262,7 +269,9 @@ if (Meteor.isClient) {
         return doc.a;
       });
     var restrictedCollectionForInvalidTransformTest = defineCollection(
-      "collection-restictedForInvalidTransform");
+      "collection-restrictedForInvalidTransform");
+    var restrictedCollectionForClientIdTest = defineCollection(
+      "collection-restrictedForClientIdTest");
 
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
@@ -758,6 +767,18 @@ if (Meteor.isClient) {
       [function (test, expect) {
         restrictedCollectionForInvalidTransformTest.insert({}, expect(function (err, res) {
           test.isTrue(err);
+        }));
+      }]);
+    testAsyncMulti(
+      "collection - restricted collection allows client-side id, " + idGeneration,
+      [function (test, expect) {
+        var self = this;
+        self.id = Random.id();
+        restrictedCollectionForClientIdTest.insert({_id: self.id}, expect(function (err, res) {
+          test.isFalse(err);
+          test.equal(res, self.id);
+          test.equal(restrictedCollectionForClientIdTest.findOne(self.id),
+                     {_id: self.id});
         }));
       }]);
   });  // end idGeneration loop

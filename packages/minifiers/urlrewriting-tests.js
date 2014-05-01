@@ -29,4 +29,5 @@ Tinytest.add("minifiers - url rewriting when merging", function (test) {
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
+  t('http://', 'http://', 'malformed URL');
 });
