@@ -2961,5 +2961,5 @@ testAsyncMulti("mongo-livedata - undefined find options", [
 Meteor.isServer && Tinytest.add("mongo-livedata - insert and retrieve EJSON user-defined type as document", function (test) {
   var coll = new Meteor.Collection(Random.id());
   coll.insert(new Meteor.Collection.ObjectID());
-  console.log(coll.find({}).fetch());
+  coll.find({}).fetch();
 });
