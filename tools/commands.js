@@ -719,10 +719,16 @@ main.registerCommand({
 
     if (! mongoPort) {
       process.stdout.write(
-"mongo: Meteor isn't running.\n" +
+"mongo: Meteor isn't running a local MongoDB server.\n" +
 "\n" +
 "This command only works while Meteor is running your application\n" +
-"locally. Start your application first.\n");
+"locally. Start your application first. (This error will also occur if\n" +
+"you asked Meteor to use a different MongoDB server with $MONGO_URL when\n" +
+"you ran your application.)\n" +
+"\n" +
+"If you're trying to connect to the database of an app you deployed\n" +
+"with 'meteor deploy', specify your site's name with this command.\n"
+);
       return 1;
     }
     mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
