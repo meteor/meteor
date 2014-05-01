@@ -71,7 +71,7 @@ umask 022
 mkdir build
 cd build
 
-git clone git://github.com/joyent/node.git
+git clone https://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
@@ -109,6 +109,11 @@ npm install source-map-support@0.2.5
 npm install bcrypt@0.7.7
 npm install node-aes-gcm@0.1.3
 npm install heapdump@0.2.5
+
+# Override the default npm of v0.10.26 (which is 1.4.3) with this, which is a
+# fork of 1.4.7 plus some upstream commits plus
+# https://github.com/npm/npm/pull/5137
+npm install https://github.com/glasser/npm/tarball/9adf943cc0837d5cedb4c4ec9dce8530507cc785
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
 npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0

@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Speed up updates of NPM modules by patching NPM to work around
+  https://github.com/npm/npm/issues/3265 instead of passing `--force`.
+
 ## v0.8.1
 
 #### Meteor Accounts
