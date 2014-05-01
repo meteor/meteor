@@ -474,8 +474,10 @@ var installNpmModule = function (name, version, dir) {
                             {cwd: dir});
 
   if (! result.success) {
-    var pkgNotFound = "404 '" + name + "' is not in the npm registry";
-    var versionNotFound = "version not found: " + version;
+    var pkgNotFound = "404 '" + utils.quotemeta(name) +
+          "' is not in the npm registry";
+    var versionNotFound = "version not found: " + utils.quotemeta(name) +
+          '@' + utils.quotemeta(version);
     if (result.stderr.match(new RegExp(pkgNotFound))) {
       buildmessage.error("there is no npm package named '" + name + "'");
     } else if (result.stderr.match(new RegExp(versionNotFound))) {
