@@ -14,15 +14,21 @@ Package.on_use(function (api) {
   api.add_files([
     'preamble.js',
     'sequence.js',
-    'var.js',
+    'var.js'
+  ]);
+
+  api.add_files([
     'dombackend.js',
     'domrange.js',
     'events.js',
+    'attrs.js'
+  ], 'client');
+
+  api.add_files([
     'render.js',
     'component.js',
-    'attrs.js',
     'materialize.js'
-  ], 'client');
+  ]);
 });
 
 Package.on_test(function (api) {

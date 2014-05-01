@@ -17,6 +17,9 @@ Package.on_use(function (api) {
   api.use('htmljs');
   api.imply('htmljs');
 
+  api.use('blaze');
+  api.imply('blaze');
+
   api.add_files(['exceptions.js', 'base.js']);
 
   api.add_files(['dombackend.js',
@@ -32,6 +35,8 @@ Package.on_use(function (api) {
                 ]);
 
   api.add_files(['handlebars_backcompat.js']);
+
+  api.add_files(['newblaze.js']);
 });
 
 Package.on_test(function (api) {
