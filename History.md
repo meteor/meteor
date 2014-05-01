@@ -3,6 +3,8 @@
 * Speed up updates of NPM modules by patching NPM to work around
   https://github.com/npm/npm/issues/3265 instead of passing `--force`.
 
+* Fix 0.8.1 regression preventing clients from specifying `_id` on insert.
+
 ## v0.8.1
 
 #### Meteor Accounts
