@@ -772,6 +772,11 @@ Meteor.Collection.prototype._validatedInsert = function (userId, doc,
                                                          generatedId) {
   var self = this;
 
+  // This parameter is optional. Default value is null
+  if (generatedId === undefined) {
+    generatedId = null;
+  }
+
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.insert.deny, function(validator) {
