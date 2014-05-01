@@ -1,5 +1,13 @@
 ## v.NEXT
 
+
+## v0.8.1.1
+
+* Fix 0.8.1 regression preventing clients from specifying `_id` on insert.
+
+
+## v0.8.1
+
 #### Meteor Accounts
 
 * Log out a user's other sessions when they change their password.

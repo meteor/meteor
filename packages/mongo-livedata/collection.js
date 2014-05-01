@@ -700,7 +700,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             var validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             args.unshift(this.userId);
-            generatedId !== null && args.push(generatedId);
+            method === 'insert' && args.push(generatedId);
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null)
