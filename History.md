@@ -1,13 +1,17 @@
 ## v.NEXT
 
-* Speed up updates of NPM modules by patching NPM to work around
-  https://github.com/npm/npm/issues/3265 instead of passing `--force`.
+* Speed up updates of NPM modules by upgrading Node to include our fix for
+  https://github.com/npm/npm/issues/3265 instead of passing `--force` to
+  `npm install`.
 
 * Fix 0.8.1 regression preventing clients from specifying `_id` on insert.
 
 * Run server tests from multiple clients serially instead of in
   parallel. This allows testing features that modify global server
   state.  #2088
+
+* Upgraded dependencies:
+  - node: 0.10.28 (from 0.10.26)
 
 Patches contributed by GitHub users awwx
 
