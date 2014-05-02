@@ -25,7 +25,10 @@ tropohouse.getWarehouseDir = function () {
 
   var warehouseBase = files.inCheckout()
      ? files.getCurrentToolsDir() : process.env.HOME;
-  return path.join(warehouseBase, ".meteor");
+  // XXX This will be `.meteor` soon, once we've written the code to make the
+  // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
+  // tools to springboard to warehouse tools).
+  return path.join(warehouseBase, ".meteor0");
 };
 
 tropohouse.downloadedBuildsDirectory = function(packageName, version) {
