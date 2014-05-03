@@ -169,6 +169,6 @@
       "1.0.0+local"
     ]
   ],
-  "plugins": [],
+  "pluginDependencies": [],
   "format": "1.0"
 }

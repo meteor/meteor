@@ -98,6 +98,9 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
 // - pluginDependencies: map from plugin name to complete (transitive)
 //   version information for all packages used to build the plugin, as
 //   a map from package name to version string.
+// - packageDependencies: map from package name to version string to complete
+//   transitive dependency in this package. We need for the version lock file
+//   and to deal with implies.
 //
 // XXX You may get different results from this function depending on
 // when you call it (if, for example, the packages in the catalog
@@ -133,11 +136,8 @@ var determineBuildTimeDependencies = function (packageSource) {
   // continue with the build ignoring that dependency. It also had
   // code to do this for implies.
 
-  // -- Direct dependencies --
+  // -- Direct & package dependencies --
 
-  // XXX it looks like when we load plugins in compileBuild, we honor
-  // implied plugins, but here where we're determining dependencies,
-  // we don't include them. we should probably straighten this out.
   var dependencyMetadata =
     packageSource.getDependencyMetadata({
       logError: true,
@@ -169,9 +169,11 @@ var determineBuildTimeDependencies = function (packageSource) {
   var resolver = new constraintSolver.Resolver;
   var sourceDeps = resolver.resolve(constraints);
 
-  // XXX this is a hack because we haven't written the code to get implied stuff
-  // into directDependencies yet
-  ret.allDependencies = sourceDeps;
+  // We care about differentiating between all dependencies (which we save in
+  // the version lock file) and the direct dependencies (which are packages that
+  // we are exactly using) in order to optimize build id generation.
+  ret.packageDependencies = sourceDeps;
+
   ret.directDependencies = {};
   _.each(sourceDeps, function (version, packageName) {
     // Take only direct dependencies.
@@ -185,7 +187,7 @@ var determineBuildTimeDependencies = function (packageSource) {
   // -- Dependencies of Plugins --
 
   ret.pluginDependencies = {};
-  var pluginVersions = packageSource.dependencyVersions.plugins;
+  var pluginVersions = packageSource.dependencyVersions.pluginDependencies;
   _.each(packageSource.pluginInfo, function (info) {
     var constraints = {};
 
@@ -208,7 +210,7 @@ var determineBuildTimeDependencies = function (packageSource) {
   // memorizing results makes the constraint solver more efficient.
   var constraintResults = {
     dependencies: sourceDeps,
-    plugins: ret.pluginDependencies
+    pluginDependencies: ret.pluginDependencies
   };
 
   packageSource.recordDependencyVersions(constraintResults);
@@ -777,21 +779,9 @@ compiler.compile = function (packageSource, options) {
     includeTool: packageSource.includeTool
   });
 
-  // XXX if there are dependencies but not allDependencies then we got this
-  // from the catalog (eg publish-for-arch) and this doesn't work right now.
-  // some ways of fixing this:
-  // (a) lazy but spammy: put allDependencies in the catalog
-  // (b) include implieses in directDependencies
-  // (c) instead of putting allDependencies (isomorphic to version lock
-  //     file) in catalog, put it in the source tarball that publish uploads
-  //     and generally drop buildTimeDependencies from the catalog
-  if (buildTimeDeps.directDependencies && !buildTimeDeps.allDependencies) {
-    throw Error("we don't have all dependencies, probably because this is publish-for-arch, which we need to fix");
-  }
-
   // Compile builds. Might use our plugins, so needs to happen second.
   var packageLoader = new PackageLoader({
-    versions: buildTimeDeps.allDependencies
+    versions: buildTimeDeps.packageDependencies
   });
 
   _.each(packageSource.architectures, function (build) {

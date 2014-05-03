@@ -1623,7 +1623,7 @@ main.registerCommand({
   if (! utils.validPackageName(name) ) {
     process.stderr.write(
       "Package name invalid. Package names can only contain \n" +
-      "ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
+      "lowercase ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
       "Package names cannot begin with a dot. \n");
     return 1;
   }
@@ -1670,9 +1670,7 @@ main.registerCommand({
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     containsPlugins: packageSource.containsPlugins,
-    dependencies: packageSource.getDependencyMetadata(),
-    buildTimeDirectDependencies: buildTimeDeps.directDependencies,
-    buildTimePluginDependencies: buildTimeDeps.pluginDependencies
+    dependencies: packageSource.getDependencyMetadata()
   });
 
   // XXX If package version already exists, print a nice error message
@@ -1708,6 +1706,11 @@ main.registerCommand({
   // package)
 
   var sources = _.union(compileResult.sources, testFiles);
+
+  // Send the versions lock file over to the server! We should make sure to use
+  // the same version lock file when we build this source elsewhere (ex:
+  // publish-for-arch).
+  sources.push(packageSource.versionsFileName());
   var bundleResult = packageClient.bundleSource(compileResult.unipackage,
                                                 sources,
                                                 options.packageDir);
@@ -1775,13 +1778,14 @@ main.registerCommand({
   }
 
   var packageSource = new PackageSource;
-  packageSource.initFromPackageDir(options.name, packageDir);
+
+  // This package source, although it is initialized from a directory is
+  // immutable. It should be built exactly as is. If we need to modify anything,
+  // such as the version lock file, something has gone terribly wrong and we
+  // should throw.
+  packageSource.initFromPackageDir(options.name, packageDir, true /* immutable */);
   var unipackage = compiler.compile(packageSource, {
-    officialBuild: true,
-    buildTimeDependencies: {
-      directDependencies: pkgVersion.buildTimeDirectDependencies,
-      pluginDependencies: pkgVersion.buildTimePluginDependencies
-    }
+    officialBuild: true
   }).unipackage;
   unipackage.saveToPath(path.join(packageDir, '.build'));
 

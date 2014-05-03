@@ -239,7 +239,7 @@ var PackageSource = function () {
   // the constraint solver thinks that they are still a valid set of
   // dependencies, we will use them again to build this package. This makes
   // building packages slightly more efficient and ensures repeatable builds.
-  self.dependencyVersions = {dependencies: {}, plugins: {}};
+  self.dependencyVersions = {dependencies: {}, pluginDependencies: {}};
 
   // If this package has a corresponding test package (for example,
   // underscore-test), defined in the same package.js file, store its value
@@ -263,6 +263,13 @@ var PackageSource = function () {
   // package that uniload uses and not do extra work that doesn't make sense in
   // the uniload context.
   self.noSources = false;
+
+  // If this is true, the package source comes from the package server, and
+  // should be treated as immutable. The only reason that we have it is so we
+  // can build it, and we should expect to use exactly the same inputs
+  // (package.js and version lock file) as we did when it was created. If we
+  // ever need to modify it, we should throw instead.
+  self.immutable = false;
 };
 
 
@@ -338,7 +345,7 @@ _.extend(PackageSource.prototype, {
       throw new Error("only one build, so how can consistency check fail?");
 
     self.dependencyVersions = options.dependencyVersions ||
-        {dependencies: {}, plugins: {}};
+        {dependencies: {}, pluginDependencies: {}};
   },
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
@@ -348,7 +355,7 @@ _.extend(PackageSource.prototype, {
   //
   // name: name of the package.
   // dir: location of directory on disk.
-  initFromPackageDir: function (name, dir) {
+  initFromPackageDir: function (name, dir, immutable) {
     var self = this;
     var isPortable = true;
     self.name = name;
@@ -886,13 +893,13 @@ _.extend(PackageSource.prototype, {
     });
 
     // If we have built this before, read the versions that we ended up using.
-    var versionsFile = path.join(self.sourceRoot,  self._versionsFileName());
+    var versionsFile = path.join(self.sourceRoot,  self.versionsFileName());
     if (fs.existsSync(versionsFile)) {
       try {
         var data = fs.readFileSync(versionsFile, 'utf8');
         var dependencyData = JSON.parse(data);
         self.dependencyVersions = {
-          "plugins": _.object(dependencyData.plugins),
+          "pluginDependencies": _.object(dependencyData.pluginDependencies),
           "dependencies": _.object(dependencyData.dependencies)
           };
       } catch (err) {
@@ -905,6 +912,13 @@ _.extend(PackageSource.prototype, {
         console.log("Could not read versions file for " + self.name +
                     ". Recomputing dependency versions from scratch.");
       }
+    };
+
+    // If immutable is set, then we should make a note to never mutate this
+    // packageSource. We should never change its dependency versions, for
+    // example.
+    if (immutable) {
+      self.immutable = true;
     };
 
   },
@@ -1135,13 +1149,19 @@ _.extend(PackageSource.prototype, {
   // versions:
   // - dependencies: results of running the constraint solver on the dependency
   //   metadata of this package
-  // - plugins: results of running the constraint solver on the plugin
-  //   dependency data for this package.
+  // - pluginDependenciess: results of running the constraint solver on the
+  //   plugin dependency data for this package.
   recordDependencyVersions: function (versions) {
     var self = this;
 
     // If nothing has changed, don't bother rewriting the versions file.
     if (self.dependencyVersions === versions) return;
+
+    // If something has changed, and this is an immutable package source, then
+    // we have done something terribly, terribly wrong. Throw.
+    if (self.immutable) {
+      throw new Error("Version lock for " + self.name + " should never change.");
+    };
 
     // In case we need to rebuild from this package Source, it will be
     // convenient to keep the results on hand and not reread from disk.
@@ -1168,7 +1188,8 @@ _.extend(PackageSource.prototype, {
     // version number. When we write them on disk, we will convert them to
     // arrays of <packageName, version> and alphabetized by packageName.
     versions["dependencies"] = alphabetize(versions["dependencies"]);
-    versions["plugins"] = alphabetize(versions["plugins"]);
+    versions["pluginDependencies"]
+      = alphabetize(versions["pluginDependencies"]);
 
     try {
       // Currently, unnamed packages are apps, and apps have a different
@@ -1178,7 +1199,7 @@ _.extend(PackageSource.prototype, {
       // Uniload sets its sourceRoot to "/", which is a little strange. Uniload
       // does not need to store dependency versions either.
       if (self.name && self.sourceRoot !== "/") {
-        var versionsFile = path.join(self.sourceRoot, self._versionsFileName());
+        var versionsFile = path.join(self.sourceRoot, self.versionsFileName());
         fs.writeFileSync(versionsFile, JSON.stringify(versions, null, 2), 'utf8');
       }
     } catch (e) {
@@ -1191,7 +1212,7 @@ _.extend(PackageSource.prototype, {
  },
 
   // Returns the name of the file containing the version lock for this package
-  _versionsFileName : function () {
+  versionsFileName : function () {
     var self = this;
     return self.name + "-versions.json";
   },
