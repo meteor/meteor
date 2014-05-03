@@ -1222,7 +1222,7 @@ _.extend(PackageSource.prototype, {
     _.each(self.architectures, function (arch) {
       // We need to iterate over both uses and implies, since implied packages
       // also constitute dependencies.
-      _.each(_.union(arch.uses, arch.implies), function (use) {
+      var processUse = function (implied, use) {
         // We can't really have a weak implies (what does that even mean?) but
         // we check for that elsewhere.
         if ((use.weak && options.skipWeak) ||
@@ -1248,12 +1248,22 @@ _.extend(PackageSource.prototype, {
           }
         }
 
-        d.references.push({
+        var reference = {
           arch: archinfo.withoutSpecificOs(arch.arch),
-          weak: use.weak,
-          unordered: use.unordered
-        });
-      });
+        };
+        if (use.weak) {
+          reference.weak = true;
+        }
+        if (use.unordered) {
+          reference.unordered = true;
+        }
+        if (implied) {
+          reference.implied = true;
+        }
+        d.references.push(reference);
+      };
+      _.each(arch.uses, _.partial(processUse, false));
+      _.each(arch.implies, _.partial(processUse, true));
     });
 
     if (failed && options.logError) {

@@ -117,11 +117,11 @@ var determineBuildTimeDependencies = function (packageSource) {
   var ret = {};
 
   // There are some special cases where we know that the package has no source
-  // files, which means it can't have any build-time dependencies. Specifically,
-  // the top-level wrapper package used by uniload (via bundler.buildJsImage)
-  // works this way. This early return avoid calling the constraint solver for
-  // uniload, which makes sense because it's supposed to only look at the
-  // prebuilt packages.
+  // files, which means it can't have any interesting build-time
+  // dependencies. Specifically, the top-level wrapper package used by uniload
+  // (via bundler.buildJsImage) works this way. This early return avoid calling
+  // the constraint solver for uniload, which makes sense because it's supposed
+  // to only look at the prebuilt packages.
   if (packageSource.noSources)
     return ret;
 
@@ -169,6 +169,9 @@ var determineBuildTimeDependencies = function (packageSource) {
   var resolver = new constraintSolver.Resolver;
   var sourceDeps = resolver.resolve(constraints);
 
+  // XXX this is a hack because we haven't written the code to get implied stuff
+  // into directDependencies yet
+  ret.allDependencies = sourceDeps;
   ret.directDependencies = {};
   _.each(sourceDeps, function (version, packageName) {
     // Take only direct dependencies.
@@ -177,7 +180,9 @@ var determineBuildTimeDependencies = function (packageSource) {
     }
   });
 
-  // -- Plugins --
+
+
+  // -- Dependencies of Plugins --
 
   ret.pluginDependencies = {};
   var pluginVersions = packageSource.dependencyVersions.plugins;
@@ -251,18 +256,23 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
   //
-  // Avoid even calling containsPlugins if we know there are no sources;
-  // specifically, this avoids calling containsPlugins in the uniload case
-  // because uniload doesn't know how to check to see if a package has plugins.
-  if (!inputSourceArch.noSources) {
-    _.each(inputSourceArch.uses, function (dependency) {
-      if (! dependency.weak && ! dependency.unordered &&
-          dependency.package !== unipackage.name &&
-          packageLoader.containsPlugins(dependency.package)) {
-        activePluginPackages.push(
-          packageLoader.getPackage(dependency.package));
-      }
-    });
+  // Note that we avoid even calling containsPlugins if we know there are no
+  // sources; specifically, this avoids calling containsPlugins in the uniload
+  // case because uniload doesn't know how to check to see if a package has
+  // plugins.
+  //
+  // eachUsedBuild takes care of pulling in implied dependencies for us (eg,
+  // templating from standard-app-packages).
+  if (!inputSourceArch.noSource) {
+    compiler.eachUsedBuild(
+      inputSourceArch.uses, inputSourceArch.arch,
+      packageLoader, {skipUnordered: true}, function (build) {
+        if (build.pkg.name === unipackage.name)
+          return;
+        if (_.isEmpty(build.pkg.plugins))
+          return;
+        activePluginPackages.push(build.pkg);
+      });
   }
 
   activePluginPackages = _.uniq(activePluginPackages);
@@ -769,7 +779,7 @@ compiler.compile = function (packageSource, options) {
 
   // Compile builds. Might use our plugins, so needs to happen second.
   var packageLoader = new PackageLoader({
-    versions: buildTimeDeps.directDependencies
+    versions: buildTimeDeps.allDependencies
   });
 
   _.each(packageSource.architectures, function (build) {
