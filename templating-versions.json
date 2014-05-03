@@ -57,7 +57,7 @@
       "1.0.0+local"
     ]
   ],
-  "plugins": [
+  "pluginDependencies": [
     [
       "compileTemplates",
       {
