@@ -777,6 +777,18 @@ compiler.compile = function (packageSource, options) {
     includeTool: packageSource.includeTool
   });
 
+  // XXX if there are dependencies but not allDependencies then we got this
+  // from the catalog (eg publish-for-arch) and this doesn't work right now.
+  // some ways of fixing this:
+  // (a) lazy but spammy: put allDependencies in the catalog
+  // (b) include implieses in directDependencies
+  // (c) instead of putting allDependencies (isomorphic to version lock
+  //     file) in catalog, put it in the source tarball that publish uploads
+  //     and generally drop buildTimeDependencies from the catalog
+  if (buildTimeDeps.directDependencies && !buildTimeDeps.allDependencies) {
+    throw Error("we don't have all dependencies, probably because this is publish-for-arch, which we need to fix");
+  }
+
   // Compile builds. Might use our plugins, so needs to happen second.
   var packageLoader = new PackageLoader({
     versions: buildTimeDeps.allDependencies
