@@ -49,7 +49,7 @@ fi
 PLATFORM="${UNAME}_${ARCH}"
 
 # save off meteor checkout dir as final target
-cd `dirname $0`/..
+cd "`dirname "$0"`"/..
 TARGET_DIR=`pwd`
 
 # Read the bundle version from the meteor shell script.

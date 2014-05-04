@@ -8,7 +8,7 @@
 set -e
 set -u
 
-cd `dirname $0`
+cd "`dirname "$0"`"
 
 TARGET="s3://com.meteor.static/test/"
 TEST=no
