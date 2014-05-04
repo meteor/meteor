@@ -21,7 +21,7 @@ Blaze.render = function (func) {
       range.setMembers(Blaze.toDOM(content));
     });
   });
-  Blaze._onAutorun(range.computation);
+  Blaze._wrapAutorun(range.computation);
   range.onstop(_onstopForRender);
   // XXX figure how else the autorun gets stopped
   // (from the app via a "finalize" API call; when the
@@ -49,7 +49,7 @@ Blaze.renderList = function (funcSequence) {
       initialMembers[i] = Blaze.render(func);
     }
   });
-  Blaze._onAutorun(computation);
+  Blaze._wrapAutorun(computation);
 
   var range = new Blaze.DOMRange(initialMembers);
   range.computation = computation;

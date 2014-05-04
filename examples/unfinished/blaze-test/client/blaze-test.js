@@ -1,6 +1,6 @@
 Meteor.startup(function () {
 
-Blaze._onAutorun = function (c) {
+Blaze._wrapAutorun = function (c) {
   console.log('Created #' + c._id);
   var callback = function () {
     if (c.stopped) {
@@ -89,7 +89,7 @@ Repeat = function (countVar, contentFunc) {
       }
     }
   });
-  Blaze._onAutorun(comp);
+  Blaze._wrapAutorun(comp);
   return Blaze.List(seq);
 };
 

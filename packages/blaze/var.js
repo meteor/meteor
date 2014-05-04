@@ -116,7 +116,7 @@ Blaze.Var = function (initializer, equalsFunc) {
         self.set(initializer());
       });
     });
-    Blaze._onAutorun(self.computation);
+    Blaze._wrapAutorun(self.computation);
   } else {
     self.set(initializer);
   }
