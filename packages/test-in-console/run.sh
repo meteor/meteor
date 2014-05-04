@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd `dirname $0`
+cd "`dirname "$0"`"
 cd ../..
 export METEOR_HOME=`pwd`
 
