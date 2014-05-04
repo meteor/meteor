@@ -282,6 +282,8 @@ _.extend(CodeGen.prototype, {
       // one argument, must be a PATH
       dataFuncCode = 'Spacebars.call(' + self.codeGenPath(args[0][1]) + ')';
     } else {
+      // Multiple positional arguments; treat them as a nested
+      // "data mustache"
       dataFuncCode = self.codeGenMustache(args[0][1], args.slice(1),
                                           'dataMustache');
     }
