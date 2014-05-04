@@ -329,7 +329,7 @@ _.extend(PackageSource.prototype, {
     var sourceArch = new SourceArch(self, {
       name: options.archName,
       arch: "os",
-      uses: _.map(options.use, utils.parseSpec),
+      uses: _.map(options.use, utils.splitConstraint),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
@@ -378,6 +378,9 @@ _.extend(PackageSource.prototype, {
     // an asset.
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
+    // Let's make sure that we are initializing either the main package or the
+    // test package for now. Otherwise, fail.
+    var tempName;
     // == 'Package' object visible in package.js ==
     var Package = {
       // Set package metadata. Options:
@@ -400,6 +403,7 @@ _.extend(PackageSource.prototype, {
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
           } else if (key === "name") {
+            tempName = self.name;
             // Do nothing, actually. This tells us that we are not building a
             // test package, but that's roughly what we assumed anyway.
           }
@@ -618,6 +622,14 @@ _.extend(PackageSource.prototype, {
         earliestCompatible(self.version);
     }
 
+    if (tempName && (self.name !== tempName) && (!self.isTest)) {
+      buildmessage.error("Can only build main or test package.");
+    }
+
+    if (!utils.validPackageName(self.name)) {
+      buildmessage.error("Package name invalid: " + self.name);
+    }
+
     // source files used
     var sources = {client: [], server: []};
 
@@ -729,7 +741,7 @@ _.extend(PackageSource.prototype, {
 
           _.each(names, function (name) {
             _.each(where, function (w) {
-              uses[w].push(_.extend(utils.parseSpec(name), {
+              uses[w].push(_.extend(utils.splitConstraint(name), {
                 unordered: options.unordered || false,
                 weak: options.weak || false
               }));
@@ -748,7 +760,7 @@ _.extend(PackageSource.prototype, {
             _.each(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
-              implies[w].push(utils.parseSpec(name));
+              implies[w].push(utils.splitConstraint(name));
             });
           });
         },
@@ -940,7 +952,7 @@ _.extend(PackageSource.prototype, {
       var sourceArch = new SourceArch(self, {
         name: archName,
         arch: arch,
-        uses: _.map(names, utils.parseSpec)
+        uses: _.map(names, utils.splitConstraint)
       });
       self.architectures.push(sourceArch);
 

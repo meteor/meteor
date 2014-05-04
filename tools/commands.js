@@ -624,35 +624,35 @@ main.registerCommand({
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    if (! catalog.getPackage(constraint.name)) {
-      process.stderr.write(constraint.name + ": no such package\n");
+    if (! catalog.getPackage(constraint.package)) {
+      process.stderr.write(constraint.package + ": no such package\n");
       failed = true;
       return;
     }
 
     // If the version was specified, check that the version exists.
-    if ( constraint.versionConstraint !== "none") {
+    if ( constraint.constraint !== "none") {
       var versionInfo = catalog.getVersion(
-        constraint.name,
-        constraint.versionConstraint);
+        constraint.package,
+        constraint.constraint);
       if (! versionInfo) {
         process.stderr.write(
-          constraint.name + "@" + constraint.versionConstraint  + ": no such version\n");
+          constraint.package + "@" + constraint.constraint  + ": no such version\n");
         failed = true;
         return;
       }
     }
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function.
-    if (_.has(packages.appDeps, constraint.name) &&
-        packages.appDeps[constraint.name] === constraint.versionConstraint) {
-      process.stderr.write(constraint.name + " with version constraint " +
-                           constraint.versionConstraint + " has already been added.\n");
+    if (_.has(packages.appDeps, constraint.package) &&
+        packages.appDeps[constraint.package] === constraint.constraint) {
+      process.stderr.write(constraint.package + " with version constraint " +
+                           constraint.constraint + " has already been added.\n");
       failed = true;
     }
 
     // Add the package to our direct dependency constraints that we get from .meteor/packages.
-    packages.appDeps[constraint.name] = constraint.versionConstraint;
+    packages.appDeps[constraint.package] = constraint.constraint;
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -755,14 +755,14 @@ main.registerCommand({
   // Show the user the messageLog of the packages that they installed.
   process.stdout.write("Successfully added the following packages. \n");
   _.each(constraints, function (constraint) {
-    var version = newVersions[constraint.name];
-    var versionRecord = catalog.getVersion(constraint.name, version);
-    if (constraint.versionConstraint !== "none" &&
-        version !== constraint.versionConstraint) {
-      process.stdout.write("Added " + constraint.name + " at version " + version +
+    var version = newVersions[constraint.package];
+    var versionRecord = catalog.getVersion(constraint.package, version);
+    if (constraint.constraint !== "none" &&
+        version !== constraint.constraint) {
+      process.stdout.write("Added " + constraint.package + " at version " + version +
                            " to avoid conflicting dependencies.");
     }
-    process.stdout.write(constraint.name + " : " + versionRecord.description + "\n");
+    process.stdout.write(constraint.package + " : " + versionRecord.description + "\n");
   });
 
   return 0;
@@ -1431,31 +1431,57 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// rebuild-all
+// rebuild
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'rebuild-all',
+  name: 'rebuild',
+  maxArgs: Infinity,
   hidden: true
 }, function (options) {
-  if (options.appDir) {
-    // The catalog doesn't know about other programs in your app. Let's blow
-    // away their .build directories if they have them, and not rebuild
-    // them. Sort of hacky, but eh.
-    var programsDir = project.getProgramsDirectory(options.appDir);
-    var programsSubdirs = project.getProgramsSubdirs(options.appDir);
-    _.each(programsSubdirs, function (program) {
-      // The implementation of this part of the function might change once we
-      // change the control file format to explicitly specify packages and
-      // programs instead of just loading everything in the programs directory?
-      files.rm_recursive(path.join(programsDir, program, '.build.' + program));
+  var messages;
+  var count = 0;
+  // No packages specified. Rebuild everything.
+  if (options.args.length === 0) {
+    if (options.appDir) {
+      // The catalog doesn't know about other programs in your app. Let's blow
+      // away their .build directories if they have them, and not rebuild
+      // them. Sort of hacky, but eh.
+      var programsDir = project.getProgramsDirectory(options.appDir);
+      var programsSubdirs = project.getProgramsSubdirs(options.appDir);
+      _.each(programsSubdirs, function (program) {
+        // The implementation of this part of the function might change once we
+        // change the control file format to explicitly specify packages and
+        // programs instead of just loading everything in the programs directory?
+        files.rm_recursive(path.join(programsDir, program, '.build.' + program));
+      });
+    }
+
+    messages = buildmessage.capture(function () {
+      count = catalog.rebuildLocalPackages();
+    });
+  } else {
+    messages = buildmessage.capture(function () {
+      // Initialize a new package loader, but only for local packages (since we
+      // are not going to rebuild non-local packages.)
+      var loader = new PackageLoader({
+          versions: null,
+       });
+
+      _.each(options.args, function (p) {
+        // Let's remove the old unipackage directory first.
+        var packpath = catalog.getLoadPathForPackage(p, null);
+        files.rm_recursive(path.join(packpath, ".build."+p));
+        console.log(path.join(packpath, ".build."+p));
+
+        // Getting the package from the package loader will cause it to be
+        // rebuilt if it is not built (which it isn't, since we just deleted the
+        // unipackage).
+        loader.getPackage(p);
+        count++;
+      });
     });
   }
-
-  var count = null;
-  var messages = buildmessage.capture(function () {
-    count = catalog.rebuildLocalPackages();
-  });
   if (count)
     console.log("Built " + count + " packages.");
   if (messages.hasMessages()) {
@@ -1599,7 +1625,10 @@ main.registerCommand({
     function () {
       // XXX would be nice to get the name out of the package (while
       // still confirming that it matches the name of the directory)
-      var packageName = path.basename(options.packageDir.toLowerCase());
+      var packageName = path.basename(options.packageDir);
+      if (! utils.validPackageName(packageName)) {
+        buildmessage.error("Invalid package name:", packageName);
+      }
 
       packageSource = new PackageSource;
       packageSource.initFromPackageDir(packageName, options.packageDir);

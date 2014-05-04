@@ -70,7 +70,7 @@ project.processPerConstraintLines = function(lines) {
     line = trimLine(line);
     if (line !== '') {
       var constraint = utils.splitConstraint(line);
-      ret[constraint.name] = constraint.versionConstraint;
+      ret[constraint.package] = constraint.constraint;
      }
   });
   return ret;
@@ -148,12 +148,13 @@ var rewriteDependencies = function (appDir, deps, versions) {
 
   // Rewrite the packages file. Do this first, since the versions file is
   // derived from the packages file.
+  // XXX: Do not remove comments from packages file.
   var lines = [];
   _.each(deps, function (versionConstraint, name) {
-    if (versionConstraint[0] === "=") { /* exact version required */
+    if (versionConstraint && versionConstraint[0] === "=") { /* exact version required */
       lines.push(name + "@" + versionConstraint + "\n");
     } else {
-      lines.push(name + "@" + versions[name] + "\n");
+      lines.push(name + "\n");
     }
   });
   lines.sort();

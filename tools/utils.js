@@ -186,7 +186,7 @@ exports.parseVersionConstraint = function (versionString) {
 // that, since it definitely contains a package name but may not
 // actually contain a constraint
 //
-// XXX should unify this with packages.parseSpec
+// XXX should unify this with splitConstraint
 exports.parseConstraint = function (constraintString) {
   if (typeof constraintString !== "string")
     throw new TypeError("constraintString must be a string");
@@ -213,42 +213,29 @@ exports.parseConstraint = function (constraintString) {
 };
 
 // XXX should unify this with utils.parseConstraint
-exports.parseSpec = function (spec) {
-  var m = spec.match(/^([^\/@]+)(\/([^@]+))?(@(.+))?$/);
-  if (! m)
-    throw new Error("Bad package spec: " + spec);
-  var ret = { package: m[1] };
-  if (m[3])
-    ret.build = m[3];
-  if (m[5])
-    ret.constraint = m[5];
-  return ret;
-};
-
-
-// XXX should unify this with utils.parseConstraint
 exports.splitConstraint = function (constraint) {
   var m = constraint.split("@");
   if (! m)
-    throw new Error("Bad package spec: " + spec);
-  var ret = { name: m[0] };
+    throw new Error("Bad package spec: " + constraint);
+  var ret = { package: m[0] };
   if (m.length > 1) {
-    ret.versionConstraint = m[1];
+    ret.constraint = m[1];
   } else {
-    ret.versionConstraint = "none";
+    ret.constraint = null;
   }
   return ret;
 };
 
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
-// safety reasons, package names may not start with a dot.
+// safety reasons, package names may not start with a dot. Package names must be
+// lowercase.
 //
 // This does not check that the package name is valid in terms of our naming
 // scheme: ie, that it is prepended by a user's username. That check should
 // happen at publication time.
 exports.validPackageName = function (packageName) {
- if (/[^a-z0-9.\-]/.test(packageName) || !/[a-z]/.test(packageName) ) {
+ if (/[^a-z0-9:.\-]/.test(packageName) || !/[a-z]/.test(packageName) ) {
    return false;
  }
  return true;

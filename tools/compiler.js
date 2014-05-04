@@ -152,10 +152,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     // better approach would proabably be to actually have this
     // function return null and make the caller do a better job of
     // recovering.
-    //
-    // XXX This is totally wrong: this function doesn't return a PackageLoader
-    // any more!
-    return new PackageLoader({ });
+    return ret;
   }
 
   var constraints = {};
@@ -194,9 +191,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     // info.uses is currently just an array of strings, and there's
     // no way to specify weak/unordered. Much like an app.
     _.each(info.use, function (spec) {
-      var parsedSpec = utils.parseSpec(spec);
-      if (parsedSpec.build)
-        throw new Error("can't deal with build specs here yet");
+      var parsedSpec = utils.splitConstraint(spec);
       constraints[parsedSpec.package] = parsedSpec.constraint || null;
     });
 
