@@ -25,6 +25,7 @@ Package.on_use(function (api) {
   ], 'client');
 
   api.add_files([
+    'renderpoint.js',
     'component.js',
     'render.js',
     'materialize.js'
