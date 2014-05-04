@@ -17,7 +17,8 @@ Package.on_use(function (api) {
   api.use('minifiers', ['server']);
   api.add_files(['templatetag.js',
                  'optimizer.js',
-                 'spacebars-compiler.js']);
+                 'codegen.js',
+                 'compiler.js']);
 });
 
 Package.on_test(function (api) {
