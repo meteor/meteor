@@ -88,7 +88,7 @@ main.SpringboardToLatestRelease = function () {};
 //   - can be a basic command, like "deploy"
 //   - can be a subcommand, like "admin grant"
 //     (distinguished by presence of ' ')
-//   - can be an option that functions as a command, ilke "--arch"
+//   - can be an option that functions as a command, like "--arch"
 //     (distinguished by starting with '--')
 // - minArgs: minimum non-option arguments that can be present (default 0)
 // - maxArgs: maximum non-option arguments that can be present (defaults to
