@@ -74,3 +74,43 @@ _.extend(Blaze.Component.prototype, {
   },
   finalize: function () {}
 });
+
+// XXX experimental.  Implements {{foo}} where `name` is "foo"
+// and `component` is the component the tag is found in
+// (the lexical "self," on which to look for methods).
+// If a function is found, it is bound to the object it
+// was found on, with no arguments.  Returns a Var.
+Blaze.lookup = function (component, name) {
+  if (name in component) {
+    var val = component[name];
+    if (typeof val === 'function') {
+      val = function () {
+        return component[name]();
+      };
+    }
+    return Blaze.Var(val);
+  } else {
+    var dataVar = Blaze.getCurrentDataVar();
+    if (dataVar) {
+      var data = dataVar.get();
+      if (data) {
+        return data[name];
+      }
+    }
+    return null;
+  }
+};
+
+Blaze.getCurrentDataVar = function () {
+  var contr = Blaze.currentController;
+  if (! contr)
+    throw new Error("Can only get data context when there's a currentController");
+
+  while (contr) {
+    if (contr.data instanceof Blaze.Var)
+      return contr.data;
+    contr = contr.parentController;
+  }
+
+  return null;
+};

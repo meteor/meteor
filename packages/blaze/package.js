@@ -25,8 +25,8 @@ Package.on_use(function (api) {
   ], 'client');
 
   api.add_files([
-    'render.js',
     'component.js',
+    'render.js',
     'materialize.js'
   ]);
 });

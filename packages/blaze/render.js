@@ -81,9 +81,17 @@ var _onstopForRender = function () {
   this.computation.stop();
 };
 
+var RenderController = Blaze.RenderController = function () {
+  Blaze.Controller.call(this);
+};
+__extends(Blaze.RenderController, Blaze.Controller);
+
 Blaze.render = function (func) {
   var range = new Blaze.DOMRange;
   var controller = Blaze.currentController;
+  if (! controller)
+    controller = new RenderController;
+
   range.computation = Deps.autorun(function () {
     Blaze.withCurrentController(controller, function () {
       var content = func();
@@ -92,8 +100,9 @@ Blaze.render = function (func) {
   });
   Blaze._onAutorun(range.computation);
   range.onstop(_onstopForRender);
-  // XXX figure how the autorun gets stopped
-  // (like a Blaze.finalize call)
+  // XXX figure how else the autorun gets stopped
+  // (from the app via a "finalize" API call; when the
+  // range is removed from the DOM?)
   return range;
 };
 
