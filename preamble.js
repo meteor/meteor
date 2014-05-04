@@ -1,6 +1,6 @@
 Blaze = {};
 
-Blaze._onAutorun = function () {}; // replace this for debugging :)
+Blaze._wrapAutorun = function () {}; // replace this for debugging :)
 
 // Adapted from CoffeeScript's `__extends`.
 __extends = function(child, parent) {

@@ -127,7 +127,7 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
     if (rawAttrs) {
       var attrUpdater = new ElementAttributesUpdater(elem);
       var controller = Blaze.currentController;
-      Blaze._onAutorun(Deps.autorun(function (c) {
+      Blaze._wrapAutorun(Deps.autorun(function (c) {
         Blaze.withCurrentController(controller, function () {
           var evaledAttrs = Blaze.evaluateAttributes(rawAttrs);
           var flattenedAttrs = HTML.flattenAttributes(evaledAttrs);
