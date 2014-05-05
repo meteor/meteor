@@ -535,6 +535,8 @@ _.extend(Connection.prototype, {
         if (!_.has(self._subscriptions, id))
           return;
         self._send({msg: 'unsub', id: id});
+        var record = self._subscriptions[id];
+        record.readyDeps && record.readyDeps.changed();
         delete self._subscriptions[id];
       },
       ready: function () {

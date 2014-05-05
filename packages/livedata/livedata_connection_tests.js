@@ -122,13 +122,14 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.isTrue(callback_fired);
   Deps.flush();
   test.isTrue(reactivelyReady);
-  autorunHandle.stop();
 
   // Unsubscribe.
   sub.stop();
   test.length(stream.sent, 1);
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: id});
+  Deps.flush();
+  test.isFalse(reactivelyReady);
 
   // Resubscribe.
   conn.subscribe('my_data');
@@ -161,12 +162,17 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   };
 
   // Subscribe to some subs.
-  var stopperHandle;
+  var stopperHandle, completerHandle;
   var autorunHandle = Deps.autorun(function () {
     conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
     conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
-    conn.subscribe("completer", onReady("completer"));
+    completerHandle = conn.subscribe("completer", onReady("completer"));
     stopperHandle = conn.subscribe("stopper", onReady("stopper"));
+  });
+  
+  var completerReady;
+  var readyAutorunHandle = Deps.autorun(function() {
+    completerReady = completerHandle.ready();
   });
 
   // Check sub messages. (Assume they are sent in the order executed.)
@@ -193,11 +199,15 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Haven't hit onReady yet.
   test.equal(onReadyCount, {});
+  Deps.flush();
+  test.isFalse(completerReady);
 
   // "completer" gets ready now. its callback should fire.
   stream.receive({msg: 'ready', 'subs': [idCompleter]});
   test.equal(onReadyCount, {completer: 1});
   test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(completerReady);
 
   // Stop 'stopper'.
   stopperHandle.stop();
@@ -206,12 +216,15 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(message, {msg: 'unsub', id: idStopper});
 
   test.equal(onReadyCount, {completer: 1});
+  Deps.flush();
+  test.isTrue(completerReady);
 
   // Change the foo subscription and flush. We should sub to the new foo
   // subscription, re-sub to the stopper subscription, and then unsub from the old
   // foo subscription.  The bar subscription should be unaffected. The completer
   // subscription should *NOT* call its new onReady callback, because we only
   // call at most one onReady for a given reactively-saved subscription.
+  // The completerHandle should have been reestablished to the ready handle.
   rFoo.set("foo2");
   Deps.flush();
   test.length(stream.sent, 3);
@@ -230,6 +243,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(message, {msg: 'unsub', id: idFoo1});
 
   test.equal(onReadyCount, {completer: 1});
+  test.isTrue(completerReady);
 
   // Ready the stopper and bar subs. Completing stopper should call only the
   // onReady from the new subscription because they were separate subscriptions
@@ -244,6 +258,8 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // time.
   autorunHandle.stop();
   Deps.flush();
+  test.isFalse(completerReady);
+  readyAutorunHandle.stop();
 
   test.length(stream.sent, 4);
   // The order of unsubs here is not important.
