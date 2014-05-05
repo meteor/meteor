@@ -79,7 +79,8 @@ _.extend(Blaze.Component.prototype, {
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
 // If a function is found, it is bound to the object it
-// was found on, with no arguments.  Returns a Var.
+// was found on, with no arguments.  Returns a function,
+// non-function value, or null.
 Blaze.lookup = function (component, name) {
   if (name in component) {
     var val = component[name];
@@ -88,7 +89,7 @@ Blaze.lookup = function (component, name) {
         return component[name]();
       };
     }
-    return Blaze.Var(val);
+    return val;
   } else {
     var dataVar = Blaze.getCurrentDataVar();
     if (dataVar) {
@@ -101,6 +102,15 @@ Blaze.lookup = function (component, name) {
   }
 };
 
+// XXX obviously this needs to do more stuff
+Blaze.lookupTemplate = function (component, name) {
+  return Blaze.lookup(component, name);
+};
+
+// Start with Blaze.currentController (which must be set, so that
+// we catch cases where it doesn't make sense to call this), and walk
+// the parentController chain looking for a `.data` property of type
+// `Blaze.Var`.  Return it if found, or `null`.
 Blaze.getCurrentDataVar = function () {
   var contr = Blaze.currentController;
   if (! contr)
