@@ -56,6 +56,19 @@ point at `origin.meteor.com`.
 
 
 
+The first time you deploy an app you'll
+be prompted for an email address – follow the link
+in your email to finish setting up your account.
+
+
+
+Once you have your account you can log in and
+log out from the command line, type `meteor whoami`,
+and run `meteor authorized` to give other Meteor developers
+permissions to deploy your app and access its database and logs.
+
+
+
 You can deploy in debug mode by passing `--debug`. This
 will leave your source code readable by your favorite in-browser
 debugger, just like it is in local development mode.
@@ -66,24 +79,6 @@ To delete an application you've deployed, specify
 the `--delete` option along with the site.
 
 
-
-To add an administrative password to your deployment, include
-the `--password` option.  Meteor will prompt
-for a password.  Once set, any future `meteor deploy` to
-the same domain will require that you provide the password.  The same
-password protects access to `meteor mongo`
-and `meteor logs`.  You can change the password by
-running `meteor deploy --password` again,
-which will first prompt for the current password, then for a new
-password.
-
-
-{{#warning}}
-Password protection only applies to administrative actions with the
-Meteor command.  It does not prevent access to your deployed
-website.  Also, this all is a temporary hack until we have
-full-featured Meteor accounts.
-{{/warning}}
 
 {{#warning}}
 If you use a domain name other than `meteor.com`
