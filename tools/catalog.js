@@ -42,6 +42,8 @@ var Catalog = function () {
   self.packages = null;
   self.versions = null;
   self.builds = null;
+  self.releaseTracks = null;
+  self.releaseVersions = null;
 
   // Local directories to search for package source trees
   self.localPackageDirs = null;
@@ -107,6 +109,8 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
+    self.releaseTracks = [];
+    self.releaseVersions = [];
     self._addLocalPackageOverrides(true /* setInitialized */);
 
     // Now we can include options.localPackageDirs. We do this
@@ -162,6 +166,8 @@ _.extend(Catalog.prototype, {
     self.packages = [];
     self.versions = [];
     self.builds = [];
+    self.releaseTracks = [];
+    self.releaseVersions = [];
     if (allPackageData) {
       self._insertServerPackages(allPackageData);
     }
@@ -482,6 +488,8 @@ _.extend(Catalog.prototype, {
     self.packages.push.apply(self.packages, serverPackageData.packages);
     self.versions.push.apply(self.versions, serverPackageData.versions);
     self.builds.push.apply(self.builds, serverPackageData.builds);
+    self.releaseTracks.push.apply(self.releaseTracks, serverPackageData.releaseTracks);
+    self.releaseVersions.push.apply(self.releaseVersions, serverPackageData.releaseVersions);
   },
 
   _requireInitialized: function () {
@@ -635,6 +643,50 @@ _.extend(Catalog.prototype, {
     }
      return null;
   },
+
+  // Returns general (non-version-specific) information about a
+  // release track, or null if there is no such release track.
+  getReleaseTrack: function (name) {
+    var self = this;
+    self._requireInitialized();
+    return _.findWhere(self.releaseTrack, { name: name });
+  },
+
+  // Return information about a particular release version, or null if such
+  // release version does not exist.
+  getReleaseVersion: function (name, version) {
+    var self = this;
+    self._requireInitialized();
+
+    var versionRecord =  _.findWhere(self.releaseVersions,
+        { name: name,  version: version });
+
+    if (!versionRecord) {
+      return null;
+    }
+    return versionRecord;
+  },
+
+  // Return an array with the names of all of the release tracks that we know
+  // about, in no particular order.
+  getAllReleaseTracks: function () {
+    var self = this;
+    self._requireInitialized();
+    return _.pluck(self.releaseTracks, 'name');
+  },
+
+  // Given a release track, returns an array of the versions available for this
+  // track, in no particular order. Returns the empty array if the release
+  // doesn't exist or doesn't have any versions.
+  getReleaseVersions: function (name) {
+    var self = this;
+    self._requireInitialized();
+
+    var ret = _.pluck(_.where(self.releaseVersions, { name: name }),
+                      'version');
+    return ret;
+  },
+
 
   // Return an array with the names of all of the packages that we
   // know about, in no particular order.

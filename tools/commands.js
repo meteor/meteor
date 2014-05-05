@@ -862,7 +862,8 @@ main.registerCommand({
     return options.using;
   },
   options: {
-    using: { type: Boolean }
+    using: { type: Boolean },
+    releases: { type: Boolean }
   }
 }, function (options) {
   var items = [];
@@ -873,7 +874,21 @@ main.registerCommand({
   // future, we should move this call to sync somewhere in the background.
   catalog.refresh(true);
 
-  if (options.using) {
+  if (options.releases && options.using) {
+     console.log("XXX: The contents of your release file.");
+  } else if (options.releases) {
+    // XXX: We probably want the recommended version rather than all of them,
+    // but for now, let's just display some stuff to make sure that it worked.
+    _.each(catalog.getAllReleaseTracks(), function (name) {
+      var versions = catalog.getReleaseVersions(name);
+      _.each(versions, function (version) {
+        var versionInfo = catalog.getReleaseVersion(name, version);
+        if (versionInfo) {
+          items.push({ name: name + " " + version, description: versionInfo.description });
+        }
+      });
+    });
+  } else if (options.using) {
     // Generate a package loader for this project. This will also compute the
     // nessessary versions and write them to disk.
     project.generatePackageLoader(options.appDir);
