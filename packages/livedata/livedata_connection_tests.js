@@ -302,15 +302,9 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   test.isFalse(fooHandle.ready());
   test.isFalse(fooReady);
 
-  // "foo" gets ready now. The handle should be ready and the autorun rerun
-  stream.receive({msg: 'ready', 'subs': [idFoo1]});
-  test.length(stream.sent, 0);
-  Deps.flush();
-  test.isTrue(fooHandle.ready());
-  test.isTrue(fooReady);
-
   // change the argument to foo. This will make a new handle, which isn't ready
-  // the ready autorun should invalidate, making fooReady false too
+  // the ready autorun should invalidate, reading the new false value, and
+  // setting up a new dep which goes true soon
   rFoo.set("foo2");
   Deps.flush();
   test.length(stream.sent, 2);
@@ -327,12 +321,40 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   test.isFalse(fooHandle.ready());
   test.isFalse(fooReady);
 
-  // "foo" gets ready again
+  // "foo" gets ready now. The handle should be ready and the autorun rerun
   stream.receive({msg: 'ready', 'subs': [idFoo2]});
   test.length(stream.sent, 0);
   Deps.flush();
   test.isTrue(fooHandle.ready());
   test.isTrue(fooReady);
+
+  // change the argument to foo. This will make a new handle, which isn't ready
+  // the ready autorun should invalidate, making fooReady false too
+  rFoo.set("foo3");
+  Deps.flush();
+  test.length(stream.sent, 2);
+
+  message = JSON.parse(stream.sent.shift());
+  var idFoo3 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo3']});
+
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: idFoo2});
+
+  Deps.flush();
+  test.isFalse(fooHandle.ready());
+  test.isFalse(fooReady);
+
+  // "foo" gets ready again
+  stream.receive({msg: 'ready', 'subs': [idFoo3]});
+  test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(fooHandle.ready());
+  test.isTrue(fooReady);
+  
+  autorunHandle.stop();
+  readyAutorunHandle.stop();
 });
 
 Tinytest.add("livedata stub - this", function (test) {
