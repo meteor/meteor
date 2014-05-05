@@ -273,6 +273,67 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(actualIds, expectedIds);
 });
 
+Tinytest.add("livedata stub - reactive subscribe handle correct", function (test) {
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  var rFoo = new ReactiveVar('foo1');
+
+  // Subscribe to some subs.
+  var fooHandle;
+  var autorunHandle = Deps.autorun(function () {
+    fooHandle = conn.subscribe("foo", rFoo.get());
+  });
+
+  var fooReady;
+  var readyAutorunHandle = Deps.autorun(function() {
+    fooReady = fooHandle.ready();
+  });
+
+  var message = JSON.parse(stream.sent.shift());
+  var idFoo1 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo1']});
+
+  // Not ready yet
+  Deps.flush();
+  test.isFalse(fooHandle.ready());
+  test.isFalse(fooReady);
+
+  // "foo" gets ready now. The handle should be ready and the autorun rerun
+  stream.receive({msg: 'ready', 'subs': [idFoo1]});
+  test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(fooHandle.ready());
+  test.isTrue(fooReady);
+
+  // change the argument to foo. This will make a new handle, which isn't ready
+  // the ready autorun should invalidate, making fooReady false too
+  rFoo.set("foo2");
+  Deps.flush();
+  test.length(stream.sent, 2);
+
+  message = JSON.parse(stream.sent.shift());
+  var idFoo2 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo2']});
+
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: idFoo1});
+
+  Deps.flush();
+  test.isFalse(fooHandle.ready());
+  test.isFalse(fooReady);
+
+  // "foo" gets ready again
+  stream.receive({msg: 'ready', 'subs': [idFoo2]});
+  test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(fooHandle.ready());
+  test.isTrue(fooReady);
+});
 
 Tinytest.add("livedata stub - this", function (test) {
   var stream = new StubStream();
