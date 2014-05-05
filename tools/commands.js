@@ -1845,6 +1845,73 @@ main.registerCommand({
   return 0;
 });
 
+main.registerCommand({
+  name: 'publish-release',
+  minArgs: 0,
+  maxArgs: 0,
+  options: {
+    config: { type: String, required: true },
+    create: { type: Boolean, required: false}
+  }
+}, function (options) {
+
+  // Refresh the catalog, cacheing the remote package data on the server.
+  catalog.refresh(true);
+
+  var relConf;
+  try {
+    var data = fs.readFileSync(options.config, 'utf8');
+    relConf = JSON.parse(data);
+  } catch (e) {
+    process.stderr.write("Could not parse release file: ");
+    process.stderr.write(e.message + "\n");
+    return 1;
+  }
+
+  // Check if the release track exists. If it doesn't, need the create flag.
+  if (!options.create) {
+    var trackRecord = catalog.getReleaseTrack(relConf.name);
+    if (!trackRecord) {
+      process.stderr.write('There is no release track named ' + relConf.name +
+                           '. If you are creating a new track, use the --create flag. \n');
+      return 1;
+    }
+    // XXX: check that we are an authorized maintainer as well.
+  }
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  if (! conn) {
+    process.stderr.write('No connection: Publish failed\n');
+    return 1;
+  }
+
+  if (options.create) {
+    process.stdout.write("Creating a new release track... \n");
+    var track = conn.call('createReleaseTrack',
+                         { name: relConf.name } );
+  }
+
+  process.stdout.write("Creating a new release version... \n");
+
+  // Send it over!
+  var uploadInfo = conn.call('createReleaseVersion', {
+    name: relConf.name,
+    version: relConf.version,
+    description: relConf.description,
+    tool: relConf.tool,
+    packages: relConf.packages
+  });
+
+  process.stdout.write("Done! \n");
+  return 0;
+});
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // list-sites
 ///////////////////////////////////////////////////////////////////////////////

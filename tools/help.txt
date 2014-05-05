@@ -364,3 +364,12 @@ Usage: meteor list-sites
 List the sites that you have deployed with 'meteor deploy', and sites
 for which other users have authorized you with the 'meteor authorized'
 command.
+
+>>> publish-release
+Publish a new release.
+Usage: meteor publish-release --config <release.json>
+
+Publish a new release.
+
+Options:
+  -- create  publish a new release track.
