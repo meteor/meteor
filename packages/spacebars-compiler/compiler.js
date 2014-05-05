@@ -33,18 +33,22 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   // is this a template, rather than a block passed to
   // a block helper, say
   var isTemplate = (options && options.isTemplate);
+  var isBody = (options && options.isBody);
 
   var tree = parseTree;
 
   // The flags `isTemplate` and `isBody` are kind of a hack.
-  if (isTemplate || (options && options.isBody)) {
+  if (isTemplate || isBody) {
     // optimizing fragments would require being smarter about whether we are
     // in a TEXTAREA, say.
     tree = SpacebarsCompiler.optimize(tree);
   }
 
+  var codegen = ((options && options.codegen2) ?
+                 new SpacebarsCompiler.CodeGen2 :
+                 new SpacebarsCompiler.CodeGen);
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
-    {codegen: new SpacebarsCompiler.CodeGen})).visit(tree);
+    {codegen: codegen})).visit(tree);
 
   var code = '(function () { var self = this; ';
   if (isTemplate) {
@@ -52,6 +56,12 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     // lexical scope by creating a local variable in the
     // template's render function.
     code += 'var template = this; ';
+  }
+  if (isTemplate || isBody) {
+    // XXX This should replace `var template` and `var self` and become
+    // `var self`.  When we're compiling a render method for a component,
+    // there is a "this," but otherwise, there isn't.
+    code += 'var self2 = this; ';
   }
   code += 'return ';
   code += BlazeTools.toJS(tree);
