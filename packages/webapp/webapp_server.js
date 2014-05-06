@@ -296,7 +296,8 @@ var runWebAppServer = function () {
         path: item.path,
         cacheable: item.cacheable,
         // Link from source to its map
-        sourceMapUrl: item.sourceMapUrl
+        sourceMapUrl: item.sourceMapUrl,
+        type: item.type
       };
 
       if (item.sourceMap) {
@@ -309,6 +310,9 @@ var runWebAppServer = function () {
       }
     }
   });
+
+  // Exported for tests.
+  WebAppInternals.staticFiles = staticFiles;
 
 
   // Serve static files from the manifest.
@@ -328,7 +332,9 @@ var runWebAppServer = function () {
     }
 
     var serveStaticJs = function (s) {
-      res.writeHead(200, { 'Content-type': 'application/javascript' });
+      res.writeHead(200, {
+        'Content-type': 'application/javascript; charset=UTF-8'
+      });
       res.write(s);
       res.end();
     };
@@ -400,6 +406,13 @@ var runWebAppServer = function () {
     // in `about:config` (it is on by default in FF 24).
     if (info.sourceMapUrl)
       res.setHeader('X-SourceMap', info.sourceMapUrl);
+
+    if (info.type === "js") {
+      res.setHeader("Content-Type", "text/javascript; charset=UTF-8");
+    } else if (info.type === "css") {
+      res.setHeader("Content-Type", "text/css; charset=UTF-8");
+    }
+
     send(req, path.join(clientDir, info.path))
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
