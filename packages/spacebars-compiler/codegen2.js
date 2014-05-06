@@ -156,7 +156,7 @@ _.extend(CodeGen2.prototype, {
       return builtInLexicals[path[1]];
     }
 
-    var args = ['self2', BlazeTools.toJSLiteral(path[0])];
+    var args = [BlazeTools.toJSLiteral(path[0]), 'self2'];
     var lookupMethod = 'lookup';
     if (opts && opts.lookupTemplate && path.length === 1)
       lookupMethod = 'lookupTemplate';
