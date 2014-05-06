@@ -10,7 +10,7 @@ var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
   'unless': 'Blaze.Unless',
   'with': 'Spacebars.With2',
-  'each': 'UI.Each'
+  'each': 'Spacebars.Each'
 };
 
 // These must be prefixed with `UI.` when you use them in a template.
