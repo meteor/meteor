@@ -36,10 +36,12 @@ _.extend(CodeGen2.prototype, {
   codeGenTemplateTag: function (tag) {
     var self = this;
     if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+      // Special dynamic attributes: `<div {{attrs}}>...`
       // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
-      return BlazeTools.EmitCode('function () { return ' +
-                                 self.codeGenMustache(tag.path, tag.args, 'attrMustache')
-                                 + '; }');
+      return BlazeTools.EmitCode(
+        'Blaze.Var(function () { return ' +
+          self.codeGenMustache(tag.path, tag.args, 'attrMustache')
+          + '; })');
     } else {
       if (tag.type === 'DOUBLE') {
         return BlazeTools.EmitCode('Blaze.Isolate(function () { return ' +
