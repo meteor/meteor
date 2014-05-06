@@ -34,6 +34,8 @@ Blaze.renderList = function (funcSequence) {
     throw new Error("Expected a Blaze.Sequence of functions in " +
                     "Blaze.renderList");
 
+  //XXX var controller = Blaze.currentController;
+
   var initialMembers;
   var computation = Deps.autorun(function (c) {
     if (! c.firstRun)
