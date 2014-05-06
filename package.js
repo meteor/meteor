@@ -18,7 +18,6 @@ Package.on_use(function (api) {
   api.add_files(['templatetag.js',
                  'optimizer.js',
                  'codegen.js',
-                 'codegen2.js',
                  'compiler.js']);
 });
 
