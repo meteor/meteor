@@ -1637,6 +1637,19 @@ main.registerCommand({
   // submissions before they ever hit the wire.
   catalog.refresh(true);
 
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  if (! conn) {
+    process.stderr.write('No connection: Publish failed\n');
+    return 1;
+  }
+
+  process.stdout.write('Building package...\n');
+
   // XXX Prettify error messages
 
   var packageSource, compileResult;
@@ -1692,16 +1705,43 @@ main.registerCommand({
     return 1;
   }
 
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
+  // We need to build the test package to get all of its sources.
+  var testFiles = [];
+  messages = buildmessage.capture(
+    { title: "getting test sources" },
+    function () {
+      var testName = packageSource.testName;
+      if (testName) {
+        var testSource = new PackageSource;
+        testSource.initFromPackageDir(testName, options.packageDir);
+        if (buildmessage.jobHasMessages())
+          return; // already have errors, so skip the build
+
+        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
+        testFiles = testUnipackage.sources;
+      }
+    });
+
+  if (messages.hasMessages()) {
+    process.stdout.write(messages.formatMessages());
     return 1;
   }
-  if (! conn) {
-    process.stderr.write('No connection: Publish failed\n');
-    return 1;
-  }
+
+  process.stdout.write('Bundling source...\n');
+
+  // XXX prevent people from directly publishing meteor-tool outside of the
+  // release publishing process (since we don't automatically rebuild the tool
+  // package)
+
+  var sources = _.union(compileResult.sources, testFiles);
+
+  // Send the versions lock file over to the server! We should make sure to use
+  // the same version lock file when we build this source elsewhere (ex:
+  // publish-for-arch).
+  sources.push(packageSource.versionsFileName());
+  var bundleResult = packageClient.bundleSource(compileResult.unipackage,
+                                                sources,
+                                                options.packageDir);
 
   // Create the package.
   // XXX First sync package metadata and check if it exists.
@@ -1727,44 +1767,6 @@ main.registerCommand({
   // telling them to try 'meteor publish-for-arch' if they want to
   // publish a new build.
 
-  process.stdout.write('Bundling source...\n');
-
-  // We need to build the test package to get all of its sources.
-  var testFiles = [];
-  messages = buildmessage.capture(
-    { title: "getting test sources" },
-    function () {
-      var testName = packageSource.testName;
-      if (testName) {
-        var testSource = new PackageSource;
-        testSource.initFromPackageDir(testName, options.packageDir);
-        if (buildmessage.jobHasMessages())
-          return; // already have errors, so skip the build
-
-        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
-        testFiles = testUnipackage.sources;
-      }
-    });
-
-  if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
-    return 1;
-  }
-
-  // XXX prevent people from directly publishing meteor-tool outside of the
-  // release publishing process (since we don't automatically rebuild the tool
-  // package)
-
-  var sources = _.union(compileResult.sources, testFiles);
-
-  // Send the versions lock file over to the server! We should make sure to use
-  // the same version lock file when we build this source elsewhere (ex:
-  // publish-for-arch).
-  sources.push(packageSource.versionsFileName());
-  var bundleResult = packageClient.bundleSource(compileResult.unipackage,
-                                                sources,
-                                                options.packageDir);
-
   process.stdout.write('Uploading source...\n');
   packageClient.uploadTarball(uploadInfo.uploadUrl,
                               bundleResult.sourceTarball);
@@ -1775,6 +1777,8 @@ main.registerCommand({
 
   packageClient.createAndPublishBuiltPackage(conn, compileResult.unipackage,
                                              options.packageDir);
+
+  catalog.refresh(true);
 
   return 0;
 });
