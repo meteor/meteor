@@ -860,7 +860,7 @@ _.extend(PackageSource.prototype, {
       // release.
       _.each(['server', 'client'], function (label) {
           uses[label] = _.map(uses[label], setFromRel);
-          implies[label] = _.map(uses[label], setFromRel);
+          implies[label] = _.map(implies[label], setFromRel);
       });
      };
 
