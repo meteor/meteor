@@ -104,6 +104,12 @@ Patches contributed by GitHub users awwx
   get one with `DDP.randomStream`.
   https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
 
+* The document passed to the `insert` callback of `allow` and `deny` now only
+  has a `_id` field if the client explicitly specified one; this allows you to
+  use `allow`/`deny` rules to prevent clients from specifying their own
+  `_id`. As an exception, `allow`/`deny` rules with a `transform` always have an
+  `_id`.
+
 * DDP now has an implementation of bidirectional heartbeats which is consistent
   across SockJS and websocket transports. This enables connection keepalive and
   allows servers and clients to more consistently and efficiently detect
