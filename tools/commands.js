@@ -1658,7 +1658,8 @@ main.registerCommand({
     return 1;
   }
 
-  compileResult.unipackage.saveToPath(path.join(options.packageDir, '.build'));
+  compileResult.unipackage.saveToPath(
+    path.join(options.packageDir, '.build.' + packageSource.name));
 
   var name = packageSource.name;
   var version = packageSource.version;
