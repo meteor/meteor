@@ -294,7 +294,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           var latestFitting = null;
 
           for (var i = versions.length - 1; i >= 0; i--) {
-            if (! constraints.violated(versions[i])) {
+            if (_.isEmpty(constraints.violatedConstraints(versions[i]))) {
               latestFitting = versions[i];
               break;
             }
@@ -349,4 +349,3 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
   return resolverOptions;
 };
-

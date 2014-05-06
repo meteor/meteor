@@ -111,17 +111,28 @@ ConstraintSolver.ConstraintsList.prototype.union = function (anotherList) {
   return newList;
 };
 
-// Checks if the passed unit version violates any of the constraints
-ConstraintSolver.ConstraintsList.prototype.violated = function (uv) {
+// Checks if the passed unit version violates any of the constraints.
+// Returns a list of constraints that are violated (empty if the unit
+// version does not violate any constraints).
+// XXX Returns a regular array, not a ConstraintsList.
+ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (uv) {
   var self = this;
   var forPackage = mori.get(self.byName, uv.name);
   var exact = mori.get(forPackage, "exact");
   var inexact = mori.get(forPackage, "inexact");
 
-  if (! mori.every(function (c) { return mori.last(c).isSatisfied(uv); }, exact))
-    return true;
-
-  return ! mori.every(function (c) { return mori.last(c).isSatisfied(uv); }, inexact);
+  var violated = [];
+  mori.each(exact, function (c) {
+    if (! mori.last(c).isSatisified(uv)) {
+      violated.push(c);
+    }
+  });
+  mori.each(inexact, function (c) {
+    if (! mori.last(c).isSatisified(uv)) {
+      violated.push(c);
+    }
+  });
+  return violated;
 };
 
 // a weird method that returns a list of exact constraints those correspond to
@@ -179,4 +190,3 @@ ConstraintSolver.ConstraintsList.fromArray = function (arr) {
 
   return list;
 };
-

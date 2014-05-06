@@ -154,6 +154,11 @@ ConstraintSolver.Resolver.prototype.resolve =
 // - dependencies: DependenciesList - remaining dependencies
 // - constraints: ConstraintsList - constraints to satisfy
 // - choices: array of UnitVersion - current fixed set of choices
+// - constraintAncestors: Constraint (string representation) ->
+//   DependencyList. Used for error reporting to indicate which direct
+//   dependencies have caused a failure. For every constraint, this is
+//   the list of direct dependencies which led to this constraint being
+//   present.
 //
 // returns {
 //   success: Boolean,
@@ -169,19 +174,44 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var dependencies = state.dependencies;
   var constraints = state.constraints;
   var choices = state.choices;
+  var constraintAncestors = state.constraintAncestors;
 
   var candidateName = dependencies.peek();
   dependencies = dependencies.remove(candidateName);
 
   var candidateVersions =
     _.filter(self.unitsVersions[candidateName], function (uv) {
-      return !constraints.violated(uv);
+      return _.isEmpty(constraints.violatedConstraints(uv));
     });
 
-  if (_.isEmpty(candidateVersions))
+  if (_.isEmpty(candidateVersions)) {
+    var uv = self.unitsVersions[candidateName][0];
+    if (! uv) {
+      // XXX Some stupid error message, this should not happen
+    } else {
+      var violatedConstraint = _.filter(
+        constraints.violatedConstraints(uv)[0],
+        function (constraint) {
+          return constraint.name === uv.name;
+        }
+      );
+      // XXX Should we return information about all the violated
+      // constraints instead of just one?
+      var directDeps = constraintAncestors[violatedConstraint.toString()];
+      return {
+        success: false,
+        // XXX We really want to say "directDep1 depends on X@1.0 and
+        // directDep2 depends on X@2.0"
+        failureMsg: "Direct dependencies " + directDeps.toString() +
+          " conflict on " + uv.name + ". " + violatedConstraint.toString()
+      };
+    }
+
+
     return { success: false,
              failureMsg: "Cannot choose satisfying versions of package -- "
                          + candidateName };
+  }
 
   var lastInvalidNeighbor = null;
 
@@ -291,7 +321,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
 
 var choicesDontViolateConstraints = function (choices, constraints) {
   return _.all(choices, function (uv) {
-    return !constraints.violated(uv);
+    return _.isEmpty(constraints.violatedConstraints(uv));
   });
 };
 
@@ -446,4 +476,3 @@ ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion =
                            _.bind(self.isSatisfied, self));
   return unitVersion;
 };
-
