@@ -241,3 +241,12 @@ Spacebars.TemplateWith = function (argFunc, contentBlock) {
   w.__isTemplateWith = true;
   return w;
 };
+
+Spacebars.With2 = function (argFunc, contentFunc, elseContentFunc) {
+  var data = Blaze.Var(argFunc);
+  return Blaze.If(function () { return data.get(); },
+                  function () {
+                    return Blaze.With(data, contentFunc);
+                  },
+                  elseContentFunc);
+};
