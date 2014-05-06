@@ -25,3 +25,21 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
     return v.get() ? contentFunc() : (elseFunc ? elseFunc() : null);
   });
 };
+
+Blaze.With = function (data, func) {
+  if (! (this instanceof Blaze.With))
+    // called without new
+    return new Blaze.With(data, func);
+
+  Blaze.Controller.call(this);
+
+  this.data = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
+  this.func = func;
+};
+Blaze.__extends(Blaze.With, Blaze.Controller);
+_.extend(Blaze.With.prototype, {
+  render: function () {
+    var func = this.func;
+    return func();
+  }
+});
