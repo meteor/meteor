@@ -28,7 +28,8 @@ Package.on_use(function (api) {
     'renderpoint.js',
     'component.js',
     'render.js',
-    'materialize.js'
+    'materialize.js',
+    'builtins.js'
   ]);
 });
 
