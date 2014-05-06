@@ -7,8 +7,8 @@
 var CodeGen2 = SpacebarsCompiler.CodeGen2 = function () {};
 
 var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
-  'if': 'UI.If',
-  'unless': 'UI.Unless',
+  'if': 'Blaze.If',
+  'unless': 'Blaze.Unless',
   'with': 'Spacebars.With',
   'each': 'UI.Each'
 };
@@ -64,12 +64,17 @@ _.extend(CodeGen2.prototype, {
           if (! tag.args.length)
             throw new Error("#" + path[0] + " requires an argument");
 
-          var codeParts = self.codeGenInclusionParts(tag);
-          var dataFunc = codeParts.dataFunc; // must exist (tag.args.length > 0)
-          var contentBlock = codeParts.content; // must exist
-          var elseContentBlock = codeParts.elseContent; // may not exist
+          // `args` must exist (tag.args.length > 0)
+          var dataCode = self.codeGenInclusionArgs(tag.args);
+          // `content` must exist
+          var contentBlock = (('content' in tag) ?
+                              self.codeGenBlock(tag.content) : null);
+          // `elseContent` may not exist
+          var elseContentBlock = (('elseContent' in tag) ?
+                                  self.codeGenBlock(tag.elseContent) : null);
 
-          var callArgs = [dataFunc, contentBlock];
+          var callArgs = ['function () { return ' + dataCode + '; }',
+                          contentBlock];
           if (elseContentBlock)
             callArgs.push(elseContentBlock);
 
@@ -84,10 +89,11 @@ _.extend(CodeGen2.prototype, {
             compCode = 'function () { return ' + compCode + '; }';
           }
 
-          var codeParts = self.codeGenInclusionParts(tag);
-          var dataFunc = codeParts.dataFunc;
-          var content = codeParts.content;
-          var elseContent = codeParts.elseContent;
+          var dataCode = self.codeGenInclusionArgs(tag.args);
+          var content = (('content' in tag) ?
+                         self.codeGenBlock(tag.content) : null);
+          var elseContent = (('elseContent' in tag) ?
+                             self.codeGenBlock(tag.elseContent) : null);
 
           var includeArgs = [compCode];
           if (content) {
@@ -99,9 +105,10 @@ _.extend(CodeGen2.prototype, {
           var includeCode =
                 'Spacebars.include(' + includeArgs.join(', ') + ')';
 
-          if (dataFunc) {
+          if (dataCode) {
             includeCode =
-              'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
+              'Spacebars.TemplateWith(function () { return ' +
+              dataCode + '; }, UI.block(' +
               SpacebarsCompiler.codeGen(BlazeTools.EmitCode(includeCode)) + '))';
           }
 
@@ -237,6 +244,10 @@ _.extend(CodeGen2.prototype, {
     return args;
   },
 
+  codeGenBlock: function (content) {
+    return SpacebarsCompiler.codeGen(content, {codegen2: true});
+  },
+
   // Takes an inclusion tag and returns an object containing these properties,
   // all optional, whose values are JS source code:
   //
@@ -245,25 +256,14 @@ _.extend(CodeGen2.prototype, {
   // - `elseContent` - source code of an elseContent block
   //
   // Implements the calling convention for inclusions.
-  codeGenInclusionParts: function (tag) {
+  codeGenInclusionArgs: function (args) {
     var self = this;
-    var ret = {};
-
-    if ('content' in tag) {
-      ret.content = (
-        'UI.block(' + SpacebarsCompiler.codeGen(tag.content) + ')');
-    }
-    if ('elseContent' in tag) {
-      ret.elseContent = (
-        'UI.block(' + SpacebarsCompiler.codeGen(tag.elseContent) + ')');
-    }
 
     var dataFuncCode = null;
 
-    var args = tag.args;
     if (! args.length) {
       // e.g. `{{#foo}}`
-      return ret;
+      return null;
     } else if (args[0].length === 3) {
       // keyword arguments only, e.g. `{{> point x=1 y=2}}`
       var dataProps = {};
@@ -288,9 +288,7 @@ _.extend(CodeGen2.prototype, {
                                           'dataMustache');
     }
 
-    ret.dataFunc = 'function () { return ' + dataFuncCode + '; }';
-
-    return ret;
+    return dataFuncCode;
   }
 
 });
