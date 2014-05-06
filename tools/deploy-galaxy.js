@@ -345,8 +345,7 @@ exports.logs = function (options) {
   try {
     var lastLogId = null;
     var Log = uniload.load({
-      packages: [ 'logging' ],
-      release: release.current.name
+      packages: [ 'logging' ]
     }).logging.Log;
 
     // XXX we're cheating a bit here, relying on the server sending

@@ -21,8 +21,7 @@ var ServiceConnection = require('./service-connection.js');
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata'],
-    release: release.current.name
+    packages: [ 'meteor', 'livedata', 'mongo-livedata']
   });
 });
 

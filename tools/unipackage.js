@@ -254,8 +254,14 @@ var Unipackage = function () {
   // CompileStep. Valid only when _pluginsInitialized is true.
   self.sourceHandlers = null;
 
-  // See description in PackageSource.
+  // See description in PackageSource. If this is set, then we include a copy of
+  // our own source, in addition to any other tools that were originally in the
+  // unipackage.
   self.includeTool = null;
+
+  // This is tools to copy from trees on disk. This is used by the
+  // unipackage-merge code in tropohouse.
+  self.toolsOnDisk = [];
 };
 
 _.extend(Unipackage.prototype, {
@@ -293,7 +299,14 @@ _.extend(Unipackage.prototype, {
 
   architectures: function () {
     var self = this;
-    return _.uniq(_.pluck(self.builds, 'arch')).sort();
+    return _.uniq(_.pluck(self.builds, 'arch').concat(self._toolArchitectures())).sort();
+  },
+
+  _toolArchitectures: function () {
+    var self = this;
+    var toolArches = _.pluck(self.toolsOnDisk, 'arch');
+    self.includeTool && toolArches.push(archinfo.host());
+    return _.uniq(toolArches).sort();
   },
 
   // Return the build of the package to use for a given target architecture (eg,
@@ -420,6 +433,12 @@ _.extend(Unipackage.prototype, {
     if (mainJson.format !== "unipackage-pre1")
       throw new Error("Unsupported unipackage format: " +
                       JSON.stringify(mainJson.format));
+
+    // unipackages didn't used to know their name, but they should.
+    if (_.has(mainJson, 'name') && name !== mainJson.name) {
+      throw new Error("unipackage " + name + " thinks its name is " +
+                      mainJson.name);
+    }
 
     var buildInfoPath = path.join(dir, 'buildinfo.json');
     var buildInfoJson = fs.existsSync(buildInfoPath) &&
@@ -581,6 +600,12 @@ _.extend(Unipackage.prototype, {
       }));
     });
 
+    _.each(mainJson.tools, function (toolMeta) {
+      toolMeta.rootDir = dir;
+      // XXX check for overlap
+      self.toolsOnDisk.push(toolMeta);
+    });
+
     return true;
   },
 
@@ -609,6 +634,7 @@ _.extend(Unipackage.prototype, {
 
       var mainJson = {
         format: "unipackage-pre1",
+        name: self.name,
         summary: self.metadata.summary,
         internal: self.metadata.internal,
         version: self.version,
@@ -820,10 +846,26 @@ _.extend(Unipackage.prototype, {
         });
       });
 
+      // Tools
+      // First, are we supposed to include our own source as a tool?
       if (self.includeTool) {
         var toolsJson = self._writeTool(builder);
         mainJson.tools = toolsJson;
       }
+      // Next, what about other tools we may be merging from other unipackages?
+      // XXX check for overlap
+      _.each(self.toolsOnDisk, function (toolMeta) {
+        var rootDir = toolMeta.rootDir;
+        delete toolMeta.rootDir;
+        builder.copyDirectory({
+          from: path.join(rootDir, toolMeta.path),
+          to: toolMeta.path
+        });
+        if (!mainJson.tools) {
+          mainJson.tools = [];
+        }
+        mainJson.tools.push(toolMeta);
+      });
 
       builder.writeJson("unipackage.json", mainJson);
       builder.writeJson("buildinfo.json", buildInfoJson);

@@ -1,8 +1,9 @@
 var _ = require('underscore');
+var path = require('path');
 var files = require('./files.js');
 var project = require('./project.js');
 var warehouse = require('./warehouse.js');
-var path = require('path');
+var catalog = require('./catalog.js');
 
 var release = exports;
 
@@ -36,6 +37,17 @@ _.extend(Release.prototype, {
     return this.name === null;
   },
 
+  // Return the package name for the command-line tools that this release
+  // uses. Valid only for proper releases.
+  getToolsPackage: function () {
+    var self = this;
+
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    // XXX validate
+    return self._manifest.tool.split('@')[0];
+  },
+
   // Return the version of the command-line tools that this release
   // uses. Valid only for proper releases.
   getToolsVersion: function () {
@@ -43,7 +55,18 @@ _.extend(Release.prototype, {
 
     if (! self.isProperRelease())
       throw new Error("not a proper release?");
-    return self._manifest.tools;
+    // XXX validate
+    return self._manifest.tool.split('@')[1];
+  },
+
+  // Return the package name and version of the command-line tools that this
+  // release uses. Valid only for proper releases.
+  getToolsPackageAtVersion: function () {
+    var self = this;
+
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self._manifest.tool;
   },
 
   // Return a list of the upgraders (project migrations) for this
@@ -55,6 +78,14 @@ _.extend(Release.prototype, {
     if (! self.isProperRelease())
       throw new Error("not a proper release?");
     return self._manifest.upgraders || [];
+  },
+
+  getPackages: function () {
+    var self = this;
+
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self._manifest.packages;
   }
 });
 
@@ -101,6 +132,7 @@ release.usingRightReleaseForApp = function (appDir) {
 // Return the name of the latest release that is downloaded and ready
 // for use. May not be called when running from a checkout.
 release.latestDownloaded = function () {
+  // XXX update this for tropohouse
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
   // For self-test only.
@@ -137,14 +169,40 @@ release.load = function (name, options) {
     return new Release({ name: null });
   }
 
-  // Go download the release if necessary.
-  // (can throw files.OfflineError or warehouse.NoSuchReleaseError)
-  var manifest =
-    warehouse.ensureReleaseExistsAndReturnManifest(name, options.quiet);
+  var parts = name.split('@');
+  if (parts.length > 2) {
+    // XXX #Pre090 better error handling
+    throw Error("too many @s in release name");
+  }
+  var track, version;
+  if (parts.length == 2) {
+    track = parts[0];
+    version = parts[1];
+  } else {
+    track = 'meteor-core';  // XXX all caps?
+    version = parts[0];
+  }
+
+  var releaseVersion = catalog.catalog.getReleaseVersion(track, version);
+  if (releaseVersion === null) {
+    // XXX maybe a better pattern for this?
+    catalog.catalog.refresh(true);
+    releaseVersion = catalog.catalog.getReleaseVersion(track, version);
+  }
+  if (releaseVersion === null) {
+    // XXX check the warehouse too, or maybe before refresh
+    // XXX Pre090 better error
+    throw Error("unknown tropohouse release");
+  }
+
+  // // Go download the release if necessary.
+  // // (can throw files.OfflineError or warehouse.NoSuchReleaseError)
+  // var manifest =
+  //   warehouse.ensureReleaseExistsAndReturnManifest(name, options.quiet);
 
   return new Release({
     name: name,
-    manifest: manifest
+    manifest: releaseVersion  // XXX rename from manifest?
   });
 };
 

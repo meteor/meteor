@@ -368,8 +368,7 @@ var launchMongo = function (options) {
     try {
       // Load mongo-livedata so we'll be able to talk to it.
       var mongoNpmModule = uniload.load({
-        packages: [ 'mongo-livedata' ],
-        release: release.current.name
+        packages: [ 'mongo-livedata' ]
       })['mongo-livedata'].MongoInternals.NpmModule;
 
       // Connect to the intended primary and start a replset.

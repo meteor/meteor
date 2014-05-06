@@ -119,24 +119,20 @@ _.extend(exports, {
   // base universe port number (that is, the Meteor Accounts port
   // number) plus 20.
   getPackageServerUrl: function () {
-    var host;
     if (process.env.METEOR_PACKAGE_SERVER_URL)
       return process.env.METEOR_PACKAGE_SERVER_URL;
-    if (isLocalUniverse())
-      host = localhostOffset(20);
-    else
-      host = getUniverse().replace(/^www\./, 'test-packages.');
-    console.log("XXX: currently using http, not https for package server.");
+    var host = config.getPackageServerDomain();
 
+    console.log("XXX: currently using http, not https for package server.");
     return "http://" + host;
-    return addScheme(host);
+    // return addScheme(host);
   },
 
   getPackageServerDomain: function () {
     if (isLocalUniverse()) {
       return localhostOffset(20);
     } else {
-      return getUniverse();
+      return getUniverse().replace(/^www\./, 'test-packages.');
     }
   },
 

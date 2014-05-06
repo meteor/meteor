@@ -260,7 +260,7 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   //
   // eachUsedBuild takes care of pulling in implied dependencies for us (eg,
   // templating from standard-app-packages).
-  if (!inputSourceArch.noSource) {
+  if (!inputSourceArch.noSources) {
     compiler.eachUsedBuild(
       inputSourceArch.uses, inputSourceArch.arch,
       packageLoader, {skipUnordered: true}, function (build) {

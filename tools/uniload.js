@@ -34,10 +34,6 @@ var files = require('./files.js');
 // Options:
 // - packages: The packages to load, as an array of strings. Each
 //   string may be either "packagename" or "packagename.slice".
-// - release: Optional. Not used to load packages! The release name to
-//   pass into the app with __meteor_runtime_config__ (essentially
-//   this determines what Meteor.release will return within the loaded
-//   environment)
 //
 // Example usage:
 //   var DDP = require('./uniload.js').load({
@@ -48,17 +44,12 @@ var files = require('./files.js');
 //   console.log(reverse.call('reverse', 'hello world'));
 
 var cacheRelease = undefined;
-var cache = null; // map from package names (joined with ',') to return value
+var cache = {}; // map from package names (joined with ',') to return value
 
 var load = function (options) {
   options = options || {};
 
   // Check the cache first
-  if (! cache ||
-      cacheRelease !== options.release) {
-    cacheRelease = options.release;
-    cache = {};
-  }
   var cacheKey = (options.packages || []).join(',');
 
   if (_.has(cache, cacheKey)) {
@@ -71,7 +62,7 @@ var load = function (options) {
   // __meteor_bootstrap__.require is no longer provided.
   var env = {
     __meteor_bootstrap__: { startup_hooks: [] },
-    __meteor_runtime_config__: { meteorRelease: options.release }
+    __meteor_runtime_config__: { meteorRelease: "UNILOAD" }
   };
 
   var ret;

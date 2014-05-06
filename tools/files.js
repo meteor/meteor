@@ -148,7 +148,8 @@ files.getToolsVersion = function () {
       path.join(files.getCurrentToolsDir(),
                 '..',  // get out of tool, back to package
                 'unipackage.json'));
-    return JSON.parse(unipackageJson).version;
+    var parsed = JSON.parse(unipackageJson);
+    return parsed.name + '@' + parsed.version;
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
@@ -343,23 +344,24 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    if (fs.statSync(fullFrom).isDirectory()) {
+    var stats = fs.statSync(fullFrom);
+    if (stats.isDirectory()) {
       var subdirPaths = files.cp_r(fullFrom, fullTo, options);
       copied = copied.concat(_.map(subdirPaths, function (subpath) {
         return path.join(f, subpath);
       }));
-    }
-    else {
+    } else {
       var absFullFrom = path.resolve(fullFrom);
       if (! options.include ||
           _.contains(options.include, absFullFrom)) {
         if (!options.transformContents) {
           // XXX reads full file into memory.. lame.
-          fs.writeFileSync(fullTo, fs.readFileSync(fullFrom));
+          fs.writeFileSync(fullTo, fs.readFileSync(fullFrom),
+                           { mode: stats.mode });
         } else {
           var contents = fs.readFileSync(fullFrom);
           contents = options.transformContents(contents, f);
-          fs.writeFileSync(fullTo, contents);
+          fs.writeFileSync(fullTo, contents, { mode: stats.mode });
         }
         copied.push(f);
       }

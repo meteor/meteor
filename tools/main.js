@@ -7,6 +7,7 @@ var Fiber = require('fibers');
 var files = require('./files.js');
 var path = require('path');
 var warehouse = require('./warehouse.js');
+var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
 var project = require('./project.js');
 var fs = require('fs');
@@ -294,15 +295,28 @@ var longHelp = function (commandName) {
 // - releaseOverride: optional. if provided, a release name to force
 //   us to use when restarting (this functions exactly like --release
 //   and will cause release.forced to be true).
-var springboard = function (toolsVersion, releaseOverride) {
+var springboard = function (rel, releaseOverride) {
   // The new way of building tools doesn't support springboarding yet.
-  console.log("SPRINGBOARDING DISABLED");
-  return;
+  console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
+
+  var archinfo = require('./archinfo.js');
+
+  // XXX split better
+  tropohouse.maybeDownloadPackageForArchitectures(
+    {packageName: rel.getToolsPackage(),
+     version: rel.getToolsVersion()}, [archinfo.host()]);
+
+  // XXX support warehouse too
+
+  var packagePath = tropohouse.packagePath(rel.getToolsPackage(),
+                                           rel.getToolsVersion());
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
-  var cmd = path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
+  // XXX use unipackage.json instead of hardcoding
+  var cmd = path.join(packagePath, 'meteor-tool-' + archinfo.host(),
+                             'meteor');
 
   if (releaseOverride !== undefined)
     // We used to just append --release=<releaseOverride> to the arguments, and
@@ -313,6 +327,7 @@ var springboard = function (toolsVersion, releaseOverride) {
 
   // Now exec; we're not coming back.
   require('kexec')(cmd, newArgv);
+  throw Error('exec failed?');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -546,6 +561,45 @@ Fiber(function () {
   if (packageDir)
     packageDir = path.resolve(packageDir);
 
+
+  // Figure out the directories that we should search for local
+  // packages (in addition to packages downloaded from the package
+  // server)
+  var localPackageDirs = [];
+  if (appDir)
+    localPackageDirs.push(path.join(appDir, 'packages'));
+
+  if (process.env.PACKAGE_DIRS)
+    // User can provide additional package directories to search in
+    // PACKAGE_DIRS (colon-separated).
+    localPackageDirs = localPackageDirs.concat(
+      process.env.PACKAGE_DIRS.split(':'));
+
+  var bootstrapPackageDirs = [];
+
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    bootstrapPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
+  // Initialize the singleton Catalog. Only after this point is the
+  // Catalog (and therefore uniload) usable.
+  //
+  // If the --offline-catalog option is set, the catalog will be offline and
+  // will never attempt to contact the server for more recent data. Otherwise,
+  // the catalog will attempt to synchronize with the remote package server.
+  catalog.initialize({
+    bootstrapLocalPackageDirs: bootstrapPackageDirs,
+    localPackageDirs: localPackageDirs,
+    offline: _.has(rawOptions, '--offline-catalog')
+  });
+  // We need to delete the option or we will throw an error.
+  // XXX: This seems like a hack?
+  delete rawOptions['--offline-catalog'];
+
+
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
   // quit and run those tools instead.
@@ -597,6 +651,14 @@ Fiber(function () {
 "checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
 "and change it to a valid Meteor release or 'none'.\n");
       process.exit(1);
+    } else if (appRelease === null) {
+      process.stderr.write(
+"Problem! This project does not have a .meteor/release file.\n" +
+"The file should either contain the release of Meteor that you want to use,\n" +
+"or the word 'none' if you will only use the project with unreleased\n" +
+"checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
+"and change it to a valid Meteor release or 'none'.\n");
+      process.exit(1);
     }
   }
 
@@ -618,9 +680,8 @@ Fiber(function () {
       if (appRelease === 'none') {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
-        // Use the project's desired release, or if a super old
-        // project, use the latest release we know about
-        releaseName = appRelease || release.latestDownloaded();
+        // Use the project's desired release
+        releaseName = appRelease;
       }
     } else {
       // Run outside an app dir with no --release flag. Use the latest
@@ -676,46 +737,10 @@ Fiber(function () {
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
   if (release.current && release.current.isProperRelease() &&
-      release.current.getToolsVersion() !== files.getToolsVersion()) {
-    springboard(release.current.getToolsVersion()); // does not return!
+      release.current.getToolsPackageAtVersion() !== files.getToolsVersion()) {
+    springboard(release.current); // does not return!
   }
 
-  // Figure out the directories that we should search for local
-  // packages (in addition to packages downloaded from the package
-  // server)
-  var localPackageDirs = [];
-  if (appDir)
-    localPackageDirs.push(path.join(appDir, 'packages'));
-
-  if (process.env.PACKAGE_DIRS)
-    // User can provide additional package directories to search in
-    // PACKAGE_DIRS (colon-separated).
-    localPackageDirs = localPackageDirs.concat(
-      process.env.PACKAGE_DIRS.split(':'));
-
-  var bootstrapPackageDirs = [];
-
-  if (releaseName === null) {
-    // Running from a checkout, so use the Meteor core packages from
-    // the checkout.
-    bootstrapPackageDirs.push(path.join(
-      files.getCurrentToolsDir(), 'packages'));
-  }
-
-  // Initialize the singleton Catalog. Only after this point is the
-  // Catalog (and therefore unipackage.load) usable.
-  //
-  // If the --offline-catalog option is set, the catalog will be offline and will never
-  // attempt to contact the server for more recent data. Otherwise, the catalog
-  // will attempt to synchronize with the remote package server.
-  catalog.initialize({
-    bootstrapLocalPackageDirs: bootstrapPackageDirs,
-    localPackageDirs: localPackageDirs,
-    offline: _.has(rawOptions, '--offline-catalog')
-  });
-  // We need to delete the option or we will throw an error.
-  // XXX: This seems like a hack?
-  delete rawOptions['--offline-catalog'];
 
   // Check for the '--help' option.
   var showHelp = false;

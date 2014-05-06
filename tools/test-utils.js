@@ -163,8 +163,7 @@ exports.deployWithNewEmail = function (s, email, appName) {
 
 var getLoadedPackages = _.once(function () {
   return uniload.load({
-    packages: ['meteor', 'livedata'],
-    release: release.current.name
+    packages: ['meteor', 'livedata']
   });
 });
 

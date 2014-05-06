@@ -649,7 +649,7 @@ _.extend(Catalog.prototype, {
   getReleaseTrack: function (name) {
     var self = this;
     self._requireInitialized();
-    return _.findWhere(self.releaseTrack, { name: name });
+    return _.findWhere(self.releaseTracks, { name: name });
   },
 
   // Return information about a particular release version, or null if such

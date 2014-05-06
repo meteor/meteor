@@ -261,7 +261,7 @@ project.generatePackageLoader = function (appDir) {
 
 
 // This will return "none" if the project is not pinned to a release
-// (it was created by a checkout), or null for a legacy app with no
+// (it was created by a checkout), or null for a pre-0.6.0 app with no
 // .meteor/release file.  It returns the empty string if the file exists
 // but is empty.
 project.getMeteorReleaseVersion = function (appDir) {
