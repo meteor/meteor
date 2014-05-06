@@ -619,7 +619,7 @@ var runWebAppServer = function () {
 
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = SpacebarsCompiler.compile(
-      boilerplateTemplateSource, { isBody: true, codegen2: true });
+      boilerplateTemplateSource, { isBody: true });
 
     // Note that we are actually depending on eval's local environment capture
     // so that UI and HTML are visible to the eval'd code.

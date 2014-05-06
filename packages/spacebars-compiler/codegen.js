@@ -7,10 +7,10 @@
 var CodeGen = SpacebarsCompiler.CodeGen = function () {};
 
 var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
-  'if': 'UI.If',
-  'unless': 'UI.Unless',
-  'with': 'Spacebars.With',
-  'each': 'UI.Each'
+  'if': 'Blaze.If',
+  'unless': 'Blaze.Unless',
+  'with': 'Spacebars.With2',
+  'each': 'Spacebars.Each'
 };
 
 // These must be prefixed with `UI.` when you use them in a template.
@@ -36,80 +36,89 @@ _.extend(CodeGen.prototype, {
   codeGenTemplateTag: function (tag) {
     var self = this;
     if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+      // Special dynamic attributes: `<div {{attrs}}>...`
       // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
-      return BlazeTools.EmitCode('function () { return ' +
-                                 self.codeGenMustache(tag.path, tag.args, 'attrMustache')
-                                 + '; }');
+      return BlazeTools.EmitCode(
+        'Blaze.Var(function () { return ' +
+          self.codeGenMustache(tag.path, tag.args, 'attrMustache')
+          + '; })');
     } else {
       if (tag.type === 'DOUBLE') {
-        return BlazeTools.EmitCode('function () { return ' +
-                                   self.codeGenMustache(tag.path, tag.args) + '; }');
+        return BlazeTools.EmitCode('Blaze.Isolate(function () { return ' +
+                                   self.codeGenMustache(tag.path, tag.args) + '; })');
       } else if (tag.type === 'TRIPLE') {
-        return BlazeTools.EmitCode('function () { return Spacebars.makeRaw(' +
-                                   self.codeGenMustache(tag.path, tag.args) + '); }');
+        return BlazeTools.EmitCode('Blaze.Isolate(function () { return Spacebars.makeRaw(' +
+                                   self.codeGenMustache(tag.path, tag.args) + '); })');
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
-        
+
         if (tag.type === 'BLOCKOPEN' &&
             builtInBlockHelpers.hasOwnProperty(path[0])) {
           // if, unless, with, each.
           //
           // If someone tries to do `{{> if}}`, we don't
           // get here, but an error is thrown when we try to codegen the path.
-          
+
           // Note: If we caught these errors earlier, while scanning, we'd be able to
           // provide nice line numbers.
           if (path.length > 1)
             throw new Error("Unexpected dotted path beginning with " + path[0]);
           if (! tag.args.length)
             throw new Error("#" + path[0] + " requires an argument");
-          
-          var codeParts = self.codeGenInclusionParts(tag);
-          var dataFunc = codeParts.dataFunc; // must exist (tag.args.length > 0)
-          var contentBlock = codeParts.content; // must exist
-          var elseContentBlock = codeParts.elseContent; // may not exist
-          
-          var callArgs = [dataFunc, contentBlock];
+
+          // `args` must exist (tag.args.length > 0)
+          var dataCode = self.codeGenInclusionArgs(tag.args);
+          // `content` must exist
+          var contentBlock = (('content' in tag) ?
+                              self.codeGenBlock(tag.content) : null);
+          // `elseContent` may not exist
+          var elseContentBlock = (('elseContent' in tag) ?
+                                  self.codeGenBlock(tag.elseContent) : null);
+
+          var callArgs = ['function () { return ' + dataCode + '; }',
+                          contentBlock];
           if (elseContentBlock)
             callArgs.push(elseContentBlock);
-          
+
           return BlazeTools.EmitCode(
             builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
-          
+
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
-          
+
           if (path.length !== 1) {
             // path code may be reactive; wrap it
             compCode = 'function () { return ' + compCode + '; }';
           }
-          
-          var codeParts = self.codeGenInclusionParts(tag);
-          var dataFunc = codeParts.dataFunc;
-          var content = codeParts.content;
-          var elseContent = codeParts.elseContent;
-          
+
+          var dataCode = self.codeGenInclusionArgs(tag.args);
+          var content = (('content' in tag) ?
+                         self.codeGenBlock(tag.content) : null);
+          var elseContent = (('elseContent' in tag) ?
+                             self.codeGenBlock(tag.elseContent) : null);
+
           var includeArgs = [compCode];
           if (content) {
             includeArgs.push(content);
             if (elseContent)
               includeArgs.push(elseContent);
           }
-          
+
           var includeCode =
                 'Spacebars.include(' + includeArgs.join(', ') + ')';
-          
-          if (dataFunc) {
+
+          if (dataCode) {
             includeCode =
-              'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
+              'Spacebars.TemplateWith(function () { return ' +
+              dataCode + '; }, UI.block(' +
               SpacebarsCompiler.codeGen(BlazeTools.EmitCode(includeCode)) + '))';
           }
-          
+
           if (path[0] === 'UI' &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
             includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
           }
-          
+
           return BlazeTools.EmitCode(includeCode);
         }
       } else {
@@ -147,11 +156,11 @@ _.extend(CodeGen.prototype, {
       return builtInLexicals[path[1]];
     }
 
-    var args = [BlazeTools.toJSLiteral(path[0])];
+    var args = [BlazeTools.toJSLiteral(path[0]), 'self2'];
     var lookupMethod = 'lookup';
     if (opts && opts.lookupTemplate && path.length === 1)
       lookupMethod = 'lookupTemplate';
-    var code = 'self.' + lookupMethod + '(' + args.join(', ') + ')';
+    var code = 'Blaze.' + lookupMethod + '(' + args.join(', ') + ')';
 
     if (path.length > 1) {
       code = 'Spacebars.dot(' + code + ', ' +
@@ -168,7 +177,7 @@ _.extend(CodeGen.prototype, {
   // more than one element) and is not wrapped in a closure.
   codeGenArgValue: function (arg) {
     var self = this;
-    
+
     var argType = arg[0];
     var argValue = arg[1];
 
@@ -196,7 +205,7 @@ _.extend(CodeGen.prototype, {
   // one for fine-grained reactivity.
   codeGenMustache: function (path, args, mustacheType) {
     var self = this;
-    
+
     var nameCode = self.codeGenPath(path);
     var argCode = self.codeGenMustacheArgs(args);
     var mustache = (mustacheType || 'mustache');
@@ -209,7 +218,7 @@ _.extend(CodeGen.prototype, {
   // args at all.
   codeGenMustacheArgs: function (tagArgs) {
     var self = this;
-    
+
     var kwArgs = null; // source -> source
     var args = null; // [source]
 
@@ -237,6 +246,10 @@ _.extend(CodeGen.prototype, {
     return args;
   },
 
+  codeGenBlock: function (content) {
+    return SpacebarsCompiler.codeGen(content);
+  },
+
   // Takes an inclusion tag and returns an object containing these properties,
   // all optional, whose values are JS source code:
   //
@@ -245,25 +258,14 @@ _.extend(CodeGen.prototype, {
   // - `elseContent` - source code of an elseContent block
   //
   // Implements the calling convention for inclusions.
-  codeGenInclusionParts: function (tag) {
+  codeGenInclusionArgs: function (args) {
     var self = this;
-    var ret = {};
-
-    if ('content' in tag) {
-      ret.content = (
-        'UI.block(' + SpacebarsCompiler.codeGen(tag.content) + ')');
-    }
-    if ('elseContent' in tag) {
-      ret.elseContent = (
-        'UI.block(' + SpacebarsCompiler.codeGen(tag.elseContent) + ')');
-    }
 
     var dataFuncCode = null;
 
-    var args = tag.args;
     if (! args.length) {
       // e.g. `{{#foo}}`
-      return ret;
+      return null;
     } else if (args[0].length === 3) {
       // keyword arguments only, e.g. `{{> point x=1 y=2}}`
       var dataProps = {};
@@ -288,9 +290,7 @@ _.extend(CodeGen.prototype, {
                                           'dataMustache');
     }
 
-    ret.dataFunc = 'function () { return ' + dataFuncCode + '; }';
-
-    return ret;
+    return dataFuncCode;
   }
-  
+
 });
