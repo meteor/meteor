@@ -962,6 +962,10 @@ The available callbacks are:
 {{#dtdd "insert(userId, doc)"}}
 The user `userId` wants to insert the document `doc` into the
 collection. Return `true` if this should be allowed.
+
+`doc` will contain the `_id` field if one was explicitly set by the client, or
+if there is an active `transform`. You can use this to prevent users from
+specifying arbitrary `_id` fields.
 {{/dtdd}}
 
 {{#dtdd "update(userId, doc, fieldNames, modifier)"}}
