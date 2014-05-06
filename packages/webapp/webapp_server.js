@@ -476,12 +476,10 @@ var runWebAppServer = function () {
       try {
         var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
                                        boilerplateBaseData);
-        var boilerplateInstance = boilerplateTemplate.extend({
-          data: boilerplateData
-        });
-        var boilerplateHtmlJs = boilerplateInstance.render();
+        var boilerplateHtmlJs =
+              Blaze.With(boilerplateData, boilerplateTemplate);
         boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
-              UI.toHTML(boilerplateHtmlJs, boilerplateInstance);
+          Blaze.toHTML(boilerplateHtmlJs);
       } catch (e) {
         Log.error("Error running template: " + e.stack);
         res.writeHead(500, headers);
@@ -621,16 +619,13 @@ var runWebAppServer = function () {
 
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = SpacebarsCompiler.compile(
-      boilerplateTemplateSource, { isBody: true });
+      boilerplateTemplateSource, { isBody: true, codegen2: true });
 
     // Note that we are actually depending on eval's local environment capture
     // so that UI and HTML are visible to the eval'd code.
     var boilerplateRender = eval(boilerplateRenderCode);
 
-    boilerplateTemplate = UI.Component.extend({
-      kind: "MainPage",
-      render: boilerplateRender
-    });
+    boilerplateTemplate = boilerplateRender;
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;
