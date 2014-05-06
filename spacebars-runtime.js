@@ -253,12 +253,17 @@ Spacebars.With2 = function (argFunc, contentFunc, elseContentFunc) {
 
 Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
   var seq = new Blaze.Sequence;
+  var elseMode = false;
 
   var argVar = Blaze.Var(argFunc, UI.safeEquals);
   ObserveSequence.observe(function () {
     return argVar.get();
   }, {
     addedAt: function (id, item, index) {
+      if (elseMode) {
+        seq.removeItem(0);
+        elseMode = false;
+      }
       var dataVar = Blaze.Var(item, UI.safeEquals);
       var func = function () {
         return Blaze.With(dataVar, contentFunc);
@@ -268,6 +273,10 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
     },
     removedAt: function (id, item, index) {
       seq.removeItem(index);
+      if (seq.size() === 0) {
+        elseMode = true;
+        seq.addItem(elseContentFunc, 0);
+      }
     },
     changedAt: function (id, newItem, oldItem, index) {
       seq.get(index).dataVar.set(newItem);
@@ -279,5 +288,9 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
     }
   });
 
+  if (seq.size() === 0) {
+    elseMode = true;
+    seq.addItem(elseContentFunc, 0);
+  }
   return Blaze.List(seq);
 };
