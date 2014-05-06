@@ -5,6 +5,7 @@ var files = require('./files.js');
 var utils = require('./utils.js');
 var tropohouse = require('./tropohouse.js');
 var archinfo = require('./archinfo.js');
+var release = require('./release.js');
 var watch = require('./watch.js');
 
 var project = exports;
@@ -207,21 +208,32 @@ var meteorReleaseFilePath = function (appDir) {
 };
 
 // Helper function. Given an object `deps` as returned from
-// `getDirectDependencies`, combine all the direct dependencies (for the
-// app and its programs) into a single object mapping package name to a
-// list of version constraints, which can be passed into the constraint
-// solver.
-project.combineAppAndProgramDependencies = function (deps) {
-  var allDeps = {};
+// `getDirectDependencies`, combine all the direct constraints (for the app, its
+// programs and the release (if one is set) and ctl) into a single array of
+// dependency objects. A dependency object has a packageName field, a version
+// field with the version constriant, and boolean values for exact and weak. (We
+// use this format because we treat release packages as exact weak
+// dependencies.) The result of this gets passed into the constraint solver.
+project.combinedConstraints = function (deps) {
+  var allDeps = [];
+
   _.each(deps.appDeps, function (constraint, packageName) {
-    allDeps[packageName] = [constraint];
+    allDeps.push(_.extend({packageName: packageName},
+                          utils.parseVersionConstraint(constraint)));
   });
   _.each(deps.programsDeps, function (deps, programName) {
     _.each(deps, function (constraint, packageName) {
-      allDeps[packageName] = allDeps[packageName] || [];
-      allDeps[packageName].push(constraint);
-    });
+      allDeps.push(_.extend({packageName: packageName},
+                          utils.parseVersionConstraint(constraint)));
   });
+  });
+  var releasePackages = release.current.manifest ? release.current.manifest.packages : {};
+  _.each(releasePackages, function(version, name) {
+    allDeps.push({packageName: name, version: version, weak: true, exact: true});
+  });
+  allDeps.push({packageName: "ctl", version:  null });
+
+
   return allDeps;
 };
 
@@ -236,14 +248,12 @@ project.generatePackageLoader = function (appDir) {
   var packages = project.getDirectDependencies(appDir);
 
   // package name -> list of version constraints
-  var allPackages = project.combineAppAndProgramDependencies(packages);
-  // XXX: We are manually adding ctl here, but we should do this in a more
-  // principled manner.
+  var allPackages = project.combinedConstraints(packages);
   var constraintSolver = require('./constraint-solver.js');
   var resolver = new constraintSolver.Resolver;
   // XXX: constraint solver currently ignores versions, but it should not.
-  var newVersions = resolver.resolve(
-    _.extend(allPackages, { "ctl" : ["none"] }));
+  var newVersions = resolver.resolve(allPackages);
+
   if ( ! newVersions) {
     return { outcome: 'conflicting-versions' };
   }

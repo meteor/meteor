@@ -350,7 +350,9 @@ _.extend(Catalog.prototype, {
   // the catalog's internal format for local versions -- [version
   // number]+local. (for example, 1.0.0+local).
   _getLocalVersion: function (version) {
-    return version.split("+")[0] + "+local";
+    if (version )
+      return version.split("+")[0] + "+local";
+    return version;
   },
 
   // Returns the latest unipackage build if the package has already been

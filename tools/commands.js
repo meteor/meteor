@@ -895,13 +895,18 @@ main.registerCommand({
     var packages = project.getDirectDependencies(options.appDir);
     var messages = buildmessage.capture(function () {
       _.each(packages.appDeps, function (version, name) {
-        var versionInfo = catalog.getVersion(name, version);
-        if (!versionInfo) {
-          buildmessage.error("Cannot process package list. Unknown: " + name +
+        //XXX: Now that we don't store the version in the .meteor/packages file,
+        //we should read the versions file for the version to use in this
+        //description.
+        if (version) {
+          var versionInfo = catalog.getVersion(name, version);
+          if (!versionInfo) {
+            buildmessage.error("Cannot process package list. Unknown: " + name +
                              " at version " + version + "\n");
-          return;
-        }
-        items.push({ name: name, description: versionInfo.description });
+           return;
+         }
+         items.push({ name: name, description: versionInfo.description });
+       }
       });
     });
     if (messages.hasMessages()) {
