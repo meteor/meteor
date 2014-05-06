@@ -82,7 +82,21 @@ _.extend(Blaze.Component.prototype, {
 // was found on.  Returns a function,
 // non-function value, or null.
 Blaze.lookup = function (component, name) {
-  if (name in component) {
+  if (/^\./.test(name)) {
+    // starts with a dot. must be a series of dots which maps to an
+    // ancestor of the appropriate height.
+    if (!/^(\.)+$/.test(name)) {
+      throw new Error("id starting with dot must be a series of dots");
+    }
+
+    var theWith = Blaze.getCurrentControllerOfType(Blaze.With);
+    for (var i = 1; (i < name.length) && theWith; i++) {
+      theWith = Blaze.getParentControllerOfType(theWith, Blaze.With);
+    }
+
+    return (theWith ? theWith.dataVar.get() : null);
+
+  } else if (name in component) {
     var ret = component[name];
     if (typeof ret === 'function') {
       ret = function () {
@@ -107,20 +121,33 @@ Blaze.lookupTemplate = function (component, name) {
   return Blaze.lookup(component, name);
 };
 
-// Start with Blaze.currentController (which must be set, so that
-// we catch cases where it doesn't make sense to call this), and walk
-// the parentController chain looking for a `.data` property of type
-// `Blaze.Var`.  Return it if found, or `null`.
-Blaze.getCurrentDataVar = function () {
+Blaze.getCurrentControllerOfType = function (type) {
   var contr = Blaze.currentController;
   if (! contr)
-    throw new Error("Can only get data context when there's a currentController");
+    // Try to catch cases where it doesn't make sense to call this.
+    // There should be a currentController set anywhere it does.
+    throw new Error("Can't use getCurrentControllerOfType without a Controller");
 
   while (contr) {
-    if (contr.data instanceof Blaze.Var)
-      return contr.data;
+    if (contr instanceof type)
+      return contr;
     contr = contr.parentController;
   }
 
   return null;
+};
+
+Blaze.getParentControllerOfType = function (controller, type) {
+  var contr = controller.parentController;
+  while (contr) {
+    if (contr instanceof type)
+      return contr;
+    contr = contr.parentController;
+  }
+  return null;
+};
+
+Blaze.getCurrentDataVar = function () {
+  var theWith = Blaze.getCurrentControllerOfType(Blaze.With);
+  return theWith && theWith.dataVar;
 };

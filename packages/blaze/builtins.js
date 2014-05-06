@@ -33,7 +33,7 @@ Blaze.With = function (data, func) {
 
   Blaze.Controller.call(this);
 
-  this.data = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
+  this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
   this.func = func;
 };
 Blaze.__extends(Blaze.With, Blaze.Controller);
