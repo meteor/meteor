@@ -95,6 +95,6 @@ var getIdentity = function (accessToken) {
   }
 };
 
-Facebook.retrieveCredential = function(credentialToken) {
-  return OAuth.retrieveCredential(credentialToken);
+Facebook.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };
