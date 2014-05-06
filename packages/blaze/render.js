@@ -34,7 +34,7 @@ Blaze.renderList = function (funcSequence) {
     throw new Error("Expected a Blaze.Sequence of functions in " +
                     "Blaze.renderList");
 
-  //XXX var controller = Blaze.currentController;
+  var controller = Blaze.currentController;
 
   var initialMembers;
   var computation = Deps.autorun(function (c) {
@@ -62,7 +62,11 @@ Blaze.renderList = function (funcSequence) {
       if (typeof func !== 'function')
         throw new Error("Expected function in Blaze.renderList");
       Deps.nonreactive(function () {
-        var newMember = Blaze.render(func);
+        var newMember = Blaze.withCurrentController(
+          controller,
+          function () {
+            return Blaze.render(func);
+          });
         range.computation.onInvalidate(function () {
           newMember.stop();
         });
