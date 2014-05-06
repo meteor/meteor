@@ -372,6 +372,8 @@ _.extend(PackageSource.prototype, {
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
 
+    var releaseRecord = null;
+
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
     // which could change a file from being handled by extension vs treated as
@@ -443,16 +445,6 @@ _.extend(PackageSource.prototype, {
           }
           fileAndDepLoader = f;
         }
-      },
-
-      // XXX COMPAT WITH 0.6.4
-      // extension doesn't contain a dot
-      register_extension: function () {
-        buildmessage.error(
-          "Package.register_extension() is no longer supported. Use " +
-            "Package._transitional_registerBuildPlugin instead.",
-              { useMyCaller: true });
-            // recover by ignoring
       },
 
       // Define a plugin. A plugin extends the build process for
@@ -782,6 +774,23 @@ _.extend(PackageSource.prototype, {
           });
         },
 
+
+        // Use this release to resolve unclear dependencies for this package. If
+        // you don't fill in dependencies for some of your implies/uses, we will
+        // look at the packages listed in the release to figure that out.
+        release: function (release) {
+          var relInf = release.split('@');
+          // XXX: Error handling
+          if (relInf.length !== 2)
+            throw new Error("Incorrect release spec");
+          var catalog = require('./catalog.js');
+          releaseRecord = catalog.catalog.getReleaseVersion(relInf[0], relInf[1]);
+          if (!releaseRecord) {
+            throw new Error("Unknown release");
+           }
+        },
+
+
         // Export symbols from this package.
         //
         // @param symbols String (eg "Foo") or array of String
@@ -829,6 +838,35 @@ _.extend(PackageSource.prototype, {
         npmDependencies = null;
       }
     }
+
+    // If we have specified a release, then we should go through the
+    // dependencies and fill in the unspecified constraints with the versions in
+    // the release (if possible).
+    if (releaseRecord) {
+      var packages = releaseRecord.packages;
+
+      // Given a dependency object with keys package (the name of the package)
+      // and constraint (the version constraint), if the constraint is null,
+      // look in the packages field in the release record and fill in from
+      // there.
+      var setFromRel = function (dep) {
+        if (! dep.constraint && _.has(packages, dep.package)) {
+          dep.constraint = packages[dep.package];
+        };
+        return dep;
+      };
+
+      // For all implies and uses, fill in the unspecified dependencies from the
+      // release.
+      _.each(['server', 'client'], function (label) {
+          uses[label] = _.map(uses[label], setFromRel);
+          implies[label] = _.map(uses[label], setFromRel);
+      });
+     };
+
+    // XXX: We should not publish packages with unspecified dependencies. Make
+    // sure there is a rule to prevent it, probably somewhere here.
+
 
     // Make sure that if a dependency was specified in multiple
     // builds, the constraint is exactly the same.
@@ -1167,7 +1205,7 @@ _.extend(PackageSource.prototype, {
     var self = this;
 
     // If nothing has changed, don't bother rewriting the versions file.
-    if (self.dependencyVersions === versions) return;
+    if (_.isEqual(self.dependencyVersions, versions)) return;
 
     // If something has changed, and this is an immutable package source, then
     // we have done something terribly, terribly wrong. Throw.
