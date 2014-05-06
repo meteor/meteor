@@ -1713,7 +1713,7 @@ main.registerCommand({
   }
 
   process.stdout.write('Creating package version...\n');
-  var uploadInfo = {
+  var uploadRec = {
     packageName: packageSource.name,
     version: version,
     description: packageSource.metadata.summary,
@@ -1721,7 +1721,7 @@ main.registerCommand({
     containsPlugins: packageSource.containsPlugins(),
     dependencies: packageSource.getDependencyMetadata()
   };
-  conn.call('createPackageVersion', uploadInfo);
+  var uploadInfo = conn.call('createPackageVersion', uploadRec);
 
   // XXX If package version already exists, print a nice error message
   // telling them to try 'meteor publish-for-arch' if they want to
