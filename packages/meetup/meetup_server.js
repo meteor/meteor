@@ -55,6 +55,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-Meetup.retrieveCredential = function(credentialToken) {
-  return OAuth.retrieveCredential(credentialToken);
+Meetup.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

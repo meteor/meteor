@@ -93,6 +93,7 @@ var getIdentity = function (accessToken) {
   }
 };
 
-MeteorDeveloperAccounts.retrieveCredential = function (credentialToken) {
-  return OAuth.retrieveCredential(credentialToken);
+MeteorDeveloperAccounts.retrieveCredential = function (credentialToken,
+                                                       credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

@@ -36,6 +36,6 @@ OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
 });
 
 
-Twitter.retrieveCredential = function(credentialToken) {
-  return OAuth.retrieveCredential(credentialToken);
+Twitter.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };
