@@ -79,17 +79,17 @@ _.extend(Blaze.Component.prototype, {
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
 // If a function is found, it is bound to the object it
-// was found on, with no arguments.  Returns a function,
+// was found on.  Returns a function,
 // non-function value, or null.
 Blaze.lookup = function (component, name) {
   if (name in component) {
-    var val = component[name];
-    if (typeof val === 'function') {
-      val = function () {
-        return component[name]();
+    var ret = component[name];
+    if (typeof ret === 'function') {
+      ret = function () {
+        return component[name].apply(component, arguments);
       };
     }
-    return val;
+    return ret;
   } else {
     var dataVar = Blaze.getCurrentDataVar();
     if (dataVar) {
