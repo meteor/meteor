@@ -81,7 +81,7 @@ _.extend(Blaze.Component.prototype, {
 // If a function is found, it is bound to the object it
 // was found on.  Returns a function,
 // non-function value, or null.
-Blaze.lookup = function (component, name) {
+Blaze.lookup = function (name, component) {
   if (/^\./.test(name)) {
     // starts with a dot. must be a series of dots which maps to an
     // ancestor of the appropriate height.
@@ -96,7 +96,7 @@ Blaze.lookup = function (component, name) {
 
     return (theWith ? theWith.dataVar.get() : null);
 
-  } else if (name in component) {
+  } else if (component && (name in component)) {
     var ret = component[name];
     if (typeof ret === 'function') {
       ret = function () {
@@ -117,8 +117,8 @@ Blaze.lookup = function (component, name) {
 };
 
 // XXX obviously this needs to do more stuff
-Blaze.lookupTemplate = function (component, name) {
-  return Blaze.lookup(component, name);
+Blaze.lookupTemplate = function (name, component) {
+  return Blaze.lookup(name, component);
 };
 
 Blaze.getCurrentControllerOfType = function (type) {
