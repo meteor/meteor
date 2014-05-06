@@ -600,12 +600,15 @@ HTML.flattenAttributes = function (attrs) {
     return attrs;
 
   var isArray = HTML.isArray(attrs);
-  if (attrs.length === 0)
+  if (isArray && attrs.length === 0)
     return null;
 
   var result = {};
   for (var i = 0, N = (isArray ? attrs.length : 1); i < N; i++) {
     var oneAttrs = (isArray ? attrs[i] : attrs);
+    if ((typeof oneAttrs !== 'object') ||
+        HTML.isConstructedObject(oneAttrs))
+      throw new Error("Expected plain JS object as attrs, found: " + oneAttrs);
     for (var name in oneAttrs) {
       if (! HTML.isValidAttributeName(name))
         throw new Error("Illegal HTML attribute name: " + name);
