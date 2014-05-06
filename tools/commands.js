@@ -1831,7 +1831,7 @@ main.registerCommand({
   var unipackage = compiler.compile(packageSource, {
     officialBuild: true
   }).unipackage;
-  unipackage.saveToPath(path.join(packageDir, '.build'));
+  unipackage.saveToPath(path.join(packageDir, '.build.' + packageSource.name));
 
   var conn;
   try {
