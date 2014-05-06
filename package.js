@@ -16,5 +16,6 @@ Package.on_use(function (api) {
 
   api.use('htmljs');
   api.use('ui');
+  api.use('observe-sequence');
   api.add_files(['spacebars-runtime.js']);
 });
