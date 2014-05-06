@@ -158,8 +158,7 @@ html_scanner = {
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isTemplate: true,
-            sourceName: 'Template "' + name + '"',
-            codegen2: true
+            sourceName: 'Template "' + name + '"'
           });
 
         results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
@@ -172,8 +171,7 @@ html_scanner = {
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isBody: true,
-            sourceName: "<body>",
-            codegen2: true
+            sourceName: "<body>"
           });
 
         // We may be one of many `<body>` tags.
