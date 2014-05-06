@@ -1,3 +1,17 @@
+// Operations like toHTML and toText use this function to
+// establish a current computation if there isn't one.
+// This ensures that Blaze.Vars are stopped (and in fact
+// any Blaze.Var will complain if there isn't a current
+// computation).
+Blaze._inDummyComputation = function (f) {
+  var ret;
+  Deps.autorun(function (c) {
+    c.stop();
+    ret = f();
+  });
+  return ret;
+};
+
 ////////////////////////////// Blaze.toText
 
 Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
@@ -13,6 +27,12 @@ Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
 });
 
 Blaze.toText = function (content, textMode) {
+  if (! Deps.active) {
+    return Blaze._inDummyComputation(function () {
+      return Blaze.toText(content, textMode);
+    });
+  }
+
   if (! textMode)
     throw new Error("textMode required for Blaze.toText");
   if (! (textMode === HTML.TEXTMODE.STRING ||
@@ -43,6 +63,11 @@ Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
 // This function is mainly for server-side rendering and is not in the normal
 // code path for client-side rendering.
 Blaze.toHTML = function (content) {
+  if (! Deps.active) {
+    return Blaze._inDummyComputation(function () {
+      return Blaze.toHTML(content);
+    });
+  }
   return (new Blaze.ToHTMLVisitor).visit(content);
 };
 
@@ -68,10 +93,16 @@ Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend({
 
 // Expand all Vars and components, making the current computation depend on them.
 Blaze.evaluate = function (content) {
+  if (! (Blaze.currentController && Deps.active))
+    throw new Error("Can only use Blaze.evaluate during rendering");
+
   return (new Blaze.EvaluatingVisitor).visit(content);
 };
 
 Blaze.evaluateAttributes = function (attrs) {
+  if (! (Blaze.currentController && Deps.active))
+    throw new Error("Can only use Blaze.evaluate during rendering");
+
   return (new Blaze.EvaluatingVisitor).visitAttributes(attrs);
 };
 
