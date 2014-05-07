@@ -1757,7 +1757,7 @@ main.registerCommand({
     packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
-  packageClient.createAndPublishBuiltPackage(conn, unipackage, packageDir);
+  packageClient.createAndPublishBuiltPackage(conn, unipackage);
 
   return 0;
 });
@@ -1893,7 +1893,8 @@ main.registerCommand({
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
                 // server, but we need to be careful.
-                var compileResult = compiler.compile(packageSource, { officialBuild: true });
+                var compileResult = compiler.compile(packageSource,
+                                                     { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
                   process.stderr.write("Error compiling unipackage:" + item + "\n");
                   return;
@@ -1909,31 +1910,45 @@ main.registerCommand({
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
-                  toPublish[item] = {source: packageSource, unipackage: compileResult};
+                  toPublish[item] = {source: packageSource,
+                                     compileResult: compileResult};
                   return;
                 } else {
-                  // Now we need to check if the compiler inputs hash matches up. If
-                  // it doesn't, we need to update the version *and* republish. This
-                  // will constitute an error -- log a message, and mark the error
-                  // so we exit before trying to publish the release.
-                  var myCompilerInputsHash = compileResult.unipackage.getBuildIdentifier({
-                    relativeTo: packageSource.sourceRoot
-                  });
-                  if (myCompilerInputsHash === oldVersion.compilerInputsHash) {
-                    // Cool, everything is exactly the same. We are done here.
-                    return;
+                  var existingBuild = catalog.getBuildWithArchesString(
+                    item, oldVersion,
+                    compileResult.unipackage.architecturesString());
+                  // If the version number mentioned in package.js exists, but
+                  // there's no build of this architecture, then either the old
+                  // version was only semi-published, or you've added some
+                  // platform-specific dependencies but haven't bumped the
+                  // version number yet; either way, you should probably bump
+                  // the version number.
+                  var somethingChanged = !existingBuild;
+
+                  if (!somethingChanged) {
+                    // Bundle the build, just to get its hash.
+                    // XXX this is redundant with the bundle build step that
+                    // publishPackage will do later
+                    var bundleBuildResult = packageClient.bundleBuild(
+                      compileResult.unipackage);
+                    if (bundleBuildResult.tarballHash !==
+                        existingBuild.build.hash) {
+                      somethingChanged = true;
+                    }
                   }
 
-                  // The build ID of the old server record is not the same as
-                  // the buildID that we have on disk. This means something has
-                  // changed -- maybe our source files, or a buildId of one of
-                  // our build-time dependencies. There might be a false
-                  // positive here (for example, we added some comments to a
-                  // package.js file somewhere), but, for now, we would rather
-                  // err on the side of catching this issue and forcing a more
-                  // thorough check.
-                  buildmessage.error("Something changed in package " + item + "." +
-                                     " Please upgrade version number. \n");
+                  if (somethingChanged) {
+                    // The build ID of the old server record is not the same as
+                    // the buildID that we have on disk. This means something
+                    // has changed -- maybe our source files, or a buildId of
+                    // one of our build-time dependencies. There might be a
+                    // false positive here (for example, we added some comments
+                    // to a package.js file somewhere), but, for now, we would
+                    // rather err on the side of catching this issue and forcing
+                    // a more thorough check.
+                    buildmessage.error("Something changed in package " + item
+                                       + ". Please upgrade version number. \n");
+                  }
                 }
               });
           }
@@ -1960,7 +1975,7 @@ main.registerCommand({
      // checks around this.
      var pub = packageClient.publishPackage(
        prebuilt.source,
-       prebuilt.unipackage,
+       prebuilt.compileResult,
        conn,
        opts);
 

@@ -841,6 +841,20 @@ _.extend(Catalog.prototype, {
       return buildsToUse;
     // We couldn't satisfy it!
     return null;
+  },
+
+  // Unlike the previous, this looks for a build which *precisely* matches the
+  // given architectures string (joined with +).
+  getBuildWithArchesString: function (name, version, archesString) {
+    var self = this;
+    self._requireInitialized();
+
+    var versionInfo = self.getVersion(name, version);
+    if (! versionInfo)
+      return null;
+
+    return _.where(self.builds, { versionId: versionInfo._id,
+                                  architecture: archesString } ) || null;
   }
 });
 

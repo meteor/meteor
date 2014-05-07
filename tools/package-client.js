@@ -386,13 +386,13 @@ var uploadTarball = function (putUrl, tarball) {
 
 exports.uploadTarball = uploadTarball;
 
-var bundleBuild = function (unipackage, packageDir) {
+var bundleBuild = function (unipackage) {
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = unipackage.name + '-' + unipackage.version + '-' +
-        unipackage.architectures().join('+');
+        unipackage.architecturesString();
   var tarInputDir = path.join(tempDir, packageTarName);
 
-  files.cp_r(path.join(packageDir, '.build.' + unipackage.name), tarInputDir);
+  unipackage.saveToPath(tarInputDir);
 
   // Don't upload buildinfo.json. It's only of interest locally (for
   // example, it contains a watchset with local paths).
@@ -413,7 +413,7 @@ var bundleBuild = function (unipackage, packageDir) {
 
 exports.bundleBuild = bundleBuild;
 
-var createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
+var createAndPublishBuiltPackage = function (conn, unipackage) {
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
@@ -421,7 +421,7 @@ var createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
     architecture: unipackage.architectures().join('+')
   });
 
-  var bundleResult = bundleBuild(unipackage, packageDir);
+  var bundleResult = bundleBuild(unipackage);
 
   process.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,
@@ -538,10 +538,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
                                                 sources,
                                                 packageSource.sourceRoot);
 
-  var compilerInputsHash = compileResult.unipackage.getBuildIdentifier({
-    relativeTo: packageSource.sourceRoot
-  });
-
   // Create the package. Check that the metadata exists.
   if (options.new) {
     process.stdout.write('Creating package...\n');
@@ -557,8 +553,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageSource.getDependencyMetadata(),
-    compilerInputsHash: compilerInputsHash
+    dependencies: packageSource.getDependencyMetadata()
   };
   var uploadInfo = conn.call('createPackageVersion', uploadRec);
 
@@ -574,8 +569,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   conn.call('publishPackageVersion',
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
-  createAndPublishBuiltPackage(conn, compileResult.unipackage,
-                               packageSource.sourceRoot);
+  createAndPublishBuiltPackage(conn, compileResult.unipackage);
   return 0;
-
 };

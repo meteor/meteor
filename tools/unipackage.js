@@ -302,6 +302,11 @@ _.extend(Unipackage.prototype, {
     return _.uniq(_.pluck(self.builds, 'arch').concat(self._toolArchitectures())).sort();
   },
 
+  architecturesString: function () {
+    var self = this;
+    return self.architectures().join('+');
+  },
+
   _toolArchitectures: function () {
     var self = this;
     var toolArches = _.pluck(self.toolsOnDisk, 'arch');
