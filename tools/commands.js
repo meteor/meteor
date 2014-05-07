@@ -1620,6 +1620,122 @@ main.registerCommand({
 // publish a package
 ///////////////////////////////////////////////////////////////////////////////
 
+var doSomePublishingStuff = function (packageSource, compileResult, conn, options) {
+  options = options || {};
+
+  var name = packageSource.name;
+  var version = packageSource.version;
+
+
+  compileResult.unipackage.saveToPath(
+    path.join(packageSource.sourceRoot, '.build.' + packageSource.name));
+
+
+  // Check that the package name is valid.
+  if (! utils.validPackageName(name) ) {
+    process.stderr.write(
+      "Package name invalid. Package names can only contain \n" +
+      "lowercase ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
+      "Package names cannot begin with a dot. \n");
+    return 1;
+  }
+
+  // Check that we have a version.
+  if (! version) {
+    process.stderr.write(
+     "That package cannot be published because it doesn't have a version.\n");
+    return 1;
+  }
+
+  // Check that the version description is under the character limit.
+  if (packageSource.metadata.summary.length > 100) {
+    process.stderr.write("Description must be under 100 chars.");
+    process.stderr.write("Publish failed.");
+    return 1;
+  }
+
+  // We need to build the test package to get all of its sources.
+  var testFiles = [];
+  var messages = buildmessage.capture(
+    { title: "getting test sources" },
+    function () {
+      var testName = packageSource.testName;
+      if (testName) {
+        var testSource = new PackageSource;
+        testSource.initFromPackageDir(testName, packageSource.sourceRoot);
+        if (buildmessage.jobHasMessages())
+          return; // already have errors, so skip the build
+
+        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
+        testFiles = testUnipackage.sources;
+      }
+    });
+
+  if (messages.hasMessages()) {
+    process.stdout.write(messages.formatMessages());
+    return 1;
+  }
+
+  process.stdout.write('Bundling source...\n');
+
+  // XXX prevent people from directly publishing meteor-tool outside of the
+  // release publishing process (since we don't automatically rebuild the tool
+  // package)
+
+  var sources = _.union(compileResult.sources, testFiles);
+
+  // Send the versions lock file over to the server! We should make sure to use
+  // the same version lock file when we build this source elsewhere (ex:
+  // publish-for-arch).
+  sources.push(packageSource.versionsFileName());
+  var bundleResult = packageClient.bundleSource(compileResult.unipackage,
+                                                sources,
+                                                packageSource.sourceRoot);
+
+  var compilerInputsHash = compileResult.unipackage.getBuildIdentifier({
+    relativeTo: packageSource.sourceRoot
+  });
+
+  // Create the package.
+  // XXX First sync package metadata and check if it exists.
+  if (options.create) {
+    process.stdout.write('Creating package...\n');
+    var packageId = conn.call('createPackage', {
+      name: packageSource.name
+    });
+  }
+
+  process.stdout.write('Creating package version...\n');
+  var uploadRec = {
+    packageName: packageSource.name,
+    version: version,
+    description: packageSource.metadata.summary,
+    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+    containsPlugins: packageSource.containsPlugins(),
+    dependencies: packageSource.getDependencyMetadata(),
+    compilerInputsHash: compilerInputsHash
+  };
+  var uploadInfo = conn.call('createPackageVersion', uploadRec);
+
+  // XXX If package version already exists, print a nice error message
+  // telling them to try 'meteor publish-for-arch' if they want to
+  // publish a new build.
+
+  process.stdout.write('Uploading source...\n');
+  packageClient.uploadTarball(uploadInfo.uploadUrl,
+                              bundleResult.sourceTarball);
+
+  process.stdout.write('Publishing package version...\n');
+  conn.call('publishPackageVersion',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
+  packageClient.createAndPublishBuiltPackage(conn, compileResult.unipackage,
+                                             packageSource.sourceRoot);
+  return true;
+
+};
+
+
 main.registerCommand({
   name: 'publish',
   minArgs: 0,
@@ -1676,116 +1792,10 @@ main.registerCommand({
     return 1;
   }
 
-  compileResult.unipackage.saveToPath(
-    path.join(options.packageDir, '.build.' + packageSource.name));
+  doSomePublishingStuff(packageSource, compileResult, conn, options);
 
-  var name = packageSource.name;
-  var version = packageSource.version;
+  conn.close();
 
-  // Check that the package name is valid.
-  if (! utils.validPackageName(name) ) {
-    process.stderr.write(
-      "Package name invalid. Package names can only contain \n" +
-      "lowercase ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
-      "Package names cannot begin with a dot. \n");
-    return 1;
-  }
-
-  // Check that we have a version.
-  if (! version) {
-    process.stderr.write(
-     "That package cannot be published because it doesn't have a version.\n");
-    return 1;
-  }
-
-  // Check that the version description is under the character limit.
-  if (packageSource.metadata.summary.length > 100) {
-    process.stderr.write("Description must be under 100 chars.");
-    process.stderr.write("Publish failed.");
-    return 1;
-  }
-
-  // We need to build the test package to get all of its sources.
-  var testFiles = [];
-  messages = buildmessage.capture(
-    { title: "getting test sources" },
-    function () {
-      var testName = packageSource.testName;
-      if (testName) {
-        var testSource = new PackageSource;
-        testSource.initFromPackageDir(testName, options.packageDir);
-        if (buildmessage.jobHasMessages())
-          return; // already have errors, so skip the build
-
-        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
-        testFiles = testUnipackage.sources;
-      }
-    });
-
-  if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
-    return 1;
-  }
-
-  process.stdout.write('Bundling source...\n');
-
-  // XXX prevent people from directly publishing meteor-tool outside of the
-  // release publishing process (since we don't automatically rebuild the tool
-  // package)
-
-  var sources = _.union(compileResult.sources, testFiles);
-
-  // Send the versions lock file over to the server! We should make sure to use
-  // the same version lock file when we build this source elsewhere (ex:
-  // publish-for-arch).
-  sources.push(packageSource.versionsFileName());
-  var bundleResult = packageClient.bundleSource(compileResult.unipackage,
-                                                sources,
-                                                options.packageDir);
-
-  var compilerInputsHash = compileResult.unipackage.getBuildIdentifier({
-    relativeTo: packageSource.sourceRoot
-  });
-
-  // Create the package.
-  // XXX First sync package metadata and check if it exists.
-  if (options.create) {
-    process.stdout.write('Creating package...\n');
-    var packageId = conn.call('createPackage', {
-      name: packageSource.name
-    });
-  }
-
-  process.stdout.write('Creating package version...\n');
-  var uploadRec = {
-    packageName: packageSource.name,
-    version: version,
-    description: packageSource.metadata.summary,
-    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-    containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageSource.getDependencyMetadata(),
-    compilerInputsHash: compilerInputsHash
-  };
-  var uploadInfo = conn.call('createPackageVersion', uploadRec);
-
-  // XXX If package version already exists, print a nice error message
-  // telling them to try 'meteor publish-for-arch' if they want to
-  // publish a new build.
-
-  process.stdout.write('Uploading source...\n');
-  packageClient.uploadTarball(uploadInfo.uploadUrl,
-                              bundleResult.sourceTarball);
-
-  process.stdout.write('Publishing package version...\n');
-  conn.call('publishPackageVersion',
-            uploadInfo.uploadToken, bundleResult.tarballHash);
-
-  packageClient.createAndPublishBuiltPackage(conn, compileResult.unipackage,
-                                             options.packageDir);
-
-  catalog.refresh(true);
-
-  return 0;
 });
 
 main.registerCommand({
@@ -1873,14 +1883,138 @@ main.registerCommand({
   // Refresh the catalog, cacheing the remote package data on the server.
   catalog.refresh(true);
 
-  var relConf;
   try {
-    var data = fs.readFileSync(options.config, 'utf8');
-    relConf = JSON.parse(data);
-  } catch (e) {
-    process.stderr.write("Could not parse release file: ");
-    process.stderr.write(e.message + "\n");
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
     return 1;
+  }
+  if (! conn) {
+    process.stderr.write('No connection: will not be able to publish anything\n');
+    return 1;
+  }
+
+  var relConf = {};
+  if (options.config === "checkout") {
+    if (!files.inCheckout()) {
+      process.stderr.write("Must run from hceckout to make release from checkout. \n");
+      return 1;
+    };
+
+    // Now, let's collect all our packages.
+    // XXX: Explain why we are doing this in a weird way.
+    var localPackageDir = path.join(files.getCurrentToolsDir(), "packages");
+    var contents = fs.readdirSync(localPackageDir);
+    var myPackages = {};
+    var toPublish = {};
+    var messages = buildmessage.capture(
+      {title: "rebuilding local packages"},
+      function () {
+        _.each(contents, function (item) {
+          var packageDir = path.resolve(path.join(localPackageDir, item));
+          /// XXX: Refactor this to get directory data from the catalog, maybe.
+          /// XXX: Do this in a buildmessage
+
+          // Consider a directory to be a package source tree if it
+          // contains 'package.js'. (We used to support unipackages in
+          // localPackageDirs, but no longer.)
+          if (fs.existsSync(path.join(packageDir, 'package.js'))) {
+            // Let earlier package directories override later package
+            // directories.
+            var packageSource = new PackageSource;
+            buildmessage.enterJob(
+              { title: "building package " + item },
+              function () {
+                // Initialize the package source. (If we can't do this, then we should
+                // not proceed)
+                packageSource.initFromPackageDir(item, packageDir);
+                if (buildmessage.jobHasMessages()) {
+                  return;
+                };
+
+                // We are not very good with change detection on the meteor
+                // tool, so we should just make sure to rebuild it completely
+                // before publishing.
+                if (packageSource.includeTool) {
+                  // Remove the build directory.
+                  files.rm_recursive(path.join(packageSource.sourceRoot, '.build.' + item));
+                }
+
+                // Now compile it! Once again, everything should compile.
+                var compileResult = compiler.compile(packageSource, { officialBuild: true });
+                if (buildmessage.jobHasMessages()) {
+                  return;
+                };
+
+
+                // Let's get the server version that this local package is
+                // overwriting. If such a version exists, we will need to make sure
+                // that the contents are the same.
+                var oldVersion = catalog.getOldServerVersion(item, packageSource.version);
+
+                // Include this package in our release.
+                myPackages[item] = packageSource.version;
+
+                // If there is no old version, then we need to publish this package.
+                if (!oldVersion) {
+                  toPublish[item] = {source: packageSource, unipackage: compileResult};
+                  return;
+                } else {
+                  // Now we need to check if the compiler inputs hash matches up. If
+                  // it doesn't, we need to update the version *and* republish. This
+                  // will constitute an error -- log a message, and mark the error
+                  // so we exit before trying to publish the release.
+                  var myCompilerInputsHash = compileResult.unipackage.getBuildIdentifier({
+                    relativeTo: packageSource.sourceRoot
+                  });
+                  if (myCompilerInputsHash === oldVersion.compilerInputsHash) {
+                    // Cool, everything is exactly the same. We are done here.
+                    return;
+                  }
+                  buildmessage.error("Something changed in package " + item + ". Please upgrade version number. \n");
+                }
+              });
+          }
+        });
+      });
+
+   if (messages.hasMessages()) {
+     process.stdout.write("\n" + messages.formatMessages());
+     return 1;
+   };
+
+   // Yay! We can publish all of these packages.
+   // XXX: Figure out when to create a new vpackage automatically.
+   _.each(toPublish, function(prebuilt, name) {
+     // Publish them!
+     process.stdout.write("Publishing: " + name + "\n");
+     var pub = doSomePublishingStuff(prebuilt.source, prebuilt.unipackage, conn, {create: true});
+     if (!pub) {
+       process.stderr.write("Failed to publish: " + name + "\n");
+       process.exit(1);
+     }
+   });
+
+   // Set the release. We should actually pass in a configuration file with this
+   // information and a separate checkout option, I think, but let's just see
+   // this work for now! XXX.
+   relConf.name="meteor-core";
+   relConf.version="test";
+   relConf.tool="meteor-tool@" + myPackages["meteor-tool"];
+   delete myPackages["meteor-tool"];
+
+   relConf.packages=myPackages;
+   relConf.description="We did it!";
+
+  } else {
+    try {
+      var data = fs.readFileSync(options.config, 'utf8');
+      relConf = JSON.parse(data);
+    } catch (e) {
+      process.stderr.write("Could not parse release file: ");
+      process.stderr.write(e.message + "\n");
+      return 1;
+    }
   }
 
   // Check if the release track exists. If it doesn't, need the create flag.

@@ -59,6 +59,10 @@ var Catalog = function () {
   // information. This means that the catalog might be out of date on the latest
   // developments.
   self.offline = null;
+
+  // When we put in local package overrides, save the old server records here,
+  // in case we ever want to refer to them. (for example, during publish time).
+  self.oldServerRecords = null;
 };
 
 _.extend(Catalog.prototype, {
@@ -111,6 +115,7 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
+    self.oldServerRecords = [];
     self._addLocalPackageOverrides(true /* setInitialized */);
 
     // Now we can include options.localPackageDirs. We do this
@@ -168,6 +173,7 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
+    self.oldServerRecords = [];
     if (allPackageData) {
       self._insertServerPackages(allPackageData);
     }
@@ -228,6 +234,8 @@ _.extend(Catalog.prototype, {
       if (_.has(self.effectiveLocalPackages, version.packageName)) {
         // Remove this one
         removedVersionIds[version._id] = true;
+        // Also, save a copy to the server records collection.
+        self.oldServerRecords.push(version);
         return false;
       }
       return true;
@@ -737,6 +745,20 @@ _.extend(Catalog.prototype, {
     }
 
     var versionRecord =  _.findWhere(self.versions, { packageName: name,
+                                                      version: version });
+    if (!versionRecord) {
+      return null;
+    }
+    return versionRecord;
+  },
+
+  // Return the old server version of the information, so we can compare to see
+  // if we are overriding it with a local version of the information.
+  getOldServerVersion: function (name, version) {
+    var self = this;
+    self._requireInitialized();
+
+    var versionRecord =  _.findWhere(self.oldServerRecords, { packageName: name,
                                                       version: version });
     if (!versionRecord) {
       return null;

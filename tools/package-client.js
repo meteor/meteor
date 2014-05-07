@@ -427,7 +427,6 @@ exports.createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
   conn.call('publishPackageBuild',
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
-  conn.close();
   process.stdout.write('Published ' + unipackage.name +
                        ', version ' + unipackage.version);
 
