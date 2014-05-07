@@ -292,7 +292,11 @@ files.mkdir_p = function (dir, mode) {
 
 // Roughly like cp -R. 'from' should be a directory. 'to' can either
 // be a directory, or it can not exist (in which case it will be
-// created with mkdir_p). Doesn't think about file mode at all.
+// created with mkdir_p).
+//
+// The output files will be readable and writable by everyone that the umask
+// allows, and executable by everyone (modulo umask) if the original file was
+// owner-executabale.
 //
 // If options.transform{Filename, Contents} is present, it should
 // be a function, and the contents (as a buffer) or filename will be
@@ -351,17 +355,23 @@ files.cp_r = function (from, to, options) {
         return path.join(f, subpath);
       }));
     } else {
+      // Create the file as readable and writable by everyone, and executable by
+      // everyone if the original file is executably by owner. (This mode will
+      // be modified by umask.) We don't copy the mode *directly* because this
+      // function is used by 'meteor create' which is copying from the read-only
+      // tools tree into a writable app.
+      var mode = (stats.mode & 0100) ? 0777 : 0666;
       var absFullFrom = path.resolve(fullFrom);
       if (! options.include ||
           _.contains(options.include, absFullFrom)) {
         if (!options.transformContents) {
           // XXX reads full file into memory.. lame.
           fs.writeFileSync(fullTo, fs.readFileSync(fullFrom),
-                           { mode: stats.mode });
+                           { mode: mode });
         } else {
           var contents = fs.readFileSync(fullFrom);
           contents = options.transformContents(contents, f);
-          fs.writeFileSync(fullTo, contents, { mode: stats.mode });
+          fs.writeFileSync(fullTo, contents, { mode: mode });
         }
         copied.push(f);
       }
