@@ -1743,6 +1743,10 @@ main.registerCommand({
                                                 sources,
                                                 options.packageDir);
 
+  var compilerInputsHash = compileResult.unipackage.getBuildIdentifier({
+    relativeTo: packageSource.sourceRoot
+  });
+
   // Create the package.
   // XXX First sync package metadata and check if it exists.
   if (options.create) {
@@ -1759,7 +1763,8 @@ main.registerCommand({
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageSource.getDependencyMetadata()
+    dependencies: packageSource.getDependencyMetadata(),
+    compilerInputsHash: compilerInputsHash
   };
   var uploadInfo = conn.call('createPackageVersion', uploadRec);
 
