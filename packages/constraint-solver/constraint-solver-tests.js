@@ -99,10 +99,10 @@ var t_progagateExact = function (deps, expected) {
   currentTest.equal(resolvedDeps, expected);
 };
 
-var FAIL = function (deps) {
+var FAIL = function (deps, regexp) {
   currentTest.throws(function () {
     var resolvedDeps = resolver.resolve(deps);
-  });
+  }, regexp);
 };
 
 Tinytest.add("constraint solver - exact dependencies", function (test) {
@@ -112,10 +112,11 @@ Tinytest.add("constraint solver - exact dependencies", function (test) {
   t_progagateExact({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "awesome-dropdown": "=1.5.0" }, { "awesome-dropdown": "1.5.0", "dropdown": "1.2.2" });
 
-  FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=1.0.0" });
+  FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=1.0.0" }, /(.*sparkle.*sparky-forms.*)|(.*sparky-forms.*sparkle.*).*jquery-widgets/);
   // something that isn't available for your architecture
   FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=2.0.0" });
   FAIL({ "sparky-forms": "=0.0.1" });
+  FAIL({ "sparky-forms-nonexistent": "0.0.1" }, /Cannot find anything about.*sparky-forms-nonexistent/);
 });
 
 Tinytest.add("constraint solver - simple exact + regular deps", function (test) {

@@ -171,7 +171,7 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
     });
 
     if (_.isEmpty(slicesForPackage))
-      throw new Error("Resolver has no knowldge about package: " + packageName);
+      throw new Error("Cannot find anything about package -- " + packageName);
 
     _.each(slicesForPackage, function (sliceName) {
       dependencies.push(sliceName);

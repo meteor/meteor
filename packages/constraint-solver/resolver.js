@@ -84,6 +84,11 @@ ConstraintSolver.Resolver.prototype.resolve =
   }, options);
 
   var rootDependencies = _.clone(dependencies);
+  // required for error reporting later
+  var constraintAncestor = {};
+  _.each(constraints, function (c) {
+    constraintAncestor[c.toString()] = c.name;
+  });
 
   dependencies = ConstraintSolver.DependenciesList.fromArray(dependencies, true);
   constraints = ConstraintSolver.ConstraintsList.fromArray(constraints);
@@ -97,7 +102,8 @@ ConstraintSolver.Resolver.prototype.resolve =
   // - dependencies: DependenciesList
   // - constraints: ConstraintsList
   // - choices: array of UnitVersion
-  var startState = self._propagateExactTransDeps(appUV, dependencies, constraints, choices);
+  // - constraintAncestor: mapping Constraint.toString() -> Constraint
+  var startState = self._propagateExactTransDeps(appUV, dependencies, constraints, choices, constraintAncestor);
   startState.choices = _.filter(startState.choices, function (uv) { return uv.name !== "target"; });
 
   if (options.stopAfterFirstPropagation)
@@ -154,8 +160,8 @@ ConstraintSolver.Resolver.prototype.resolve =
 // - dependencies: DependenciesList - remaining dependencies
 // - constraints: ConstraintsList - constraints to satisfy
 // - choices: array of UnitVersion - current fixed set of choices
-// - constraintAncestors: Constraint (string representation) ->
-//   DependencyList. Used for error reporting to indicate which direct
+// - constraintAncestor: Constraint (string representation) ->
+//   Dependency name. Used for error reporting to indicate which direct
 //   dependencies have caused a failure. For every constraint, this is
 //   the list of direct dependencies which led to this constraint being
 //   present.
@@ -174,7 +180,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var dependencies = state.dependencies;
   var constraints = state.constraints;
   var choices = state.choices;
-  var constraintAncestors = state.constraintAncestors;
+  var constraintAncestor = state.constraintAncestor;
 
   var candidateName = dependencies.peek();
   dependencies = dependencies.remove(candidateName);
@@ -184,58 +190,60 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       return _.isEmpty(constraints.violatedConstraints(uv));
     });
 
-  if (_.isEmpty(candidateVersions)) {
-    var uv = self.unitsVersions[candidateName][0];
-    if (! uv) {
-      // XXX Some stupid error message, this should not happen
-    } else {
-      var violatedConstraint = _.filter(
-        constraints.violatedConstraints(uv)[0],
-        function (constraint) {
-          return constraint.name === uv.name;
-        }
-      );
-      // XXX Should we return information about all the violated
-      // constraints instead of just one?
-      var directDeps = constraintAncestors[violatedConstraint.toString()];
+    var generateError = function (uv, violatedConstraints) {
+      var directDepsString = "";
+
+      _.each(violatedConstraints, function (c) {
+        directDepsString += constraintAncestor[c.toString()] +
+          + "(" + c.toString() + "), ";
+      });
+
       return {
         success: false,
         // XXX We really want to say "directDep1 depends on X@1.0 and
         // directDep2 depends on X@2.0"
-        failureMsg: "Direct dependencies " + directDeps.toString() +
-          " conflict on " + uv.name + ". " + violatedConstraint.toString()
+        failureMsg: "Direct dependencies " + directDepsString +
+          " conflict on " + uv.name
       };
-    }
+    };
 
+  if (_.isEmpty(candidateVersions)) {
+    var uv = self.unitsVersions[candidateName][0];
 
-    return { success: false,
-             failureMsg: "Cannot choose satisfying versions of package -- "
-                         + candidateName };
+    if (! uv)
+      return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName };
+
+    return generateError(uv, constraints.violatedConstraints(uv));
   }
 
-  var lastInvalidNeighbor = null;
+  var firstError = null;
 
   var neighbors = _.chain(candidateVersions).map(function (uv) {
     var nChoices = _.clone(choices);
+    var nConstraintAncestors = _.clone(constraintAncestor);
     nChoices.push(uv);
 
-    return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices);
+    return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices, nConstraintAncestors);
   }).filter(function (state) {
-    var isValid =
-      choicesDontViolateConstraints(state.choices, state.constraints);
+    var vcfc =
+      violatedConstraintsForSomeChoice(state.choices, state.constraints);
 
-    if (! isValid)
-      lastInvalidNeighbor = state;
+    if (! vcfc)
+      return true;
 
-    return isValid;
+    firstError = generateError(vcfc.choice, vcfc.constraints);
+    return false;
   }).value();
 
+  if (firstError)
+    return firstError;
+
+  // Should never be true as !!firstError === !neighbors.length but still check
+  // just in case.
   if (! neighbors.length)
     return { success: false,
              failureMsg: "None of the versions unit produces a sensible result -- "
-               + candidateName,
-             triedUnitVersions: candidateVersions,
-             lastInvalidNeighbor: lastInvalidNeighbor };
+               + candidateName };
 
   return { success: true, neighbors: neighbors };
 };
@@ -247,7 +255,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
 // propagated (i.e. doesn't try to propagate anything not related to the passed
 // unit version).
 ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
-  function (uv, dependencies, constraints, choices) {
+  function (uv, dependencies, constraints, choices, constraintAncestor) {
   var self = this;
 
   // XXX representing a queue as an array with push/shift operations is not
@@ -256,6 +264,9 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   // Boolean map to avoid adding the same stuff to queue over and over again.
   // Keeps the time complexity the same but can save some memory.
   var isEnqueued = {};
+  // For keeping track of new choices in this iteration
+  var oldChoice = {};
+  _.each(choices, function (uv) { oldChoice[uv.name] = uv; });
 
   queue.push(uv);
   isEnqueued[uv.name] = true;
@@ -312,17 +323,42 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
     });
   }
 
+  // Update the constraintAncestor table
+  _.each(choices, function (uv) {
+    if (oldChoice[uv.name])
+      return;
+
+    var relevantConstraint = null;
+    constraints.forPackage(uv.name, function (c) { relevantConstraint = c; });
+    if (! constraintAncestor[relevantConstraint.toString()])
+      console.log(relevantConstraint.toString(), constraintAncestor);
+
+    uv.constraints.each(function (c) {
+      if (! constraintAncestor[c.toString()])
+        constraintAncestor[c.toString()] = constraintAncestor[relevantConstraint.toString()];
+    });
+  });
+
   return {
     dependencies: dependencies,
     constraints: constraints,
-    choices: choices
+    choices: choices,
+    constraintAncestor: constraintAncestor
   };
 };
 
-var choicesDontViolateConstraints = function (choices, constraints) {
-  return _.all(choices, function (uv) {
-    return _.isEmpty(constraints.violatedConstraints(uv));
+var violatedConstraintsForSomeChoice = function (choices, constraints) {
+  var ret = null;
+  _.each(choices, function (choice) {
+    if (ret)
+      return;
+
+    var violatedConstraints = constraints.violatedConstraints(choice);
+    if (! _.isEmpty(violatedConstraints))
+      ret = { constraints: violatedConstraints, choice: choice };
   });
+
+  return ret;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

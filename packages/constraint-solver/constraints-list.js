@@ -65,9 +65,14 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
   return newList;
 };
 
-ConstraintSolver.ConstraintsList.prototype.forPackage = function (name) {
+ConstraintSolver.ConstraintsList.prototype.forPackage = function (name, iter) {
   var self = this;
-  return mori.get(self.byName, name);
+  var forPackage = mori.get(self.byName, name);
+  var exact = mori.get(forPackage, "exact");
+  var inexact = mori.get(forPackage, "inexact");
+
+  mori.each(exact, iter);
+  mori.each(inexact, iter);
 };
 
 // doesn't break on the false return value
@@ -117,21 +122,15 @@ ConstraintSolver.ConstraintsList.prototype.union = function (anotherList) {
 // XXX Returns a regular array, not a ConstraintsList.
 ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (uv) {
   var self = this;
-  var forPackage = mori.get(self.byName, uv.name);
-  var exact = mori.get(forPackage, "exact");
-  var inexact = mori.get(forPackage, "inexact");
 
   var violated = [];
-  mori.each(exact, function (c) {
-    if (! mori.last(c).isSatisified(uv)) {
+
+  self.forPackage(uv.name, function (c) {
+    if (! mori.last(c).isSatisfied(uv)) {
       violated.push(c);
     }
   });
-  mori.each(inexact, function (c) {
-    if (! mori.last(c).isSatisified(uv)) {
-      violated.push(c);
-    }
-  });
+
   return violated;
 };
 
