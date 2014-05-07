@@ -1620,129 +1620,11 @@ main.registerCommand({
 // publish a package
 ///////////////////////////////////////////////////////////////////////////////
 
-var doSomePublishingStuff = function (packageSource, compileResult, conn, options) {
-  options = options || {};
-
-  var name = packageSource.name;
-  var version = packageSource.version;
-
-
-  compileResult.unipackage.saveToPath(
-    path.join(packageSource.sourceRoot, '.build.' + packageSource.name));
-
-
-  // Check that the package name is valid.
-  if (! utils.validPackageName(name) ) {
-    process.stderr.write(
-      "Package name invalid. Package names can only contain \n" +
-      "lowercase ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
-      "Package names cannot begin with a dot. \n");
-    return 1;
-  }
-
-  // Check that we have a version.
-  if (! version) {
-    process.stderr.write(
-     "That package cannot be published because it doesn't have a version.\n");
-    return 1;
-  }
-
-  // Check that the version description is under the character limit.
-  if (packageSource.metadata.summary.length > 100) {
-    process.stderr.write("Description must be under 100 chars.");
-    process.stderr.write("Publish failed.");
-    return 1;
-  }
-
-  // We need to build the test package to get all of its sources.
-  var testFiles = [];
-  var messages = buildmessage.capture(
-    { title: "getting test sources" },
-    function () {
-      var testName = packageSource.testName;
-      if (testName) {
-        var testSource = new PackageSource;
-        testSource.initFromPackageDir(testName, packageSource.sourceRoot);
-        if (buildmessage.jobHasMessages())
-          return; // already have errors, so skip the build
-
-        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
-        testFiles = testUnipackage.sources;
-      }
-    });
-
-  if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
-    return 1;
-  }
-
-  process.stdout.write('Bundling source...\n');
-
-  // XXX prevent people from directly publishing meteor-tool outside of the
-  // release publishing process (since we don't automatically rebuild the tool
-  // package)
-
-  var sources = _.union(compileResult.sources, testFiles);
-
-  // Send the versions lock file over to the server! We should make sure to use
-  // the same version lock file when we build this source elsewhere (ex:
-  // publish-for-arch).
-  sources.push(packageSource.versionsFileName());
-  var bundleResult = packageClient.bundleSource(compileResult.unipackage,
-                                                sources,
-                                                packageSource.sourceRoot);
-
-  var compilerInputsHash = compileResult.unipackage.getBuildIdentifier({
-    relativeTo: packageSource.sourceRoot
-  });
-
-  // Create the package.
-  // XXX First sync package metadata and check if it exists.
-  if (options.create) {
-    process.stdout.write('Creating package...\n');
-    var packageId = conn.call('createPackage', {
-      name: packageSource.name
-    });
-  }
-
-  process.stdout.write('Creating package version...\n');
-  var uploadRec = {
-    packageName: packageSource.name,
-    version: version,
-    description: packageSource.metadata.summary,
-    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-    containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageSource.getDependencyMetadata(),
-    compilerInputsHash: compilerInputsHash
-  };
-  var uploadInfo = conn.call('createPackageVersion', uploadRec);
-
-  // XXX If package version already exists, print a nice error message
-  // telling them to try 'meteor publish-for-arch' if they want to
-  // publish a new build.
-
-  process.stdout.write('Uploading source...\n');
-  packageClient.uploadTarball(uploadInfo.uploadUrl,
-                              bundleResult.sourceTarball);
-
-  process.stdout.write('Publishing package version...\n');
-  conn.call('publishPackageVersion',
-            uploadInfo.uploadToken, bundleResult.tarballHash);
-
-  packageClient.createAndPublishBuiltPackage(conn, compileResult.unipackage,
-                                             packageSource.sourceRoot);
-  return true;
-
-};
-
-
 main.registerCommand({
   name: 'publish',
   minArgs: 0,
   maxArgs: 0,
   options: {
-    // XXX A temporary option to create the package, until we sync
-    // package metadata to the client.
     create: { type: Boolean }
   },
   requiresPackage: true
@@ -1792,10 +1674,20 @@ main.registerCommand({
     return 1;
   }
 
-  doSomePublishingStuff(packageSource, compileResult, conn, options);
+  // We don't allow the tool to be published outside of the release process.
+  // XXX: I think this behavior doesn't make sense.
+/*  if (packageSource.includeTool) {
+    process.stderr.write("The tools package may not be published directly. \n");
+    return 1;
+  }*/
 
+  // We have initialized everything, so perform the publish oepration.
+  var ec = packageClient.publishPackage(packageSource, compileResult, conn, { new: options.create });
+
+  // We are only publishing one package, so we should close the connection, and
+  // then exit with the previous error code.
   conn.close();
-
+  return ec;
 });
 
 main.registerCommand({
@@ -1876,7 +1768,8 @@ main.registerCommand({
   maxArgs: 0,
   options: {
     config: { type: String, required: true },
-    create: { type: Boolean, required: false}
+    create: { type: Boolean, required: false },
+    fromCheckout: { type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -1895,15 +1788,68 @@ main.registerCommand({
   }
 
   var relConf = {};
-  if (options.config === "checkout") {
+
+  // Let's read the json release file. It should, at the very minimum contain
+  // the release track name, the release version and some short freeform
+  // description.
+  try {
+    var data = fs.readFileSync(options.config, 'utf8');
+    relConf = JSON.parse(data);
+  } catch (e) {
+    process.stderr.write("Could not parse release file: ");
+    process.stderr.write(e.message + "\n");
+    return 1;
+  }
+
+  // This is sort of a hidden option to just take your entire meteor checkout
+  // and make a release out of it. That's what we do now (that's what releases
+  // meant pre-0.90), and it is very convenient to do that here.
+  //
+  // If you have any unpublished packages at new versions in your checkout, this
+  // WILL PUBLISH THEM at specified versions. (If you have unpublished changes,
+  // including changes to build-time dependencies, but have not incremented the
+  // version number, this will use buildmessage to error and exit.)
+  //
+  // Without any modifications about forks and package names, this particular
+  // option is not very useful outside of MDG. Right now, to run this option on
+  // a non-MDG fork of meteor, someone would probably need to go through and
+  // change the package names to have proper prefixes, etc.
+  if (options.fromCheckout) {
+    // You must be running from checkout to bundle up your checkout as a release.
     if (!files.inCheckout()) {
-      process.stderr.write("Must run from hceckout to make release from checkout. \n");
+      process.stderr.write("Must run from checkout to make release from checkout. \n");
       return 1;
     };
 
-    // Now, let's collect all our packages.
-    // XXX: Explain why we are doing this in a weird way.
-    var localPackageDir = path.join(files.getCurrentToolsDir(), "packages");
+    // We are going to disable publishing a release from checkout and an appDir,
+    // just to be extra safe about local packages. There is never a good reason
+    // why you would do that, and maybe you are confused about what you are
+    // trying to do.
+    if (options.appDir) {
+      process.stderr.write("Trying to publish from checkout while in an application " +
+                           "directory is strange. Please try again from somewhere else. \n");
+      return 1;
+    }
+
+    // You should not use a release configuration with packages&tool *and* a
+    // from checkout option, at least for now. That's potentially confusing
+    // (which ones did you mean to use) and makes it likely that you did one of
+    // these by accident. So, we will disallow it for now.
+    if (relConf.packages || relConf.tool) {
+      process.stderr.write(
+        "Setting the --fromCheckout option will use the tool & packages in your meteor " +
+        "checkout. \n" +
+        "Your release configuration file should not contain that information.");
+      return 1;
+    }
+
+    // Now, let's collect all the packages in our meteor/packages directory. We
+    // are going to be extra-careful to publish only those packages, and not
+    // just all local packages -- we might be running this from an app
+    // directory, though we really shouldn't be, or, if we ever restructure the
+    // way that we store packages in the meteor directory, we should be sure to
+    // reevaluate what this command actually does.
+    var localPackageDir = path.join(files.getCurrentToolsDir(),"packages");
     var contents = fs.readdirSync(localPackageDir);
     var myPackages = {};
     var toPublish = {};
@@ -1911,16 +1857,18 @@ main.registerCommand({
       {title: "rebuilding local packages"},
       function () {
         _.each(contents, function (item) {
+          // We expect the meteor/packages directory to only contain a lot of
+          // directories, each of which is a package. This may one day be false,
+          // in which case, this function will fail. That's an extra layer of
+          // safety -- this is a very specific command that does a very specific
+          // thing, and if we ever change how we store packages in checkout, we
+          // should reconsider if, for example, we want to publish all of them
+          // in a release.
           var packageDir = path.resolve(path.join(localPackageDir, item));
-          /// XXX: Refactor this to get directory data from the catalog, maybe.
-          /// XXX: Do this in a buildmessage
-
           // Consider a directory to be a package source tree if it
           // contains 'package.js'. (We used to support unipackages in
           // localPackageDirs, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-            // Let earlier package directories override later package
-            // directories.
             var packageSource = new PackageSource;
             buildmessage.enterJob(
               { title: "building package " + item },
@@ -1929,23 +1877,27 @@ main.registerCommand({
                 // not proceed)
                 packageSource.initFromPackageDir(item, packageDir);
                 if (buildmessage.jobHasMessages()) {
+                  process.stderr.write("Error reading package:" + item + "\n");
                   return;
                 };
 
                 // We are not very good with change detection on the meteor
-                // tool, so we should just make sure to rebuild it completely
-                // before publishing.
+                // tool, so we should just make extra-special sure to rebuild it
+                // completely before publishing.
                 if (packageSource.includeTool) {
                   // Remove the build directory.
                   files.rm_recursive(path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
-                // Now compile it! Once again, everything should compile.
+                // Now compile it! Once again, everything should compile, and if
+                // it doesn't we should fail. Hopefully, of course, we have
+                // tested our stuff before deciding to publish it to the package
+                // server, but we need to be careful.
                 var compileResult = compiler.compile(packageSource, { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
+                  process.stderr.write("Error compiling unipackage:" + item + "\n");
                   return;
                 };
-
 
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
@@ -1971,7 +1923,17 @@ main.registerCommand({
                     // Cool, everything is exactly the same. We are done here.
                     return;
                   }
-                  buildmessage.error("Something changed in package " + item + ". Please upgrade version number. \n");
+
+                  // The build ID of the old server record is not the same as
+                  // the buildID that we have on disk. This means something has
+                  // changed -- maybe our source files, or a buildId of one of
+                  // our build-time dependencies. There might be a false
+                  // positive here (for example, we added some comments to a
+                  // package.js file somewhere), but, for now, we would rather
+                  // err on the side of catching this issue and forcing a more
+                  // thorough check.
+                  buildmessage.error("Something changed in package " + item + "." +
+                                     " Please upgrade version number. \n");
                 }
               });
           }
@@ -1983,38 +1945,38 @@ main.registerCommand({
      return 1;
    };
 
-   // Yay! We can publish all of these packages.
-   // XXX: Figure out when to create a new vpackage automatically.
-   _.each(toPublish, function(prebuilt, name) {
-     // Publish them!
-     process.stdout.write("Publishing: " + name + "\n");
-     var pub = doSomePublishingStuff(prebuilt.source, prebuilt.unipackage, conn, {create: true});
-     if (!pub) {
+   // We now have an object of packages that have new versions on disk that
+   // don't exist in the server catalog. Publish them.
+  _.each(toPublish,
+   function(prebuilt, name) {
+     var opts = {
+       new: !catalog.recordExistOnServer(name)
+     };
+     process.stdout.write("Publishing package: " + name + "\n");
+
+     // If we are creating a new package, dsPS will document this for us, so we
+     // don't need to do this here. Though, in the future, once we are done
+     // bootstrapping package servers, we should consider having some extra
+     // checks around this.
+     var pub = packageClient.publishPackage(
+       prebuilt.source,
+       prebuilt.unipackage,
+       conn,
+       opts);
+
+     // If we fail to publish, just exit outright, something has gone wrong.
+     if (pub > 0) {
        process.stderr.write("Failed to publish: " + name + "\n");
        process.exit(1);
      }
    });
 
-   // Set the release. We should actually pass in a configuration file with this
-   // information and a separate checkout option, I think, but let's just see
-   // this work for now! XXX.
-   relConf.name="meteor-core";
-   relConf.version="test";
+   // Set the remaining release information. For now, when we publish from
+   // checkout, we always set the meteor tool as the tool. We don't include the
+   // tool in the packages list.
    relConf.tool="meteor-tool@" + myPackages["meteor-tool"];
    delete myPackages["meteor-tool"];
-
    relConf.packages=myPackages;
-   relConf.description="We did it!";
-
-  } else {
-    try {
-      var data = fs.readFileSync(options.config, 'utf8');
-      relConf = JSON.parse(data);
-    } catch (e) {
-      process.stderr.write("Could not parse release file: ");
-      process.stderr.write(e.message + "\n");
-      return 1;
-    }
   }
 
   // Check if the release track exists. If it doesn't, need the create flag.
@@ -2026,20 +1988,7 @@ main.registerCommand({
       return 1;
     }
     // XXX: check that we are an authorized maintainer as well.
-  }
-
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-  if (! conn) {
-    process.stderr.write('No connection: Publish failed\n');
-    return 1;
-  }
-
-  if (options.create) {
+  } else {
     process.stdout.write("Creating a new release track... \n");
     var track = conn.call('createReleaseTrack',
                          { name: relConf.name } );

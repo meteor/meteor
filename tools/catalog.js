@@ -766,6 +766,16 @@ _.extend(Catalog.prototype, {
     return versionRecord;
   },
 
+  // Return true if the record for this package name has ever existed on the
+  // server, before being overwritten by local overrides. (Return false if the
+  // local package is a new package)
+  recordExistOnServer: function (name) {
+    var self = this;
+    self._requireInitialized();
+
+    return !!(_.findWhere(self.oldServerRecords, { packageName: name }));
+  },
+
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
   getLatestVersion: function (name) {

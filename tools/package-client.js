@@ -8,6 +8,8 @@ var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
 var ServiceConnection = require('./service-connection.js');
+var utils = require('./utils.js');
+var buildmessage = require('./buildmessage.js');
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -312,7 +314,7 @@ var hashTarball = function (tarball) {
 // In retrospect a better approach here might be to actually make "save source
 // somewhere else" or perhaps "add source to tarball" be part of the package
 // build itself...
-exports.bundleSource = function (unipackage, includeSources, packageDir) {
+var bundleSource = function (unipackage, includeSources, packageDir) {
   var name = unipackage.name;
 
   var tempDir = files.mkdtemp('build-source-package-');
@@ -364,6 +366,8 @@ exports.bundleSource = function (unipackage, includeSources, packageDir) {
   };
 };
 
+
+
 var uploadTarball = function (putUrl, tarball) {
   var size = fs.statSync(tarball).size;
   var rs = fs.createReadStream(tarball);
@@ -409,7 +413,7 @@ var bundleBuild = function (unipackage, packageDir) {
 
 exports.bundleBuild = bundleBuild;
 
-exports.createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
+var createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
@@ -433,6 +437,8 @@ exports.createAndPublishBuiltPackage = function (conn, unipackage, packageDir) {
   process.stdout.write('\nDone!\n');
 };
 
+exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
+
 exports.handlePackageServerConnectionError = function (error) {
   var Package = getLoadedPackages();
   if (error instanceof Package.meteor.Meteor.Error) {
@@ -446,4 +452,130 @@ exports.handlePackageServerConnectionError = function (error) {
   } else {
     throw error;
   }
+};
+
+// Publish the package information into the server catalog. Create new records
+// for the package (if needed), the version and the build; upload source and
+// unipackage.
+//
+// packageSource: the packageSource for this package.
+// compileResult: the compiled unipackage and various source files.
+// conn: the open, logged-in connection over which we should talk to the package
+//       server. DO NOT CLOSE this connection here.
+// options:
+//      new: this package is new, we should call createPackage to create a new
+//           package record.
+//
+// Return true on success and an error code otherwise.
+exports.publishPackage = function (packageSource, compileResult, conn, options) {
+  options = options || {};
+
+  var name = packageSource.name;
+  var version = packageSource.version;
+
+  // Check that the package name is valid.
+  if (! utils.validPackageName(name) ) {
+    process.stderr.write(
+      "Package name invalid. Package names can only contain \n" +
+      "lowercase ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
+      "Package names cannot begin with a dot. \n");
+    return 1;
+  }
+
+  // Check that we have a version.
+  if (! version) {
+    process.stderr.write(
+     "That package cannot be published because it doesn't have a version.\n");
+    return 1;
+  }
+
+  // Check that the version description is under the character limit.
+  if (packageSource.metadata.summary.length > 100) {
+    process.stderr.write("Description must be under 100 chars.");
+    process.stderr.write("Publish failed.");
+    return 1;
+  }
+
+  // XXX: check auth.
+
+  // We need to build the test package to get all of its sources.
+  var testFiles = [];
+  var messages = buildmessage.capture(
+    { title: "getting test sources" },
+    function () {
+      var testName = packageSource.testName;
+      if (testName) {
+        var PackageSource = require('./package-source.js');
+        var compiler = require('./compiler.js');
+
+        var testSource = new PackageSource;
+        testSource.initFromPackageDir(testName, packageSource.sourceRoot);
+        if (buildmessage.jobHasMessages())
+          return; // already have errors, so skip the build
+
+        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
+        testFiles = testUnipackage.sources;
+      }
+    });
+
+  if (messages.hasMessages()) {
+    process.stdout.write(messages.formatMessages());
+    return 1;
+  }
+
+  compileResult.unipackage.saveToPath(
+    path.join(packageSource.sourceRoot, '.build.' + packageSource.name));
+
+  process.stdout.write('Bundling source...\n');
+
+  var sources = _.union(compileResult.sources, testFiles);
+
+  // Send the versions lock file over to the server! We should make sure to use
+  // the same version lock file when we build this source elsewhere (ex:
+  // publish-for-arch).
+  sources.push(packageSource.versionsFileName());
+  var bundleResult = bundleSource(compileResult.unipackage,
+                                                sources,
+                                                packageSource.sourceRoot);
+
+  var compilerInputsHash = compileResult.unipackage.getBuildIdentifier({
+    relativeTo: packageSource.sourceRoot
+  });
+
+  // Create the package. Check that the metadata exists.
+  if (options.new) {
+    process.stdout.write('Creating package...\n');
+    var packageId = conn.call('createPackage', {
+      name: packageSource.name
+    });
+  }
+
+  process.stdout.write('Creating package version...\n');
+  var uploadRec = {
+    packageName: packageSource.name,
+    version: version,
+    description: packageSource.metadata.summary,
+    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+    containsPlugins: packageSource.containsPlugins(),
+    dependencies: packageSource.getDependencyMetadata(),
+    compilerInputsHash: compilerInputsHash
+  };
+  var uploadInfo = conn.call('createPackageVersion', uploadRec);
+
+  // XXX If package version already exists, print a nice error message
+  // telling them to try 'meteor publish-for-arch' if they want to
+  // publish a new build.
+
+  process.stdout.write('Uploading source...\n');
+  uploadTarball(uploadInfo.uploadUrl,
+                              bundleResult.sourceTarball);
+
+  process.stdout.write('Publishing package version...\n');
+  conn.call('publishPackageVersion',
+            uploadInfo.uploadToken, bundleResult.tarballHash);
+
+  createAndPublishBuiltPackage(conn, compileResult.unipackage,
+                               packageSource.sourceRoot);
+  return 0;
+
 };
