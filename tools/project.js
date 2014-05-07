@@ -139,7 +139,8 @@ project.getDirectDependencies = function(appDir) {
   };
 };
 
-// Get a list of constraints from the .meteor/versions file.
+// Returns a map from package name to version from the .meteor/versions
+// file.
 project.getIndirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getVersionsLines(appDir));
 };
@@ -314,4 +315,8 @@ project.removePackage = function (appDir, name) {
     return trimLine(line) === name;
   });
   writePackages(appDir, lines);
+};
+
+project.getAppIdentifier = function (appDir) {
+  return "emily's test app";
 };

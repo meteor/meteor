@@ -14,7 +14,7 @@ var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var packageCache = require('./package-cache.js');
 var PackageLoader = require('./package-loader.js');
-
+var stats = require('./stats.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -413,6 +413,7 @@ _.extend(AppRunner.prototype, {
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     var loader = project.generatePackageLoader(self.appDir);
+    stats.recordPackages(self.appDir);
 
     var bundleResult = bundler.bundle({
       appDir: self.appDir,

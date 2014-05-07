@@ -136,6 +136,19 @@ _.extend(exports, {
     }
   },
 
+  getPackageStatsServerUrl: function () {
+    var host = config.getPackageStatsServerDomain();
+    return addScheme(host);
+  },
+
+  getPackageStatsServerDomain: function () {
+    if (isLocalUniverse()) {
+      return localhostOffset(30);
+    } else {
+      return getUniverse().replace(/^www\./, 'test-packages-stats.');
+    }
+  },
+
   getPackageStorage: function() {
     return path.join(tropohouse.getWarehouseDir(), "package-metadata", "v1", "data.json");
   },
