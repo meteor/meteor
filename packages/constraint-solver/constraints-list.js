@@ -71,8 +71,12 @@ ConstraintSolver.ConstraintsList.prototype.forPackage = function (name, iter) {
   var exact = mori.get(forPackage, "exact");
   var inexact = mori.get(forPackage, "inexact");
 
-  mori.each(exact, iter);
-  mori.each(inexact, iter);
+  var niter = function (pair) {
+    iter(mori.last(pair));
+  };
+
+  mori.each(exact, niter);
+  mori.each(inexact, niter);
 };
 
 // doesn't break on the false return value
@@ -126,7 +130,7 @@ ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (uv) {
   var violated = [];
 
   self.forPackage(uv.name, function (c) {
-    if (! mori.last(c).isSatisfied(uv)) {
+    if (! c.isSatisfied(uv)) {
       violated.push(c);
     }
   });

@@ -190,22 +190,21 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       return _.isEmpty(constraints.violatedConstraints(uv));
     });
 
-    var generateError = function (uv, violatedConstraints) {
-      var directDepsString = "";
+  var generateError = function (uv, violatedConstraints) {
+    var directDepsString = "";
 
-      _.each(violatedConstraints, function (c) {
-        directDepsString += constraintAncestor[c.toString()] +
-          + "(" + c.toString() + "), ";
-      });
+    _.each(violatedConstraints, function (c) {
+      directDepsString += constraintAncestor[c.toString()] +
+        + "(" + c.toString() + "), ";
+    });
 
-      return {
-        success: false,
-        // XXX We really want to say "directDep1 depends on X@1.0 and
-        // directDep2 depends on X@2.0"
-        failureMsg: "Direct dependencies " + directDepsString +
-          " conflict on " + uv.name
-      };
+    return {
+      success: false,
+      // XXX We really want to say "directDep1 depends on X@1.0 and
+      // directDep2 depends on X@2.0"
+      failureMsg: "Direct dependencies " + directDepsString + "conflict on " + uv.name
     };
+  };
 
   if (_.isEmpty(candidateVersions)) {
     var uv = self.unitsVersions[candidateName][0];
@@ -231,11 +230,13 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     if (! vcfc)
       return true;
 
-    firstError = generateError(vcfc.choice, vcfc.constraints);
+    if (! firstError) {
+      firstError = generateError(vcfc.choice, vcfc.constraints);
+    }
     return false;
   }).value();
 
-  if (firstError)
+  if (firstError && ! neighbors.length)
     return firstError;
 
   // Should never be true as !!firstError === !neighbors.length but still check
@@ -330,12 +331,28 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
 
     var relevantConstraint = null;
     constraints.forPackage(uv.name, function (c) { relevantConstraint = c; });
-    if (! constraintAncestor[relevantConstraint.toString()])
-      console.log(relevantConstraint.toString(), constraintAncestor);
+
+    var rootAnc = null;
+    if (relevantConstraint) {
+      rootAnc = constraintAncestor[relevantConstraint.toString()];
+    } else {
+      // XXX this probably only works correctly when uv was a root dependency
+      // w/o a constraint or dependency of one of the root deps.
+      _.each(choices, function (choice) {
+        if (rootAnc)
+          return;
+
+        if (choice.dependencies.contains(uv.name))
+          rootAnc = choice.name;
+      });
+
+      if (! rootAnc)
+        rootAnc = uv.name;
+    }
 
     uv.constraints.each(function (c) {
       if (! constraintAncestor[c.toString()])
-        constraintAncestor[c.toString()] = constraintAncestor[relevantConstraint.toString()];
+        constraintAncestor[c.toString()] = rootAnc;
     });
   });
 
