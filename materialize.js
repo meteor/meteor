@@ -5,10 +5,10 @@
 // computation).
 Blaze._inDummyComputation = function (f) {
   var ret;
-  Deps.autorun(function (c) {
+  Blaze._wrapAutorun(Deps.autorun(function (c) {
     c.stop();
     ret = f();
-  });
+  }));
   return ret;
 };
 
@@ -25,6 +25,11 @@ Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
     return Blaze.toHTML(node);
   }
 });
+
+var ToTextController = Blaze.ToTextController = function () {
+  Blaze.Controller.call(this);
+};
+__extends(Blaze.ToTextController, Blaze.Controller);
 
 Blaze.toText = function (content, textMode) {
   if (! Deps.active) {
@@ -43,7 +48,10 @@ Blaze.toText = function (content, textMode) {
   var visitor = new Blaze.ToTextVisitor;
   visitor.textMode = textMode;
 
-  return visitor.visit(content);
+  var controller = (Blaze.currentController || new ToTextController);
+  return Blaze.withCurrentController(controller, function () {
+    return visitor.visit(content);
+  });
 };
 
 ////////////////////////////// Blaze.toHTML
@@ -60,6 +68,11 @@ Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
   }
 });
 
+var ToHTMLController = Blaze.ToHTMLController = function () {
+  Blaze.Controller.call(this);
+};
+__extends(Blaze.ToHTMLController, Blaze.Controller);
+
 // This function is mainly for server-side rendering and is not in the normal
 // code path for client-side rendering.
 Blaze.toHTML = function (content) {
@@ -68,7 +81,10 @@ Blaze.toHTML = function (content) {
       return Blaze.toHTML(content);
     });
   }
-  return (new Blaze.ToHTMLVisitor).visit(content);
+  var controller = (Blaze.currentController || new ToHTMLController);
+  return Blaze.withCurrentController(controller, function () {
+    return (new Blaze.ToHTMLVisitor).visit(content);
+  });
 };
 
 
