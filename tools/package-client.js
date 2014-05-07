@@ -289,21 +289,6 @@ exports.loggedInPackagesConnection = function () {
   }
 };
 
-var hashTarball = function (tarball) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  var rs = fs.createReadStream(tarball);
-  var fut = new Future();
-  rs.on('end', function () {
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  var tarballHash = fut.wait();
-  rs.close();
-  return tarballHash;
-};
-
 // XXX this is missing a few things:
 //    - locking down build-time dependencies: tools version, versions
 //      of all (not-built-from-source) plugins used
@@ -358,7 +343,7 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   var sourceTarball = path.join(tempDir, packageTarName + '.tgz');
   files.createTarball(dirToTar, sourceTarball);
 
-  var tarballHash = hashTarball(sourceTarball);
+  var tarballHash = files.fileHash(sourceTarball);
 
   return {
     sourceTarball: sourceTarball,
@@ -388,8 +373,7 @@ exports.uploadTarball = uploadTarball;
 
 var bundleBuild = function (unipackage) {
   var tempDir = files.mkdtemp('build-package-');
-  var packageTarName = unipackage.name + '-' + unipackage.version + '-' +
-        unipackage.architecturesString();
+  var packageTarName = unipackage.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
 
   unipackage.saveToPath(tarInputDir);
@@ -403,11 +387,13 @@ var bundleBuild = function (unipackage) {
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);
 
-  var tarballHash = hashTarball(buildTarball);
+  var tarballHash = files.fileHash(buildTarball);
+  var treeHash = files.treeHash(tarInputDir);
 
   return {
     buildTarball: buildTarball,
-    tarballHash: tarballHash
+    tarballHash: tarballHash,
+    treeHash: treeHash
   };
 };
 
@@ -429,7 +415,9 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
 
   process.stdout.write('Publishing package build...\n');
   conn.call('publishPackageBuild',
-            uploadInfo.uploadToken, bundleResult.tarballHash);
+            uploadInfo.uploadToken,
+            bundleResult.tarballHash,
+            bundleResult.treeHash);
 
   process.stdout.write('Published ' + unipackage.name +
                        ', version ' + unipackage.version);

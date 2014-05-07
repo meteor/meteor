@@ -1926,13 +1926,13 @@ main.registerCommand({
                   var somethingChanged = !existingBuild;
 
                   if (!somethingChanged) {
-                    // Bundle the build, just to get its hash.
+                    // Save the unipackage, just to get its hash.
                     // XXX this is redundant with the bundle build step that
                     // publishPackage will do later
                     var bundleBuildResult = packageClient.bundleBuild(
                       compileResult.unipackage);
-                    if (bundleBuildResult.tarballHash !==
-                        existingBuild.build.hash) {
+                    if (bundleBuildResult.treeHash !==
+                        existingBuild.build.treeHash) {
                       somethingChanged = true;
                     }
                   }
@@ -2019,6 +2019,9 @@ main.registerCommand({
     tool: relConf.tool,
     packages: relConf.packages
   });
+
+  // Get it back.
+  catalog.refresh(true);
 
   process.stdout.write("Done! \n");
   return 0;

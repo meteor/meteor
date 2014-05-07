@@ -264,6 +264,63 @@ var makeTreeReadOnly = function (p) {
   }
 };
 
+// Returns the base64 SHA256 of the given file.
+files.fileHash = function (filename) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.setEncoding('base64');
+  var rs = fs.createReadStream(filename);
+  var fut = new Future();
+  rs.on('end', function () {
+    rs.close();
+    fut.return(hash.digest('base64'));
+  });
+  rs.pipe(hash, { end: false });
+  return fut.wait();
+};
+
+
+// Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
+// to modtime, uid/gid, or any permissions bits other than the current-user-exec
+// bit on normal files.
+files.treeHash = function (root) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+
+  var traverse = function (relativePath) {
+    var absPath = path.join(root, relativePath);
+    var stat = fs.lstatSync(absPath);
+
+    if (stat.isDirectory()) {
+      if (relativePath) {
+        hash.update('dir ' + JSON.stringify(relativePath) + '\n');
+      }
+      _.each(fs.readdirSync(absPath), function (entry) {
+        traverse(path.join(relativePath, entry));
+      });
+    } else if (stat.isFile()) {
+      if (!relativePath) {
+        throw Error("must call files.treeHash on a directory");
+      }
+      hash.update('file ' + JSON.stringify(relativePath) + ' ' +
+                  stat.size + ' ' + files.fileHash(absPath) + '\n');
+      if (stat.mode & 0100) {
+        hash.update('exec\n');
+      }
+    } else if (stat.isSymbolicLink()) {
+      if (!relativePath) {
+        throw Error("must call files.treeHash on a directory");
+      }
+      hash.update('symlink ' + JSON.stringify(relativePath) + ' ' +
+                  JSON.stringify(fs.readlinkSync(absPath)) + '\n');
+    }
+    // ignore anything weirder
+  };
+
+  traverse('');
+  return hash.digest('base64');
+};
+
 // like mkdir -p. if it returns true, the item is a directory (even if
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.

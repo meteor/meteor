@@ -307,6 +307,11 @@ _.extend(Unipackage.prototype, {
     return self.architectures().join('+');
   },
 
+  tarballName: function () {
+    var self = this;
+    return self.name + '-' + self.version + '-' + self.architecturesString();
+  },
+
   _toolArchitectures: function () {
     var self = this;
     var toolArches = _.pluck(self.toolsOnDisk, 'arch');
