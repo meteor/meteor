@@ -1914,8 +1914,8 @@ main.registerCommand({
                                      compileResult: compileResult};
                   return;
                 } else {
-                  var existingBuild = catalog.getBuildWithArchesString(
-                    item, oldVersion,
+                  var existingBuild = catalog.getOldBuildWithArchesString(
+                    oldVersion,
                     compileResult.unipackage.architecturesString());
                   // If the version number mentioned in package.js exists, but
                   // there's no build of this architecture, then either the old

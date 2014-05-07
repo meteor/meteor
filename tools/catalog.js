@@ -63,6 +63,7 @@ var Catalog = function () {
   // When we put in local package overrides, save the old server records here,
   // in case we ever want to refer to them. (for example, during publish time).
   self.oldServerRecords = null;
+  self.oldServerBuilds = [];
 };
 
 _.extend(Catalog.prototype, {
@@ -242,7 +243,10 @@ _.extend(Catalog.prototype, {
     });
 
     self.builds = _.filter(self.builds, function (build) {
-      return ! _.has(removedVersionIds, build.versionId);
+      if (! _.has(removedVersionIds, build.versionId))
+        return true;
+      self.oldServerBuilds.push(build);
+      return false;
     });
 
     self.packages = _.filter(self.packages, function (pkg) {
@@ -358,7 +362,7 @@ _.extend(Catalog.prototype, {
   // the catalog's internal format for local versions -- [version
   // number]+local. (for example, 1.0.0+local).
   _getLocalVersion: function (version) {
-    if (version )
+    if (version)
       return version.split("+")[0] + "+local";
     return version;
   },
@@ -844,17 +848,16 @@ _.extend(Catalog.prototype, {
   },
 
   // Unlike the previous, this looks for a build which *precisely* matches the
-  // given architectures string (joined with +).
-  getBuildWithArchesString: function (name, version, archesString) {
+  // given architectures string (joined with +). Also, it takes a versionRecord
+  // rather than name/version. Also, it looks at oldServerBuilds. OK, it's not
+  // much like the previous at all.
+  getOldBuildWithArchesString: function (versionRecord, archesString) {
     var self = this;
     self._requireInitialized();
 
-    var versionInfo = self.getVersion(name, version);
-    if (! versionInfo)
-      return null;
-
-    return _.where(self.builds, { versionId: versionInfo._id,
-                                  architecture: archesString } ) || null;
+    return _.findWhere(self.oldServerBuilds,
+                       { versionId: versionRecord._id,
+                         architecture: archesString });
   }
 });
 
