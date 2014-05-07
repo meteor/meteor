@@ -855,6 +855,7 @@ _.extend(Unipackage.prototype, {
       // Next, what about other tools we may be merging from other unipackages?
       // XXX check for overlap
       _.each(self.toolsOnDisk, function (toolMeta) {
+        toolMeta = _.clone(toolMeta);
         var rootDir = toolMeta.rootDir;
         delete toolMeta.rootDir;
         builder.copyDirectory({
