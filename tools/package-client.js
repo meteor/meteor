@@ -10,6 +10,7 @@ var files = require('./files.js');
 var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
+var compiler = require('./compiler.js');
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -540,6 +541,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     version: version,
     description: packageSource.metadata.summary,
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+    compilerVersion: compiler.BUILT_BY,
     containsPlugins: packageSource.containsPlugins(),
     dependencies: packageSource.getDependencyMetadata()
   };
