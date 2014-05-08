@@ -17,6 +17,9 @@
   `browser-policy-content` and you don't want your app to send this
   header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
 
+* Fix memory leak (introduced in 0.8.1) by making sure to unregister
+  sessions at the server when they are closed due to heartbeat timeout.
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
