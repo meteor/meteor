@@ -1827,7 +1827,8 @@ main.registerCommand({
     // trying to do.
     if (options.appDir) {
       process.stderr.write("Trying to publish from checkout while in an application " +
-                           "directory is strange. Please try again from somewhere else. \n");
+                           "directory is strange." +
+                           " Please try again from somewhere else. \n");
       return 1;
     }
 
@@ -1883,10 +1884,11 @@ main.registerCommand({
 
                 // We are not very good with change detection on the meteor
                 // tool, so we should just make extra-special sure to rebuild it
-                // completely before publishing.
+                // completely before publishing. Though we don't really need this.
                 if (packageSource.includeTool) {
                   // Remove the build directory.
-                  files.rm_recursive(path.join(packageSource.sourceRoot, '.build.' + item));
+                  files.rm_recursive(
+                    path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
                 // Now compile it! Once again, everything should compile, and if
@@ -1910,6 +1912,21 @@ main.registerCommand({
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
+                  // We are going to check if we are publishing an official
+                  // release. If this is an experimental or pre-release, then we
+                  // are not ready to commit to these package semver versions
+                  // either. Any packages that we should publish as part of this
+                  // release should have a -(something) at the end.
+                  var newVersion = packageSource.version;
+                  if (!relConf.official && newVersion.split("-").length < 2) {
+                    buildmessagge.error("It looks like you are building an "+
+                                        " experimental or pre-release. Any packages " +
+                                        "we publish here should have an identifier " +
+                                        "at the end (ex: 1.0.0-dev). If this is an " +
+                                        "official release, please set official to true " +
+                                        "in the release configuration file.");
+                    return;
+                  }
                   toPublish[item] = {source: packageSource,
                                      compileResult: compileResult};
                   return;
@@ -1917,6 +1934,7 @@ main.registerCommand({
                   var existingBuild = catalog.getOldBuildWithArchesString(
                     oldVersion,
                     compileResult.unipackage.architecturesString());
+
                   // If the version number mentioned in package.js exists, but
                   // there's no build of this architecture, then either the old
                   // version was only semi-published, or you've added some
