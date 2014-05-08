@@ -369,6 +369,8 @@ main.registerCommand({
   project.writeMeteorReleaseVersion(
     appPath, release.current.isCheckout() ? "none" : release.current.name);
 
+  project.ensureAppIdentifier(appPath);
+
   process.stderr.write(appPath + ": created");
   if (options.example && options.example !== appPath)
     process.stderr.write(" (from '" + options.example + "' template)");

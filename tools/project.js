@@ -317,6 +317,21 @@ project.removePackage = function (appDir, name) {
   writePackages(appDir, lines);
 };
 
+project.appIdentifierFile = function (appDir) {
+  return path.join(appDir, '.meteor', 'identifier');
+};
+
 project.getAppIdentifier = function (appDir) {
-  return "emily's test app";
+  var identifierFile = project.appIdentifierFile(appDir);
+  if (fs.existsSync(identifierFile)) {
+    return fs.readFileSync(identifierFile, 'utf8');
+  } else {
+    throw new Error("Expected a file at " + identifierFile);
+  }
+};
+
+project.ensureAppIdentifier = function (appDir) {
+  var identifierFile = project.appIdentifierFile(appDir);
+  if (!fs.existsSync(identifierFile))
+    fs.writeFileSync(identifierFile, utils.randomToken());
 };
