@@ -9,6 +9,8 @@
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
 // - `"ELSE"` - `{{else}}`
+// - `"ESCAPEDDOUBLE"` - {{|foo}}
+// - `"ESCAPEDTRIPLE"` - {{{|foo}}}
 //
 // Besides `type`, the mandatory properties of a TemplateTag are:
 //
@@ -22,7 +24,7 @@
 //   are `[["STRING", "bar"], ["NUMBER", 3, "x"]]`.  Applies to DOUBLE,
 //   TRIPLE, INCLUSION, and BLOCKOPEN.
 //
-// - `value` - For COMMENT tags, a string of the comment's text.
+// - `value` - For COMMENT and ESCAPED tags, a string of the comment's text.
 //
 // These additional are typically set during parsing:
 //
