@@ -1,6 +1,12 @@
 ## v.NEXT
 
 
+## v.0.8.1.2
+
+* Fix memory leak (introduced in 0.8.1) by making sure to unregister
+  sessions at the server when they are closed due to heartbeat timeout.
+
+
 ## v0.8.1.1
 
 * Fix 0.8.1 regression preventing clients from specifying `_id` on insert. #2097
