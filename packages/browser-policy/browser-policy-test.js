@@ -153,6 +153,7 @@ Tinytest.add("browser-policy - x-frame-options", function (test) {
 });
 
 Tinytest.add("browser-policy - X-Content-Type-Options", function (test) {
+  BrowserPolicy.content._reset();
   test.equal(BrowserPolicy.content._xContentTypeOptions(), "nosniff");
   BrowserPolicy.content.allowContentTypeSniffing();
   test.equal(BrowserPolicy.content._xContentTypeOptions(), undefined);

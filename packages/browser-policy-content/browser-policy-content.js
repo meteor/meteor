@@ -132,6 +132,7 @@ var setDefaultPolicy = function () {
                                   "connect-src *; " +
                                   "img-src data: 'self'; " +
                                   "style-src 'self' 'unsafe-inline';");
+  contentSniffingAllowed = false;
 };
 
 var setWebAppInlineScripts = function (value) {

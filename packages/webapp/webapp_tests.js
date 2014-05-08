@@ -19,5 +19,5 @@ Tinytest.add("webapp - content-type header", function (test) {
              "text/css; charset=utf-8");
   resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), jsResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
-             "text/javascript; charset=utf-8");
+             "application/javascript; charset=utf-8");
 });

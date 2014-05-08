@@ -408,7 +408,7 @@ var runWebAppServer = function () {
       res.setHeader('X-SourceMap', info.sourceMapUrl);
 
     if (info.type === "js") {
-      res.setHeader("Content-Type", "text/javascript; charset=UTF-8");
+      res.setHeader("Content-Type", "application/javascript; charset=UTF-8");
     } else if (info.type === "css") {
       res.setHeader("Content-Type", "text/css; charset=UTF-8");
     }
