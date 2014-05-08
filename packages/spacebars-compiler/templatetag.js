@@ -45,6 +45,8 @@ var makeStacheTagStartRegex = function (r) {
 };
 
 var starts = {
+  ESCAPEDDOUBLE: makeStacheTagStartRegex(/^\{\{\|\s*(?!\s)/),
+  ESCAPEDTRIPLE: makeStacheTagStartRegex(/^\{\{\{\|\s*(?!\s)/),
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -223,8 +225,9 @@ TemplateTag.parse = function (scannerOrString) {
   };
 
   // must do ELSE first; order of others doesn't matter
-
-  if (run(starts.ELSE)) type = 'ELSE';
+  if (run(starts.ESCAPEDDOUBLE)) type = 'ESCAPEDDOUBLE';
+  else if (run(starts.ESCAPEDTRIPLE)) type = 'ESCAPEDTRIPLE';
+  else if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
@@ -248,6 +251,16 @@ TemplateTag.parse = function (scannerOrString) {
     if (! result)
       error("Unclosed comment");
     tag.value = result.slice(0, -2);
+  } else if (type === 'ESCAPEDDOUBLE') {
+    var result = run(/^[\s\S]*?\}\}/);
+    if (! result)
+      error("Unclosed ESCAPEDDOUBLE");
+    tag.value = result.slice(0, -2);
+  }else if (type === 'ESCAPEDTRIPLE') {
+    var result = run(/^[\s\S]*?\}\}\}/);
+    if (! result)
+      error("Unclosed ESCAPEDTRIPLE");
+    tag.value = result.slice(0, -3);
   } else if (type === 'BLOCKCLOSE') {
     tag.path = scanPath();
     if (! run(ends.DOUBLE))
@@ -256,7 +269,7 @@ TemplateTag.parse = function (scannerOrString) {
     if (! run(ends.DOUBLE))
       expected('`}}`');
   } else {
-    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
+    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION, ESCAPEDTRIPLE, ESCAPEDDOUBLE
     tag.path = scanPath();
     tag.args = [];
     var foundKwArg = false;

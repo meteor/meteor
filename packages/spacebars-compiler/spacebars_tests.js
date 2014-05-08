@@ -159,6 +159,10 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{./this}}', "Can only use");
   run('{{../this}}', "Can only use");
 
+  run('{{|foo}}', {type: 'ESCAPEDDOUBLE', value: 'foo'});
+  run('{{||foo}}', {type: 'ESCAPEDDOUBLE', value: '|foo'});
+
+  run('{{{|foo}}}', {type: 'ESCAPEDTRIPLE', value: 'foo'});
 });
 
 
