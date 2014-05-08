@@ -224,7 +224,8 @@ TemplateTag.parse = function (scannerOrString) {
     error('Expected ' + what);
   };
 
-  // must do ELSE first; order of others doesn't matter
+  // must do escaped tags first, followed immediately by ELSE. 
+  // after that order does not matter.
   if (run(starts.ESCAPEDDOUBLE)) type = 'ESCAPEDDOUBLE';
   else if (run(starts.ESCAPEDTRIPLE)) type = 'ESCAPEDTRIPLE';
   else if (run(starts.ELSE)) type = 'ELSE';
@@ -269,7 +270,7 @@ TemplateTag.parse = function (scannerOrString) {
     if (! run(ends.DOUBLE))
       expected('`}}`');
   } else {
-    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION, ESCAPEDTRIPLE, ESCAPEDDOUBLE
+    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
     tag.args = [];
     var foundKwArg = false;
