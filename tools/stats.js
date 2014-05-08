@@ -24,7 +24,7 @@ var recordPackages = function (appDir) {
       project.getIndirectDependencies(appDir),
       function (version, name) {
         return {
-          packageName: name,
+          name: name,
           version: version,
           direct: _.contains(directDeps, name)
         };
