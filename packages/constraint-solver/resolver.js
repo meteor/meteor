@@ -287,13 +287,15 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
       transitiveConstraints = transitiveConstraints.union(uv.constraints);
     });
 
+    var newChoices = exactTransitiveDepsVersions;
+
     dependencies = dependencies.union(inexactTransitiveDeps);
     constraints = constraints.union(transitiveConstraints);
-    choices = _.union(choices, exactTransitiveDepsVersions);
+    choices = _.union(choices, newChoices);
 
     // Since exact transitive deps are put into choices, there is no need to
     // keep them in dependencies.
-    _.each(choices, function (uv) {
+    _.each(newChoices, function (uv) {
       dependencies = dependencies.remove(uv.name);
     });
 
@@ -322,6 +324,10 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
       queue.push(dep);
       isEnqueued[dep.name] = true;
     });
+
+    // for error reporting
+    uv.constraints.each(function (c) {
+      constraintAncestor[c.toString()] = uv.name; });
   }
 
   // Update the constraintAncestor table
