@@ -195,7 +195,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
 
     _.each(violatedConstraints, function (c) {
       directDepsString += constraintAncestor[c.toString()] +
-        + "(" + c.toString() + "), ";
+        "(" + c.toString() + "), ";
     });
 
     return {
