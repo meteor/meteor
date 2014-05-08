@@ -11,6 +11,7 @@ var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var meteorNpm = require('./meteor-npm.js');
+var release = require('./release.js');
 
 var compiler = exports;
 
@@ -179,8 +180,6 @@ var determineBuildTimeDependencies = function (packageSource) {
     }
   });
 
-
-
   // -- Dependencies of Plugins --
 
   ret.pluginDependencies = {};
@@ -208,7 +207,9 @@ var determineBuildTimeDependencies = function (packageSource) {
     pluginDependencies: ret.pluginDependencies
   };
 
-  packageSource.recordDependencyVersions(constraintResults);
+  packageSource.recordDependencyVersions(
+    constraintResults,
+    release.current.getCurrentToolsVersion());
 
   return ret;
 };

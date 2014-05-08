@@ -69,6 +69,34 @@ _.extend(Release.prototype, {
     return self._manifest.tool;
   },
 
+  // Return the tool that we are using. If this is a proper release, return the
+  // tool package listed in the manifest, otherwise return the version of the
+  // meteor-tool package in checkout.
+  //
+  // (XXX: Or maybe just return "checkout" or something?)
+  getCurrentToolsVersion: function () {
+    var self = this;
+
+    if (release.current.name) {
+      return self._manifest.tool;
+    } else {
+      // If the release information is not set, we are building from checkout,
+      // so we are using the equivivalent of the meteor tool in this
+      // checkout. (This is oddly recursive, so maybe we shouldn't bother with
+      // it at all in that case).
+      //
+      // It is safe to call the catalog here because, by the time we are recording
+      // the dependencyVersions, we have already run the constraint solver, so the
+      // catalog has been initialized.
+      var catalog = require('./catalog.js');
+      var catversion =  catalog.catalog.getLatestVersion("meteor-tool").version;
+      // The catalog version is going to have a +local at the end. We will never
+      // be able to springboard to that, so we should skip it.
+      var eqVersion = catversion.split("+")[0];
+     return "meteor-tool@" + eqVersion;
+    }
+  },
+
   // Return a list of the upgraders (project migrations) for this
   // release, an (ordered!) array of strings. Valid only for proper
   // releases.

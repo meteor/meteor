@@ -11,6 +11,7 @@ var buildmessage = require('./buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
+var release = require('./release.js');
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -950,7 +951,8 @@ _.extend(PackageSource.prototype, {
         var dependencyData = JSON.parse(data);
         self.dependencyVersions = {
           "pluginDependencies": _.object(dependencyData.pluginDependencies),
-          "dependencies": _.object(dependencyData.dependencies)
+          "dependencies": _.object(dependencyData.dependencies),
+          "toolVersion": dependencyData.toolVersion
           };
       } catch (err) {
         // We 'recover' by not reading the dependency versions. Log a line about
@@ -1196,13 +1198,16 @@ _.extend(PackageSource.prototype, {
   // package on disk and save them into the packageSource. Next time we build
   // the package, we will look at them for optimization & repeatable builds.
   //
-  // versions:
+  // constraints:
   // - dependencies: results of running the constraint solver on the dependency
   //   metadata of this package
   // - pluginDependenciess: results of running the constraint solver on the
   //   plugin dependency data for this package.
-  recordDependencyVersions: function (versions) {
+  // currentTool: string of the tool version that we are using
+  //  (ex: meteor-tool@1.0.0)
+  recordDependencyVersions: function (constraints, currentTool) {
     var self = this;
+    var versions = _.extend(constraints, {"toolVersion": currentTool });
 
     // If nothing has changed, don't bother rewriting the versions file.
     if (_.isEqual(self.dependencyVersions, versions)) return;
