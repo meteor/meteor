@@ -10,6 +10,13 @@
   parallel. This allows testing features that modify global server
   state.  #2088
 
+* Add Content-Type headers on JavaScript and CSS resources.
+
+* Add `X-Content-Type-Options: nosniff` header to
+  `browser-policy-content`'s default policy. If you are using
+  `browser-policy-content` and you don't want your app to send this
+  header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
