@@ -589,6 +589,9 @@ var runWebAppServer = function () {
     // '--keepalive' is a use of the option.
     var expectKeepalives = _.contains(argv, '--keepalive');
 
+    var jsCssPrefix = bundledJsCssPrefix ||
+                      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+
     boilerplateBaseData = {
       css: [],
       js: [],
@@ -597,17 +600,15 @@ var runWebAppServer = function () {
       inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
       meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
       reloadSafetyBelt: RELOAD_SAFETYBELT,
-      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-      bundledJsCssPrefix: bundledJsCssPrefix ||
-        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
+      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
     };
 
     _.each(WebApp.clientProgram.manifest, function (item) {
       if (item.type === 'css' && item.where === 'client') {
-        boilerplateBaseData.css.push({url: item.url});
+        boilerplateBaseData.css.push({url: item.url, bundledJsCssPrefix: jsCssPrefix});
       }
       if (item.type === 'js' && item.where === 'client') {
-        boilerplateBaseData.js.push({url: item.url});
+        boilerplateBaseData.js.push( {url: item.url, bundledJsCssPrefix: jsCssPrefix});
       }
       if (item.type === 'head') {
         boilerplateBaseData.head = fs.readFileSync(
