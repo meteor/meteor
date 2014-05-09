@@ -10,7 +10,7 @@
   `Facebook.retrieveCredential`, etc., which is needed to use them as of
   0.8.1. #2118
 
-* Fix 0.8.1 regression broke apps using a `ROOT_URL` with a path
+* Fix 0.8.1 regression that broke apps using a `ROOT_URL` with a path
   prefix. #2109
 
 
