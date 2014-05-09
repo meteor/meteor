@@ -1260,6 +1260,7 @@ _.extend(exports, {
   define: define,
   Sandbox: Sandbox,
   Run: Run,
+  fail: fail,
   expectEqual: expectEqual,
   expectThrows: expectThrows
 });
