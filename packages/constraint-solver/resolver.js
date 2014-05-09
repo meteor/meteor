@@ -409,16 +409,22 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     var self = this;
 
     check(name, String);
-    if (self.dependencies.contains(name))
+    if (self.dependencies.contains(name)) {
+      return;
+      // XXX may also throw if it is unexpected
       throw new Error("Dependency already exists -- " + name);
+    }
     self.dependencies = self.dependencies.push(name);
   },
   addConstraint: function (constraint) {
     var self = this;
 
     check(constraint, ConstraintSolver.Constraint);
-    if (self.constraints.contains(constraint))
+    if (self.constraints.contains(constraint)) {
+      return;
+      // XXX may also throw if it is unexpected
       throw new Error("Constraint already exists -- " + constraint.toString());
+    }
 
     self.constraints = self.constraints.push(constraint);
   },

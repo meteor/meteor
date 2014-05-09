@@ -17,7 +17,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // The main resolver
   self.resolver = new ConstraintSolver.Resolver();
 
-  // XXX for now we convert slices to unit versions as "deps:main.os"
+  // XXX for now we convert builds to unit versions as "deps#os"
 
   var forEveryVersion = function (iter) {
     _.each(catalog.getAllPackageNames(), function (packageName) {
@@ -31,22 +31,21 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // Create a unit version for every package
   // Set constraints and dependencies between units
   forEveryVersion(function (packageName, version, versionDef) {
-    var slices = {};
+    var builds = {};
     _.each(versionDef.dependencies, function (dep, depName) {
       _.each(dep.references, function (ref) {
-        var unitName = packageName + ":" + ref.slice + "." + ref.arch;
-        var unitVersion = slices[unitName];
+        var unitName = packageName + "#" + ref.arch;
+        var unitVersion = builds[unitName];
         if (! unitVersion) {
-          // if it is first time we met the slice of this version, register it
+          // if it is first time we met the build of this version, register it
           // in resolver.
-          slices[unitName] = new ConstraintSolver.UnitVersion(
+          builds[unitName] = new ConstraintSolver.UnitVersion(
             unitName, version, versionDef.earliestCompatibleVersion);
-          unitVersion = slices[unitName];
+          unitVersion = builds[unitName];
           self.resolver.addUnitVersion(unitVersion);
         }
 
-        var targetSlice = ref.targetSlice || "main";
-        var targetUnitName = depName + ":" + targetSlice + "." + ref.arch;
+        var targetUnitName = depName + "#" + ref.arch;
 
         // Add the dependency if needed
         if (! ref.weak)
@@ -61,44 +60,43 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       });
     });
 
-    if (_.isEmpty(versionDef.dependencies)) {
+    if (_.isEmpty(builds)) {
       // XXX this is a hack to temporary solve the problem with packages w/o
-      // dependencies. Right now in order to understand what are slices of
-      // package, we look into its dependencies slice-wise. W/o dependencies we
-      // would need to do something else, like see what slices other slices
-      // depend on. Also if depending slices of other packages don't specify the
-      // version, there is no way we can resolve what slices different versions
+      // dependencies. Right now in order to understand what are builds of
+      // package, we look into its dependencies build-wise. W/o dependencies we
+      // would need to do something else, like see what builds other builds
+      // depend on. Also if depending builds of other packages don't specify the
+      // version, there is no way we can resolve what builds different versions
       // have as different versions of the same package can in theory have
-      // diverging sets of slices.
+      // diverging sets of builds.
       //
-      // But in practive we always have main/test + os/browser slices. So we
-      // will just hardcode two most improtant slices at the moment. Fix it
+      // But in practive we always have main + os builds. So we
+      // will just hardcode two most improtant builds at the moment. Fix it
       // later.
       _.each(["os", "browser"], function (arch) {
-        var slice = "main";
-        var unitName = packageName + ":" + slice + "." + arch;
-        var unitVersion = slices[unitName];
+        var unitName = packageName + "#" + arch;
+        var unitVersion = builds[unitName];
         if (! unitVersion) {
-          slices[unitName] = new ConstraintSolver.UnitVersion(
+          builds[unitName] = new ConstraintSolver.UnitVersion(
             unitName, version, versionDef.earliestCompatibleVersion);
-          unitVersion = slices[unitName];
+          unitVersion = builds[unitName];
           self.resolver.addUnitVersion(unitVersion);
         }
       });
     }
 
-    // Every slice implies that if it is picked, other slices are constrained to
+    // Every build implies that if it is picked, other builds are constrained to
     // the same version.
-    _.each(slices, function (slice, sliceName) {
-      _.each(slices, function (other, otherSliceName) {
-        if (slice === other)
+    _.each(builds, function (build, buildName) {
+      _.each(builds, function (other, otherBuildName) {
+        if (build === other)
           return;
 
-        // Constraint is the exact same version of a slice
+        // Constraint is the exact same version of a build
         var constraintStr = "=" + version;
         var constraint =
-          self.resolver.getConstraint(otherSliceName, constraintStr);
-        slice.addConstraint(constraint);
+          self.resolver.getConstraint(otherBuildName, constraintStr);
+        build.addConstraint(constraint);
       });
     });
   });
@@ -124,11 +122,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   var resultChoices = {};
   _.each(res, function (uv) {
     // Since we don't yet define the interface for a an app to depend only on
-    // certain slices of the packages (like only browser slices) and we know
-    // that each slice weakly depends on other sibling slices of the same
-    // version, we can safely output the whole package for each slice in the
+    // certain builds of the packages (like only browser builds) and we know
+    // that each build weakly depends on other sibling builds of the same
+    // version, we can safely output the whole package for each build in the
     // result.
-    resultChoices[uv.name.split(':')[0]] = uv.version;
+    resultChoices[uv.name.split('#')[0]] = uv.version;
   });
 
   return resultChoices;
@@ -146,39 +144,38 @@ ConstraintSolver.PackagesResolver.prototype.propagatedExactDeps =
 
   var resultChoices = {};
   _.each(res, function (uv) {
-    resultChoices[uv.name.split(':')[0]] = uv.version;
+    resultChoices[uv.name.split('#')[0]] = uv.version;
   });
 
   return resultChoices;
 };
 
 // takes deps of form {'foo': '1.2.3', 'bar': null, 'quz': '=1.2.5'} and splits
-// them into dependencies ['foo:main.os', 'bar:main.browser',
-// 'quz:main.browser'] + constraints
-// XXX right now creates a dependency for every 'main' slice it can find
+// them into dependencies ['foo#os', 'bar#browser', // 'quz#browser'] + constraints
+// XXX right now creates a dependency for every build it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (deps) {
   var self = this;
   var dependencies = [];
   var constraints = [];
-  var slicesNames = _.keys(self.resolver.unitsVersions);
+  var buildNames = _.keys(self.resolver.unitsVersions);
 
   _.each(deps, function (constraint, packageName) {
-    var slicesForPackage = _.filter(slicesNames, function (slice) {
+    var buildPrefix = packageName + "#";
+    var buildsForPackage = _.filter(buildNames, function (build) {
       // we pick everything that starts with 'foo:main.'
-      var slicePrefix = packageName + ":main.";
-      return slice.substr(0, slicePrefix.length) === slicePrefix;
+      return build.substr(0, buildPrefix.length) === buildPrefix;
     });
 
-    if (_.isEmpty(slicesForPackage))
+    if (_.isEmpty(buildsForPackage))
       throw new Error("Cannot find anything about package -- " + packageName);
 
-    _.each(slicesForPackage, function (sliceName) {
-      dependencies.push(sliceName);
+    _.each(buildsForPackage, function (buildName) {
+      dependencies.push(buildName);
 
       // add the constraint if such exists
       if (constraint !== null && constraint !== "none") {
-        constraints.push(self.resolver.getConstraint(sliceName, constraint));
+        constraints.push(self.resolver.getConstraint(buildName, constraint));
       }
     });
   });

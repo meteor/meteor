@@ -19,9 +19,9 @@ var insertVersion = function (name, version, ecv, deps) {
     constructedDeps[name] = {
       constraint: constraint,
       references: [
-        { slice: "main", arch: "os", targetSlice: "main", weak: false,
+        { arch: "os", targetSlice: "main", weak: false,
           implied: false, unordered: false },
-        { slice: "main", arch: "browser", targetSlice: "main", weak: false,
+        { arch: "browser", targetSlice: "main", weak: false,
           implied: false, unordered: false }]
     };
   });
@@ -336,10 +336,8 @@ function getCatalogStub (gems) {
         packageVersion.dependencies[name] = {
           constraint: convertConstraints(constraints)[0], // XXX pick first one only
           references: [{
-            "slice": "main",
             "arch": "browser"
           }, {
-            "slice": "main",
             "arch": "os" }]
         };
       });
