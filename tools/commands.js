@@ -1919,12 +1919,12 @@ main.registerCommand({
                   // release should have a -(something) at the end.
                   var newVersion = packageSource.version;
                   if (!relConf.official && newVersion.split("-").length < 2) {
-                    buildmessagge.error("It looks like you are building an "+
-                                        " experimental or pre-release. Any packages " +
-                                        "we publish here should have an identifier " +
-                                        "at the end (ex: 1.0.0-dev). If this is an " +
-                                        "official release, please set official to true " +
-                                        "in the release configuration file.");
+                    buildmessage.error("It looks like you are building an "+
+                                       " experimental or pre-release. Any packages " +
+                                       "we publish here should have an identifier " +
+                                       "at the end (ex: 1.0.0-dev). If this is an " +
+                                       "official release, please set official to true " +
+                                       "in the release configuration file.");
                     return;
                   }
                   toPublish[item] = {source: packageSource,
