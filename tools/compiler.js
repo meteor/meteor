@@ -4,7 +4,7 @@ var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
-var Unipackage = require('./unipackage.js');
+var Unipackage = require('./unipackage.js').Unipackage;
 var PackageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
@@ -163,17 +163,14 @@ var determineBuildTimeDependencies = function (packageSource) {
 
 
   var versions = packageSource.dependencyVersions.dependencies;
-  var constraintSolver = require('./constraint-solver.js');
-  var resolver = new constraintSolver.Resolver;
-  var sourceDeps = resolver.resolve(constraints);
+  ret.packageDependencies = catalog.catalog.resolveConstraints(constraints,
+                                              { previousSolution: versions });
 
   // We care about differentiating between all dependencies (which we save in
   // the version lock file) and the direct dependencies (which are packages that
   // we are exactly using) in order to optimize build id generation.
-  ret.packageDependencies = sourceDeps;
-
   ret.directDependencies = {};
-  _.each(sourceDeps, function (version, packageName) {
+  _.each(  ret.packageDependencies, function (version, packageName) {
     // Take only direct dependencies.
     if (_.has(constraints, packageName)) {
       ret.directDependencies[packageName] = version;
@@ -194,22 +191,25 @@ var determineBuildTimeDependencies = function (packageSource) {
       constraints[parsedSpec.package] = parsedSpec.constraint || null;
     });
 
-    var resolver = new constraintSolver.Resolver;
     var pluginVersion = pluginVersions[info.name];
-    ret.pluginDependencies[info.name] = resolver.resolve(constraints);
+    ret.pluginDependencies[info.name] =
+      catalog.catalog.resolveConstraints(
+        constraints, { previousSolution: pluginVersions  });
   });
 
   // Every time we run the constraint solver, we record the results. This has
   // two benefits -- first, it faciliatates repeatable builds, second,
   // memorizing results makes the constraint solver more efficient.
-  var constraintResults = {
-    dependencies: sourceDeps,
-    pluginDependencies: ret.pluginDependencies
-  };
+  if (ret.packageDependencies) {
+    var constraintResults = {
+      dependencies: ret.packageDependencies,
+      pluginDependencies: ret.pluginDependencies
+    };
 
-  packageSource.recordDependencyVersions(
-    constraintResults,
-    release.current.getCurrentToolsVersion());
+    packageSource.recordDependencyVersions(
+      constraintResults,
+      release.current.getCurrentToolsVersion());
+  }
 
   return ret;
 };
@@ -681,14 +681,7 @@ compiler.compile = function (packageSource, options) {
   options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
-  var buildTimeDeps;
-  if (options.buildTimeDependencies &&
-      options.buildTimeDependencies.directDependencies &&
-      options.buildTImeDependencies.pluginDependencies) {
-    buildTimeDeps = options.buildTimeDependencies;
-  } else {
-    buildTimeDeps = determineBuildTimeDependencies(packageSource);
-  }
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
 
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
@@ -938,9 +931,9 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     function (pluginDeps, pluginName) {
       // For each plugin, check that the resolved build-time deps for
       // that plugin match the unipackage's build time deps for it.
-      var packageLoaderForPlugin = new PackageLoader(
-        buildTimeDeps.pluginDependencies
-      );
+      var packageLoaderForPlugin = new PackageLoader({
+        versions: buildTimeDeps.pluginDependencies
+      });
       var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];
       if (! unipackagePluginDeps ||
           _.keys(pluginDeps).length !== _.keys(unipackagePluginDeps).length) {

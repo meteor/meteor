@@ -667,15 +667,12 @@ main.registerCommand({
   // never downgrade a dependency.
   var versions = project.getIndirectDependencies(options.appDir);
 
-  // Call the constraint solver.
-  var constraintSolver = require('./constraint-solver.js');
-  var resolver = new constraintSolver.Resolver;
   // Combine into one object mapping package name to list of
   // constraints, to pass in to the constraint solver.
   var allPackages = project.combineAppAndProgramDependencies(packages);
-  // XXX: constraint solver currently ignores versions, but it should not.
-  // XXX: this would also be the place to add no-update options.
-  var newVersions = resolver.resolve(allPackages);
+  // Call the constraint solver.
+  var newVersions = catalog.resolveConstraints(allPackages,
+                                              { previousSolution: versions });
   if ( ! newVersions) {
     // XXX: Better error handling.
     process.stderr.write("Cannot resolve package dependencies.");
@@ -812,12 +809,8 @@ main.registerCommand({
   var versions = project.getIndirectDependencies(options.appDir);
 
   // Call the constraint solver.
-  var constraintSolver = require('./constraint-solver.js');
-  var resolver = new constraintSolver.Resolver;
-  // XXX: constraint solver currently ignores versions, but it should not.
-  // XXX: this would also be the place to add no-update options.
-  var newVersions = resolver.resolve(
-    project.combineAppAndProgramDependencies(packages));
+  var newVersions = catalog.resolveConstraints(packages,
+                                              { previousSolution: versions });
   if ( ! newVersions) {
     // This should never really happen.
     process.stderr.write("Cannot resolve package dependencies.");

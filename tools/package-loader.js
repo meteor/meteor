@@ -5,7 +5,7 @@ var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var Unipackage = require('./unipackage.js');
+var Unipackage = require('./unipackage.js').Unipackage;
 
 // options:
 //  - versions: a map from package name to the version to use.  or null to only

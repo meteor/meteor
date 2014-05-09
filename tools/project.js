@@ -7,6 +7,7 @@ var tropohouse = require('./tropohouse.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var watch = require('./watch.js');
+var catalog = require('./catalog.js');
 
 var project = exports;
 
@@ -249,13 +250,12 @@ project.generatePackageLoader = function (appDir) {
 
   // package name -> list of version constraints
   var allPackages = project.combinedConstraints(packages);
-  var constraintSolver = require('./constraint-solver.js');
-  var resolver = new constraintSolver.Resolver;
-  // XXX: constraint solver currently ignores versions, but it should not.
-  var newVersions = resolver.resolve(allPackages);
-
+  // Call the constraint solver.
+  var newVersions = catalog.catalog.resolveConstraints(allPackages,
+                                              { previousSolution: versions });
   if ( ! newVersions) {
-    return { outcome: 'conflicting-versions' };
+    console.log("Cannot compute versions for: ", allPackages);
+    process.exit(1);
   }
 
   // Download any necessary package builds and write out the new versions file.
@@ -266,6 +266,7 @@ project.generatePackageLoader = function (appDir) {
   var loader = new PackageLoader({
     versions: newVersions
   });
+
   return loader;
 };
 

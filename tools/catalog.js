@@ -6,7 +6,7 @@ var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
-var Unipackage = require('./unipackage.js');
+var Unipackage = require('./unipackage.js').Unipackage;
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
@@ -64,6 +64,9 @@ var Catalog = function () {
   // in case we ever want to refer to them. (for example, during publish time).
   self.oldServerRecords = null;
   self.oldServerBuilds = [];
+
+  // Constraint solver using this catalog.
+  self.resolver = null;
 };
 
 _.extend(Catalog.prototype, {
@@ -138,6 +141,45 @@ _.extend(Catalog.prototype, {
     // server.
     self.offline = options.offline ? options.offline : false;
     self.refresh(false /* don't load server packages yet */);
+
+    // initialize the constraint solver for this catalog.
+    self._initResolver();
+  },
+
+  _initResolver : function () {
+    var self = this;
+    // initialize the constraint solver for this catalog.
+    var uniload = require('./uniload.js');
+    self.resolver =  uniload.load({
+      packages: [ 'constraint-solver']
+    }).ConstraintSolver;
+  },
+
+  // Calls the constraint solver that is associated with this catalog and
+  // returns a set of resolved constraints or null, if the constraint solver has
+  // not yet been initialized. (null is a fine result, because if the constraint
+  // solver has not been initialized, we are building from checkout and will only
+  // use local packages to build the constraint solver & its dependencies. This
+  // also avoids having to resolve what versions to use, which we can't do
+  // without the constraint solver. #UnbuiltConstraintSolverMustUseLocalPackages)
+  //
+  // constraints: a set of constraints that we are trying to resolve
+  // opts: options for the constraint solver. See the resolver.resolve function
+  // in the constraint solver package
+  resolveConstraints : function (constraints, opts) {
+    var self = this;
+
+    // Moderate hack. We don't have a constraint solver initialized yet. We are
+    // probably trying to build the constraint solver package, or one of its
+    // dependencies. Luckily, we know that this means that we are running from
+    // checkout and all packages are local, so we can just use those
+    // versions. #UnbuiltConstraintSolverMustUseLocalPackages
+    if (!self.resolver) {
+      return null;
+    };
+
+    // The constraint solver has been initialized, so we can just call it.
+    return self.resolver.resolve(constraints, opts);
   },
 
   // Refresh the packages in the catalog.
@@ -648,8 +690,9 @@ _.extend(Catalog.prototype, {
       return self.effectiveLocalPackages[name];
     }
 
-    if (! version)
+    if (! version) {
       throw new Error(name + " not a local package, and no version specified?");
+    }
 
     var packageDir = tropohouse.packagePath(name, version);
     if (fs.existsSync(packageDir)) {
