@@ -1217,37 +1217,40 @@ _.extend(Server.prototype, {
 
   _handleConnect: function (socket, msg) {
     var self = this;
+
+    // The connect message must specify a version and an array of supported
+    // versions, and it must claim to support what it is proposing.
+    if (!(typeof (msg.version) === 'string' &&
+          _.isArray(msg.support) &&
+          _.all(msg.support, _.isString) &&
+          _.contains(msg.support, msg.version))) {
+      socket.send(stringifyDDP({msg: 'failed',
+                                version: SUPPORTED_DDP_VERSIONS[0]}));
+      socket.close();
+      return;
+    }
+
     // In the future, handle session resumption: something like:
     //  socket._meteorSession = self.sessions[msg.session]
     var version = calculateVersion(msg.support, SUPPORTED_DDP_VERSIONS);
 
-    if (msg.version === version) {
-      // Creating a new session
-      socket._meteorSession = new Session(self, version, socket, self.options);
-      self.sessions[socket._meteorSession.id] = socket._meteorSession;
-      self.onConnectionHook.each(function (callback) {
-        if (socket._meteorSession)
-          callback(socket._meteorSession.connectionHandle);
-        return true;
-      });
-    } else if (!msg.version) {
-      // connect message without a version. This means an old (pre-pre1)
-      // client is trying to connect. If we just disconnect the
-      // connection, they'll retry right away. Instead, just pause for a
-      // bit (randomly distributed so as to avoid synchronized swarms)
-      // and hold the connection open.
-      var timeout = 1000 * (30 + Random.fraction() * 60);
-      // drop all future data coming over this connection on the
-      // floor. We don't want to confuse things.
-      socket.removeAllListeners('data');
-      Meteor.setTimeout(function () {
-        socket.send(stringifyDDP({msg: 'failed', version: version}));
-        socket.close();
-      }, timeout);
-    } else {
+    if (msg.version !== version) {
+      // The best version to use (according to the client's stated preferences)
+      // is not the one the client is trying to use. Inform them about the best
+      // version to use.
       socket.send(stringifyDDP({msg: 'failed', version: version}));
       socket.close();
+      return;
     }
+
+    // Yay, version matches! Create a new session.
+    socket._meteorSession = new Session(self, version, socket, self.options);
+    self.sessions[socket._meteorSession.id] = socket._meteorSession;
+    self.onConnectionHook.each(function (callback) {
+      if (socket._meteorSession)
+        callback(socket._meteorSession.connectionHandle);
+      return true;
+    });
   },
   /**
    * Register a publish handler function.
