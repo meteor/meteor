@@ -181,7 +181,7 @@ var Connection = function (url, options) {
 
   // Reactive userId.
   self._userId = null;
-  self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
+  self._userIdDeps = new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
@@ -522,13 +522,13 @@ _.extend(Connection.prototype, {
         params: EJSON.clone(params),
         inactive: false,
         ready: false,
-        readyDeps: (typeof Deps !== "undefined") && new Deps.Dependency,
+        readyDeps: new Deps.Dependency,
         readyCallback: callbacks.onReady,
         errorCallback: callbacks.onError,
         connection: self,
         remove: function() {
           delete this.connection._subscriptions[this.id];
-          this.readyDeps && this.readyDeps.changed();
+          this.readyDeps.changed();
         },
         stop: function() {
           this.connection._send({msg: 'unsub', id: id});
@@ -551,7 +551,7 @@ _.extend(Connection.prototype, {
         if (!_.has(self._subscriptions, id))
           return false;
         var record = self._subscriptions[id];
-        record.readyDeps && record.readyDeps.depend();
+        record.readyDeps.depend();
         return record.ready;
       }
     };
@@ -1305,7 +1305,7 @@ _.extend(Connection.prototype, {
           return;
         subRecord.readyCallback && subRecord.readyCallback();
         subRecord.ready = true;
-        subRecord.readyDeps && subRecord.readyDeps.changed();
+        subRecord.readyDeps.changed();
       });
     });
   },
