@@ -295,7 +295,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
 
     // Since exact transitive deps are put into choices, there is no need to
     // keep them in dependencies.
-    _.each(newChoices, function (uv) {
+    _.each(choices, function (uv) {
       dependencies = dependencies.remove(uv.name);
     });
 
