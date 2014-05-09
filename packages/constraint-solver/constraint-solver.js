@@ -205,7 +205,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;
 
     // XXX reuse this code for "UPDATE" and "MINOR_UPDATE" and "FORCE"
-    resolverOptions.costFunction = function (choices, options) {
+    resolverOptions.costFunction = function (state, options) {
+      var choices = state.choices;
+      var constraints = state.constraints;
       var rootDeps = options.rootDependencies || [];
       var prevSol = options.previousSolution || [];
 
@@ -219,6 +221,14 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       // very major, major, medium, minor costs
       // XXX maybe these can be calculated lazily?
       var cost = [0, 0, 0, 0];
+
+      var minimalConstraint = {};
+      constraints.each(function (c) {
+        if (! _.has(minimalConstraint, c.name))
+          minimalConstraint[c.name] = c.version;
+        else if (semver.lt(c.version, minimalConstraint[c.name]))
+          minimalConstraint[c.name] = c.version;
+      });
 
       _.each(choices, function (uv) {
         if (_.has(prevSolMapping, uv.name)) {
@@ -260,8 +270,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           } else {
             // transitive dependency
             // prefarable earliest possible to be conservative
-            // xcxc XXX but for now prefering the latest is OK too
-            cost[MINOR] += latestDistance;
+            cost[MINOR] += semverToNum(uv.version) -
+              semverToNum(minimalConstraint[uv.name] || "0.0.0");
           }
         }
       });
@@ -338,7 +348,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
   case "CONSERVATIVE":
     // XXX this is not used anywhere but tests?
-    resolverOptions.costFunction = function (choices) {
+    resolverOptions.costFunction = function (state) {
+      var choices = state.choices;
       return _.reduce(choices, function (sum, uv) {
         return semverToNum(uv.version) + sum;
       }, 0);
