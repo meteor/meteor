@@ -145,9 +145,11 @@ _.extend(Catalog.prototype, {
     // initialize the constraint solver for this catalog. We have to do this at
     // the end, after we have loaded enough stuff to load packages.
     var uniload = require('./uniload.js');
-    self.resolver =  uniload.load({
+    var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
-    });
+    })['constraint-solver'];
+    self.resolver =
+      new constraintSolverPackage.ConstraintSolver.PackagesResolver(self);
   },
 
   // Calls the constraint solver that is associated with this catalog and
@@ -174,7 +176,7 @@ _.extend(Catalog.prototype, {
     };
 
     // The constraint solver has been initialized, so we can just call it.
-    return self.resolver.ConstraintSolver.resolve(constraints, opts);
+    return self.resolver.resolve(constraints, opts);
   },
 
   // Refresh the packages in the catalog.

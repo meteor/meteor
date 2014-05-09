@@ -929,6 +929,11 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
   var pluginDepsMatch = _.all(
     buildTimeDeps.pluginDependencies,
     function (pluginDeps, pluginName) {
+      // If we don't know what the dependencies are, then surely we are not up
+      // to date.
+      if (!pluginDeps)
+        return false;
+
       // For each plugin, check that the resolved build-time deps for
       // that plugin match the unipackage's build time deps for it.
       var packageLoaderForPlugin = new PackageLoader({
