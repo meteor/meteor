@@ -6,6 +6,13 @@
 * Fix memory leak (introduced in 0.8.1) by making sure to unregister
   sessions at the server when they are closed due to heartbeat timeout.
 
+* Add `credentialSecret` argument to `Google.retrieveCredential`,
+  `Facebook.retrieveCredential`, etc., which is needed to use them as of
+  0.8.1. #2118
+
+* Fix 0.8.1 regression broke apps using a `ROOT_URL` with a path
+  prefix. #2109
+
 
 ## v0.8.1.1
 
