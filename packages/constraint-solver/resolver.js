@@ -212,7 +212,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     if (! uv)
       return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName };
 
-    return generateError(uv, constraints.violatedConstraints(uv));
+    return generateError(uv, constraints.constraintsForPackage(uv.name));
   }
 
   var firstError = null;
@@ -231,7 +231,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       return true;
 
     if (! firstError) {
-      firstError = generateError(vcfc.choice, vcfc.constraints);
+      firstError = generateError(vcfc.choice, constraints.constraintsForPackage(vcfc.choice.name));
     }
     return false;
   }).value();

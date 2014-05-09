@@ -138,6 +138,20 @@ ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (uv) {
   return violated;
 };
 
+// XXX Returns a regular array, not a ConstraintsList.
+ConstraintSolver.ConstraintsList.prototype.constraintsForPackage = function (p) {
+  var self = this;
+
+  var constraints = [];
+
+  self.forPackage(p, function (c) {
+    constraints.push(c);
+  });
+
+  return constraints;
+};
+
+
 // a weird method that returns a list of exact constraints those correspond to
 // the dependencies in the passed list
 ConstraintSolver.ConstraintsList.prototype.exactDependenciesIntersection =
