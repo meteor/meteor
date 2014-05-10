@@ -103,14 +103,17 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 };
 
 ConstraintSolver.PackagesResolver.prototype.resolve =
-  function (dependencies, options) {
+  function (dependencies, constraints, options) {
   var self = this;
+
+  check(dependencies, [String]);
+  check(constraints, [{ packageName: String, version: String, exact: Boolean }]);
 
   options = _.defaults(options || {}, {
     mode: 'LATEST'
   });
 
-  var dc = self._splitDepsToConstraints(dependencies);
+  var dc = self._splitDepsToConstraints(dependencies, constraints);
 
   var resolverOptions = self._getResolverOptions(options, dc);
 
@@ -135,7 +138,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 ConstraintSolver.PackagesResolver.prototype.propagatedExactDeps =
   function (dependencies) {
   var self = this;
-  var dc = self._splitDepsToConstraints(dependencies);
+
+  check(dependencies, [String]);
+  check(constraints, [{ packageName: String, version: String, exact: Boolean }]);
+
+  var dc = self._splitDepsToConstraints(dependencies, constraints);
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
@@ -154,16 +161,16 @@ ConstraintSolver.PackagesResolver.prototype.propagatedExactDeps =
 // them into dependencies ['foo#os', 'bar#browser', // 'quz#browser'] + constraints
 // XXX right now creates a dependency for every build it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
-  function (deps) {
+  function (inputDeps, inputConstraints) {
   var self = this;
   var dependencies = [];
   var constraints = [];
   var buildNames = _.keys(self.resolver.unitsVersions);
 
-  _.each(deps, function (constraint, packageName) {
+  _.each(inputDeps, function (packageName) {
     var buildPrefix = packageName + "#";
     var buildsForPackage = _.filter(buildNames, function (build) {
-      // we pick everything that starts with 'foo:main.'
+      // we pick everything that starts with 'foo#'
       return build.substr(0, buildPrefix.length) === buildPrefix;
     });
 
@@ -172,11 +179,24 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
 
     _.each(buildsForPackage, function (buildName) {
       dependencies.push(buildName);
+    });
+  });
 
-      // add the constraint if such exists
-      if (constraint !== null && constraint !== "none") {
-        constraints.push(self.resolver.getConstraint(buildName, constraint));
-      }
+  // XXX hackish code duplication
+  _.each(inputConstraints, function (constraint) {
+    var buildPrefix = constraint.packageName + "#";
+    var buildsForPackage = _.filter(buildNames, function (build) {
+      // we pick everything that starts with 'foo#'
+      return build.substr(0, buildPrefix.length) === buildPrefix;
+    });
+
+    if (_.isEmpty(buildsForPackage))
+      throw new Error("Cannot find anything about package -- " + packageName);
+
+    var constraintStr = (constraint.exact ? "=" : "") + constraint.version;
+
+    _.each(buildsForPackage, function (buildName) {
+      constraints.push(self.resolver.getConstraint(buildName, constraintStr));
     });
   });
 
