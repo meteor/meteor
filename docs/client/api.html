@@ -2152,17 +2152,19 @@ from the `rendered` callback and event handlers, not from `created`
 and `destroyed`, because they require the template instance to be
 in the DOM.
 
-{{> api_box template_findAll}}
+{{> api_box template_$}}
 
 Returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of DOM elements
 matching `selector`. This object is similar to an array but has other methods
 defined by the jQuery library.
 
-You can also call this function as `this.$(selector)`.
-
 The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
 the selector.
+
+{{> api_box template_findAll}}
+
+Similar to `this.$(selector)`, but returns an array of DOM elements matching `selector` instead.
 
 {{> api_box template_find}}
 

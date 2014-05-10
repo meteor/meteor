@@ -15,9 +15,12 @@ UI.Component.instantiate = function (parent) {
 
   // XXX messy to define this here
   inst.templateInstance = {
-    findAll: function (selector) {
+    $: function(selector) {
       // XXX check that `.dom` exists here?
       return inst.dom.$(selector);
+    },
+    findAll: function (selector) {
+      return $.makeArray(this.$(selector));
     },
     find: function (selector) {
       var result = this.findAll(selector);
@@ -28,7 +31,6 @@ UI.Component.instantiate = function (parent) {
     data: null,
     __component__: inst
   };
-  inst.templateInstance.$ = inst.templateInstance.findAll;
 
   inst.parent = (parent || null);
 

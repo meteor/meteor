@@ -1803,6 +1803,18 @@ Template.api.template_helpers = {
   ]
 };
 
+Template.api.template_$ = {
+  id: "template_findAll",
+  name: "<em>this</em>.$(selector)",
+  locus: "Client",
+  descr: ["Find all elements matching `selector` in this template instance."],
+  args: [
+    {name: "selector",
+     type: "String",
+     descr: 'The CSS selector to match, scoped to the template contents.'}
+  ]
+};
+
 Template.api.template_findAll = {
   id: "template_findAll",
   name: "<em>this</em>.findAll(selector)",
