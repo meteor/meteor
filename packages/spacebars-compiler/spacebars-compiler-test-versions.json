@@ -5,14 +5,6 @@
       "1.0.0+local"
     ],
     [
-      "audit-argument-checks",
-      "1.0.0+local"
-    ],
-    [
-      "autopublish",
-      "1.0.0+local"
-    ],
-    [
       "binary-heap",
       "1.0.0+local"
     ],
@@ -29,15 +21,7 @@
       "1.0.0+local"
     ],
     [
-      "disable-oplog",
-      "1.0.0+local"
-    ],
-    [
       "ejson",
-      "1.0.0+local"
-    ],
-    [
-      "facts",
       "1.0.0+local"
     ],
     [
@@ -58,10 +42,6 @@
     ],
     [
       "id-map",
-      "1.0.0+local"
-    ],
-    [
-      "insecure",
       "1.0.0+local"
     ],
     [
@@ -109,15 +89,7 @@
       "1.0.0+local"
     ],
     [
-      "reload",
-      "1.0.0+local"
-    ],
-    [
       "retry",
-      "1.0.0+local"
-    ],
-    [
-      "routepolicy",
       "1.0.0+local"
     ],
     [
@@ -126,10 +98,6 @@
     ],
     [
       "spacebars-compiler",
-      "1.0.0+local"
-    ],
-    [
-      "templating",
       "1.0.0+local"
     ],
     [
@@ -143,12 +111,9 @@
     [
       "underscore",
       "1.0.0+local"
-    ],
-    [
-      "webapp",
-      "1.0.0+local"
     ]
   ],
   "pluginDependencies": [],
+  "toolVersion": "meteor-tool@1.0.0",
   "format": "1.0"
 }

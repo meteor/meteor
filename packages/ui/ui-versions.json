@@ -54,5 +54,6 @@
     ]
   ],
   "pluginDependencies": [],
+  "toolVersion": "meteor-tool@1.0.0",
   "format": "1.0"
 }
