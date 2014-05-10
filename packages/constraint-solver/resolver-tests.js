@@ -63,7 +63,8 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
 
   // Run looking for a conservative solution for A
   var AOnlySolution = resolver.resolve(["A"], [], [], {
-    costFunction: function (choices) {
+    costFunction: function (state) {
+      var choices = state.choices;
       var A = _.find(choices, function (uv) { return uv.name === "A"; });
       var distanceA = A ? semver2number(A.version) : 0;
       return distanceA - 100;
@@ -73,7 +74,8 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
   test.equal(AOnlySolution, [A100, C100]);
 
   var AnBSolution = resolver.resolve(["A", "B"], [], [], {
-    costFunction: function (choices) {
+    costFunction: function (state) {
+      var choices = state.choices;
       var C = _.find(choices, function (uv) { return uv.name === "C"; });
       var A = _.find(choices, function (uv) { return uv.name === "A"; });
       var distanceC = C ? semver2number(C.version) : 0;
@@ -110,7 +112,8 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
   // of A that uses C.
   var lockedVersions = [B100];
   var solution = resolver.resolve(["A", "B"], [], [], {
-    costFunction: function (choices) {
+    costFunction: function (state) {
+      var choices = state.choices;
       return _.reduce(choices, function (sum, uv) {
         var lockedVersion = _.find(lockedVersions, function (luv) { return luv.name === uv.name; });
         if (! lockedVersion || lockedVersion === uv)
