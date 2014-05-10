@@ -158,7 +158,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 };
 
 // takes deps of form {'foo': '1.2.3', 'bar': null, 'quz': '=1.2.5'} and splits
-// them into dependencies ['foo#os', 'bar#browser', // 'quz#browser'] + constraints
+// them into dependencies ['foo#os', 'bar#browser', 'quz#browser'] + constraints
 // XXX right now creates a dependency for every build it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
