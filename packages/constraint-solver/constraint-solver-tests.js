@@ -89,19 +89,39 @@ var catalogStub = {
 var resolver = new ConstraintSolver.PackagesResolver(catalogStub);
 
 var currentTest = null;
+var splitArgs = function (deps) {
+  var dependencies = [], constraints = [];
+
+  _.each(deps, function (constr, dep) {
+    dependencies.push(dep);
+    if (constr)
+      constraints.push({ packageName: dep, exact: (constr.indexOf("=") !== -1), version: constr.replace("=", "")});
+  });
+  return {dependencies: dependencies, constraints: constraints};
+};
+
 var t = function (deps, expected, options) {
-  var resolvedDeps = resolver.resolve(deps, options);
+  var dependencies = splitArgs(deps).dependencies;
+  var constraints = splitArgs(deps).constraints;
+
+  var resolvedDeps = resolver.resolve(dependencies, constraints, options);
   currentTest.equal(resolvedDeps, expected);
 };
 
 var t_progagateExact = function (deps, expected) {
-  var resolvedDeps = resolver.propagatedExactDeps(deps);
+  var dependencies = splitArgs(deps).dependencies;
+  var constraints = splitArgs(deps).constraints;
+
+  var resolvedDeps = resolver.propagateExactDeps(dependencies, constraints);
   currentTest.equal(resolvedDeps, expected);
 };
 
 var FAIL = function (deps, regexp) {
   currentTest.throws(function () {
-    var resolvedDeps = resolver.resolve(deps);
+    var dependencies = splitArgs(deps).dependencies;
+    var constraints = splitArgs(deps).constraints;
+
+    var resolvedDeps = resolver.resolve(dependencies, constraints);
   }, regexp);
 };
 
@@ -159,25 +179,21 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   currentTest = test;
-  var versions = resolver.resolve({ "sparkle": "none" }, { mode: "CONSERVATIVE" });
-  test.isTrue(_.isString(versions.sparkle));
-  versions = resolver.resolve({ "sparkle": null }, { mode: "CONSERVATIVE" });
+  var versions = resolver.resolve(["sparkle"], [], { mode: "CONSERVATIVE" });
   test.isTrue(_.isString(versions.sparkle));
 });
 
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   currentTest = test;
-  var versions = resolver.resolve({ "sparkle": "none", "sparky-forms": "1.1.2" }, { mode: "CONSERVATIVE" });
-  test.equal(versions.sparkle, "2.1.1");
-  var versions = resolver.resolve({ "sparkle": null, "sparky-forms": "1.1.2" }, { mode: "CONSERVATIVE" });
+  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", exact: false }], { mode: "CONSERVATIVE" });
   test.equal(versions.sparkle, "2.1.1");
 });
 
 Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
   var r = new ConstraintSolver.PackagesResolver(getCatalogStub(sinatraGems));
 
-  r.resolve({
+  var args = splitArgs({
     'capistrano': '2.14.2',
     'data_mapper': '1.2.0',
     'dm-core': '1.2.0',
@@ -189,21 +205,25 @@ Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) 
     'sinatra': '1.3.5',
     'sqlite3': '1.3.7'
   });
+
+  r.resolve(args.dependencies, args.constraints);
 });
 
 var railsCatalog = getCatalogStub(railsGems);
 Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
-  r.resolve({
+  var args = splitArgs({
     'rails': '4.0.4'
   });
+
+  r.resolve(args.dependencies, args.constraints);
 });
 
 Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
-  r.resolve({
+  var args = splitArgs({
     'rails': '4.0.0',
     'protected_attributes': null,
     'rails-observers': null,
@@ -275,6 +295,8 @@ Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq", function
     'gitlab_emoji': '0.0.1',
     'gon': '5.0.0'
   });
+
+  r.resolve(args.dependencies, args.constraints);
 });
 
 // Given a set of gems definitions returns a Catalog-like object

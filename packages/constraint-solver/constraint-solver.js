@@ -135,8 +135,8 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   return resultChoices;
 };
 
-ConstraintSolver.PackagesResolver.prototype.propagatedExactDeps =
-  function (dependencies) {
+ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
+  function (dependencies, constraints) {
   var self = this;
 
   check(dependencies, [String]);
