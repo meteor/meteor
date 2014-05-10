@@ -937,7 +937,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
       // For each plugin, check that the resolved build-time deps for
       // that plugin match the unipackage's build time deps for it.
       var packageLoaderForPlugin = new PackageLoader({
-        versions: buildTimeDeps.pluginDependencies
+        versions: buildTimeDeps.pluginDependencies[pluginName]
       });
       var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];
       if (! unipackagePluginDeps ||

@@ -185,15 +185,19 @@ _.extend(Catalog.prototype, {
         if (!constraint.weak) {
           deps.push(constraint.packageName);
         }
-        constr.push(constraint);
+        if (constraint.version) {
+          constr.push(constraint);
+        }
       });
     } else {
       _.each(constraints, function (constraint, packageName) {
         deps.push(packageName);
-        var utils = require('./utils.js');
-        var vers = utils.parseConstraint(constraint);
-        vers['packageName'] = packageName;
-        constr.push(vers);
+        if (constraint) {
+          var utils = require('./utils.js');
+          var vers = utils.parseConstraint(constraint);
+          vers['packageName'] = packageName;
+          constr.push(vers);
+        }
      });
     }
     // The constraint solver has been initialized, so we can just call it.
