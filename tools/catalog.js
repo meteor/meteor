@@ -175,8 +175,29 @@ _.extend(Catalog.prototype, {
       return null;
     };
 
+    // XXX: This should probably be in the constraint solver, but we can put it
+    // here for now and deal with merging the interfaces later. (#Pre0.90)
+    // XXX: This is also a great time to address the lack of consistency.
+    var deps = [];
+    var constr = [];
+    if (_.isArray(constraints)) {
+      _.each(constraints, function (constraint) {
+        if (!constraint.weak) {
+          deps.push(constraint.packageName);
+        }
+        constr.push(constraint);
+      });
+    } else {
+      _.each(constraints, function (constraint, packageName) {
+        deps.push(packageName);
+        var utils = require('./utils.js');
+        var vers = utils.parseConstraint(constraint);
+        vers['packageName'] = packageName;
+        constr.push(vers);
+     });
+    }
     // The constraint solver has been initialized, so we can just call it.
-    return self.resolver.resolve(constraints, opts);
+    return self.resolver.resolve(deps, constr, opts);
   },
 
   // Refresh the packages in the catalog.
