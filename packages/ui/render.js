@@ -23,7 +23,7 @@ UI.Component.instantiate = function (parent) {
       return $.makeArray(this.$(selector));
     },
     find: function (selector) {
-      var result = this.findAll(selector);
+      var result = this.$(selector);
       return result[0] || null;
     },
     firstNode: null,
