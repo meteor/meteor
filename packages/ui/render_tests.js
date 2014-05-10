@@ -407,6 +407,31 @@ Tinytest.add("ui - render - components", function (test) {
   })();
 });
 
+Tinytest.add("ui - render - findAll", function (test) {
+  var found = null;
+  var $found = null;
+
+  var myComponent = UI.Component.extend({
+    render: function() {
+      return DIV([P('first'), P('second')]);
+    },
+    rendered: function() {
+      found = this.findAll('p');
+      $found = this.$('p');
+    },
+  });
+  
+  var div = document.createElement("DIV");
+
+  materialize(myComponent, div);
+  Deps.flush();
+  
+  test.equal(_.isArray(found), true);
+  test.equal(_.isArray($found), false);
+  test.equal(found.length, 2);
+  test.equal($found.length, 2);
+});
+
 Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
