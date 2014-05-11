@@ -121,6 +121,7 @@ ConstraintSolver.Resolver.prototype.resolve =
 
   pq.push(startState, [estimatedStartingCost, 0]);
 
+  var naughtinessRating = {};
   var someError = null;
   var solution = null;
   while (! pq.empty()) {
@@ -131,10 +132,11 @@ ConstraintSolver.Resolver.prototype.resolve =
       break;
     }
 
-    var neighborsObj = self._stateNeighbors(currentState);
+    var neighborsObj = self._stateNeighbors(currentState, naughtinessRating);
 
     if (! neighborsObj.success) {
       someError = someError || neighborsObj.failureMsg;
+      naughtinessRating[neighborsObj.conflictingUnit] = (naughtinessRating[neighborsObj.conflictingUnit] || 0) + 1;
     } else {
       _.each(neighborsObj.neighbors, function (state) {
         var tentativeCost =
@@ -174,7 +176,7 @@ ConstraintSolver.Resolver.prototype.resolve =
 //
 // NOTE: assumes that exact dependencies are already propagated
 ConstraintSolver.Resolver.prototype._stateNeighbors =
-  function (state) {
+  function (state, naughtinessRating) {
   var self = this;
 
   var dependencies = state.dependencies;
@@ -183,6 +185,16 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var constraintAncestor = state.constraintAncestor;
 
   var candidateName = dependencies.peek();
+  var currentNaughtiness = naughtinessRating[candidateName] || 0;
+
+  dependencies.each(function (d) {
+    var r = naughtinessRating[d] || 0;
+    if (r > currentNaughtiness) {
+      currentNaughtiness = r;
+      candidateName = d;
+    }
+  });
+
   dependencies = dependencies.remove(candidateName);
 
   var candidateVersions =
@@ -202,7 +214,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       success: false,
       // XXX We really want to say "directDep1 depends on X@1.0 and
       // directDep2 depends on X@2.0"
-      failureMsg: "Direct dependencies " + directDepsString + "conflict on " + uv.name
+      failureMsg: "Direct dependencies " + directDepsString + "conflict on " + uv.name,
+      conflictingUnit: candidateName
     };
   };
 
@@ -210,7 +223,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     var uv = self.unitsVersions[candidateName][0];
 
     if (! uv)
-      return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName };
+      return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName, conflictingUnit: candidateName };
 
     return generateError(uv, constraints.constraintsForPackage(uv.name));
   }
@@ -244,7 +257,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   if (! neighbors.length)
     return { success: false,
              failureMsg: "None of the versions unit produces a sensible result -- "
-               + candidateName };
+               + candidateName,
+             conflictingUnit: candidateName };
 
   return { success: true, neighbors: neighbors };
 };
