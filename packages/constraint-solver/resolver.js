@@ -283,6 +283,9 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   var oldChoice = {};
   _.each(choices, function (uv) { oldChoice[uv.name] = uv; });
 
+  // Keeps track of the exact constraint that led to a choice
+  var exactConstrForChoice = {};
+
   queue.push(uv);
   isEnqueued[uv.name] = true;
 
@@ -322,26 +325,29 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
       .exactConstraintsIntersection(constraints)
       .union(uv.constraints.exactDependenciesIntersection(uv.dependencies));
 
-    var exactDeps = [];
-
     newExactConstraintsList.each(function (c) {
-      var uv = c.getSatisfyingUnitVersion(self);
-      if (! uv)
+      var dep = c.getSatisfyingUnitVersion(self);
+      if (! dep)
         throw new Error("No unit version was found for the constraint -- " + c.toString());
-      exactDeps.push(uv);
-    });
 
-    // Enqueue all new exact dependencies.
-    _.each(exactDeps, function (dep) {
+      // Enqueue all new exact dependencies.
       if (_.has(isEnqueued, dep.name))
         return;
       queue.push(dep);
       isEnqueued[dep.name] = true;
+      exactConstrForChoice[dep.name] = c;
     });
 
+    var constr = exactConstrForChoice[uv.name];
+    if (! constr) {
+      // likely the uv passed to this propagation in a first place
+      constraints.forPackage(uv.name, function (c) { constr = c; });
+    }
     // for error reporting
     uv.constraints.each(function (c) {
-      constraintAncestor[c.toString()] = uv.name; });
+      if (! constraintAncestor[c.toString()])
+        constraintAncestor[c.toString()] = constr ? constraintAncestor[constr.toString()] : uv.name;
+    });
   }
 
   // Update the constraintAncestor table
