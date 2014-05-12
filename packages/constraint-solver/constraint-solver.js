@@ -110,7 +110,8 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   check(constraints, [{ packageName: String, version: String, exact: Boolean }]);
 
   options = _.defaults(options || {}, {
-    mode: 'LATEST'
+    _testing: false,
+    breaking: false
   });
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
@@ -217,8 +218,15 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   };
 
   var resolverOptions = {};
-  switch (options.mode) {
-  case "LATEST":
+
+  if (options._testing) {
+    resolverOptions.costFunction = function (state) {
+      var choices = state.choices;
+      return _.reduce(choices, function (sum, uv) {
+        return semverToNum(uv.version) + sum;
+      }, 0);
+    };
+  } else {
     // Poorman's enum
     var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;
 
@@ -361,19 +369,6 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
       return arr;
     };
-
-    break;
-
-  case "CONSERVATIVE":
-    // XXX this is not used anywhere but tests?
-    resolverOptions.costFunction = function (state) {
-      var choices = state.choices;
-      return _.reduce(choices, function (sum, uv) {
-        return semverToNum(uv.version) + sum;
-      }, 0);
-    };
-
-    break;
   }
 
   return resolverOptions;

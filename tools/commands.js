@@ -401,7 +401,7 @@ main.registerCommand({
   // to this:
   // var newVersions = catalog.resolveConstraints(allPackages, {
   //   previousSolution: versions,
-  //   force: !options.minor
+  //   breaking: !options.minor
   // });
 
   // Refresh the catalog, cacheing the remote package data on the server.
@@ -683,7 +683,7 @@ main.registerCommand({
   // Call the constraint solver.
   var newVersions = catalog.resolveConstraints(allPackages, {
     previousSolution: versions,
-    force: !!options.force
+    breaking: !!options.force
   });
 
   if ( ! newVersions) {

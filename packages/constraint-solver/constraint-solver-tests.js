@@ -148,7 +148,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
     "sparkle": "2.1.1",
     "jquery-widgets": "1.0.0",
     "jquery": "1.8.2"
-  }, { mode: "CONSERVATIVE" });
+  }, { _testing: true });
 
   t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
     "sparky-forms": "1.1.2",
@@ -158,7 +158,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
     "jquery": "1.8.2",
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
-  }, { mode: "CONSERVATIVE" });
+  }, { _testing: true });
 });
 
 Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
@@ -174,19 +174,19 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
     "jquery": "1.8.2",
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
-  }, { mode: "CONSERVATIVE" });
+  }, { _testing: true });
 });
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   currentTest = test;
-  var versions = resolver.resolve(["sparkle"], [], { mode: "CONSERVATIVE" });
+  var versions = resolver.resolve(["sparkle"], [], { _testing: true });
   test.isTrue(_.isString(versions.sparkle));
 });
 
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   currentTest = test;
-  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", exact: false }], { mode: "CONSERVATIVE" });
+  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", exact: false }], { _testing: true });
   test.equal(versions.sparkle, "2.1.1");
 });
 
