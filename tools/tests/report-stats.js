@@ -18,12 +18,9 @@ selftest.define("report-stats", function () {
   selftest.expectEqual(!! identifier, true);
   selftest.expectEqual(identifier.length > 0, true);
 
-  // verify that identifier file when running 'meteor bundle' on old
-  // apps
-  s.unlink(".meteor/identifier");
-  run = s.run("bundle", "foo.tar.gz");
-  run.waitSecs(30);
-  run.expectExit(0);
+  // verify that identifier file when running 'meteor bundle' on apps
+  // with no identifier file (eg pre-0.9.0 apps)
+  bundleWithFreshIdentifier(s);
   identifier = s.read(".meteor/identifier");
   selftest.expectEqual(!! identifier, true);
   selftest.expectEqual(identifier.length > 0, true);
@@ -33,10 +30,32 @@ selftest.define("report-stats", function () {
   var usage = fetchPackageUsageForApp(identifier);
   selftest.expectEqual(usage.packages, stats.packageList(s.cwd));
 
+  // verify that the stats server recorded that with no userId
+  var appPackages = stats.getAppPackagesForAppIdInTest(s.cwd);
+  selftest.expectEqual(appPackages.appId, identifier);
+  selftest.expectEqual(appPackages.userId, null);
+  selftest.expectEqual(appPackages.packages, stats.packageList(s.cwd));
+
+  // now bundle again while logged in. verify that the stats server
+  // recorded that with the right userId
+  testUtils.login(s, "test", "testtest");
+  bundleWithFreshIdentifier(s);
+  appPackages = stats.getAppPackagesForAppIdInTest(s.cwd);
+  selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
+
   // TODO:
-  // - test both the logged in state and the logged out state
   // - opt out
 });
+
+// Bundle the app in the current working directory after deleting its
+// identifier file (meaning a new one will be created).
+// @param s {Sandbox}
+var bundleWithFreshIdentifier = function (s) {
+  s.unlink(".meteor/identifier");
+  run = s.run("bundle", "foo.tar.gz");
+  run.waitSecs(30);
+  run.expectExit(0);
+};
 
 // Contact the package stats server and look for a given app
 // identifier reported in the range (now - 30 minutes, now + 30

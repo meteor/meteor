@@ -31,13 +31,7 @@ var recordPackages = function (appDir) {
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
   Fiber(function () {
-    var Package = uniload.load({
-      packages: ["livedata"]
-    });
-    var conn = new ServiceConnection(
-      Package,
-      config.getPackageStatsServerUrl()
-    );
+    var conn = connectToPackagesStatsServer();
 
     if (auth.isLoggedIn()) {
       auth.loginWithTokenOrOAuth(
@@ -58,5 +52,25 @@ var recordPackages = function (appDir) {
   }).run();
 };
 
+// Used in a test (and can only be used against the testing packages
+// server) to fetch one package stats entry for a given application.
+var getAppPackagesForAppIdInTest = function (appDir) {
+  return connectToPackagesStatsServer().call(
+    "getAppPackagesForAppId",
+    project.getAppIdentifier(appDir) /*appId*/);
+};
+
+var connectToPackagesStatsServer = function () {
+  var Package = uniload.load({
+    packages: ["livedata"]
+  });
+  var conn = new ServiceConnection(
+    Package,
+    config.getPackageStatsServerUrl()
+  );
+  return conn;
+};
+
 exports.recordPackages = recordPackages;
 exports.packageList = packageList; // for use in the "stats" self-test.
+exports.getAppPackagesForAppIdInTest = getAppPackagesForAppIdInTest;

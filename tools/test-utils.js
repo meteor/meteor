@@ -133,6 +133,11 @@ exports.logout = function (s) {
   run.expectExit(0);
 };
 
+exports.getUserId = function (s) {
+  var data = JSON.parse(s.readSessionFile());
+  return data.sessions["www.meteor.com"].userId;
+};
+
 var registrationUrlRegexp =
       /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
 exports.registrationUrlRegexp = registrationUrlRegexp;
