@@ -106,8 +106,14 @@ npm install tar@0.1.19
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install source-map-support@0.2.5
-npm install bcrypt@0.7.7
+npm install pathwatcher@1.2.4
+
+# Gives access to authenticated encryption; Node 0.12 will have this natively.
 npm install node-aes-gcm@0.1.3
+
+# Useful modules with native dependencies; we can get them out of the dev bundle
+# once we have full publish-for-arch support.
+npm install bcrypt@0.7.7
 npm install heapdump@0.2.5
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
