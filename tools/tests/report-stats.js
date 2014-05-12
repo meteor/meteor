@@ -47,7 +47,7 @@ selftest.define("report-stats", function () {
 var fetchPackageUsageForApp = function (identifier) {
   var stats = testUtils.ddpConnect(/*xcxc*/ "test-packages-stats.meteor.com");
   var nowMinus30Minutes = new Date(new Date - 1000 * 60 * 30 /*ms*/);
-  var nowPlus30Minutes = new Date(nowMinus30Minutes + 1000 * 60 * 60 /*ms*/);
+  var nowPlus30Minutes = new Date(+nowMinus30Minutes + 1000 * 60 * 60 /*ms*/);
   var usage = stats.call("fetchAppPackageUsage",
              nowMinus30Minutes, nowPlus30Minutes, "like a boss" /*apiKey*/);
 
