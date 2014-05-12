@@ -14,6 +14,7 @@ var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js');
 var ServiceConnection = require('./service-connection.js');
+var stats = require('./stats.js');
 
 // a bit of a hack
 var getPackage = _.once(function () {
@@ -204,6 +205,7 @@ exports.deploy = function (options) {
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
       var loader = project.generatePackageLoader(options.appDir);
+      stats.recordPackages(options.appDir);
       var bundleResult = bundler.bundle({
         appDir: options.appDir,
         packageLoader: loader,

@@ -23,6 +23,7 @@ var PackageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js').catalog;
+var stats = require('./stats.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -958,6 +959,8 @@ main.registerCommand({
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.generatePackageLoader(options.appDir);
+  stats.recordPackages(options.appDir);
+
   var bundleResult = bundler.bundle({
     appDir: options.appDir,
     packageLoader: loader,
