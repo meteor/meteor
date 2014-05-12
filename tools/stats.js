@@ -54,10 +54,10 @@ var recordPackages = function (appDir) {
 
 // Used in a test (and can only be used against the testing packages
 // server) to fetch one package stats entry for a given application.
-var getAppPackagesForAppIdInTest = function (appDir) {
+var getPackagesForAppIdInTest = function (appDir) {
   return connectToPackagesStatsServer().call(
-    "getAppPackagesForAppId",
-    project.getAppIdentifier(appDir) /*appId*/);
+    "getPackagesForAppId",
+    project.getAppIdentifier(appDir));
 };
 
 var connectToPackagesStatsServer = function () {
@@ -73,4 +73,4 @@ var connectToPackagesStatsServer = function () {
 
 exports.recordPackages = recordPackages;
 exports.packageList = packageList; // for use in the "stats" self-test.
-exports.getAppPackagesForAppIdInTest = getAppPackagesForAppIdInTest;
+exports.getPackagesForAppIdInTest = getPackagesForAppIdInTest;

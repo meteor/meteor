@@ -31,7 +31,7 @@ selftest.define("report-stats", function () {
   selftest.expectEqual(usage.packages, stats.packageList(s.cwd));
 
   // verify that the stats server recorded that with no userId
-  var appPackages = stats.getAppPackagesForAppIdInTest(s.cwd);
+  var appPackages = stats.getPackagesForAppIdInTest(s.cwd);
   selftest.expectEqual(appPackages.appId, identifier);
   selftest.expectEqual(appPackages.userId, null);
   selftest.expectEqual(appPackages.packages, stats.packageList(s.cwd));
@@ -40,7 +40,7 @@ selftest.define("report-stats", function () {
   // recorded that with the right userId
   testUtils.login(s, "test", "testtest");
   bundleWithFreshIdentifier(s);
-  appPackages = stats.getAppPackagesForAppIdInTest(s.cwd);
+  appPackages = stats.getPackagesForAppIdInTest(s.cwd);
   selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
 
   // TODO:

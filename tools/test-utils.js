@@ -135,7 +135,7 @@ exports.logout = function (s) {
 
 exports.getUserId = function (s) {
   var data = JSON.parse(s.readSessionFile());
-  return data.sessions["www.meteor.com"].userId;
+  return data.sessions[config.getUniverse()].userId;
 };
 
 var registrationUrlRegexp =
