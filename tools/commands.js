@@ -390,12 +390,19 @@ main.registerCommand({
     // Undocumented flag used by upgrade-to-engine.sh for updating
     // from prehistoric versions of Meteor. Ignoring it should be
     // harmless. We should remove it eventually.
-    'dont-fetch-latest': { type: Boolean }
+    'dont-fetch-latest': { type: Boolean, required: false },
+    minor: { type: Boolean, required: false }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
   requiresRelease: false
 }, function (options) {
+  // XXX in the new packaging world it would call the constraint solver similar
+  // to this:
+  // var newVersions = catalog.resolveConstraints(allPackages, {
+  //   previousSolution: versions,
+  //   force: !options.minor
+  // });
 
   // Refresh the catalog, cacheing the remote package data on the server.
   catalog.catalog.refresh(true);
@@ -601,7 +608,10 @@ main.registerCommand({
   name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  options: {
+    force: { type: Boolean, required: false }
+  }
 }, function (options) {
 
   var failed = false;
@@ -671,8 +681,11 @@ main.registerCommand({
   // constraints, to pass in to the constraint solver.
   var allPackages = project.combineAppAndProgramDependencies(packages);
   // Call the constraint solver.
-  var newVersions = catalog.resolveConstraints(allPackages,
-                                              { previousSolution: versions });
+  var newVersions = catalog.resolveConstraints(allPackages, {
+    previousSolution: versions,
+    force: !!options.force
+  });
+
   if ( ! newVersions) {
     // XXX: Better error handling.
     process.stderr.write("Cannot resolve package dependencies.");
