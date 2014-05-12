@@ -1161,7 +1161,7 @@ var runTests = function (options) {
         if (! lines.length) {
           process.stderr.write("  => No output\n");
         } else {
-          var historyLines = options.historyLines || 10;
+          var historyLines = options.historyLines || 20;
 
           process.stderr.write("  => Last " + historyLines + " lines:\n");
           _.each(lines.slice(-historyLines), function (line) {
