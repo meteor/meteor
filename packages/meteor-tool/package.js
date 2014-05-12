@@ -13,5 +13,6 @@ Package.includeTool([
   'js-analyze',
   'logging',
   'mongo-livedata',
-  'minimongo'
+  'minimongo',
+  'constraint-solver'
 ]);
