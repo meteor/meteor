@@ -188,6 +188,7 @@ exports.parseVersionConstraint = function (versionString) {
 //
 // XXX should unify this with splitConstraint
 exports.parseConstraint = function (constraintString) {
+  if (!constraintString) return { version: null };
   if (typeof constraintString !== "string")
     throw new TypeError("constraintString must be a string");
 

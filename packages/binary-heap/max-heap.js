@@ -172,7 +172,7 @@ _.extend(MaxHeap.prototype, {
     var self = this;
     return self._heapIdx.has(id);
   },
-  empty: function (id) {
+  empty: function () {
     var self = this;
     return !self.size();
   },

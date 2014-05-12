@@ -990,11 +990,16 @@ _.extend(Unipackage.prototype, {
 
 
     var pluginDeps = [];
+    // Mild hack documentation: versions for a pluginName can be null if this is
+    // a preconstraint-solver build. (That, elsewhere, indicates to us that we
+    // should only use local packages to build it -- and neatly avoids having to
+    // resolve its dependencies) So, we need to check for that.
+    // #UnbuiltConstraintSolverMustUseLocalPackages
     _.each(
       self.buildTimePluginDependencies,
       function (versions, pluginName) {
+        versions = versions ?_.clone(versions): {};
         var singlePluginDeps = [];
-        versions = _.clone(versions);
         delete versions[self.name];
         _.each(
           getLoadedPackageVersions(versions),
@@ -1051,4 +1056,4 @@ _.extend(Unipackage.prototype, {
   }
 });
 
-module.exports = Unipackage;
+exports.Unipackage = Unipackage;

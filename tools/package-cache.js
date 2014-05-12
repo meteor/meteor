@@ -84,7 +84,7 @@ _.extend(PackageCache.prototype, {
       } else {
         var packageSource = new PackageSource;
         packageSource.initFromPackageDir(name, loadPath);
-        unipackage = new Unipackage;
+        unipackage = new Unipackage.Unipackage;
         unipackage.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
       }
@@ -101,7 +101,7 @@ _.extend(PackageCache.prototype, {
     // Does loadPath point directly at a unipackage (rather than a
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      unipackage = new Unipackage;
+      unipackage = new Unipackage.Unipackage;
 
       unipackage.initFromPath(name, loadPath);
       self.loadedPackages[key] = {
@@ -119,7 +119,7 @@ _.extend(PackageCache.prototype, {
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {
-      unipackage = new Unipackage;
+      unipackage = new Unipackage.Unipackage;
       unipackage.initFromPath(name, buildDir);
        if (compiler.checkUpToDate(packageSource, unipackage)) {
         self.loadedPackages[key] = { pkg: unipackage,

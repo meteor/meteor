@@ -1,0 +1,43 @@
+{
+  "dependencies": [
+    [
+      "binary-heap",
+      "1.0.0+local"
+    ],
+    [
+      "check",
+      "1.0.0+local"
+    ],
+    [
+      "ejson",
+      "1.0.0+local"
+    ],
+    [
+      "id-map",
+      "1.0.0+local"
+    ],
+    [
+      "json",
+      "1.0.0+local"
+    ],
+    [
+      "meteor",
+      "1.0.0+local"
+    ],
+    [
+      "package-version-parser",
+      "1.0.0+local"
+    ],
+    [
+      "random",
+      "1.0.0+local"
+    ],
+    [
+      "underscore",
+      "1.0.0+local"
+    ]
+  ],
+  "pluginDependencies": [],
+  "toolVersion": "meteor-tool@1.0.0",
+  "format": "1.0"
+}
