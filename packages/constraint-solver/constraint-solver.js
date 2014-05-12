@@ -114,6 +114,16 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
     breaking: false
   });
 
+  options.rootDependencies = _.clone(dependencies);
+
+  if (options.previousSolution) {
+    options.previousSolution = _.flatten(_.map(options.previousSolution, function (version, packageName) {
+      return _.map(self._buildsForPackage(packageName), function (unitName) {
+        return self.resolver.unitsVersions[unitName];
+      });
+    }));
+  }
+
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
   var resolverOptions = self._getResolverOptions(options, dc);
@@ -158,50 +168,48 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
   return resultChoices;
 };
 
-// takes deps of form {'foo': '1.2.3', 'bar': null, 'quz': '=1.2.5'} and splits
-// them into dependencies ['foo#os', 'bar#browser', 'quz#browser'] + constraints
+// takes dependencies and constraints and rewrites the names from "foo" to
+// "foo#os" and "foo#browser"
 // XXX right now creates a dependency for every build it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
   var self = this;
   var dependencies = [];
   var constraints = [];
-  var buildNames = _.keys(self.resolver.unitsVersions);
 
   _.each(inputDeps, function (packageName) {
-    var buildPrefix = packageName + "#";
-    var buildsForPackage = _.filter(buildNames, function (build) {
-      // we pick everything that starts with 'foo#'
-      return build.substr(0, buildPrefix.length) === buildPrefix;
-    });
-
-    if (_.isEmpty(buildsForPackage))
-      throw new Error("Cannot find anything about package -- " + packageName);
-
-    _.each(buildsForPackage, function (buildName) {
+    _.each(self._buildsForPackage(packageName), function (buildName) {
       dependencies.push(buildName);
     });
   });
 
   // XXX hackish code duplication
   _.each(inputConstraints, function (constraint) {
-    var buildPrefix = constraint.packageName + "#";
-    var buildsForPackage = _.filter(buildNames, function (build) {
-      // we pick everything that starts with 'foo#'
-      return build.substr(0, buildPrefix.length) === buildPrefix;
-    });
-
-    if (_.isEmpty(buildsForPackage))
-      throw new Error("Cannot find anything about package -- " + packageName);
-
     var constraintStr = (constraint.exact ? "=" : "") + constraint.version;
 
-    _.each(buildsForPackage, function (buildName) {
+    _.each(self._buildsForPackage(constraint.packageName), function (buildName) {
       constraints.push(self.resolver.getConstraint(buildName, constraintStr));
     });
   });
 
   return { dependencies: dependencies, constraints: constraints };
+};
+
+ConstraintSolver.PackagesResolver.prototype._buildsForPackage =
+  function (packageName) {
+  var self = this;
+  var buildPrefix = packageName + "#";
+  var builds = [];
+  // XXX hardcode os and browser
+  _.each(["os", "browser"], function (arch) {
+    if (self.resolver.unitsVersions[buildPrefix + arch])
+      builds.push(buildPrefix + arch);
+  });
+
+  if (_.isEmpty(builds))
+    throw new Error("Cannot find anything about package -- " + packageName);
+
+  return builds;
 };
 
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
@@ -229,21 +237,18 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   } else {
     // Poorman's enum
     var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;
+    var rootDeps = options.rootDependencies || [];
+    var prevSol = options.previousSolution || [];
 
-    // XXX reuse this code for "UPDATE" and "MINOR_UPDATE" and "FORCE"
+    var isRootDep = {};
+    var prevSolMapping = {};
+
+    _.each(rootDeps, function (dep) { isRootDep[dep] = true; });
+    _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
+
     resolverOptions.costFunction = function (state, options) {
       var choices = state.choices;
       var constraints = state.constraints;
-      var rootDeps = options.rootDependencies || [];
-      var prevSol = options.previousSolution || [];
-
-      var isRootDep = {};
-      var prevSolMapping = {};
-
-      // XXX this is recalculated over and over again and can be cached
-      _.each(rootDeps, function (dep) { isRootDep[dep] = true; });
-      _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
-
       // very major, major, medium, minor costs
       // XXX maybe these can be calculated lazily?
       var cost = [0, 0, 0, 0];
@@ -273,6 +278,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             if (versionsDistance < 0 || ! isCompatible) {
               // the new pick is older or is incompatible with the prev. solution
               // i.e. can have breaking changes, prefer not to do this
+              // XXX in fact we want to avoid downgrades to the direct
+              // dependencies at all cost.
               cost[VMAJOR]++;
             } else {
               // compatible but possibly newer
@@ -308,15 +315,6 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     resolverOptions.estimateCostFunction = function (state, options) {
       var dependencies = state.dependencies;
       var constraints = state.constraints;
-      var rootDeps = options.rootDependencies || [];
-      var prevSol = options.previousSolution || [];
-
-      var isRootDep = {};
-      var prevSolMapping = {};
-
-      // XXX this is recalculated over and over again and can be cached
-      _.each(rootDeps, function (dep) { isRootDep[dep] = true; });
-      _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
 
       var cost = [0, 0, 0, 0];
       return cost;
