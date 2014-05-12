@@ -473,8 +473,12 @@ var oauthFlow = function (conn, options) {
     credentialToken
   );
 
+  // XXX We're using a test-only flag here to just get the raw
+  // credential secret (instead of a bunch of code that communicates the
+  // credential secret somewhere else); this should be temporary until
+  // we give this a nicer name and make it not just test only.
   var redirectResult = httpHelpers.request({
-    url: authorizeResult.location,
+    url: authorizeResult.location + '&only_credential_secret_for_test=1',
     method: 'GET',
     strictSSL: true
   });
@@ -489,7 +493,10 @@ var oauthFlow = function (conn, options) {
 
   // XXX tokenId???
   var loginResult = conn.apply('login', [{
-    oauth: { credentialToken: credentialToken }
+    oauth: {
+      credentialToken: credentialToken,
+      credentialSecret: response.body
+    }
   }], { wait: true });
 
   if (loginResult.token && loginResult.id) {
@@ -1028,7 +1035,7 @@ exports.loggedInUsername = function () {
   return loggedIn(data) ? currentUsername(data) : false;
 };
 
-// Given a DDP connection, log in with OAuth using Meteor developer
+// Given a ServiceConnection, log in with OAuth using Meteor developer
 // accounts. Assumes the user is already logged in to the developer
 // accounts server.
 exports.loginWithTokenOrOAuth = function (conn, url, domain, sessionType) {

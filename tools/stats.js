@@ -1,8 +1,11 @@
+var Fiber = require("fibers");
+var _ = require("underscore");
+
 var config = require("./config.js");
 var uniload = require("./uniload.js");
-var Fiber = require("fibers");
 var project = require("./project.js");
-var _ = require("underscore");
+var auth = require("./auth.js");
+var ServiceConnection = require("./service-connection.js");
 
 // Return a list of packages used by this app, both directly and
 // indirectly. Formatted as a list of objects with 'name', 'version'
@@ -28,11 +31,22 @@ var recordPackages = function (appDir) {
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
   Fiber(function () {
-    var DDP = uniload.load({
+    var Package = uniload.load({
       packages: ["livedata"]
-    }).livedata.DDP;
-    var conn = DDP.connect(config.getPackageStatsServerUrl());
+    });
+    var conn = new ServiceConnection(
+      Package,
+      config.getPackageStatsServerUrl()
+    );
 
+    if (auth.isLoggedIn()) {
+      auth.loginWithTokenOrOAuth(
+        conn,
+        config.getPackageStatsServerUrl(),
+        config.getPackageStatsServerDomain(),
+        "package-stats-server"
+      );
+    }
     // XXX do the right thing in the following cases:
     // not logged in to meteor account
     // logged in to meteor accounts, but not logged into package stats server
