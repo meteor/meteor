@@ -156,6 +156,10 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
   // `only_credential_secret_for_test` parameter, which just returns the
   // credential secret without any surrounding HTML. (The test needs to
   // be able to easily grab the secret and use it to log in.)
+  //
+  // XXX only_credential_secret_for_test could be useful for other
+  // things beside tests, like command-line clients. We should give it a
+  // real name and serve the credential secret in JSON.
   if (query.only_credential_secret_for_test) {
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end(credentialSecret, 'utf-8');
