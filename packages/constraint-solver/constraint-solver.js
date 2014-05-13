@@ -119,7 +119,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   if (options.previousSolution) {
     options.previousSolution = _.flatten(_.map(options.previousSolution, function (version, packageName) {
       return _.map(self._buildsForPackage(packageName), function (unitName) {
-        return self.resolver.unitsVersions[unitName];
+        if (!self.resolver._unitsVersionsMap[unitName + "@" + version])
+          console.log(unitName, version)
+        return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     }));
   }
