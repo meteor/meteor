@@ -11,7 +11,6 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 // works by passing an hour time range.
 selftest.define("report-stats", function () {
   var s = new Sandbox;
-  s.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
   var run = s.run("create", "foo");
   run.expectExit(0);
