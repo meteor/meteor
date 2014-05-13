@@ -1214,7 +1214,7 @@ _.extend(PackageSource.prototype, {
 
     // In case we need to rebuild from this package Source, it will be
     // convenient to keep the results on hand and not reread from disk.
-    self.dependencyVersions = versions;
+    self.dependencyVersions = _.clone(versions);
 
     // There is always a possibility that we might want to change the format of
     // this file, so let's keep track of what it is.
