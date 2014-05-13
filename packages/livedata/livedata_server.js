@@ -298,7 +298,7 @@ var Session = function (server, version, socket, options) {
       heartbeatInterval: options.heartbeatInterval,
       heartbeatTimeout: options.heartbeatTimeout,
       onTimeout: function () {
-        self.destroy();
+        self.close();
       },
       sendPing: function () {
         self.send({msg: 'ping'});
