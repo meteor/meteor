@@ -26,18 +26,17 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
   });
 };
 
-Blaze.With = function (data, func) {
-  if (! (this instanceof Blaze.With))
-    // called without new
-    return new Blaze.With(data, func);
+Blaze.With = Blaze.Controller.extend({
+  constructor: function (data, func) {
+    if (! (this instanceof Blaze.With))
+      // called without new
+      return new Blaze.With(data, func);
 
-  Blaze.Controller.call(this);
+    Blaze.With.__super__.constructor.call(this);
 
-  this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
-  this.func = func;
-};
-Blaze.__extends(Blaze.With, Blaze.Controller);
-_.extend(Blaze.With.prototype, {
+    this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
+    this.func = func;
+  },
   render: function () {
     var func = this.func;
     return func();

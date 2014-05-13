@@ -4,16 +4,13 @@ var _onstopForRender = function () {
   this.computation.stop();
 };
 
-var RenderController = Blaze.RenderController = function () {
-  Blaze.Controller.call(this);
-};
-__extends(Blaze.RenderController, Blaze.Controller);
+Blaze.RenderController = Blaze.Controller.extend();
 
 Blaze.render = function (func) {
   var range = new Blaze.DOMRange;
   var controller = Blaze.currentController;
   if (! controller)
-    controller = new RenderController;
+    controller = new Blaze.RenderController;
 
   range.computation = Deps.autorun(function () {
     Blaze.withCurrentController(controller, function () {

@@ -15,12 +15,11 @@
 // while Controllers straddle the gap between Components and the
 // timeless RenderPoints which keep no instance state.
 
-Blaze.Controller = function () {
-  this.parentController = Blaze.currentController;
-};
-__extends(Blaze.Controller, Blaze.RenderPoint);
-
-_.extend(Blaze.Controller.prototype, {
+Blaze.Controller = Blaze.RenderPoint.extend({
+  constructor: function () {
+    Blaze.Controller.__super__.constructor.call(this);
+    this.parentController = Blaze.currentController;
+  },
   evaluate: function () {
     var self = this;
     return Blaze.withCurrentController(self, function () {
@@ -53,12 +52,7 @@ Blaze.withCurrentController = function (controller, func) {
   }
 };
 
-Blaze.Component = function () {
-  Blaze.Controller.call(this);
-};
-__extends(Blaze.Component, Blaze.Controller);
-
-_.extend(Blaze.Component.prototype, {
+Blaze.Component = Blaze.Controller.extend({
   renderToDOM: function () {
     var self = this;
     if (self.domrange)

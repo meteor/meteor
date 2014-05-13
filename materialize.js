@@ -26,10 +26,7 @@ Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
   }
 });
 
-var ToTextController = Blaze.ToTextController = function () {
-  Blaze.Controller.call(this);
-};
-__extends(Blaze.ToTextController, Blaze.Controller);
+Blaze.ToTextController = Blaze.Controller.extend();
 
 Blaze.toText = function (content, textMode) {
   if (! Deps.active) {
@@ -48,7 +45,7 @@ Blaze.toText = function (content, textMode) {
   var visitor = new Blaze.ToTextVisitor;
   visitor.textMode = textMode;
 
-  var controller = (Blaze.currentController || new ToTextController);
+  var controller = (Blaze.currentController || new Blaze.ToTextController);
   return Blaze.withCurrentController(controller, function () {
     return visitor.visit(content);
   });
@@ -68,10 +65,7 @@ Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
   }
 });
 
-var ToHTMLController = Blaze.ToHTMLController = function () {
-  Blaze.Controller.call(this);
-};
-__extends(Blaze.ToHTMLController, Blaze.Controller);
+Blaze.ToHTMLController = Blaze.Controller.extend();
 
 // This function is mainly for server-side rendering and is not in the normal
 // code path for client-side rendering.
@@ -81,7 +75,7 @@ Blaze.toHTML = function (content) {
       return Blaze.toHTML(content);
     });
   }
-  var controller = (Blaze.currentController || new ToHTMLController);
+  var controller = (Blaze.currentController || new Blaze.ToHTMLController);
   return Blaze.withCurrentController(controller, function () {
     return (new Blaze.ToHTMLVisitor).visit(content);
   });
