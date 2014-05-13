@@ -194,7 +194,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     var pluginVersion = pluginVersions[info.name];
     ret.pluginDependencies[info.name] =
       catalog.catalog.resolveConstraints(
-        constraints, { previousSolution: pluginVersions  });
+        constraints, { previousSolution: pluginVersion  });
   });
 
   // Every time we run the constraint solver, we record the results. This has
