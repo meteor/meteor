@@ -704,7 +704,7 @@ _.extend(Catalog.prototype, {
       throw new Error(name + " not a local package, and no version specified?");
     }
 
-    var packageDir = tropohouse.packagePath(name, version);
+    var packageDir = tropohouse.default.packagePath(name, version);
     if (fs.existsSync(packageDir)) {
       return packageDir;
     }

@@ -137,7 +137,8 @@ _.extend(exports, {
   },
 
   getPackageStorage: function() {
-    return path.join(tropohouse.getWarehouseDir(), "package-metadata", "v1", "data.json");
+    return path.join(tropohouse.default.root,
+                     "package-metadata", "v1", "data.json");
   },
 
   getPackageStorageVersion: function() {

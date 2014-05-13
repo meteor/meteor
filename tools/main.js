@@ -302,15 +302,15 @@ var springboard = function (rel, releaseOverride) {
   var archinfo = require('./archinfo.js');
 
   // XXX split better
-  tropohouse.maybeDownloadPackageForArchitectures(
+  tropohouse.default.maybeDownloadPackageForArchitectures(
     {packageName: rel.getToolsPackage(),
      version: rel.getToolsVersion()},
     [archinfo.host()]);
 
   // XXX support warehouse too
 
-  var packagePath = tropohouse.packagePath(rel.getToolsPackage(),
-                                           rel.getToolsVersion());
+  var packagePath = tropohouse.default.packagePath(
+    rel.getToolsPackage(), rel.getToolsVersion());
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.

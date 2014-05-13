@@ -189,7 +189,7 @@ project.setDependencies = function (appDir, deps, versions) {
   _.each(versions, function (version, name) {
     var packageVersionInfo = { packageName: name, version: version };
     // XXX error handling
-    var available = tropohouse.maybeDownloadPackageForArchitectures(
+    var available = tropohouse.default.maybeDownloadPackageForArchitectures(
       packageVersionInfo,
       ['browser', archinfo.host()]
     );
