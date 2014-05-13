@@ -421,7 +421,7 @@ ConstraintSolver.UnitVersion = function (name, unitVersion, ecv) {
   self.dependencies = new ConstraintSolver.DependenciesList();
   self.constraints = new ConstraintSolver.ConstraintsList();
   // a string in a form of "1.2.0"
-  self.ecv = ecv;
+  self.earliestCompatibleVersion = ecv;
 };
 
 _.extend(ConstraintSolver.UnitVersion.prototype, {
@@ -546,7 +546,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (unitVersion) {
     return self.version === unitVersion.version;
 
   return semver.lte(self.version, unitVersion.version) &&
-    semver.lte(unitVersion.ecv, self.version);
+    semver.lte(unitVersion.earliestCompatibleVersion, self.version);
 };
 
 // Returns any unit version satisfying the constraint in the resolver
