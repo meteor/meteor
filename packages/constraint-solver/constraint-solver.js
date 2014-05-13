@@ -114,19 +114,18 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
     breaking: false
   });
 
-  options.rootDependencies = _.clone(dependencies);
-
   if (options.previousSolution) {
     options.previousSolution = _.flatten(_.map(options.previousSolution, function (version, packageName) {
       return _.map(self._buildsForPackage(packageName), function (unitName) {
-        if (!self.resolver._unitsVersionsMap[unitName + "@" + version])
-          console.log(unitName, version)
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     }));
   }
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
+
+  options.rootDependencies = dc.dependencies;
+
 
   var resolverOptions = self._getResolverOptions(options, dc);
 
@@ -283,15 +282,18 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
               // XXX in fact we want to avoid downgrades to the direct
               // dependencies at all cost.
               cost[VMAJOR]++;
+              options.debug && console.log("root & *not* compatible: ", uv.name, prev.version, "=>", uv.version)
             } else {
               // compatible but possibly newer
               // prefer the version closest to the older solution
               cost[MEDIUM] += versionsDistance;
+              options.debug && console.log("root & compatible: ", uv.name, prev.version, "=>", uv.version)
             }
           } else {
             // transitive dependency
             // prefer to have less changed transitive dependencies
             cost[MINOR] += versionsDistance === 0 ? 1 : 0;
+            options.debug && console.log("transitive: ", uv.name, prev.version, "=>", uv.version)
           }
         } else {
           var latestDistance =
@@ -302,11 +304,13 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             // root dependency
             // preferably latest
             cost[MAJOR] += latestDistance;
+            options.debug && console.log("root: ", uv.name, "=>", uv.version)
           } else {
             // transitive dependency
             // prefarable earliest possible to be conservative
             cost[MINOR] += semverToNum(uv.version) -
               semverToNum(minimalConstraint[uv.name] || "0.0.0");
+            options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }
       });

@@ -456,7 +456,7 @@ Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq, additions
   // check that root deps are the same
   _.each(args.dependencies, function (dep) {
     if (previousSolution[dep])
-      test.equal(solution[dep], previousSolution[dep]);
+      test.equal(solution[dep], previousSolution[dep], dep);
   });
 });
 
@@ -507,10 +507,12 @@ function getCatalogStub (gems) {
       // get some results as the correctness is not as important as the speed.
       if (_.contains(['railties', 'rails', 'activesupport', 'actionpack', 'activerecord', 'activemodel'], packageVersion.packageName) && semver.gte(exactVersion(packageVersion.version), "3.0.0"))
         packageVersion.earliestCompatibleVersion = "3.0.0";
-      if (_.contains(['devise'], packageVersion.packageName) && semver.gte(exactVersion(packageVersion.version), "3.0.0") && semver.lte(exactVersion(packageVersion.version), "3.2.0"))
-        packageVersion.earliestCompatibleVersion = "2.2.0";
+      if (_.contains(['devise'], packageVersion.packageName) && semver.gte(exactVersion(packageVersion.version), "3.0.0") && semver.lte(exactVersion(packageVersion.version), "3.7.0"))
+        packageVersion.earliestCompatibleVersion = "2.0.0";
       if (packageVersion.packageName === "redis")
         packageVersion.earliestCompatibleVersion = "0.0.1";
+      if (packageVersion.packageName === "github-markup")
+        packageVersion.earliestCompatibleVersion = "0.3.0";
 
       _.each(gem.dependencies, function (dep) {
         var name = dep[0];
@@ -550,7 +552,7 @@ function convertConstraints (inp) {
   // '~>1.2.3' => '1.2.3'
   // '>=1.2.3' => '1.2.3'
   .map(function (s) {
-    if (s === ">= 0.0.0")
+    if (s.indexOf(">= 0") === 0)
       return "none";
     var x = s.split(' ');
     if (x[0] === '~>' || x[0] === '>=' || x[0] === '>')
