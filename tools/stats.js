@@ -41,10 +41,6 @@ var recordPackages = function (appDir) {
         "package-stats-server"
       );
     }
-    // XXX do the right thing in the following cases:
-    // not logged in to meteor account
-    // logged in to meteor accounts, but not logged into package stats server
-    // logged into package stats server
 
     conn.call("recordAppPackages",
               project.getAppIdentifier(appDir),
