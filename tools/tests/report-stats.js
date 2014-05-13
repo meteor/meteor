@@ -3,11 +3,15 @@ var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 
+var testStatsServer = "https://test-package-stats.meteor.com";
+process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
+
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
 selftest.define("report-stats", function () {
   var s = new Sandbox;
+  s.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
   var run = s.run("create", "foo");
   run.expectExit(0);
@@ -52,7 +56,7 @@ selftest.define("report-stats", function () {
 // @param s {Sandbox}
 var bundleWithFreshIdentifier = function (s) {
   s.unlink(".meteor/identifier");
-  run = s.run("bundle", "foo.tar.gz");
+  var run = s.run("bundle", "foo.tar.gz");
   run.waitSecs(30);
   run.expectExit(0);
 };
@@ -64,7 +68,7 @@ var bundleWithFreshIdentifier = function (s) {
 //
 // Returns the (unique) package usage document for the given app.
 var fetchPackageUsageForApp = function (identifier) {
-  var stats = testUtils.ddpConnect(/*xcxc*/ "test-packages-stats.meteor.com");
+  var stats = testUtils.ddpConnect(testStatsServer);
   var nowMinus30Minutes = new Date(new Date - 1000 * 60 * 30 /*ms*/);
   var nowPlus30Minutes = new Date(+nowMinus30Minutes + 1000 * 60 * 60 /*ms*/);
   var usage = stats.call("fetchAppPackageUsage",
