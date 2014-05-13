@@ -334,5 +334,7 @@ project.getAppIdentifier = function (appDir) {
 project.ensureAppIdentifier = function (appDir) {
   var identifierFile = project.appIdentifierFile(appDir);
   if (!fs.existsSync(identifierFile))
-    fs.writeFileSync(identifierFile, utils.randomToken());
+    fs.writeFileSync(
+      identifierFile,
+      utils.randomToken() + utils.randomToken() + utils.randomToken());
 };
