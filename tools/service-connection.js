@@ -46,11 +46,11 @@ var ServiceConnection = function (Package, endpointUrl, headers) {
 // when we open the first ServiceConnection we call
 // `ensureConnectionTimeoutErrorDefined` which replaces this with a
 // real error type.
-ServiceConfiguration.ConnectionTimeoutError = _.extend(
+ServiceConnection.ConnectionTimeoutError = _.extend(
   function () {}, {uninitialized: true});
 
 // can't run this at the top-level since we're not in a fiber. see
-// comment before ServiceConfiguration.ConnectionTimeoutError.
+// comment before ServiceConnection.ConnectionTimeoutError.
 ensureConnectionTimeoutErrorDefined = function (Meteor) {
   if (! ServiceConnection.ConnectionTimeoutError.uninitialized) {
     ServiceConnection.ConnectionTimeoutError = Meteor.makeErrorType(
