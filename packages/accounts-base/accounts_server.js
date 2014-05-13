@@ -568,13 +568,15 @@ Accounts._setAccountData = function (connectionId, field, value) {
     data[field] = value;
 };
 
-Meteor.server.onConnection(function (connection) {
-  accountData[connection.id] = {connection: connection};
-  connection.onClose(function () {
-    removeTokenFromConnection(connection.id);
-    delete accountData[connection.id];
+if (Meteor.server){
+  Meteor.server.onConnection(function (connection) {
+    accountData[connection.id] = {connection: connection};
+    connection.onClose(function () {
+      removeTokenFromConnection(connection.id);
+      delete accountData[connection.id];
+    });
   });
-});
+}
 
 
 ///
