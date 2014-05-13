@@ -126,13 +126,6 @@ Meteor.users = new Meteor.Collection("users", {
 // There is an allow call in accounts_server that restricts this
 // collection.
 
-// loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-Meteor.startup(function () {
-  var ServiceConfiguration =
-    Package['service-configuration'].ServiceConfiguration;
-  Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
-  Accounts.ConfigError = ServiceConfiguration.ConfigError;
-});
 
 // Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)
