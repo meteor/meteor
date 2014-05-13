@@ -37,9 +37,22 @@ var ServiceConnection = function (Package, endpointUrl, headers) {
   }, TIMEOUT_SEC*1000);
 };
 
-// can't run this at the top-level since we're not in a fiber
+// A story. Ideally, we'd just create an error class here (using
+// Meteor.makeErrorType from the 'meteor' package). Unfortunately, we
+// can't do that at the top-level since uniload yields therefore must
+// run in a fiber. Instead, we start out with an empty function here
+// (this is necessary so that `foo instanceof
+// ServiceConnection.ConnectionTimeoutError` doesn't throw). Then,
+// when we open the first ServiceConnection we call
+// `ensureConnectionTimeoutErrorDefined` which replaces this with a
+// real error type.
+ServiceConfiguration.ConnectionTimeoutError = _.extend(
+  function () {}, {uninitialized: true});
+
+// can't run this at the top-level since we're not in a fiber. see
+// comment before ServiceConfiguration.ConnectionTimeoutError.
 ensureConnectionTimeoutErrorDefined = function (Meteor) {
-  if (! ServiceConnection.ConnectionTimeoutError) {
+  if (! ServiceConnection.ConnectionTimeoutError.uninitialized) {
     ServiceConnection.ConnectionTimeoutError = Meteor.makeErrorType(
       "ServiceConnection.ConnectionTimeoutError", /*name*/
       function () {
