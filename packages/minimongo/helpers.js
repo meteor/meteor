@@ -8,7 +8,7 @@ isArray = function (x) {
 // XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
 // RegExp
 // XXX note that _type(undefined) === 3!!!!
-isPlainObject = function (x) {
+isPlainObject = LocalCollection._isPlainObject = function (x) {
   return x && LocalCollection._f._type(x) === 3;
 };
 

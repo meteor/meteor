@@ -17,6 +17,7 @@ OAuth._pendingCredentials = new Meteor.Collection(
   });
 
 OAuth._pendingCredentials._ensureIndex('key', {unique: 1});
+OAuth._pendingCredentials._ensureIndex('credentialSecret');
 OAuth._pendingCredentials._ensureIndex('createdAt');
 
 
@@ -35,10 +36,13 @@ var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // Will throw an exception if `key` is not a string.
 //
 // @param key {string}
-// @param credential {string}   The credential to store
+// @param credential {Object}   The credential to store
+// @param credentialSecret {string} A secret that must be presented in
+//   addition to the `key` to retrieve the credential
 //
-OAuth._storePendingCredential = function (key, credential) {
+OAuth._storePendingCredential = function (key, credential, credentialSecret) {
   check(key, String);
+  check(credentialSecret, Match.Optional(String));
 
   if (credential instanceof Error) {
     credential = storableError(credential);
@@ -54,6 +58,7 @@ OAuth._storePendingCredential = function (key, credential) {
   }, {
     key: key,
     credential: credential,
+    credentialSecret: credentialSecret || null,
     createdAt: new Date()
   });
 };
@@ -62,11 +67,15 @@ OAuth._storePendingCredential = function (key, credential) {
 // Retrieves and removes a credential from the _pendingCredentials collection
 //
 // @param key {string}
+// @param credentialSecret {string}
 //
-OAuth._retrievePendingCredential = function (key) {
+OAuth._retrievePendingCredential = function (key, credentialSecret) {
   check(key, String);
 
-  var pendingCredential = OAuth._pendingCredentials.findOne({ key:key });
+  var pendingCredential = OAuth._pendingCredentials.findOne({
+    key: key,
+    credentialSecret: credentialSecret || null
+  });
   if (pendingCredential) {
     OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)

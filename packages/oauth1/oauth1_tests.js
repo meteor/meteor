@@ -47,13 +47,29 @@ var testPendingCredential = function (test) {
       url: "/_oauth/" + serviceName + "?close",
       query: {
         state: credentialToken,
-        oauth_token: twitterfooAccessToken
+        oauth_token: twitterfooAccessToken,
+        close: 1,
+        only_credential_secret_for_test: 1
       }
     };
-    OAuthTest.middleware(req, new http.ServerResponse(req));
+    var res = new http.ServerResponse(req);
+    var write = res.write;
+    var end = res.write;
+    var respData = "";
+    res.write = function (data, encoding, callback) {
+      respData += data;
+      return write.apply(this, arguments);
+    };
+    res.end = function (data) {
+      respData += data;
+      return end.apply(this, arguments);
+    };
+    OAuthTest.middleware(req, res);
+    var credentialSecret = respData;
 
     // Test that the result for the token is available
-    var result = OAuth._retrievePendingCredential(credentialToken);
+    var result = OAuth._retrievePendingCredential(credentialToken,
+                                                  credentialSecret);
     var serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
     test.equal(serviceData.id, twitterfooId);

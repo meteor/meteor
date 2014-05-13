@@ -91,7 +91,7 @@ _.extend(Runner.prototype, {
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
-    if (! self.quiet & ! self.stopped) {
+    if (! self.quiet && ! self.stopped) {
       runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
       runLog.log("=> Started proxy.");
     }

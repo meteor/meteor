@@ -474,7 +474,10 @@ _.extend(OplogObserveDriver.prototype, {
           return;
         self._currentlyFetching = null;
       }
-      self._beSteady();
+      // We're done fetching, so we can be steady, unless we've had a _pollQuery
+      // call (here or in another fiber).
+      if (self._phase !== PHASE.QUERYING)
+        self._beSteady();
     }));
   },
   _beSteady: function () {

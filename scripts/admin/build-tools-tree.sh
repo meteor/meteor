@@ -8,7 +8,7 @@
 set -e
 set -u
 
-cd `dirname $0`/../..
+cd "`dirname "$0"`"/../..
 
 if [ "$TARGET_DIR" == "" ] ; then
     echo 'Must set $TARGET_DIR'

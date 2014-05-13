@@ -54,17 +54,19 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);
 
+      var credentialSecret = Random.secret();
+
       // Store the login result so it can be retrieved in another
       // browser tab by the result handler
       OAuth._storePendingCredential(query.state, {
         serviceName: service.serviceName,
         serviceData: oauthResult.serviceData,
         options: oauthResult.options
-      });
+      }, credentialSecret);
     }
 
     // Either close the window, redirect, or render nothing
     // if all else fails
-    OAuth._renderOauthResults(res, query);
+    OAuth._renderOauthResults(res, query, credentialSecret);
   }
 };

@@ -1,3 +1,8 @@
+// credentialToken -> credentialSecret. You must provide both the
+// credentialToken and the credentialSecret to retrieve an access token from
+// the _pendingCredentials collection.
+var credentialSecrets = {};
+
 OAuth = {};
 
 // Open a popup window, centered on the screen, and call a callback when it
@@ -70,4 +75,24 @@ OAuth.initiateLogin = function (credentialToken, url, callback, dimensions) {
     _.bind(callback, null, credentialToken),
     dimensions
   );
+};
+
+// Called by the popup when the OAuth flow is completed, right before
+// the popup closes.
+OAuth._handleCredentialSecret = function (credentialToken, secret) {
+  check(credentialToken, String);
+  check(secret, String);
+  if (! _.has(credentialSecrets,credentialToken)) {
+    credentialSecrets[credentialToken] = secret;
+  } else {
+    throw new Error("Duplicate credential token from OAuth login");
+  }
+};
+
+// Used by accounts-oauth, which needs both a credentialToken and the
+// corresponding to credential secret to call the `login` method over DDP.
+OAuth._retrieveCredentialSecret = function (credentialToken) {
+  var secret = credentialSecrets[credentialToken];
+  delete credentialSecrets[credentialToken];
+  return secret;
 };

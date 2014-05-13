@@ -49,7 +49,7 @@ fi
 PLATFORM="${UNAME}_${ARCH}"
 
 # save off meteor checkout dir as final target
-cd `dirname $0`/..
+cd "`dirname "$0"`"/..
 TARGET_DIR=`pwd`
 
 # Read the bundle version from the meteor shell script.
@@ -71,12 +71,12 @@ umask 022
 mkdir build
 cd build
 
-git clone git://github.com/joyent/node.git
+git clone https://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.26
+git checkout v0.10.28
 
 ./configure --prefix="$DIR"
 make -j4

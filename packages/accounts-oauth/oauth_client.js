@@ -2,8 +2,12 @@
 // access in the popup this should log the user in, otherwise
 // nothing should happen.
 Accounts.oauth.tryLoginAfterPopupClosed = function(credentialToken, callback) {
+  var credentialSecret = OAuth._retrieveCredentialSecret(credentialToken) || null;
   Accounts.callLoginMethod({
-    methodArguments: [{oauth: {credentialToken: credentialToken}}],
+    methodArguments: [{oauth: {
+      credentialToken: credentialToken,
+      credentialSecret: credentialSecret
+    }}],
     userCallback: callback && function (err) {
       // Allow server to specify a specify subclass of errors. We should come
       // up with a more generic way to do this!

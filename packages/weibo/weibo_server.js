@@ -72,6 +72,6 @@ var getIdentity = function (accessToken, userId) {
   }
 };
 
-Weibo.retrieveCredential = function(credentialToken) {
-  return OAuth.retrieveCredential(credentialToken);
+Weibo.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

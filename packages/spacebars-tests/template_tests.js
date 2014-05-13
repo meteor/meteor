@@ -767,30 +767,40 @@ Tinytest.add('spacebars - templates - textarea each', function (test) {
 
 // Ensure that one can call `Meteor.defer` within a rendered callback
 // triggered by a document insertion that happend in a method stub.
+//
+// Why do we have this test? Because you generally can't call
+// `Meteor.defer` inside a method stub (see
+// packages/meteor/timers.js).  This test verifies that rendered
+// callbacks don't fire synchronously as part of a method stub.
 testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (test, expect) {
   var tmpl = Template.spacebars_template_test_defer_in_rendered;
-  var coll = new Meteor.Collection("test-defer-in-rendered--client-only");
+  var coll = new Meteor.Collection(null);
+
+  Meteor.methods({
+    spacebarsTestInsertEmptyObject: function () {
+      // cause a new instance of `subtmpl` to be placed in the
+      // DOM. verify that it's not fired directly within a method
+      // stub, in which `Meteor.defer` is not allowed.
+      coll.insert({});
+    }
+  });
+
   tmpl.items = function () {
     return coll.find();
   };
 
   var subtmpl = Template.spacebars_template_test_defer_in_rendered_subtemplate;
+
   subtmpl.rendered = expect(function () {
     // will throw if called in a method stub
-    Meteor.defer(function () {
-    });
+    Meteor.defer(function () {});
   });
-
+ 
   var div = renderToDiv(tmpl);
 
-  // `coll` is not defined on the server so we'll get an error.  We
-  // can't make this a client-only collection since then we won't be
-  // running in a stub and the error won't fire.
-  Meteor._suppress_log(1);
-  // cause a new instance of `subtmpl` to be placed in the DOM. verify
-  // that it's not fired directly within a method stub, in which
-  // `Meteor.defer` is not allowed.
-  coll.insert({});
+  // not defined on the server, but it's fine since the stub does
+  // the relevant work
+  Meteor.call("spacebarsTestInsertEmptyObject");
 }]);
 
 testAsyncMulti('spacebars - template - rendered template is DOM in rendered callbacks', [
@@ -1950,20 +1960,37 @@ Tinytest.add(
       return Session.get(sessionKey);
     };
 
+    var numUrlAttrs = 4;
     var div = renderToDiv(tmpl);
 
+    // [tag name, attr name, is a url attribute]
+    var attrsList = [["A", "href", true], ["FORM", "action", true],
+                     ["IMG", "src", true], ["INPUT", "value", false]];
+
     var checkAttrs = function (url, isJavascriptProtocol) {
+      if (isJavascriptProtocol) {
+        Meteor._suppress_log(numUrlAttrs);
+      }
       Session.set(sessionKey, url);
       Deps.flush();
       _.each(
-        // [tag name, attr name, is a url attribute]
-        [["A", "href", true], ["FORM", "action", true],
-         ["IMG", "src", true], ["INPUT", "value", false]],
+        attrsList,
         function (attrInfo) {
-
           var normalizedUrl;
           var elem = document.createElement(attrInfo[0]);
-          elem[attrInfo[1]] = url;
+          try {
+            elem[attrInfo[1]] = url;
+          } catch (err) {
+            // IE throws an exception if you set an img src to a
+            // javascript: URL. Blaze can't override this behavior;
+            // whether you've called UI._javascriptUrlsAllowed() or not,
+            // you won't be able to set a javascript: URL in an img
+            // src. So we only test img tags in other browsers.
+            if (attrInfo[0] === "IMG") {
+              return;
+            }
+            throw err;
+          }
           document.body.appendChild(elem);
           normalizedUrl = elem[attrInfo[1]];
           document.body.removeChild(elem);

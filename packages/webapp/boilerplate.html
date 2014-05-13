@@ -1,13 +1,13 @@
 <html {{htmlAttributes}}>
 <head>
-{{#each css}}  <link rel="stylesheet" href="{{bundledJsCssPrefix}}{{url}}">{{/each}}
+{{#each css}}  <link rel="stylesheet" href="{{../bundledJsCssPrefix}}{{url}}">{{/each}}
 
 {{#if inlineScriptsAllowed}}
 <script type='text/javascript'>__meteor_runtime_config__ = {{meteorRuntimeConfig}};</script>
 {{else}}
 <script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_runtime_config.js'></script>
 {{/if}}
-{{#each js}}  <script type="text/javascript" src="{{bundledJsCssPrefix}}{{url}}"></script>
+{{#each js}}  <script type="text/javascript" src="{{../bundledJsCssPrefix}}{{url}}"></script>
 {{/each}}
 {{#if inlineScriptsAllowed}}
 <script type='text/javascript'>{{{reloadSafetyBelt}}}</script>

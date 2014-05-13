@@ -89,7 +89,7 @@ main.SpringboardToLatestRelease = function () {};
 //   - can be a basic command, like "deploy"
 //   - can be a subcommand, like "admin grant"
 //     (distinguished by presence of ' ')
-//   - can be an option that functions as a command, ilke "--arch"
+//   - can be an option that functions as a command, like "--arch"
 //     (distinguished by starting with '--')
 // - minArgs: minimum non-option arguments that can be present (default 0)
 // - maxArgs: maximum non-option arguments that can be present (defaults to
@@ -354,7 +354,7 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.26';
+  var MIN_NODE_VERSION = 'v0.10.28';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     process.stderr.write(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');

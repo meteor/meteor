@@ -235,8 +235,10 @@ var UrlHandler = AttributeHandler.extend({
       var isJavascriptProtocol =
             (normalizeUrl(value).indexOf('javascript:') === 0);
       if (isJavascriptProtocol) {
-        Meteor._debug("javascript: URLs are not allowed. " +
-                      "Use UI._allowJavascriptUrls() to enable them.");
+        Meteor._debug("URLs that use the 'javascript:' protocol are not " +
+                      "allowed in URL attribute values. " +
+                      "Call UI._allowJavascriptUrls() " +
+                      "to enable them.");
         origUpdate.apply(self, [element, oldValue, null]);
       } else {
         origUpdate.apply(self, args);

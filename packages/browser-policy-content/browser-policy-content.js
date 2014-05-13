@@ -1,7 +1,8 @@
 // By adding this package, you get the following default policy:
 // No eval or other string-to-code, and content can only be loaded from the
 // same origin as the app (except for XHRs and websocket connections, which can
-// go to any origin).
+// go to any origin). Browsers will also be told not to sniff content types
+// away from declared content types (X-Content-Type-Options: nosniff).
 //
 // Apps should call BrowserPolicy.content.disallowInlineScripts() if they are
 // not using any inline script tags and are willing to accept an extra round
@@ -32,6 +33,8 @@
 // allowAllContentSameOrigin()
 // disallowAllContent()
 //
+// You can allow content type sniffing by calling
+// `BrowserPolicy.content.allowContentTypeSniffing()`.
 
 var cspSrcs;
 var cachedCsp; // Avoid constructing the header out of cspSrcs when possible.
@@ -43,6 +46,9 @@ var keywords = {
   self: "'self'",
   none: "'none'"
 };
+
+// If false, we set the X-Content-Type-Options header to 'nosniff'.
+var contentSniffingAllowed = false;
 
 BrowserPolicy.content = {};
 
@@ -126,6 +132,7 @@ var setDefaultPolicy = function () {
                                   "connect-src *; " +
                                   "img-src data: 'self'; " +
                                   "style-src 'self' 'unsafe-inline';");
+  contentSniffingAllowed = false;
 };
 
 var setWebAppInlineScripts = function (value) {
@@ -134,6 +141,9 @@ var setWebAppInlineScripts = function (value) {
 };
 
 _.extend(BrowserPolicy.content, {
+  allowContentTypeSniffing: function () {
+    contentSniffingAllowed = true;
+  },
   // Exported for tests and browser-policy-common.
   _constructCsp: function () {
     if (! cspSrcs || _.isEmpty(cspSrcs))
@@ -220,6 +230,12 @@ _.extend(BrowserPolicy.content, {
       "default-src": []
     };
     setWebAppInlineScripts(false);
+  },
+
+  _xContentTypeOptions: function () {
+    if (! contentSniffingAllowed) {
+      return "nosniff";
+    }
   }
 });
 

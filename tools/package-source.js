@@ -13,12 +13,6 @@ var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 
-// Like Perl's quotemeta: quotes all regexp metacharacters. See
-//   https://github.com/substack/quotemeta/blob/master/index.js
-var quotemeta = function (str) {
-  return String(str).replace(/(\W)/g, '\\$1');
-};
-
 // Given a semver version string, return the earliest semver for which
 // we are a replacement. This is used to compute the default
 // earliestCompatibleVersion.
@@ -1008,7 +1002,7 @@ _.extend(PackageSource.prototype, {
         var sourceInclude = _.map(
           extensions,
           function (isTemplate, ext) {
-            return new RegExp('\\.' + quotemeta(ext) + '$');
+            return new RegExp('\\.' + utils.quotemeta(ext) + '$');
           }
         );
         var sourceExclude = [/^\./].concat(ignoreFiles);
