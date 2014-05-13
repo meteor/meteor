@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('deps');
   api.use('underscore'); // only the subset in microscore.js
   api.use('htmljs');
+  api.use('jsclass');
   //api.use('observe-sequence');
 
   api.add_files([

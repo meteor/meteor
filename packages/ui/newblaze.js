@@ -10,3 +10,5 @@ _.extend(UI.body2, {
     });
   }
 });
+
+UI.Component2 = Blaze.Component;

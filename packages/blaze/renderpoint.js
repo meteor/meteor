@@ -1,8 +1,6 @@
 // RenderPoints must support being evaluated and/or createDOMRanged multiple
 // times.  They must not contain per-instance state.
-Blaze.RenderPoint = function () {};
-
-_.extend(Blaze.RenderPoint.prototype, {
+Blaze.RenderPoint = JSClass.create({
   render: function () {
     return null;
   },
@@ -22,16 +20,16 @@ _.extend(Blaze.RenderPoint.prototype, {
   }
 });
 
-Blaze.Isolate = function (func) {
-  if (! (this instanceof Blaze.Isolate))
-    // called without new
-    return new Blaze.Isolate(func);
+Blaze.Isolate = Blaze.RenderPoint.extend({
+  constructor: function (func) {
+    if (! (this instanceof Blaze.Isolate))
+      // called without new
+      return new Blaze.Isolate(func);
 
-  this.func = func;
-};
-__extends(Blaze.Isolate, Blaze.RenderPoint);
+    Blaze.Isolate.__super__.constructor.call(this);
 
-_.extend(Blaze.Isolate.prototype, {
+    this.func = func;
+  },
   render: function () {
     var func = this.func;
     return func();
@@ -42,21 +40,21 @@ _.extend(Blaze.Isolate.prototype, {
 });
 
 
-Blaze.List = function (funcSequence) {
-  var self = this;
+Blaze.List = Blaze.RenderPoint.extend({
+  constructor: function (funcSequence) {
+    var self = this;
 
-  if (! (self instanceof Blaze.List))
-    // called without `new`
-    return new Blaze.List(funcSequence);
+    if (! (self instanceof Blaze.List))
+      // called without `new`
+      return new Blaze.List(funcSequence);
 
-  if (! (funcSequence instanceof Blaze.Sequence))
-    throw new Error("Expected a Blaze.Sequence of functions in Blaze.List");
+    if (! (funcSequence instanceof Blaze.Sequence))
+      throw new Error("Expected a Blaze.Sequence of functions in Blaze.List");
 
-  self.funcSeq = funcSequence;
-};
-__extends(Blaze.List, Blaze.RenderPoint);
+    Blaze.List.__super__.constructor.call(this);
 
-_.extend(Blaze.List.prototype, {
+    self.funcSeq = funcSequence;
+  },
   render: function () {
     var funcSeq = this.funcSeq;
     this.funcSeq.depend();
