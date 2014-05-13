@@ -1,5 +1,8 @@
 var Future = require("fibers/future");
 var _ = require("underscore");
+var uniload = require("./uniload.js");
+
+var TIMEOUT_SEC = 15;
 
 // Wrapper to manage a connection to a DDP service. Provides failing
 // method calls and subscriptions if, after 10 seconds, we're not
@@ -14,6 +17,7 @@ var _ = require("underscore");
 var ServiceConnection = function (Package, endpointUrl, headers) {
   var self = this;
   self.Package = Package;
+  ensureConnectionTimeoutErrorDefined(Package.meteor.Meteor);
 
   var options = {};
   if (headers) {
@@ -30,7 +34,19 @@ var ServiceConnection = function (Package, endpointUrl, headers) {
       });
       self.connectionTimeoutCallbacks = [];
     }
-  }, 10*1000);
+  }, TIMEOUT_SEC*1000);
+};
+
+// can't run this at the top-level since we're not in a fiber
+ensureConnectionTimeoutErrorDefined = function (Meteor) {
+  if (! ServiceConnection.ConnectionTimeoutError) {
+    ServiceConnection.ConnectionTimeoutError = Meteor.makeErrorType(
+      "ServiceConnection.ConnectionTimeoutError", /*name*/
+      function () {
+        this.message = "ServiceConnection: Timeout after "
+          + TIMEOUT_SEC + " seconds";
+      } /*constructor*/);
+  }
 };
 
 _.extend(ServiceConnection.prototype, {
@@ -120,7 +136,5 @@ _.extend(ServiceConnection.prototype, {
     }
   }
 });
-
-ServiceConnection.ConnectionTimeoutError = function () {};
 
 module.exports = ServiceConnection;

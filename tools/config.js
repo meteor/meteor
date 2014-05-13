@@ -1,5 +1,6 @@
 var fs = require('fs');
 var path = require('path');
+var url = require('url');
 var files = require('./files.js');
 var _ = require('underscore');
 var tropohouse = require('./tropohouse.js');
@@ -133,6 +134,27 @@ _.extend(exports, {
       return localhostOffset(20);
     } else {
       return getUniverse().replace(/^www\./, 'test-packages.');
+    }
+  },
+
+  getPackageStatsServerUrl: function () {
+    if (process.env.METEOR_PACKAGE_STATS_SERVER_URL) {
+      return process.env.METEOR_PACKAGE_STATS_SERVER_URL;
+    }
+
+    var host = config.getPackageStatsServerDomain();
+    return addScheme(host);
+  },
+
+  getPackageStatsServerDomain: function () {
+    if (process.env.METEOR_PACKAGE_STATS_SERVER_URL) {
+      return url.parse(process.env.METEOR_PACKAGE_STATS_SERVER_URL).hostname;
+    }
+
+    if (isLocalUniverse()) {
+      return localhostOffset(30);
+    } else {
+      return getUniverse().replace(/^www\./, 'package-stats.');
     }
   },
 

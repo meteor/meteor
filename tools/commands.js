@@ -24,6 +24,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js').catalog;
 var serverCatalog = require('./catalog.js').serverCatalog;
+var stats = require('./stats.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -369,6 +370,8 @@ main.registerCommand({
 
   project.writeMeteorReleaseVersion(
     appPath, release.current.isCheckout() ? "none" : release.current.name);
+
+  project.ensureAppIdentifier(appPath);
 
   process.stderr.write(appPath + ": created");
   if (options.example && options.example !== appPath)
@@ -963,6 +966,8 @@ main.registerCommand({
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.generatePackageLoader(options.appDir);
+  stats.recordPackages(options.appDir);
+
   var bundleResult = bundler.bundle({
     appDir: options.appDir,
     packageLoader: loader,

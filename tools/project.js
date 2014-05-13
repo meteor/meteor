@@ -140,7 +140,8 @@ project.getDirectDependencies = function(appDir) {
   };
 };
 
-// Get a list of constraints from the .meteor/versions file.
+// Returns a map from package name to version from the .meteor/versions
+// file.
 project.getIndirectDependencies = function(appDir) {
   return project.processPerConstraintLines(getVersionsLines(appDir));
 };
@@ -315,4 +316,23 @@ project.removePackage = function (appDir, name) {
     return trimLine(line) === name;
   });
   writePackages(appDir, lines);
+};
+
+project.appIdentifierFile = function (appDir) {
+  return path.join(appDir, '.meteor', 'identifier');
+};
+
+project.getAppIdentifier = function (appDir) {
+  var identifierFile = project.appIdentifierFile(appDir);
+  if (fs.existsSync(identifierFile)) {
+    return fs.readFileSync(identifierFile, 'utf8');
+  } else {
+    throw new Error("Expected a file at " + identifierFile);
+  }
+};
+
+project.ensureAppIdentifier = function (appDir) {
+  var identifierFile = project.appIdentifierFile(appDir);
+  if (!fs.existsSync(identifierFile))
+    fs.writeFileSync(identifierFile, utils.randomToken());
 };

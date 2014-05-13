@@ -556,8 +556,10 @@ Fiber(function () {
   // search for packages.
 
   var appDir = files.findAppDir();
-  if (appDir)
+  if (appDir) {
     appDir = path.resolve(appDir);
+    project.ensureAppIdentifier(appDir);
+  }
   var packageDir = files.findPackageDir();
   if (packageDir)
     packageDir = path.resolve(packageDir);

@@ -11,6 +11,7 @@ var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
+var uniload = require('./uniload.js');
 
 var auth = exports;
 
@@ -426,19 +427,16 @@ var sendAuthorizeRequest = function (clientId, redirectUri, state) {
   // redirect for us, but instead issue the second request ourselves,
   // since request would pass our credentials along to the redirected
   // URL. See comments in http-helpers.js.
-  try {
-    var codeResult = httpHelpers.request({
-      url: authCodeUrl,
-      method: 'POST',
-      strictSSL: true,
-      useAuthHeader: true
-    });
-  } catch (e) {
-    return { error: 'no-account-server' };
-  }
+  var codeResult = httpHelpers.request({
+    url: authCodeUrl,
+    method: 'POST',
+    strictSSL: true,
+    useAuthHeader: true
+  });
+
   var response = codeResult.response;
   if (response.statusCode !== 302 || ! response.headers.location) {
-    return { error: 'access-denied' };
+    throw new Error('access-denied');
   }
 
   if (url.parse(response.headers.location).hostname !==
@@ -447,7 +445,7 @@ var sendAuthorizeRequest = function (clientId, redirectUri, state) {
     // presumably the oauth server is trying to interact with us (make
     // us log in, authorize the client, or something like that). We're
     // not a web browser so we can't participate in such things.
-    return { error: 'access-denied' };
+    throw new Error('access-denied');
   }
 
   return { location: response.headers.location };
@@ -464,8 +462,7 @@ var sendAuthorizeRequest = function (clientId, redirectUri, state) {
 //    in the Meteor session file on success
 // All options are required.
 //
-// Returns true if the login was successful, and an object with an
-// 'error' key otherwise.
+// Throws an error if the login is not successful.
 var oauthFlow = function (conn, options) {
   var crypto = require('crypto');
   var credentialToken = crypto.randomBytes(16).toString('hex');
@@ -476,36 +473,31 @@ var oauthFlow = function (conn, options) {
     credentialToken
   );
 
-  if (authorizeResult.error) {
-    return authorizeResult;
-  }
-
-  try {
-    var redirectResult = httpHelpers.request({
-      url: authorizeResult.location,
-      method: 'GET',
-      strictSSL: true
-    });
-  } catch (e) {
-    return { error: 'no-package-server' };
-  }
+  // XXX We're using a test-only flag here to just get the raw
+  // credential secret (instead of a bunch of code that communicates the
+  // credential secret somewhere else); this should be temporary until
+  // we give this a nicer name and make it not just test only.
+  var redirectResult = httpHelpers.request({
+    url: authorizeResult.location + '&only_credential_secret_for_test=1',
+    method: 'GET',
+    strictSSL: true
+  });
 
   var response = redirectResult.response;
   // 'access-denied' isn't exactly right because it's possible that the server
   // went down since our last request, but close enough.
 
   if (response.statusCode !== 200) {
-    return { error: 'access-denied' };
+    throw new Error('access-denied');
   }
 
   // XXX tokenId???
-  try {
-    var loginResult = conn.apply('login', [{
-      oauth: { credentialToken: credentialToken }
-    }], { wait: true });
-  } catch (err) {
-    return { error: 'login-failed' };
-  }
+  var loginResult = conn.apply('login', [{
+    oauth: {
+      credentialToken: credentialToken,
+      credentialSecret: response.body
+    }
+  }], { wait: true });
 
   if (loginResult.token && loginResult.id) {
     var data = readSessionData();
@@ -515,7 +507,7 @@ var oauthFlow = function (conn, options) {
     writeSessionData(data);
     return true;
   } else {
-    return { error: 'login-failed' };
+    throw new Error('login-failed');
   }
 };
 
@@ -546,14 +538,16 @@ var logInToGalaxy = function (galaxyName) {
   var session = crypto.randomBytes(16).toString('hex');
   var stateInfo = { session: session };
 
-  var authorizeResult = sendAuthorizeRequest(
-    galaxyClientId,
-    galaxyRedirect,
-    encodeURIComponent(JSON.stringify(stateInfo))
-  );
+  var authorizeResult;
 
-  if (authorizeResult.error) {
-    return authorizeResult;
+  try {
+    sendAuthorizeRequest(
+      galaxyClientId,
+      galaxyRedirect,
+      encodeURIComponent(JSON.stringify(stateInfo))
+    );
+  } catch (err) {
+    return { error: err.message };
   }
 
   // Ask the galaxy to log us in with our auth code.
@@ -1041,4 +1035,74 @@ exports.loggedInUsername = function () {
   return loggedIn(data) ? currentUsername(data) : false;
 };
 
-exports.oauthFlow = oauthFlow;
+// Given a ServiceConnection, log in with OAuth using Meteor developer
+// accounts. Assumes the user is already logged in to the developer
+// accounts server.
+exports.loginWithTokenOrOAuth = function (conn, url, domain, sessionType) {
+  var setUpOnReconnect = function () {
+    conn.onReconnect = function () {
+      conn.apply('login', [{
+        resume: auth.getSessionToken(domain)
+      }], { wait: true }, function () { });
+    };
+  };
+
+  var Package = uniload.load({
+    packages: [ 'meteor', 'livedata', 'mongo-livedata' ]
+  });
+
+  // Subscribe to the package server's service configurations so that we
+  // can get the OAuth client ID to kick off the OAuth flow.
+  var serviceConfigurations = new Package.meteor.Meteor.Collection(
+    'meteor_accounts_loginServiceConfiguration',
+    { connection: conn.connection }
+  );
+  var serviceConfigurationsSub = conn.
+        subscribeAndWait('meteor.loginServiceConfiguration');
+
+  var accountsConfiguration = serviceConfigurations.findOne({
+    service: 'meteor-developer'
+  });
+
+  if (! accountsConfiguration || ! accountsConfiguration.clientId) {
+    throw new Error('no-accounts-configuration');
+  }
+
+  var clientId = accountsConfiguration.clientId;
+  var loginResult;
+
+  // Try to log in with an existing login token, if we have one.
+  var existingToken = auth.getSessionToken(domain);
+  if (existingToken) {
+    try {
+      loginResult = conn.apply('login', [{
+        resume: existingToken
+      }], { wait: true });
+    } catch (err) {
+      // If we get a Meteor.Error, then we swallow it and go on to
+      // attempt an OAuth flow and get a new token. If it's not a
+      // Meteor.Error, then we leave it to the caller to handle.
+      if (! err instanceof Package.meteor.Meteor.Error) {
+        throw err;
+      }
+    }
+
+    if (loginResult && loginResult.token && loginResult.id) {
+      // Success!
+      setUpOnReconnect();
+      return;
+    }
+  }
+
+  // Either we didn't have an existing token, or it didn't work. Do an
+  // OAuth flow to log in.
+  var redirectUri = url + '/_oauth/meteor-developer?close';
+  loginResult = oauthFlow(conn, {
+    clientId: clientId,
+    redirectUri: redirectUri,
+    domain: domain,
+    sessionType: sessionType
+  });
+
+  setUpOnReconnect();
+};
