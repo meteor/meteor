@@ -60,11 +60,6 @@ var Catalog = function () {
   // developments.
   self.offline = null;
 
-  // When we put in local package overrides, save the old server records here,
-  // in case we ever want to refer to them. (for example, during publish time).
-  self.oldServerRecords = null;
-  self.oldServerBuilds = [];
-
   // Constraint solver using this catalog.
   self.resolver = null;
 };
@@ -119,7 +114,6 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
-    self.oldServerRecords = [];
     self._addLocalPackageOverrides(true /* setInitialized */);
 
     // Now we can include options.localPackageDirs. We do this
@@ -238,7 +232,6 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
-    self.oldServerRecords = [];
     if (allPackageData) {
       self._insertServerPackages(allPackageData);
     }
@@ -299,18 +292,13 @@ _.extend(Catalog.prototype, {
       if (_.has(self.effectiveLocalPackages, version.packageName)) {
         // Remove this one
         removedVersionIds[version._id] = true;
-        // Also, save a copy to the server records collection.
-        self.oldServerRecords.push(version);
         return false;
       }
       return true;
     });
 
     self.builds = _.filter(self.builds, function (build) {
-      if (! _.has(removedVersionIds, build.versionId))
-        return true;
-      self.oldServerBuilds.push(build);
-      return false;
+      return ! _.has(removedVersionIds, build.versionId);
     });
 
     self.packages = _.filter(self.packages, function (pkg) {
@@ -821,30 +809,6 @@ _.extend(Catalog.prototype, {
     return versionRecord;
   },
 
-  // Return the old server version of the information, so we can compare to see
-  // if we are overriding it with a local version of the information.
-  getOldServerVersion: function (name, version) {
-    var self = this;
-    self._requireInitialized();
-
-    var versionRecord =  _.findWhere(self.oldServerRecords, { packageName: name,
-                                                      version: version });
-    if (!versionRecord) {
-      return null;
-    }
-    return versionRecord;
-  },
-
-  // Return true if the record for this package name has ever existed on the
-  // server, before being overwritten by local overrides. (Return false if the
-  // local package is a new package)
-  recordExistOnServer: function (name) {
-    var self = this;
-    self._requireInitialized();
-
-    return !!(_.findWhere(self.oldServerRecords, { packageName: name }));
-  },
-
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
   getLatestVersion: function (name) {
@@ -914,16 +878,30 @@ _.extend(Catalog.prototype, {
 
   // Unlike the previous, this looks for a build which *precisely* matches the
   // given architectures string (joined with +). Also, it takes a versionRecord
-  // rather than name/version. Also, it looks at oldServerBuilds. OK, it's not
-  // much like the previous at all.
-  getOldBuildWithArchesString: function (versionRecord, archesString) {
+  // rather than name/version.
+  getBuildWithArchesString: function (versionRecord, archesString) {
     var self = this;
     self._requireInitialized();
 
-    return _.findWhere(self.oldServerBuilds,
+    return _.findWhere(self.builds,
                        { versionId: versionRecord._id,
                          architecture: archesString });
   }
 });
 
+
+// This is the catalog that's used to answer the specific question of "so what's
+// on the server?".  It does not contain any local catalogs.  Typically, we call
+// catalog.serverCatalog.refresh(true) to update data.json.
+catalog.serverCatalog = new Catalog();
+
+// This is the catalog that's used to actually drive the constraint solver: it
+// contains local packages, and since local packages always beat server
+// packages, it doesn't contain any information about the server version of
+// local packages. Typically, we call catalog.catalog.refresh() after doing a
+// sync-refresh of serverCatalog; since only serverCatalog does the sync
+// request, the two catalogs are not fighting over the data files on disk.
+//
+// XXX we haven't finished this refactoring yet so there are plenty of
+// catalog.catalog.refresh(true) calls
 catalog.catalog = new Catalog();

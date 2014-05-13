@@ -23,6 +23,7 @@ var PackageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js').catalog;
+var serverCatalog = require('./catalog.js').serverCatalog;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1590,7 +1591,7 @@ main.registerCommand({
     changed: { type: Boolean },
     'force-online': { type: Boolean },
     slow: { type: Boolean },
-    history: { type: Number },
+    history: { type: Number }
   },
   hidden: true
 }, function (options) {
@@ -1786,7 +1787,7 @@ main.registerCommand({
 }, function (options) {
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -1917,7 +1918,7 @@ main.registerCommand({
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
                 // that the contents are the same.
-                var oldVersion = catalog.getOldServerVersion(item, packageSource.version);
+                var oldVersion = serverCatalog.getVersion(item, packageSource.version);
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
@@ -1943,7 +1944,7 @@ main.registerCommand({
                                      compileResult: compileResult};
                   return;
                 } else {
-                  var existingBuild = catalog.getOldBuildWithArchesString(
+                  var existingBuild = serverCatalog.getBuildWithArchesString(
                     oldVersion,
                     compileResult.unipackage.architecturesString());
 
@@ -1995,7 +1996,7 @@ main.registerCommand({
   _.each(toPublish,
    function(prebuilt, name) {
      var opts = {
-       new: !catalog.recordExistOnServer(name)
+       new: !serverCatalog.getPackage(name)
      };
      process.stdout.write("Publishing package: " + name + "\n");
 
@@ -2026,7 +2027,7 @@ main.registerCommand({
 
   // Check if the release track exists. If it doesn't, need the create flag.
   if (!options.create) {
-    var trackRecord = catalog.getReleaseTrack(relConf.name);
+    var trackRecord = serverCatalog.getReleaseTrack(relConf.name);
     if (!trackRecord) {
       process.stderr.write('There is no release track named ' + relConf.name +
                            '. If you are creating a new track, use the --create flag. \n');
@@ -2051,7 +2052,7 @@ main.registerCommand({
   });
 
   // Get it back.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   process.stdout.write("Done! \n");
   return 0;

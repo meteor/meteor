@@ -111,8 +111,8 @@ tropohouse.downloadSpecifiedBuild = function (buildRecord) {
 //
 // XXX more precise error handling in offline case. maybe throw instead like
 // warehouse does.
-tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
-                                                            requiredArches) {
+tropohouse.maybeDownloadPackageForArchitectures = function (
+  versionInfo, requiredArches, justGetBuilds) {
   var packageName = versionInfo.packageName;
   var version = versionInfo.version;
 
@@ -142,6 +142,10 @@ tropohouse.maybeDownloadPackageForArchitectures = function (versionInfo,
     _.each(buildsToDownload, function (build) {
       tropohouse.downloadSpecifiedBuild(build);
     });
+  }
+
+  if (justGetBuilds) {
+    return;
   }
 
   var packageDir = tropohouse.packagePath(packageName, version);

@@ -11,7 +11,7 @@ var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
 var project = require('./project.js');
 var fs = require('fs');
-var catalog = require('./catalog.js').catalog;
+var catalog = require('./catalog.js');
 var main = exports;
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -304,7 +304,8 @@ var springboard = function (rel, releaseOverride) {
   // XXX split better
   tropohouse.maybeDownloadPackageForArchitectures(
     {packageName: rel.getToolsPackage(),
-     version: rel.getToolsVersion()}, [archinfo.host()]);
+     version: rel.getToolsVersion()},
+    [archinfo.host()]);
 
   // XXX support warehouse too
 
@@ -590,9 +591,13 @@ Fiber(function () {
   // If the --offline-catalog option is set, the catalog will be offline and
   // will never attempt to contact the server for more recent data. Otherwise,
   // the catalog will attempt to synchronize with the remote package server.
-  catalog.initialize({
+  catalog.catalog.initialize({
     bootstrapLocalPackageDirs: bootstrapPackageDirs,
     localPackageDirs: localPackageDirs,
+    offline: _.has(rawOptions, '--offline-catalog')
+  });
+  // XXX maybe only do this for commands that need it
+  catalog.serverCatalog.initialize({
     offline: _.has(rawOptions, '--offline-catalog')
   });
   // We need to delete the option or we will throw an error.
