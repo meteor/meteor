@@ -44,6 +44,8 @@ var Catalog = function () {
   self.builds = null;
   self.releaseTracks = null;
   self.releaseVersions = null;
+  // This is just one object.
+  self.defaultReleaseVersion = null;
 
   // Local directories to search for package source trees
   self.localPackageDirs = null;
@@ -232,6 +234,7 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
+    self.defaultReleaseVersion = null;
     if (allPackageData) {
       self._insertServerPackages(allPackageData);
     }
@@ -556,6 +559,10 @@ _.extend(Catalog.prototype, {
     self.builds.push.apply(self.builds, serverPackageData.builds);
     self.releaseTracks.push.apply(self.releaseTracks, serverPackageData.releaseTracks);
     self.releaseVersions.push.apply(self.releaseVersions, serverPackageData.releaseVersions);
+    if (serverPackageData.defaultReleaseVersions &&
+        serverPackageData.defaultReleaseVersions.length === 1) {
+      self.defaultReleaseVersion = serverPackageData.defaultReleaseVersions[0];
+    }
   },
 
   _requireInitialized: function () {
