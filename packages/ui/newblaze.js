@@ -32,5 +32,18 @@ UI.TemplateComponent = Blaze.Component.extend({
       return self.renderTemplate();
     }
   },
-  renderTemplate: function () { return null; }
+  renderTemplate: function () { return null; }, // override this
+  renderToDOM: function() {
+    var range = UI.TemplateComponent.__super__.renderToDOM.call(this);
+    if (this._eventMaps) {
+      _.each(this._eventMaps, function (m) {
+        range.addDOMAugmenter(new Blaze.EventAugmenter(m));
+      });
+    }
+    return range;
+  },
+  events: function (eventMap) {
+    this._eventMaps = (this._eventMaps || []);
+    this._eventMaps.push(eventMap);
+  }
 });
