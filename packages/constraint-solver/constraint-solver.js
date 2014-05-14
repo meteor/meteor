@@ -322,28 +322,27 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       var dependencies = state.dependencies;
       var constraints = state.constraints;
 
-      var minimalConstraint = {};
-      constraints.each(function (c) {
-        if (! _.has(minimalConstraint, c.name))
-          minimalConstraint[c.name] = c.version;
-        else if (semver.lt(c.version, minimalConstraint[c.name]))
-          minimalConstraint[c.name] = c.version;
-      });
-
       var cost = [0, 0, 0, 0];
 
       dependencies.each(function (dep) {
+        // XXX don't try to estimate transitive dependencies
+        if (! isRootDep[dep]) {
+          cost[MINOR] += 10000000;
+          return;
+        }
+
         if (_.has(prevSolMapping, dep)) {
           var prev = prevSolMapping[dep];
-          var prevVersionMatches = _.isEmpty(constraints.violatedConstraints(prev));
+          var prevVersionMatches =
+            _.isEmpty(constraints.violatedConstraints(prev));
 
           // if it matches, assume we would pick it and the cost doesn't
           // increase
           if (prevVersionMatches)
             return;
 
-          // XXX implement earliestMatchingVersionFor
-          var uv = constraints.earliestMatchingVersionFor(dep);
+          var uv =
+            constraints.earliestMatchingVersionFor(dep, self.resolver);
 
           // Cannot find anything compatible
           if (! uv) {
@@ -359,7 +358,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             semver.gte(prev.version, uv.earliestCompatibleVersion) ||
             semver.gte(uv.version, prev.earliestCompatibleVersion);
 
-          if (! isCompatible) {
+          if (! isCompatible || versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
           }
@@ -367,31 +366,19 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           cost[MAJOR] += versionsDistance;
         } else {
           var versions = self.resolver.unitsVersions[dep];
-          var latestFitting = null;
+          var latestMatching =
+            constraints.latestMatchingVersionFor(dep, self.resolver);
 
-          for (var i = versions.length - 1; i >= 0; i--) {
-            if (_.isEmpty(constraints.violatedConstraints(versions[i]))) {
-              latestFitting = versions[i];
-              break;
-            }
-          }
-
-          if (! latestFitting) {
+          if (! latestMatching) {
             cost[MEDIUM] = Infinity;
             return;
           }
 
           var latestDistance =
             semverToNum(self.resolver._latestVersion[dep]) -
-            semverToNum(latestFitting.version);
+            semverToNum(latestMatching.version);
 
-          if (isRootDep[dep]) {
-            cost[MEDIUM] += latestDistance;
-          } else {
-            // one of the transitive dependencies
-            cost[MINOR] += semverToNum(latestFitting.version) -
-              semverToNum(minimalConstraint[dep] || "0.0.0");
-          }
+          cost[MEDIUM] += latestDistance;
         }
       });
 

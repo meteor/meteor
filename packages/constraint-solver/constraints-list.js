@@ -1,4 +1,5 @@
 var mori = Npm.require('mori');
+var semver = Npm.require('semver');
 
 ////////////////////////////////////////////////////////////////////////////////
 // ConstraintsList
@@ -165,6 +166,66 @@ ConstraintSolver.ConstraintsList.prototype.exactDependenciesIntersection =
   });
 
   return newList;
+};
+
+ConstraintSolver.ConstraintsList.prototype._edgeMatchingVersionsFor =
+  function (dep, resolver) {
+  var self = this;
+
+  // earliest, latest and exact constraints found
+  var earliest = null;
+  var latest = null;
+  var exact = null;
+
+  self.forPackage(dep, function (c) {
+    if (c.exact)
+      exact = c;
+    if (exact)
+      return;
+
+    if (! earliest || semver.lt(c.version, earliest.version))
+      earliest = c;
+    if (! latest || semver.gt(c.version, latest.version))
+      latest = c;
+  });
+
+  // there is some exact constraint, the choice is obvious
+  if (exact) {
+    var uv = exact.getSatisfyingUnitVersion(resolver);
+    if (_.isEmpty(self.violatedConstraints(uv)))
+      return { earliest: uv, latest: uv };
+    else
+      return { earliest: null, latest: null };
+  }
+
+  var earliestUv = null;
+  var latestUv = null;
+
+  // The range of constraints is consistent and can have some matching uvs if
+  // both earliest and latest constraints have the same ecv
+  if (! earliest || earliest.earliestCompatibleVersion === latest.earliestCompatibleVersion) {
+    _.each(resolver.unitsVersions[dep], function (uv) {
+      if (earliest && latest)
+        if (! earliest.isSatisfied(uv) || ! latest.isSatisfied(uv))
+          return;
+      if (! earliestUv || semver.lt(uv.version, earliestUv.version))
+        earliestUv = uv;
+      if (! latestUv || semver.gt(uv.version, latestUv.version))
+        latestUv = uv;
+    });
+  }
+
+  return { earliest: earliestUv, latest: latestUv };
+};
+
+ConstraintSolver.ConstraintsList.prototype.earliestMatchingVersionFor =
+  function (dep, resolver) {
+  return this._edgeMatchingVersionsFor(dep, resolver).earliest;
+};
+
+ConstraintSolver.ConstraintsList.prototype.latestMatchingVersionFor =
+  function (dep, resolver) {
+  return this._edgeMatchingVersionsFor(dep, resolver).latest;
 };
 
 ConstraintSolver.ConstraintsList.prototype.toString = function (simple) {
