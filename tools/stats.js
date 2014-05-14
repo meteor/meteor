@@ -31,20 +31,31 @@ var recordPackages = function (appDir) {
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
   Fiber(function () {
-    var conn = connectToPackagesStatsServer();
+    try {
+      var conn = connectToPackagesStatsServer();
 
-    if (auth.isLoggedIn()) {
-      auth.loginWithTokenOrOAuth(
-        conn,
-        config.getPackageStatsServerUrl(),
-        config.getPackageStatsServerDomain(),
-        "package-stats-server"
-      );
+      if (auth.isLoggedIn()) {
+        try {
+          auth.loginWithTokenOrOAuth(
+            conn,
+            config.getPackageStatsServerUrl(),
+            config.getPackageStatsServerDomain(),
+            "package-stats-server"
+          );
+        } catch (err) {
+          // Do nothing. If we can't log in, we should continue and report
+          // stats anonymously.
+        }
+      }
+
+      conn.call("recordAppPackages",
+                project.getAppIdentifier(appDir),
+                packageList(appDir));
+    } catch (err) {
+      // Do nothing. A failure to record package stats shouldn't be
+      // visible to the end user and shouldn't affect whatever command
+      // they are running.
     }
-
-    conn.call("recordAppPackages",
-              project.getAppIdentifier(appDir),
-              packageList(appDir));
   }).run();
 };
 
