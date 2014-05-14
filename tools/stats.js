@@ -2,6 +2,7 @@ var Fiber = require("fibers");
 var _ = require("underscore");
 
 var config = require("./config.js");
+var files = require("./files.js");
 var uniload = require("./uniload.js");
 var project = require("./project.js");
 var auth = require("./auth.js");
@@ -54,6 +55,7 @@ var recordPackages = function () {
             "package-stats-server"
           );
         } catch (err) {
+          maybeLogError(err);
           // Do nothing. If we can't log in, we should continue and report
           // stats anonymously.
         }
@@ -63,11 +65,21 @@ var recordPackages = function () {
                 project.project.getAppIdentifier(),
                 packages);
     } catch (err) {
+      maybeLogError(err);
       // Do nothing. A failure to record package stats shouldn't be
       // visible to the end user and shouldn't affect whatever command
       // they are running.
     }
   }).run();
+};
+
+// Log an error only if we're running Meteor from a checkout
+var maybeLogError = function (err) {
+  if (files.inCheckout()) {
+    process.stderr.write("Failed to record package usage.\n");
+    process.stderr.write(err.stack || err);
+    process.stderr.write("\n\n");
+  }
 };
 
 // Used in a test (and can only be used against the testing packages
