@@ -67,7 +67,7 @@ _.extend(CodeGen.prototype, {
             throw new Error("#" + path[0] + " requires an argument");
 
           // `args` must exist (tag.args.length > 0)
-          var dataCode = self.codeGenInclusionArgs(tag.args);
+          var dataCode = self.codeGenInclusionArgs(tag.args) || 'null';
           // `content` must exist
           var contentBlock = (('content' in tag) ?
                               self.codeGenBlock(tag.content) : null);
@@ -86,18 +86,13 @@ _.extend(CodeGen.prototype, {
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
 
-          if (path.length !== 1) {
-            // path code may be reactive; wrap it
-            compCode = 'function () { return ' + compCode + '; }';
-          }
-
           var dataCode = self.codeGenInclusionArgs(tag.args);
           var content = (('content' in tag) ?
                          self.codeGenBlock(tag.content) : null);
           var elseContent = (('elseContent' in tag) ?
                              self.codeGenBlock(tag.elseContent) : null);
 
-          var includeArgs = [compCode];
+          var includeArgs = [compCode, dataCode || 'null'];
           if (content) {
             includeArgs.push(content);
             if (elseContent)
@@ -105,8 +100,8 @@ _.extend(CodeGen.prototype, {
           }
 
           var includeCode =
-                'Spacebars.include(' + includeArgs.join(', ') + ')';
-
+                'Blaze.Isolate(function () { return Spacebars.include2(' + includeArgs.join(', ') + '); })';
+          /*
           if (dataCode) {
             includeCode =
               'Spacebars.TemplateWith(function () { return ' +
@@ -118,7 +113,7 @@ _.extend(CodeGen.prototype, {
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
             includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
           }
-
+*/
           return BlazeTools.EmitCode(includeCode);
         }
       } else {
@@ -156,7 +151,7 @@ _.extend(CodeGen.prototype, {
       return builtInLexicals[path[1]];
     }
 
-    var args = [BlazeTools.toJSLiteral(path[0]), 'self2'];
+    var args = [BlazeTools.toJSLiteral(path[0]), 'self'];
     var lookupMethod = 'lookup';
     if (opts && opts.lookupTemplate && path.length === 1)
       lookupMethod = 'lookupTemplate';
