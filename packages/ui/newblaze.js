@@ -11,4 +11,26 @@ _.extend(UI.body2, {
   }
 });
 
-UI.Component2 = Blaze.Component;
+UI.TemplateComponent = Blaze.Component.extend({
+  constructor: function (dataFunc, contentFunc, elseFunc) {
+    UI.TemplateComponent.__super__.constructor.call(this);
+
+    if (dataFunc)
+      this.dataFunc = dataFunc;
+    if (contentFunc)
+      this.contentFunc = contentFunc;
+    if (elseFunc)
+      this.elseFunc = elseFunc;
+  },
+  render: function () {
+    var self = this;
+    if (self.dataFunc) {
+      return Blaze.With(self.dataFunc, function () {
+        return self.renderTemplate();
+      });
+    } else {
+      return self.renderTemplate();
+    }
+  },
+  renderTemplate: function () { return null; }
+});

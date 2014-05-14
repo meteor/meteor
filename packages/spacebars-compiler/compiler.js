@@ -48,7 +48,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
     {codegen: codegen})).visit(tree);
 
-  var code = '(function () { var self = this; ';
+  var code = '(function () { ';
   if (isTemplate) {
     // support `{{> UI.contentBlock}}` and `{{> UI.elseBlock}}` with
     // lexical scope by creating a local variable in the
@@ -59,7 +59,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     // XXX This should replace `var template` and `var self` and become
     // `var self`.  When we're compiling a render method for a component,
     // there is a "this," but otherwise, there isn't.
-    code += 'var self2 = this; ';
+    code += 'var self = this; ';
   }
   code += 'return ';
   code += BlazeTools.toJS(tree);

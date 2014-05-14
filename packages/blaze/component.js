@@ -69,13 +69,15 @@ Blaze.Component = Blaze.Controller.extend({
   finalize: function () {}
 });
 
-// XXX experimental.  Implements {{foo}} where `name` is "foo"
+// Implements {{foo}} where `name` is "foo"
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
 // If a function is found, it is bound to the object it
 // was found on.  Returns a function,
 // non-function value, or null.
-Blaze.lookup = function (name, component) {
+Blaze.lookup = function (name, component, options) {
+  var isTemplate = options && options.template;
+
   if (/^\./.test(name)) {
     // starts with a dot. must be a series of dots which maps to an
     // ancestor of the appropriate height.
@@ -98,6 +100,8 @@ Blaze.lookup = function (name, component) {
       };
     }
     return ret;
+  } else if (isTemplate && _.has(Template, name)) {
+    return Template[name];
   } else {
     var dataVar = Blaze.getCurrentDataVar();
     if (dataVar) {
@@ -110,9 +114,11 @@ Blaze.lookup = function (name, component) {
   }
 };
 
-// XXX obviously this needs to do more stuff
 Blaze.lookupTemplate = function (name, component) {
-  return Blaze.lookup(name, component);
+  var result = Blaze.lookup(name, component, {template:true});
+  if (! result)
+    throw new Error("No such template: " + name);
+  return result;
 };
 
 Blaze.getCurrentControllerOfType = function (type) {

@@ -1,5 +1,13 @@
 Spacebars = {};
 
+Spacebars.include2 = function (templateOrFunction, dataFunc, contentFunc, elseFunc) {
+  var template = Spacebars.call(templateOrFunction);
+  if (! (template instanceof Blaze.Component))
+    throw new Error("Expected template, found: " + template);
+
+  return new template.constructor(dataFunc, contentFunc, elseFunc);
+};
+
 // * `templateOrFunction` - template (component) or function returning a template
 // or null
 Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock) {
