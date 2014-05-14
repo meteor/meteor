@@ -3,7 +3,7 @@ PriorityQueue = function () {
   var compareArrays = function (a, b) {
     for (var i = 0; i < a.length; i++)
       if (a[i] !== b[i])
-        if (typeof a[i] === 'function')
+        if (a[i] instanceof Array)
           return compareArrays(a[i], b[i]);
         else
           return a[i] - b[i];

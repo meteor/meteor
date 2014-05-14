@@ -286,7 +286,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             } else {
               // compatible but possibly newer
               // prefer the version closest to the older solution
-              cost[MEDIUM] += versionsDistance;
+              cost[MAJOR] += versionsDistance;
               options.debug && console.log("root & compatible: ", uv.name, prev.version, "=>", uv.version)
             }
           } else {
@@ -303,7 +303,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           if (isRootDep[uv.name]) {
             // root dependency
             // preferably latest
-            cost[MAJOR] += latestDistance;
+            cost[MEDIUM] += latestDistance;
             options.debug && console.log("root: ", uv.name, "=>", uv.version)
           } else {
             // transitive dependency
@@ -322,13 +322,49 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       var dependencies = state.dependencies;
       var constraints = state.constraints;
 
+      var minimalConstraint = {};
+      constraints.each(function (c) {
+        if (! _.has(minimalConstraint, c.name))
+          minimalConstraint[c.name] = c.version;
+        else if (semver.lt(c.version, minimalConstraint[c.name]))
+          minimalConstraint[c.name] = c.version;
+      });
+
       var cost = [0, 0, 0, 0];
-      return cost;
 
       dependencies.each(function (dep) {
         if (_.has(prevSolMapping, dep)) {
-          // was used in previous solution
-          // XXX do something smart here
+          var prev = prevSolMapping[dep];
+          var prevVersionMatches = _.isEmpty(constraints.violatedConstraints(prev));
+
+          // if it matches, assume we would pick it and the cost doesn't
+          // increase
+          if (prevVersionMatches)
+            return;
+
+          // XXX implement earliestMatchingVersionFor
+          var uv = constraints.earliestMatchingVersionFor(dep);
+
+          // Cannot find anything compatible
+          if (! uv) {
+            cost[VMAJOR]++;
+            return;
+          }
+
+          var versionsDistance =
+            semverToNum(uv.version) -
+            semverToNum(prev.version);
+
+          var isCompatible =
+            semver.gte(prev.version, uv.earliestCompatibleVersion) ||
+            semver.gte(uv.version, prev.earliestCompatibleVersion);
+
+          if (! isCompatible) {
+            cost[VMAJOR]++;
+            return;
+          }
+
+          cost[MAJOR] += versionsDistance;
         } else {
           var versions = self.resolver.unitsVersions[dep];
           var latestFitting = null;
@@ -341,7 +377,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
 
           if (! latestFitting) {
-            cost[MAJOR] = Infinity;
+            cost[MEDIUM] = Infinity;
             return;
           }
 
@@ -350,11 +386,11 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             semverToNum(latestFitting.version);
 
           if (isRootDep[dep]) {
-            cost[MAJOR] += latestDistance;
+            cost[MEDIUM] += latestDistance;
           } else {
             // one of the transitive dependencies
-            // XXX should really be a distance from the earlies fitting
-            cost[MINOR] += latestDistance;
+            cost[MINOR] += semverToNum(latestFitting.version) -
+              semverToNum(minimalConstraint[dep] || "0.0.0");
           }
         }
       });
