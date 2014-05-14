@@ -328,6 +328,12 @@ Commands:
 
 See 'meteor help admin <command>' for details on an admin command.
 
+>>> admin make-bootstrap-tarballs
+Makes bootstrap tarballs
+Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
+
+For internal use only.
+
 
 >>> dummy
 Dummy command used for automated testing
@@ -339,13 +345,6 @@ Options:
   --email, -e  A required string option.
   --port, -p   A numeric option with a short alias.
   --changed    A boolean option.
-
-
->>> admin make-bootstrap-tarballs
-Makes bootstrap tarballs.
-Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
-
-For internal use only.
 
 
 >>> publish
