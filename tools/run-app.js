@@ -276,7 +276,7 @@ _.extend(AppProcess.prototype, {
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
-//   proxy
+//   proxy, dontRecordPackageUsage
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -335,6 +335,8 @@ var AppRunner = function (appDir, options) {
     options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
   self.noRestartBanner = options.noRestartBanner;
+  self.recordPackageUsage =
+    options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
 
   self.fiber = null;
   self.startFuture = null;
@@ -413,7 +415,9 @@ _.extend(AppRunner.prototype, {
       packageCache.packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    stats.recordPackages();
+    var loader = project.generatePackageLoader(self.appDir);
+    if (self.recordPackageUsage)
+      stats.recordPackages(self.appDir);
 
     var bundleResult = bundler.bundle({
       outputPath: bundlePath,

@@ -328,8 +328,14 @@ site + " is too long.\n" +
 // - site: site to deploy as
 // - settingsFile: file from which to read deploy settings (undefined
 //   to leave unchanged from previous deploy of the app, if any)
+// - recordPackageUsage: (defaults to true) if set to false, don't
+//   send information about packages used by this app to the package
+//   stats server.
 // - buildOptions: the 'buildOptions' argument to the bundler
 var bundleAndDeploy = function (options) {
+  if (options.recordPackageUsage === undefined)
+    options.recordPackageUsage = true;
+
   var site = canonicalizeSite(options.site);
   if (! site)
     return 1;
@@ -390,7 +396,11 @@ var bundleAndDeploy = function (options) {
 
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
-    stats.recordPackages();
+
+    var loader = project.generatePackageLoader(options.appDir);
+    if (options.recordPackageUsage)
+      stats.recordPackages(options.appDir);
+
     var bundleResult = bundler.bundle({
       outputPath: bundlePath,
       nodeModulesMode: "skip",

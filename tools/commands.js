@@ -931,7 +931,8 @@ main.registerCommand({
       appDir: testRunnerAppDir,
       site: options.deploy,
       settingsFile: options.settings,
-      buildOptions: buildOptions
+      buildOptions: buildOptions,
+      recordPackageUsage: false
     });
   } else {
     var runAll = require('./run-all.js');
@@ -948,7 +949,8 @@ main.registerCommand({
       rootUrl: process.env.ROOT_URL,
       mongoUrl: process.env.MONGO_URL,
       oplogUrl: process.env.MONGO_OPLOG_URL,
-      once: options.once
+      once: options.once,
+      recordPackageUsage: false
     });
   }
 
