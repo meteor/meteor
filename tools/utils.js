@@ -216,8 +216,6 @@ exports.parseConstraint = function (constraintString) {
 // XXX should unify this with utils.parseConstraint
 exports.splitConstraint = function (constraint) {
   var m = constraint.split("@");
-  if (! m)
-    throw new Error("Bad package spec: " + constraint);
   var ret = { package: m[0] };
   if (m.length > 1) {
     ret.constraint = m[1];

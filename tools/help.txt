@@ -341,11 +341,11 @@ Options:
   --changed    A boolean option.
 
 
->>> admin grant
-Grant a permission on an official service
-Usage: meteor admin grant [XXX]
+>>> admin make-bootstrap-tarballs
+Makes bootstrap tarballs.
+Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
 
-Not yet implemented
+For internal use only.
 
 
 >>> publish

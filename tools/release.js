@@ -160,16 +160,17 @@ release.usingRightReleaseForApp = function (appDir) {
 // Return the name of the latest release that is downloaded and ready
 // for use. May not be called when running from a checkout.
 release.latestDownloaded = function () {
-  // XXX update this for tropohouse
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
   // For self-test only.
   if (process.env.METEOR_TEST_LATEST_RELEASE)
     return process.env.METEOR_TEST_LATEST_RELEASE;
-  var ret = warehouse.latestRelease();
-  if (! ret)
-    throw new Error("no releases available?");
-  return ret;
+
+  var defaultRelease = catalog.serverCatalog.getDefaultReleaseVersion();
+  if (!defaultRelease) {
+    throw new Error("no latest release available?");
+  }
+  return defaultRelease.name + '@' + defaultRelease.version;
 };
 
 // Load a release and return it as a Release object without setting

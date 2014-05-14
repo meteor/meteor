@@ -10,12 +10,13 @@ var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
-var catalog = require('./catalog.js').catalog;
+var catalog = require('./catalog.js');
 var Unipackage = require('./unipackage.js').Unipackage;
 
-exports.Tropohouse = function (root) {
+exports.Tropohouse = function (root, catalog) {
   var self = this;
   self.root = root;
+  self.catalog = catalog;
 };
 
 // Return the directory containing our loaded collection of tools, releases and
@@ -34,7 +35,11 @@ var defaultWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor0");
 };
 
-exports.default = new exports.Tropohouse(defaultWarehouseDir());
+// The default tropohouse is on disk at defaultWarehouseDir() and knows not to
+// download local packages; you can make your own Tropohouse to override these
+// things.
+exports.default = new exports.Tropohouse(
+  defaultWarehouseDir(), catalog.catalog);
 
 _.extend(exports.Tropohouse.prototype, {
   // Return the directory within the warehouse that would contain downloaded
@@ -86,14 +91,14 @@ _.extend(exports.Tropohouse.prototype, {
   // check for contents.
   //
   // Returns null if the package name is lexographically invalid.
-  packagePath: function (packageName, version) {
+  packagePath: function (packageName, version, relative) {
     var self = this;
     if (! utils.validPackageName(packageName)) {
       return null;
     }
 
-    var loadPath = path.join(self.root, "packages", packageName, version);
-    return loadPath;
+    var relativePath = path.join("packages", packageName, version);
+    return relative ? relativePath : path.join(self.root, relativePath);
   },
 
   // Contacts the package server, downloads and extracts a tarball for a given
@@ -120,8 +125,10 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX more precise error handling in offline case. maybe throw instead like
   // warehouse does.
-  maybeDownloadPackageForArchitectures: function (versionInfo, requiredArches,
-                                                  justGetBuilds) {
+  //
+  // XXX this is kinda bogus right now and needs to be fixed when we actually
+  // get around to implement cross-linking (which is the point)
+  maybeDownloadPackageForArchitectures: function (versionInfo, requiredArches) {
     var self = this;
     var packageName = versionInfo.packageName;
     var version = versionInfo.version;
@@ -129,8 +136,18 @@ _.extend(exports.Tropohouse.prototype, {
     // If this package isn't coming from the package server (loaded from a
     // checkout, or from an app package directory), don't try to download it (we
     // already have it)
-    if (catalog.isLocalPackage(packageName))
+    if (self.catalog.isLocalPackage(packageName))
       return true;
+
+    var packageDir = self.packagePath(packageName, version);
+    if (fs.existsSync(packageDir)) {
+      // Package exists for this build, so we are good.
+
+      // XXX this doesn't actually work! the point of this whole thing is that
+      // you can fat-ify a package (eg, at deploy time) but this here assumes
+      // that once you write a package you'll never write it again.
+      return true;
+    }
 
     // Figure out what arches (if any) we have downloaded for this package
     // version already.
@@ -140,7 +157,7 @@ _.extend(exports.Tropohouse.prototype, {
     });
 
     if (archesToDownload.length) {
-      var buildsToDownload = catalog.getBuildsForArches(
+      var buildsToDownload = self.catalog.getBuildsForArches(
         packageName, version, archesToDownload);
       if (! buildsToDownload) {
         // XXX throw a special error instead?
@@ -150,30 +167,21 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
-      self.downloadSpecifiedBuild(build);
+        self.downloadSpecifiedBuild(build);
       });
     }
 
-    if (justGetBuilds) {
-      return;  // XXX use this return value when we actually call it
-    }
-
-    var packageDir = self.packagePath(packageName, version);
-    if (fs.existsSync(packageDir)) {
-      // Package exists for this build, so we are good.
-    } else {
-      // We need to turn our builds into a unipackage.
-      var unipackage = new Unipackage;
-      var builds = self.downloadedBuilds(packageName, version);
-      _.each(builds, function (build, i) {
-        unipackage._loadBuildsFromPath(
-          packageName,
-          self.downloadedBuildPath(packageName, version, build),
-          {firstUnipackage: i === 0});
-      });
-      // XXX save new buildinfo stuff so it auto-rebuilds
-      unipackage.saveToPath(packageDir);
-    }
+    // We need to turn our builds into a unipackage.
+    var unipackage = new Unipackage;
+    var builds = self.downloadedBuilds(packageName, version);
+    _.each(builds, function (build, i) {
+      unipackage._loadBuildsFromPath(
+        packageName,
+        self.downloadedBuildPath(packageName, version, build),
+        {firstUnipackage: i === 0});
+    });
+    // XXX save new buildinfo stuff so it auto-rebuilds
+    unipackage.saveToPath(packageDir);
 
     return true;
   }

@@ -471,10 +471,12 @@ files.mkdtemp = function (prefix) {
   return dir;
 };
 
-cleanup.onExit(function (sig) {
-  _.each(tempDirs, files.rm_recursive);
-  tempDirs = [];
-});
+if (!process.env.METEOR_SAVE_TMPDIRS) {
+  cleanup.onExit(function (sig) {
+    _.each(tempDirs, files.rm_recursive);
+    tempDirs = [];
+  });
+}
 
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and

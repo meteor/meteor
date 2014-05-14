@@ -219,13 +219,13 @@ _.extend(Catalog.prototype, {
       allPackageData = packageClient.updateServerPackageData(localData);
       if (! allPackageData) {
         // If we couldn't contact the package server, use our local data.
-        allPackageData = localData.collections;
+        allPackageData = localData;
         // XXX should do some nicer error handling here (return error to
         // caller and let them handle it?)
         process.stderr.write("Warning: could not connect to package server\n");
       }
     } else {
-      allPackageData = localData.collections;
+      allPackageData = localData;
     }
 
     self.initialized = false;
@@ -235,7 +235,7 @@ _.extend(Catalog.prototype, {
     self.releaseTracks = [];
     self.releaseVersions = [];
     self.defaultReleaseVersion = null;
-    if (allPackageData) {
+    if (allPackageData && allPackageData.collections) {
       self._insertServerPackages(allPackageData);
     }
     self._addLocalPackageOverrides(true /* setInitialized */);
@@ -554,14 +554,15 @@ _.extend(Catalog.prototype, {
   _insertServerPackages: function (serverPackageData) {
     var self = this;
 
-    self.packages.push.apply(self.packages, serverPackageData.packages);
-    self.versions.push.apply(self.versions, serverPackageData.versions);
-    self.builds.push.apply(self.builds, serverPackageData.builds);
-    self.releaseTracks.push.apply(self.releaseTracks, serverPackageData.releaseTracks);
-    self.releaseVersions.push.apply(self.releaseVersions, serverPackageData.releaseVersions);
-    if (serverPackageData.defaultReleaseVersions &&
-        serverPackageData.defaultReleaseVersions.length === 1) {
-      self.defaultReleaseVersion = serverPackageData.defaultReleaseVersions[0];
+    var collections = serverPackageData.collections;
+
+    _.each(
+      ['packages', 'versions', 'builds', 'releaseTracks', 'releaseVersions'],
+      function (field) {
+        self[field].push.apply(self[field], collections[field]);
+      });
+    if (serverPackageData.defaultReleaseVersion) {
+      self.defaultReleaseVersion = serverPackageData.defaultReleaseVersion;
     }
   },
 
@@ -893,6 +894,27 @@ _.extend(Catalog.prototype, {
     return _.findWhere(self.builds,
                        { versionId: versionRecord._id,
                          architecture: archesString });
+  },
+
+  getAllBuilds: function (name, version) {
+    var self = this;
+    self._requireInitialized();
+
+    var versionRecord = self.getVersion(name, version);
+    if (!versionRecord)
+      return null;
+
+    return _.where(self.builds, { versionId: versionRecord._id });
+  },
+
+  getDefaultReleaseVersion: function () {
+    var self = this;
+    self._requireInitialized();
+
+    if (!self.defaultReleaseVersion) {
+      self.refresh(true);
+    }
+    return self.defaultReleaseVersion;
   }
 });
 

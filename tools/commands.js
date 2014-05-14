@@ -25,6 +25,7 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js').catalog;
 var serverCatalog = require('./catalog.js').serverCatalog;
 var stats = require('./stats.js');
+var unipackage = require('./unipackage.js');
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -1573,9 +1574,123 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'admin grant'
+  name: 'admin make-bootstrap-tarballs',
+  minArgs: 2,
+  maxArgs: 2,
+  hidden: true
 }, function (options) {
-  process.stderr.write("'admin grant' command not implemented yet\n");
+  var releaseNameAndVersion = options.args[0];
+  var outputDirectory = options.args[1];
+
+  serverCatalog.refresh(true);
+
+  var parsed = utils.splitConstraint(releaseNameAndVersion);
+  if (!parsed.constraint)
+    throw new main.ShowUsage;
+
+  var release = serverCatalog.getReleaseVersion(parsed.package,
+                                                parsed.constraint);
+  if (!release) {
+    // XXX this could also mean package unknown.
+    process.stderr.write('Release unknown: ' + releaseNameAndVersion + '\n');
+    return 1;
+  }
+
+  var toolPkg = release.tool && utils.splitConstraint(release.tool);
+  if (! (toolPkg && toolPkg.constraint))
+    throw new Error("bad tool in release: " + toolPkg);
+  var toolPkgBuilds = serverCatalog.getAllBuilds(
+    toolPkg.package, toolPkg.constraint);
+  if (!toolPkgBuilds) {
+    // XXX this could also mean package unknown.
+    process.stderr.write('Tool version unknown: ' + release.tool + '\n');
+    return 1;
+  }
+  if (!toolPkgBuilds.length) {
+    process.stderr.write('Tool version has no builds: ' + release.tool + '\n');
+    return 1;
+  }
+
+  // XXX check to make sure this is the three arches that we want? it's easier
+  // during 0.9.0 development to allow it to just decide "ok, i just want to
+  // build the OSX tarball" though.
+  var buildArches = _.pluck(toolPkgBuilds, 'architecture');
+  var osArches = _.map(buildArches, function (buildArch) {
+    var subArches = buildArch.split('+');
+    var osArches = _.filter(subArches, function (subArch) {
+      return subArch.substr(0, 3) === 'os.';
+    });
+    if (osArches.length !== 1) {
+      throw Error("build architecture " + buildArch + "  lacks unique os.*");
+    }
+    return osArches[0];
+  });
+
+  process.stderr.write(
+    'Building bootstrap tarballs for architectures ' +
+      osArches.join(', ') + '\n');
+  // Before downloading anything, check that the catalog contains everything we
+  // need for the OSes that the tool is built for.
+  _.each(osArches, function (osArch) {
+    _.each(release.packages, function (pkgVersion, pkgName) {
+      if (!serverCatalog.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
+        throw Error("missing build of " + pkgName + "@" + pkgVersion +
+                    " for " + osArch);
+      }
+    });
+  });
+
+  files.mkdir_p(outputDirectory);
+
+  _.each(osArches, function (osArch) {
+    var tmpdir = files.mkdtemp();
+    // We're going to build and tar up a tropohouse in a temporary directory; we
+    // don't want to use any of our local packages, so we use serverCatalog
+    // instead of catalog.
+    // XXX update to '.meteor' when we combine houses
+    var tmpTropo = new tropohouse.Tropohouse(
+      path.join(tmpdir, '.meteor0'), serverCatalog);
+    tmpTropo.maybeDownloadPackageForArchitectures(
+      {packageName: toolPkg.package, version: toolPkg.constraint},
+      [osArch]);  // XXX 'browser' too?
+    _.each(release.packages, function (pkgVersion, pkgName) {
+      tmpTropo.maybeDownloadPackageForArchitectures(
+        {packageName: pkgName, version: pkgVersion},
+        [osArch]);  // XXX 'browser' too?
+    });
+
+    // Delete the downloaded-builds directory which basically just has a second
+    // copy of everything.  I think it's OK if the first time we try to deploy
+    // to Linux from Mac, it has to download a bunch of stuff.  (Alternatively,
+    // we could actually always include Linux64 in the bootstrap tarball, but
+    // meh.)
+    // XXX it's not like cross-linking even works yet anyway
+    files.rm_recursive(path.join(tmpTropo.root, 'downloaded-builds'));
+
+    // XXX should we include some sort of preliminary package-metadata as well?
+    // maybe with a defaultReleaseVersion of the release we are using?
+
+    // Create the top-level 'meteor' symlink, which links to the latest tool's
+    // meteor shell script.
+    var toolUnipackagePath =
+          tmpTropo.packagePath(toolPkg.package, toolPkg.constraint);
+    var toolUnipackage = new unipackage.Unipackage;
+    toolUnipackage.initFromPath(toolPkg.package, toolUnipackagePath);
+    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk, {arch: osArch});
+    if (!toolRecord)
+      throw Error("missing tool for " + osArch);
+    fs.symlinkSync(
+      path.join(
+        tmpTropo.packagePath(toolPkg.package, toolPkg.constraint, true),
+        toolRecord.path,
+        'meteor'),
+      path.join(tmpTropo.root, 'meteor'));
+
+    files.createTarball(
+      tmpTropo.root,
+      path.join(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
+  });
+
   return 0;
 });
 
@@ -1763,10 +1878,10 @@ main.registerCommand({
   // such as the version lock file, something has gone terribly wrong and we
   // should throw.
   packageSource.initFromPackageDir(options.name, packageDir, true /* immutable */);
-  var unipackage = compiler.compile(packageSource, {
+  var unipkg = compiler.compile(packageSource, {
     officialBuild: true
   }).unipackage;
-  unipackage.saveToPath(path.join(packageDir, '.build.' + packageSource.name));
+  unipkg.saveToPath(path.join(packageDir, '.build.' + packageSource.name));
 
   var conn;
   try {
@@ -1787,7 +1902,7 @@ main.registerCommand({
   options: {
     config: { type: String, required: true },
     create: { type: Boolean, required: false },
-    fromCheckout: { type: Boolean, required: false }
+    'from-checkout': { type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -1832,7 +1947,7 @@ main.registerCommand({
   // option is not very useful outside of MDG. Right now, to run this option on
   // a non-MDG fork of meteor, someone would probably need to go through and
   // change the package names to have proper prefixes, etc.
-  if (options.fromCheckout) {
+  if (options['from-checkout']) {
     // You must be running from checkout to bundle up your checkout as a release.
     if (!files.inCheckout()) {
       process.stderr.write("Must run from checkout to make release from checkout. \n");
@@ -1856,7 +1971,7 @@ main.registerCommand({
     // these by accident. So, we will disallow it for now.
     if (relConf.packages || relConf.tool) {
       process.stderr.write(
-        "Setting the --fromCheckout option will use the tool & packages in your meteor " +
+        "Setting the --from-checkout option will use the tool & packages in your meteor " +
         "checkout. \n" +
         "Your release configuration file should not contain that information.");
       return 1;

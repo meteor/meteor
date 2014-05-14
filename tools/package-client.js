@@ -134,28 +134,15 @@ var mergeCollections = function (sources) {
   return ret;
 };
 
-// Writes the cached package data to the on-disk cache. Takes in the following
-// arguments:
-// - syncToken : the token representing our conversation with the server, that
-//   we can later use to get a diff of this cache and the new server-side data.
-// - collectionData : a javascript object representing the data we have about
-//   packages on the server, with collection names as keys and arrays of those
-//   collection records as values.
+// Writes the cached package data to the on-disk cache.
 //
 // Returns nothing, but
 // XXXX: Does what on errors?
-var writePackageDataToDisk = function (syncToken, collectionData) {
-  var finalWrite = {};
-  finalWrite.syncToken = syncToken;
-  finalWrite.formatVersion = "1.0";
-  finalWrite.collections = {};
-  _.forEach(collectionData, function(coll, name) {
-    finalWrite.collections[name] = coll;
-  });
+var writePackageDataToDisk = function (syncToken, data) {
   var filename = config.getPackageStorage();
   // XXX think about permissions?
   files.mkdir_p(path.dirname(filename));
-  files.writeFileAtomically(filename, JSON.stringify(finalWrite, null, 2));
+  files.writeFileAtomically(filename, JSON.stringify(data, null, 2));
 };
 
 // Contacts the package server to get the latest diff and writes changes to
@@ -185,9 +172,15 @@ exports.updateServerPackageData = function (cachedServerData) {
   }
   sources.push(remoteData.collections);
 
-  var allPackageData = mergeCollections(sources);
-  writePackageDataToDisk(remoteData.syncToken, allPackageData);
-  return allPackageData;
+  var allCollections = mergeCollections(sources);
+  var data = {
+    syncToken: remoteData.syncToken,
+    formatVersion: "1.0",
+    defaultReleaseVersion: remoteData.defaultReleaseVersion,
+    collections: allCollections
+  };
+  writePackageDataToDisk(remoteData.syncToken, data);
+  return data;
 };
 
 // Returns a logged-in DDP connection to the package server, or null if
