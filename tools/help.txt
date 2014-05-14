@@ -349,8 +349,7 @@ For internal use only.
 
 
 >>> publish
-Publish a new version of a package, as specified in your package.js file
-to the meteor package server.
+Publish a new version of a package to the package server
 
 Usage: meteor publish [--create]
 
@@ -358,7 +357,7 @@ Pass --create to create a new package.
 
 
 >>> list-sites
-List sites for which you are authorized.
+List sites for which you are authorized
 Usage: meteor list-sites
 
 List the sites that you have deployed with 'meteor deploy', and sites
@@ -366,7 +365,7 @@ for which other users have authorized you with the 'meteor authorized'
 command.
 
 >>> publish-release
-Publish a new release.
+Publish a new release
 Usage: meteor publish-release --config <release.json>
 
 Publish a new release.
