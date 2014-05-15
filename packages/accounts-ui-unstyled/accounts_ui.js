@@ -2,12 +2,13 @@ Accounts.ui = {};
 
 Accounts.ui._options = {
   requestPermissions: {},
-  requestOfflineToken: {}
+  requestOfflineToken: {},
+  forceApprovalPrompt: {}
 };
 
 Accounts.ui.config = function(options) {
   // validate options keys
-  var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken'];
+  var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken', 'forceApprovalPrompt'];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key))
       throw new Error("Accounts.ui.config: Invalid key: " + key);
@@ -56,9 +57,22 @@ Accounts.ui.config = function(options) {
       }
     });
   }
+
+  // deal with `forceApprovalPrompt`
+  if (options.forceApprovalPrompt) {
+    _.each(options.forceApprovalPrompt, function (value, service) {
+      if (service !== 'google')
+        throw new Error("Accounts.ui.config: `forceApprovalPrompt` only supported for Google login at the moment.");
+
+      if (Accounts.ui._options.forceApprovalPrompt[service]) {
+        throw new Error("Accounts.ui.config: Can't set `forceApprovalPrompt` more than once for " + service);
+      } else {
+        Accounts.ui._options.forceApprovalPrompt[service] = value;
+      }
+    });
+  }
 };
 
 passwordSignupFields = function () {
   return Accounts.ui._options.passwordSignupFields || "EMAIL_ONLY";
 };
-

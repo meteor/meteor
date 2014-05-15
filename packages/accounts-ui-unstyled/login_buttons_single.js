@@ -29,6 +29,8 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
       options.requestPermissions = Accounts.ui._options.requestPermissions[serviceName];
     if (Accounts.ui._options.requestOfflineToken[serviceName])
       options.requestOfflineToken = Accounts.ui._options.requestOfflineToken[serviceName];
+    if (Accounts.ui._options.forceApprovalPrompt[serviceName])
+      options.forceApprovalPrompt = Accounts.ui._options.forceApprovalPrompt[serviceName];
 
     loginWithService(options, callback);
   }
