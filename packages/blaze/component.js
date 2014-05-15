@@ -35,6 +35,9 @@ Blaze.Controller = Blaze.RenderPoint.extend({
     self.domrange = range;
     return range;
   },
+  // Don't call renderToDOM from the outside; just override it
+  // if you need to.  Call createDOMRange instead, which sets
+  // up the pointers between the range and the controller.
   renderToDOM: function () {
     return new Blaze.DOMRange(Blaze.toDOM(this.render()));
   }
@@ -58,6 +61,8 @@ Blaze.Component = Blaze.Controller.extend({
     if (self.domrange)
       throw new Error("Can't render a Component twice!");
 
+    // Note that this will reactively re-render the result
+    // of the render() method.
     var range = Blaze.render(function () {
       return self.render();
     });

@@ -1,7 +1,7 @@
 // render and put in the document
 var renderToDiv = function (comp) {
   var div = document.createElement("DIV");
-  UI.materialize(comp, div);
+  Blaze.renderComponent(comp, div);
   return div;
 };
 
