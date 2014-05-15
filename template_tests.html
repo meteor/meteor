@@ -726,3 +726,13 @@ Hi there!
   <img src="{{foo}}" />
   <input value="{{foo}}" />
 </template>
+
+<template name="spacebars_test_event_handler_cleanup">
+  {{#if foo}}
+    {{>spacebars_test_event_handler_cleanup_sub}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_event_handler_cleanup_sub">
+  <div></div>
+</template>
