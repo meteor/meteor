@@ -6,6 +6,9 @@ var _onstopForRender = function () {
 
 Blaze.RenderController = Blaze.Controller.extend();
 
+// Takes a function that returns HTMLjs and returns a DOMRange.
+// The function will be reactively re-run.  The resulting DOMRange
+// may be attached to the DOM using `.attach(parentElement, [nextNode])`.
 Blaze.render = function (func) {
   var range = new Blaze.DOMRange;
   var controller = Blaze.currentController;
@@ -24,6 +27,33 @@ Blaze.render = function (func) {
   // (from the app via a "finalize" API call; when the
   // range is removed from the DOM?)
   return range;
+};
+
+// Instantiate a component class or a template like Template.foo
+// (with no arguments), render it to DOM, and optionally
+// attach it under parentElement.  Returns the component instance.
+// If you want the DOMRange, use `.domrange` on the return value.
+Blaze.renderComponent = function (constructorOrPrototype, parentElement, nextNode) {
+  var controller = Blaze.currentController;
+  if (! controller)
+    controller = new Blaze.RenderController;
+
+  var constructor = constructorOrPrototype;
+  if (typeof constructor !== 'function') {
+    constructor = constructorOrPrototype.constructor;
+    if (! (constructor && constructor.prototype === constructorOrPrototype))
+      throw new Error("Expected prototype, found: " + constructor);
+  }
+
+  var range = Blaze.withCurrentController(controller, function () {
+    return (new constructor).createDOMRange();
+  });
+
+  if (parentElement) {
+    range.attach(parentElement, nextNode);
+  }
+
+  return range.controller;
 };
 
 Blaze.renderList = function (funcSequence) {

@@ -20,7 +20,7 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
     this._memberIn(members[i]);
 
   this.members = members;
-  this.placeholderComment = null;
+  this.emptyRangePlaceholder = null;
   this.attached = false;
   this.parentElement = null;
   this.parentRange = null;
@@ -75,14 +75,14 @@ _.extend(Blaze.DOMRange.prototype, {
     // updating the DOM.
     var members = this.members;
     if (members.length) {
-      this.placeholderComment = null;
+      this.emptyRangePlaceholder = null;
       for (var i = 0; i < members.length; i++) {
         Blaze.DOMRange.attach(members[i], parentElement, nextNode);
       }
     } else {
-      var comment = document.createComment("empty");
-      this.placeholderComment = comment;
-      parentElement.insertBefore(comment, nextNode || null);
+      var placeholder = document.createTextNode("");
+      this.emptyRangePlaceholder = placeholder;
+      parentElement.insertBefore(placeholder, nextNode || null);
     }
     this.attached = true;
     this.parentElement = parentElement;
@@ -122,7 +122,7 @@ _.extend(Blaze.DOMRange.prototype, {
       throw new Error("Must be attached");
 
     if (! this.members.length)
-      return this.placeholderComment;
+      return this.emptyRangePlaceholder;
 
     var m = this.members[0];
     return (m instanceof Blaze.DOMRange) ? m.firstNode() : m;
@@ -132,7 +132,7 @@ _.extend(Blaze.DOMRange.prototype, {
       throw new Error("Must be attached");
 
     if (! this.members.length)
-      return this.placeholderComment;
+      return this.emptyRangePlaceholder;
 
     var m = this.members[this.members.length - 1];
     return (m instanceof Blaze.DOMRange) ? m.lastNode() : m;
@@ -148,9 +148,9 @@ _.extend(Blaze.DOMRange.prototype, {
         Blaze.DOMRange.detach(members[i]);
       }
     } else {
-      var comment = this.placeholderComment;
-      this.parentElement.removeChild(comment);
-      this.placeholderComment = null;
+      var placeholder = this.emptyRangePlaceholder;
+      this.parentElement.removeChild(placeholder);
+      this.emptyRangePlaceholder = null;
     }
     this.attached = false;
     this.parentElement = null;
