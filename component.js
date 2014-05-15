@@ -69,6 +69,14 @@ Blaze.Component = Blaze.Controller.extend({
   finalize: function () {}
 });
 
+Blaze._bindIfIsFunction = function (x, target) {
+  if (typeof x !== 'function')
+    return x;
+  return function () {
+    return x.apply(target, arguments);
+  };
+};
+
 // Implements {{foo}} where `name` is "foo"
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
@@ -93,13 +101,21 @@ Blaze.lookup = function (name, component, options) {
     return (theWith ? theWith.dataVar.get() : null);
 
   } else if (component && (name in component)) {
-    var ret = component[name];
-    if (typeof ret === 'function') {
-      ret = function () {
-        return component[name].apply(component, arguments);
+    // Implement "old this"
+    var result = component[name];
+    if (typeof result === 'function') {
+      result = function () {
+        var dataVar = Blaze.getCurrentDataVar();
+        var data = dataVar && dataVar.get();
+        if (data == null)
+          data = {};
+        return component[name].apply(data, arguments);
       };
     }
-    return ret;
+    return result;
+
+    // "New this"
+    //return Blaze._bindIfIsFunction(component[name], component);
   } else if (isTemplate && _.has(Template, name)) {
     return Template[name];
   } else {
@@ -107,7 +123,7 @@ Blaze.lookup = function (name, component, options) {
     if (dataVar) {
       var data = dataVar.get();
       if (data) {
-        return data[name];
+        return Blaze._bindIfIsFunction(data[name], data);
       }
     }
     return null;
@@ -147,7 +163,31 @@ Blaze.getParentControllerOfType = function (controller, type) {
   return null;
 };
 
+Blaze.getElementController = function (elem) {
+  var range = Blaze.DOMRange.forElement(elem);
+  var controller = null;
+  while (range && ! controller) {
+    controller = (range.controller || null);
+    if (! controller)
+      range = range.parentRange;
+  }
+  return controller;
+};
+
+Blaze.getElementControllerOfType = function (elem, type) {
+  var controller = Blaze.getElementController(elem);
+  while (controller && ! (controller instanceof type)) {
+    controller = (controller.parentController || null);
+  }
+  return controller;
+};
+
 Blaze.getCurrentDataVar = function () {
   var theWith = Blaze.getCurrentControllerOfType(Blaze.With);
-  return theWith && theWith.dataVar;
+  return theWith ? theWith.dataVar : null;
+};
+
+Blaze.getElementDataVar = function (elem) {
+  var theWith = Blaze.getElementControllerOfType(elem, Blaze.With);
+  return theWith ? theWith.dataVar : null;
 };
