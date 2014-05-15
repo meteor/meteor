@@ -1900,7 +1900,7 @@ main.registerCommand({
   maxArgs: 0,
   options: {
     config: { type: String, required: true },
-    create: { type: Boolean, required: false },
+    'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
   }
 }, function (options) {
@@ -2145,11 +2145,11 @@ main.registerCommand({
   }
 
   // Check if the release track exists. If it doesn't, need the create flag.
-  if (!options.create) {
+  if (!options['create-track']) {
     var trackRecord = serverCatalog.getReleaseTrack(relConf.name);
     if (!trackRecord) {
       process.stderr.write('There is no release track named ' + relConf.name +
-                           '. If you are creating a new track, use the --create flag. \n');
+                           '. If you are creating a new track, use the --create-track flag. \n');
       return 1;
     }
     // XXX: check that we are an authorized maintainer as well.
