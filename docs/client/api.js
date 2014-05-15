@@ -1187,6 +1187,11 @@ Template.api.accounts_ui_config = {
       descr: "To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details."
     },
     {
+      name: "forceApprovalPrompt",
+      type: "Boolean",
+      descr: "If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google."
+    },
+    {
       name: "passwordSignupFields",
       type: "String",
       descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
