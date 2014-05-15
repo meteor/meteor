@@ -2021,3 +2021,31 @@ Tinytest.add(
     checkAttrs("    javascript:alert(1)", false);
   }
 );
+
+Tinytest.add(
+  "spacebars - template - event handlers get cleaned up with template is removed",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_handler_cleanup;
+    var subtmpl = Template.spacebars_test_event_handler_cleanup_sub;
+
+    var rv = new ReactiveVar(true);
+    tmpl.foo = function () {
+      return rv.get();
+    };
+
+    subtmpl.events({
+      "click/mouseover": function () { }
+    });
+
+    var div = renderToDiv(tmpl);
+
+    test.equal(div.$_uievents["click"].handlers.length, 1);
+    test.equal(div.$_uievents["mouseover"].handlers.length, 1);
+
+    rv.set(false);
+    Deps.flush();
+
+    test.equal(div.$_uievents["click"].handlers.length, 0);
+    test.equal(div.$_uievents["mouseover"].handlers.length, 0);
+  }
+);
