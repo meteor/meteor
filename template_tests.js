@@ -1,6 +1,6 @@
 var renderToDiv = function (comp) {
   var div = document.createElement("DIV");
-  UI.materialize(comp, div);
+  Blaze.renderComponent(comp, div);
   return div;
 };
 
@@ -48,11 +48,9 @@ Tinytest.add("spacebars - templates - simple helper", function (test) {
   });
 
   delete tmpl.foo;
-  // We'd like this to throw, but it doesn't because of how self.lookup
-  // works.  D'oh.  Fix this as part of "new this".
-  //test.throws(function () {
+  test.throws(function () {
     renderToDiv(tmpl);
-  //});
+  });
 
   tmpl.foo = function () {};
   // doesn't throw
