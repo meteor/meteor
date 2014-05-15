@@ -1025,7 +1025,7 @@ DomRange.prototype.on = function (events, selector, handler) {
 
       for (var i = 0; i < newHandlerRecs.length; i++) {
         var handlerToRemove = newHandlerRecs[i];
-        var info = eventDict[handlerToRemove].type;
+        var info = eventDict[handlerToRemove.type];
         if (! info)
           continue;
         var handlerList = info.handlers;
