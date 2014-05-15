@@ -115,11 +115,14 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   });
 
   if (options.previousSolution) {
-    options.previousSolution = _.flatten(_.map(options.previousSolution, function (version, packageName) {
+    // XXX glasser and ekate added this filter to strip some undefineds that
+    // were causing crashes, but maybe the real answer is that there shouldn't
+    // have been undefineds?
+    options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
       return _.map(self._buildsForPackage(packageName), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
-    }));
+    })), _.identity);
   }
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
