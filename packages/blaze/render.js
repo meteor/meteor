@@ -44,7 +44,7 @@ Blaze.renderList = function (funcSequence) {
       var func = funcSequence.get(i);
       if (typeof func !== 'function')
         throw new Error("Expected a Blaze.Sequence of functions in " +
-                        "Blaze.renderList");
+                        "Blaze.renderList, found item: " + func);
       initialMembers[i] = Blaze.render(func);
     }
   });

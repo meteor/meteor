@@ -281,7 +281,7 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
     },
     removedAt: function (id, item, index) {
       seq.removeItem(index);
-      if (seq.size() === 0) {
+      if (elseContentFunc && seq.size() === 0) {
         elseMode = true;
         seq.addItem(elseContentFunc, 0);
       }
@@ -296,7 +296,7 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
     }
   });
 
-  if (seq.size() === 0) {
+  if (elseContentFunc && seq.size() === 0) {
     elseMode = true;
     seq.addItem(elseContentFunc, 0);
   }

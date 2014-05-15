@@ -44,6 +44,26 @@ UI.TemplateComponent = Blaze.Component.extend({
   },
   events: function (eventMap) {
     this._eventMaps = (this._eventMaps || []);
-    this._eventMaps.push(eventMap);
+    // implement "old this"
+    var eventMap2 = {};
+    for (var k in eventMap) {
+      eventMap2[k] = (function (k, v) {
+        return function (event/*, ...*/) {
+          var dataVar = Blaze.getElementDataVar(event.currentTarget);
+          var data = dataVar && dataVar.get();
+          if (data == null)
+            data = {};
+          var args = Array.prototype.slice.call(arguments);
+          var tmplInstance = {}; // XXX
+          args.splice(1, 0, tmplInstance);
+          return v.apply(data, args);
+        };
+      })(k, eventMap[k]);
+    }
+
+    this._eventMaps.push(eventMap2);
+  },
+  helpers: function (dict) {
+    _.extend(this, dict);
   }
 });

@@ -249,8 +249,6 @@ updateTemplateInstance = function (comp) {
 };
 
 _extend(UI.Component, {
-  // We implement the old APIs here, including how data is passed
-  // to helpers in `this`.
   helpers: function (dict) {
     _extend(this, dict);
   },

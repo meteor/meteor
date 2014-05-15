@@ -53,6 +53,17 @@ _.extend(Blaze.DOMRange, {
   lastNode: function (rangeOrNode) {
     var m = rangeOrNode;
     return (m instanceof Blaze.DOMRange) ? m.lastNode() : m;
+  },
+  forElement: function (elem) {
+    if (elem.nodeType !== 1)
+      throw new Error("Expected element, found: " + elem);
+    var range = null;
+    while (elem && ! range) {
+      range = (elem.$blaze_range || null);
+      if (! range)
+        elem = elem.parentNode;
+    }
+    return range;
   }
 });
 
