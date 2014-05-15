@@ -103,6 +103,8 @@ Patches contributed by GitHub users awwx
 
 * Clean up autoruns when calling `UI.toHTML`.
 
+* Properly clean up event listeners when removing templates.
+
 * Add support for `{{!-- block comments --}}` in Spacebars. Block comments may
   contain `}}`, so they are more useful than `{{! normal comments}}` for
   commenting out sections of Spacebars templates.
