@@ -31,6 +31,6 @@ test -x "$HOME/.meteor0/meteor"
 "$HOME/.meteor0/meteor" help
 
 echo
-echo "A Meteor packaging prelease has been installed in ~/.meteor0."
+echo "A Meteor packaging pre-release has been installed in ~/.meteor0."
 echo
 echo "Run it with ~/.meteor0/meteor"
