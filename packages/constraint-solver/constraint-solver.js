@@ -107,7 +107,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   var self = this;
 
   check(dependencies, [String]);
-  check(constraints, [{ packageName: String, version: String, exact: Boolean }]);
+  check(constraints, [{ packageName: String, version: String, type: String }]);
 
   options = _.defaults(options || {}, {
     _testing: false,
@@ -155,7 +155,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
   var self = this;
 
   check(dependencies, [String]);
-  check(constraints, [{ packageName: String, version: String, exact: Boolean }]);
+  check(constraints, [{ packageName: String, version: String, type: String }]);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 

@@ -95,7 +95,7 @@ var splitArgs = function (deps) {
   _.each(deps, function (constr, dep) {
     dependencies.push(dep);
     if (constr)
-      constraints.push({ packageName: dep, exact: (constr.indexOf("=") !== -1), version: constr.replace("=", "")});
+      constraints.push({ packageName: dep, type: (constr.indexOf("=") !== -1 ? "exactly" : "compatible-with"), version: constr.replace("=", "")});
   });
   return {dependencies: dependencies, constraints: constraints};
 };
@@ -186,7 +186,7 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   currentTest = test;
-  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", exact: false }], { _testing: true });
+  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", type: "compatible-with" }], { _testing: true });
   test.equal(versions.sparkle, "2.1.1");
 });
 
