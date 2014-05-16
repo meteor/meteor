@@ -502,18 +502,6 @@ function getCatalogStub (gems) {
         dependencies: {}
       };
 
-      // These gems didn't really follow the semver and they prevent our
-      // generated tests from being resolved. We set the ECV manually so we can
-      // get some results as the correctness is not as important as the speed.
-      if (_.contains(['railties', 'rails', 'activesupport', 'actionpack', 'activerecord', 'activemodel'], packageVersion.packageName) && semver.gte(exactVersion(packageVersion.version), "3.0.0"))
-        packageVersion.earliestCompatibleVersion = "3.0.0";
-      if (_.contains(['devise'], packageVersion.packageName) && semver.gte(exactVersion(packageVersion.version), "3.0.0") && semver.lte(exactVersion(packageVersion.version), "3.7.0"))
-        packageVersion.earliestCompatibleVersion = "2.0.0";
-      if (packageVersion.packageName === "redis")
-        packageVersion.earliestCompatibleVersion = "0.0.1";
-      if (packageVersion.packageName === "github-markup")
-        packageVersion.earliestCompatibleVersion = "0.3.0";
-
       _.each(gem.dependencies, function (dep) {
         var name = dep[0];
         var constraints = dep[1];
@@ -555,8 +543,10 @@ function convertConstraints (inp) {
     if (s.indexOf(">= 0") === 0)
       return "none";
     var x = s.split(' ');
-    if (x[0] === '~>' || x[0] === '>=' || x[0] === '>')
+    if (x[0] === '~>')
       x[0] = '';
+    else if (x[0] === '>' || x[0] === '>=')
+      x[0] = '>=';
     else if (x[0] === '=')
       x[0] = '=';
     else
