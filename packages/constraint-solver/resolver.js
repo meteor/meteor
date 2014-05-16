@@ -85,7 +85,6 @@ ConstraintSolver.Resolver.prototype.resolve =
     }
   }, options);
 
-  var rootDependencies = _.clone(dependencies);
   // required for error reporting later
   var constraintAncestor = {};
   _.each(constraints, function (c) {
@@ -112,14 +111,13 @@ ConstraintSolver.Resolver.prototype.resolve =
     return startState.choices;
 
   var pq = new PriorityQueue();
-  var opts = { rootDependencies: rootDependencies };
   var costFunction = options.costFunction;
   var estimateCostFunction = options.estimateCostFunction;
   var combineCostFunction = options.combineCostFunction;
 
   var estimatedStartingCost =
-    combineCostFunction(costFunction(startState, opts),
-                        estimateCostFunction(startState, opts));
+    combineCostFunction(costFunction(startState),
+                        estimateCostFunction(startState));
 
   pq.push(startState, [estimatedStartingCost, 0]);
 
@@ -142,8 +140,8 @@ ConstraintSolver.Resolver.prototype.resolve =
     } else {
       _.each(neighborsObj.neighbors, function (state) {
         var tentativeCost =
-          combineCostFunction(costFunction(state, opts),
-                              estimateCostFunction(state, opts));
+          combineCostFunction(costFunction(state),
+                              estimateCostFunction(state));
 
         pq.push(state, [tentativeCost, -state.choices.length]);
       });

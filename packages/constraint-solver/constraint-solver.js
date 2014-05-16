@@ -102,16 +102,33 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   });
 };
 
+// dependencies - an array of string names of packages (not slices)
+// constraints - an array of objects:
+//  - packageName - string name
+//  - version - string constraint (ex.: "1.2.3", ">=2.3.4", "=3.3.3")
+// options:
+//  - breaking - set this flag to true if breaking upgrades are allowed
+//  - upgrade - set this flag to true if upgrading direct dependencies is more
+//  prioritized than keeping old versions the same
+//  - previousSolution - mapping from package name to a version that was used in
+//  the previous constraint solver run
 ConstraintSolver.PackagesResolver.prototype.resolve =
   function (dependencies, constraints, options) {
   var self = this;
 
-  check(dependencies, [String]);
-  check(constraints, [{ packageName: String, version: String, type: String }]);
-
   options = _.defaults(options || {}, {
     _testing: false,
-    breaking: false
+    breaking: false,
+    upgrade: false
+  });
+
+  check(dependencies, [String]);
+  check(constraints, [{ packageName: String, version: String, type: String }]);
+  check(options, {
+    _testing: Match.Optional(Boolean),
+    breaking: Match.Optional(Boolean),
+    upgrade: Match.Optional(Boolean),
+    previousSolution: Match.Optional(Object)
   });
 
   if (options.previousSolution) {
@@ -266,9 +283,14 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     var prevSolMapping = {};
 
     _.each(rootDeps, function (dep) { isRootDep[dep] = true; });
-    _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
+
+    // if the upgrade is preferred over preserving previous solution, pretend
+    // there are no previous solution
+    if (! options.upgrade)
+      _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
 
     resolverOptions.costFunction = function (state, options) {
+      options = options || {};
       var choices = state.choices;
       var constraints = state.constraints;
       // very major, major, medium, minor costs
@@ -340,6 +362,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     };
 
     resolverOptions.estimateCostFunction = function (state, options) {
+      options = options || {};
       var dependencies = state.dependencies;
       var constraints = state.constraints;
 
