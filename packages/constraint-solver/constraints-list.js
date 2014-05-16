@@ -168,7 +168,12 @@ ConstraintSolver.ConstraintsList.prototype.exactDependenciesIntersection =
   return newList;
 };
 
-ConstraintSolver.ConstraintsList.prototype._edgeMatchingVersionsFor =
+// Finds the earliest and latest versions of package `dep` in `resolver` that
+// matches this list of constraints.
+// The feature is: it runs in linear time of all constraints for given package
+// and linear time of all uvs for the package:
+// O(|constraintsForDep| + |uvsOfDep|)
+ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor =
   function (dep, resolver) {
   var self = this;
 
@@ -232,12 +237,12 @@ ConstraintSolver.ConstraintsList.prototype._edgeMatchingVersionsFor =
 
 ConstraintSolver.ConstraintsList.prototype.earliestMatchingVersionFor =
   function (dep, resolver) {
-  return this._edgeMatchingVersionsFor(dep, resolver).earliest;
+  return this.edgeMatchingVersionsFor(dep, resolver).earliest;
 };
 
 ConstraintSolver.ConstraintsList.prototype.latestMatchingVersionFor =
   function (dep, resolver) {
-  return this._edgeMatchingVersionsFor(dep, resolver).latest;
+  return this.edgeMatchingVersionsFor(dep, resolver).latest;
 };
 
 ConstraintSolver.ConstraintsList.prototype.toString = function (simple) {

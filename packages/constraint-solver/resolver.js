@@ -1,3 +1,5 @@
+var semver = Npm.require('semver');
+
 ////////////////////////////////////////////////////////////////////////////////
 // Resolver
 ////////////////////////////////////////////////////////////////////////////////
@@ -197,9 +199,15 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
 
   dependencies = dependencies.remove(candidateName);
 
+  var edgeVersions = constraints.edgeMatchingVersionsFor(candidateName, self);
+
+  edgeVersions.earliest = edgeVersions.earliest || { version: "100.100.100" };
+  edgeVersions.latest = edgeVersions.latest || { version: "0.0.0" };
+
   var candidateVersions =
     _.filter(self.unitsVersions[candidateName], function (uv) {
-      return _.isEmpty(constraints.violatedConstraints(uv));
+       // reject immideately if not in acceptable range
+      return semver.lte(edgeVersions.earliest.version, uv.version) && semver.lte(uv.version, edgeVersions.latest.version);
     });
 
   var generateError = function (uv, violatedConstraints) {
@@ -544,7 +552,6 @@ ConstraintSolver.Constraint.prototype.toString = function () {
   return self.name + "@" + operator + self.version;
 };
 
-var semver = Npm.require('semver');
 
 ConstraintSolver.Constraint.prototype.isSatisfied = function (unitVersion) {
   var self = this;
