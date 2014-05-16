@@ -127,6 +127,10 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
+  _.each(options.previousSolution, function (uv) {
+    dc.constraints.push(new ConstraintSolver.Constraint(uv.name, ">=" + uv.version));
+  });
+
   options.rootDependencies = dc.dependencies;
 
 
