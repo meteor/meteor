@@ -127,8 +127,18 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
+  // Never allow to downgrade a version of a direct dependency in regards to the
+  // previous solution.
+  // Depending on whether the option `breaking` is set or not, allow only
+  // compatible upgrades or any upgrades.
   _.each(options.previousSolution, function (uv) {
-    dc.constraints.push(new ConstraintSolver.Constraint(uv.name, ">=" + uv.version));
+    // if not a root dependency, there is no 'no-upgrade' constraint
+    if (! _.contains(dependencies, uv.name))
+      return;
+
+    var constrType = options.breaking ? ">=" : "";
+    dc.constraints.push(
+      new ConstraintSolver.Constraint(uv.name, constrType + uv.version));
   });
 
   options.rootDependencies = dc.dependencies;
