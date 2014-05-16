@@ -1,0 +1,19 @@
+<template name="ui-dynamic-test">
+  {{> UI.dynamic templateName=templateName dataContext=templateData}}
+</template>
+
+<template name="ui-dynamic-test-no-data">
+  {{> UI.dynamic templateName=templateName}}
+</template>
+
+<template name="ui-dynamic-test-inherited-data">
+  {{#with context}}
+    {{> UI.dynamic templateName=templateName}}
+  {{else}}
+    {{> UI.dynamic templateName=templateName}}
+  {{/with}}
+</template>
+
+<template name="ui-dynamic-test-sub">
+  test{{foo}}
+</template>

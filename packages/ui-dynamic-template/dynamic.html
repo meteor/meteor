@@ -1,0 +1,18 @@
+<template name="__dynamicWithDataContext">
+  {{#with chooseTemplate templateName}}
+    {{#with ../dataContext}} {{! original 'dataContext' argument to __dynamic}}
+      {{> ..}} {{! return value from chooseTemplate(templateName) }}
+    {{else}} {{! if the 'dataContext' argument was falsey }}
+      {{> .}} {{! return value from chooseTemplate(templateName) }}
+    {{/with}}
+  {{/with}}
+</template>
+
+<template name="__dynamic">
+  {{#if dataContext}}
+    {{> __dynamicWithDataContext}}
+  {{else}}
+    {{! if there was no explicit dataContext argument, use the parent context}}
+    {{> __dynamicWithDataContext templateName=templateName dataContext=..}}
+  {{/if}}
+</template>
