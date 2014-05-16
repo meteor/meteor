@@ -527,13 +527,21 @@ ConstraintSolver.Constraint = function (name, versionString) {
     _.extend(self, PackageVersion.parseVersionConstraint(versionString));
     self.name = name;
   } else {
+    // borrows the structure from the parseVersionConstraint format:
+    // - type - String [compatibl-with|exactly|at-least]
+    // - version - String - semver string
     _.extend(self, PackageVersion.parseConstraint(name));
   }
 };
 
 ConstraintSolver.Constraint.prototype.toString = function () {
   var self = this;
-  return self.name + "@" + (self.exact ? "=" : "") + self.version;
+  var operator = "";
+  if (self.type === "exactly")
+    operator = "=";
+  if (self.type === "at-least")
+    operator = ">=";
+  return self.name + "@" + operator + self.version;
 };
 
 var semver = Npm.require('semver');
@@ -542,8 +550,10 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (unitVersion) {
   var self = this;
   check(unitVersion, ConstraintSolver.UnitVersion);
 
-  if (self.exact)
+  if (self.type === "exactly")
     return self.version === unitVersion.version;
+  if (self.type === "at-least")
+    return semver.lte(self.version, unitVersion.version);
 
   return semver.lte(self.version, unitVersion.version) &&
     semver.lte(unitVersion.earliestCompatibleVersion, self.version);
@@ -554,7 +564,7 @@ ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion =
   function (resolver) {
   var self = this;
 
-  if (self.exact)
+  if (self.type === "exactly")
     return resolver._unitsVersionsMap[self.toString().replace("=", "")];
 
   var unitVersion = _.find(resolver.unitsVersions[self.name],

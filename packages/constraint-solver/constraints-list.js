@@ -24,7 +24,7 @@ ConstraintSolver.ConstraintsList.prototype.contains = function (c) {
     return false;
 
   var bn = mori.get(self.byName, c.name);
-  var constraints = mori.get(bn, c.exact ? "exact" : "inexact");
+  var constraints = mori.get(bn, c.type === "exactly" ? "exact" : "inexact");
   return mori.has_key(constraints, c.version);
 };
 
@@ -43,7 +43,7 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
     var exactMap = mori.hash_map();
     var inexactMap = mori.hash_map();
 
-    if (c.exact) {
+    if (c.type === "exactly") {
       exactMap = mori.assoc(exactMap, c.version, c);
     } else {
       inexactMap = mori.assoc(inexactMap, c.version, c);
@@ -52,7 +52,7 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
     var bn = mori.hash_map("exact", exactMap, "inexact", inexactMap);
     newList.byName = mori.assoc(newList.byName, c.name, bn);
   } else {
-    var exactStr = c.exact ? "exact" : "inexact";
+    var exactStr = c.type === "exactly" ? "exact" : "inexact";
 
     var bn = mori.get(newList.byName, c.name);
     var constraints = mori.get(bn, exactStr);
@@ -176,12 +176,19 @@ ConstraintSolver.ConstraintsList.prototype._edgeMatchingVersionsFor =
   var earliest = null;
   var latest = null;
   var exact = null;
+  var greatestAtLeast = null;
 
   self.forPackage(dep, function (c) {
-    if (c.exact)
+    if (c.type === "exactly")
       exact = c;
     if (exact)
       return;
+
+    if (c.type === "at-least") {
+      if (! greatestAtLeast || semver.lt(greatestAtLeast.version, c.version))
+        greatestAtLeast = c;
+      return;
+    }
 
     if (! earliest || semver.lt(c.version, earliest.version))
       earliest = c;
@@ -202,12 +209,17 @@ ConstraintSolver.ConstraintsList.prototype._edgeMatchingVersionsFor =
   var latestUv = null;
 
   // The range of constraints is consistent and can have some matching uvs if
-  // both earliest and latest constraints have the same ecv
-  if (! earliest || earliest.earliestCompatibleVersion === latest.earliestCompatibleVersion) {
+  // uvs corresponding to both earliest and latest constraints have the same ecv
+  if (! earliest ||
+      earliest.getSatisfyingUnitVersion(resolver).earliestCompatibleVersion
+    === latest.getSatisfyingUnitVersion(resolver).earliestCompatibleVersion) {
     _.each(resolver.unitsVersions[dep], function (uv) {
       if (earliest && latest)
         if (! earliest.isSatisfied(uv) || ! latest.isSatisfied(uv))
           return;
+      // return if one of the >= constraints is not satisfied
+      if (greatestAtLeast && ! greatestAtLeast.isSatisfied(uv))
+        return;
       if (! earliestUv || semver.lt(uv.version, earliestUv.version))
         earliestUv = uv;
       if (! latestUv || semver.gt(uv.version, latestUv.version))

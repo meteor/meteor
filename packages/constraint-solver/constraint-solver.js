@@ -187,9 +187,13 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
     });
   });
 
-  // XXX hackish code duplication
   _.each(inputConstraints, function (constraint) {
-    var constraintStr = (constraint.exact ? "=" : "") + constraint.version;
+    var operator = "";
+    if (constraint.type === "exactly")
+      operator = "=";
+    if (constraint.type === "at-least")
+      operator = ">=";
+    var constraintStr = operator + constraint.version;
 
     _.each(self._buildsForPackage(constraint.packageName), function (buildName) {
       constraints.push(self.resolver.getConstraint(buildName, constraintStr));
