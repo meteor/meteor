@@ -1959,7 +1959,7 @@ main.registerCommand({
     // trying to do.
     if (options.appDir) {
       process.stderr.write("Trying to publish from checkout while in an application " +
-                           "directory is strange." +
+                           "directory is a bad idea." +
                            " Please try again from somewhere else. \n");
       return 1;
     }
@@ -2146,9 +2146,9 @@ main.registerCommand({
 
   // Check if the release track exists. If it doesn't, need the create flag.
   if (!options['create-track']) {
-    var trackRecord = serverCatalog.getReleaseTrack(relConf.name);
+    var trackRecord = serverCatalog.getReleaseTrack(relConf.track);
     if (!trackRecord) {
-      process.stderr.write('There is no release track named ' + relConf.name +
+      process.stderr.write('There is no release track named ' + relConf.track +
                            '. If you are creating a new track, use the --create-track flag. \n');
       return 1;
     }
@@ -2156,16 +2156,18 @@ main.registerCommand({
   } else {
     process.stdout.write("Creating a new release track... \n");
     var track = conn.call('createReleaseTrack',
-                         { name: relConf.name } );
+                         { name: relConf.track } );
   }
 
   process.stdout.write("Creating a new release version... \n");
 
   // Send it over!
   var uploadInfo = conn.call('createReleaseVersion', {
-    name: relConf.name,
+    track: relConf.track,
     version: relConf.version,
+    orderKey: relConf.orderKey,
     description: relConf.description,
+    recommended: relConf.recommended,
     tool: relConf.tool,
     packages: relConf.packages
   });
