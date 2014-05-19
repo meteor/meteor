@@ -729,12 +729,12 @@ _.extend(Catalog.prototype, {
 
   // Return information about a particular release version, or null if such
   // release version does not exist.
-  getReleaseVersion: function (name, version) {
+  getReleaseVersion: function (track, version) {
     var self = this;
     self._requireInitialized();
 
     var versionRecord =  _.findWhere(self.releaseVersions,
-        { name: name,  version: version });
+        { track: track,  version: version });
 
     if (!versionRecord) {
       return null;
@@ -750,18 +750,6 @@ _.extend(Catalog.prototype, {
     return _.pluck(self.releaseTracks, 'name');
   },
 
-  // Given a release track, returns an array of the versions available for this
-  // track, in no particular order. Returns the empty array if the release
-  // doesn't exist or doesn't have any versions.
-  getAllReleaseVersions: function (name) {
-    var self = this;
-    self._requireInitialized();
-
-    var ret = _.pluck(_.where(self.releaseVersions, { name: name }),
-                      'version');
-    return ret;
-  },
-
   // Given a release track, return all recommended versions for this track, sorted
   // by their orderKey. Returns the empty array if the release track does not
   // exist or does not have any recommended versions.
@@ -773,7 +761,6 @@ _.extend(Catalog.prototype, {
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
     });
-
     return _.pluck(recSort, "version");
   },
 
