@@ -891,7 +891,7 @@ main.registerCommand({
     // XXX: We probably want the recommended version rather than all of them,
     // but for now, let's just display some stuff to make sure that it worked.
     _.each(catalog.getAllReleaseTracks(), function (name) {
-      var versions = catalog.getReleaseVersions(name);
+      var versions = catalog.getSortedRecommendedReleaseVersions(name);
       _.each(versions, function (version) {
         var versionInfo = catalog.getReleaseVersion(name, version);
         if (versionInfo) {

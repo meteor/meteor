@@ -753,7 +753,7 @@ _.extend(Catalog.prototype, {
   // Given a release track, returns an array of the versions available for this
   // track, in no particular order. Returns the empty array if the release
   // doesn't exist or doesn't have any versions.
-  getReleaseVersions: function (name) {
+  getAllReleaseVersions: function (name) {
     var self = this;
     self._requireInitialized();
 
@@ -762,6 +762,20 @@ _.extend(Catalog.prototype, {
     return ret;
   },
 
+  // Given a release track, return all recommended versions for this track, sorted
+  // by their orderKey. Returns the empty array if the release track does not
+  // exist or does not have any recommended versions.
+  getSortedRecommendedReleaseVersions: function (track) {
+    var self = this;
+    self._requireInitialized();
+
+    var recommended = _.where(self.releaseVersions, { track: track, recommended: true});
+    var recSort = _.sortBy(recommended, function (rec) {
+      return rec.orderKey;
+    });
+
+    return _.pluck(recSort, "version");
+  },
 
   // Return an array with the names of all of the packages that we
   // know about, in no particular order.
