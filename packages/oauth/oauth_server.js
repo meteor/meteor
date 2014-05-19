@@ -189,6 +189,20 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
   }
 };
 
+// Writes an HTTP response to the popup window at the end of an OAuth
+// login flow. At this point, if the user has successfully authenticated
+// to the OAuth server and authorized this app, we communicate the
+// credentialToken and credentialSecret to the main window. The main
+// window must provide both these values to the DDP `login` method to
+// authenticate its DDP connection. After communicating these vaues to
+// the main window, we close the popup.
+//
+// We export this function so that developers can override this
+// behavior, which is particularly useful in, for example, some mobile
+// environments where popups and/or `window.opener` don't work. For
+// example, an app could override `OAuth._endOfLoginResponse` to put the
+// credential token and credential secret in the popup URL for the main
+// window to read them there instead of using `window.opener`.
 OAuth._endOfLoginResponse = function(res, credentialToken, credentialSecret) {
 
   var isSafe = function (value) {
@@ -200,9 +214,10 @@ OAuth._endOfLoginResponse = function(res, credentialToken, credentialSecret) {
 
   res.writeHead(200, {'Content-Type': 'text/html'});
   // If we have a credentialSecret, report it back to the parent window,
-  // with the corresponding credentialToken (which we sanitize because
-  // it came from a query parameter). The parent window uses the
-  // credentialToken and credential secret to log in over DDP.
+  // with the corresponding credentialToken (which we check against a
+  // restricted set of characters because it came from a query
+  // parameter). The parent window uses the credentialToken and
+  // credentialSecret to log in over DDP.
   var setCredentialSecret = '';
   if (credentialToken && credentialSecret &&
       isSafe(credentialToken) && isSafe(credentialSecret)) {
