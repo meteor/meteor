@@ -166,26 +166,8 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
   } else if (query.error) {
     Log.warn("Error in OAuth Server: " + query.error);
     OAuth._endOfLoginResponse(res);
-  } else if ('close' in query) { // check with 'in' because we don't set a value
-    OAuth._endOfLoginResponse(res, query.state, credentialSecret);
-  } else if (query.redirect) {
-    // Only redirect to URLs on the same domain as this app.
-    // XXX No code in core uses this code path right now.
-    // XXX In order for the redirect flow to be fully supported, we'd
-    // have to communicate the credentialSecret back to the app somehow.
-    var redirectHostname = url.parse(query.redirect).hostname;
-    var appHostname = url.parse(Meteor.absoluteUrl()).hostname;
-    if (appHostname === redirectHostname) {
-      // We rely on node to make sure the header is really only a single header
-      // (not, for example, a url with a newline and then another header).
-      res.writeHead(302, {'Location': query.redirect});
-    } else {
-      res.writeHead(400);
-    }
-    res.end();
   } else {
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    res.end('', 'utf-8');
+    OAuth._endOfLoginResponse(res, query.state, credentialSecret);
   }
 };
 
