@@ -255,3 +255,58 @@ exports.validEmail = function (address) {
 exports.quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
+
+
+// If the given version matches a template (essentially, semver-style, but with
+// a bounded number of digits per number part, and with no restriction on the
+// amount of number parts, and some restrictions on legal prerelease labels),
+// then return an orderKey for it. Otherwise return null.
+//
+// This conventional orderKey pads each part (with 0s for numbers, and ! for
+// prerelease tags), and appends a $. (Because ! sorts before $, this means that
+// the prerelease for a given release will sort before it. Because $ sorts
+// before '.', this means that 1.2 will sort before 1.2.3.)
+exports.defaultOrderKeyForReleaseVersion = function (v) {
+  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-za-z]{1,15})(\d{0,4}))?$/);
+  if (!m)
+    return null;
+  var numberPart = m[1];
+  var prereleaseTag = m[2];
+  var prereleaseNumber = m[3];
+
+  var hasRedundantLeadingZero = function (x) {
+    return x.length > 1 && x[0] === '0';
+  };
+  var leftPad = function (chr, len, str) {
+    if (str.length > len)
+      throw Error("too long to pad!");
+    var padding = new Array(len - str.length + 1).join(chr);
+    return padding + str;
+  };
+  var rightPad = function (chr, len, str) {
+    if (str.length > len)
+      throw Error("too long to pad!");
+    var padding = new Array(len - str.length + 1).join(chr);
+    return str + padding;
+  };
+
+  // Versions must have no redundant leading zeroes, or else this encoding would
+  // be ambiguous.
+  var numbers = numberPart.split('.');
+  if (_.any(numbers, hasRedundantLeadingZero))
+    return null;
+  if (prereleaseNumber && hasRedundantLeadingZero(prereleaseNumber))
+    return null;
+
+  // First, put together the non-prerelease part.
+  var ret = _.map(numbers, _.partial(leftPad, '0', 4)).join('.');
+
+  if (!prereleaseTag)
+    return ret + '$';
+
+  ret += '!' + rightPad('!', 15, prereleaseTag);
+  if (prereleaseNumber)
+    ret += leftPad('0', 4, prereleaseNumber);
+
+  return ret + '$';
+};
