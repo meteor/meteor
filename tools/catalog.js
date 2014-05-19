@@ -15,6 +15,9 @@ var files = require('./files.js');
 
 var catalog = exports;
 
+// XXX "Meteor-Core"? decide this pre 0.9.0.
+catalog.DEFAULT_TRACK = 'METEOR-CORE';
+
 var isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK
@@ -44,8 +47,6 @@ var Catalog = function () {
   self.builds = null;
   self.releaseTracks = null;
   self.releaseVersions = null;
-  // This is just one object.
-  self.defaultReleaseVersion = null;
 
   // Local directories to search for package source trees
   self.localPackageDirs = null;
@@ -234,7 +235,6 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
-    self.defaultReleaseVersion = null;
     if (allPackageData && allPackageData.collections) {
       self._insertServerPackages(allPackageData);
     }
@@ -561,9 +561,6 @@ _.extend(Catalog.prototype, {
       function (field) {
         self[field].push.apply(self[field], collections[field]);
       });
-    if (serverPackageData.defaultReleaseVersion) {
-      self.defaultReleaseVersion = serverPackageData.defaultReleaseVersion;
-    }
   },
 
   _requireInitialized: function () {
@@ -761,6 +758,7 @@ _.extend(Catalog.prototype, {
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
     });
+    recSort.reverse();
     return _.pluck(recSort, "version");
   },
 
@@ -908,14 +906,28 @@ _.extend(Catalog.prototype, {
     return _.where(self.builds, { versionId: versionRecord._id });
   },
 
+  // Returns the default release version: the latest recommended version on the
+  // default track. Returns null if no such thing exists (even after syncing
+  // with the server, which it only does if there is no eligible release
+  // version).
   getDefaultReleaseVersion: function () {
     var self = this;
     self._requireInitialized();
 
-    if (!self.defaultReleaseVersion) {
+    var attempt = function () {
+      var versions = self.getSortedRecommendedReleaseVersions(
+        catalog.DEFAULT_TRACK);
+      if (!versions.length)
+        return null;
+      return {name: catalog.DEFAULT_TRACK, version: versions[0]};
+    };
+
+    var ret = attempt();
+    if (!ret) {
       self.refresh(true);
+      ret = attempt();
     }
-    return self.defaultReleaseVersion;
+    return ret;
   }
 });
 

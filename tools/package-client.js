@@ -176,7 +176,6 @@ exports.updateServerPackageData = function (cachedServerData) {
   var data = {
     syncToken: remoteData.syncToken,
     formatVersion: "1.0",
-    defaultReleaseVersion: remoteData.defaultReleaseVersion,
     collections: allCollections
   };
   writePackageDataToDisk(remoteData.syncToken, data);

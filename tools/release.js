@@ -208,7 +208,7 @@ release.load = function (name, options) {
     track = parts[0];
     version = parts[1];
   } else {
-    track = 'meteor-core';  // XXX all caps?
+    track = catalog.DEFAULT_TRACK;
     version = parts[0];
   }
 

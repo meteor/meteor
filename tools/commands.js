@@ -1667,7 +1667,7 @@ main.registerCommand({
     files.rm_recursive(path.join(tmpTropo.root, 'downloaded-builds'));
 
     // XXX should we include some sort of preliminary package-metadata as well?
-    // maybe with a defaultReleaseVersion of the release we are using?
+    // maybe with release info about the release we are using?
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
