@@ -215,7 +215,7 @@ release.load = function (name, options) {
   var releaseVersion = catalog.catalog.getReleaseVersion(track, version);
   if (releaseVersion === null) {
     // XXX maybe a better pattern for this?
-    catalog.catalog.refresh(true);
+    catalog.serverCatalog.refresh(true);
     releaseVersion = catalog.catalog.getReleaseVersion(track, version);
   }
   if (releaseVersion === null) {

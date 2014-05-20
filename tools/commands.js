@@ -410,7 +410,7 @@ main.registerCommand({
   var couldNotContactServer = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
@@ -604,7 +604,7 @@ main.registerCommand({
   var failed = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   // Read in existing package dependencies.
   var packages = project.getDirectDependencies(options.appDir);
@@ -781,7 +781,7 @@ main.registerCommand({
   // server. Technically, we don't need to do this, since it is unlikely that
   // new data will change our constraint solver decisions. But as a user, I
   // would expect this command to update the local catalog.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   // Read in existing package dependencies.
   var packages = project.getDirectDependencies(options.appDir);
@@ -865,7 +865,7 @@ main.registerCommand({
   // are only calling 'using', this is not nessessary, but, once again, as a
   // user, I would not be surprised to see this contact the server. In the
   // future, we should move this call to sync somewhere in the background.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   if (options.releases && options.using) {
      console.log("XXX: The contents of your release file.");
@@ -1747,7 +1747,7 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -1815,7 +1815,7 @@ main.registerCommand({
 }, function (options) {
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  catalog.refresh(true);
+  serverCatalog.refresh(true);
 
   if (! catalog.getPackage(options.name)) {
     process.stderr.write('No package named ' + options.name);

@@ -217,6 +217,10 @@ _.extend(Catalog.prototype, {
     var localData = packageClient.loadCachedServerData();
     var allPackageData;
     if (! self.offline && sync) {
+      // XXX see below, there is probably a better refactoring
+      if (self !== catalog.serverCatalog)
+        throw Error("Only the server catalog should be synced");
+
       allPackageData = packageClient.updateServerPackageData(localData);
       if (! allPackageData) {
         // If we couldn't contact the package server, use our local data.
@@ -239,6 +243,12 @@ _.extend(Catalog.prototype, {
       self._insertServerPackages(allPackageData);
     }
     self._addLocalPackageOverrides(true /* setInitialized */);
+
+    // XXX This is a temporary hack, but for now all syncs happen on the server
+    // catalog and are propagated to the bundler catalog via this line. We might
+    // have a better refactoring later?
+    if (sync && self === catalog.serverCatalog)
+      catalog.catalog.refresh();
   },
 
   // Compute self.effectiveLocalPackages from self.localPackageDirs
