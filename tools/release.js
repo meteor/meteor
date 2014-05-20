@@ -170,7 +170,7 @@ release.latestDownloaded = function () {
   if (!defaultRelease) {
     throw new Error("no latest release available?");
   }
-  return defaultRelease.name + '@' + defaultRelease.version;
+  return defaultRelease.track + '@' + defaultRelease.version;
 };
 
 // Load a release and return it as a Release object without setting

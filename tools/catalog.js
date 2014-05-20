@@ -929,7 +929,7 @@ _.extend(Catalog.prototype, {
         catalog.DEFAULT_TRACK);
       if (!versions.length)
         return null;
-      return {name: catalog.DEFAULT_TRACK, version: versions[0]};
+      return {track: catalog.DEFAULT_TRACK, version: versions[0]};
     };
 
     var ret = attempt();

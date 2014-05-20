@@ -756,7 +756,6 @@ Fiber(function () {
     springboard(release.current); // does not return!
   }
 
-
   // Check for the '--help' option.
   var showHelp = false;
   if (_.has(rawOptions, '--help')) {
