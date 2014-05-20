@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
+  in 0.8.0.1 that broke Atmosphere packages that do OAuth1
+  logins. #2154.
+
 
 ## v.0.8.1.2
 
