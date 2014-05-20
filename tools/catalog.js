@@ -179,9 +179,11 @@ _.extend(Catalog.prototype, {
     var constr = [];
     if (_.isArray(constraints)) {
       _.each(constraints, function (constraint) {
+        constraint = _.clone(constraint);
         if (!constraint.weak) {
           deps.push(constraint.packageName);
         }
+        delete constraint.weak;
         if (constraint.version) {
           constr.push(constraint);
         }

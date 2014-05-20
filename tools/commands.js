@@ -694,7 +694,9 @@ main.registerCommand({
 
   // Combine into one object mapping package name to list of
   // constraints, to pass in to the constraint solver.
-  var allPackages = project.combineAppAndProgramDependencies(packages);
+  var allPackages = project.combinedConstraints(
+    packages,
+    release.current.isProperRelease() ? release.current.getPackages() : {});
   // Call the constraint solver.
   var newVersions = catalog.resolveConstraints(allPackages, {
     previousSolution: versions,
