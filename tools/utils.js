@@ -138,6 +138,8 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
+// XXX minimize duplication between this, tools/package-version-parser,
+//     and packages/package-version-parser
 // Given a version constraint string of the form "1.0.0" or "=1.2.3-rc0",
 // return an object with keys:
 // - version: the version part of the constraint, such as "1.0.0" or "1.2.3"
@@ -149,7 +151,7 @@ exports.randomPort = function () {
 // gracefully and print a reasonable error if the user typos their
 // version constraint in package or whatever
 exports.parseVersionConstraint = function (versionString) {
-  var versionDesc = { version: null, exact: false };
+  var versionDesc = { version: null, type: 'compatible-with' };
 
   // XXX #noconstraint #geoff #changed
   // XXX remove none when it is no longer used
@@ -158,7 +160,7 @@ exports.parseVersionConstraint = function (versionString) {
   }
 
   if (versionString.charAt(0) === '=') {
-    versionDesc.exact = true;
+    versionDesc.type = 'exactly';
     versionString = versionString.substr(1);
   }
 

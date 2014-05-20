@@ -5,7 +5,7 @@ var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var Unipackage = require('./unipackage.js').Unipackage;
+var unipackage = require('./unipackage.js');
 
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
@@ -46,7 +46,7 @@ _.extend(PackageLoader.prototype, {
         return null;
       buildmessage.error("package not available: " + name);
       // recover by returning a dummy (empty) package
-      var pkg = new Unipackage;
+      var pkg = new unipackage.Unipackage;
       pkg.initEmpty(name);
       return pkg;
     }

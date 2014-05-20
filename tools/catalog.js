@@ -191,7 +191,7 @@ _.extend(Catalog.prototype, {
         deps.push(packageName);
         if (constraint) {
           var utils = require('./utils.js');
-          var vers = utils.parseConstraint(constraint);
+          var vers = utils.parseVersionConstraint(constraint);
           vers['packageName'] = packageName;
           constr.push(vers);
         }

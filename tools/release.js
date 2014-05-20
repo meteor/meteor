@@ -11,7 +11,7 @@ var Release = function (options) {
   var self = this;
 
   // If an actual, proper, "released" release, the name of the
-  // release, eg, "1.0". If not a proper release, null.
+  // release, eg, "METEOR-CORE@1.0". If not a proper release, null.
   self.name = options.name;
 
   if (self.name === null) {

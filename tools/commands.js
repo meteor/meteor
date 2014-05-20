@@ -496,6 +496,33 @@ main.registerCommand({
     return;
   }
 
+
+  // OK, let's figure out what release fits with our package constraints!
+  // XXX this will actually be a loop over possible releases in the non-force
+  //     case
+  // XXX better error checking on name
+  var releaseRecord = catalog.getReleaseVersion(
+    release.current.name.split('@')[0], release.current.name.split('@')[1]);
+  if (!releaseRecord)
+    throw Error("missing release record?");
+  var directDependencies = project.getDirectDependencies(options.appDir);
+  var previousVersions = project.getIndirectDependencies(options.appDir);
+  var constraints = project.combinedConstraints(
+    directDependencies, releaseRecord.packages);
+  var solutionVersions = catalog.resolveConstraints(
+    constraints, { previousSolution: previousVersions });
+  if (!solutionVersions) {
+    // XXX text
+    process.stderr.write(
+      "Couldn't solve the update to " + release.current.name + ". Ah well.\n");
+    return 1;
+  }
+  project.setDependencies(options.appDir, directDependencies.appDeps,
+                          solutionVersions);
+  // XXX did we have to change some package versions? we should probably
+  //     mention that fact.
+
+
   // Find upgraders (in order) necessary to upgrade the app for the new
   // release (new metadata file formats, etc, or maybe even updating renamed
   // APIs).

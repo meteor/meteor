@@ -217,7 +217,7 @@ var meteorReleaseFilePath = function (appDir) {
 // field with the version constriant, and boolean values for exact and weak. (We
 // use this format because we treat release packages as exact weak
 // dependencies.) The result of this gets passed into the constraint solver.
-project.combinedConstraints = function (deps) {
+project.combinedConstraints = function (deps, releasePackages) {
   var allDeps = [];
 
   _.each(deps.appDeps, function (constraint, packageName) {
@@ -230,12 +230,12 @@ project.combinedConstraints = function (deps) {
                           utils.parseVersionConstraint(constraint)));
   });
   });
-  var releasePackages = release.current.manifest ? release.current.manifest.packages : {};
+
   _.each(releasePackages, function(version, name) {
     allDeps.push({packageName: name, version: version, weak: true, exact: true});
   });
+  // XXX grr
   allDeps.push({packageName: "ctl", version:  null });
-
 
   return allDeps;
 };
@@ -249,19 +249,20 @@ project.combinedConstraints = function (deps) {
 project.generatePackageLoader = function (appDir) {
   var versions = project.getIndirectDependencies(appDir);
   var packages = project.getDirectDependencies(appDir);
+  var releasePackages =
+        release.current.isProperRelease() ? release.current.getPackages() : {};
 
   // package name -> list of version constraints
-  var allPackages = project.combinedConstraints(packages);
+  var allPackages = project.combinedConstraints(packages, releasePackages);
   // Call the constraint solver.
-  var newVersions = catalog.catalog.resolveConstraints(allPackages,
-                                              { previousSolution: versions });
+  var newVersions = catalog.catalog.resolveConstraints(
+    allPackages, { previousSolution: versions });
   if ( ! newVersions) {
     console.log("Cannot compute versions for: ", allPackages);
     process.exit(1);
   }
 
   // Download any necessary package builds and write out the new versions file.
-  delete packages["ctl"];
   project.setDependencies(appDir, packages.appDeps, newVersions);
 
   var PackageLoader = require('./package-loader.js');
