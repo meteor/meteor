@@ -392,11 +392,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'update',
   options: {
-    // Undocumented flag used by upgrade-to-engine.sh for updating
-    // from prehistoric versions of Meteor. Ignoring it should be
-    // harmless. We should remove it eventually.
-    'dont-fetch-latest': { type: Boolean, required: false },
-    minor: { type: Boolean, required: false }
+    patch: { type: Boolean, required: false }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -409,6 +405,10 @@ main.registerCommand({
   //   breaking: !options.minor
   // });
 
+  // XXX clean this up if we don't end up using it, but we probably should be
+  // using it on the refresh call
+  var couldNotContactServer = false;
+
   // Refresh the catalog, cacheing the remote package data on the server.
   catalog.catalog.refresh(true);
 
@@ -419,35 +419,17 @@ main.registerCommand({
     return 1;
   }
 
-  var couldNotContactServer = false;
-
   // Unless --release was passed (meaning that either the user asked for a
   // particular release, or that we _just did_ this and springboarded at
-  // #UpdateSpringboard), go get the latest release and switch to it.
+  // #UpdateSpringboard), go get the latest release and switch to it. (We
+  // already know what the latest release is because we refreshed the catalog
+  // above.)
   if (! release.forced) {
-    try {
-      warehouse.fetchLatestRelease({showInstalling: true});
-    } catch (e) {
-      if (! (e instanceof files.OfflineError)) {
-        console.error("Failed to update Meteor.");
-        throw e;
-      }
-      // If the problem appears to be that we're offline, just log and
-      // continue.
-      console.log("Can't contact the update server. Are you online?");
-      couldNotContactServer = true;
-    }
-
     if (! release.current ||
         release.current.name !== release.latestDownloaded()) {
       // The user asked for the latest release (well, they "asked for it" by not
       // passing --release). We're not currently running the latest release (we
-      // may have even just downloaded it).  #UpdateSpringboard
-      //
-      // (We used to springboard only if the tools version actually
-      // changed between the old and new releases. Now we do it
-      // unconditionally, because it's not a big deal to do it and it
-      // eliminates the complexity of the current release changing.)
+      // may have even just learned about it).  #UpdateSpringboard
       throw new main.SpringboardToLatestRelease;
     }
   }
