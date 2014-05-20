@@ -300,34 +300,42 @@ var springboard = function (rel, releaseOverride) {
   console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
   var archinfo = require('./archinfo.js');
+  var unipackage = require('./unipackage.js');
+
+  var toolsPkg = rel.getToolsPackage();
+  var toolsVersion = rel.getToolsVersion();
 
   // XXX split better
   tropohouse.default.maybeDownloadPackageForArchitectures(
-    {packageName: rel.getToolsPackage(),
-     version: rel.getToolsVersion()},
+    {packageName: toolsPkg, version: toolsVersion},
     [archinfo.host()]);
 
   // XXX support warehouse too
 
-  var packagePath = tropohouse.default.packagePath(
-    rel.getToolsPackage(), rel.getToolsVersion());
+  var packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
+  var toolUnipackage = new unipackage.Unipackage;
+  toolUnipackage.initFromPath(toolsPkg, packagePath);
+  var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+                               {arch: archinfo.host()});
+  if (!toolRecord)
+    throw Error("missing tool for " + archinfo.host() + " in " +
+                toolsPkg + "@" + toolsVersion);
+  var executable = path.join(packagePath, toolRecord.path, 'meteor');
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
-  // XXX use unipackage.json instead of hardcoding
-  var cmd = path.join(packagePath, 'meteor-tool-' + archinfo.host(),
-                             'meteor');
 
-  if (releaseOverride !== undefined)
+  if (releaseOverride !== undefined) {
     // We used to just append --release=<releaseOverride> to the arguments, and
     // though that's probably safe in practice, it makes us worry about things
     // like other --release options.  So now we use an environment
     // variable. #SpringboardEnvironmentVar
     process.env['METEOR_SPRINGBOARD_RELEASE'] = releaseOverride;
+  }
 
   // Now exec; we're not coming back.
-  require('kexec')(cmd, newArgv);
+  require('kexec')(executable, newArgv);
   throw Error('exec failed?');
 };
 
