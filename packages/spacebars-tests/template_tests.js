@@ -965,16 +965,6 @@ Tinytest.add('spacebars - templates - constant #each argument', function (test) 
              'foo bar 2');
 });
 
-// extract a multi-line string from a comment within a function.
-// @param f {Function} eg function () { /* [[[...content...]]] */ }
-// @returns {String} eg "content"
-var textFromFunction = function(f) {
-  var str = f.toString().match(/\[\[\[([\S\s]*)\]\]\]/m)[1];
-  // remove line number comments added by linker
-  str = str.replace(/[ ]*\/\/ \d+$/gm, '');
-  return str;
-};
-
 Tinytest.addAsync('spacebars - templates - #markdown - basic', function (test, onComplete) {
   var tmpl = Template.spacebars_template_test_markdown_basic;
   tmpl.obj = {snippet: "<i>hi</i>"};
