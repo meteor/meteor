@@ -523,111 +523,124 @@ main.registerCommand({
     }
   }
 
-  var solutionVersions = null;
+  var solutionPackageVersions = null;
   var directDependencies = project.getDirectDependencies(options.appDir);
   var previousVersions = project.getIndirectDependencies(options.appDir);
-  _.find(releaseVersionsToTry, function (releaseVersionToTry) {
+  var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.getReleaseVersion(
-      currentReleaseTrack, releaseVersionToTry);
+      currentReleaseTrack, versionToTry);
     if (!releaseRecord)
       throw Error("missing release record?");
     var constraints = project.combinedConstraints(
       directDependencies, releaseRecord.packages);
     try {
-      solutionVersions = catalog.resolveConstraints(
+      solutionPackageVersions = catalog.resolveConstraints(
         constraints, { previousSolution: previousVersions });
     } catch (e) {
       // XXX we should make the error handling explicitly detectable, and not
       // actually mention failures that are recoverable
       process.stderr.write(
         "XXX Update to release " + currentReleaseTrack +
-          "@" + releaseVersionToTry + " impossible: " + e.message + "\n");
+          "@" + versionToTry + " impossible: " + e.message + "\n");
       return false;
     }
     return true;
   });
 
-  if (!solutionVersions) {
+  if (!solutionReleaseVersion) {
     // XXX put an error here when we stop doing an error on every failure above
     return 1;
   }
 
-  project.setDependencies(options.appDir, directDependencies.appDeps,
-                          solutionVersions);
+  var solutionReleaseName = currentReleaseTrack + '@' + solutionReleaseVersion;
+
+  // We could at this point springboard to solutionRelease (which is no newer
+  // than the release we are currently running), but there's no clear advantage
+  // to this yet. The main reason might be if we decide to delete some
+  // backward-compatibility code which knows how to deal with an older release,
+  // but if we actually do that, we can change this code to add the extra
+  // springboard at that time.
+
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
 
+  // XXX reimplement upgraders (or don't, until we need them).
+  // // Find upgraders (in order) necessary to upgrade the app for the new
+  // // release (new metadata file formats, etc, or maybe even updating renamed
+  // // APIs).
+  // //
+  // // * If this is a pre-engine app with no .meteor/release file, run
+  // //   all upgraders.
+  // // * If the app didn't have a release because it was created by a
+  // //   checkout, don't run any upgraders.
+  // //
+  // // We're going to need the list of upgraders from the old release
+  // // (the release the app was using previously) to decide what
+  // // upgraders to run. It's possible that we don't have it downloaded
+  // // yet (if they checked out the project and immediately ran 'meteor
+  // // update --release foo'), so it's important to do this before we
+  // // actually update the project.
+  // var upgradersToRun;
+  // if (appRelease === "none") {
+  //   upgradersToRun = [];
+  // } else {
+  //   var oldUpgraders;
 
-  // Find upgraders (in order) necessary to upgrade the app for the new
-  // release (new metadata file formats, etc, or maybe even updating renamed
-  // APIs).
-  //
-  // * If this is a pre-engine app with no .meteor/release file, run
-  //   all upgraders.
-  // * If the app didn't have a release because it was created by a
-  //   checkout, don't run any upgraders.
-  //
-  // We're going to need the list of upgraders from the old release
-  // (the release the app was using previously) to decide what
-  // upgraders to run. It's possible that we don't have it downloaded
-  // yet (if they checked out the project and immediately ran 'meteor
-  // update --release foo'), so it's important to do this before we
-  // actually update the project.
-  var upgradersToRun;
-  if (appRelease === "none") {
-    upgradersToRun = [];
-  } else {
-    var oldUpgraders;
+  //   if (appRelease === null) {
+  //     oldUpgraders = [];
+  //   } else {
+  //     try {
+  //       var oldRelease = release.load(appRelease);
+  //     } catch (e) {
+  //       if (e instanceof files.OfflineError) {
+  //         process.stderr.write(
+  //           "You need to be online to do this. Please check your internet connection.\n");
+  //         return 1;
+  //       }
+  //       if (e instanceof warehouse.NoSuchReleaseError) {
+  //         // In this situation it's tempting to just print a warning and
+  //         // skip the updaters, but I can't figure out how to explain
+  //         // what's happening to the user, so let's just do this.
+  //         process.stderr.write(
+  //           "This project says that it uses version " + appRelease + " of Meteor, but you\n" +
+  //             "don't have that version of Meteor installed and the Meteor update servers\n" +
+  //             "don't have it either. Please edit the .meteor/release file in the project\n" +
+  //             "project and change it to a valid Meteor release.\n");
+  //         return 1;
+  //       }
+  //       throw e;
+  //     }
+  //     oldUpgraders = oldRelease.getUpgraders();
+  //   }
 
-    if (appRelease === null) {
-      oldUpgraders = [];
-    } else {
-      try {
-        var oldRelease = release.load(appRelease);
-      } catch (e) {
-        if (e instanceof files.OfflineError) {
-          process.stderr.write(
-"You need to be online to do this. Please check your internet connection.\n");
-          return 1;
-        }
-        if (e instanceof warehouse.NoSuchReleaseError) {
-          // In this situation it's tempting to just print a warning and
-          // skip the updaters, but I can't figure out how to explain
-          // what's happening to the user, so let's just do this.
-          process.stderr.write(
-"This project says that it uses version " + appRelease + " of Meteor, but you\n" +
-"don't have that version of Meteor installed and the Meteor update servers\n" +
-"don't have it either. Please edit the .meteor/release file in the project\n" +
-"project and change it to a valid Meteor release.\n");
-          return 1;
-        }
-        throw e;
-      }
-      oldUpgraders = oldRelease.getUpgraders();
-    }
+  //   // XXX release.current needs to be replaced with solutionReleaseName
+  //   upgradersToRun = _.difference(release.current.getUpgraders(), oldUpgraders);
+  // }
 
-    upgradersToRun = _.difference(release.current.getUpgraders(), oldUpgraders);
-  }
+  // Write the new versions to .meteor/packages and .meteor/versions.
+  project.setDependencies(options.appDir, directDependencies.appDeps,
+                          solutionPackageVersions);
 
   // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(options.appDir, release.current.name);
+  project.writeMeteorReleaseVersion(options.appDir, solutionReleaseName);
 
-  // Now run the upgraders.
-  _.each(upgradersToRun, function (upgrader) {
-    require("./upgraders.js").runUpgrader(upgrader, options.appDir);
-  });
+  // XXX redo upgrader support
+  // // Now run the upgraders.
+  // _.each(upgradersToRun, function (upgrader) {
+  //   require("./upgraders.js").runUpgrader(upgrader, options.appDir);
+  // });
 
   // This is the right spot to do any other changes we need to the app in
   // order to update it for the new release.
 
   console.log("%s: updated to Meteor %s.",
-              path.basename(options.appDir), release.current.name);
+              path.basename(options.appDir), solutionReleaseName);
 
   // Print any notices relevant to this upgrade.
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
-  var packages = project.getPackages(options.appDir);
+  // var packages = project.getPackages(options.appDir);
   // XXX reimplement "notices" for tropohouse
   // warehouse.printNotices(appRelease, release.current.name, packages);
 });

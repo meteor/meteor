@@ -770,7 +770,7 @@ _.extend(Catalog.prototype, {
     var recommended = _.filter(self.releaseVersions, function (v) {
       if (v.track !== track || !v.recommended)
         return false;
-      return laterThanOrderKey === null || v.orderKey > laterThanOrderKey;
+      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
     });
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
