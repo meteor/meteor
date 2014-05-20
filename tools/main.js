@@ -1046,7 +1046,7 @@ commandName + ": You're not in a Meteor package directory.\n");
       // Load the latest release's metadata so that we can figure out
       // the tools version that it uses.
       var latestRelease = release.load(release.latestDownloaded());
-      springboard(latestRelease.getToolsVersion(), latestRelease.name);
+      springboard(latestRelease, latestRelease.name);
       // (does not return)
     }
     if (e instanceof main.WaitForExit)

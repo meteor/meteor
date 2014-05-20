@@ -410,7 +410,7 @@ main.registerCommand({
   var couldNotContactServer = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  catalog.catalog.refresh(true);
+  catalog.refresh(true);
 
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
