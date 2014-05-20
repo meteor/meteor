@@ -1915,6 +1915,20 @@ main.registerCommand({
     return 1;
   }
 
+  // XXX put a check here on the schema? or just trust the server to do it?
+
+  // If you didn't specify an orderKey and it's compatible with our conventional
+  // orderKey generation algorithm, use the algorithm. If you explicitly specify
+  // orderKey: null, don't include one.
+  if (!_.has(relConf, 'orderKey')) {
+    relConf.orderKey = utils.defaultOrderKeyForReleaseVersion(relConf.version);
+  }
+  // This covers both the case of "explicitly specified {orderKey: null}" and
+  // "defaultOrderKeyForReleaseVersion returned null".
+  if (relConf.orderKey === null) {
+    delete relConf.orderKey;
+  }
+
   // This is sort of a hidden option to just take your entire meteor checkout
   // and make a release out of it. That's what we do now (that's what releases
   // meant pre-0.90), and it is very convenient to do that here.
