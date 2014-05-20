@@ -210,6 +210,7 @@ release.load = function (name, options) {
   } else {
     track = catalog.DEFAULT_TRACK;
     version = parts[0];
+    name = track + '@' + version;
   }
 
   var releaseVersion = catalog.catalog.getReleaseVersion(track, version);
