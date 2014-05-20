@@ -18,6 +18,10 @@
 * Fix memory leak (introduced in 0.8.1) by making sure to unregister
   sessions at the server when they are closed due to heartbeat timeout.
 
+* Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
+  in 0.8.0.1 that broke Atmosphere packages that do OAuth1
+  logins. #2154.
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
