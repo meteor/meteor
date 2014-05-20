@@ -220,7 +220,8 @@ release.load = function (name, options) {
   }
   if (releaseVersion === null) {
     // XXX check the warehouse too, or maybe before refresh
-    // XXX Pre090 better error
+    // XXX Pre090 better error, probably something like
+    //     warehouse.NoSuchReleaseError
     throw Error("unknown tropohouse release");
   }
 

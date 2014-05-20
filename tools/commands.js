@@ -565,7 +565,8 @@ main.registerCommand({
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
   var packages = project.getPackages(options.appDir);
-  warehouse.printNotices(appRelease, release.current.name, packages);
+  // XXX reimplement "notices" for tropohouse
+  // warehouse.printNotices(appRelease, release.current.name, packages);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -50,6 +50,7 @@ var writePackages = function (appDir, lines) {
 };
 
 // Package names used by this project.
+// XXX this doesn't trim constraints
 project.getPackages = function (appDir) {
   var ret = [];
 
