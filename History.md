@@ -22,6 +22,12 @@
   in 0.8.0.1 that broke Atmosphere packages that do OAuth1
   logins. #2154.
 
+* Add `credentialSecret` argument to `Google.retrieveCredential`, which
+  was forgotten in a previous release.
+
+* Fix a Blaze memory leak by cleaning up event handlers when a template
+  instance is destroyed. #1997
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
