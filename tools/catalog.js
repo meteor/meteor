@@ -162,6 +162,7 @@ _.extend(Catalog.prototype, {
   // in the constraint solver package
   resolveConstraints : function (constraints, opts) {
     var self = this;
+    self._requireInitialized();
 
     // Moderate hack. We don't have a constraint solver initialized yet. We are
     // probably trying to build the constraint solver package, or one of its

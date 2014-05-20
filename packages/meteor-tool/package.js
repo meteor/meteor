@@ -14,5 +14,6 @@ Package.includeTool([
   'logging',
   'mongo-livedata',
   'minimongo',
-  'constraint-solver'
+  'constraint-solver',
+  'package-version-parser'
 ]);
