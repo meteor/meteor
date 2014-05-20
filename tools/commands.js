@@ -419,17 +419,21 @@ main.registerCommand({
     return 1;
   }
 
-  // Unless --release was passed (meaning that either the user asked for a
-  // particular release, or that we _just did_ this and springboarded at
-  // #UpdateSpringboard), go get the latest release and switch to it. (We
-  // already know what the latest release is because we refreshed the catalog
-  // above.)
+  // Unless --release was passed (in which case we ought to already have
+  // springboarded to that release), go get the latest release and switch to
+  // it. (We already know what the latest release is because we refreshed the
+  // catalog above.)  Note that after springboarding, we will hit this again
+  // (because springboarding to a specific release does NOT set release.forced),
+  // but it should be a no-op next time (unless there actually was a new latest
+  // release in the interim).
   if (! release.forced) {
     if (! release.current ||
         release.current.name !== release.latestDownloaded()) {
       // The user asked for the latest release (well, they "asked for it" by not
       // passing --release). We're not currently running the latest release (we
       // may have even just learned about it).  #UpdateSpringboard
+      // XXX this is wrong, it should springboard to the latest release
+      //     *IN THE CURRENT TRACK*, not METEOR-CORE (unlike 'meteor create')
       throw new main.SpringboardToLatestRelease;
     }
   }
@@ -443,7 +447,7 @@ main.registerCommand({
   // If we're not in an app, then we're done (other than maybe printing some
   // stuff).
   if (! options.appDir) {
-    if (release.forced) {
+    if (release.forced || process.env.METEOR_SPRINGBOARD_RELEASE) {
       // We get here if:
       // 1) the user ran 'meteor update' and we found a new version
       // 2) the user ran 'meteor update --release xyz' (regardless of
@@ -451,7 +455,9 @@ main.registerCommand({
       //
       // In case (1), we downloaded and installed the update and then
       // we springboarded (at #UpdateSpringboard above), causing
-      // release.forced to be true.
+      // $METEOR_SPRINGBOARD_RELEASE to be true.
+      // XXX probably should have a better interface than looking directly
+      //     at the env var here
       //
       // In case (2), we downloaded, installed, and springboarded to
       // the requested release in the initialization code, before the
@@ -481,12 +487,6 @@ main.registerCommand({
   // Otherwise, we have to upgrade the app too, if the release changed.
   var appRelease = project.getMeteorReleaseVersion(options.appDir);
   if (appRelease !== null && appRelease === release.current.name) {
-    // Note that in this case, release.forced is true iff --release was actually
-    // passed on the command-line: #UpdateSpringboard can't have occured.  Why?
-    // Well, if the user didn't specify --release but we're in an app, then
-    // release.current.name must have been taken from the app, and
-    // #UpdateSpringboard only happens if needs to try to change the app
-    // release, and this is the message for not needing to change the release.
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
     var maybeOnThisComputer =
           couldNotContactServer ? "\ninstalled on this computer" : "";
@@ -498,27 +498,63 @@ main.registerCommand({
 
 
   // OK, let's figure out what release fits with our package constraints!
-  // XXX this will actually be a loop over possible releases in the non-force
-  //     case
-  // XXX better error checking on name
-  var releaseRecord = catalog.getReleaseVersion(
-    release.current.name.split('@')[0], release.current.name.split('@')[1]);
-  if (!releaseRecord)
-    throw Error("missing release record?");
+  // XXX better error checking on release.current.name
+  // XXX add a method to release.current
+  var currentReleaseTrack = release.current.name.split('@')[0];
+  var releaseVersionsToTry;
+  if (release.forced) {
+    releaseVersionsToTry = [release.current.name.split('@')[1]];
+  } else {
+    // XXX clean up all this splitty stuff
+    var appReleaseInfo = catalog.getReleaseVersion(
+      appRelease.split('@')[0], appRelease.split('@')[1]);
+    var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
+    releaseVersionsToTry = catalog.getSortedRecommendedReleaseVersions(
+      currentReleaseTrack, appOrderKey);
+    if (!releaseVersionsToTry.length) {
+      // XXX make error better, and make sure that the "already there" error
+      // above truly does cover every other case
+      var maybeOnThisComputer =
+            couldNotContactServer ? "\ninstalled on this computer" : "";
+      console.log(
+"This project is already at Meteor %s, which is newer than the latest release%s.",
+        appRelease, maybeOnThisComputer);
+      return;
+    }
+  }
+
+  var solutionVersions = null;
   var directDependencies = project.getDirectDependencies(options.appDir);
   var previousVersions = project.getIndirectDependencies(options.appDir);
-  var constraints = project.combinedConstraints(
-    directDependencies, releaseRecord.packages);
-  var solutionVersions = catalog.resolveConstraints(
-    constraints, { previousSolution: previousVersions });
+  _.find(releaseVersionsToTry, function (releaseVersionToTry) {
+    var releaseRecord = catalog.getReleaseVersion(
+      currentReleaseTrack, releaseVersionToTry);
+    if (!releaseRecord)
+      throw Error("missing release record?");
+    var constraints = project.combinedConstraints(
+      directDependencies, releaseRecord.packages);
+    try {
+      solutionVersions = catalog.resolveConstraints(
+        constraints, { previousSolution: previousVersions });
+    } catch (e) {
+      // XXX we should make the error handling explicitly detectable, and not
+      // actually mention failures that are recoverable
+      process.stderr.write(
+        "XXX Update to release " + currentReleaseTrack +
+          "@" + releaseVersionToTry + " impossible: " + e.message + "\n");
+      return false;
+    }
+    return true;
+  });
+
   if (!solutionVersions) {
-    // XXX text
-    process.stderr.write(
-      "Couldn't solve the update to " + release.current.name + ". Ah well.\n");
+    // XXX put an error here when we stop doing an error on every failure above
     return 1;
   }
+
   project.setDependencies(options.appDir, directDependencies.appDeps,
                           solutionVersions);
+
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
 

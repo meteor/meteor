@@ -630,6 +630,7 @@ Fiber(function () {
   // #ImprovingCrossVersionOptionParsing.
 
   var releaseOverride = null;
+  var releaseForced = false;
   if (_.has(rawOptions, '--release')) {
     if (rawOptions['--release'].length > 1) {
       process.stderr.write(
@@ -638,6 +639,7 @@ Fiber(function () {
       process.exit(1);
     }
     releaseOverride = rawOptions['--release'][0];
+    releaseForced = true;
     if (! releaseOverride) {
       process.stderr.write(
 "The --release option needs a value.\n" +
@@ -648,6 +650,12 @@ Fiber(function () {
   }
   if (_.has(process.env, 'METEOR_SPRINGBOARD_RELEASE')) {
     // See #SpringboardEnvironmentVar
+    // Note that this does *NOT* cause release.forced to be true.
+    // release.forced should only be set when the user actually
+    // ran with --release, not just because (eg) they ran
+    // 'meteor update' and we springboarded to the latest release.
+    // (It's important that 'meteor update' be able to tell these
+    // conditions apart even after the springboard!)
     releaseOverride = process.env['METEOR_SPRINGBOARD_RELEASE'];
   }
 
@@ -741,7 +749,7 @@ Fiber(function () {
       throw e;
     }
 
-    release.setCurrent(rel, /* forced */ !! releaseOverride);
+    release.setCurrent(rel, releaseForced);
   }
 
   // If we're not running the correct version of the tools for this

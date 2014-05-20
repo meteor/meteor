@@ -763,11 +763,15 @@ _.extend(Catalog.prototype, {
   // Given a release track, return all recommended versions for this track, sorted
   // by their orderKey. Returns the empty array if the release track does not
   // exist or does not have any recommended versions.
-  getSortedRecommendedReleaseVersions: function (track) {
+  getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
     self._requireInitialized();
 
-    var recommended = _.where(self.releaseVersions, { track: track, recommended: true});
+    var recommended = _.filter(self.releaseVersions, function (v) {
+      if (v.track !== track || !v.recommended)
+        return false;
+      return laterThanOrderKey === null || v.orderKey > laterThanOrderKey;
+    });
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
     });
