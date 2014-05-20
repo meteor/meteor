@@ -52,10 +52,17 @@
   Tinytest.add(
     'roles - can check current users roles via template helper', 
     function (test) {
-      var isInRole = Roles._handlebarsHelpers.isInRole,
+      var isInRole,
           expected,
           actual
 
+      if (!Roles._handlebarsHelpers) {
+        // probably running package tests outside of a Meteor app.
+        // skip this test.
+        return
+      }
+
+      isInRole = Roles._handlebarsHelpers.isInRole
       test.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
 
       expected = true

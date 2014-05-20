@@ -1,3 +1,8 @@
+## v1.2.9
+
+* Let `meteor test-packages ./roles` work outside of an actual meteor app. #43
+
+
 ## v1.2.8
 
 * Bump version number since Atmosphere only supports 3 levels

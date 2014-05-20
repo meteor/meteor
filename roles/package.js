@@ -37,7 +37,13 @@ Package.on_test(function (api) {
 function uiExists() {
   var fs = Npm.require('fs'),
       path = Npm.require('path'),
-      meteorPackages = fs.readFileSync(path.resolve('.meteor/packages'), 'utf8');
+      meteorPackages;
+
+  try {
+    meteorPackages = fs.readFileSync(path.resolve('.meteor/packages'), 'utf8');
+  } catch (ex) {
+    return false;
+  }
 
   if (!meteorPackages) {
     return false;
