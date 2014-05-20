@@ -11,6 +11,7 @@ if (Meteor.isServer) {
     createInsecureCollection: function (name, options) {
       check(name, String);
       check(options, Match.Optional({
+        connection: Match.Optional( null ),
         transformName: Match.Optional(String),
         idGeneration: Match.Optional(String)
       }));
@@ -2524,6 +2525,39 @@ if (Meteor.isServer) {
     }
   ]);
 }
+
+
+testAsyncMulti("mongo-livedata - server collection methods with null connection", [
+  function (test, expect) {
+    if ( Meteor.isClient ){
+      var cname = Random.id();
+      Meteor.call( 'createInsecureCollection', cname, { connection: null} );
+      var handle = Meteor.subscribe( 'c-' + cname );
+      pollUntil(expect, function () {
+        return handle.ready();
+      }, 10000);
+
+      var coll = new Meteor.Collection(cname);
+      var doc = { foo: "bar" };
+
+      var id = coll.insert(doc, expect( function( err, res){
+        test.isFalse( err, 'insert should not error' );
+      }));
+      test.equal( coll.find( doc ).count(), 1, 'doc inserted');
+
+      coll.update( id, {$set: {foo: 'baz'}}, expect( function( err, res){
+        test.isFalse( err, 'update should not error' );
+      }));
+      test.equal( coll.find({foo: 'baz'}).count(), 1, 'doc updated');
+
+      coll.remove( id, expect( function( err, res){
+        test.isFalse( err, 'remove should not error' );
+      }));
+      test.equal( coll.find().count(), 0, 'collection should have no docs');
+    }
+  }
+
+]);
 
 Tinytest.addAsync("mongo-livedata - local collections with different connections", function (test, onComplete) {
   var cname = Random.id();

@@ -648,7 +648,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   self._prefix = '/' + self._name + '/';
 
   // mutation methods
-  if ( Meteor.isServer || self._connection ) {
+  if( self._connection || Meteor.isServer ){
     var m = {};
 
     _.each(['insert', 'update', 'remove'], function (method) {
@@ -683,7 +683,6 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
           }
 
           // This is the server receiving a method call from the client.
-
           // We don't allow arbitrary selectors in mutations from the client: only
           // single-ID selectors.
           if (method !== 'insert')
@@ -724,11 +723,13 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
-    if ( Meteor.isClient || self._connection === Meteor.server)
+    if ( Meteor.isClient ){
       self._connection.methods(m);
+      return;
+    }
 
     //create server methods so client call can succeed when server collection is not backed by db
-    if ( Meteor.isServer && self._connection === null )
+    if ( self._connection === Meteor.server || self._connection === null )
       Meteor.server.methods( m );
   }
 };
