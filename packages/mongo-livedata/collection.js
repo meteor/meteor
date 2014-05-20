@@ -648,7 +648,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
   self._prefix = '/' + self._name + '/';
 
   // mutation methods
-  if (self._connection) {
+  if ( Meteor.isServer || self._connection ) {
     var m = {};
 
     _.each(['insert', 'update', 'remove'], function (method) {
@@ -724,8 +724,12 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
     // Minimongo on the server gets no stubs; instead, by default
     // it wait()s until its result is ready, yielding.
     // This matches the behavior of macromongo on the server better.
-    if (Meteor.isClient || self._connection === Meteor.server)
+    if ( Meteor.isClient || self._connection === Meteor.server)
       self._connection.methods(m);
+
+    //create server methods so client call can succeed when server collection is not backed by db
+    if ( Meteor.isServer && self._connection === null )
+      Meteor.server.methods( m );
   }
 };
 
