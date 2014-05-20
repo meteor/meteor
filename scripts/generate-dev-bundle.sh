@@ -172,11 +172,11 @@ git checkout ssl-r$MONGO_VERSION
 # Compile
 
 MONGO_FLAGS="--ssl --release -j4 "
-MONGO_FLAGS+="--cpppath $DIR/build/openssl-out/include --libpath $DIR/build/openssl-out/lib "
+MONGO_FLAGS+="--cpppath=$DIR/build/openssl-out/include --libpath=$DIR/build/openssl-out/lib "
 
 if [ "$MONGO_OS" == "osx" ]; then
     # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
-    MONGO_FLAGS+="--openssl $DIR/build/openssl-out/lib "
+    MONGO_FLAGS+="--openssl=$DIR/build/openssl-out/lib "
     /usr/local/bin/scons $MONGO_FLAGS mongo mongod
 elif [ "$MONGO_OS" == "linux" ]; then
     MONGO_FLAGS+="--no-glibc-check --prefix=./ "
