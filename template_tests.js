@@ -975,166 +975,76 @@ var textFromFunction = function(f) {
   return str;
 };
 
-Tinytest.add('spacebars - templates - #markdown - basic', function (test) {
+Tinytest.addAsync('spacebars - templates - #markdown - basic', function (test, onComplete) {
   var tmpl = Template.spacebars_template_test_markdown_basic;
   tmpl.obj = {snippet: "<i>hi</i>"};
   tmpl.hi = function () {
     return this.snippet;
   };
   var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p><i>hi</i>
-/each}}</p>
 
-<p><b><i>hi</i></b>
-<b>/each}}</b></p>
-
-<ul>
-<li><i>hi</i></li>
-<li><p>/each}}</p></li>
-<li><p><b><i>hi</i></b></p></li>
-<li><b>/each}}</b></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>&lt;i&gt;hi&lt;/i&gt;
-/each}}
-
-&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;
-&lt;b&gt;/each}}&lt;/b&gt;
-</code></pre>
-
-<p>&amp;gt</p>
-
-<ul>
-<li>&amp;gt</li>
-</ul>
-
-<p><code>&amp;gt</code></p>
-
-<pre><code>&amp;gt
-</code></pre>
-
-<p>&gt;</p>
-
-<ul>
-<li>&gt;</li>
-</ul>
-
-<p><code>&amp;gt;</code></p>
-
-<pre><code>&amp;gt;
-</code></pre>
-
-<p><code>&lt;i&gt;hi&lt;/i&gt;</code>
-<code>/each}}</code></p>
-
-<p><code>&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;</code>
-<code>&lt;b&gt;/each}}</code></p>]]] */
-  })));
+  Meteor.call("getAsset", "markdown_basic.html", function (err, html) {
+    test.isFalse(err);
+    test.equal(canonicalizeHtml(div.innerHTML),
+               canonicalizeHtml(html));
+    onComplete();
+  });
 });
 
-Tinytest.add('spacebars - templates - #markdown - if', function (test) {
-  var tmpl = Template.spacebars_template_test_markdown_if;
-  var R = new ReactiveVar(false);
-  tmpl.cond = function () { return R.get(); };
+testAsyncMulti('spacebars - templates - #markdown - if', [
+  function (test, expect) {
+    var self = this;
+    Meteor.call("getAsset", "markdown_if1.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html1 = html;
+    }));
+    Meteor.call("getAsset", "markdown_if2.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html2 = html;
+    }));
+  },
 
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>false</p>
+  function (test, expect) {
+    var self = this;
+    var tmpl = Template.spacebars_template_test_markdown_if;
+    var R = new ReactiveVar(false);
+    tmpl.cond = function () { return R.get(); };
 
-<p><b>false</b></p>
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
+    R.set(true);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
+  }
+]);
 
-<ul>
-<li><p>false</p></li>
-<li><p><b>false</b></p></li>
-</ul>
+testAsyncMulti('spacebars - templates - #markdown - each', [
+  function (test, expect) {
+    var self = this;
+    Meteor.call("getAsset", "markdown_each1.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html1 = html;
+    }));
+    Meteor.call("getAsset", "markdown_each2.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html2 = html;
+    }));
+  },
 
-<p>some paragraph to fix showdown's four space parsing below.</p>
+  function (test, expect) {
+    var self = this;
+    var tmpl = Template.spacebars_template_test_markdown_each;
+    var R = new ReactiveVar([]);
+    tmpl.seq = function () { return R.get(); };
 
-<pre><code>false
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
 
-&lt;b&gt;false&lt;/b&gt;
-</code></pre>
-
-<p><code>false</code></p>
-
-<p><code>&lt;b&gt;false&lt;/b&gt;</code></p>]]] */
-  })));
-  R.set(true);
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>true</p>
-
-<p><b>true</b></p>
-
-<ul>
-<li><p>true</p></li>
-<li><p><b>true</b></p></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>true
-
-&lt;b&gt;true&lt;/b&gt;
-</code></pre>
-
-<p><code>true</code></p>
-
-<p><code>&lt;b&gt;true&lt;/b&gt;</code></p>]]] */
-  })));
-});
-
-Tinytest.add('spacebars - templates - #markdown - each', function (test) {
-  var tmpl = Template.spacebars_template_test_markdown_each;
-  var R = new ReactiveVar([]);
-  tmpl.seq = function () { return R.get(); };
-
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p><b></b></p>
-
-<ul>
-<li></li>
-<li><b></b></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>&lt;b&gt;&lt;/b&gt;
-</code></pre>
-
-<p>``</p>
-
-<p><code>&lt;b&gt;&lt;/b&gt;</code></p>]]] */
-    })));
-
-  R.set(["item"]);
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>item</p>
-
-<p><b>item</b></p>
-
-<ul>
-<li><p>item</p></li>
-<li><p><b>item</b></p></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>item
-
-&lt;b&gt;item&lt;/b&gt;
-</code></pre>
-
-<p><code>item</code></p>
-
-<p><code>&lt;b&gt;item&lt;/b&gt;</code></p>]]] */
-    })));
-});
+    R.set(["item"]);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
+  }
+]);
 
 Tinytest.add('spacebars - templates - #markdown - inclusion', function (test) {
   var tmpl = Template.spacebars_template_test_markdown_inclusion;
