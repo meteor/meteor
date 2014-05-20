@@ -369,9 +369,6 @@ files.mkdir_p = function (dir, mode) {
 // override options.include. Any directories beneath `from` are only
 // included if they contain any files in options.include, or are
 // themselves explicitly listed in options.include.
-//
-// Returns the list of relative file paths copied to the destination,
-// as filtered by ignore and transformed by transformFilename.
 files.cp_r = function (from, to, options) {
   options = options || {};
 
@@ -395,7 +392,7 @@ files.cp_r = function (from, to, options) {
   })) {
     files.mkdir_p(to, 0755);
   }
-  var copied = [];
+
   _.each(fs.readdirSync(from), function (f) {
     if (_.any(options.ignore || [], function (pattern) {
       return f.match(pattern);
@@ -405,20 +402,34 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    var stats = fs.statSync(fullFrom);
+    var stats = fs.lstatSync(fullFrom);
     if (stats.isDirectory()) {
-      var subdirPaths = files.cp_r(fullFrom, fullTo, options);
-      copied = copied.concat(_.map(subdirPaths, function (subpath) {
-        return path.join(f, subpath);
-      }));
+      files.cp_r(fullFrom, fullTo, options);
     } else {
+      var absFullFrom = path.resolve(fullFrom);
+      // If it's not one of the particular sources we're asked to include,
+      // skip it.
+      if (options.include && ! _.contains(options.include, absFullFrom))
+        return;
+
+      // If it's a symlink, we want to copy it as if it were the underlying file
+      // (contents and mode). This mostly occurs in the usage by bundleSource
+      // when building a package: if a source file is a symlink to something
+      // random on your disk, we should include the source file. But we're
+      // careful not to call statSync until after checking options.include;
+      // otherwise we'd crash if there's something that we're skipping anyway
+      // that's a broken symlink (eg, emacs sometimes writes .#foo files which
+      // are stored as symlinks but don't actually link anywhere real).
+      if (stats.isSymbolicLink()) {
+        stats = fs.statSync(fullFrom);
+      }
+
       // Create the file as readable and writable by everyone, and executable by
       // everyone if the original file is executably by owner. (This mode will
       // be modified by umask.) We don't copy the mode *directly* because this
       // function is used by 'meteor create' which is copying from the read-only
       // tools tree into a writable app.
       var mode = (stats.mode & 0100) ? 0777 : 0666;
-      var absFullFrom = path.resolve(fullFrom);
       if (! options.include ||
           _.contains(options.include, absFullFrom)) {
         if (!options.transformContents) {
@@ -430,11 +441,9 @@ files.cp_r = function (from, to, options) {
           contents = options.transformContents(contents, f);
           fs.writeFileSync(fullTo, contents, { mode: mode });
         }
-        copied.push(f);
       }
     }
   });
-  return copied;
 };
 
 // Make a temporary directory. Returns the path to the newly created
