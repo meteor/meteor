@@ -1233,6 +1233,10 @@ _.extend(PackageSource.prototype, {
         });
     };
 
+    // XXX: I am tired of writing out version files in checkout. I will fix this
+    // to explicitly not do that later.
+    return;
+
     // Both plugins and direct dependencies are objects mapping package name to
     // version number. When we write them on disk, we will convert them to
     // arrays of <packageName, version> and alphabetized by packageName.
