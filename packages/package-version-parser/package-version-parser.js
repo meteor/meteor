@@ -20,6 +20,7 @@ PackageVersion.parseVersionConstraint = function (versionString) {
   if (versionString === "none" || versionString === null) {
     versionDesc.type = "at-least";
     versionDesc.version = "0.0.0";
+    return versionDesc;
   }
 
   if (versionString.charAt(0) === '=') {

@@ -227,12 +227,13 @@ project.combinedConstraints = function (deps, releasePackages) {
   _.each(deps.programsDeps, function (deps, programName) {
     _.each(deps, function (constraint, packageName) {
       allDeps.push(_.extend({packageName: packageName},
-                          utils.parseVersionConstraint(constraint)));
+                            utils.parseVersionConstraint(constraint)));
   });
   });
 
   _.each(releasePackages, function(version, name) {
-    allDeps.push({packageName: name, version: version, weak: true, exact: true});
+    allDeps.push({packageName: name, version: version, weak: true,
+                  type: 'exactly'});
   });
   // XXX grr
   allDeps.push({packageName: "ctl", version:  null });
