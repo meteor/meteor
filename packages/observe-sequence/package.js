@@ -7,6 +7,7 @@ Package.on_use(function (api) {
   api.use('deps');
   api.use('minimongo');  // for idStringify
   api.use('underscore');
+  api.use('random');
   api.export('ObserveSequence');
   api.add_files(['observe_sequence.js']);
 });
