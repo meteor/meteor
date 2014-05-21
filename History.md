@@ -11,7 +11,8 @@
   was forgotten in a previous release.
 
 * Add `-a` and `-r` aliases for `--add` and `--remove` in `meteor
-  authorized` command. #2155
+  authorized` command. These aliases were documented in `meteor help`
+  but previously didn't exist. #2155
 
 * Add missing `underscore` dependency in the `oauth-encryption` package. #2165
 
