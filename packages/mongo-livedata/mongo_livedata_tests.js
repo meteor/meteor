@@ -334,7 +334,6 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   }, context);
   test.equal(total, 14);
 
-  cur.rewind();
   index = 0;
   test.equal(cur.map(function (doc, i, cursor) {
     // XXX we could theoretically make map run its iterations in parallel or

@@ -779,14 +779,6 @@ Template.api.cursor_map = {
   ]
 };
 
-Template.api.cursor_rewind = {
-  id: "rewind",
-  name: "<em>cursor</em>.rewind()",
-  locus: "Anywhere",
-  descr: ["Resets the query cursor."],
-  args: [ ]
-};
-
 Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",

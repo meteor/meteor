@@ -113,20 +113,16 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
-  // db_objects is an array of the objects that match the cursor. (It's always
-  // an array, never an IdMap: LocalCollection.Cursor is always ordered.)
-  self.db_objects = null;
-  self.cursor_pos = 0;
-
   // by default, queries register w/ Deps when it is available.
   if (typeof Deps !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
+// Since we don't actually have a "nextObject" interface, there's really no
+// reason to have a "rewind" interface.  All it did was make multiple calls
+// to fetch/map/forEach return nothing the second time.
+// XXX COMPAT WITH 0.8.1
 LocalCollection.Cursor.prototype.rewind = function () {
-  var self = this;
-  self.db_objects = null;
-  self.cursor_pos = 0;
 };
 
 LocalCollection.prototype.findOne = function (selector, options) {
@@ -150,25 +146,29 @@ LocalCollection.prototype.findOne = function (selector, options) {
 LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects({ordered: true});
+  var objects = self._getRawObjects({ordered: true});
 
-  if (self.reactive)
+  if (self.reactive) {
     self._depend({
       addedBefore: true,
       removed: true,
       changed: true,
       movedBefore: true});
+  }
 
-  while (self.cursor_pos < self.db_objects.length) {
-    var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
-    if (self.projectionFn)
+  _.each(objects, function (elt, i) {
+    if (self.projectionFn) {
       elt = self.projectionFn(elt);
+    } else {
+      // projection functions always clone the pieces they use, but if not we
+      // have to do it here.
+      elt = EJSON.clone(elt);
+    }
+
     if (self._transform)
       elt = self._transform(elt);
-    callback.call(thisArg, elt, self.cursor_pos, self);
-    ++self.cursor_pos;
-  }
+    callback.call(thisArg, elt, i, self);
+  });
 };
 
 LocalCollection.Cursor.prototype.getTransform = function () {
@@ -200,10 +200,7 @@ LocalCollection.Cursor.prototype.count = function () {
     self._depend({added: true, removed: true},
                  true /* allow the observe to be unordered */);
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects({ordered: true});
-
-  return self.db_objects.length;
+  return self._getRawObjects({ordered: true}).length;
 };
 
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {

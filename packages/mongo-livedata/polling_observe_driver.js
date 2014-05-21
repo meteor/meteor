@@ -139,11 +139,6 @@ _.extend(PollingObserveDriver.prototype, {
     var writesForCycle = self._pendingWrites;
     self._pendingWrites = [];
 
-    // Always rewind the cursor; it's a no-op the first time, but better safe
-    // than sorry (eg, if the first call to getRawObjects throws, the cursor
-    // needs rewinding even though 'first' is true).
-    self._synchronousCursor.rewind();
-
     // Get the new query results. (This yields.)
     try {
       var newResults = self._synchronousCursor.getRawObjects(self._ordered);

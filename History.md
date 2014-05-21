@@ -50,6 +50,10 @@
 * Use `Meteor.absoluteUrl()` to compute the redirect URI in `force-ssl`
   instead of the host header.
 
+* Automatically rewind cursors before calls to `fetch`, `forEach`, or `map`. On
+  the client, don't cache the return value of `cursor.count()` (consistently
+  with the server behavior). `cursor.rewind()` is now a no-op. #2114
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
   - uglify-js: 2.4.13 (from 2.4.7)
