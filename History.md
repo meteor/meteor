@@ -32,6 +32,9 @@
 
 * EJSON custom type conversion functions should not be permitted to yield. #2136
 
+* The legacy polling observe driver handles errors communicating with MongoDB
+  better and no longer gets "stuck" in some circumstances.
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
