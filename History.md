@@ -4,6 +4,12 @@
   in 0.8.0.1 that broke Atmosphere packages that do OAuth1
   logins. #2154.
 
+* Add `credentialSecret` argument to `Google.retrieveCredential`, which
+  was forgotten in a previous release.
+
+* Add `-a` and `-r` aliases for `--add` and `--remove` in `meteor
+  authorized` command. #2155
+
 
 ## v.0.8.1.2
 
