@@ -181,7 +181,6 @@ var toc = [
         {instance: "cursor", name: "map"},
         {instance: "cursor", name: "fetch"},
         {instance: "cursor", name: "count"},
-        {instance: "cursor", name: "rewind"},
         {instance: "cursor", name: "observe"},
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],

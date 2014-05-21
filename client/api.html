@@ -1117,12 +1117,6 @@ Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
-{{> api_box cursor_rewind}}
-
-The `forEach`, `map`, or `fetch` methods can only be called once on a
-cursor.  To access the data in a cursor more than once, use `rewind` to
-reset the cursor.
-
 {{> api_box cursor_observe}}
 
 Establishes a *live query* that invokes callbacks when the result of
