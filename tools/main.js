@@ -80,7 +80,11 @@ main.WaitForExit = function () {};
 
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the latest available (downloaded) Meteor release.
-main.SpringboardToLatestRelease = function () {};
+// If track is specified, it uses the latest available in the given
+// track instead of the default track.
+main.SpringboardToLatestRelease = function (track) {
+  this.track = track;
+};
 
 // Register a command-line command.
 //
@@ -708,7 +712,7 @@ Fiber(function () {
       }
     } else {
       // Run outside an app dir with no --release flag. Use the latest
-      // release we know about.
+      // release we know about (in the default track).
       releaseName = release.latestDownloaded();
     }
   }
@@ -1060,7 +1064,7 @@ commandName + ": You're not in a Meteor package directory.\n");
     if (e instanceof main.SpringboardToLatestRelease) {
       // Load the latest release's metadata so that we can figure out
       // the tools version that it uses.
-      var latestRelease = release.load(release.latestDownloaded());
+      var latestRelease = release.load(release.latestDownloaded(e.track));
       springboard(latestRelease, latestRelease.name);
       // (does not return)
     }

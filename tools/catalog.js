@@ -924,19 +924,20 @@ _.extend(Catalog.prototype, {
   },
 
   // Returns the default release version: the latest recommended version on the
-  // default track. Returns null if no such thing exists (even after syncing
-  // with the server, which it only does if there is no eligible release
-  // version).
-  getDefaultReleaseVersion: function () {
+  // default track (or the specified track). Returns null if no such thing
+  // exists (even after syncing with the server, which it only does if there is
+  // no eligible release version).
+  getDefaultReleaseVersion: function (track) {
     var self = this;
     self._requireInitialized();
 
+    track = track || catalog.DEFAULT_TRACK;
+
     var attempt = function () {
-      var versions = self.getSortedRecommendedReleaseVersions(
-        catalog.DEFAULT_TRACK);
+      var versions = self.getSortedRecommendedReleaseVersions(track);
       if (!versions.length)
         return null;
-      return {track: catalog.DEFAULT_TRACK, version: versions[0]};
+      return {track: track, version: versions[0]};
     };
 
     var ret = attempt();

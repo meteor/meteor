@@ -303,8 +303,9 @@ main.registerCommand({
   // at the end.)
   if (! release.current.isCheckout() &&
       release.current.name !== release.latestDownloaded() &&
-      ! release.forced)
+      ! release.forced) {
     throw new main.SpringboardToLatestRelease;
+  }
 
   var exampleDir = path.join(__dirname, '..', 'examples');
   var examples = _.reject(fs.readdirSync(exampleDir), function (e) {
@@ -419,6 +420,14 @@ main.registerCommand({
     return 1;
   }
 
+  // This is the release track we'll end up on --- either because it's
+  // the explicitly specified (with --release) track; or because we
+  // didn't specify a release and it's the app's current release (if we're
+  // in an app dir), since non-forced updates don't change the track.
+  // XXX better error checking on release.current.name
+  // XXX add a method to release.current
+  var releaseTrack = release.current.name.split('@')[0];
+
   // Unless --release was passed (in which case we ought to already have
   // springboarded to that release), go get the latest release and switch to
   // it. (We already know what the latest release is because we refreshed the
@@ -428,13 +437,11 @@ main.registerCommand({
   // release in the interim).
   if (! release.forced) {
     if (! release.current ||
-        release.current.name !== release.latestDownloaded()) {
+        release.current.name !== release.latestDownloaded(releaseTrack)) {
       // The user asked for the latest release (well, they "asked for it" by not
-      // passing --release). We're not currently running the latest release (we
-      // may have even just learned about it).  #UpdateSpringboard
-      // XXX this is wrong, it should springboard to the latest release
-      //     *IN THE CURRENT TRACK*, not METEOR-CORE (unlike 'meteor create')
-      throw new main.SpringboardToLatestRelease;
+      // passing --release). We're not currently running the latest release on
+      // this track (we may have even just learned about it). #UpdateSpringboard
+      throw new main.SpringboardToLatestRelease(releaseTrack);
     }
   }
 
@@ -498,9 +505,6 @@ main.registerCommand({
 
 
   // OK, let's figure out what release fits with our package constraints!
-  // XXX better error checking on release.current.name
-  // XXX add a method to release.current
-  var currentReleaseTrack = release.current.name.split('@')[0];
   var releaseVersionsToTry;
   if (release.forced) {
     releaseVersionsToTry = [release.current.name.split('@')[1]];
@@ -510,7 +514,7 @@ main.registerCommand({
       appRelease.split('@')[0], appRelease.split('@')[1]);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
     releaseVersionsToTry = catalog.getSortedRecommendedReleaseVersions(
-      currentReleaseTrack, appOrderKey);
+      releaseTrack, appOrderKey);
     if (!releaseVersionsToTry.length) {
       // XXX make error better, and make sure that the "already there" error
       // above truly does cover every other case
@@ -527,8 +531,7 @@ main.registerCommand({
   var directDependencies = project.getDirectDependencies(options.appDir);
   var previousVersions = project.getIndirectDependencies(options.appDir);
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
-    var releaseRecord = catalog.getReleaseVersion(
-      currentReleaseTrack, versionToTry);
+    var releaseRecord = catalog.getReleaseVersion(releaseTrack, versionToTry);
     if (!releaseRecord)
       throw Error("missing release record?");
     var constraints = project.combinedConstraints(
@@ -540,7 +543,7 @@ main.registerCommand({
       // XXX we should make the error handling explicitly detectable, and not
       // actually mention failures that are recoverable
       process.stderr.write(
-        "XXX Update to release " + currentReleaseTrack +
+        "XXX Update to release " + releaseTrack +
           "@" + versionToTry + " impossible: " + e.message + "\n");
       return false;
     }
@@ -552,7 +555,7 @@ main.registerCommand({
     return 1;
   }
 
-  var solutionReleaseName = currentReleaseTrack + '@' + solutionReleaseVersion;
+  var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
 
   // We could at this point springboard to solutionRelease (which is no newer
   // than the release we are currently running), but there's no clear advantage
