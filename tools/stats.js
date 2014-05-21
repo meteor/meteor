@@ -3,7 +3,7 @@ var _ = require("underscore");
 
 var config = require("./config.js");
 var uniload = require("./uniload.js");
-var project = require("./project.js");
+var project = require("./project.js").project;
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
 
@@ -11,11 +11,11 @@ var ServiceConnection = require("./service-connection.js");
 // indirectly. Formatted as a list of objects with 'name', 'version'
 // and 'direct', which is how the `recordAppPackages` method on the
 // stats server expects to get this list.
-var packageList = function (appDir) {
-  var directDeps = project.getPackages(appDir);
+var packageList = function () {
+  var directDeps = project.s.getConstraints();
 
   return _.map(
-    project.getIndirectDependencies(appDir),
+    project.getVersions(),
     function (version, name) {
       return {
         name: name,
@@ -26,7 +26,7 @@ var packageList = function (appDir) {
   );
 };
 
-var recordPackages = function (appDir) {
+var recordPackages = function () {
   // We do this inside a new fiber to avoid blocking anything on talking
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
@@ -49,8 +49,8 @@ var recordPackages = function (appDir) {
       }
 
       conn.call("recordAppPackages",
-                project.getAppIdentifier(appDir),
-                packageList(appDir));
+                project.getAppIdentifier(),
+                packageList());
     } catch (err) {
       // Do nothing. A failure to record package stats shouldn't be
       // visible to the end user and shouldn't affect whatever command
@@ -61,10 +61,10 @@ var recordPackages = function (appDir) {
 
 // Used in a test (and can only be used against the testing packages
 // server) to fetch one package stats entry for a given application.
-var getPackagesForAppIdInTest = function (appDir) {
+var getPackagesForAppIdInTest = function () {
   return connectToPackagesStatsServer().call(
     "getPackagesForAppId",
-    project.getAppIdentifier(appDir));
+    project.getAppIdentifier());
 };
 
 var connectToPackagesStatsServer = function () {

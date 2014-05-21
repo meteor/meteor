@@ -6,7 +6,7 @@ var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
 var uniload = require('./uniload.js');
-var project = require('./project.js');
+var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
@@ -175,13 +175,12 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
 
-  // First, generate a package loader. This will also have the side effect of
-  // processing our dependencies and rewriting the versions file, but
-  // regardless, we are going to need it to compile packages.
-  var loader = project.generatePackageLoader(options.appDir);
+  // We need the package loader to compile our packages, so let's make sure to
+  // get one.
+  var loader = project.getPackageLoader();
 
   // Then get the list of packages that we need to get and build.
-  var allPackages = project.getIndirectDependencies(options.appDir);
+  var allPackages = project.getVersions();
 
   var messages = buildmessage.capture(function () {
     _.forEach(allPackages, function (versions, name) {
@@ -248,7 +247,7 @@ main.registerCommand({
   }
 
   if (release.forced) {
-    var appRelease = project.getMeteorReleaseVersion(options.appDir);
+    var appRelease = project.getMeteorReleaseVersion();
     if (release.current.name !== appRelease) {
       console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
                   release.current.name, appRelease);
@@ -370,9 +369,9 @@ main.registerCommand({
   }
 
   project.writeMeteorReleaseVersion(
-    appPath, release.current.isCheckout() ? "none" : release.current.name);
+    release.current.isCheckout() ? "none" : release.current.name);
 
-  project.ensureAppIdentifier(appPath);
+  project.ensureAppIdentifier();
 
   process.stderr.write(appPath + ": created");
   if (options.example && options.example !== appPath)
@@ -479,7 +478,7 @@ main.registerCommand({
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getMeteorReleaseVersion(options.appDir);
+  var appRelease = project.getMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
     // Note that in this case, release.forced is true iff --release was actually
     // passed on the command-line: #UpdateSpringboard can't have occured.  Why?
@@ -505,10 +504,11 @@ main.registerCommand({
     release.current.name.split('@')[0], release.current.name.split('@')[1]);
   if (!releaseRecord)
     throw Error("missing release record?");
-  var directDependencies = project.getDirectDependencies(options.appDir);
-  var previousVersions = project.getIndirectDependencies(options.appDir);
-  var constraints = project.combinedConstraints(
-    directDependencies, releaseRecord.packages);
+
+  var constraints =
+        project.calculateCombinedConstraints(releaseRecord.packages);
+  var previousVersions = project.getVersions();
+
   var solutionVersions = catalog.resolveConstraints(
     constraints, { previousSolution: previousVersions });
   if (!solutionVersions) {
@@ -517,7 +517,9 @@ main.registerCommand({
       "Couldn't solve the update to " + release.current.name + ". Ah well.\n");
     return 1;
   }
-  project.setDependencies(options.appDir, directDependencies.appDeps,
+
+  var directDependencies = project.getConstraints();
+  project.setDependencies(directDependencies,
                           solutionVersions);
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
@@ -575,7 +577,7 @@ main.registerCommand({
   }
 
   // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(options.appDir, release.current.name);
+  project.writeMeteorReleaseVersion(release.current.name);
 
   // Now run the upgraders.
   _.each(upgradersToRun, function (upgrader) {
@@ -591,7 +593,7 @@ main.registerCommand({
   // Print any notices relevant to this upgrade.
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
-  var packages = project.getPackages(options.appDir);
+  var packages = project.getConstraints();
   // XXX reimplement "notices" for tropohouse
   // warehouse.printNotices(appRelease, release.current.name, packages);
 });
@@ -690,13 +692,12 @@ main.registerCommand({
   // Get the contents of our versions file. We need to pass them to the
   // constraint solver, because our contract with the user says that we will
   // never downgrade a dependency.
-  var versions = project.getIndirectDependencies(options.appDir);
+  var versions = project.getVersions();
 
   // Combine into one object mapping package name to list of
   // constraints, to pass in to the constraint solver.
-  var allPackages = project.combinedConstraints(
-    packages,
-    release.current.isProperRelease() ? release.current.getPackages() : {});
+  var allPackages = project.getCombinedConstraints();
+
   // Call the constraint solver.
   var newVersions = catalog.resolveConstraints(allPackages, {
     previousSolution: versions,
@@ -814,7 +815,7 @@ main.registerCommand({
   serverCatalog.refresh(true);
 
   // Read in existing package dependencies.
-  var packages = project.getDirectDependencies(options.appDir);
+  var packages = project.getConstraints();
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -825,23 +826,21 @@ main.registerCommand({
   _.each(options.args, function (packageName) {
     // Check that we are using the package. We don't check if the package
     // exists. You should be able to remove non-existent packages.
-    if (! _.has(packages.appDeps, packageName)) {
+    if (! _.has(packages, packageName)) {
       process.stderr.write( packageName  + " is not in this project \n");
     }
 
     // Remove the package from our dependency list.
-    delete packages.appDeps[packageName];
+    delete packages[packageName];
   });
 
   // Get the contents of our versions file. We need to pass them to the
   // constraint solver, because our contract with the user says that we will
   // never downgrade a dependency.
-  var versions = project.getIndirectDependencies(options.appDir);
+  var versions = project.getVersions();
   // Combine into one object mapping package name to list of
   // constraints, to pass in to the constraint solver.
-  var allPackages = project.combinedConstraints(
-    packages,
-    release.current.isProperRelease() ? release.current.getPackages() : {});
+  var allPackages = project.getCombinedConstraints();
 
   // Call the constraint solver.
   var newVersions = catalog.resolveConstraints(allPackages,
@@ -863,7 +862,7 @@ main.registerCommand({
   });
 
   // Write the dependency files with the right versions
-  project.setDependencies(options.appDir, packages.appDeps, newVersions);
+  project.setDependencies(packages, newVersions);
 
   // Show the user the messageLog of everything we removed.
   _.each(messageLog, function (msg) {
@@ -919,9 +918,8 @@ main.registerCommand({
   } else if (options.using) {
     // Generate a package loader for this project. This will also compute the
     // nessessary versions and write them to disk.
-    project.generatePackageLoader(options.appDir);
-    var packages = project.getDirectDependencies(options.appDir).appDeps;
-    var versions = project.getIndirectDependencies(options.appDir);
+    var packages = project.getConstraints();
+    var versions = project.getVersions();
 
     var messages = buildmessage.capture(function () {
       _.each(packages, function (version, name) {
@@ -987,7 +985,7 @@ main.registerCommand({
   var outputPath = path.resolve(options.args[0]); // get absolute path
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
-  var loader = project.generatePackageLoader(options.appDir);
+  var loader = project.getPackageLoader();
   stats.recordPackages(options.appDir);
 
   var bundleResult = bundler.bundle({
@@ -1436,21 +1434,28 @@ main.registerCommand({
   // current app (if any).
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
-  project.writeMeteorReleaseVersion(testRunnerAppDir,
-                                    release.current.name || 'none');
-  project.addPackage(testRunnerAppDir,
-                     options['driver-package'] || 'test-in-browser');
+
+  // We are going to operate in the special test project, so let's remap our
+  // main project to the test directory.
+  project.initialize(testRunnerAppDir);
+  project.writeMeteorReleaseVersion(release.current.name || 'none');
+  project.forceEditPackages(
+    [options['driver-package'] || 'test-in-browser'],
+    'add');
 
   // When we test packages, we need to know their versions and all of their
   // dependencies. We are going to add them to the project and have the project
   // compute them for us. This means that right now, we are testing all packages
   // as they work together.
+  var tests = [];
   _.each(testPackages, function(name) {
     var versionRecord = catalog.getLatestVersion(name);
     if (versionRecord && versionRecord.testName) {
-      project.addPackage(testRunnerAppDir, versionRecord.testName);
+      tests.push(versionRecord.testName);
     }
   });
+
+  project.forceEditPackages(tests, 'add');
 
   var buildOptions = {
     minify: options.production
@@ -1507,8 +1512,8 @@ main.registerCommand({
       // The catalog doesn't know about other programs in your app. Let's blow
       // away their .build directories if they have them, and not rebuild
       // them. Sort of hacky, but eh.
-      var programsDir = project.getProgramsDirectory(options.appDir);
-      var programsSubdirs = project.getProgramsSubdirs(options.appDir);
+      var programsDir = project.getProgramsDirectory();
+      var programsSubdirs = project.getProgramsSubdirs();
       _.each(programsSubdirs, function (program) {
         // The implementation of this part of the function might change once we
         // change the control file format to explicitly specify packages and

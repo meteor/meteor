@@ -171,6 +171,16 @@ exports.splitConstraint = function (constraint) {
   return ret;
 };
 
+exports.dealConstraint = function (name, constraint) {
+  var ret = { package: name };
+  if (constraint) {
+    ret.constraint = constraint;
+  } else {
+    ret.constraint = null;
+  }
+  return ret;
+};
+
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
 // safety reasons, package names may not start with a dot. Package names must be

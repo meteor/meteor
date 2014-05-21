@@ -1739,8 +1739,9 @@ exports.bundle = function (options) {
     // Step 1: scan for targets and make a list. We will reload if you create a
     // new subdir in 'programs', or create 'programs' itself.
     var programs = [];
-    var programsDir = project.getProgramsDirectory(appDir);
-    var programsSubdirs = project.getProgramsSubdirs(appDir, {
+    project.b.initialize(appDir);
+    var programsDir = project.b.getProgramsDirectory(appDir);
+    var programsSubdirs = project.b.getProgramsSubdirs(appDir, {
       watchSet: watchSet
     });
 

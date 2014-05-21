@@ -376,8 +376,8 @@ var bundleAndDeploy = function (options) {
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
 
-    var loader = project.generatePackageLoader(options.appDir);
-    stats.recordPackages(options.appDir);
+    var loader = project.project.getPackageLoader();
+    stats.recordPackages();
     var bundleResult = bundler.bundle({
       appDir: options.appDir,
       packageLoader: loader,

@@ -564,9 +564,10 @@ Fiber(function () {
   // search for packages.
 
   var appDir = files.findAppDir();
+  // If we are running from the appdir, initialize the project.
   if (appDir) {
     appDir = path.resolve(appDir);
-    project.ensureAppIdentifier(appDir);
+    project.project.initialize(appDir);
   }
   var packageDir = files.findPackageDir();
   if (packageDir)
@@ -655,7 +656,7 @@ Fiber(function () {
   if (appDir) {
     // appRelease will be null if a super old project with no
     // .meteor/release or 'none' if created by a checkout
-    appRelease = project.getMeteorReleaseVersion(appDir);
+    appRelease = project.project.getMeteorReleaseVersion();
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
     if (appRelease === '') {

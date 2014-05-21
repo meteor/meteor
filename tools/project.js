@@ -11,7 +11,22 @@ var catalog = require('./catalog.js');
 
 var project = exports;
 
+// Trims whitespace & other filler characters of a line in a project file.
+var trimLine = function (line) {
+  var match = line.match(/^([^#]*)#/);
+  if (match)
+    line = match[1];
+  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
+  return line;
+};
+
+// Reads in a file, stripping blanck lines in the end. Returns an array of lines
+// in the file, to be processed individually.
 var getLines = function (file) {
+  if (!fs.existsSync(file)) {
+    return [];
+  }
+
   var raw = fs.readFileSync(file, 'utf8');
   var lines = raw.split(/\r*\n\r*/);
 
@@ -26,46 +41,10 @@ var getLines = function (file) {
   return lines;
 };
 
-var getPackagesLines = function (appDir) {
-  return getLines(path.join(appDir, '.meteor', 'packages'));
-};
-
-var getVersionsLines = function (appDir) {
-  var versionsFile = path.join(appDir, '.meteor', 'versions');
-  return fs.existsSync(versionsFile) ? getLines(versionsFile) : [];
-};
-
-
-var trimLine = function (line) {
-  var match = line.match(/^([^#]*)#/);
-  if (match)
-    line = match[1];
-  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
-  return line;
-};
-
-var writePackages = function (appDir, lines) {
-  fs.writeFileSync(path.join(appDir, '.meteor', 'packages'),
-                   lines.join('\n') + '\n', 'utf8');
-};
-
-// Package names used by this project.
-// XXX this doesn't trim constraints
-project.getPackages = function (appDir) {
-  var ret = [];
-
-  // read from .meteor/packages
-  _.each(getPackagesLines(appDir), function (line) {
-    line = trimLine(line);
-    if (line !== '')
-      ret.push(line);
-  });
-
-  return ret;
-};
-
-// Return an array of form [{packageName: foo, versionConstraint: 1.0}]
-project.processPerConstraintLines = function(lines) {
+// Given a set of lines, each of the form "foo@bar", return an array of form
+// [{packageName: foo, versionConstraint: bar}]. If there is bar,
+// versionConstraint is null.
+var processPerConstraintLines = function(lines) {
   var ret = {};
 
   // read from .meteor/packages
@@ -80,265 +59,435 @@ project.processPerConstraintLines = function(lines) {
 
 };
 
-project.getProgramsDirectory = function (appDir) {
-  return path.join(appDir, "programs");
+
+// Use this class to query & record data about a specific project, such as the
+// current app.
+var Project = function () {
+  var self = this;
+
+  // Root of the directory containing the project. All project-specific
+  // configuration files (etc) are relative to this URL. String.
+  self.rootDir = null;
+
+  // Packages that this project explicitly requires, as represented by its
+  // .meteor/packages file. Object mapping the package name a string version
+  // contraint, or null, if no such constraint was specified.
+  self.constraints = null;
+
+  // All the package constraints that this project has, including constraints
+  // derived from the programs in its programs directory and constraints that
+  // come from the current release version.
+  self.combinedConstraints = null;
+
+  // Packages & versions of all dependencies, including transitive dependencies,
+  // program dependencies and so on, that this project uses. An object mapping a
+  // package name to its string version.
+  self.dependencies = null;
+
+  // The package loader for this project, with the project's dependencies as its
+  // version file. (See package-loader.js for more information about package
+  // loaders).
+  self.packageLoader = null;
+
+  // True if the project has been initialized with a root directory and
+  // dependency information and false otherwise.
+  self.initialized = false;
+
+  // It is kind of pointless to make a path.join to get these every time, so we
+  // might as well remember what they are.
+  self._constraintFile = null;
+  self._versionsFile = null;
 };
 
-// Return the list of subdirectories containing programs in the
-// app. Options can include:
-//  - watchSet: if provided, the app's programs directory will be added to it
-project.getProgramsSubdirs = function (appDir, options) {
-  options = options || {};
-  var programsDir = project.getProgramsDirectory(appDir);
-  var readOptions = {
-    absPath: programsDir,
-    include: [/\/$/],
-    exclude: [/^\./]
-  };
-  if (options.watchSet) {
-    return watch.readAndWatchDirectory(options.watchSet, readOptions);
-  } else {
-    return watch.readDirectory(readOptions);
-  }
-};
+_.extend(Project.prototype, {
+  // XXX: documentation
+  initialize : function (rootDir) {
+    var self = this;
+    // Initialize the root directory.
+    self.rootDir = rootDir;
+    self._constraintFile = self._genConstraintFile();
+    self._versionsFile = self._genVersionsFile();
 
-// Read direct dependencies from the .meteor/packages file and from
-// programs in this app.
-//
-// Returns an object with keys:
-//  - appDeps: object mapping package names to version constraints
-//  - programsDeps: an object mapping program name to program deps,
-//    where program deps is an object mapping package names to version
-//    constraints.
-project.getDirectDependencies = function(appDir) {
-  var appDeps = project.processPerConstraintLines(getPackagesLines(appDir));
+    // Process the constraints.
+    // First, read in our own packages file.
+    var appConstraintFile = self._constraintFile;
+    self.constraints = processPerConstraintLines(
+      getLines(appConstraintFile));
+/*
+    var releasePackages = release.current.isProperRelease() ?
+          release.current.getPackages() : {}; */
+    var releasePackages = {};
 
-  var programsDeps = {};
-  var programsSubdirs = project.getProgramsSubdirs(appDir);
+/*    self.combinedConstraints =
+      self.calculateCombinedConstraints(releasePackages); */
 
-  var PackageSource;
-  _.each(programsSubdirs, function (item) {
-    if (! PackageSource) {
-      PackageSource = require('./package-source.js');
-    }
+    self.dependencies = processPerConstraintLines(
+      getLines(self._versionsFile));
 
-    var programName = item.substr(0, item.length - 1);
-    programsDeps[programName] = {};
+    self.ensureAppIdentifier();
 
-    var programSubdir = path.join(project.getProgramsDirectory(appDir), item);
-    var programSource = new PackageSource(programSubdir);
-    programSource.initFromPackageDir(programName, programSubdir);
-    _.each(programSource.architectures, function (sourceBuild) {
-      _.each(sourceBuild.uses, function (use) {
-        programsDeps[programName][use["package"]] = use.constraint || "none";
+    self.initialized = true;
+
+  },
+
+  _ensurePackageLoader : function () {
+    var self = this;
+
+    if (!self.packageLoader) {
+
+      var newVersions = catalog.catalog.resolveConstraints(
+        self.getCombinedConstraints(),
+        {  previousSolution: self.dependencies }
+      );
+
+      if (newVersions !== self.dependencies) {
+        self.setDependencies(self.constraints, newVersions);
+      };
+
+      var PackageLoader = require('./package-loader.js');
+      self.packageLoader = new PackageLoader({
+        versions: newVersions
       });
-    });
-  });
-
-  return {
-    appDeps: appDeps,
-    programsDeps: programsDeps
-  };
-};
-
-// Returns a map from package name to version from the .meteor/versions
-// file.
-project.getIndirectDependencies = function(appDir) {
-  return project.processPerConstraintLines(getVersionsLines(appDir));
-};
-
-// Write the .meteor/versions file after running the constraint solver.
-var rewriteDependencies = function (appDir, deps, versions) {
-
-  // Rewrite the packages file. Do this first, since the versions file is
-  // derived from the packages file.
-  // XXX: Do not remove comments from packages file.
-  var lines = [];
-  _.each(deps, function (versionConstraint, name) {
-    if (versionConstraint) {
-      console.log(versionConstraint);
-      lines.push(name + "@" + versionConstraint + "\n");
-    } else {
-      lines.push(name + "\n");
     }
-  });
-  lines.sort();
+  },
 
-  fs.writeFileSync(path.join(appDir, '.meteor', 'packages'),
-                   lines.join(''), 'utf8');
+  // XXX: document
+  calculateCombinedConstraints : function (releasePackages) {
+    var self = this;
 
-  // Rewrite the versions file.
-  lines = [];
-  _.each(versions, function (version, name) {
-    lines.push(name + "@" + version + "\n");
-  });
-  lines.sort();
-  fs.writeFileSync(path.join(appDir, '.meteor', 'versions'),
-                   lines.join(''), 'utf8');
-};
-
-
-// Call this after running the constraint solver. Downloads the
-// necessary package builds and writes the .meteor/versions and
-// .meteor/packages files with the results of the constraint solver.
-//
-// Only writes to .meteor/versions if all the requested versions were
-// available from the package server.
-//
-// Returns an object whose keys are package names and values are
-// versions that were successfully downloaded.
-project.setDependencies = function (appDir, deps, versions) {
-  var downloadedPackages = {};
-  _.each(versions, function (version, name) {
-    var packageVersionInfo = { packageName: name, version: version };
-    // XXX error handling
-    var available = tropohouse.default.maybeDownloadPackageForArchitectures(
-      packageVersionInfo,
-      ['browser', archinfo.host()]
-    );
-    if (available) {
-      downloadedPackages[name] = version;
-    }
-  });
-
-  if (_.keys(downloadedPackages).length === _.keys(versions).length) {
-    rewriteDependencies(appDir, deps, versions);
-  }
-  return downloadedPackages;
-};
-
-var meteorReleaseFilePath = function (appDir) {
-  return path.join(appDir, '.meteor', 'release');
-};
-
-// Helper function. Given an object `deps` as returned from
-// `getDirectDependencies`, combine all the direct constraints (for the app, its
-// programs and the release (if one is set) and ctl) into a single array of
-// dependency objects. A dependency object has a packageName field, a version
-// field with the version constriant, and boolean values for exact and weak. (We
-// use this format because we treat release packages as exact weak
-// dependencies.) The result of this gets passed into the constraint solver.
-project.combinedConstraints = function (deps, releasePackages) {
-  var allDeps = [];
-
-  _.each(deps.appDeps, function (constraint, packageName) {
-    allDeps.push(_.extend({packageName: packageName},
-                          utils.parseVersionConstraint(constraint)));
-  });
-  _.each(deps.programsDeps, function (deps, programName) {
-    _.each(deps, function (constraint, packageName) {
+    var allDeps = [];
+    _.each(self.constraints, function (constraint, packageName) {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));
-  });
-  });
+    });
+    _.each(self._getProgramsDeps, function (deps, programName) {
+      _.each(deps, function (constraint, packageName) {
+        allDeps.push(_.extend({packageName: packageName},
+                              utils.parseVersionConstraint(constraint)));
+      });
+    });
+    _.each(releasePackages, function(version, name) {
+      allDeps.push({packageName: name, version: version, weak: true,
+                    type: 'exactly'});
+    });
+    // XXX grr
+    allDeps.push({packageName: "ctl", version:  null });
 
-  _.each(releasePackages, function(version, name) {
-    allDeps.push({packageName: name, version: version, weak: true,
-                  type: 'exactly'});
-  });
-  // XXX grr
-  allDeps.push({packageName: "ctl", version:  null });
+    return allDeps;
+  },
 
-  return allDeps;
-};
+  _getProgramDeps: function () {
+    var self = this;
 
-// Run the constraint solver to determine the package versions to use.
-//
-// We let the user manually edit the .meteor/packages and .meteor/versions
-// files, and we use local packages that can change dependencies in
-// development, so we need to rerun the constraint solver before running and
-// deploying the app.
-project.generatePackageLoader = function (appDir) {
-  var versions = project.getIndirectDependencies(appDir);
-  var packages = project.getDirectDependencies(appDir);
-  var releasePackages =
-        release.current.isProperRelease() ? release.current.getPackages() : {};
+    // Now we have to go through the programs directory, go through each of the
+    // programs and get their dependencies.
+    var programsDeps = {};
+    var programsSubdirs = self.getProgramsSubdirs();
+    var PackageSource;
+    _.each(programsSubdirs, function (item) {
+      if (! PackageSource) {
+        PackageSource = require('./package-source.js');
+      }
 
-  // package name -> list of version constraints
-  var allPackages = project.combinedConstraints(packages, releasePackages);
-  // Call the constraint solver.
-  var newVersions = catalog.catalog.resolveConstraints(
-    allPackages, { previousSolution: versions });
-  if ( ! newVersions) {
-    console.log("Cannot compute versions for: ", allPackages);
-    process.exit(1);
+      var programName = item.substr(0, item.length - 1);
+      programsDeps[programName] = {};
+
+      var programSubdir = path.join(self.getProgramsDirectory(), item);
+      var programSource = new PackageSource(programSubdir);
+      programSource.initFromPackageDir(programName, programSubdir);
+      _.each(programSource.architectures, function (sourceBuild) {
+        _.each(sourceBuild.uses, function (use) {
+          programsDeps[programName][use["package"]] = use.constraint || "none";
+        });
+      });
+    });
+
+    return programsDeps;
+  },
+
+  // Accessor methods dealing with programs.
+
+  // Gets the program directory for this project, as derived from the root
+  // directory. We watch the programs directory for new folders added (since
+  // programs are added automatically unlike packages), and traverse through it
+  // to deal with programs (and handle git checkout leftovers gracefully) in the
+  // bundler.
+  getProgramsDirectory : function () {
+    var self = this;
+    return path.join(self.rootDir, "programs");
+  },
+
+  // Return the list of subdirectories containing programs in the project, mostly
+  // as subdirectories of the ProgramsDirectory. Used at bundling, and
+  // miscellaneous.
+  //
+  // Options are:
+  //
+  // - watchSet: a watchSet. If provided, this function will add the app's program
+  //   directly to the provided watchset.
+  //
+  getProgramsSubdirs : function (options) {
+    var self = this;
+    options = options || {};
+    var programsDir = self.getProgramsDirectory();
+    var readOptions = {
+      absPath: programsDir,
+      include: [/\/$/],
+      exclude: [/^\./]
+    };
+    if (options.watchSet) {
+      return watch.readAndWatchDirectory(options.watchSet, readOptions);
+    } else {
+      return watch.readDirectory(readOptions);
+    }
+  },
+
+  // Accessor methods dealing with dependencies.
+
+  // Give the contents of the project's .meteor/packages file to the caller.
+  //
+  // Returns an object mapping package name to an optional string constraint, or
+  // null if the package is unconstrained.
+  getConstraints : function () {
+    var self = this;
+    return self.constraints;
+  },
+
+  // Return all the constraints on this project, including release & program
+  // constraints.
+  //
+  // Returns an object mapping package name to an optional string constraint, or
+  // null if the package is unconstrained.
+  getCombinedConstraints : function () {
+    var self = this;
+    if (!self.combinedConstraints) {
+      var releasePackages = release.current.isProperRelease() ?
+            release.current.getPackages() : {};
+      self.combinedConstraints =
+        self.calculateCombinedConstraints(releasePackages);
+    }
+
+    return self.combinedConstraints;
+  },
+
+  // Returns the file path to the .meteor/packages file, containing the
+  // constraints for this specific project.
+  _genConstraintFile : function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'packages');
+  },
+
+
+
+  // Give the contents of the project's .meteor/versions file to the caller.
+  //
+  // Returns an object mapping package name to its string version.
+  getVersions : function () {
+    var self = this;
+    self._ensurePackageLoader();
+    return self.dependencies;
+  },
+
+  // Returns the file path to the .meteor/versions file, containing the
+  // dependencies for this specific project.
+  _genVersionsFile : function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'versions');
+  },
+
+  // Give the package loader attached to this project to the caller.
+  //
+  // Returns a packageLoader that has been pre-loaded with this project's
+  // transitive dependencies.
+  getPackageLoader : function () {
+    var self = this;
+    self._ensurePackageLoader();
+    return self.packageLoader;
+  },
+
+  // Accessor methods dealing with releases.
+
+  // This will return "none" if the project is not pinned to a release
+  // (it was created by a checkout), or null for a pre-0.6.0 app with no
+  // .meteor/release file.  It returns the empty string if the file exists
+  // but is empty.
+  getMeteorReleaseVersion : function () {
+    var self = this;
+    var releasePath = self._meteorReleaseFilePath();
+    try {
+      var lines = getLines(releasePath);
+    } catch (e) {
+      return null;
+    }
+    // This should really never happen, and the caller will print a special error.
+    if (!lines.length)
+      return '';
+    return trimLine(lines[0]);
+  },
+
+  // Returns the full filepath of the projects .meteor/release file.
+  _meteorReleaseFilePath : function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'release');
+  },
+
+  // Modifications
+
+  // Shortcut to add a package to a project's packages file.
+  //
+  // Takes in an array of package names and an operation (either 'add' or
+  // 'remove') Writes the new information into the .meteor/packages file, adds
+  // it to the set of constraints, and invalidates the pre-computed
+  // packageLoader & versions files. They will be recomputed next time we ask
+  // for them.
+  //
+  // THIS AVOIDS THE NORMAL SAFETY CHECKS OF METEOR ADD.
+  //
+  // In fact, we use this specifically in circumstances when we may want to
+  // circumvent those checks -- either we are using a temporary app where
+  // failure to deal with all packages will have no long-lasting reprecussions
+  // (testing) or we are running an upgrader that intends to break the build.
+  //
+  // XXX: get rid of this function.
+  forceEditPackages : function (names, operation) {
+    var self = this;
+
+    var appConstraintFile = self._constraintFile;
+    var lines = getLines(appConstraintFile);
+    if (operation === "add") {
+      _.each(names, function (name) {
+        if (_.contains(self.constraints, name))
+          return;
+        if (!self.constraints.length && lines.length)
+          lines.push('');
+        lines.push(name);
+      });
+    } else if (operation == "remove") {
+      lines = _.reject(lines, function (line) {
+        return _.indexOf(trimLine(line), names) !== -1;
+      });
+    }
+
+    fs.writeFileSync(appConstraintFile,
+                     lines.join('\n') + '\n', 'utf8');
+
+    // Our package loader is based on the wrong information, so we should
+    // invalidate it.
+    self.packageLoader = null;
+
+    // Also, let's reread our packages file. This is not super efficient.
+    // XXX: eficienize.
+    self.constraints = processPerConstraintLines(
+      getLines(appConstraintFile));
+  },
+
+  // Call this after running the constraint solver. Downloads the
+  // necessary package builds and writes the .meteor/versions and
+  // .meteor/packages files with the results of the constraint solver.
+  //
+  // Only writes to .meteor/versions if all the requested versions were
+  // available from the package server.
+  //
+  // Returns an object whose keys are package names and values are
+  // versions that were successfully downloaded.
+  //
+  // XXX: Clean up this function in various ways.
+  setDependencies : function (deps, versions) {
+    var self = this;
+
+    // Set our own internal variables first.
+    self.constraints = deps;
+    self.dependencies = versions;
+
+    var downloadedPackages = {};
+    _.each(versions, function (version, name) {
+      var packageVersionInfo = { packageName: name, version: version };
+      // XXX error handling
+      var available = tropohouse.default.maybeDownloadPackageForArchitectures(
+        packageVersionInfo,
+        ['browser', archinfo.host()]
+      );
+      if (available) {
+        downloadedPackages[name] = version;
+      }
+    });
+
+    if (_.keys(downloadedPackages).length === _.keys(versions).length) {
+      // Rewrite the packages file. Do this first, since the versions file is
+      // derived from the packages file.
+      // XXX: Do not remove comments from packages file.
+      var lines = [];
+      _.each(deps, function (versionConstraint, name) {
+        if (versionConstraint) {
+          console.log(versionConstraint);
+          lines.push(name + "@" + versionConstraint + "\n");
+        } else {
+          lines.push(name + "\n");
+        }
+      });
+      lines.sort();
+
+      fs.writeFileSync(path.join(self.rootDir, '.meteor', 'packages'),
+                       lines.join(''), 'utf8');
+
+      // Rewrite the versions file.
+      lines = [];
+      _.each(versions, function (version, name) {
+        lines.push(name + "@" + version + "\n");
+      });
+      lines.sort();
+      fs.writeFileSync(path.join(self.rootDir, '.meteor', 'versions'),
+                       lines.join(''), 'utf8');
+
+    }
+    return downloadedPackages;
+  },
+
+
+  // Modifies the project's release version. Takes in a release and writes it in
+  // the project's release file.
+  //
+  // Pass "none" if you don't want the project to be pinned to a Meteor
+  // release (typically used when the app was created by a checkout).
+  writeMeteorReleaseVersion : function (release) {
+    var self = this;
+    var releasePath = self._meteorReleaseFilePath();
+    fs.writeFileSync(releasePath, release + '\n');
+  },
+
+  // Each project contains an identifier that is sent to the stat server.
+  //
+  // XXX: memoize this like everything else and also document.
+  appIdentifierFile : function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'identifier');
+  },
+
+  getAppIdentifier : function () {
+    var self = this;
+    var identifierFile = self.appIdentifierFile();
+    if (fs.existsSync(identifierFile)) {
+      return fs.readFileSync(identifierFile, 'utf8');
+    } else {
+      throw new Error("Expected a file at " + identifierFile);
+    }
+  },
+
+  ensureAppIdentifier : function () {
+    var self = this;
+    var identifierFile = self.appIdentifierFile();
+    if (!fs.existsSync(identifierFile))
+      fs.writeFileSync(
+        identifierFile,
+        utils.randomToken() + utils.randomToken() + utils.randomToken());
   }
-
-  // Download any necessary package builds and write out the new versions file.
-  project.setDependencies(appDir, packages.appDeps, newVersions);
-
-  var PackageLoader = require('./package-loader.js');
-  var loader = new PackageLoader({
-    versions: newVersions
-  });
-
-  return loader;
-};
+});
 
 
-// This will return "none" if the project is not pinned to a release
-// (it was created by a checkout), or null for a pre-0.6.0 app with no
-// .meteor/release file.  It returns the empty string if the file exists
-// but is empty.
-project.getMeteorReleaseVersion = function (appDir) {
-  var releasePath = meteorReleaseFilePath(appDir);
-  try {
-    var lines = getLines(releasePath);
-  } catch (e) {
-    return null;
-  }
-  // This should really never happen, and the caller will print a special error.
-  if (!lines.length)
-    return '';
-  return trimLine(lines[0]);
-};
+// XXX: We want to experiment with project being a singleton, but we also want
+// to be careful about it.
+project.project = new Project();
 
-// Pass "none" if you don't want the project to be pinned to a Meteor
-// release (typically used when the app was created by a checkout).
-project.writeMeteorReleaseVersion = function (appDir, release) {
-  var releasePath = meteorReleaseFilePath(appDir);
-  fs.writeFileSync(releasePath, release + '\n');
-};
-
-project.addPackage = function (appDir, name) {
-  var lines = getPackagesLines(appDir);
-
-  // detail: if the file starts with a comment, try to keep a single
-  // blank line after the comment (unless the user removes it)
-  var current = project.getPackages(appDir);
-  if (_.contains(current, name))
-    return;
-  if (!current.length && lines.length)
-    lines.push('');
-  lines.push(name);
-  writePackages(appDir, lines);
-};
-
-project.removePackage = function (appDir, name) {
-  // XXX assume no special regexp characters
-  var lines = _.reject(getPackagesLines(appDir), function (line) {
-    return trimLine(line) === name;
-  });
-  writePackages(appDir, lines);
-};
-
-project.appIdentifierFile = function (appDir) {
-  return path.join(appDir, '.meteor', 'identifier');
-};
-
-project.getAppIdentifier = function (appDir) {
-  var identifierFile = project.appIdentifierFile(appDir);
-  if (fs.existsSync(identifierFile)) {
-    return fs.readFileSync(identifierFile, 'utf8');
-  } else {
-    throw new Error("Expected a file at " + identifierFile);
-  }
-};
-
-project.ensureAppIdentifier = function (appDir) {
-  var identifierFile = project.appIdentifierFile(appDir);
-  if (!fs.existsSync(identifierFile))
-    fs.writeFileSync(
-      identifierFile,
-      utils.randomToken() + utils.randomToken() + utils.randomToken());
-};
+project.b = new Project();
+project.u = new Project();
+project.s = new Project();

@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var path = require('path');
 var files = require('./files.js');
-var project = require('./project.js');
+var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
 
@@ -140,17 +140,17 @@ release.current = null;
 // a checkin.) null if release.current is null.
 release.forced = null;
 
-// True if release.current is the release we'd use if we wanted to run
-// the app in 'appDir' (taking into account release.forced and whether
-// we're currently running from a checkout).
-release.usingRightReleaseForApp = function (appDir) {
+// True if release.current is the release we'd use if we wanted to run the app
+// in the current project. (taking into account release.forced and whether we're
+// currently running from a checkout).
+release.usingRightReleaseForApp = function () {
   if (release.current === null)
     throw new Error("no release?");
 
   if (! files.usesWarehouse() || release.forced)
     return true;
 
-  var appRelease = project.getMeteorReleaseVersion(appDir);
+  var appRelease = project.getMeteorReleaseVersion();
   if (appRelease === null)
     // Really old app that has no release specified.
     appRelease = release.latestDownloaded();

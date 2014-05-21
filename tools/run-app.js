@@ -5,7 +5,7 @@ var Future = require('fibers/future');
 var Fiber = require('fibers');
 var files = require('./files.js');
 var watch = require('./watch.js');
-var project = require('./project.js');
+var project = require('./project.js').project;
 var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
@@ -401,10 +401,10 @@ _.extend(AppRunner.prototype, {
     // you are testing packages from an app and you 'meteor update'
     // that app.
     if (self.appDirForVersionCheck &&
-        ! release.usingRightReleaseForApp(self.appDirForVersionCheck)) {
+        ! release.usingRightReleaseForApp()) {
       return { outcome: 'wrong-release',
                releaseNeeded:
-               project.getMeteorReleaseVersion(self.appDirForVersionCheck) };
+               project.getMeteorReleaseVersion() };
     }
 
     // Bundle up the app
@@ -412,8 +412,8 @@ _.extend(AppRunner.prototype, {
       packageCache.packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    var loader = project.generatePackageLoader(self.appDir);
-    stats.recordPackages(self.appDir);
+    var loader = project.getPackageLoader();
+    stats.recordPackages();
 
     var bundleResult = bundler.bundle({
       appDir: self.appDir,

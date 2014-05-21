@@ -12,7 +12,7 @@ var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
-var project = require('./project.js');
+var project = require('./project.js').project;
 var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
 
@@ -204,7 +204,7 @@ exports.deploy = function (options) {
 
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-      var loader = project.generatePackageLoader(options.appDir);
+      var loader = project.getPackageLoader(options.appDir);
       stats.recordPackages(options.appDir);
       var bundleResult = bundler.bundle({
         appDir: options.appDir,

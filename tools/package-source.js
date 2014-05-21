@@ -6,7 +6,6 @@ var sourcemap = require('source-map');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
-var project = require('./project.js');
 var buildmessage = require('./buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 var Builder = require('./builder.js');
@@ -979,14 +978,18 @@ _.extend(PackageSource.prototype, {
 
     _.each(["client", "server"], function (archName) {
       // Determine used packages
-      var names = project.getPackages(appDir);
+      var project = require('./project.js').project;
+      var names = project.getCombinedConstraints();
       var arch = archName === "server" ? "os" : "browser";
 
+console.log(names);
       // Create build
+      console.log(names);
       var sourceArch = new SourceArch(self, {
         name: archName,
         arch: arch,
-        uses: _.map(names, utils.splitConstraint)
+        uses: names
+//        uses: _.map(names, utils.splitConstraint)
       });
       self.architectures.push(sourceArch);
 

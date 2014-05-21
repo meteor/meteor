@@ -36,7 +36,8 @@ var project = require('./project.js');
 // explicitly listed in .meteor/packages. So we need to add
 // "standard-app-packages" to .meteor/packages when upgrading.
 var addAppPackagesAndStandardAppPackages = function (appDir) {
-  project.addPackage(appDir, 'standard-app-packages');
+  project.u.initialize(appDir);
+  project.u.forceEditPackages(['standard-app-packages'], 'add');
 
   var appPackageDir = path.join(appDir, 'packages');
   try {
@@ -51,7 +52,7 @@ var addAppPackagesAndStandardAppPackages = function (appDir) {
     // package.js. (In 0.6.5, they can also be built packages with
     // unipackage.json... but that surely is irrelevant for this upgrade.)
     if (fs.existsSync(path.join(appPackageDir, p, 'package.js')))
-      project.addPackage(appDir, p);
+      project.u.forceEditPackages(['p'], 'add');
   });
 };
 
@@ -61,7 +62,8 @@ var addAppPackagesAndStandardAppPackages = function (appDir) {
 // want literally every user to have to type the same "meteor remove
 // preserve-inputs" command. So we do it for them.
 var noPreserveInputs = function (appDir) {
-  project.removePackage(appDir, 'preserve-inputs');
+  project.u.initialize(appDir);
+  project.u.forceEditPackages(['preserve-inputs'], 'remove');
 };
 
 
