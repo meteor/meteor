@@ -110,14 +110,19 @@ var builtinConverters = [
       return EJSON._isCustomType(obj);
     },
     toJSONValue: function (obj) {
-      return {$type: obj.typeName(), $value: obj.toJSONValue()};
+      var jsonValue = Meteor._noYieldsAllowed(function () {
+        return obj.toJSONValue();
+      });
+      return {$type: obj.typeName(), $value: jsonValue};
     },
     fromJSONValue: function (obj) {
       var typeName = obj.$type;
       if (!_.has(customTypes, typeName))
         throw new Error("Custom EJSON type " + typeName + " is not defined");
       var converter = customTypes[typeName];
-      return converter(obj.$value);
+      return Meteor._noYieldsAllowed(function () {
+        return converter(obj.$value);
+      });
     }
   }
 ];

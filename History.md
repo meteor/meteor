@@ -30,6 +30,8 @@
 
 * Allow `check` to work on the server outside of a Fiber. #2136
 
+* EJSON custom type conversion functions should not be permitted to yield. #2136
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
