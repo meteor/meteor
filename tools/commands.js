@@ -945,8 +945,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    add: { type: String, short: "a" },
-    remove: { type: String, short: "r" },
+    add: { type: String },
+    remove: { type: String },
     list: { type: Boolean }
   }
 }, function (options) {
