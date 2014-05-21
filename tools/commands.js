@@ -426,7 +426,7 @@ main.registerCommand({
   // in an app dir), since non-forced updates don't change the track.
   // XXX better error checking on release.current.name
   // XXX add a method to release.current
-  var releaseTrack = release.current.name.split('@')[0];
+  var releaseTrack = release.current.getReleaseTrack();
 
   // Unless --release was passed (in which case we ought to already have
   // springboarded to that release), go get the latest release and switch to
@@ -507,7 +507,7 @@ main.registerCommand({
   // OK, let's figure out what release fits with our package constraints!
   var releaseVersionsToTry;
   if (release.forced) {
-    releaseVersionsToTry = [release.current.name.split('@')[1]];
+    releaseVersionsToTry = [release.current.getReleaseVersion()];
   } else {
     // XXX clean up all this splitty stuff
     var appReleaseInfo = catalog.getReleaseVersion(

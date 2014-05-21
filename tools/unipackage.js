@@ -336,7 +336,7 @@ _.extend(Unipackage.prototype, {
       // recover by returning by no builds
       return null;
     }
-    return _.where(self.builds, { arch: chosenArch })[0];
+    return _.findWhere(self.builds, { arch: chosenArch });
   },
 
   // Load this package's plugins into memory, if they haven't already

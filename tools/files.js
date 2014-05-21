@@ -595,6 +595,14 @@ files.writeFileAtomically = function (filename, contents) {
   fs.renameSync(tmpFile, filename);
 };
 
+// Like fs.symlinkSync, but creates a temporay link and renames it over the
+// file; this means it works even if the file already exists.
+files.symlinkOverSync = function (linkText, file) {
+  var tmpSymlink = file + ".tmp" + utils.randomToken();
+  fs.symlinkSync(linkText, tmpSymlink);
+  fs.renameSync(tmpSymlink, file);
+};
+
 // Run a program synchronously and, assuming it returns success (0),
 // return whatever it wrote to stdout, as a string. Otherwise (if it
 // did not exit gracefully and return 0) return null. As node has

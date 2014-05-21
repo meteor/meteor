@@ -37,6 +37,20 @@ _.extend(Release.prototype, {
     return this.name === null;
   },
 
+  getReleaseTrack: function () {
+    var self = this;
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self.name.split('@')[0];
+  },
+
+  getReleaseVersion: function () {
+    var self = this;
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self.name.split('@')[1];
+  },
+
   // Return the package name for the command-line tools that this release
   // uses. Valid only for proper releases.
   getToolsPackage: function () {
@@ -167,7 +181,7 @@ release.latestDownloaded = function (track) {
   if (process.env.METEOR_TEST_LATEST_RELEASE)
     return process.env.METEOR_TEST_LATEST_RELEASE;
 
-  var defaultRelease = catalog.serverCatalog.getDefaultReleaseVersion(track);
+  var defaultRelease = catalog.serverCatalog.getDefaultRelease(track);
   if (!defaultRelease) {
     throw new Error("no latest release available?");
   }

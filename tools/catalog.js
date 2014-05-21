@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var semver = require('semver');
 var _ = require('underscore');
+var Future = require('fibers/future');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
@@ -12,6 +13,7 @@ var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
+var fiberHelpers = require('./fiber-helpers.js');
 
 var catalog = exports;
 
@@ -65,6 +67,11 @@ var Catalog = function () {
 
   // Constraint solver using this catalog.
   self.resolver = null;
+
+  // This is set to an array while refresh() is running; if another refresh()
+  // call happens during a yield, instead of doing a second refresh it just
+  // waits for the first to finish.
+  self._refreshFutures = null;
 };
 
 _.extend(Catalog.prototype, {
@@ -213,9 +220,52 @@ _.extend(Catalog.prototype, {
   // on the catalog.
   //
   // Prints a warning if `sync` is true and we can't contact the package server.
+  //
+  // If a refresh is already in progress (which is yielding), it just waits for
+  // the in-progress refresh to finish.  What if the in-progress refresh was
+  // sync=false but the new call was sync=true?  This can't happen because
+  // sync=false refreshes can't yield (and we use noYieldsAllowed to verify
+  // this).
   refresh: function (sync) {
     var self = this;
     self._requireInitialized();
+
+    if (self._refreshFutures) {
+      var f = new Future;
+      self._refreshFutures.push(f);
+      f.wait();
+      return;
+    }
+
+    self._refreshFutures = [];
+
+    var thrownError = null;
+    try {
+      if (sync) {
+        self._refresh(true);
+      } else {
+        fiberHelpers.noYieldsAllowed(function () {
+          self._refresh();
+        });
+      }
+    } catch (e) {
+      thrownError = e;
+    }
+
+    while (self._refreshFutures.length) {
+      var fut = self._refreshFutures.pop();
+      if (thrownError) {
+        // XXX is it really right to throw the same error multiple times?
+        fut.throw(thrownError);
+      } else {
+        fut.return();
+      }
+    }
+    self._refreshFutures = null;
+  },
+
+  _refresh: function (sync) {
+    var self = this;
 
     var localData = packageClient.loadCachedServerData();
     var allPackageData;
@@ -927,7 +977,7 @@ _.extend(Catalog.prototype, {
   // default track (or the specified track). Returns null if no such thing
   // exists (even after syncing with the server, which it only does if there is
   // no eligible release version).
-  getDefaultReleaseVersion: function (track) {
+  getDefaultRelease: function (track) {
     var self = this;
     self._requireInitialized();
 
@@ -940,12 +990,15 @@ _.extend(Catalog.prototype, {
       return {track: track, version: versions[0]};
     };
 
-    var ret = attempt();
-    if (!ret) {
+    var key = attempt();
+    if (!key) {
       self.refresh(true);
-      ret = attempt();
+      key = attempt();
     }
-    return ret;
+    if (!key) {
+      return null;
+    }
+    return self.getReleaseVersion(key.track, key.version);
   }
 });
 

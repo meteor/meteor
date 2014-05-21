@@ -256,3 +256,10 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
 
   return ret + '$';
 };
+
+
+// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+exports.startsWith = function(str, starts) {
+  return str.length >= starts.length &&
+    str.substring(0, starts.length) === starts;
+};

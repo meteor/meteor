@@ -34,14 +34,6 @@ var fiberHelpers = require('./fiber-helpers.js');
 
 var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 
-// Like fs.symlinkSync, but creates a temporay link and renames it over the
-// file; this means it works even if the file already exists.
-var symlinkOverSync = function (linkText, file) {
-  var tmpSymlink = file + ".tmp" + utils.randomToken();
-  fs.symlinkSync(linkText, tmpSymlink);
-  fs.renameSync(tmpSymlink, file);
-};
-
 var warehouse = exports;
 _.extend(warehouse, {
   // An exception meaning that you asked for a release that doesn't
@@ -120,37 +112,6 @@ _.extend(warehouse, {
     } catch (e) {
       return null;
     }
-  },
-
-  // returns true if we updated the latest symlink
-  // XXX make errors prettier
-  fetchLatestRelease: function (options) {
-    options = options || {};
-    var manifest = updater.getManifest();
-
-    // XXX in the future support release channels other than stable
-    var releaseName = manifest && manifest.releases &&
-          manifest.releases.stable && manifest.releases.stable.version;
-    if (! releaseName)
-      throw new Error("no stable release found?");
-
-    var latestReleaseManifest = warehouse._populateWarehouseForRelease(
-      releaseName, !!options.showInstalling);
-
-    // First, make sure the latest tools symlink reflects the latest installed
-    // release.
-    if (latestReleaseManifest.tools !== warehouse.latestTools()) {
-      symlinkOverSync(latestReleaseManifest.tools,
-                      warehouse._latestToolsSymlinkPath());
-    }
-
-    var storedLatestRelease = warehouse.latestRelease();
-    if (storedLatestRelease === releaseName)
-      return false;
-
-    symlinkOverSync(releaseName + '.release.json',
-                    warehouse._latestReleaseSymlinkPath());
-    return true;
   },
 
   packageExistsInWarehouse: function (name, version) {
