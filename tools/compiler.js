@@ -162,7 +162,7 @@ var determineBuildTimeDependencies = function (packageSource) {
   });
 
 
-  var versions = packageSource.dependencyVersions.dependencies;
+  var versions = packageSource.dependencyVersions.dependencies || {};
   ret.packageDependencies = catalog.catalog.resolveConstraints(constraints,
                                               { previousSolution: versions });
 
@@ -191,7 +191,7 @@ var determineBuildTimeDependencies = function (packageSource) {
       constraints[parsedSpec.package] = parsedSpec.constraint || null;
     });
 
-    var pluginVersion = pluginVersions[info.name];
+    var pluginVersion = pluginVersions[info.name] || {};
     ret.pluginDependencies[info.name] =
       catalog.catalog.resolveConstraints(
         constraints, { previousSolution: pluginVersion  });

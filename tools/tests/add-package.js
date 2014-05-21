@@ -24,14 +24,11 @@ var copyFile = function(from, to, sand) {
 // packages: an array of packages in order. Packages can be of the form:
 //
 //    standard-app-packages (ie: name), in which case this will match any
-//    version of that package as long as it is included. This is for packages
-//    external to the app, since we don't want this test to fail when we push a
-//    new version.
+//    version of that package as long as it is included.
 //
 //    awesome-pack@1.0.0+local (ie: name@version) to match that name at that
-//    version explicitly. This is for packages that only exist for the purpose
-//    of this test (for example, packages local to this app), so we know exactly
-//    what version we expect.
+//    version explicitly. This is for packages that we included at a specific
+//    version.
 var checkPackages = function(sand, packages) {
   var lines = sand.read(".meteor/packages").split("\n");
   var i = 0;
@@ -170,16 +167,16 @@ selftest.define("add packages", function () {
 
   run = s.run("--once");
 
-  run = s.run("add", "say-something", "--offline-catalog");
+  run = s.run("add", "say-something@1.0.0", "--offline-catalog");
   run.match("Successfully added");
   checkPackages(s,
-                ["accounts-base",  "say-something@1.0.0+local", "standard-app-packages"]);
+                ["accounts-base",  "say-something@1.0.0", "standard-app-packages"]);
 
   run = s.run("add", "depends-on-plugin", "--offline-catalog");
   run.match("Successfully added");
   checkPackages(s,
-                ["accounts-base",  "depends-on-plugin@1.0.0+local",
-                 "say-something@1.0.0+local",  "standard-app-packages"]);
+                ["accounts-base",  "depends-on-plugin",
+                 "say-something@1.0.0",  "standard-app-packages"]);
 
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
@@ -201,7 +198,6 @@ selftest.define("add packages", function () {
   checkVersions(s,
                 ["accounts-base",
                  "standard-app-packages"]);
-
   run = s.run("list", "--using", "--offline-catalog");
   run.match("accounts-base");
   run.match("standard-app-packages");

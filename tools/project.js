@@ -155,7 +155,8 @@ var rewriteDependencies = function (appDir, deps, versions) {
   // XXX: Do not remove comments from packages file.
   var lines = [];
   _.each(deps, function (versionConstraint, name) {
-    if (versionConstraint && versionConstraint[0] === "=") { /* exact version required */
+    if (versionConstraint) {
+      console.log(versionConstraint);
       lines.push(name + "@" + versionConstraint + "\n");
     } else {
       lines.push(name + "\n");
