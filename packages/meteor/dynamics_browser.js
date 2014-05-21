@@ -12,6 +12,10 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
     return currentValues[this.slot];
   },
 
+  getOrNullIfOutsideFiber: function () {
+    return this.get();
+  },
+
   withValue: function (value, func) {
     var saved = currentValues[this.slot];
     try {

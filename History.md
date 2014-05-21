@@ -28,6 +28,8 @@
 * Fix a Blaze memory leak by cleaning up event handlers when a template
   instance is destroyed. #1997
 
+* Allow `check` to work on the server outside of a Fiber. #2136
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
 
