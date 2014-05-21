@@ -708,7 +708,7 @@ main.registerCommand({
     }
 
     // If the version was specified, check that the version exists.
-    if ( constraint.constraint !== "none") {
+    if ( constraint.constraint !== null) {
       var versionInfo = catalog.getVersion(
         constraint.package,
         constraint.constraint);
@@ -814,11 +814,11 @@ main.registerCommand({
     // If the previous versions file had this, then we are upgrading, if it did
     // not, then we must be adding this package anew.
     if (_.has(versions, packageName)) {
-      messageLog.push("upgraded " + packageName + " from version " +
+      messageLog.push("  upgraded " + packageName + " from version " +
                       versions[packageName] +
                       " to version " + newVersions[packageName]);
     } else {
-      messageLog.push("added " + packageName +
+      messageLog.push("  added " + packageName +
                       " at version " + newVersions[packageName]);
     };
   });
@@ -889,9 +889,14 @@ main.registerCommand({
   // constraint solver, because our contract with the user says that we will
   // never downgrade a dependency.
   var versions = project.getIndirectDependencies(options.appDir);
+  // Combine into one object mapping package name to list of
+  // constraints, to pass in to the constraint solver.
+  var allPackages = project.combinedConstraints(
+    packages,
+    release.current.isProperRelease() ? release.current.getPackages() : {});
 
   // Call the constraint solver.
-  var newVersions = catalog.resolveConstraints(packages,
+  var newVersions = catalog.resolveConstraints(allPackages,
                                               { previousSolution: versions });
   if ( ! newVersions) {
     // This should never really happen.
@@ -967,21 +972,25 @@ main.registerCommand({
     // Generate a package loader for this project. This will also compute the
     // nessessary versions and write them to disk.
     project.generatePackageLoader(options.appDir);
-    var packages = project.getDirectDependencies(options.appDir);
+    var packages = project.getDirectDependencies(options.appDir).appDeps;
+    var versions = project.getIndirectDependencies(options.appDir);
+
     var messages = buildmessage.capture(function () {
-      _.each(packages.appDeps, function (version, name) {
+      _.each(packages, function (version, name) {
         //XXX: Now that we don't store the version in the .meteor/packages file,
         //we should read the versions file for the version to use in this
         //description.
-        if (version) {
-          var versionInfo = catalog.getVersion(name, version);
-          if (!versionInfo) {
-            buildmessage.error("Cannot process package list. Unknown: " + name +
+        if (!version) {
+          version = versions[name];
+        }
+        var versionInfo = catalog.getVersion(name, version);
+        if (!versionInfo) {
+          buildmessage.error("Cannot process package list. Unknown: " + name +
                              " at version " + version + "\n");
-           return;
-         }
-         items.push({ name: name, description: versionInfo.description });
-       }
+          return;
+        }
+        items.push({ name: name, description: versionInfo.description });
+
       });
     });
     if (messages.hasMessages()) {
