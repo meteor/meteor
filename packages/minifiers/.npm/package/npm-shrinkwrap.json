@@ -17,13 +17,13 @@
       }
     },
     "uglify-js": {
-      "version": "2.4.7",
+      "version": "2.4.13",
       "dependencies": {
         "async": {
-          "version": "0.2.9"
+          "version": "0.2.10"
         },
         "source-map": {
-          "version": "0.1.31",
+          "version": "0.1.33",
           "dependencies": {
             "amdefine": {
               "version": "0.1.0"
@@ -39,7 +39,7 @@
           }
         },
         "uglify-to-browserify": {
-          "version": "1.0.1"
+          "version": "1.0.2"
         }
       }
     }

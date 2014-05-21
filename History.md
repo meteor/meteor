@@ -37,6 +37,7 @@
 
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
+  - uglify-js: 2.4.13 (from 2.4.7)
 
 Patches contributed by GitHub users awwx
 
