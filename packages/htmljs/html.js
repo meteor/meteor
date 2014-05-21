@@ -31,7 +31,7 @@ HTML.ensureTag = function (tagName) {
 // Given "p" create the function `HTML.P`.
 var makeTagConstructor = function (tagName) {
   // HTMLTag is the per-tagName constructor of a HTML.Tag subclass
-  var HTMLTag = function HTMLTag(/*arguments*/) {
+  var HTMLTag = function (/*arguments*/) {
     // Work with or without `new`.  If not called with `new`,
     // perform instantiation by recursively calling this constructor.
     // We can't pass varargs, so pass no args.
