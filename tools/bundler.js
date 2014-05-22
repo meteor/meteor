@@ -1707,6 +1707,21 @@ exports.bundle = function (options) {
       return server;
     };
 
+    var makeIgnoreFilesList = function() {
+      var ignoreFilesList = ignoreFiles;
+      var listPath = path.join(appDir, '.meteorignore');
+
+      // Include each line of ".meteorignore" file into ignoreFilesList
+      if (fs.statSync(listPath).isFile()) {
+        var lines = fs.readFileSync(listPath).toString().split("\n");
+        _.each(lines, function(line) {
+          ignoreFilesList.push(line.trim());
+        });
+      }
+
+      return ignoreFilesList;
+    };
+
     // Include default targets, unless there's a no-default-targets file in the
     // top level of the app. (This is a very hacky interface which will
     // change. Note, eg, that .meteor/packages is confusingly ignored in this
@@ -1717,7 +1732,7 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Package object that represents the app
-      var app = library.getForApp(appDir, ignoreFiles);
+      var app = library.getForApp(appDir, makeIgnoreFilesList());
 
       // Client
       var client = makeClientTarget(app);
