@@ -60,7 +60,8 @@ Patches contributed by GitHub users awwx
 
 * Add missing `underscore` dependency in the `oauth-encryption` package. #2165
 
-* Fix minification bug that caused some apps to fail to render in IE8. #2037.
+* Work around IE8 bug that caused some apps to fail to render when
+  minified. #2037.
 
 
 ## v.0.8.1.2
