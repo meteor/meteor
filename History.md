@@ -16,6 +16,8 @@
 
 * Add missing `underscore` dependency in the `oauth-encryption` package. #2165
 
+* Fix minification bug that caused some apps to fail to render in IE8. #2037.
+
 
 ## v.0.8.1.2
 
