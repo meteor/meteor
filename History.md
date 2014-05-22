@@ -3,6 +3,10 @@
 
 ## v.0.8.1.3
 
+* Fix a security issue in the `spiderable` package. `spiderable` now
+  uses the ROOT_URL environment variable instead of the Host header to
+  determine which page to snapshot.
+
 * Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
   in 0.8.0.1 that broke Atmosphere packages that do OAuth1
   logins. #2154.

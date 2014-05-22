@@ -1,5 +1,5 @@
-=> Meteor 0.8.1.2: Fix regressions from 0.8.1, including a memory
-   leak in DDP heartbeats.
+=> Meteor 0.8.1.3: Fixes a security flaw in the `spiderable` package and
+   minor regressions from 0.8.1.
 
    This release is being downloaded in the background. Update your
-   project to Meteor 0.8.1.2 by running 'meteor update'.
+   project to Meteor 0.8.1.3 by running 'meteor update'.
