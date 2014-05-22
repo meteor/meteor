@@ -38,6 +38,8 @@
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
   - uglify-js: 2.4.13 (from 2.4.7)
+  - sockjs server: 0.3.9 (from 0.3.8)
+  - websocket-driver: 0.3.4 (from 0.3.2)
 
 Patches contributed by GitHub users awwx
 
