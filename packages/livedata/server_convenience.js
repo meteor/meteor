@@ -24,6 +24,10 @@ if (Package.webapp) {
   Meteor.server = null;
   Meteor.refresh = function (notification) {
   };
+  _.each(['publish', 'methods', 'call', 'apply', 'onConnection'],
+    function (name) {
+      Meteor[name] = function(){};
+    });
 }
 
 // Meteor.server used to be called Meteor.default_server. Provide
