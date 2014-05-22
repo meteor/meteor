@@ -8,6 +8,8 @@
   https://github.com/npm/npm/issues/3265 instead of passing `--force` to
   `npm install`.
 
+* Always rebuild on changes to npm-shrinkwrap.json files.  #1648
+
 * Run server tests from multiple clients serially instead of in
   parallel. This allows testing features that modify global server
   state.  #2088
