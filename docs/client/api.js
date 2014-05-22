@@ -1920,6 +1920,18 @@ Template.api.ui_insert = {
     }]
 };
 
+Template.api.ui_getelementdata = {
+  id: "ui_getelementdata",
+  name: "UI.getElementData(el)",
+  locus: "Client",
+  descr: ["Returns the data context that was used when rendering a DOM element from a Meteor template."],
+  args: [
+    {name: "el",
+     type: "DOM Element",
+     descr: "An element that was rendered by a Meteor template"
+    }]
+};
+
 
 
 var rfc = function (descr) {

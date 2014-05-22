@@ -203,8 +203,8 @@ yourself. (Ask someone else who is an authorized user to do it.)
 You can only add or remove one authorized user at a time.
 
 Options:
-  --add, -a     add an authorized user
-  --remove, -r  remove an authorized user
+  --add         add an authorized user
+  --remove      remove an authorized user
   --list        list authorized users (the default)
 
 
