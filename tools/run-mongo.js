@@ -52,7 +52,8 @@ var findMongoPids = function (appDir, port) {
     'ps ax',
     function (error, stdout, stderr) {
       if (error) {
-        fut['throw'](new Error("Couldn't run ps ax: " + JSON.stringify(error)));
+        fut['throw'](new Error("Couldn't run ps ax: " + JSON.stringify(error) +
+                               "; " + error.message));
         return;
       }
 
