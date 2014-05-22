@@ -1708,7 +1708,7 @@ exports.bundle = function (options) {
     };
 
     var makeIgnoreFilesList = function() {
-      var ignoreFilesList = ignoreFiles;
+      var ignoreFilesList = _.clone(ignoreFiles);
       var listPath = path.join(appDir, '.meteorignore');
 
       // Include each line of ".meteorignore" file into ignoreFilesList
