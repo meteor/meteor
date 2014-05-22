@@ -368,6 +368,9 @@ main.registerCommand({
     });
   }
 
+  // We are actually working with a new meteor project at this point, so
+  // reorient its path.
+  project.initialize(appPath);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
 

@@ -171,15 +171,13 @@ exports.splitConstraint = function (constraint) {
   return ret;
 };
 
-exports.dealConstraint = function (name, constraint) {
-  var ret = { package: name };
-  if (constraint) {
-    ret.constraint = constraint;
-  } else {
-    ret.constraint = null;
-  }
-  return ret;
+
+// XXX should unify this with utils.parseConstraint
+exports.dealConstraint = function (constraint, pkg) {
+  return { package: pkg, constraint: constraint};
 };
+
+
 
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For

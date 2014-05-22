@@ -148,7 +148,7 @@ var determineBuildTimeDependencies = function (packageSource) {
 
   if (! dependencyMetadata) {
     // If _computeDependencyMetadata failed, I guess we can try to
-    // recover by returning a PackageLoader with no versions in
+    // recover by returning an empty thing with no versions in
     // it. This will cause a lot of 'package not found' errors, so a
     // better approach would proabably be to actually have this
     // function return null and make the caller do a better job of
@@ -160,7 +160,6 @@ var determineBuildTimeDependencies = function (packageSource) {
   _.each(dependencyMetadata, function (info, packageName) {
     constraints[packageName] = info.constraint;
   });
-
 
   var versions = packageSource.dependencyVersions.dependencies || {};
   ret.packageDependencies = catalog.catalog.resolveConstraints(constraints,

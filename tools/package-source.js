@@ -979,17 +979,14 @@ _.extend(PackageSource.prototype, {
     _.each(["client", "server"], function (archName) {
       // Determine used packages
       var project = require('./project.js').project;
-      var names = project.getCombinedConstraints();
+      var names = project.getConstraints();
       var arch = archName === "server" ? "os" : "browser";
 
-console.log(names);
       // Create build
-      console.log(names);
       var sourceArch = new SourceArch(self, {
         name: archName,
         arch: arch,
-        uses: names
-//        uses: _.map(names, utils.splitConstraint)
+        uses: _.map(names, utils.dealConstraint)
       });
       self.architectures.push(sourceArch);
 
