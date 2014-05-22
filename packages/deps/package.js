@@ -6,7 +6,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('underscore');
   api.export('Deps');
   api.add_files('deps.js');
   api.add_files('deprecated.js');
