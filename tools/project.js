@@ -56,9 +56,7 @@ var processPerConstraintLines = function(lines) {
      }
   });
   return ret;
-
 };
-
 
 // Use this class to query & record data about a specific project, such as the
 // current app.
@@ -170,7 +168,7 @@ _.extend(Project.prototype, {
     // Lastly, invalidate everything that we have computed -- obviously the
     // dependencies that we counted with the previous rootPath are wrong and we
     // need to recompute them.
-    self.depsUpToDate = false;
+    self._depsUpToDate = false;
   },
 
   // Several fields in project are derived from constraints. Whenever we change
@@ -179,7 +177,7 @@ _.extend(Project.prototype, {
   //
   // If the project's dependencies are up to date, this does nothing. Otherwise,
   // it recomputes the combined constraints, the versions to use and initializes
-  // the package loader for this project.
+  // the package loader for this project. This WILL REWRITE THE VERSIONS FILE.
   _ensureDepsUpToDate : function () {
     var self = this;
 
@@ -196,7 +194,7 @@ _.extend(Project.prototype, {
         "need to compute release before computing project dependencies.");
     }
 
-    if (!self.depsUpToDate) {
+    if (!self._depsUpToDate) {
       // Use current release to calculate packages & combined constraints.
       var releasePackages = release.current.isProperRelease() ?
             release.current.getPackages() : {};
@@ -217,7 +215,9 @@ _.extend(Project.prototype, {
       // disk. Otherwise, don't bother with I/O operations.
       if (newVersions !== self.dependencies) {
         // This will set self.dependencies as a side effect.
-        self.setDependencies(self.constraints, newVersions);
+        self._ensurePackagesExistOnDisk(newVersions);
+        self.dependencies = newVersions;
+        self.recordVersions();
       };
 
       // Finally, initialize the package loader.
@@ -227,7 +227,7 @@ _.extend(Project.prototype, {
       });
 
       // We are done!
-      self.depsUpToDate = true;
+      self._depsUpToDate = true;
     }
   },
 
@@ -248,7 +248,6 @@ _.extend(Project.prototype, {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));
     });
-
     // Next, we process the program constraints. These don't change since the
     // project was initialized.
     _.each(self._programConstraints, function (deps, programName) {
@@ -440,7 +439,7 @@ _.extend(Project.prototype, {
       });
     } else if (operation == "remove") {
       lines = _.reject(lines, function (line) {
-        return _.indexOf(trimLine(line), names) !== -1;
+        return _.indexOf(names, trimLine(line)) !== -1;
       });
       _.each(names, function (name) {
         delete self.constraints[name];
@@ -455,16 +454,69 @@ _.extend(Project.prototype, {
   },
 
 
+  // Remove packages from the app -- remove packages from the constraints, then
+  // recalculate versions and record the result to disk. We feel safe doing this
+  // here because this really shouldn't fail (we are just removing things).
   removePackages : function (names) {
     var self = this;
 
-    var newPaks = self.constraints;
+    // Compute the new set of packages by removing all the names from the list
+    // of constraints.
     _.each(names, function (name) {
-      delete newPaks[name];
+      delete self.constraints[name];
     });
 
+    // Record the packages results to disk. This is a slightly annoying
+    // operation because we want to keep all the comments intact.
+    var lines = getLines(self._constraintFile);
+    lines = _.reject(lines, function (line) {
+      return _.indexOf(names, trimLine(line)) !== -1;
+    });
+    fs.writeFileSync(self._constraintFile,
+                     lines.join('\n') + '\n', 'utf8');
 
+    // Force a recalculation of all the dependencies, and record them to disk.
+    self._depsUpToDate = false;
+    self._ensureDepsUpToDate();
+    self.recordVersions();
   },
+
+  // Recalculates the project dependencies if needed and records them to disk.
+  recordVersions : function () {
+    var self = this;
+    var versions = self.dependencies;
+
+    var lines = [];
+    _.each(versions, function (version, name) {
+      lines.push(name + "@" + version + "\n");
+    });
+    lines.sort();
+    fs.writeFileSync(self._versionsFile,
+                     lines.join(''), 'utf8');
+  },
+
+  // Go through a list of packages and make sure that we can access them, mostly
+  // by calling tropohouse. Return the object with mapping packageName to
+  // version for the packages that we have successfully downloaded.
+  //
+  // This primarily exists as a safety check to be used when doing operations
+  // that could lead to changes in the versions file.
+  _ensurePackagesExistOnDisk : function (versions) {
+    var downloadedPackages = {};
+    _.each(versions, function (version, name) {
+      var packageVersionInfo = { packageName: name, version: version };
+      // XXX error handling
+      var available = tropohouse.default.maybeDownloadPackageForArchitectures(
+        packageVersionInfo,
+        ['browser', archinfo.host()]
+      );
+      if (available) {
+        downloadedPackages[name] = version;
+      }
+    });
+    return downloadedPackages;
+  },
+
 
   // Call this after running the constraint solver. Downloads the
   // necessary package builds and writes the .meteor/versions and
