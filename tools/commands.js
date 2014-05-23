@@ -370,11 +370,9 @@ main.registerCommand({
 
   // We are actually working with a new meteor project at this point, so
   // reorient its path.
-  project.initialize(appPath);
+  project.setRootDir(appPath);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
-
-  project.ensureAppIdentifier();
 
   process.stderr.write(appPath + ": created");
   if (options.example && options.example !== appPath)
@@ -512,8 +510,9 @@ main.registerCommand({
         project.calculateCombinedConstraints(releaseRecord.packages);
   var previousVersions = project.getVersions();
 
-  var solutionVersions = catalog.resolveConstraints(
-    constraints, { previousSolution: previousVersions });
+  var solutionVersions = catalog.resolveConstraints(constraints,
+                                              { previousSolution: versions },
+                                              { ignoreProjectDeps: true });
   if (!solutionVersions) {
     // XXX text
     process.stderr.write(
@@ -640,7 +639,11 @@ main.registerCommand({
   serverCatalog.refresh(true);
 
   // Read in existing package dependencies.
-  var packages = project.getDirectDependencies(options.appDir);
+  var packages = project.getConstraints();
+
+  // Combine into one object mapping package name to list of
+  // constraints, to pass in to the constraint solver.
+  var allPackages = project.getCurrentCombinedConstraints();
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -674,15 +677,21 @@ main.registerCommand({
     }
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function.
-    if (_.has(packages.appDeps, constraint.package) &&
-        packages.appDeps[constraint.package] === constraint.constraint) {
+    if (_.has(packages, constraint.package) &&
+        packages[constraint.package] === constraint.constraint) {
       process.stderr.write(constraint.package + " with version constraint " +
                            constraint.constraint + " has already been added.\n");
       failed = true;
     }
 
-    // Add the package to our direct dependency constraints that we get from .meteor/packages.
-    packages.appDeps[constraint.package] = constraint.constraint;
+    // Add the package to our direct dependency constraints that we get
+    // from .meteor/packages.
+    packages[constraint.package] = constraint.constraint;
+
+    // Also, add it to all of our combined dependencies.
+    allPackages.push(
+      _.extend({ packageName: constraint.package },
+                 utils.parseVersionConstraint(constraint.constraint)));
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -697,16 +706,15 @@ main.registerCommand({
   // never downgrade a dependency.
   var versions = project.getVersions();
 
-  // Combine into one object mapping package name to list of
-  // constraints, to pass in to the constraint solver.
-  var allPackages = project.getCombinedConstraints();
 
   // Call the constraint solver.
-  var newVersions = catalog.resolveConstraints(allPackages, {
+  var resolverOpts =  {
     previousSolution: versions,
     breaking: !!options.force
-  });
-
+  };
+  var newVersions = catalog.resolveConstraints(allPackages,
+                                               resolverOpts,
+                                               { ignoreProjectDeps: true });
   if ( ! newVersions) {
     // XXX: Better error handling.
     process.stderr.write("Cannot resolve package dependencies.");
@@ -732,8 +740,7 @@ main.registerCommand({
   // system. (Later we may also need to download more builds to be able to
   // deploy to another architecture.)
   var downloaded = project.setDependencies(
-    options.appDir,
-    packages.appDeps,
+    packages,
     newVersions
   );
 
@@ -788,10 +795,10 @@ main.registerCommand({
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.package];
     var versionRecord = catalog.getVersion(constraint.package, version);
-    if (constraint.constraint !== "none" &&
+    if (constraint.constraint !== null &&
         version !== constraint.constraint) {
       process.stdout.write("Added " + constraint.package + " at version " + version +
-                           " to avoid conflicting dependencies.");
+                           " to avoid conflicting dependencies. \n");
     }
     process.stdout.write(constraint.package + " : " + versionRecord.description + "\n");
   });
@@ -843,11 +850,12 @@ main.registerCommand({
   var versions = project.getVersions();
   // Combine into one object mapping package name to list of
   // constraints, to pass in to the constraint solver.
-  var allPackages = project.getCombinedConstraints();
+  var allPackages = project.getCurrentCombinedConstraints();
 
   // Call the constraint solver.
   var newVersions = catalog.resolveConstraints(allPackages,
-                                              { previousSolution: versions });
+                                              { previousSolution: versions },
+                                              { ignoreProjectDeps: true });
   if ( ! newVersions) {
     // This should never really happen.
     process.stderr.write("Cannot resolve package dependencies.");
@@ -1440,7 +1448,7 @@ main.registerCommand({
 
   // We are going to operate in the special test project, so let's remap our
   // main project to the test directory.
-  project.initialize(testRunnerAppDir);
+  project.setRootDir(testRunnerAppDir);
   project.writeMeteorReleaseVersion(release.current.name || 'none');
   project.forceEditPackages(
     [options['driver-package'] || 'test-in-browser'],

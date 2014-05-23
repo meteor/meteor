@@ -564,10 +564,13 @@ Fiber(function () {
   // search for packages.
 
   var appDir = files.findAppDir();
-  // If we are running from the appdir, initialize the project.
   if (appDir) {
     appDir = path.resolve(appDir);
-    project.project.initialize(appDir);
+    // This does not initialize project! It just stores the root directory and
+    // reads some files. We need to do this in order to figure out our release,
+    // which we need in order to figure out dependencies and properly initialize
+    // the project.
+    project.project.setRootDir(appDir);
   }
   var packageDir = files.findPackageDir();
   if (packageDir)

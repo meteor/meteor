@@ -158,10 +158,14 @@ _.extend(Catalog.prototype, {
   // without the constraint solver. #UnbuiltConstraintSolverMustUseLocalPackages)
   //
   // constraints: a set of constraints that we are trying to resolve
-  // opts: options for the constraint solver. See the resolver.resolve function
-  // in the constraint solver package
-  resolveConstraints : function (constraints, opts) {
+  // resolverOpts: options for the constraint solver. See the resolver.resolve function
+  //   in the constraint solver package
+  // opts:
+  // ignoreProjectDeps: ignore the dependencies of the project, and call the
+  //   constraint solver anyway.
+  resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
+    opts = opts || {};
     self._requireInitialized();
 
     // Moderate hack. We don't have a constraint solver initialized yet. We are
@@ -200,8 +204,41 @@ _.extend(Catalog.prototype, {
         }
      });
     }
-    // The constraint solver has been initialized, so we can just call it.
-    return self.resolver.resolve(deps, constr, opts);
+
+    // If we are called with 'ignore projectDeps', then we don't even look to
+    // see what the project thinks is the reasonable version answer. We
+    // recalculate everything.
+    if (opts.ignoreProjectDeps) {
+      return self.resolver.resolve(deps, constr, resolverOpts);
+    }
+
+    // Override the previousSolutions with the project's dependencies
+    // value. Then, call the constraint solver, to get the valid transitive
+    // subset of those versions to record for our solution. This will give us
+    // unified version lock files, if the project version lock file is complete
+    // (in that includes transitive dependencies of everything). Hopefully, this
+    // is more efficient than just calling the constraint solver.
+    //
+    // We do this, because when we record the local version lock files, we don't
+    // want to record irrelevant dependencies (since we don't want those files
+    // changing randomly).
+    var project = require("./project.js").project;
+    var versions = project.getVersions();
+    resolverOpts.previousSolution = versions;
+    var solution = self.resolver.resolve(deps, constr, resolverOpts);
+    // Just to be sure, check that everything in the solution is in the original
+    // versions. This should never be false if we did everything right at
+    // project loading and it is a bit computationally annoying, so maybe we
+    // shouldn't do it. But it is nice to check.
+    _.each(solution, function (version, package) {
+      if (versions[package] !== version) {
+        console.log(solution, versions);
+        throw new Error ("differing versions for " + package + ":" +
+                         resolverOpts.previousSolution[package] + " vs "
+                         +  version + " did you init correctly?");
+      }
+    });
+    return solution;
   },
 
   // Refresh the packages in the catalog.

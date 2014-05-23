@@ -12,7 +12,7 @@ var ServiceConnection = require("./service-connection.js");
 // and 'direct', which is how the `recordAppPackages` method on the
 // stats server expects to get this list.
 var packageList = function () {
-  var directDeps = project.s.getConstraints();
+  var directDeps = project.project.getConstraints();
 
   return _.map(
     project.getVersions(),

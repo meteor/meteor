@@ -62,6 +62,8 @@ var processPerConstraintLines = function(lines) {
 
 // Use this class to query & record data about a specific project, such as the
 // current app.
+//
+// Does not store the name of the release.
 var Project = function () {
   var self = this;
 
@@ -76,22 +78,36 @@ var Project = function () {
 
   // All the package constraints that this project has, including constraints
   // derived from the programs in its programs directory and constraints that
-  // come from the current release version.
+  // come from the current release version. Derived from self.constraints.
   self.combinedConstraints = null;
 
   // Packages & versions of all dependencies, including transitive dependencies,
   // program dependencies and so on, that this project uses. An object mapping a
-  // package name to its string version.
+  // package name to its string version. Derived from self.combinedConstraints.
   self.dependencies = null;
 
   // The package loader for this project, with the project's dependencies as its
   // version file. (See package-loader.js for more information about package
-  // loaders).
+  // loaders). Derived from self.dependencies.
   self.packageLoader = null;
+
+  // The app identifier is used for stats, read from a file and not invalidated
+  // by any constraint-related operations.
+  self.appId = null;
 
   // True if the project has been initialized with a root directory and
   // dependency information and false otherwise.
   self.initialized = false;
+
+  // Packages used by the sub-programs using of this project. Should not change
+  // without restart, we memoize this because we would otherwise need to reread
+  // it from disk every time we recalculate versions.
+  self._programConstraints = null;
+
+  // Whenever we change the constraints, we invalidate many constraint-related
+  // fields. Rather than recomputing immediately, let's wait until we are done
+  // and then recompute when needed.
+  self._depsUpToDate = false;
 
   // It is kind of pointless to make a path.join to get these every time, so we
   // might as well remember what they are.
@@ -100,88 +116,33 @@ var Project = function () {
 };
 
 _.extend(Project.prototype, {
-  // XXX: documentation
-  initialize : function (rootDir) {
+  // Set a given root directory as the project's root directory. Figure out all
+  // relevant file paths and read in data that is independent of the constraint
+  // solver.
+  //
+  // rootDir: project's root directory.
+  setRootDir : function (rootDir, opts) {
     var self = this;
-    // Initialize the root directory.
+    opts = opts || {};
+
+    // Set the root directory and its immediately derived filenames.
     self.rootDir = rootDir;
     self._constraintFile = self._genConstraintFile();
     self._versionsFile = self._genVersionsFile();
 
-    // Process the constraints.
-    // First, read in our own packages file.
+    // Read in the contents of the .meteor/packages file.
     var appConstraintFile = self._constraintFile;
     self.constraints = processPerConstraintLines(
       getLines(appConstraintFile));
-/*
-    var releasePackages = release.current.isProperRelease() ?
-          release.current.getPackages() : {}; */
-    var releasePackages = {};
 
-/*    self.combinedConstraints =
-      self.calculateCombinedConstraints(releasePackages); */
-
+    // Read in the contents of the .meteor/versions file, so we can give them to
+    // the constraint solver as the previous solution.
     self.dependencies = processPerConstraintLines(
       getLines(self._versionsFile));
 
-    self.ensureAppIdentifier();
-
-    self.initialized = true;
-
-  },
-
-  _ensurePackageLoader : function () {
-    var self = this;
-
-    if (!self.packageLoader) {
-
-      var newVersions = catalog.catalog.resolveConstraints(
-        self.getCombinedConstraints(),
-        {  previousSolution: self.dependencies }
-      );
-
-      if (newVersions !== self.dependencies) {
-        self.setDependencies(self.constraints, newVersions);
-      };
-
-      var PackageLoader = require('./package-loader.js');
-      self.packageLoader = new PackageLoader({
-        versions: newVersions
-      });
-    }
-  },
-
-  // XXX: document
-  calculateCombinedConstraints : function (releasePackages) {
-    var self = this;
-
-    var allDeps = [];
-    _.each(self.constraints, function (constraint, packageName) {
-      allDeps.push(_.extend({packageName: packageName},
-                            utils.parseVersionConstraint(constraint)));
-    });
-    _.each(self._getProgramsDeps, function (deps, programName) {
-      _.each(deps, function (constraint, packageName) {
-        allDeps.push(_.extend({packageName: packageName},
-                              utils.parseVersionConstraint(constraint)));
-      });
-    });
-    _.each(releasePackages, function(version, name) {
-      allDeps.push({packageName: name, version: version, weak: true,
-                    type: 'exactly'});
-    });
-    // XXX grr
-    allDeps.push({packageName: "ctl", version:  null });
-
-    return allDeps;
-  },
-
-  _getProgramDeps: function () {
-    var self = this;
-
     // Now we have to go through the programs directory, go through each of the
     // programs and get their dependencies.
-    var programsDeps = {};
+    self._programConstraints = {};
     var programsSubdirs = self.getProgramsSubdirs();
     var PackageSource;
     _.each(programsSubdirs, function (item) {
@@ -190,19 +151,127 @@ _.extend(Project.prototype, {
       }
 
       var programName = item.substr(0, item.length - 1);
-      programsDeps[programName] = {};
+       self._programConstraints[programName] = {};
 
       var programSubdir = path.join(self.getProgramsDirectory(), item);
       var programSource = new PackageSource(programSubdir);
       programSource.initFromPackageDir(programName, programSubdir);
       _.each(programSource.architectures, function (sourceBuild) {
         _.each(sourceBuild.uses, function (use) {
-          programsDeps[programName][use["package"]] = use.constraint || "none";
+           self._programConstraints[programName][use["package"]] =
+             use.constraint || null;
         });
       });
     });
 
-    return programsDeps;
+    // Also, make sure we have an app identifier for this app.
+    self.ensureAppIdentifier();
+
+    // Lastly, invalidate everything that we have computed -- obviously the
+    // dependencies that we counted with the previous rootPath are wrong and we
+    // need to recompute them.
+    self.depsUpToDate = false;
+  },
+
+  // Several fields in project are derived from constraints. Whenever we change
+  // the constraints, we invalidate those fields, when we call on
+  // dependency-related operations, we recompute them as needed.
+  //
+  // If the project's dependencies are up to date, this does nothing. Otherwise,
+  // it recomputes the combined constraints, the versions to use and initializes
+  // the package loader for this project.
+  _ensureDepsUpToDate : function () {
+    var self = this;
+
+    // Aha, now we can initialize the project singleton. There is a dependency
+    // chain here -- to calculate project dependencies, we need to know what
+    // release we are on. So, we need to initialize it after the release. To
+    // figure out our release, we need to initialize the catalog. But we can't use
+    // the catalog's constraint solver until we initialize the release.
+    //
+    // Because this call is lazy, we don't need to worry about this, as long as we
+    // call things in the right order in main.js
+    if (!release.current) {
+      throw new Error(
+        "need to compute release before computing project dependencies.");
+    }
+
+    if (!self.depsUpToDate) {
+      // Use current release to calculate packages & combined constraints.
+      var releasePackages = release.current.isProperRelease() ?
+            release.current.getPackages() : {};
+      self.combinedConstraints =
+        self.calculateCombinedConstraints(releasePackages);
+
+      // Call the constraint solver, using the previous dependencies as the last
+      // solution. Remember to check 'ignoreProjectDeps', otherwise it will just
+      // try to look up the solution in our own dependencies and it will be a
+      // disaster.
+      var newVersions = catalog.catalog.resolveConstraints(
+        self.combinedConstraints,
+        { previousSolution: self.dependencies },
+        { ignoreProjectDeps: true }
+      );
+
+      // If the result is now what it used to be, rewrite the files on
+      // disk. Otherwise, don't bother with I/O operations.
+      if (newVersions !== self.dependencies) {
+        // This will set self.dependencies as a side effect.
+        self.setDependencies(self.constraints, newVersions);
+      };
+
+      // Finally, initialize the package loader.
+      var PackageLoader = require('./package-loader.js');
+      self.packageLoader = new PackageLoader({
+        versions: newVersions
+      });
+
+      // We are done!
+      self.depsUpToDate = true;
+    }
+  },
+
+  // Given a set of packages from a release, recalculates all the constraints on
+  // a given project: combines the constraints from all the programs, the
+  // packages file and the release packages.
+  //
+  // Returns an array of {packageName, version} objects.
+  //
+  // This has no side effects: it does not alter the result of
+  // getCurrentCombinedConstraints.
+  calculateCombinedConstraints : function (releasePackages) {
+    var self = this;
+    var allDeps = [];
+    // First, we process the contents of the .meteor/packages file. The
+    // self.constraints variable is always up to date.
+    _.each(self.constraints, function (constraint, packageName) {
+      allDeps.push(_.extend({packageName: packageName},
+                            utils.parseVersionConstraint(constraint)));
+    });
+
+    // Next, we process the program constraints. These don't change since the
+    // project was initialized.
+    _.each(self._programConstraints, function (deps, programName) {
+      _.each(deps, function (constraint, packageName) {
+        allDeps.push(_.extend({packageName: packageName},
+                              utils.parseVersionConstraint(constraint)));
+      });
+    });
+
+    // Finally, each release package is a weak exact constraint. So, let's add
+    // those.
+    _.each(releasePackages, function(version, name) {
+      allDeps.push({packageName: name, version: version, weak: true,
+                    type: 'exactly'});
+    });
+
+    // This is an UGLY HACK that has to do with our requirement to have a
+    // control package on everything (and preferably that package is ctl), even
+    // apps that don't actually need it because they don't go to galaxy. Maybe
+    // someday, this will make sense.
+    allDeps.push({packageName: "ctl", version:  null });
+
+    return allDeps;
   },
 
   // Accessor methods dealing with programs.
@@ -256,17 +325,15 @@ _.extend(Project.prototype, {
   // Return all the constraints on this project, including release & program
   // constraints.
   //
+  // THIS USES CURRENT RELEASE TO FIGURE OUT RELEASE CONSTRAINTS. If, for some
+  // reason, you want to do something else (for example, update), call
+  // 'calculateCombinedConstraints' instead.
+  //
   // Returns an object mapping package name to an optional string constraint, or
   // null if the package is unconstrained.
-  getCombinedConstraints : function () {
+  getCurrentCombinedConstraints : function () {
     var self = this;
-    if (!self.combinedConstraints) {
-      var releasePackages = release.current.isProperRelease() ?
-            release.current.getPackages() : {};
-      self.combinedConstraints =
-        self.calculateCombinedConstraints(releasePackages);
-    }
-
+    self._ensureDepsUpToDate();
     return self.combinedConstraints;
   },
 
@@ -284,7 +351,7 @@ _.extend(Project.prototype, {
   // Returns an object mapping package name to its string version.
   getVersions : function () {
     var self = this;
-    self._ensurePackageLoader();
+    self._ensureDepsUpToDate();
     return self.dependencies;
   },
 
@@ -301,7 +368,7 @@ _.extend(Project.prototype, {
   // transitive dependencies.
   getPackageLoader : function () {
     var self = this;
-    self._ensurePackageLoader();
+    self._ensureDepsUpToDate();
     return self.packageLoader;
   },
 
@@ -311,6 +378,14 @@ _.extend(Project.prototype, {
   // (it was created by a checkout), or null for a pre-0.6.0 app with no
   // .meteor/release file.  It returns the empty string if the file exists
   // but is empty.
+  //
+  // This is NOT the same as release.current. If you want to refer to the
+  // release currently running DO NOT use this function.  We don't even bother
+  // to memorize the result of this, just to disincentivize accidentally using
+  // this value.
+  //
+  // (XXX: we should move this to release.js, and move the getLines
+  // function into utils)
   getMeteorReleaseVersion : function () {
     var self = this;
     var releasePath = self._meteorReleaseFilePath();
@@ -361,24 +436,23 @@ _.extend(Project.prototype, {
         if (!self.constraints.length && lines.length)
           lines.push('');
         lines.push(name);
+        self.constraints[name] = null;
       });
     } else if (operation == "remove") {
       lines = _.reject(lines, function (line) {
         return _.indexOf(trimLine(line), names) !== -1;
+      });
+      _.each(names, function (name) {
+        delete self.constraints[name];
       });
     }
 
     fs.writeFileSync(appConstraintFile,
                      lines.join('\n') + '\n', 'utf8');
 
-    // Our package loader is based on the wrong information, so we should
-    // invalidate it.
+    // Any derived values need to be invalidated.
     self.packageLoader = null;
-
-    // Also, let's reread our packages file. This is not super efficient.
-    // XXX: eficienize.
-    self.constraints = processPerConstraintLines(
-      getLines(appConstraintFile));
+    self.combinedConstraints = null;
   },
 
   // Call this after running the constraint solver. Downloads the
@@ -391,7 +465,8 @@ _.extend(Project.prototype, {
   // Returns an object whose keys are package names and values are
   // versions that were successfully downloaded.
   //
-  // XXX: Clean up this function in various ways.
+  // XXX: This shouldn't really take deps as an argument, or at least it should
+  // allow the situation where constraints don't change at all.
   setDependencies : function (deps, versions) {
     var self = this;
 
@@ -399,6 +474,9 @@ _.extend(Project.prototype, {
     self.constraints = deps;
     self.dependencies = versions;
 
+    // First, we need to make sure that we have downloaded all the packages that
+    // we are going to use. So, go through the versions and call tropohouse to
+    // make sure that we have them.
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
       var packageVersionInfo = { packageName: name, version: version };
@@ -412,25 +490,33 @@ _.extend(Project.prototype, {
       }
     });
 
+    // If we have successfully downloaded everything, then we can rewrite the
+    // relevant project files.
+    //
+    // XXX: But ... shouldn't we tell the user if we failed?!
     if (_.keys(downloadedPackages).length === _.keys(versions).length) {
       // Rewrite the packages file. Do this first, since the versions file is
       // derived from the packages file.
       // XXX: Do not remove comments from packages file.
       var lines = [];
+
+      // This rewrites the .meteor/packages file.
+      // XXX: make this optional.
+      // XXX: make this not remove comments.
+      var lines = [];
       _.each(deps, function (versionConstraint, name) {
         if (versionConstraint) {
-          console.log(versionConstraint);
           lines.push(name + "@" + versionConstraint + "\n");
         } else {
           lines.push(name + "\n");
         }
       });
       lines.sort();
-
       fs.writeFileSync(path.join(self.rootDir, '.meteor', 'packages'),
                        lines.join(''), 'utf8');
 
-      // Rewrite the versions file.
+      // Rewrite the versions file. This is a system file that doesn't allow
+      // comments (XXX: Why not?), so this is pretty straightforward.
       lines = [];
       _.each(versions, function (version, name) {
         lines.push(name + "@" + version + "\n");
@@ -455,39 +541,40 @@ _.extend(Project.prototype, {
     fs.writeFileSync(releasePath, release + '\n');
   },
 
-  // Each project contains an identifier that is sent to the stat server.
-  //
-  // XXX: memoize this like everything else and also document.
+  // The file for the app identifier.
   appIdentifierFile : function () {
     var self = this;
     return path.join(self.rootDir, '.meteor', 'identifier');
   },
 
+  // Get the app identifier.
   getAppIdentifier : function () {
     var self = this;
-    var identifierFile = self.appIdentifierFile();
-    if (fs.existsSync(identifierFile)) {
-      return fs.readFileSync(identifierFile, 'utf8');
-    } else {
-      throw new Error("Expected a file at " + identifierFile);
-    }
+    return self.appId;
   },
 
+  // Write out the app identifier file, if none exists. Save the app identifier
+  // into the project.
+  //
+  // We do this in a slightly complicated manner, because, when this function is
+  // called, the appID file has not been added to the watchset of the app yet,
+  // so we want to minimize the chance of collision.
   ensureAppIdentifier : function () {
     var self = this;
     var identifierFile = self.appIdentifierFile();
-    if (!fs.existsSync(identifierFile))
-      fs.writeFileSync(
-        identifierFile,
-        utils.randomToken() + utils.randomToken() + utils.randomToken());
+    if (!fs.existsSync(identifierFile)) {
+      var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
+      fs.writeFileSync(identifierFile, id);
+    }
+    if (fs.existsSync(identifierFile)) {
+      self.appId = fs.readFileSync(identifierFile, 'utf8');
+    } else {
+      throw new Error("Expected a file at " + identifierFile);
+    }
   }
 });
 
-
-// XXX: We want to experiment with project being a singleton, but we also want
-// to be careful about it.
+// The project is currently a singleton, but there is no universal reason for
+// this to be the case. Let's use this design pattern to begin with, so that if
+// we want to expose Project() and allow multiple projects, we could do so easily.
 project.project = new Project();
-
-project.b = new Project();
-project.u = new Project();
-project.s = new Project();
