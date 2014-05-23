@@ -827,64 +827,42 @@ main.registerCommand({
   // Read in existing package dependencies.
   var packages = project.getConstraints();
 
-  // For every package name specified, add it to our list of package
-  // constraints. Don't run the constraint solver until you have added all of
-  // them -- add should be an atomic operation regardless of the package
-  // order. Even though the package file should specify versions of its inputs,
-  // we don't specify these constraints until we get them back from the
-  // constraint solver.
+  // For each package name specified, check if we already have it and warn the
+  // user. Because removing each package is a completely atomic operation that
+  // has no chance of failure, this is just a warning message, it doesn't cause
+  // us to stop.
   _.each(options.args, function (packageName) {
     // Check that we are using the package. We don't check if the package
     // exists. You should be able to remove non-existent packages.
     if (! _.has(packages, packageName)) {
       process.stderr.write( packageName  + " is not in this project \n");
     }
-
-    // Remove the package from our dependency list.
-    delete packages[packageName];
   });
 
-  // Get the contents of our versions file. We need to pass them to the
-  // constraint solver, because our contract with the user says that we will
-  // never downgrade a dependency.
+  // Get the contents of our versions file, we will want them in order to remove
+  // to the user what we removed.
   var versions = project.getVersions();
-  // Combine into one object mapping package name to list of
-  // constraints, to pass in to the constraint solver.
-  var allPackages = project.getCurrentCombinedConstraints();
 
-  // Call the constraint solver.
-  var newVersions = catalog.resolveConstraints(allPackages,
-                                              { previousSolution: versions },
-                                              { ignoreProjectDeps: true });
-  if ( ! newVersions) {
-    // This should never really happen.
-    process.stderr.write("Cannot resolve package dependencies.");
-  }
+  // Remove the packages from the project! There is really no way for this to
+  // fail, unless something has gone horribly wrong, so we don't need to check
+  // for it.
+  project.removePackages(options.args);
 
-  // Don't tell the user what all the operations were until we finish -- we
-  // don't want to give a false sense of completeness until everything is
-  // written to disk.
-  var messageLog = [];
+  // Retrieve the new dependency versions that we have chosen for this project
+  // and do some pretty output reporting.
+  var newVersions = project.getVersions();
 
   // Remove the versions that don't exist
   var removed = _.difference(_.keys(versions), _.keys(newVersions));
   _.each(removed, function(packageName) {
-    messageLog.push("removed dependency on " + packageName);
+    process.stdout.write("  removed dependency on " + packageName + "\n");
   });
 
-  // Write the dependency files with the right versions
-  project.setDependencies(packages, newVersions);
-
-  // Show the user the messageLog of everything we removed.
-  _.each(messageLog, function (msg) {
-    process.stdout.write(msg + "\n");
-  });
-
-  // Log that we removed everything. It is possible to remove a project
-  // dependency that is still in .meteor/versions because other packages depend
-  // on it, so overlap with removed is not guaranteed.
+  // Log that we removed the constraints. It is possible that there are
+  // constraints that we officially removed that the project still 'depends' on,
+  // which is why there are these two tiers of error messages.
   _.each(options.args, function (packageName) {
-      process.stdout.write("Removed " + packageName + " from project \n");
+      process.stdout.write("Removed constraint " + packageName + " from project \n");
   });
 
   return 0;

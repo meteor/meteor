@@ -451,8 +451,19 @@ _.extend(Project.prototype, {
                      lines.join('\n') + '\n', 'utf8');
 
     // Any derived values need to be invalidated.
-    self.packageLoader = null;
-    self.combinedConstraints = null;
+    self._depsUpToDate = false;
+  },
+
+
+  removePackages : function (names) {
+    var self = this;
+
+    var newPaks = self.constraints;
+    _.each(names, function (name) {
+      delete newPaks[name];
+    });
+
+
   },
 
   // Call this after running the constraint solver. Downloads the
