@@ -153,7 +153,7 @@ meteorNpm.dependenciesArePortable = function (packageNpmDir) {
       if (itemName.match(/\.node$/))
         return true;
       var item = path.join(dir, itemName);
-      if (fs.statSync(item).isDirectory())
+      if (fs.lstatSync(item).isDirectory())
         return search(item);
     }) || false;
   };
