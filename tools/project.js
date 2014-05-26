@@ -94,22 +94,10 @@ var Project = function () {
   // by any constraint-related operations.
   self.appId = null;
 
-  // Packages used by the sub-programs using of this project. Will not change
-  // while the app is running! Therefore, we can remember it, so we don't need
-  // to perform a bunch of reads when we recalculate combinedConstraints.
-  //
-  // XXX: Is this actually faster?
-  self._programConstraints = null;
-
   // Whenever we change the constraints, we invalidate many constraint-related
   // fields. Rather than recomputing immediately, let's wait until we are done
   // and then recompute when needed.
   self._depsUpToDate = false;
-
-  // It is kind of pointless to make a path.join to get these every time, so we
-  // might as well remember what they are.
-  self._constraintFile = null;
-  self._versionsFile = null;
 };
 
 _.extend(Project.prototype, {
@@ -124,43 +112,16 @@ _.extend(Project.prototype, {
 
     // Set the root directory and its immediately derived filenames.
     self.rootDir = rootDir;
-    self._constraintFile = self._genConstraintFile();
-    self._versionsFile = self._genVersionsFile();
 
     // Read in the contents of the .meteor/packages file.
-    var appConstraintFile = self._constraintFile;
+    var appConstraintFile = self._getConstraintFile();
     self.constraints = processPerConstraintLines(
       getLines(appConstraintFile));
 
     // Read in the contents of the .meteor/versions file, so we can give them to
     // the constraint solver as the previous solution.
     self.dependencies = processPerConstraintLines(
-      getLines(self._versionsFile));
-
-    // Now we have to go through the programs directory, go through each of the
-    // programs and get their dependencies.
-    self._programConstraints = {};
-    var programsSubdirs = self.getProgramsSubdirs();
-    var PackageSource;
-    _.each(programsSubdirs, function (item) {
-      if (! PackageSource) {
-        PackageSource = require('./package-source.js');
-      }
-
-      var programName = item.substr(0, item.length - 1);
-       self._programConstraints[programName] = {};
-
-      var programSubdir = path.join(self.getProgramsDirectory(), item);
-      var programSource = new PackageSource(programSubdir);
-      programSource.initFromPackageDir(programName, programSubdir);
-      _.each(programSource.architectures, function (sourceBuild) {
-        _.each(sourceBuild.uses, function (use) {
-           self._programConstraints[programName][use["package"]] =
-             use.constraint || null;
-        });
-      });
-    });
-
+      getLines(self._getVersionsFile()));
     // Also, make sure we have an app identifier for this app.
     self.ensureAppIdentifier();
 
@@ -200,13 +161,6 @@ _.extend(Project.prototype, {
     }
 
     if (!self._depsUpToDate) {
-
-      // XXX: I don't understand why we don't reread this automatically.
-      self.constraints = processPerConstraintLines(
-        getLines(self._constraintFile));
-      self.dependencies = processPerConstraintLines(
-         getLines(self._versionsFile));
-
       // Use current release to calculate packages & combined constraints.
       var releasePackages = release.current.isProperRelease() ?
             release.current.getPackages() : {};
@@ -260,12 +214,28 @@ _.extend(Project.prototype, {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));
     });
-    // Next, we process the program constraints. These don't change since the
-    // project was initialized.
-    _.each(self._programConstraints, function (deps, programName) {
-      _.each(deps, function (constraint, packageName) {
-        allDeps.push(_.extend({packageName: packageName},
-                              utils.parseVersionConstraint(constraint)));
+
+    // Now we have to go through the programs directory, go through each of the
+    // programs, get their dependencies and use them. (We could have memorized
+    // this value, but this is called very rarely outside the first
+    // initialization).
+    var programsSubdirs = self.getProgramsSubdirs();
+    var PackageSource;
+    _.each(programsSubdirs, function (item) {
+      if (! PackageSource) {
+        PackageSource = require('./package-source.js');
+      }
+
+      var programName = item.substr(0, item.length - 1);
+
+      var programSubdir = path.join(self.getProgramsDirectory(), item);
+      var programSource = new PackageSource(programSubdir);
+      programSource.initFromPackageDir(programName, programSubdir);
+      _.each(programSource.architectures, function (sourceBuild) {
+        _.each(sourceBuild.uses, function (use) {
+           allDeps.push(_.extend({packageName: use.package},
+                              utils.parseVersionConstraint(use.constraint)));
+        });
       });
     });
 
@@ -350,7 +320,7 @@ _.extend(Project.prototype, {
 
   // Returns the file path to the .meteor/packages file, containing the
   // constraints for this specific project.
-  _genConstraintFile : function () {
+  _getConstraintFile : function () {
     var self = this;
     return path.join(self.rootDir, '.meteor', 'packages');
   },
@@ -366,7 +336,7 @@ _.extend(Project.prototype, {
 
   // Returns the file path to the .meteor/versions file, containing the
   // dependencies for this specific project.
-  _genVersionsFile : function () {
+  _getVersionsFile : function () {
     var self = this;
     return path.join(self.rootDir, '.meteor', 'versions');
   },
@@ -436,7 +406,7 @@ _.extend(Project.prototype, {
   forceEditPackages : function (names, operation) {
     var self = this;
 
-    var appConstraintFile = self._constraintFile;
+    var appConstraintFile = self._getConstraintFile();
     var lines = getLines(appConstraintFile);
     if (operation === "add") {
       _.each(names, function (name) {
@@ -478,11 +448,12 @@ _.extend(Project.prototype, {
 
     // Record the packages results to disk. This is a slightly annoying
     // operation because we want to keep all the comments intact.
-    var lines = getLines(self._constraintFile);
+    var packages = self._genConstraintFile();
+    var lines = getLines(packages);
     lines = _.reject(lines, function (line) {
       return _.indexOf(names, trimLine(line)) !== -1;
     });
-    fs.writeFileSync(self._constraintFile,
+    fs.writeFileSync(packages,
                      lines.join('\n') + '\n', 'utf8');
 
     // Force a recalculation of all the dependencies, and record them to disk.
@@ -501,7 +472,7 @@ _.extend(Project.prototype, {
       lines.push(name + "@" + version + "\n");
     });
     lines.sort();
-    fs.writeFileSync(self._versionsFile,
+    fs.writeFileSync(self._getVersionsFile(),
                      lines.join(''), 'utf8');
   },
 
