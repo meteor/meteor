@@ -12,21 +12,12 @@ var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
+var utils = require('./utils.js');
 
 var catalog = exports;
 
 // XXX "Meteor-Core"? decide this pre 0.9.0.
 catalog.DEFAULT_TRACK = 'METEOR-CORE';
-
-var isDirectory = function (dir) {
-  try {
-    // use stat rather than lstat since symlink to dir is OK
-    var stats = fs.statSync(dir);
-  } catch (e) {
-    return false;
-  }
-  return stats.isDirectory();
-};
 
 // Use this class to query the metadata for all of the packages that
 // we know about (including packages on the package server that we
@@ -96,7 +87,7 @@ _.extend(Catalog.prototype, {
     var trimPackageDirs = function (packageDirs) {
       // Trim down local package dirs to just those that actually exist
       // (and that are actually directories)
-      return _.filter(packageDirs || [], isDirectory);
+      return _.filter(packageDirs || [], utils.isDirectory);
     };
 
     var bootstrapPackageDirs = trimPackageDirs(
@@ -300,12 +291,12 @@ _.extend(Catalog.prototype, {
     self.effectiveLocalPackages = {};
 
     _.each(self.localPackageDirs, function (localPackageDir) {
-      if (! isDirectory(localPackageDir))
+      if (! utils.isDirectory(localPackageDir))
         return;
       var contents = fs.readdirSync(localPackageDir);
       _.each(contents, function (item) {
         var packageDir = path.resolve(path.join(localPackageDir, item));
-        if (! isDirectory(packageDir))
+        if (! utils.isDirectory(packageDir))
           return;
 
         // Consider a directory to be a package source tree if it

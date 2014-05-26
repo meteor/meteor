@@ -5,6 +5,7 @@ var archinfo = require('./archinfo.js');
 var files = require('./files.js');
 var semver = require('semver');
 var os = require('os');
+var fs = require('fs');
 
 var utils = exports;
 
@@ -210,7 +211,6 @@ exports.quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
 
-
 // If the given version matches a template (essentially, semver-style, but with
 // a bounded number of digits per number part, and with no restriction on the
 // amount of number parts, and some restrictions on legal prerelease labels),
@@ -263,4 +263,14 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
     ret += leftPad('0', 4, prereleaseNumber);
 
   return ret + '$';
+};
+
+exports.isDirectory = function (dir) {
+  try {
+    // use stat rather than lstat since symlink to dir is OK
+    var stats = fs.statSync(dir);
+  } catch (e) {
+    return false;
+  }
+  return stats.isDirectory();
 };
