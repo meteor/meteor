@@ -547,9 +547,12 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = getLines(packages);
     _.each(moreDeps, function (constraint) {
-      lines.push(constraint + "\n");
+      lines.push(constraint);
     });
     lines.sort();
+    lines = _.map(lines, function (line) {
+      return line + "\n";
+    });
     fs.writeFileSync(packages, lines.join(''), 'utf8');
 
     // Rewrite the versions file.

@@ -74,29 +74,14 @@ _.extend(Catalog.prototype, {
   //    'foo' that we find through the package server. Directories
   //    that don't exist (or paths that aren't directories) will be
   //    silently ignored.
-  // - bootstrapLocalPackageDirs: like 'localPackageDirs', but
-  //   containing the packages that we can call 'unipackage.load' to
-  //   load the packages that we need to talk to the server. Packages
-  //   inside `bootstrapLocalPackageDirs` cannot use troposphere
-  //   packages.
   initialize: function (options) {
     var self = this;
 
     options = options || {};
 
-    var trimPackageDirs = function (packageDirs) {
-      // Trim down local package dirs to just those that actually exist
-      // (and that are actually directories)
-      return _.filter(packageDirs || [], utils.isDirectory);
-    };
+    self.localPackageDirs =
+      _.filter(options.localPackageDirs || [], utils.isDirectory);
 
-    var bootstrapPackageDirs = trimPackageDirs(
-      options.bootstrapLocalPackageDirs);
-    var localPackageDirs = trimPackageDirs(
-      options.localPackageDirs);
-    var allLocalPackageDirs = bootstrapPackageDirs.concat(localPackageDirs);
-
-    self.localPackageDirs = bootstrapPackageDirs;
     self._recomputeEffectiveLocalPackages();
 
     // First, initialize the catalog with just the local packages for
@@ -108,15 +93,6 @@ _.extend(Catalog.prototype, {
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
-    self._addLocalPackageOverrides(true /* setInitialized */);
-
-    // Now we can include options.localPackageDirs. We do this
-    // separately from the bootstrapping packages because packages in
-    // options.localPackageDirs (app packages, for example) are allowed
-    // to use troposphere packages, so we have to be able to talk to the
-    // server before we load them.
-    self.localPackageDirs = allLocalPackageDirs;
-    self._recomputeEffectiveLocalPackages();
 
     // We don't need to call _addLocalPackageOverrides here; that will
     // be called as part of catalog initialization, which is the next
@@ -128,7 +104,7 @@ _.extend(Catalog.prototype, {
     // We should to figure out if we are intending to connect to the package
     // server.
     self.offline = options.offline ? options.offline : false;
-    self.refresh(false /* don't load server packages yet */);
+    self.refresh(false);
 
     // initialize the constraint solver for this catalog. We have to do this at
     // the end, after we have loaded enough stuff to load packages.
@@ -244,7 +220,7 @@ _.extend(Catalog.prototype, {
   // Prints a warning if `sync` is true and we can't contact the package server.
   refresh: function (sync) {
     var self = this;
-    self._requireInitialized();
+//    self._requireInitialized();
 
     var localData = packageClient.loadCachedServerData();
     var allPackageData;

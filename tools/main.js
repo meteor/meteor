@@ -566,10 +566,8 @@ Fiber(function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = path.resolve(appDir);
-    // This does not initialize project! It just stores the root directory and
-    // reads some files. We need to do this in order to figure out our release,
-    // which we need in order to figure out dependencies and properly initialize
-    // the project.
+    // Set the project root directory. This doesn't do any dependency
+    // calculation -- we can't do that until the release is initialized.
     project.project.setRootDir(appDir);
   }
   var packageDir = files.findPackageDir();
@@ -590,12 +588,10 @@ Fiber(function () {
     localPackageDirs = localPackageDirs.concat(
       process.env.PACKAGE_DIRS.split(':'));
 
-  var bootstrapPackageDirs = [];
-
   if (!files.usesWarehouse()) {
     // Running from a checkout, so use the Meteor core packages from
     // the checkout.
-    bootstrapPackageDirs.push(path.join(
+    localPackageDirs.push(path.join(
       files.getCurrentToolsDir(), 'packages'));
   }
 
@@ -606,7 +602,6 @@ Fiber(function () {
   // will never attempt to contact the server for more recent data. Otherwise,
   // the catalog will attempt to synchronize with the remote package server.
   catalog.catalog.initialize({
-    bootstrapLocalPackageDirs: bootstrapPackageDirs,
     localPackageDirs: localPackageDirs,
     offline: _.has(rawOptions, '--offline-catalog')
   });
