@@ -108,7 +108,6 @@ selftest.define("change packages", function () {
   run.waitSecs(5);
   run.match("running at");
   run.match("localhost");
-
   // Add the local package 'say-something'. It should print a message.
   s.write(".meteor/packages", "standard-app-packages \n say-something");
   run.waitSecs(2);
@@ -144,7 +143,6 @@ selftest.define("change packages", function () {
 
   run.waitSecs(2);
   run.match("restarted");
-
 });
 
 
@@ -161,6 +159,7 @@ selftest.define("add packages", function () {
 
   console.log("XXX: this assumes that we are running from checkout");
   run = s.run("add", "accounts-base", "--offline-catalog");
+
   run.match("Successfully added");
   checkPackages(s,
                 ["accounts-base", "standard-app-packages"]);
@@ -168,7 +167,9 @@ selftest.define("add packages", function () {
   run = s.run("--once");
 
   run = s.run("add", "say-something@1.0.0", "--offline-catalog");
+
   run.match("Successfully added");
+
   checkPackages(s,
                 ["accounts-base",  "say-something@1.0.0", "standard-app-packages"]);
 
@@ -184,16 +185,15 @@ selftest.define("add packages", function () {
                  "contains-plugin@1.1.0+local"]);
 
   run = s.run("remove", "say-something", "--offline-catalog");
-  run.match("Removed say-something");
+  run.match("Removed constraint say-something");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "standard-app-packages",
                  "contains-plugin"]);
 
-
   run = s.run("remove", "depends-on-plugin", "--offline-catalog");
   run.match("removed dependency on contains-plugin");
-  run.match("Removed depends-on-plugin");
+  run.match("Removed constraint depends-on-plugin");
 
   checkVersions(s,
                 ["accounts-base",

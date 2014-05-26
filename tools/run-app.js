@@ -389,6 +389,7 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (onListen) {
     var self = this;
 
+    project.reload();
     runLog.clearLog();
     self.proxy.setMode("hold");
 

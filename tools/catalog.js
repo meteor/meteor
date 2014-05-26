@@ -205,10 +205,12 @@ _.extend(Catalog.prototype, {
      });
     }
 
+    var project = require("./project.js").project;
     // If we are called with 'ignore projectDeps', then we don't even look to
     // see what the project thinks is the reasonable version answer. We
-    // recalculate everything.
-    if (opts.ignoreProjectDeps) {
+    // recalculate everything. Also, if the project root path has not been
+    // initialized, we probably can't use the project's dependencies.
+    if (opts.ignoreProjectDeps || !project.rootDir) {
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
 
@@ -222,7 +224,6 @@ _.extend(Catalog.prototype, {
     // We do this, because when we record the local version lock files, we don't
     // want to record irrelevant dependencies (since we don't want those files
     // changing randomly).
-    var project = require("./project.js").project;
     var versions = project.getVersions();
     resolverOpts.previousSolution = versions;
     var solution = self.resolver.resolve(deps, constr, resolverOpts);

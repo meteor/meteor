@@ -81,7 +81,8 @@ var Project = function () {
 
   // Packages & versions of all dependencies, including transitive dependencies,
   // program dependencies and so on, that this project uses. An object mapping a
-  // package name to its string version. Derived from self.combinedConstraints.
+  // package name to its string version. Derived from self.combinedConstraints
+  // and recorded in the .meteor/versions file.
   self.dependencies = null;
 
   // The package loader for this project, with the project's dependencies as its
@@ -93,13 +94,11 @@ var Project = function () {
   // by any constraint-related operations.
   self.appId = null;
 
-  // True if the project has been initialized with a root directory and
-  // dependency information and false otherwise.
-  self.initialized = false;
-
-  // Packages used by the sub-programs using of this project. Should not change
-  // without restart, we memoize this because we would otherwise need to reread
-  // it from disk every time we recalculate versions.
+  // Packages used by the sub-programs using of this project. Will not change
+  // while the app is running! Therefore, we can remember it, so we don't need
+  // to perform a bunch of reads when we recalculate combinedConstraints.
+  //
+  // XXX: Is this actually faster?
   self._programConstraints = null;
 
   // Whenever we change the constraints, we invalidate many constraint-related
@@ -171,6 +170,17 @@ _.extend(Project.prototype, {
     self._depsUpToDate = false;
   },
 
+  // Rereads all the on-disk files by reinitalizing the project with the same directory.
+  //
+  // We don't automatically reinitialize this singleton when an app is
+  // restarted, but an app restart is very likely caused by changes to our
+  // package configuration files. So, make sure to reload the constraints &
+  // dependencies here.
+  reload : function () {
+    var self = this;
+    self.setRootDir(self.rootDir);
+  },
+
   // Several fields in project are derived from constraints. Whenever we change
   // the constraints, we invalidate those fields, when we call on
   // dependency-related operations, we recompute them as needed.
@@ -181,20 +191,22 @@ _.extend(Project.prototype, {
   _ensureDepsUpToDate : function () {
     var self = this;
 
-    // Aha, now we can initialize the project singleton. There is a dependency
-    // chain here -- to calculate project dependencies, we need to know what
-    // release we are on. So, we need to initialize it after the release. To
-    // figure out our release, we need to initialize the catalog. But we can't use
-    // the catalog's constraint solver until we initialize the release.
-    //
-    // Because this call is lazy, we don't need to worry about this, as long as we
-    // call things in the right order in main.js
+    // To calculate project dependencies, we need to know what release we are
+    // on, but to do that, we need to have a rootDirectory. So, we initialize
+    // the path first, and call 'ensureDepsUpToDate' lazily.
     if (!release.current) {
       throw new Error(
         "need to compute release before computing project dependencies.");
     }
 
     if (!self._depsUpToDate) {
+
+      // XXX: I don't understand why we don't reread this automatically.
+      self.constraints = processPerConstraintLines(
+        getLines(self._constraintFile));
+      self.dependencies = processPerConstraintLines(
+         getLines(self._versionsFile));
+
       // Use current release to calculate packages & combined constraints.
       var releasePackages = release.current.isProperRelease() ?
             release.current.getPackages() : {};
@@ -342,8 +354,6 @@ _.extend(Project.prototype, {
     var self = this;
     return path.join(self.rootDir, '.meteor', 'packages');
   },
-
-
 
   // Give the contents of the project's .meteor/versions file to the caller.
   //
