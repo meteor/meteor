@@ -157,12 +157,13 @@ _.extend(Catalog.prototype, {
   // also avoids having to resolve what versions to use, which we can't do
   // without the constraint solver. #UnbuiltConstraintSolverMustUseLocalPackages)
   //
-  // constraints: a set of constraints that we are trying to resolve
-  // resolverOpts: options for the constraint solver. See the resolver.resolve function
-  //   in the constraint solver package
-  // opts:
-  // ignoreProjectDeps: ignore the dependencies of the project, and call the
-  //   constraint solver anyway.
+  // - constraints: a set of constraints that we are trying to resolve
+  // - resolverOpts: options for the constraint solver. See the resolver.resolve function
+  //   in the constraint solver package.
+
+  // - opts:
+  //   - ignoreProjectDeps: ignore the dependencies of the project, and call the
+  //     constraint solver anyway.
   resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};

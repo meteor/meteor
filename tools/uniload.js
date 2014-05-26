@@ -69,14 +69,21 @@ var load = function (options) {
   var messages = buildmessage.capture({
     title: "loading unipackage"
   }, function () {
-    // Load the code
+    // Load the code. The uniloader does not call the constraint solver. But
+    // keep in mind, that it does use the catalog to build these packages when
+    // it gets around to it.
     var loader = new PackageLoader({
       versions: null,
       uniloadDir: files.getUniloadDir()
     });
 
-    // XXX: Normally, we should pass in dependencyVersions, but we are planning
-    // to refactor this code in the next 48 hours.
+    // Build the bundler image.
+    //
+    // Passing in dependency versions doesn't really make any sense here. We
+    // don't know the previous dependencies of this package, and, anyway, if we
+    // are running from checkout, they are all +local, and if we are running
+    // from release it is a bunch of unipackages. So, we don't pass in
+    // dependency versions.
     var image = bundler.buildJsImage({
       name: "load",
       packageLoader: loader,
