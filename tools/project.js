@@ -20,7 +20,7 @@ var trimLine = function (line) {
   return line;
 };
 
-// Reads in a file, stripping blanck lines in the end. Returns an array of lines
+// Reads in a file, stripping blank lines in the end. Returns an array of lines
 // in the file, to be processed individually.
 var getLines = function (file) {
   if (!fs.existsSync(file)) {
@@ -233,8 +233,9 @@ _.extend(Project.prototype, {
       programSource.initFromPackageDir(programName, programSubdir);
       _.each(programSource.architectures, function (sourceBuild) {
         _.each(sourceBuild.uses, function (use) {
+           var constraint = use.constraint || null;
            allDeps.push(_.extend({packageName: use.package},
-                              utils.parseVersionConstraint(use.constraint)));
+                              utils.parseVersionConstraint(constraint)));
         });
       });
     });
@@ -402,7 +403,10 @@ _.extend(Project.prototype, {
   // failure to deal with all packages will have no long-lasting reprecussions
   // (testing) or we are running an upgrader that intends to break the build.
   //
-  // XXX: get rid of this function.
+  // XXX: I don't like that this exists, but I like being explicit about what
+  // upgraders do: they force a remove or add of a package, perhaps without
+  // asking permission or running constraint solvers. If we are willing to kill
+  // those upgraders, I would love to remove it.
   forceEditPackages : function (names, operation) {
     var self = this;
 
@@ -418,12 +422,7 @@ _.extend(Project.prototype, {
         self.constraints[name] = null;
       });
     } else if (operation == "remove") {
-      lines = _.reject(lines, function (line) {
-        return _.indexOf(names, trimLine(line)) !== -1;
-      });
-      _.each(names, function (name) {
-        delete self.constraints[name];
-      });
+      self._removePackageRecords(names);
     }
 
     fs.writeFileSync(appConstraintFile,
@@ -433,11 +432,10 @@ _.extend(Project.prototype, {
     self._depsUpToDate = false;
   },
 
-
-  // Remove packages from the app -- remove packages from the constraints, then
-  // recalculate versions and record the result to disk. We feel safe doing this
-  // here because this really shouldn't fail (we are just removing things).
-  removePackages : function (names) {
+  // Edits the internal and external package records: .meteor/packages and
+  // self.constraints to remove the packages in a given list of package
+  // names. Does not rewrite the versions file.
+  _removePackageRecords : function (names) {
     var self = this;
 
     // Compute the new set of packages by removing all the names from the list
@@ -448,13 +446,21 @@ _.extend(Project.prototype, {
 
     // Record the packages results to disk. This is a slightly annoying
     // operation because we want to keep all the comments intact.
-    var packages = self._genConstraintFile();
+    var packages = self._getConstraintFile();
     var lines = getLines(packages);
     lines = _.reject(lines, function (line) {
       return _.indexOf(names, trimLine(line)) !== -1;
     });
     fs.writeFileSync(packages,
                      lines.join('\n') + '\n', 'utf8');
+  },
+
+  // Remove packages from the app -- remove packages from the constraints, then
+  // recalculate versions and record the result to disk. We feel safe doing this
+  // here because this really shouldn't fail (we are just removing things).
+  removePackages : function (names) {
+    var self = this;
+    self._removePackageRecords(names);
 
     // Force a recalculation of all the dependencies, and record them to disk.
     self._depsUpToDate = false;
@@ -463,9 +469,9 @@ _.extend(Project.prototype, {
   },
 
   // Recalculates the project dependencies if needed and records them to disk.
-  recordVersions : function () {
+  recordVersions : function (newVersions) {
     var self = this;
-    var versions = self.dependencies;
+    var versions = newVersions || self.dependencies;
 
     var lines = [];
     _.each(versions, function (version, name) {
@@ -476,9 +482,12 @@ _.extend(Project.prototype, {
                      lines.join(''), 'utf8');
   },
 
-  // Go through a list of packages and make sure that we can access them, mostly
-  // by calling tropohouse. Return the object with mapping packageName to
-  // version for the packages that we have successfully downloaded.
+  // Go through a list of packages and makes sure we have enough builds of the
+  // package downloaded such that we can load a browser build and a build that
+  // will run on this system. (Later we may also need to download more builds to
+  // be able to deploy to another architecture.) Return the object with mapping
+  // packageName to version for the packages that we have successfully
+  // downloaded.
   //
   // This primarily exists as a safety check to be used when doing operations
   // that could lead to changes in the versions file.
@@ -499,77 +508,53 @@ _.extend(Project.prototype, {
   },
 
 
-  // Call this after running the constraint solver. Downloads the
-  // necessary package builds and writes the .meteor/versions and
-  // .meteor/packages files with the results of the constraint solver.
+  // Tries to download all the packages that changed between the old
+  // self.dependencies and newVersions, and, if successful, adds 'moreDeps' to
+  // the package constraints to this project and replaces the project's
+  // dependencies with newVersions. Rewrites the data on disk to match. This
+  // does NOT run the constraint solver, it assumes that newVersions is valid to
+  // the full set of project constraints.
   //
-  // Only writes to .meteor/versions if all the requested versions were
-  // available from the package server.
+  // - moreDeps: an array of string package constraints to add to the project. This array
+  //   can be empty.
+  // - newVersions: a new set of dependencies for this project.
   //
-  // Returns an object whose keys are package names and values are
-  // versions that were successfully downloaded.
-  //
-  // XXX: This shouldn't really take deps as an argument, or at least it should
-  // allow the situation where constraints don't change at all.
-  setDependencies : function (deps, versions) {
+  // returns an object mapping packageName to version of packages that we have
+  // available on disk. If this object does not contain all the keys of
+  // newVersions, then we haven't written the new versions&packages files to
+  // disk and the operation has failed.
+  addPackages : function (moreDeps, newVersions) {
     var self = this;
-
-    // Set our own internal variables first.
-    self.constraints = deps;
-    self.dependencies = versions;
 
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to
     // make sure that we have them.
-    var downloadedPackages = {};
-    _.each(versions, function (version, name) {
-      var packageVersionInfo = { packageName: name, version: version };
-      // XXX error handling
-      var available = tropohouse.default.maybeDownloadPackageForArchitectures(
-        packageVersionInfo,
-        ['browser', archinfo.host()]
-      );
-      if (available) {
-        downloadedPackages[name] = version;
-      }
-    });
+    var downloadedPackages = self._ensurePackagesExistOnDisk(newVersions);
 
-    // If we have successfully downloaded everything, then we can rewrite the
-    // relevant project files.
-    //
-    // XXX: But ... shouldn't we tell the user if we failed?!
-    if (_.keys(downloadedPackages).length === _.keys(versions).length) {
-      // Rewrite the packages file. Do this first, since the versions file is
-      // derived from the packages file.
-      // XXX: Do not remove comments from packages file.
-      var lines = [];
-
-      // This rewrites the .meteor/packages file.
-      // XXX: make this optional.
-      // XXX: make this not remove comments.
-      var lines = [];
-      _.each(deps, function (versionConstraint, name) {
-        if (versionConstraint) {
-          lines.push(name + "@" + versionConstraint + "\n");
-        } else {
-          lines.push(name + "\n");
-        }
-      });
-      lines.sort();
-      fs.writeFileSync(path.join(self.rootDir, '.meteor', 'packages'),
-                       lines.join(''), 'utf8');
-
-      // Rewrite the versions file. This is a system file that doesn't allow
-      // comments (XXX: Why not?), so this is pretty straightforward.
-      lines = [];
-      _.each(versions, function (version, name) {
-        lines.push(name + "@" + version + "\n");
-      });
-      lines.sort();
-      fs.writeFileSync(path.join(self.rootDir, '.meteor', 'versions'),
-                       lines.join(''), 'utf8');
-
+    // Return the packages that we have downloaded successfully and let the
+    // client deal with reporting the error to the user.
+    if (_.keys(downloadedPackages).length !== _.keys(newVersions).length) {
+      return downloadedPackages;
     }
+
+    // We can continue normally, so set our own internal variables.
+    self.constraints = _.extend(self.constraints, moreDeps);
+    self.dependencies = newVersions;
+
+    // Add to the packages file. Do this first, since the versions file is
+    // derived from this one and can always be reconstructed later. We read the
+    // file from disk, because we don't store the comments.
+    var packages = self._getConstraintFile();
+    var lines = getLines(packages);
+    _.each(moreDeps, function (constraint) {
+      lines.push(constraint + "\n");
+    });
+    lines.sort();
+    fs.writeFileSync(packages, lines.join(''), 'utf8');
+
+    // Rewrite the versions file.
+    self.recordVersions(newVersions);
+
     return downloadedPackages;
   },
 

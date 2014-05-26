@@ -520,12 +520,14 @@ main.registerCommand({
     return 1;
   }
 
-  var directDependencies = project.getConstraints();
-  project.setDependencies(directDependencies,
-                          solutionVersions);
+  // We are not adding any new packages, but we want all the checks associated
+  // with adding packages, like making sure that all our packages have been
+  // downloaded from troposphere.
+  project.addPackages([], solutionVersions);
+
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
-
+  // XXX error handling.
 
   // Find upgraders (in order) necessary to upgrade the app for the new
   // release (new metadata file formats, etc, or maybe even updating renamed
@@ -731,18 +733,10 @@ main.registerCommand({
     messageLog.push("removed dependency on " + packageName);
   });
 
-  // Install the new versions. If all new versions were installed
-  // successfully, then `setDependencies` also records dependency
-  // changes in the .meteor/versions file.
-  //
-  // Makes sure we have enough builds of the package downloaded such that
-  // we can load a browser build and a build that will run on this
-  // system. (Later we may also need to download more builds to be able to
-  // deploy to another architecture.)
-  var downloaded = project.setDependencies(
-    packages,
-    newVersions
-  );
+  // Install the new versions. If all new versions were installed successfully,
+  // then change the .meteor/packages and .meteor/versions to match expected
+  // reality.
+  var downloaded = project.addPackages(options.args, newVersions);
 
   _.each(newVersions, function(version, packageName) {
     if (failed)
