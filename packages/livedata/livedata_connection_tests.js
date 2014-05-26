@@ -282,14 +282,12 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   var rFoo = new ReactiveVar('foo1');
 
   // Subscribe to some subs.
-  var fooHandle;
+  var fooHandle, fooReady;
   var autorunHandle = Deps.autorun(function () {
     fooHandle = conn.subscribe("foo", rFoo.get());
-  });
-
-  var fooReady;
-  var readyAutorunHandle = Deps.autorun(function() {
-    fooReady = fooHandle.ready();
+    Deps.autorun(function() {
+      fooReady = fooHandle.ready();
+    });
   });
 
   var message = JSON.parse(stream.sent.shift());
@@ -354,7 +352,6 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   test.isTrue(fooReady);
   
   autorunHandle.stop();
-  readyAutorunHandle.stop();
 });
 
 Tinytest.add("livedata stub - this", function (test) {

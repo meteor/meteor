@@ -528,7 +528,7 @@ _.extend(Connection.prototype, {
         connection: self,
         remove: function() {
           delete this.connection._subscriptions[this.id];
-          this.readyDeps.changed();
+          this.ready && this.readyDeps.changed();
         },
         stop: function() {
           this.connection._send({msg: 'unsub', id: id});
