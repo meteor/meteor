@@ -234,7 +234,6 @@ _.extend(Catalog.prototype, {
     // shouldn't do it. But it is nice to check.
     _.each(solution, function (version, package) {
       if (versions[package] !== version) {
-        console.log(solution, versions);
         throw new Error ("differing versions for " + package + ":" +
                          resolverOpts.previousSolution[package] + " vs "
                          +  version + " did you init correctly?");
