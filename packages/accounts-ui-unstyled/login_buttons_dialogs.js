@@ -4,8 +4,8 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 
 //
 // populate the session so that the appropriate dialogs are
-// displayed by reading variables set by accounts-urls, which parses
-// special URLs. since accounts-ui depends on accounts-urls, we are
+// displayed by reading variables set by accounts-base, which parses
+// special URLs. since accounts-ui depends on accounts-base, we are
 // guaranteed to have these set at this point.
 //
 
