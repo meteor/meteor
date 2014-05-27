@@ -765,30 +765,40 @@ Tinytest.add('spacebars-tests - template_tests - textarea each', function (test)
 
 // Ensure that one can call `Meteor.defer` within a rendered callback
 // triggered by a document insertion that happend in a method stub.
+//
+// Why do we have this test? Because you generally can't call
+// `Meteor.defer` inside a method stub (see
+// packages/meteor/timers.js).  This test verifies that rendered
+// callbacks don't fire synchronously as part of a method stub.
 testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (test, expect) {
   var tmpl = Template.spacebars_template_test_defer_in_rendered;
-  var coll = new Meteor.Collection("test-defer-in-rendered--client-only");
+  var coll = new Meteor.Collection(null);
+
+  Meteor.methods({
+    spacebarsTestInsertEmptyObject: function () {
+      // cause a new instance of `subtmpl` to be placed in the
+      // DOM. verify that it's not fired directly within a method
+      // stub, in which `Meteor.defer` is not allowed.
+      coll.insert({});
+    }
+  });
+
   tmpl.items = function () {
     return coll.find();
   };
 
   var subtmpl = Template.spacebars_template_test_defer_in_rendered_subtemplate;
+
   subtmpl.rendered = expect(function () {
     // will throw if called in a method stub
-    Meteor.defer(function () {
-    });
+    Meteor.defer(function () {});
   });
 
   var div = renderToDiv(tmpl);
 
-  // `coll` is not defined on the server so we'll get an error.  We
-  // can't make this a client-only collection since then we won't be
-  // running in a stub and the error won't fire.
-  Meteor._suppress_log(1);
-  // cause a new instance of `subtmpl` to be placed in the DOM. verify
-  // that it's not fired directly within a method stub, in which
-  // `Meteor.defer` is not allowed.
-  coll.insert({});
+  // not defined on the server, but it's fine since the stub does
+  // the relevant work
+  Meteor.call("spacebarsTestInsertEmptyObject");
 }]);
 
 testAsyncMulti('spacebars - template - rendered template is DOM in rendered callbacks', [
@@ -953,176 +963,76 @@ Tinytest.add('spacebars-tests - template_tests - constant #each argument', funct
              'foo bar 2');
 });
 
-// extract a multi-line string from a comment within a function.
-// @param f {Function} eg function () { /* [[[...content...]]] */ }
-// @returns {String} eg "content"
-var textFromFunction = function(f) {
-  var str = f.toString().match(/\[\[\[([\S\s]*)\]\]\]/m)[1];
-  // remove line number comments added by linker
-  str = str.replace(/[ ]*\/\/ \d+$/gm, '');
-  return str;
-};
-
-Tinytest.add('spacebars-tests - template_tests - #markdown - basic', function (test) {
+Tinytest.addAsync('spacebars-tests - template_tests - #markdown - basic', function (test, onComplete) {
   var tmpl = Template.spacebars_template_test_markdown_basic;
   tmpl.obj = {snippet: "<i>hi</i>"};
   tmpl.hi = function () {
     return this.snippet;
   };
   var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p><i>hi</i>
-/each}}</p>
 
-<p><b><i>hi</i></b>
-<b>/each}}</b></p>
-
-<ul>
-<li><i>hi</i></li>
-<li><p>/each}}</p></li>
-<li><p><b><i>hi</i></b></p></li>
-<li><b>/each}}</b></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>&lt;i&gt;hi&lt;/i&gt;
-/each}}
-
-&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;
-&lt;b&gt;/each}}&lt;/b&gt;
-</code></pre>
-
-<p>&amp;gt</p>
-
-<ul>
-<li>&amp;gt</li>
-</ul>
-
-<p><code>&amp;gt</code></p>
-
-<pre><code>&amp;gt
-</code></pre>
-
-<p>&gt;</p>
-
-<ul>
-<li>&gt;</li>
-</ul>
-
-<p><code>&amp;gt;</code></p>
-
-<pre><code>&amp;gt;
-</code></pre>
-
-<p><code>&lt;i&gt;hi&lt;/i&gt;</code>
-<code>/each}}</code></p>
-
-<p><code>&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;</code>
-<code>&lt;b&gt;/each}}</code></p>]]] */
-  })));
+  Meteor.call("getAsset", "markdown_basic.html", function (err, html) {
+    test.isFalse(err);
+    test.equal(canonicalizeHtml(div.innerHTML),
+               canonicalizeHtml(html));
+    onComplete();
+  });
 });
 
-Tinytest.add('spacebars-tests - template_tests - #markdown - if', function (test) {
-  var tmpl = Template.spacebars_template_test_markdown_if;
-  var R = new ReactiveVar(false);
-  tmpl.cond = function () { return R.get(); };
+testAsyncMulti('spacebars-tests - template_tests - #markdown - if', [
+  function (test, expect) {
+    var self = this;
+    Meteor.call("getAsset", "markdown_if1.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html1 = html;
+    }));
+    Meteor.call("getAsset", "markdown_if2.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html2 = html;
+    }));
+  },
 
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>false</p>
+  function (test, expect) {
+    var self = this;
+    var tmpl = Template.spacebars_template_test_markdown_if;
+    var R = new ReactiveVar(false);
+    tmpl.cond = function () { return R.get(); };
 
-<p><b>false</b></p>
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
+    R.set(true);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
+  }
+]);
 
-<ul>
-<li><p>false</p></li>
-<li><p><b>false</b></p></li>
-</ul>
+testAsyncMulti('spacebars-tests - template_tests - #markdown - each', [
+  function (test, expect) {
+    var self = this;
+    Meteor.call("getAsset", "markdown_each1.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html1 = html;
+    }));
+    Meteor.call("getAsset", "markdown_each2.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html2 = html;
+    }));
+  },
 
-<p>some paragraph to fix showdown's four space parsing below.</p>
+  function (test, expect) {
+    var self = this;
+    var tmpl = Template.spacebars_template_test_markdown_each;
+    var R = new ReactiveVar([]);
+    tmpl.seq = function () { return R.get(); };
 
-<pre><code>false
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
 
-&lt;b&gt;false&lt;/b&gt;
-</code></pre>
-
-<p><code>false</code></p>
-
-<p><code>&lt;b&gt;false&lt;/b&gt;</code></p>]]] */
-  })));
-  R.set(true);
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>true</p>
-
-<p><b>true</b></p>
-
-<ul>
-<li><p>true</p></li>
-<li><p><b>true</b></p></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>true
-
-&lt;b&gt;true&lt;/b&gt;
-</code></pre>
-
-<p><code>true</code></p>
-
-<p><code>&lt;b&gt;true&lt;/b&gt;</code></p>]]] */
-  })));
-});
-
-Tinytest.add('spacebars-tests - template_tests - #markdown - each', function (test) {
-  var tmpl = Template.spacebars_template_test_markdown_each;
-  var R = new ReactiveVar([]);
-  tmpl.seq = function () { return R.get(); };
-
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p><b></b></p>
-
-<ul>
-<li></li>
-<li><b></b></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>&lt;b&gt;&lt;/b&gt;
-</code></pre>
-
-<p>``</p>
-
-<p><code>&lt;b&gt;&lt;/b&gt;</code></p>]]] */
-    })));
-
-  R.set(["item"]);
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>item</p>
-
-<p><b>item</b></p>
-
-<ul>
-<li><p>item</p></li>
-<li><p><b>item</b></p></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>item
-
-&lt;b&gt;item&lt;/b&gt;
-</code></pre>
-
-<p><code>item</code></p>
-
-<p><code>&lt;b&gt;item&lt;/b&gt;</code></p>]]] */
-    })));
-});
+    R.set(["item"]);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
+  }
+]);
 
 Tinytest.add('spacebars-tests - template_tests - #markdown - inclusion', function (test) {
   var tmpl = Template.spacebars_template_test_markdown_inclusion;
@@ -1934,3 +1844,102 @@ Tinytest.add("spacebars-tests - template_tests - {{#with}} with mutated data con
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '1');
   });
+
+Tinytest.add(
+  "spacebars - template - javascript scheme urls",
+  function (test) {
+    var tmpl = Template.spacebars_test_url_attribute;
+    var sessionKey = "foo-" + Random.id();
+    tmpl.foo = function () {
+      return Session.get(sessionKey);
+    };
+
+    var numUrlAttrs = 4;
+    var div = renderToDiv(tmpl);
+
+    // [tag name, attr name, is a url attribute]
+    var attrsList = [["A", "href", true], ["FORM", "action", true],
+                     ["IMG", "src", true], ["INPUT", "value", false]];
+
+    var checkAttrs = function (url, isJavascriptProtocol) {
+      if (isJavascriptProtocol) {
+        Meteor._suppress_log(numUrlAttrs);
+      }
+      Session.set(sessionKey, url);
+      Deps.flush();
+      _.each(
+        attrsList,
+        function (attrInfo) {
+          var normalizedUrl;
+          var elem = document.createElement(attrInfo[0]);
+          try {
+            elem[attrInfo[1]] = url;
+          } catch (err) {
+            // IE throws an exception if you set an img src to a
+            // javascript: URL. Blaze can't override this behavior;
+            // whether you've called UI._javascriptUrlsAllowed() or not,
+            // you won't be able to set a javascript: URL in an img
+            // src. So we only test img tags in other browsers.
+            if (attrInfo[0] === "IMG") {
+              return;
+            }
+            throw err;
+          }
+          document.body.appendChild(elem);
+          normalizedUrl = elem[attrInfo[1]];
+          document.body.removeChild(elem);
+
+          _.each(
+            div.getElementsByTagName(attrInfo[0]),
+            function (elem) {
+              test.equal(
+                elem[attrInfo[1]],
+                isJavascriptProtocol && attrInfo[2] ? "" : normalizedUrl
+              );
+            }
+          );
+        }
+      );
+    };
+
+    test.equal(UI._javascriptUrlsAllowed(), false);
+    checkAttrs("http://www.meteor.com", false);
+    checkAttrs("javascript:alert(1)", true);
+    checkAttrs("jAvAsCrIpT:alert(1)", true);
+    checkAttrs("    javascript:alert(1)", true);
+    UI._allowJavascriptUrls();
+    test.equal(UI._javascriptUrlsAllowed(), true);
+    checkAttrs("http://www.meteor.com", false);
+    checkAttrs("javascript:alert(1)", false);
+    checkAttrs("jAvAsCrIpT:alert(1)", false);
+    checkAttrs("    javascript:alert(1)", false);
+  }
+);
+
+Tinytest.add(
+  "spacebars - template - event handlers get cleaned up with template is removed",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_handler_cleanup;
+    var subtmpl = Template.spacebars_test_event_handler_cleanup_sub;
+
+    var rv = new ReactiveVar(true);
+    tmpl.foo = function () {
+      return rv.get();
+    };
+
+    subtmpl.events({
+      "click/mouseover": function () { }
+    });
+
+    var div = renderToDiv(tmpl);
+
+    test.equal(div.$_uievents["click"].handlers.length, 1);
+    test.equal(div.$_uievents["mouseover"].handlers.length, 1);
+
+    rv.set(false);
+    Deps.flush();
+
+    test.equal(div.$_uievents["click"].handlers.length, 0);
+    test.equal(div.$_uievents["mouseover"].handlers.length, 0);
+  }
+);
