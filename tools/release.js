@@ -89,7 +89,9 @@ _.extend(Release.prototype, {
       // the dependencyVersions, we have already run the constraint solver, so the
       // catalog has been initialized.
       var catalog = require('./catalog.js');
-      var catversion =  catalog.catalog.getLatestVersion("meteor-tool").version;
+      // We call this on the complete catalog, because it is possible for us to
+      // have a local version of the tool.
+      var catversion =  catalog.complete.getLatestVersion("meteor-tool").version;
       // The catalog version is going to have a +local at the end. We will never
       // be able to springboard to that, so we should skip it.
       var eqVersion = catversion.split("+")[0];
@@ -166,7 +168,7 @@ release.latestDownloaded = function () {
   if (process.env.METEOR_TEST_LATEST_RELEASE)
     return process.env.METEOR_TEST_LATEST_RELEASE;
 
-  var defaultRelease = catalog.serverCatalog.getDefaultReleaseVersion();
+  var defaultRelease = catalog.official.getDefaultReleaseVersion();
   if (!defaultRelease) {
     throw new Error("no latest release available?");
   }
@@ -208,17 +210,12 @@ release.load = function (name, options) {
     track = parts[0];
     version = parts[1];
   } else {
-    track = catalog.DEFAULT_TRACK;
+    track = catalog.official.DEFAULT_TRACK;
     version = parts[0];
     name = track + '@' + version;
   }
 
-  var releaseVersion = catalog.catalog.getReleaseVersion(track, version);
-  if (releaseVersion === null) {
-    // XXX maybe a better pattern for this?
-    catalog.serverCatalog.refresh(true);
-    releaseVersion = catalog.catalog.getReleaseVersion(track, version);
-  }
+  var releaseVersion = catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
     // XXX check the warehouse too, or maybe before refresh
     // XXX Pre090 better error, probably something like

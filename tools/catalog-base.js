@@ -40,6 +40,9 @@ baseCatalog.BaseCatalog = function () {
 
 };
 
+// XXX: We have a pattern on retrieval of data, where we try, fail, then try to
+// refresh. Do we want to keep that? I think so. Come back to it.
+
 _.extend(baseCatalog.BaseCatalog.prototype, {
   // Set all the collections to their initial values, which are mostly
   // blank. This does not set self.initialized -- do that manually in the child
@@ -97,13 +100,23 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    var versionRecord =  _.findWhere(self.releaseVersions,
-        { track: track,  version: version });
+    var retrieveRecord = function () {
+      return _.findWhere(self.releaseVersions,
+                         { track: track,  version: version });
+    };
+    var versionRecord =  retrieveRecord();
 
+    // The first time, we try to refresh and try again. If we don't have the
+    // information after that, tough luck.
     if (!versionRecord) {
-      return null;
+      self.refresh();
+      versionRecord =  retrieveRecord();
+    }
+    if (!versionRecord) {
+        return null;
     }
     return versionRecord;
+
   },
 
   // Return an array with the names of all of the release tracks that we know
@@ -175,10 +188,20 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       version = self._getLocalVersion(version);
     }
 
-    var versionRecord =  _.findWhere(self.versions, { packageName: name,
-                                                      version: version });
+    var retrieveRecord = function () {
+      return  _.findWhere(self.versions, { packageName: name,
+                                           version: version });
+    };
+    var versionRecord =  retrieveRecord();
+
+    // The first time, we try to refresh and try again. If we don't have the
+    // information after that, tough luck.
     if (!versionRecord) {
-      return null;
+      self.refresh();
+      versionRecord =  retrieveRecord();
+    }
+    if (!versionRecord) {
+        return null;
     }
     return versionRecord;
   },
@@ -312,5 +335,10 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return packageDir;
     }
      return null;
+  },
+
+  // Reload catalog data to account for new information if needed.
+  refresh: function () {
+    throw new Error("no such thing as a base refresh");
   }
 });

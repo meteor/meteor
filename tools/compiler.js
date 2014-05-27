@@ -162,7 +162,7 @@ var determineBuildTimeDependencies = function (packageSource) {
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
-  ret.packageDependencies = catalog.catalog.resolveConstraints(constraints,
+  ret.packageDependencies = catalog.complete.resolveConstraints(constraints,
                                               { previousSolution: versions });
 
   // We care about differentiating between all dependencies (which we save in
@@ -192,7 +192,7 @@ var determineBuildTimeDependencies = function (packageSource) {
 
     var pluginVersion = pluginVersions[info.name] || {};
     ret.pluginDependencies[info.name] =
-      catalog.catalog.resolveConstraints(
+      catalog.complete.resolveConstraints(
         constraints, { previousSolution: pluginVersion  });
   });
 
@@ -824,7 +824,7 @@ var getPluginProviders = function (versions) {
   _.each(versions, function (version, name) {
     // Direct dependencies only create a build-order constraint if
     // they contain a plugin.
-    var catalogVersion = catalog.catalog.getVersion(name, version);
+    var catalogVersion = catalog.complete.getVersion(name, version);
     if (catalogVersion && catalogVersion.containsPlugins) {
       result[name] = version;
     }

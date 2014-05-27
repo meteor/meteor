@@ -449,7 +449,7 @@ _.extend(AppRunner.prototype, {
 
     // HACK: Also make sure we notice when somebody adds a package to
     // the app packages dir that may override a catalog package.
-    catalog.catalog.watchLocalPackageDirs(watchSet);
+    catalog.complete.watchLocalPackageDirs(watchSet);
 
     // Were there errors?
     if (bundleResult.errors) {

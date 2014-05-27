@@ -22,10 +22,16 @@ var packageCache = require('./package-cache.js');
 var PackageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
-var catalog = require('./catalog.js').catalog;
-var serverCatalog = require('./catalog.js').serverCatalog;
+var catalogs = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+
+// Reminder: we have two catalogs. The complete catalog contains local packages,
+// and uses them to override the server data. The official catalog only knows
+// about server packages. All query operations on package server contents should
+// refer to the /official/ catalog.
+var catalog = catalogs.complete;
+var officialCatalog = catalogs.official;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -410,7 +416,7 @@ main.registerCommand({
   var couldNotContactServer = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
@@ -638,7 +644,7 @@ main.registerCommand({
   var failed = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh();
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -816,7 +822,7 @@ main.registerCommand({
   // server. Technically, we don't need to do this, since it is unlikely that
   // new data will change our constraint solver decisions. But as a user, I
   // would expect this command to update the local catalog.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -882,7 +888,7 @@ main.registerCommand({
   // are only calling 'using', this is not nessessary, but, once again, as a
   // user, I would not be surprised to see this contact the server. In the
   // future, we should move this call to sync somewhere in the background.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   if (options.releases && options.using) {
      console.log("XXX: The contents of your release file.");
@@ -1590,13 +1596,16 @@ main.registerCommand({
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
 
-  serverCatalog.refresh(true);
+  // In this function, we want to use the official catalog everywhere, because
+  // we assume that all packages have been published (along with the release
+  // obviously) and we want to be sure to only bundle the published versions.
+  officialCatalog.refresh();
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
     throw new main.ShowUsage;
 
-  var release = serverCatalog.getReleaseVersion(parsed.package,
+  var release = officialCatalog.getReleaseVersion(parsed.package,
                                                 parsed.constraint);
   if (!release) {
     // XXX this could also mean package unknown.
@@ -1607,7 +1616,7 @@ main.registerCommand({
   var toolPkg = release.tool && utils.splitConstraint(release.tool);
   if (! (toolPkg && toolPkg.constraint))
     throw new Error("bad tool in release: " + toolPkg);
-  var toolPkgBuilds = serverCatalog.getAllBuilds(
+  var toolPkgBuilds = officialCatalog.getAllBuilds(
     toolPkg.package, toolPkg.constraint);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
@@ -1641,7 +1650,7 @@ main.registerCommand({
   // need for the OSes that the tool is built for.
   _.each(osArches, function (osArch) {
     _.each(release.packages, function (pkgVersion, pkgName) {
-      if (!serverCatalog.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
+      if (!officialCatalog.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
         throw Error("missing build of " + pkgName + "@" + pkgVersion +
                     " for " + osArch);
       }
@@ -1653,11 +1662,11 @@ main.registerCommand({
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     // We're going to build and tar up a tropohouse in a temporary directory; we
-    // don't want to use any of our local packages, so we use serverCatalog
+    // don't want to use any of our local packages, so we use officialCatalog
     // instead of catalog.
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
-      path.join(tmpdir, '.meteor0'), serverCatalog);
+      path.join(tmpdir, '.meteor0'), officialCatalog);
     tmpTropo.maybeDownloadPackageForArchitectures(
       {packageName: toolPkg.package, version: toolPkg.constraint},
       [osArch]);  // XXX 'browser' too?
@@ -1774,7 +1783,7 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -1823,7 +1832,8 @@ main.registerCommand({
   }*/
 
   // We have initialized everything, so perform the publish oepration.
-  var ec = packageClient.publishPackage(packageSource, compileResult, conn, { new: options.create });
+  var ec = packageClient.publishPackage(
+    packageSource, compileResult, conn, { new: options.create });
 
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.
@@ -1842,13 +1852,13 @@ main.registerCommand({
 }, function (options) {
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   if (! catalog.getPackage(options.name)) {
     process.stderr.write('No package named ' + options.name);
     return 1;
   }
-  var pkgVersion = catalog.getVersion(options.name, options.versionString);
+  var pkgVersion = officialCatalog.getVersion(options.name, options.versionString);
   if (! pkgVersion) {
     process.stderr.write('There is no version ' +
                          options.versionString + ' for package ' +
@@ -1915,7 +1925,7 @@ main.registerCommand({
 }, function (options) {
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -2060,7 +2070,8 @@ main.registerCommand({
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
                 // that the contents are the same.
-                var oldVersion = serverCatalog.getVersion(item, packageSource.version);
+                var oldVersion = officialCatalog.getVersion
+                                   (item, packageSource.version);
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
@@ -2086,7 +2097,7 @@ main.registerCommand({
                                      compileResult: compileResult};
                   return;
                 } else {
-                  var existingBuild = serverCatalog.getBuildWithArchesString(
+                  var existingBuild = officialCatalog.getBuildWithArchesString(
                     oldVersion,
                     compileResult.unipackage.architecturesString());
 
@@ -2138,7 +2149,7 @@ main.registerCommand({
   _.each(toPublish,
    function(prebuilt, name) {
      var opts = {
-       new: !serverCatalog.getPackage(name)
+       new: !officialCatalog.getPackage(name)
      };
      process.stdout.write("Publishing package: " + name + "\n");
 
@@ -2169,7 +2180,7 @@ main.registerCommand({
 
   // Check if the release track exists. If it doesn't, need the create flag.
   if (!options['create-track']) {
-    var trackRecord = serverCatalog.getReleaseTrack(relConf.track);
+    var trackRecord = officialCatalog.getReleaseTrack(relConf.track);
     if (!trackRecord) {
       process.stderr.write('There is no release track named ' + relConf.track +
                            '. If you are creating a new track, use the --create-track flag. \n');
@@ -2196,7 +2207,7 @@ main.registerCommand({
   });
 
   // Get it back.
-  serverCatalog.refresh(true);
+  officialCatalog.refresh(true);
 
   process.stdout.write("Done! \n");
   return 0;

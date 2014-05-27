@@ -171,7 +171,7 @@ _.extend(Project.prototype, {
       // solution. Remember to check 'ignoreProjectDeps', otherwise it will just
       // try to look up the solution in our own dependencies and it will be a
       // disaster.
-      var newVersions = catalog.catalog.resolveConstraints(
+      var newVersions = catalog.complete.resolveConstraints(
         self.combinedConstraints,
         { previousSolution: self.dependencies },
         { ignoreProjectDeps: true }

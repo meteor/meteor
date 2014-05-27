@@ -39,7 +39,7 @@ var defaultWarehouseDir = function () {
 // download local packages; you can make your own Tropohouse to override these
 // things.
 exports.default = new exports.Tropohouse(
-  defaultWarehouseDir(), catalog.catalog);
+  defaultWarehouseDir(), catalog.complete);
 
 _.extend(exports.Tropohouse.prototype, {
   // Return the directory within the warehouse that would contain downloaded

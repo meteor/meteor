@@ -965,7 +965,7 @@ _.extend(Unipackage.prototype, {
       self.buildTimeDirectDependencies,
       function (packageName, version) { // filter
         if (packageName !== self.name) {
-          var catalogVersion = catalog.catalog.getVersion(packageName,
+          var catalogVersion = catalog.complete.getVersion(packageName,
                                                           version);
           // XXX This could throw if we call it on a freshly-built
           // unipackage (as opposed to one read from disk that has real

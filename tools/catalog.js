@@ -729,16 +729,11 @@ _.extend(CompleteCatalog.prototype, {
 
 // This is the catalog that's used to answer the specific question of "so what's
 // on the server?".  It does not contain any local catalogs.  Typically, we call
-// catalog.serverCatalog.refresh(true) to update data.json.
-catalog.serverCatalog = new ServerCatalog();
+// catalog.official.refresh(true) to update data.json.
+catalog.official = new ServerCatalog();
 
 // This is the catalog that's used to actually drive the constraint solver: it
 // contains local packages, and since local packages always beat server
 // packages, it doesn't contain any information about the server version of
-// local packages. Typically, we call catalog.catalog.refresh() after doing a
-// sync-refresh of serverCatalog; since only serverCatalog does the sync
-// request, the two catalogs are not fighting over the data files on disk.
-//
-// XXX we haven't finished this refactoring yet so there are plenty of
-// catalog.catalog.refresh(true) calls
-catalog.catalog = new CompleteCatalog();
+// local packages.
+catalog.complete = new CompleteCatalog();

@@ -768,7 +768,6 @@ _.extend(PackageSource.prototype, {
           });
         },
 
-
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
@@ -777,13 +776,12 @@ _.extend(PackageSource.prototype, {
           // XXX: Error handling
           if (relInf.length !== 2)
             throw new Error("Incorrect release spec");
-          var catalog = require('./catalog.js');
-          releaseRecord = catalog.catalog.getReleaseVersion(relInf[0], relInf[1]);
+          var catalog = require('./catalog.js').complete;
+          releaseRecord = catalog.getReleaseVersion(relInf[0], relInf[1]);
           if (!releaseRecord) {
             throw new Error("Unknown release");
            }
         },
-
 
         // Export symbols from this package.
         //

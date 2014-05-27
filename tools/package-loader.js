@@ -2,7 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
 var packageCache = require('./package-cache.js');
-var catalog = require('./catalog.js');
+var catalogs = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
@@ -66,9 +66,9 @@ _.extend(PackageLoader.prototype, {
 
     var versionRecord;
     if (self.versions === null) {
-      versionRecord = catalog.catalog.getLatestVersion(name);
+      versionRecord = catalogs.complete.getLatestVersion(name);
     } else if (_.has(self.versions, name)) {
-      versionRecord = catalog.catalog.getVersion(name, self.versions[name]);
+      versionRecord = catalogs.complete.getVersion(name, self.versions[name]);
     } else {
       throw new Error("no version specified for package " + name);
     }
@@ -106,7 +106,7 @@ _.extend(PackageLoader.prototype, {
       version = null;
     }
 
-    return catalog.catalog.getLoadPathForPackage(name, version);
+    return catalogs.complete.getLoadPathForPackage(name, version);
   },
 
   // Given a package name like "ddp" and an architecture, get the build of that

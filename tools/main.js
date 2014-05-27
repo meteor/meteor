@@ -595,24 +595,27 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  // Initialize the singleton Catalog. Only after this point is the
-  // Catalog (and therefore uniload) usable.
-  //
-  // If the --offline-catalog option is set, the catalog will be offline and
-  // will never attempt to contact the server for more recent data. Otherwise,
-  // the catalog will attempt to synchronize with the remote package server.
-  catalog.catalog.initialize({
-    localPackageDirs: localPackageDirs,
-    offline: _.has(rawOptions, '--offline-catalog')
+  // Initialize the complete Catalog, which we use to retrieve packages. Only
+  // after this point is the Catalog (and therefore uniload) usable.
+  catalog.complete.initialize({
+    localPackageDirs: localPackageDirs
   });
-  // XXX maybe only do this for commands that need it
-  catalog.serverCatalog.initialize({
-    offline: _.has(rawOptions, '--offline-catalog')
-  });
-  // We need to delete the option or we will throw an error.
-  // XXX: This seems like a hack?
-  delete rawOptions['--offline-catalog'];
 
+  // Initialize the server catalog. We don't load data into the server catalog
+  // until refresh is called, so this probably doesn't take up too much
+  // memory. We could move this initialization to commands.js or something, but
+  // this makes it easier to not bother propagating the offline-catalog option
+  // through every command that might care about it.
+  //
+  // If the --offline-catalog option is set, the
+  // catalog will be offline and will never attempt to contact the server for
+  // more recent data. Otherwise, the catalog will attempt to synchronize with
+  // the remote package server.
+  catalog.official.initialize({
+    offline: _.has(rawOptions, '--offline-catalog')
+  });
+  // Delete the offline option.
+  delete rawOptions['--offline-catalog'];
 
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
