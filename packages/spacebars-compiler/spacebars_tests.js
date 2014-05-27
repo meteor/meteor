@@ -102,6 +102,8 @@ Tinytest.add("spacebars - stache tags", function (test) {
 
   run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''],
                         args: []});
+  run('{{x foo.[=]}}', {type: 'DOUBLE', path: ['x'],
+                        args: [['PATH', ['foo', '=']]]});
   run('{{[].foo}}', "Path can't start with empty string");
 
   run('{{foo null}}', {type: 'DOUBLE', path: ['foo'],
@@ -158,6 +160,9 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{foo.this}}', "Can only use");
   run('{{./this}}', "Can only use");
   run('{{../this}}', "Can only use");
+
+  run('{{foo "="}}', {type: 'DOUBLE', path: ['foo'],
+                        args: [['STRING', '=']]});
 
 });
 
