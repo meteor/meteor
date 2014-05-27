@@ -1,6 +1,6 @@
 // XXX SECTION: Meta tests
 
-Tinytest.add("seeded random", function (test) {
+Tinytest.add("test-helpers - seeded_random", function (test) {
   // Test that two seeded PRNGs with the same seed produce the same values.
   var seed = "I'm a seed";
   var sr1 = new SeededRandom(seed);
