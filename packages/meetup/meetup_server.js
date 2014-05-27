@@ -1,6 +1,6 @@
 Meetup = {};
 
-Oauth.registerService('meetup', 2, null, function(query) {
+OAuth.registerService('meetup', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
   var identity = getIdentity(accessToken);
@@ -17,7 +17,7 @@ Oauth.registerService('meetup', 2, null, function(query) {
 var getAccessToken = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {
@@ -25,7 +25,7 @@ var getAccessToken = function (query) {
       "https://secure.meetup.com/oauth2/access", {headers: {Accept: 'application/json'}, params: {
         code: query.code,
         client_id: config.clientId,
-        client_secret: config.secret,
+        client_secret: OAuth.openSecret(config.secret),
         grant_type: 'authorization_code',
         redirect_uri: Meteor.absoluteUrl("_oauth/meetup?close"),
         state: query.state
@@ -55,6 +55,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-Meetup.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+Meetup.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

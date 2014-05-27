@@ -19,6 +19,7 @@ Tinytest.add('random', function (test) {
 Tinytest.add('random - format', function (test) {
   var idLen = 17;
   test.equal(Random.id().length, idLen);
+  test.equal(Random.id(29).length, 29);
   var numDigits = 9;
   var hexStr = Random.hexString(numDigits);
   test.equal(hexStr.length, numDigits);
@@ -26,6 +27,9 @@ Tinytest.add('random - format', function (test) {
   var frac = Random.fraction();
   test.isTrue(frac < 1.0);
   test.isTrue(frac >= 0.0);
+
+  test.equal(Random.secret().length, 43);
+  test.equal(Random.secret(13).length, 13);
 });
 
 Tinytest.add('random - Alea is last resort', function (test) {

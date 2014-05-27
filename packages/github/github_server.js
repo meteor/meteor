@@ -1,6 +1,6 @@
 Github = {};
 
-Oauth.registerService('github', 2, null, function(query) {
+OAuth.registerService('github', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
   var identity = getIdentity(accessToken);
@@ -8,7 +8,7 @@ Oauth.registerService('github', 2, null, function(query) {
   return {
     serviceData: {
       id: identity.id,
-      accessToken: accessToken,
+      accessToken: OAuth.sealSecret(accessToken),
       email: identity.email,
       username: identity.login
     },
@@ -24,7 +24,7 @@ if (Meteor.release)
 var getAccessToken = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'github'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {
@@ -37,7 +37,7 @@ var getAccessToken = function (query) {
         params: {
           code: query.code,
           client_id: config.clientId,
-          client_secret: config.secret,
+          client_secret: OAuth.openSecret(config.secret),
           redirect_uri: Meteor.absoluteUrl("_oauth/github?close"),
           state: query.state
         }
@@ -67,6 +67,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-Github.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+Github.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

@@ -1,3 +1,9 @@
+Meteor.methods({
+  getCurrentLoginToken: function () {
+    return Accounts._getLoginToken(this.connection.id);
+  }
+});
+
 // XXX it'd be cool to also test that the right thing happens if options
 // *are* validated, but Accounts._options is global state which makes this hard
 // (impossible?)
@@ -294,6 +300,76 @@ Tinytest.addAsync(
         serverConn.close();
       },
       onComplete
+    );
+  }
+);
+
+Tinytest.add(
+  'accounts - get new token',
+  function (test) {
+    // Test that the `getNewToken` method returns us a valid token, with
+    // the same expiration as our original token.
+    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    var stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    var conn = DDP.connect(Meteor.absoluteUrl());
+    conn.call('login', { resume: stampedToken.token });
+    test.equal(conn.call('getCurrentLoginToken'),
+               Accounts._hashLoginToken(stampedToken.token));
+
+    var newTokenResult = conn.call('getNewToken');
+    test.equal(newTokenResult.tokenExpires,
+               Accounts._tokenExpiration(stampedToken.when));
+    test.equal(conn.call('getCurrentLoginToken'),
+               Accounts._hashLoginToken(newTokenResult.token));
+    conn.disconnect();
+
+    // A second connection should be able to log in with the new token
+    // we got.
+    var secondConn = DDP.connect(Meteor.absoluteUrl());
+    secondConn.call('login', { resume: newTokenResult.token });
+    secondConn.disconnect();
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - remove other tokens',
+  function (test, onComplete) {
+    // Test that the `removeOtherTokens` method removes all tokens other
+    // than the caller's token, thereby logging out and closing other
+    // connections.
+    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    var stampedTokens = [];
+    var conns = [];
+
+    _.times(2, function (i) {
+      stampedTokens.push(Accounts._generateStampedLoginToken());
+      Accounts._insertLoginToken(userId, stampedTokens[i]);
+      var conn = DDP.connect(Meteor.absoluteUrl());
+      conn.call('login', { resume: stampedTokens[i].token });
+      test.equal(conn.call('getCurrentLoginToken'),
+                 Accounts._hashLoginToken(stampedTokens[i].token));
+      conns.push(conn);
+    });
+
+    conns[0].call('removeOtherTokens');
+    simplePoll(
+      function () {
+        var tokens = _.map(conns, function (conn) {
+          return conn.call('getCurrentLoginToken');
+        });
+        return ! tokens[1] &&
+          tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
+      },
+      function () { // success
+        _.each(conns, function (conn) {
+          conn.disconnect();
+        });
+        onComplete();
+      },
+      function () { // timed out
+        throw new Error("accounts - remove other tokens timed out");
+      }
     );
   }
 );

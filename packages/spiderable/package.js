@@ -12,3 +12,8 @@ Package.on_use(function (api) {
   api.add_files('spiderable.html', 'client');
   api.add_files('spiderable.js', 'server');
 });
+
+Package.on_test(function (api) {
+  api.use(['spiderable', 'tinytest']);
+  api.add_files('spiderable_tests.js', 'server');
+});

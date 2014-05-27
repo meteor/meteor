@@ -215,38 +215,40 @@ Meteor.logout = function (callback) {
 };
 
 Meteor.logoutOtherClients = function (callback) {
-  // Call the `logoutOtherClients` method. Store the login token that we get
-  // back and use it to log in again. The server is not supposed to close
-  // connections on the old token for 10 seconds, so we should have time to
-  // store our new token and log in with it before being disconnected. If we get
-  // disconnected, then we'll immediately reconnect with the new token. If for
-  // some reason we get disconnected before storing the new token, then the
-  // worst that will happen is that we'll have a flicker from trying to log in
-  // with the old token before storing and logging in with the new one.
-  Accounts.connection.apply('logoutOtherClients', [], { wait: true },
-               function (error, result) {
-                 if (error) {
-                   callback && callback(error);
-                 } else {
-                   var userId = Meteor.userId();
-                   storeLoginToken(userId, result.token, result.tokenExpires);
-                   // If the server hasn't disconnected us yet by deleting our
-                   // old token, then logging in now with the new valid token
-                   // will prevent us from getting disconnected. If the server
-                   // has already disconnected us due to our old invalid token,
-                   // then we would have already tried and failed to login with
-                   // the old token on reconnect, and we have to make sure a
-                   // login method gets sent here with the new token.
-                   Meteor.loginWithToken(result.token, function (err) {
-                     if (err &&
-                         storedLoginToken() &&
-                         storedLoginToken().token === result.token) {
-                       makeClientLoggedOut();
-                     }
-                     callback && callback(err);
-                   });
-                 }
-               });
+  // We need to make two method calls: one to replace our current token,
+  // and another to remove all tokens except the current one. We want to
+  // call these two methods one after the other, without any other
+  // methods running between them. For example, we don't want `logout`
+  // to be called in between our two method calls (otherwise the second
+  // method call would return an error). Another example: we don't want
+  // logout to be called before the callback for `getNewToken`;
+  // otherwise we would momentarily log the user out and then write a
+  // new token to localStorage.
+  //
+  // To accomplish this, we make both calls as wait methods, and queue
+  // them one after the other, without spinning off the event loop in
+  // between. Even though we queue `removeOtherTokens` before
+  // `getNewToken`, we won't actually send the `removeOtherTokens` call
+  // until the `getNewToken` callback has finished running, because they
+  // are both wait methods.
+  Accounts.connection.apply(
+    'getNewToken',
+    [],
+    { wait: true },
+    function (err, result) {
+      if (! err) {
+        storeLoginToken(Meteor.userId(), result.token, result.tokenExpires);
+      }
+    }
+  );
+  Accounts.connection.apply(
+    'removeOtherTokens',
+    [],
+    { wait: true },
+    function (err) {
+      callback && callback(err);
+    }
+  );
 };
 
 

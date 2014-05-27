@@ -8,7 +8,10 @@
 # For any emails that show up in the shortlog that aren't in one of
 # these lists, figure out their GitHub username and add them.
 
+GITHUB: aldeed <eric@dairystatedesigns.com>
 GITHUB: AlexeyMK <alexey@alexeymk.com>
+GITHUB: apendua <apendua@gmail.com>
+GITHUB: arbesfeld <arbesfeld@gmail.com>
 GITHUB: DenisGorbachev <Denis.Gorbachev@faster-than-wind.ru>
 GITHUB: EOT <eot@gmx.at>
 GITHUB: FooBarWidget <honglilai@gmail.com>
@@ -20,10 +23,12 @@ GITHUB: awwx <andrew.wilcox@gmail.com>
 GITHUB: cmather <mather.chris@gmail.com>
 GITHUB: codeinthehole <david.winterbottom@gmail.com>
 GITHUB: dandv <ddascalescu+github@gmail.com>
+GITHUB: davegonzalez <gonzalez.dalex@gmail.com>
 GITHUB: emgee3 <hello@gravitronic.com>
 GITHUB: icellan <icellan@icellan.com>
 GITHUB: jacott <geoffjacobsen@gmail.com>
 GITHUB: jfhamlin <jfhamlin@gmail.com>
+GITHUB: justinsb <justin@fathomdb.com>
 GITHUB: marcandre <github@marc-andre.ca>
 GITHUB: mart-jansink <m.jansink@gmail.com>
 GITHUB: meawoppl <meawoppl@gmail.com>
@@ -33,7 +38,9 @@ GITHUB: mitar <mitar.github@tnode.com>
 GITHUB: mizzao <mizzao@gmail.com>
 GITHUB: mquandalle <maxime.quandalle@gmail.com>
 GITHUB: nathan-muir <ndmuir@gmail.com>
+GITHUB: Neftedollar <oildollar@gmail.com>
 GITHUB: paulswartz <paulswartz@gmail.com>
+GITHUB: Pent <jon@empire5design.com>
 GITHUB: queso <joshua.owens@gmail.com>
 GITHUB: rdickert <robert.dickert@gmail.com>
 GITHUB: rgould <rwgould@gmail.com>
@@ -50,6 +57,7 @@ METEOR: dgreensp <dgreenspan@alum.mit.edu>
 METEOR: estark37 <emily@meteor.com>
 METEOR: estark37 <estark37@gmail.com>
 METEOR: glasser <glasser@meteor.com>
+METEOR: glasser <glasser@davidglasser.net>
 METEOR: gschmidt <geoff@geoffschmidt.com>
 METEOR: karayu <lele.yu@gmail.com>
 METEOR: n1mmy <nim@meteor.com>
@@ -57,3 +65,4 @@ METEOR: sixolet <naomi@meteor.com>
 METEOR: Slava <slava@meteor.com>
 METEOR: stubailo <sashko@mit.edu>
 METEOR: ekatek <ekate@meteor.com>
+

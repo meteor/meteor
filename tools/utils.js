@@ -146,3 +146,8 @@ exports.validEmail = function (address) {
   return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
 }
 
+// Like Perl's quotemeta: quotes all regexp metacharacters. See
+//   https://github.com/substack/quotemeta/blob/master/index.js
+exports.quotemeta = function (str) {
+    return String(str).replace(/(\W)/g, '\\$1');
+};

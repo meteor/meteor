@@ -53,16 +53,9 @@ Tinytest.add("templating - table assembly", function(test) {
     });
   };
 
-  var table;
-  table = childWithTag(renderToDiv(Template.test_table_a0), "TABLE");
-
-  // table.rows is a great test, as it fails not only when TR/TD tags are
-  // stripped due to improper html-to-fragment, but also when they are present
-  // but don't show up because we didn't create a TBODY for IE.
-  test.equal(table.rows.length, 3);
-
-  // this time with an explicit TBODY
-  table = childWithTag(renderToDiv(Template.test_table_b0), "TABLE");
+  // The table.rows test would fail when TR/TD tags are stripped due
+  // to improper html-to-fragment
+  var table = childWithTag(renderToDiv(Template.test_table_b0), "TABLE");
   test.equal(table.rows.length, 3);
 
   var c = new LocalCollection();

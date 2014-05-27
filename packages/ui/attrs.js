@@ -36,45 +36,6 @@ AttributeHandler.prototype.update = function (element, oldValue, value) {
   }
 };
 
-// _assign is like _.extend or the upcoming Object.assign.
-// Copy src's own, enumerable properties onto tgt and return
-// tgt.
-var _assign = function (tgt, src) {
-  for (var k in src)
-    if (src.hasOwnProperty(k))
-      tgt[k] = src[k];
-  return tgt;
-};
-
-// return an array with the falsy elements removed
-var _arrayCompact = function (array) {
-  var result = [];
-  for (var i = 0; i < array.length; i++) {
-    var item = array[i];
-    if (item)
-      result.push(item);
-  }
-  return result;
-};
-
-var _arrayContains = function (array, item) {
-  for (var i = 0; i < array.length; i++) {
-    if (array[i] === item)
-      return true;
-  }
-  return false;
-};
-
-var _arrayWithout = function (array, item) {
-  var result = [];
-  for (var i = 0; i < array.length; i++) {
-    var x = array[i];
-    if (x !== item)
-      result.push(x);
-  }
-  return result;
-};
-
 AttributeHandler.extend = function (options) {
   var curType = this;
   var subType = function AttributeHandlerSubtype(/*arguments*/) {
@@ -83,7 +44,7 @@ AttributeHandler.extend = function (options) {
   subType.prototype = new curType;
   subType.extend = curType.extend;
   if (options)
-    _assign(subType.prototype, options);
+    _.extend(subType.prototype, options);
   return subType;
 };
 
@@ -93,22 +54,22 @@ var BaseClassHandler = AttributeHandler.extend({
     if (!this.getCurrentValue || !this.setValue)
       throw new Error("Missing methods in subclass of 'BaseClassHandler'");
 
-    var oldClasses = oldValue ? _arrayCompact(oldValue.split(' ')) : [];
-    var newClasses = value ? _arrayCompact(value.split(' ')) : [];
+    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
+    var newClasses = value ? _.compact(value.split(' ')) : [];
 
     // the current classes on the element, which we will mutate.
-    var classes = _arrayCompact(this.getCurrentValue(element).split(' '));
+    var classes = _.compact(this.getCurrentValue(element).split(' '));
 
     // optimize this later (to be asymptotically faster) if necessary
     for (var i = 0; i < oldClasses.length; i++) {
       var c = oldClasses[i];
-      if (! _arrayContains(newClasses, c))
-        classes = _arrayWithout(classes, c);
+      if (! _.contains(newClasses, c))
+        classes = _.without(classes, c);
     }
     for (var i = 0; i < newClasses.length; i++) {
       var c = newClasses[i];
-      if ((! _arrayContains(oldClasses, c)) &&
-          (! _arrayContains(classes, c)))
+      if ((! _.contains(oldClasses, c)) &&
+          (! _.contains(classes, c)))
         classes.push(c);
     }
 
@@ -199,6 +160,93 @@ var isSVGElement = function (elem) {
   return 'ownerSVGElement' in elem;
 };
 
+var isUrlAttribute = function (tagName, attrName) {
+  // Compiled from http://www.w3.org/TR/REC-html40/index/attributes.html
+  // and
+  // http://www.w3.org/html/wg/drafts/html/master/index.html#attributes-1
+  var urlAttrs = {
+    FORM: ['action'],
+    BODY: ['background'],
+    BLOCKQUOTE: ['cite'],
+    Q: ['cite'],
+    DEL: ['cite'],
+    INS: ['cite'],
+    OBJECT: ['classid', 'codebase', 'data', 'usemap'],
+    APPLET: ['codebase'],
+    A: ['href'],
+    AREA: ['href'],
+    LINK: ['href'],
+    BASE: ['href'],
+    IMG: ['longdesc', 'src', 'usemap'],
+    FRAME: ['longdesc', 'src'],
+    IFRAME: ['longdesc', 'src'],
+    HEAD: ['profile'],
+    SCRIPT: ['src'],
+    INPUT: ['src', 'usemap', 'formaction'],
+    BUTTON: ['formaction'],
+    BASE: ['href'],
+    MENUITEM: ['icon'],
+    HTML: ['manifest'],
+    VIDEO: ['poster']
+  };
+
+  if (attrName === 'itemid') {
+    return true;
+  }
+
+  var urlAttrNames = urlAttrs[tagName] || [];
+  return _.contains(urlAttrNames, attrName);
+};
+
+// To get the protocol for a URL, we let the browser normalize it for
+// us, by setting it as the href for an anchor tag and then reading out
+// the 'protocol' property.
+if (Meteor.isClient) {
+  var anchorForNormalization = document.createElement('A');
+}
+
+var normalizeUrl = function (url) {
+  if (Meteor.isClient) {
+    anchorForNormalization.href = url;
+    return anchorForNormalization.href;
+  } else {
+    throw new Error('normalizeUrl not implemented on the server');
+  }
+};
+
+// UrlHandler is an attribute handler for all HTML attributes that take
+// URL values. It disallows javascript: URLs, unless
+// UI._allowJavascriptUrls() has been called. To detect javascript:
+// urls, we set the attribute and then reads the attribute out of the
+// DOM, in order to avoid writing our own URL normalization code. (We
+// don't want to be fooled by ' javascript:alert(1)' or
+// 'jAvAsCrIpT:alert(1)'.) In future, when the URL interface is more
+// widely supported, we can use that, which will be
+// cleaner.  https://developer.mozilla.org/en-US/docs/Web/API/URL
+var origUpdate = AttributeHandler.prototype.update;
+var UrlHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    var self = this;
+    var args = arguments;
+
+    if (UI._javascriptUrlsAllowed()) {
+      origUpdate.apply(self, args);
+    } else {
+      var isJavascriptProtocol =
+            (normalizeUrl(value).indexOf('javascript:') === 0);
+      if (isJavascriptProtocol) {
+        Meteor._debug("URLs that use the 'javascript:' protocol are not " +
+                      "allowed in URL attribute values. " +
+                      "Call UI._allowJavascriptUrls() " +
+                      "to enable them.");
+        origUpdate.apply(self, [element, oldValue, null]);
+      } else {
+        origUpdate.apply(self, args);
+      }
+    }
+  }
+});
+
 // XXX make it possible for users to register attribute handlers!
 makeAttributeHandler = function (elem, name, value) {
   // generally, use setAttribute but certain attributes need to be set
@@ -219,6 +267,8 @@ makeAttributeHandler = function (elem, name, value) {
     return new ValueHandler(name, value);
   } else if (name.substring(0,6) === 'xlink:') {
     return new XlinkHandler(name.substring(6), value);
+  } else if (isUrlAttribute(elem.tagName, name)) {
+    return new UrlHandler(name, value);
   } else {
     return new AttributeHandler(name, value);
   }

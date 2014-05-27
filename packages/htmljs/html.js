@@ -31,7 +31,7 @@ HTML.ensureTag = function (tagName) {
 // Given "p" create the function `HTML.P`.
 var makeTagConstructor = function (tagName) {
   // HTMLTag is the per-tagName constructor of a HTML.Tag subclass
-  var HTMLTag = function HTMLTag(/*arguments*/) {
+  var HTMLTag = function (/*arguments*/) {
     // Work with or without `new`.  If not called with `new`,
     // perform instantiation by recursively calling this constructor.
     // We can't pass varargs, so pass no args.
@@ -178,10 +178,14 @@ callReactiveFunction = function (func) {
 
 stopWithLater = function (instance) {
   if (instance.materialized && instance.materialized.isWith) {
-    if (Deps.active)
+    if (Deps.active) {
       instance.materialized();
-    else
-      instance.data.stop();
+    } else {
+      if (instance.data) // `UI.With`
+        instance.data.stop();
+      else if (instance.v) // `Spacebars.With`
+        instance.v.stop();
+    }
   }
 };
 

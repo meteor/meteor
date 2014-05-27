@@ -31,6 +31,12 @@ MethodInvocation = function (options) {
 
   // On the server, the connection this method call came in on.
   this.connection = options.connection;
+
+  // The seed for randomStream value generation
+  this.randomSeed = options.randomSeed;
+
+  // This is set by RandomStream.get; and holds the random stream state
+  this.randomStream = null;
 };
 
 _.extend(MethodInvocation.prototype, {

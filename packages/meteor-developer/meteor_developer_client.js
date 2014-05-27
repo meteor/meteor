@@ -10,13 +10,11 @@ var requestCredential = function (credentialRequestCompleteCallback) {
   });
   if (!config) {
     credentialRequestCompleteCallback &&
-      credentialRequestCompleteCallback(
-        new ServiceConfiguration.ConfigError("Service not configured")
-      );
+      credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError());
     return;
   }
 
-  var credentialToken = Random.id();
+  var credentialToken = Random.secret();
 
   var loginUrl =
         METEOR_DEVELOPER_URL + "/oauth2/authorize?" +
@@ -25,7 +23,7 @@ var requestCredential = function (credentialRequestCompleteCallback) {
         "client_id=" + config.clientId +
         "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteor-developer?close");
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken),
     {

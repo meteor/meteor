@@ -11,7 +11,7 @@
 
 set -e -x
 
-cd `dirname $0`/../../..
+cd "`dirname "$0"`"/../../..
 
 # METEOR_TOOL_PATH is the path to the 'meteor' that we will use for
 # our tests. There is a vestigal capability to default to running the

@@ -5,7 +5,7 @@ Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
 
-Oauth.registerService('google', 2, null, function(query) {
+OAuth.registerService('google', 2, null, function(query) {
 
   var response = getTokens(query);
   var accessToken = response.accessToken;
@@ -38,7 +38,7 @@ Oauth.registerService('google', 2, null, function(query) {
 var getTokens = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var response;
   try {
@@ -46,7 +46,7 @@ var getTokens = function (query) {
       "https://accounts.google.com/o/oauth2/token", {params: {
         code: query.code,
         client_id: config.clientId,
-        client_secret: config.secret,
+        client_secret: OAuth.openSecret(config.secret),
         redirect_uri: Meteor.absoluteUrl("_oauth/google?close"),
         grant_type: 'authorization_code'
       }});
@@ -78,6 +78,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-Google.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+Google.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

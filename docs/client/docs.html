@@ -8,7 +8,7 @@
 </head>
 
 <body>
-  <div id="nav">
+  <div id="nav" class="hide">
     {{> nav }}
   </div>
   <div id="main">
@@ -23,6 +23,7 @@
 </body>
 
 <template name="nav">
+  <div id="menu-ico"><a href="#">&#9776;</a></div>
   <div id="nav-inner">
     {{#each sections}}
       {{#if type "spacer"}}

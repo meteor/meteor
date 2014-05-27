@@ -15,11 +15,12 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
 
   var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config) {
-    credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError("Service not configured"));
+    credentialRequestCompleteCallback && credentialRequestCompleteCallback(
+      new ServiceConfiguration.ConfigError());
     return;
   }
 
-  var credentialToken = Random.id();
+  var credentialToken = Random.secret();
   var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent);
   var display = mobile ? 'touch' : 'popup';
 
@@ -32,7 +33,7 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
         '&display=' + display + '&scope=' + scope + '&state=' + credentialToken;
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken)
   );

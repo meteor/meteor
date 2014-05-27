@@ -1,9 +1,106 @@
 ## v.NEXT
 
-* Log out a user's other sessions when they change their password.
+* Speed up updates of NPM modules by upgrading Node to include our fix for
+  https://github.com/npm/npm/issues/3265 instead of passing `--force` to
+  `npm install`.
 
-* Move boilerplate HTML from tools to webapp. Changes internal
-  Webapp.addHtmlAttributeHook API incompatibly.
+* Run server tests from multiple clients serially instead of in
+  parallel. This allows testing features that modify global server
+  state.  #2088
+
+* Add Content-Type headers on JavaScript and CSS resources.
+
+* Add `X-Content-Type-Options: nosniff` header to
+  `browser-policy-content`'s default policy. If you are using
+  `browser-policy-content` and you don't want your app to send this
+  header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
+
+* Fix memory leak (introduced in 0.8.1) by making sure to unregister
+  sessions at the server when they are closed due to heartbeat timeout.
+
+* Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
+  in 0.8.0.1 that broke Atmosphere packages that do OAuth1
+  logins. #2154.
+
+* Add `credentialSecret` argument to `Google.retrieveCredential`, which
+  was forgotten in a previous release.
+
+* Fix a Blaze memory leak by cleaning up event handlers when a template
+  instance is destroyed. #1997
+
+* Allow `check` to work on the server outside of a Fiber. #2136
+
+* EJSON custom type conversion functions should not be permitted to yield. #2136
+
+* The legacy polling observe driver handles errors communicating with MongoDB
+  better and no longer gets "stuck" in some circumstances.
+
+* Upgraded dependencies:
+  - node: 0.10.28 (from 0.10.26)
+  - uglify-js: 2.4.13 (from 2.4.7)
+
+Patches contributed by GitHub users awwx
+
+
+## v.0.8.1.3
+
+* Fix a security issue in the `spiderable` package. `spiderable` now
+  uses the ROOT_URL environment variable instead of the Host header to
+  determine which page to snapshot.
+
+* Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
+  in 0.8.0.1 that broke Atmosphere packages that do OAuth1
+  logins. #2154.
+
+* Add `credentialSecret` argument to `Google.retrieveCredential`, which
+  was forgotten in a previous release.
+
+* Remove nonexistent `-a` and `-r` aliases for `--add` and `--remove` in
+  `meteor help authorized`. #2155
+
+* Add missing `underscore` dependency in the `oauth-encryption` package. #2165
+
+* Work around IE8 bug that caused some apps to fail to render when
+  minified. #2037.
+
+
+## v.0.8.1.2
+
+* Fix memory leak (introduced in 0.8.1) by making sure to unregister
+  sessions at the server when they are closed due to heartbeat timeout.
+
+* Add `credentialSecret` argument to `Google.retrieveCredential`,
+  `Facebook.retrieveCredential`, etc., which is needed to use them as of
+  0.8.1. #2118
+
+* Fix 0.8.1 regression that broke apps using a `ROOT_URL` with a path
+  prefix. #2109
+
+
+## v0.8.1.1
+
+* Fix 0.8.1 regression preventing clients from specifying `_id` on insert. #2097
+
+* Fix handling of malformed URLs when merging CSS files. #2103, #2093
+
+* Loosen the checks on the `options` argument to `Collection.find` to
+  allow undefined values.
+
+
+## v0.8.1
+
+#### Meteor Accounts
+
+* Fix a security flaw in OAuth1 and OAuth2 implementations. If you are
+  using any OAuth accounts packages (such as `accounts-google` or
+  `accounts-twitter`), we recommend that you update immediately and log
+  out your users' current sessions with the following MongoDB command:
+
+    $ db.users.update({}, { $set: { 'services.resume.loginTokens': [] } }, { multi: true });
+
+* OAuth redirect URLs are now required to be on the same origin as your app.
+
+* Log out a user's other sessions when they change their password.
 
 * Store pending OAuth login results in the database instead of
   in-memory, so that an OAuth flow succeeds even if different requests
@@ -12,12 +109,124 @@
 * When validateLoginAttempt callbacks return false, don't override a more
   specific error message.
 
-* The oplog observe driver handles errors communicating with Mongo better and
-  knows to re-poll all queries during Mongo failovers.
+* Add `Random.secret()` for generating security-critical secrets like
+  login tokens.
 
-* Upgraded dependencies:
-  - Node.js from 0.10.25 to 0.10.26.
-  - MongoDB driver from 1.3.19 to 1.4.1
+* `Meteor.logoutOtherClients` now calls the user callback when other
+  login tokens have actually been removed from the database, not when
+  they have been marked for eventual removal.  #1915
+
+* Rename `Oauth` to `OAuth`.  `Oauth` is now an alias for backwards
+  compatibility.
+
+* Add `oauth-encryption` package for encrypting sensitive account
+  credentials in the database.
+
+* A validate login hook can now override the exception thrown from
+  `beginPasswordExchange` like it can for other login methods.
+
+* Remove an expensive observe over all users in the `accounts-base`
+  package.
+
+
+#### Blaze
+
+* Disallow `javascript:` URLs in URL attribute values by default, to
+  help prevent cross-site scripting bugs. Call
+  `UI._allowJavascriptUrls()` to allow them.
+
+* Fix `UI.toHTML` on templates containing `{{#with}}`.
+
+* Fix `{{#with}}` over a data context that is mutated.  #2046
+
+* Clean up autoruns when calling `UI.toHTML`.
+
+* Properly clean up event listeners when removing templates.
+
+* Add support for `{{!-- block comments --}}` in Spacebars. Block comments may
+  contain `}}`, so they are more useful than `{{! normal comments}}` for
+  commenting out sections of Spacebars templates.
+
+* Don't dynamically insert `<tbody>` tags in reactive tables
+
+* When handling a custom jQuery event, additional arguments are
+  no longer lost -- they now come after the template instance
+  argument.  #1988
+
+
+#### DDP and MongoDB
+
+* Extend latency compensation to support an arbitrary sequence of
+  inserts in methods.  Previously, documents created inside a method
+  stub on the client would eventually be replaced by new documents
+  from the server, causing the screen to flicker.  Calling `insert`
+  inside a method body now generates the same ID on the client (inside
+  the method stub) and on the server.  A sequence of inserts also
+  generates the same sequence of IDs.  Code that wants a random stream
+  that is consistent between method stub and real method execution can
+  get one with `DDP.randomStream`.
+  https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
+
+* The document passed to the `insert` callback of `allow` and `deny` now only
+  has a `_id` field if the client explicitly specified one; this allows you to
+  use `allow`/`deny` rules to prevent clients from specifying their own
+  `_id`. As an exception, `allow`/`deny` rules with a `transform` always have an
+  `_id`.
+
+* DDP now has an implementation of bidirectional heartbeats which is consistent
+  across SockJS and websocket transports. This enables connection keepalive and
+  allows servers and clients to more consistently and efficiently detect
+  disconnection.
+
+* The DDP protocol version number has been incremented to "pre2" (adding
+  randomSeed and heartbeats).
+
+* The oplog observe driver handles errors communicating with MongoDB
+  better and knows to re-poll all queries after a MongoDB failover.
+
+* Fix bugs involving mutating DDP method arguments.
+
+
+#### meteor command-line tool
+
+* Move boilerplate HTML from tools to webapp.  Change internal
+  `Webapp.addHtmlAttributeHook` API.
+
+* Add `meteor list-sites` command for listing the sites that you have
+  deployed to meteor.com with your Meteor developer account.
+
+* Third-party template languages can request that their generated source loads
+  before other JavaScript files, just like *.html files, by passing the
+  isTemplate option to Plugin.registerSourceHandler.
+
+* You can specify a particular interface for the dev mode runner to bind to with
+  `meteor -p host:port`.
+
+* Don't include proprietary tar tags in bundle tarballs.
+
+* Convert relative URLs to absolute URLs when merging CSS files.
+
+
+#### Upgraded dependencies
+
+* Node.js from 0.10.25 to 0.10.26.
+* MongoDB driver from 1.3.19 to 1.4.1
+* stylus: 0.42.3 (from 0.42.2)
+* showdown: 0.3.1
+* css-parse: an unreleased version (from 1.7.0)
+* css-stringify: an unreleased version (from 1.4.1)
+
+
+Patches contributed by GitHub users aldeed, apendua, arbesfeld, awwx, dandv,
+davegonzalez, emgee3, justinsb, mquandalle, Neftedollar, Pent, sdarnell,
+and timhaines.
+
+
+## v0.8.0.1
+
+* Fix security flaw in OAuth1 implementation. Clients can no longer
+  choose the callback_url for OAuth1 logins.
+
 
 ## v0.8.0
 

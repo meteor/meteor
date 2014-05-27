@@ -11,17 +11,18 @@ var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
 
-// options: port, buildOptions, settingsFile, banner, program,
-// onRunEnd, onFailure, watchForChanges, quiet, rootUrl, mongoUrl,
-// oplogUrl, disableOplog, appDirForVersionCheck
+// options: proxyPort, proxyHost, appPort, appHost, buildOptions,
+// settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
+// quiet, rootUrl, mongoUrl, oplogUrl, disableOplog,
+// appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
 
-  if (! _.has(options, 'port'))
-    throw new Error("no port?");
+  if (! _.has(options, 'proxyPort'))
+    throw new Error("no proxyPort?");
 
-  var listenPort = options.port;
+  var listenPort = options.proxyPort;
   var mongoPort = listenPort + 1;
   self.specifiedAppPort = options.appPort;
   self.regenerateAppPort();
@@ -29,11 +30,19 @@ var Runner = function (appDir, options) {
   self.stopped = false;
   self.quiet = options.quiet;
   self.banner = options.banner || files.prettyPath(self.appDir);
-  self.rootUrl = options.rootUrl || ('http://localhost:' + listenPort + '/');
+  if (options.rootUrl) {
+    self.rootUrl = options.rootUrl;
+  } else if (options.proxyHost) {
+    self.rootUrl = 'http://' + options.proxyHost + ':' + listenPort + '/';
+  } else {
+    self.rootUrl = 'http://localhost:' + listenPort + '/';
+  }
 
   self.proxy = new Proxy({
     listenPort: listenPort,
+    listenHost: options.proxyHost,
     proxyToPort: self.appPort,
+    proxyToHost: options.appHost,
     onFailure: options.onFailure
   });
 
@@ -61,6 +70,7 @@ var Runner = function (appDir, options) {
   self.appRunner = new AppRunner(appDir, {
     appDirForVersionCheck: options.appDirForVersionCheck,
     port: self.appPort,
+    listenHost: options.appHost,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
     buildOptions: options.buildOptions,
@@ -81,7 +91,7 @@ _.extend(Runner.prototype, {
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
-    if (! self.quiet & ! self.stopped) {
+    if (! self.quiet && ! self.stopped) {
       runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
       runLog.log("=> Started proxy.");
     }
@@ -201,7 +211,7 @@ _.extend(Runner.prototype, {
 //
 // Options:
 //
-// - port: the port to connect to to access the application (we will
+// - proxyPort: the port to connect to to access the application (we will
 //   run a proxy here that proxies to the actual app process). required
 // - buildOptions: 'buildOptions' argument to bundler.bundle()
 // - settingsFile: path to file containing deploy-time settings

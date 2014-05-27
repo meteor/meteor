@@ -218,11 +218,11 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
   var lengthCur = lastSeqArray.length;
 
   _.each(seqArray, function (doc, i) {
-    newIdObjects.push(_.pick(doc, '_id'));
+    newIdObjects.push({_id: doc._id});
     posNew[idStringify(doc._id)] = i;
   });
   _.each(lastSeqArray, function (doc, i) {
-    oldIdObjects.push(_.pick(doc, '_id'));
+    oldIdObjects.push({_id: doc._id});
     posOld[idStringify(doc._id)] = i;
     posCur[idStringify(doc._id)] = i;
   });

@@ -962,6 +962,10 @@ The available callbacks are:
 {{#dtdd "insert(userId, doc)"}}
 The user `userId` wants to insert the document `doc` into the
 collection. Return `true` if this should be allowed.
+
+`doc` will contain the `_id` field if one was explicitly set by the client, or
+if there is an active `transform`. You can use this to prevent users from
+specifying arbitrary `_id` fields.
 {{/dtdd}}
 
 {{#dtdd "update(userId, doc, fieldNames, modifier)"}}
@@ -1710,6 +1714,11 @@ example, to support GitHub login, run `$ meteor add accounts-github` and use the
         Session.set('errorMessage', err.reason || 'Unknown error');
     });
 
+Login service configuration is sent from the server to the client over DDP when
+your app starts up; you may not call the login function until the configuration
+is loaded. The function `Accounts.loginServicesConfigured()` is a reactive data
+source that will return true once the login service is configured; you should
+not make login buttons visible or active until it is true.
 
 
 {{> api_box currentUser}}
@@ -2221,6 +2230,8 @@ data used changes.
 {{> api_box ui_renderwithdata}}
 
 {{> api_box ui_insert}}
+
+{{> api_box ui_getelementdata}}
 
 
 

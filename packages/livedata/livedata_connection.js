@@ -622,6 +622,17 @@ _.extend(Connection.prototype, {
   //   onResultReceived: Function - a callback to call as soon as the method
   //                                result is received. the data written by
   //                                the method may not yet be in the cache!
+  //   returnStubValue: Boolean - If true then in cases where we would have
+  //                              otherwise discarded the stub's return value
+  //                              and returned undefined, instead we go ahead
+  //                              and return it.  Specifically, this is any
+  //                              time other than when (a) we are already
+  //                              inside a stub or (b) we are in Node and no
+  //                              callback was provided.  Currently we require
+  //                              this flag to be explicitly passed to reduce
+  //                              the likelihood that stub return values will
+  //                              be confused with server return values; we
+  //                              may improve this in future.
   // @param callback {Optional Function}
   apply: function (name, args, options, callback) {
     var self = this;
@@ -658,6 +669,27 @@ _.extend(Connection.prototype, {
       };
     })();
 
+    var enclosing = DDP._CurrentInvocation.get();
+    var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+    // Lazily generate a randomSeed, only if it is requested by the stub.
+    // The random streams only have utility if they're used on both the client
+    // and the server; if the client doesn't generate any 'random' values
+    // then we don't expect the server to generate any either.
+    // Less commonly, the server may perform different actions from the client,
+    // and may in fact generate values where the client did not, but we don't
+    // have any client-side values to match, so even here we may as well just
+    // use a random seed on the server.  In that case, we don't pass the
+    // randomSeed to save bandwidth, and we don't even generate it to save a
+    // bit of CPU and to avoid consuming entropy.
+    var randomSeed = null;
+    var randomSeedGenerator = function () {
+      if (randomSeed === null) {
+        randomSeed = makeRpcSeed(enclosing, name);
+      }
+      return randomSeed;
+    };
+
     // Run the stub, if we have one. The stub is supposed to make some
     // temporary writes to the database to give the user a smooth experience
     // until the actual result of executing the method comes back from the
@@ -670,18 +702,17 @@ _.extend(Connection.prototype, {
     // to do a RPC, so we use the return value of the stub as our return
     // value.
 
-    var enclosing = DDP._CurrentInvocation.get();
-    var alreadyInSimulation = enclosing && enclosing.isSimulation;
-
     var stub = self._methodHandlers[name];
     if (stub) {
       var setUserId = function(userId) {
         self.setUserId(userId);
       };
+
       var invocation = new MethodInvocation({
         isSimulation: true,
         userId: self.userId(),
-        setUserId: setUserId
+        setUserId: setUserId,
+        randomSeed: function () { return randomSeedGenerator(); }
       });
 
       if (!alreadyInSimulation)
@@ -690,7 +721,7 @@ _.extend(Connection.prototype, {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var ret = DDP._CurrentInvocation.withValue(invocation, function () {
+        var stubReturnValue = DDP._CurrentInvocation.withValue(invocation, function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.
@@ -716,12 +747,12 @@ _.extend(Connection.prototype, {
     // we'll end up returning undefined.
     if (alreadyInSimulation) {
       if (callback) {
-        callback(exception, ret);
+        callback(exception, stubReturnValue);
         return undefined;
       }
       if (exception)
         throw exception;
-      return ret;
+      return stubReturnValue;
     }
 
     // If an exception occurred in a stub, and we're ignoring it
@@ -756,18 +787,25 @@ _.extend(Connection.prototype, {
     // Send the RPC. Note that on the client, it is important that the
     // stub have finished before we send the RPC, so that we know we have
     // a complete list of which local documents the stub wrote.
+    var message = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: methodId()
+    };
+
+    // Send the randomSeed only if we used it
+    if (randomSeed !== null) {
+      message.randomSeed = randomSeed;
+    }
+
     var methodInvoker = new MethodInvoker({
       methodId: methodId(),
       callback: callback,
       connection: self,
       onResultReceived: options.onResultReceived,
       wait: !!options.wait,
-      message: {
-        msg: 'method',
-        method: name,
-        params: args,
-        id: methodId()
-      }
+      message: message
     });
 
     if (options.wait) {
@@ -792,7 +830,7 @@ _.extend(Connection.prototype, {
     if (future) {
       return future.wait();
     }
-    return undefined;
+    return options.returnStubValue ? stubReturnValue : undefined;
   },
 
   // Before calling a method stub, prepare all stores to track changes and allow

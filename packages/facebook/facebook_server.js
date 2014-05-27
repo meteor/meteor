@@ -3,7 +3,7 @@ Facebook = {};
 var querystring = Npm.require('querystring');
 
 
-Oauth.registerService('facebook', 2, null, function(query) {
+OAuth.registerService('facebook', 2, null, function(query) {
 
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
@@ -44,7 +44,7 @@ var isJSON = function (str) {
 var getTokenResponse = function (query) {
   var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
-    throw new ServiceConfiguration.ConfigError("Service not configured");
+    throw new ServiceConfiguration.ConfigError();
 
   var responseContent;
   try {
@@ -54,7 +54,7 @@ var getTokenResponse = function (query) {
         params: {
           client_id: config.appId,
           redirect_uri: Meteor.absoluteUrl("_oauth/facebook?close"),
-          client_secret: config.secret,
+          client_secret: OAuth.openSecret(config.secret),
           code: query.code
         }
       }).content;
@@ -95,6 +95,6 @@ var getIdentity = function (accessToken) {
   }
 };
 
-Facebook.retrieveCredential = function(credentialToken) {
-  return Oauth.retrieveCredential(credentialToken);
+Facebook.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

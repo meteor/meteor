@@ -23,6 +23,30 @@ var REQUEST_TIMEOUT = 15*1000;
 // small for our docs.
 var MAX_BUFFER = 5*1024*1024; // 5MB
 
+// Exported for tests.
+Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
+  // reassembling url without escaped fragment if exists
+  var parsedUrl = urlParser.parse(requestUrl);
+  var parsedQuery = querystring.parse(parsedUrl.query);
+  delete parsedQuery['_escaped_fragment_'];
+
+  var parsedAbsoluteUrl = urlParser.parse(siteAbsoluteUrl);
+  // If the ROOT_URL contains a path, Meteor strips that path off of the
+  // request's URL before we see it. So we concatenate the pathname from
+  // the request's URL with the root URL's pathname to get the full
+  // pathname.
+  if (parsedUrl.pathname.charAt(0) === "/") {
+    parsedUrl.pathname = parsedUrl.pathname.substring(1);
+  }
+  parsedAbsoluteUrl.pathname = urlParser.resolve(parsedAbsoluteUrl.pathname,
+                                                 parsedUrl.pathname);
+  parsedAbsoluteUrl.query = parsedQuery;
+  // `url.format` will only use `query` if `search` is absent
+  parsedAbsoluteUrl.search = null;
+
+  return urlParser.format(parsedAbsoluteUrl);
+};
+
 WebApp.connectHandlers.use(function (req, res, next) {
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
   // https://developers.google.com/webmasters/ajax-crawling/docs/specification
@@ -35,13 +59,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {
 
-    // reassembling url without escaped fragment if exists
-    var parsedUrl = urlParser.parse(req.url);
-    var parsedQuery = querystring.parse(parsedUrl.query);
-    delete parsedQuery['_escaped_fragment_'];
-    var newQuery = querystring.stringify(parsedQuery);
-    var newPath = parsedUrl.pathname + (newQuery ? ('?' + newQuery) : '');
-    var url = "http://" + req.headers.host + newPath;
+    var url = Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
 
     // This string is going to be put into a bash script, so it's important
     // that 'url' (which comes from the network) can neither exploit phantomjs

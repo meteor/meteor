@@ -1,5 +1,5 @@
 makeErrorByStatus = function(statusCode, content) {
-  var MAX_LENGTH = 160; // if you change this, also change the appropriate test
+  var MAX_LENGTH = 500; // if you change this, also change the appropriate test
 
   var truncate = function(str, length) {
     return str.length > length ? str.slice(0, length) + '...' : str;

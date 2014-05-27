@@ -153,8 +153,8 @@ main.registerCommand({
   name: 'run',
   requiresApp: true,
   options: {
-    port: { type: Number, short: "p", default: 3000 },
-    'app-port': { type: Number },
+    port: { type: String, short: "p", default: '3000' },
+    'app-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -166,6 +166,32 @@ main.registerCommand({
     once: { type: Boolean }
   }
 }, function (options) {
+  // XXX factor this out into a {type: host/port}?
+  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
+  if (!portMatch) {
+    process.stderr.write(
+"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+    return 1;
+  }
+  var proxyHost = portMatch[1] || null;
+  var proxyPort = parseInt(portMatch[2]);
+
+  var appHost, appPort;
+  if (options['app-port']) {
+    var appPortMatch = options['app-port'].match(/^(?:(.+):)?([0-9]+)?$/);
+    if (!appPortMatch) {
+      process.stderr.write(
+"run: --app-port must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+      return 1;
+    }
+    appHost = appPortMatch[1] || null;
+    // It's legit to specify `--app-port host:` and still let the port be
+    // randomized.
+    appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
+  }
+
   if (release.forced) {
     var appRelease = project.getMeteorReleaseVersion(options.appDir);
     if (release.current.name !== appRelease) {
@@ -182,8 +208,10 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    port: options.port,
-    appPort: options['app-port'],
+    proxyPort: proxyPort,
+    proxyHost: proxyHost,
+    appPort: appPort,
+    appHost: appHost,
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
@@ -621,6 +649,7 @@ main.registerCommand({
   requiresApp: true,
   options: {
     debug: { type: Boolean },
+    directory: { type: Boolean },
     // Undocumented
     'for-deploy': { type: Boolean }
   }
@@ -636,8 +665,9 @@ main.registerCommand({
   // machines, but worth it for humans)
 
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var bundlePath = path.join(buildDir, 'bundle');
   var outputPath = path.resolve(options.args[0]); // get absolute path
+  var bundlePath = options['directory'] ?
+      outputPath : path.join(buildDir, 'bundle');
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
@@ -654,11 +684,13 @@ main.registerCommand({
     return 1;
   }
 
-  try {
-    files.createTarball(path.join(buildDir, 'bundle'), outputPath);
-  } catch (err) {
-    console.log(JSON.stringify(err));
-    process.stderr.write("Couldn't create tarball\n");
+  if (!options['directory']) {
+    try {
+      files.createTarball(path.join(buildDir, 'bundle'), outputPath);
+    } catch (err) {
+      console.log(JSON.stringify(err));
+      process.stderr.write("Couldn't create tarball\n");
+    }
   }
   files.rm_recursive(buildDir);
 });
@@ -691,10 +723,16 @@ main.registerCommand({
 
     if (! mongoPort) {
       process.stdout.write(
-"mongo: Meteor isn't running.\n" +
+"mongo: Meteor isn't running a local MongoDB server.\n" +
 "\n" +
 "This command only works while Meteor is running your application\n" +
-"locally. Start your application first.\n");
+"locally. Start your application first. (This error will also occur if\n" +
+"you asked Meteor to use a different MongoDB server with $MONGO_URL when\n" +
+"you ran your application.)\n" +
+"\n" +
+"If you're trying to connect to the database of an app you deployed\n" +
+"with 'meteor deploy', specify your site's name with this command.\n"
+);
       return 1;
     }
     mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
@@ -917,8 +955,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    add: { type: String },
-    remove: { type: String },
+    add: { type: String, short: "a" },
+    remove: { type: String, short: "r" },
     list: { type: Boolean }
   }
 }, function (options) {
@@ -1076,7 +1114,7 @@ main.registerCommand({
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
       appDirForVersionCheck: options.appDir,
-      port: options.port,
+      proxyPort: options.port,
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",
@@ -1292,6 +1330,26 @@ main.registerCommand({
     historyLines: options.history,
     testRegexp: testRegexp
   });
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// list-sites
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'list-sites',
+  minArgs: 0,
+  maxArgs: 0
+}, function (options) {
+  auth.pollForRegistrationCompletion();
+  if (! auth.isLoggedIn()) {
+    process.stderr.write(
+      "You must be logged in for that. Try 'meteor login'.\n");
+    return 1;
+  }
+
+  return deploy.listSites();
 });
 
 

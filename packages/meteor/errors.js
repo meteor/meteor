@@ -1,11 +1,3 @@
-// http://davidshariff.com/blog/javascript-inheritance-patterns/
-var inherits = function (child, parent) {
-  var tmp = function () {};
-  tmp.prototype = parent.prototype;
-  child.prototype = new tmp;
-  child.prototype.constructor = child;
-};
-
 // Makes an error subclass which properly contains a stack trace in most
 // environments. constructor can set fields on `this` (and should probably set
 // `message`, which is what gets displayed at the top of a stack trace).
@@ -34,7 +26,7 @@ Meteor.makeErrorType = function (name, constructor) {
     return self;
   };
 
-  inherits(errorClass, Error);
+  Meteor._inherits(errorClass, Error);
 
   return errorClass;
 };

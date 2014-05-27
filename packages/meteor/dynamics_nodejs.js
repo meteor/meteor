@@ -24,6 +24,25 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
       Fiber.current._meteor_dynamics[this.slot];
   },
 
+  // Most Meteor code ought to run inside a fiber, and the
+  // _nodeCodeMustBeInFiber assertion helps you remember to include appropriate
+  // bindEnvironment calls (which will get you the *right value* for your
+  // environment variables, on the server).
+  //
+  // In some very special cases, it's more important to run Meteor code on the
+  // server in non-Fiber contexts rather than to strongly enforce the safeguard
+  // against forgetting to use bindEnvironment. For example, using `check` in
+  // some top-level constructs like connect handlers without needing unnecessary
+  // Fibers on every request is more important that possibly failing to find the
+  // correct argumentChecker. So this function is just like get(), but it
+  // returns null rather than throwing when called from outside a Fiber. (On the
+  // client, it is identical to get().)
+  getOrNullIfOutsideFiber: function () {
+    if (!Fiber.current)
+      return null;
+    return this.get();
+  },
+
   withValue: function (value, func) {
     Meteor._nodeCodeMustBeInFiber();
 

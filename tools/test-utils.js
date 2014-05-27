@@ -75,7 +75,7 @@ exports.cleanUpLegacyApp = function (sandbox, name, password) {
     run.matchErr('Password:');
     run.write(password + '\n');
   }
-  run.waitSecs(20);
+  run.waitSecs(60);
   run.match('Deleted');
   // XXX same as above, we should be waiting for exit code 0, but the
   // process appears to never exit.

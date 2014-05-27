@@ -73,12 +73,13 @@ Meteor.methods({beginPasswordExchange: function (request) {
     // the second step method ('login') is called. If a user calls
     // 'beginPasswordExchange' but then never calls the second step
     // 'login' method, no login hook will fire.
-    Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
+    // The validate login hooks can mutate the exception to be thrown.
+    var attempt = Accounts._reportLoginFailure(self, 'beginPasswordExchange', arguments, {
       type: 'password',
       error: err,
       userId: user && user._id
     });
-    throw err;
+    throw attempt.error;
   }
 
   // Save results so we can verify them later.
@@ -263,7 +264,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
     throw new Error("No such email for user.");
 
-  var token = Random.id();
+  var token = Random.secret();
   var when = new Date();
   Meteor.users.update(userId, {$set: {
     "services.password.reset": {
@@ -312,7 +313,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     throw new Error("No such email for user.");
 
 
-  var token = Random.id();
+  var token = Random.secret();
   var when = new Date();
   Meteor.users.update(userId, {$set: {
     "services.password.reset": {
@@ -435,7 +436,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
 
 
   var tokenRecord = {
-    token: Random.id(),
+    token: Random.secret(),
     address: address,
     when: new Date()};
   Meteor.users.update(

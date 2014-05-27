@@ -10,14 +10,15 @@
 
 
 // Collection containing pending credentials of oauth credential requests
-// Has token, credential, and createdAt fields.
-Oauth._pendingCredentials = new Meteor.Collection(
+// Has key, credential, and createdAt fields.
+OAuth._pendingCredentials = new Meteor.Collection(
   "meteor_oauth_pendingCredentials", {
     _preventAutopublish: true
   });
 
-Oauth._pendingCredentials._ensureIndex('token', {unique: 1});
-Oauth._pendingCredentials._ensureIndex('createdAt');
+OAuth._pendingCredentials._ensureIndex('key', {unique: 1});
+OAuth._pendingCredentials._ensureIndex('credentialSecret');
+OAuth._pendingCredentials._ensureIndex('createdAt');
 
 
 
@@ -26,44 +27,61 @@ var _cleanStaleResults = function() {
   // Remove credentials older than 1 minute
   var timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
-  Oauth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
+  OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
 };
 var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
-// Stores the token and credential in the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
+// Stores the key and credential in the _pendingCredentials collection.
+// Will throw an exception if `key` is not a string.
 //
-// @param credentialToken {string}
-// @param credential {string}   The credential to store
+// @param key {string}
+// @param credential {Object}   The credential to store
+// @param credentialSecret {string} A secret that must be presented in
+//   addition to the `key` to retrieve the credential
 //
-Oauth._storePendingCredential = function (credentialToken, credential) {
-  if (credential instanceof Error)
-    credential = storableError(credential);
+OAuth._storePendingCredential = function (key, credential, credentialSecret) {
+  check(key, String);
+  check(credentialSecret, Match.Optional(String));
 
-  Oauth._pendingCredentials.insert({
-    token: credentialToken,
+  if (credential instanceof Error) {
+    credential = storableError(credential);
+  } else {
+    credential = OAuth.sealSecret(credential);
+  }
+
+  // We do an upsert here instead of an insert in case the user happens
+  // to somehow send the same `state` parameter twice during an OAuth
+  // login; we don't want a duplicate key error.
+  OAuth._pendingCredentials.upsert({
+    key: key
+  }, {
+    key: key,
     credential: credential,
+    credentialSecret: credentialSecret || null,
     createdAt: new Date()
   });
 };
 
 
 // Retrieves and removes a credential from the _pendingCredentials collection
-// XXX After oauth token encryption is added to Meteor, apply it here too
 //
-// @param credentialToken {string}
+// @param key {string}
+// @param credentialSecret {string}
 //
-Oauth._retrievePendingCredential = function (credentialToken) {
-  check(credentialToken, String);
+OAuth._retrievePendingCredential = function (key, credentialSecret) {
+  check(key, String);
 
-  var pendingCredential = Oauth._pendingCredentials.findOne({ token:credentialToken });
+  var pendingCredential = OAuth._pendingCredentials.findOne({
+    key: key,
+    credentialSecret: credentialSecret || null
+  });
   if (pendingCredential) {
-    Oauth._pendingCredentials.remove({ _id: pendingCredential._id });
+    OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
       return recreateError(pendingCredential.credential.error);
     else
-      return pendingCredential.credential;
+      return OAuth.openSecret(pendingCredential.credential);
   } else {
     return undefined;
   }
