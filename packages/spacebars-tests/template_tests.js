@@ -1292,7 +1292,7 @@ Tinytest.add("spacebars-tests - template_tests - content context", function (tes
 
 _.each(['textarea', 'text', 'password', 'submit', 'button',
         'reset', 'select', 'hidden'], function (type) {
-  Tinytest.add("spacebars-tests - template_tests - " + type, function(test) {
+  Tinytest.add("spacebars-tests - template_tests - controls - " + type, function(test) {
     var R = ReactiveVar({x:"test"});
     var R2 = ReactiveVar("");
     var tmpl;
