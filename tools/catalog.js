@@ -79,35 +79,30 @@ _.extend(Catalog.prototype, {
 
     options = options || {};
 
-    self.localPackageDirs =
-      _.filter(options.localPackageDirs || [], utils.isDirectory);
-
-    self._recomputeEffectiveLocalPackages();
-
-    // First, initialize the catalog with just the local packages for
-    // bootstrapping. This is just enough (at least if we're running
-    // from a checkout) that we're able to call unipackage.load to load
-    // the packages that we need to talk to the server.
     self.packages = [];
     self.versions = [];
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
 
-    // We don't need to call _addLocalPackageOverrides here; that will
-    // be called as part of catalog initialization, which is the next
-    // step.
-
-    // OK, now initialize the catalog for real, with both local and
-    // package server packages.
+    // At this point, effectiveLocalPackageDirs is just the local package
+    // directories, since we haven't had a chance to add any other local
+    // packages. Nonetheless, let's set those.
+    self.localPackageDirs =
+      _.filter(options.localPackageDirs || [], utils.isDirectory);
+    self._recomputeEffectiveLocalPackages();
 
     // We should to figure out if we are intending to connect to the package
     // server.
     self.offline = options.offline ? options.offline : false;
-    self.refresh(false);
 
-    // initialize the constraint solver for this catalog. We have to do this at
-    // the end, after we have loaded enough stuff to load packages.
+    // Lastly, let's read through the data.json file and then put through the
+    // local overrides. As a side effect, this will 'initialize' our catalog,
+    // allowing us to build packages for the constraint solver.
+    self.refresh(false); // don't sync to the server.
+
+    // Finally, initialize the constraint solver for this catalog. We have to do
+    // this at the end, after we have loaded enough stuff to load packages.
     var uniload = require('./uniload.js');
     var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
@@ -116,31 +111,39 @@ _.extend(Catalog.prototype, {
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self);
   },
 
-  // Calls the constraint solver that is associated with this catalog and
-  // returns a set of resolved constraints or null, if the constraint solver has
-  // not yet been initialized. (null is a fine result, because if the constraint
-  // solver has not been initialized, we are building from checkout and will only
-  // use local packages to build the constraint solver & its dependencies. This
-  // also avoids having to resolve what versions to use, which we can't do
-  // without the constraint solver. #UnbuiltConstraintSolverMustUseLocalPackages)
+  // Given a set of constraints, returns a det of dependencies that satisfy the
+  // constraint.
   //
-  // - constraints: a set of constraints that we are trying to resolve
-  // - resolverOpts: options for the constraint solver. See the resolver.resolve function
-  //   in the constraint solver package.
-
-  // - opts:
-  //   - ignoreProjectDeps: ignore the dependencies of the project, and call the
-  //     constraint solver anyway.
+  // Calls the constraint solver, if one already exists. If the project
+  // currently in use has a versions file, that file will be used as a
+  // comprehensive version lock: the returned dependencies will be a subset
+  // of the project's dependencies, using the same versions.
+  //
+  // If no constraint solver has been initialized (probably because we are
+  // trying to compile its dependencies), return null. (This interacts with the
+  // package loader to redirect to only using local packages, which makes sense,
+  // since we must be running from checkout).
+  //
+  // - constraints: a set of constraints that we are trying to resolve.
+  //   XXX: In some format!
+  // - resolverOpts: options for the constraint solver. See the resolver.resolve
+  //   function in the constraint solver package.
+  // - opts: (options for this function)
+  //   - ignoreProjectDeps: ignore the dependencies of the project, do not
+  //     attempt to use them as the previous versions or expect the final answer
+  //     to be a subset.
+  //
+  // Returns an object mapping a package name to a version, or null.
   resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
     self._requireInitialized();
 
-    // Moderate hack. We don't have a constraint solver initialized yet. We are
-    // probably trying to build the constraint solver package, or one of its
-    // dependencies. Luckily, we know that this means that we are running from
-    // checkout and all packages are local, so we can just use those
-    // versions. #UnbuiltConstraintSolverMustUseLocalPackages
+    // Kind of a hack, as per specification. We don't have a constraint solver
+    // initialized yet. We are probably trying to build the constraint solver
+    // package, or one of its dependencies. Luckily, we know that this means
+    // that we are running from checkout and all packages are local, so we can
+    // just use those versions. #UnbuiltConstraintSolverMustUseLocalPackages
     if (!self.resolver) {
       return null;
     };
@@ -175,37 +178,36 @@ _.extend(Catalog.prototype, {
 
     var project = require("./project.js").project;
     // If we are called with 'ignore projectDeps', then we don't even look to
-    // see what the project thinks is the reasonable version answer. We
-    // recalculate everything. Also, if the project root path has not been
-    // initialized, we probably can't use the project's dependencies.
+    // see what the project thinks and recalculate everything. Similarly, if the
+    // project root path has not been initialized, we are probably running
+    // outside of a project, and have nothing to look at for guidance.
     if (opts.ignoreProjectDeps || !project.rootDir) {
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
 
     // Override the previousSolutions with the project's dependencies
-    // value. Then, call the constraint solver, to get the valid transitive
-    // subset of those versions to record for our solution. This will give us
-    // unified version lock files, if the project version lock file is complete
-    // (in that includes transitive dependencies of everything). Hopefully, this
-    // is more efficient than just calling the constraint solver.
-    //
-    // We do this, because when we record the local version lock files, we don't
-    // want to record irrelevant dependencies (since we don't want those files
-    // changing randomly).
+    // value. (They probably come from the package's own lock file, but we
+    // ignore that when running in a project) Then, call the constraint solver,
+    // to get the valid transitive subset of those versions to record for our
+    // solution. (We don't just return the original version lock because we want
+    // to record the correct transitive dependencies)
     var versions = project.getVersions();
     resolverOpts.previousSolution = versions;
     var solution = self.resolver.resolve(deps, constr, resolverOpts);
-    // Just to be sure, check that everything in the solution is in the original
-    // versions. This should never be false if we did everything right at
-    // project loading and it is a bit computationally annoying, so maybe we
-    // shouldn't do it. But it is nice to check.
-    _.each(solution, function (version, package) {
-      if (versions[package] !== version) {
-        throw new Error ("differing versions for " + package + ":" +
-                         resolverOpts.previousSolution[package] + " vs "
-                         +  version + " did you init correctly?");
-      }
-    });
+
+    // In case this ever comes up, just to be sure, here is some code to check
+    // that everything in the solution is in the original versions. This should
+    // never be false if we did everything right at project loading and it is
+    // computationally annoying, so unless we are actively debugging, we
+    // shouldn't use it.
+    // _.each(solution, function (version, package) {
+    //  if (versions[package] !== version) {
+    //    throw new Error ("differing versions for " + package + ":" +
+    //                     resolverOpts.previousSolution[package] + " vs "
+    //                     +  version + " ?");
+    //  }
+    // });
+
     return solution;
   },
 
