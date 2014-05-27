@@ -11,6 +11,28 @@ _.extend(UI.body2, {
   }
 });
 
+if (Meteor.isClient) {
+  UI.TemplateRenderedAugmenter = Blaze.DOMAugmenter.extend({
+    constructor: function () {
+      this.fired = false;
+    },
+    attach: function (range, element) {
+      if (! this.fired) {
+        this.fired = true; // only fire once
+        var tmpl = range.controller;
+        if (tmpl.rendered && ! tmpl.isFinalized) {
+          Deps.afterFlush(function () {
+            if (! tmpl.isFinalized) {
+              var templateInstance = {}; // XXX
+              tmpl.rendered.call(templateInstance);
+            }
+          });
+        }
+      }
+    }
+  });
+}
+
 UI.TemplateComponent = Blaze.Component.extend({
   constructor: function (dataFunc, contentFunc, elseFunc) {
     UI.TemplateComponent.__super__.constructor.call(this);
@@ -39,6 +61,9 @@ UI.TemplateComponent = Blaze.Component.extend({
       _.each(this._eventMaps, function (m) {
         range.addDOMAugmenter(new Blaze.EventAugmenter(m));
       });
+    }
+    if (this.rendered) {
+      range.addDOMAugmenter(new UI.TemplateRenderedAugmenter);
     }
     return range;
   },
