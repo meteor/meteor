@@ -770,7 +770,7 @@ Tinytest.add('spacebars-tests - template_tests - textarea each', function (test)
 // `Meteor.defer` inside a method stub (see
 // packages/meteor/timers.js).  This test verifies that rendered
 // callbacks don't fire synchronously as part of a method stub.
-testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (test, expect) {
+testAsyncMulti('spacebars-tests - template_tests - defer in rendered callbacks', [function (test, expect) {
   var tmpl = Template.spacebars_template_test_defer_in_rendered;
   var coll = new Meteor.Collection(null);
 
@@ -801,7 +801,7 @@ testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (
   Meteor.call("spacebarsTestInsertEmptyObject");
 }]);
 
-testAsyncMulti('spacebars - template - rendered template is DOM in rendered callbacks', [
+testAsyncMulti('spacebars-tests - template_tests - rendered template is DOM in rendered callbacks', [
   function (test, expect) {
     var tmpl = Template.spacebars_template_test_aaa;
     tmpl.rendered = expect(function () {
@@ -1845,8 +1845,7 @@ Tinytest.add("spacebars-tests - template_tests - {{#with}} with mutated data con
     test.equal(canonicalizeHtml(div.innerHTML), '1');
   });
 
-Tinytest.add(
-  "spacebars - template - javascript scheme urls",
+Tinytest.add("spacebars-tests - template_tests - javascript scheme urls",
   function (test) {
     var tmpl = Template.spacebars_test_url_attribute;
     var sessionKey = "foo-" + Random.id();
@@ -1916,8 +1915,7 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
-  "spacebars - template - event handlers get cleaned up with template is removed",
+Tinytest.add("spacebars-tests - template_tests - event handlers get cleaned up with template is removed",
   function (test) {
     var tmpl = Template.spacebars_test_event_handler_cleanup;
     var subtmpl = Template.spacebars_test_event_handler_cleanup_sub;
