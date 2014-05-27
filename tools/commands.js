@@ -1959,6 +1959,29 @@ main.registerCommand({
 });
 
 main.registerCommand({
+  name: 'add-maintainer',
+  minArgs: 2,
+  maxArgs: 2
+}, function (options) {
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  if (! conn) {
+    process.stderr.write("No connection: add-maintainer failed\n");
+    return 1;
+  }
+
+  conn.call("addMaintainer", options.args[0], options.args[1]);
+  process.stdout.write(options.args[1] + " is now a maintainer for " +
+                       options.args[0] + "\n");
+  return 0;
+});
+
+main.registerCommand({
   name: 'publish-release',
   minArgs: 0,
   maxArgs: 0,
