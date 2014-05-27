@@ -67,7 +67,10 @@ Blaze.Component = Blaze.Controller.extend({
       return self.render();
     });
     range.onstop(function () {
-      self.finalize();
+      if (! self.isFinalized) {
+        self.isFinalized = true;
+        self.finalize();
+      }
     });
     return range;
   },

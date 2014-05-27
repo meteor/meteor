@@ -1,3 +1,4 @@
+
 // A constant empty array (frozen if the JS engine supports it).
 var _emptyArray = Object.freeze ? Object.freeze([]) : [];
 
@@ -286,19 +287,18 @@ _.extend(Blaze.DOMRange.prototype, {
   }
 });
 
-Blaze.DOMAugmenter = function () {};
+Blaze.DOMAugmenter = JSClass.create();
 _.extend(Blaze.DOMAugmenter, {
   attach: function (range, element) {},
   // arguments are same as were passed to `attach`
   detach: function (range, element) {}
 });
 
-Blaze.EventAugmenter = function (eventMap) {
-  this.eventMap = eventMap;
-  this.handles = [];
-};
-Blaze.EventAugmenter.prototype = new Blaze.DOMAugmenter;
-_.extend(Blaze.EventAugmenter.prototype, {
+Blaze.EventAugmenter = Blaze.DOMAugmenter.extend({
+  constructor: function (eventMap) {
+    this.eventMap = eventMap;
+    this.handles = [];
+  },
   attach: function (range, element) {
     var self = this;
     var eventMap = self.eventMap;
