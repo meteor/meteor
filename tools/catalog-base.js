@@ -40,9 +40,6 @@ baseCatalog.BaseCatalog = function () {
 
 };
 
-// XXX: We have a pattern on retrieval of data, where we try, fail, then try to
-// refresh. Do we want to keep that? I think so. Come back to it.
-
 _.extend(baseCatalog.BaseCatalog.prototype, {
   // Set all the collections to their initial values, which are mostly
   // blank. This does not set self.initialized -- do that manually in the child
@@ -86,12 +83,34 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // data about the existence of various packages, versions, etc, which it does
   // through these methods.
 
+  // We have a pattern, where we try to retrieve something and if we fail, call
+  // refresh to check if there is new data. That makes sense to me, so let's do
+  // that all the time. (In the future, we should continue some rate-limiting
+  // on refresh, but for now, most of the time, refreshing on an unknown <stuff>
+  // will just cause us to crash if it doesn't exist, so we are just delaying
+  // the inevitable rather than slowing down normal operations)
+  _recordOrRefresh: function (recordFinder) {
+    var record = recordFinder();
+    // If we cannot find it maybe refresh.
+    if (!record) {
+      self.refresh();
+      record = recordFinder();
+    }
+    // If we still cannot find it, give the user a null.
+    if (!record) {
+      return null;
+    }
+    return record;
+  },
+
   // Returns general (non-version-specific) information about a
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
     self._requireInitialized();
-    return _.findWhere(self.releaseTracks, { name: name });
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.releaseTracks, { name: name });
+    });
   },
 
   // Return information about a particular release version, or null if such
@@ -99,24 +118,10 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getReleaseVersion: function (track, version) {
     var self = this;
     self._requireInitialized();
-
-    var retrieveRecord = function () {
+    return self._recordOrRefresh(function () {
       return _.findWhere(self.releaseVersions,
                          { track: track,  version: version });
-    };
-    var versionRecord =  retrieveRecord();
-
-    // The first time, we try to refresh and try again. If we don't have the
-    // information after that, tough luck.
-    if (!versionRecord) {
-      self.refresh();
-      versionRecord =  retrieveRecord();
-    }
-    if (!versionRecord) {
-        return null;
-    }
-    return versionRecord;
-
+    });
   },
 
   // Return an array with the names of all of the release tracks that we know
@@ -134,7 +139,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    var recommended = _.where(self.releaseVersions, { track: track, recommended: true});
+    var recommended = _.where(self.releaseVersions,
+      { track: track, recommended: true});
+
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
     });
@@ -156,7 +163,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getPackage: function (name) {
     var self = this;
     self._requireInitialized();
-    return _.findWhere(self.packages, { name: name });
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.packages, { name: name });
+    });
   },
 
   // Given a package, returns an array of the versions available for
@@ -167,7 +176,6 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getSortedVersions: function (name) {
     var self = this;
     self._requireInitialized();
-
     var ret = _.pluck(_.where(self.versions, { packageName: name }),
                       'version');
     ret.sort(semver.compare);
@@ -188,22 +196,10 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       version = self._getLocalVersion(version);
     }
 
-    var retrieveRecord = function () {
+    return self._recordOrRefresh(function () {
       return  _.findWhere(self.versions, { packageName: name,
                                            version: version });
-    };
-    var versionRecord =  retrieveRecord();
-
-    // The first time, we try to refresh and try again. If we don't have the
-    // information after that, tough luck.
-    if (!versionRecord) {
-      self.refresh();
-      versionRecord =  retrieveRecord();
-    }
-    if (!versionRecord) {
-        return null;
-    }
-    return versionRecord;
+    });
   },
 
   // As getVersion, but returns info on the latest version of the
@@ -280,9 +276,11 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    return _.findWhere(self.builds,
-                       { versionId: versionRecord._id,
-                         architecture: archesString });
+    return self._recordOrRefresh(function () {
+      _.findWhere(self.builds,
+                  { versionId: versionRecord._id,
+                    architecture: archesString });
+    });
   },
 
   getAllBuilds: function (name, version) {
@@ -304,20 +302,15 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    var attempt = function () {
+    var getDef = function () {
       var versions = self.getSortedRecommendedReleaseVersions(
-        catalog.DEFAULT_TRACK);
+        self.DEFAULT_TRACK);
       if (!versions.length)
         return null;
-      return {track: catalog.DEFAULT_TRACK, version: versions[0]};
+      return {track: self.DEFAULT_TRACK, version: versions[0]};
     };
 
-    var ret = attempt();
-    if (!ret) {
-      self.refresh(true);
-      ret = attempt();
-    }
-    return ret;
+    return self._recordOrRefresh(getDef);
   },
 
   // Given a name and a version of a package, return a path on disk
@@ -334,7 +327,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     if (fs.existsSync(packageDir)) {
       return packageDir;
     }
-     return null;
+    return null;
   },
 
   // Reload catalog data to account for new information if needed.
