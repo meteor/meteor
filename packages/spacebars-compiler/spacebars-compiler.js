@@ -176,87 +176,93 @@ Spacebars.isReservedName = function (name) {
 };
 
 var codeGenTemplateTag = function (tag) {
-  if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
-    // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
-    return HTML.EmitCode('function () { return ' +
-                         codeGenMustache(tag.path, tag.args, 'attrMustache')
-                         + '; }');
-  } else {
-    if (tag.type === 'DOUBLE') {
+  if(tag.type === 'ESCAPEDDOUBLE'){
+    return HTML.Raw('{{' + tag.value +'}}');
+  } else if(tag.type === 'ESCAPEDTRIPLE'){
+    return HTML.Raw('{{{' + tag.value +'}}}');
+  } else{
+    if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
+      // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
       return HTML.EmitCode('function () { return ' +
-                           codeGenMustache(tag.path, tag.args) + '; }');
-    } else if (tag.type === 'TRIPLE') {
-      return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
-                           codeGenMustache(tag.path, tag.args) + '); }');
-    } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
-      var path = tag.path;
-
-      if (tag.type === 'BLOCKOPEN' &&
-          builtInBlockHelpers.hasOwnProperty(path[0])) {
-        // if, unless, with, each.
-        //
-        // If someone tries to do `{{> if}}`, we don't
-        // get here, but an error is thrown when we try to codegen the path.
-
-        // Note: If we caught these errors earlier, while scanning, we'd be able to
-        // provide nice line numbers.
-        if (path.length > 1)
-          throw new Error("Unexpected dotted path beginning with " + path[0]);
-        if (! tag.args.length)
-          throw new Error("#" + path[0] + " requires an argument");
-
-        var codeParts = codeGenInclusionParts(tag);
-        var dataFunc = codeParts.dataFunc; // must exist (tag.args.length > 0)
-        var contentBlock = codeParts.content; // must exist
-        var elseContentBlock = codeParts.elseContent; // may not exist
-
-        var callArgs = [dataFunc, contentBlock];
-        if (elseContentBlock)
-          callArgs.push(elseContentBlock);
-
-        return HTML.EmitCode(
-          builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
-
-      } else {
-        var compCode = codeGenPath(path, {lookupTemplate: true});
-
-        if (path.length !== 1) {
-          // path code may be reactive; wrap it
-          compCode = 'function () { return ' + compCode + '; }';
-        }
-
-        var codeParts = codeGenInclusionParts(tag);
-        var dataFunc = codeParts.dataFunc;
-        var content = codeParts.content;
-        var elseContent = codeParts.elseContent;
-
-        var includeArgs = [compCode];
-        if (content) {
-          includeArgs.push(content);
-          if (elseContent)
-            includeArgs.push(elseContent);
-        }
-
-        var includeCode =
-              'Spacebars.include(' + includeArgs.join(', ') + ')';
-
-        if (dataFunc) {
-          includeCode =
-            'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
-            Spacebars.codeGen(HTML.EmitCode(includeCode)) + '))';
-        }
-
-        if (path[0] === 'UI' &&
-            (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
-          includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
-        }
-
-        return HTML.EmitCode(includeCode);
-      }
+                           codeGenMustache(tag.path, tag.args, 'attrMustache')
+                           + '; }');
     } else {
-      // Can't get here; TemplateTag validation should catch any
-      // inappropriate tag types that might come out of the parser.
-      throw new Error("Unexpected template tag type: " + tag.type);
+      if (tag.type === 'DOUBLE') {
+        return HTML.EmitCode('function () { return ' +
+                             codeGenMustache(tag.path, tag.args) + '; }');
+      } else if (tag.type === 'TRIPLE') {
+        return HTML.EmitCode('function () { return Spacebars.makeRaw(' +
+                             codeGenMustache(tag.path, tag.args) + '); }');
+      } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
+        var path = tag.path;
+
+        if (tag.type === 'BLOCKOPEN' &&
+            builtInBlockHelpers.hasOwnProperty(path[0])) {
+          // if, unless, with, each.
+          //
+          // If someone tries to do `{{> if}}`, we don't
+          // get here, but an error is thrown when we try to codegen the path.
+
+          // Note: If we caught these errors earlier, while scanning, we'd be able to
+          // provide nice line numbers.
+          if (path.length > 1)
+            throw new Error("Unexpected dotted path beginning with " + path[0]);
+          if (! tag.args.length)
+            throw new Error("#" + path[0] + " requires an argument");
+
+          var codeParts = codeGenInclusionParts(tag);
+          var dataFunc = codeParts.dataFunc; // must exist (tag.args.length > 0)
+          var contentBlock = codeParts.content; // must exist
+          var elseContentBlock = codeParts.elseContent; // may not exist
+
+          var callArgs = [dataFunc, contentBlock];
+          if (elseContentBlock)
+            callArgs.push(elseContentBlock);
+
+          return HTML.EmitCode(
+            builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
+
+        } else {
+          var compCode = codeGenPath(path, {lookupTemplate: true});
+
+          if (path.length !== 1) {
+            // path code may be reactive; wrap it
+            compCode = 'function () { return ' + compCode + '; }';
+          }
+
+          var codeParts = codeGenInclusionParts(tag);
+          var dataFunc = codeParts.dataFunc;
+          var content = codeParts.content;
+          var elseContent = codeParts.elseContent;
+
+          var includeArgs = [compCode];
+          if (content) {
+            includeArgs.push(content);
+            if (elseContent)
+              includeArgs.push(elseContent);
+          }
+
+          var includeCode =
+                'Spacebars.include(' + includeArgs.join(', ') + ')';
+
+          if (dataFunc) {
+            includeCode =
+              'Spacebars.TemplateWith(' + dataFunc + ', UI.block(' +
+              Spacebars.codeGen(HTML.EmitCode(includeCode)) + '))';
+          }
+
+          if (path[0] === 'UI' &&
+              (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
+            includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
+          }
+
+          return HTML.EmitCode(includeCode);
+        }
+      } else {
+        // Can't get here; TemplateTag validation should catch any
+        // inappropriate tag types that might come out of the parser.
+        throw new Error("Unexpected template tag type: " + tag.type + ' ' + tag.path + ' ' + tag.args);
+      }
     }
   }
 };

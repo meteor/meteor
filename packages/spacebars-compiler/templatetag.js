@@ -9,6 +9,8 @@
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
 // - `"ELSE"` - `{{else}}`
+// - `"ESCAPEDDOUBLE"` - {{|foo}}
+// - `"ESCAPEDTRIPLE"` - {{{|foo}}}
 //
 // Besides `type`, the mandatory properties of a TemplateTag are:
 //
@@ -22,7 +24,7 @@
 //   are `[["STRING", "bar"], ["NUMBER", 3, "x"]]`.  Applies to DOUBLE,
 //   TRIPLE, INCLUSION, and BLOCKOPEN.
 //
-// - `value` - For COMMENT tags, a string of the comment's text.
+// - `value` - For COMMENT and ESCAPED tags, a string of the comment's text.
 //
 // These additional are typically set during parsing:
 //
@@ -45,6 +47,8 @@ var makeStacheTagStartRegex = function (r) {
 };
 
 var starts = {
+  ESCAPEDDOUBLE: makeStacheTagStartRegex(/^\{\{\|\s*(?!\s)/),
+  ESCAPEDTRIPLE: makeStacheTagStartRegex(/^\{\{\{\|\s*(?!\s)/),
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -222,9 +226,11 @@ TemplateTag.parse = function (scannerOrString) {
     error('Expected ' + what);
   };
 
-  // must do ELSE first; order of others doesn't matter
-
-  if (run(starts.ELSE)) type = 'ELSE';
+  // must do escaped tags first, followed immediately by ELSE. 
+  // after that order does not matter.
+  if (run(starts.ESCAPEDDOUBLE)) type = 'ESCAPEDDOUBLE';
+  else if (run(starts.ESCAPEDTRIPLE)) type = 'ESCAPEDTRIPLE';
+  else if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
@@ -248,6 +254,16 @@ TemplateTag.parse = function (scannerOrString) {
     if (! result)
       error("Unclosed comment");
     tag.value = result.slice(0, -2);
+  } else if (type === 'ESCAPEDDOUBLE') {
+    var result = run(/^[\s\S]*?\}\}/);
+    if (! result)
+      error("Unclosed ESCAPEDDOUBLE");
+    tag.value = result.slice(0, -2);
+  }else if (type === 'ESCAPEDTRIPLE') {
+    var result = run(/^[\s\S]*?\}\}\}/);
+    if (! result)
+      error("Unclosed ESCAPEDTRIPLE");
+    tag.value = result.slice(0, -3);
   } else if (type === 'BLOCKCLOSE') {
     tag.path = scanPath();
     if (! run(ends.DOUBLE))
