@@ -1,4 +1,4 @@
-Tinytest.add("spacebars - stache tags", function (test) {
+Tinytest.add("spacebars-compiler - stache tags", function (test) {
 
   var run = function (input, expected) {
     if (typeof expected === "string") {
@@ -162,7 +162,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
 });
 
 
-Tinytest.add("spacebars - Spacebars.dot", function (test) {
+Tinytest.add("spacebars-compiler - Spacebars.dot", function (test) {
   test.equal(Spacebars.dot(null, 'foo'), null);
   test.equal(Spacebars.dot('foo', 'foo'), undefined);
   test.equal(Spacebars.dot({x:1}, 'x'), 1);
@@ -224,7 +224,7 @@ Tinytest.add("spacebars - Spacebars.dot", function (test) {
 
 //////////////////////////////////////////////////
 
-Tinytest.add("spacebars - parse", function (test) {
+Tinytest.add("spacebars-compiler - parse", function (test) {
   test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('{{foo}}')),
              'SpacebarsCompiler.TemplateTag({type: "DOUBLE", path: ["foo"]})');
 

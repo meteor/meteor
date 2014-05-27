@@ -1,4 +1,4 @@
-Tinytest.add("spacebars - compiler output", function (test) {
+Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   var run = function (input, expected) {
     if (expected.fail) {
@@ -251,7 +251,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
 
 });
 
-Tinytest.add("spacebars - compiler errors", function (test) {
+Tinytest.add("spacebars-compiler - compiler errors", function (test) {
 
   var getError = function (input) {
     try {
