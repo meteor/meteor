@@ -795,7 +795,7 @@ testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (
     // will throw if called in a method stub
     Meteor.defer(function () {});
   });
- 
+
   var div = renderToDiv(tmpl);
 
   // not defined on the server, but it's fine since the stub does
@@ -1947,5 +1947,40 @@ Tinytest.add(
 
     test.equal(div.$_uievents["click"].handlers.length, 0);
     test.equal(div.$_uievents["mouseover"].handlers.length, 0);
+  }
+);
+
+// https://github.com/meteor/meteor/issues/2156
+Tinytest.add(
+  "spacebars - template - each with inserts inside autorun",
+  function (test) {
+    var tmpl = Template.spacebars_test_each_with_autorun_insert;
+    var coll = new Meteor.Collection(null);
+    var rv = new ReactiveVar;
+
+    tmpl.items = function () {
+      return coll.find();
+    };
+
+    var div = renderToDiv(tmpl);
+
+    Deps.autorun(function () {
+      if (rv.get()) {
+        coll.insert({ name: rv.get() });
+      }
+    });
+
+    rv.set("foo1");
+    Deps.flush();
+    var firstId = coll.findOne()._id;
+
+    rv.set("foo2");
+    Deps.flush();
+
+    test.equal(canonicalizeHtml(div.innerHTML), "foo1 foo2");
+
+    coll.update(firstId, { $set: { name: "foo3" } });
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "foo3 foo2");
   }
 );
