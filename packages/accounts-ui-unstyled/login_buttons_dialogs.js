@@ -63,6 +63,7 @@ var resetPassword = function () {
         loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
         loginButtonsSession.set('resetPasswordToken', null);
+        loginButtonsSession.set('justResetPassword', true);
         Accounts._enableAutoLogin();
       }
     });
@@ -71,6 +72,23 @@ var resetPassword = function () {
 Template._resetPasswordDialog.inResetPasswordFlow = function () {
   return loginButtonsSession.get('resetPasswordToken');
 };
+
+//
+// justResetPasswordDialog template
+//
+
+Template._justResetPasswordDialog.events({
+  'click #just-verified-dismiss-button': function () {
+    loginButtonsSession.set('justResetPassword', false);
+  }
+});
+
+Template._justResetPasswordDialog.visible = function () {
+  return loginButtonsSession.get('justResetPassword');
+};
+
+Template._justResetPasswordDialog.displayName = displayName;
+
 
 
 //
@@ -127,6 +145,8 @@ Template._justVerifiedEmailDialog.events({
 Template._justVerifiedEmailDialog.visible = function () {
   return loginButtonsSession.get('justVerifiedEmail');
 };
+
+Template._justVerifiedEmailDialog.displayName = displayName;
 
 
 //
