@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 set -u
-cd `dirname $0`
+cd "`dirname "$0"`"
 DIR="$(pwd)"
 METEOR_DIR="$(pwd)/../.."
 

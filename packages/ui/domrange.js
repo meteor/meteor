@@ -130,7 +130,7 @@ var rangeRemoved = function (range) {
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
 
-    // remove events
+    // clean up events
     if (range.stopHandles) {
       for (var i = 0; i < range.stopHandles.length; i++)
         range.stopHandles[i].stop();
@@ -188,6 +188,8 @@ var DomRange = function () {
 
   this.isParented = false;
   this.isRemoved = false;
+
+  this.stopHandles = null;
 };
 
 _extend(DomRange.prototype, {

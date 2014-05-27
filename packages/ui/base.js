@@ -342,3 +342,11 @@ UI.getElementData = function (el) {
   var comp = UI.DomRange.getContainingComponent(el);
   return comp && getComponentData(comp);
 };
+
+var jsUrlsAllowed = false;
+UI._allowJavascriptUrls = function () {
+  jsUrlsAllowed = true;
+};
+UI._javascriptUrlsAllowed = function () {
+  return jsUrlsAllowed;
+};

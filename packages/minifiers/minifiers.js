@@ -85,7 +85,7 @@ CssTools = {
   rewriteCssUrls: function (ast) {
 
     var isRelative = function(path) {
-      return path.charAt(0) !== '/';
+      return path && path.charAt(0) !== '/';
     };
 
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {

@@ -15,17 +15,6 @@
         "cookie": {
           "version": "0.1.0"
         },
-        "send": {
-          "version": "0.1.4",
-          "dependencies": {
-            "mime": {
-              "version": "1.2.11"
-            },
-            "range-parser": {
-              "version": "0.0.4"
-            }
-          }
-        },
         "bytes": {
           "version": "0.2.0"
         },

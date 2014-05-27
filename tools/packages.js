@@ -11,6 +11,7 @@ var meteorNpm = require('./meteor-npm.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require(path.join(__dirname, 'linker.js'));
 var unipackage = require('./unipackage.js');
+var utils = require('./utils.js');
 var fs = require('fs');
 var sourcemap = require('source-map');
 
@@ -27,12 +28,6 @@ var sourcemap = require('source-map');
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
 exports.BUILT_BY = 'meteor/10';
-
-// Like Perl's quotemeta: quotes all regexp metacharacters. See
-//   https://github.com/substack/quotemeta/blob/master/index.js
-var quotemeta = function (str) {
-    return String(str).replace(/(\W)/g, '\\$1');
-};
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -1749,7 +1744,7 @@ _.extend(Package.prototype, {
       // Determine source files
       slice.getSourcesFunc = function () {
         var sourceInclude = _.map(slice.registeredExtensions(), function (ext) {
-          return new RegExp('\\.' + quotemeta(ext) + '$');
+          return new RegExp('\\.' + utils.quotemeta(ext) + '$');
         });
         var sourceExclude = [/^\./].concat(ignoreFiles);
 

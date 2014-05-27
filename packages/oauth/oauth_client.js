@@ -1,4 +1,9 @@
-Oauth = {};
+// credentialToken -> credentialSecret. You must provide both the
+// credentialToken and the credentialSecret to retrieve an access token from
+// the _pendingCredentials collection.
+var credentialSecrets = {};
+
+OAuth = {};
 
 // Open a popup window, centered on the screen, and call a callback when it
 // closes.
@@ -8,7 +13,7 @@ Oauth = {};
 //   arguments.
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
-Oauth.showPopup = function (url, callback, dimensions) {
+OAuth.showPopup = function (url, callback, dimensions) {
   // default dimensions that worked well for facebook and google
   var popup = openCenteredPopup(
     url,
@@ -64,10 +69,30 @@ var openCenteredPopup = function(url, width, height) {
 
 // XXX COMPAT WITH 0.7.0.1
 // Private interface but probably used by many oauth clients in atmosphere.
-Oauth.initiateLogin = function (credentialToken, url, callback, dimensions) {
-  Oauth.showPopup(
+OAuth.initiateLogin = function (credentialToken, url, callback, dimensions) {
+  OAuth.showPopup(
     url,
     _.bind(callback, null, credentialToken),
     dimensions
   );
+};
+
+// Called by the popup when the OAuth flow is completed, right before
+// the popup closes.
+OAuth._handleCredentialSecret = function (credentialToken, secret) {
+  check(credentialToken, String);
+  check(secret, String);
+  if (! _.has(credentialSecrets,credentialToken)) {
+    credentialSecrets[credentialToken] = secret;
+  } else {
+    throw new Error("Duplicate credential token from OAuth login");
+  }
+};
+
+// Used by accounts-oauth, which needs both a credentialToken and the
+// corresponding to credential secret to call the `login` method over DDP.
+OAuth._retrieveCredentialSecret = function (credentialToken) {
+  var secret = credentialSecrets[credentialToken];
+  delete credentialSecrets[credentialToken];
+  return secret;
 };

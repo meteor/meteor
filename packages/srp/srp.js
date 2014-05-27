@@ -165,7 +165,7 @@ SRP.Client.prototype.verifyConfirmation = function (confirmation) {
 
 
 /**
- * Generate a new SRP server object. Password is the plaintext password.
+ * Generate a new SRP server object.
  *
  * options is optional and can include:
  * - b: server's private ephemeral value. String or

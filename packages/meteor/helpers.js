@@ -115,7 +115,7 @@ _.extend(Meteor, {
 
   // Sets child's prototype to a new object whose prototype is parent's
   // prototype. Used as:
-  //   Meteor._inherit(ClassB, ClassA).
+  //   Meteor._inherits(ClassB, ClassA).
   //   _.extend(ClassB.prototype, { ... })
   // Inspired by CoffeeScript's `extend` and Google Closure's `goog.inherits`.
   _inherits: function (Child, Parent) {

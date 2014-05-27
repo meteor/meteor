@@ -29,7 +29,7 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   var loginUrl = '/_oauth/twitter/?requestTokenAndRedirect=true'
         + '&state=' + credentialToken;
 
-  Oauth.showPopup(
+  OAuth.showPopup(
     loginUrl,
     _.bind(credentialRequestCompleteCallback, null, credentialToken)
   );

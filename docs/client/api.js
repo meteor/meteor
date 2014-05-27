@@ -58,12 +58,18 @@ Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
   locus: "Anywhere",
-  descr: ["`Meteor.settings` contains deployment-specific configuration options. " +
-          "You can initialize settings by passing the `--settings` option (which takes a file containing JSON data) to " +
-          "`meteor run` or `meteor deploy`, " +
-          "or by setting your server process's `METEOR_SETTINGS` environment variable to a JSON string. " +
-          "If you don't provide any settings, `Meteor.settings` will be an empty object.  If the settings object contains a key named `public`, then " +
-          "`Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server."]
+  descr: ["`Meteor.settings` contains deployment-specific configuration " +
+          "options. You can initialize settings by passing the `--settings` " +
+          "option (which takes the name of a file containing JSON data) to " +
+          "`meteor run` or `meteor deploy`. When running your server " +
+          "directly (e.g. from a bundle), you instead specify settings by " +
+          "putting the JSON directly into the `METEOR_SETTINGS` environment " +
+          "variable. " +
+          "If you don't provide any settings, `Meteor.settings` will be an " +
+          "empty object.  If the settings object contains a key named " +
+          "`public`, then `Meteor.settings.public` will be available on the " +
+          "client as well as the server.  All other properties of " +
+          "`Meteor.settings` are only defined on the server."]
 };
 
 Template.api.release = {
@@ -398,7 +404,7 @@ Template.api.method_invocation_connection = {
 
 Template.api.error = {
   id: "meteor_error",
-  name: "new Meteor.Error(error, reason, details)",
+  name: "new Meteor.Error(error [, reason] [, details])",
   locus: "Anywhere",
   descr: ["This class represents a symbolic error thrown by a method."],
   args: [
@@ -1158,6 +1164,11 @@ Template.api.accounts_config = {
       name: "loginExpirationInDays",
       type: "Number",
       descr: "The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration."
+    },
+    {
+      name: "oauthSecretKey",
+      type: "String",
+      descr: "When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details."
     }
   ]
 };
@@ -1906,6 +1917,18 @@ Template.api.ui_insert = {
     {name: "nextNode",
      type: "DOM Node",
      descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child."
+    }]
+};
+
+Template.api.ui_getelementdata = {
+  id: "ui_getelementdata",
+  name: "UI.getElementData(el)",
+  locus: "Client",
+  descr: ["Returns the data context that was used when rendering a DOM element from a Meteor template."],
+  args: [
+    {name: "el",
+     type: "DOM Element",
+     descr: "An element that was rendered by a Meteor template"
     }]
 };
 

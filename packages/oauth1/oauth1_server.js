@@ -1,5 +1,5 @@
 // connect middleware
-Oauth._requestHandlers['1'] = function (service, query, res) {
+OAuth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (!config) {
@@ -11,14 +11,15 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
-    var callbackUrl = Meteor.absoluteUrl("_oauth/twitter?close&state=" +
+    var callbackUrl = Meteor.absoluteUrl("_oauth/" + service.serviceName +
+                                         "?close&state=" +
                                          query.state);
 
     // Get a request token to start auth process
     oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
-    Oauth._storeRequestToken(query.state,
+    OAuth._storeRequestToken(query.state,
       oauthBinding.requestToken,
       oauthBinding.requestTokenSecret
     );
@@ -39,7 +40,7 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    var requestTokenInfo = Oauth._retrieveRequestToken(query.state);
+    var requestTokenInfo = OAuth._retrieveRequestToken(query.state);
 
     // Verify user authorized access and the oauth_token matches
     // the requestToken from previous step
@@ -54,17 +55,19 @@ Oauth._requestHandlers['1'] = function (service, query, res) {
       // Run service-specific handler.
       var oauthResult = service.handleOauthRequest(oauthBinding);
 
+      var credentialSecret = Random.secret();
+
       // Store the login result so it can be retrieved in another
       // browser tab by the result handler
-      Oauth._storePendingCredential(query.state, {
+      OAuth._storePendingCredential(query.state, {
         serviceName: service.serviceName,
         serviceData: oauthResult.serviceData,
         options: oauthResult.options
-      });
+      }, credentialSecret);
     }
 
     // Either close the window, redirect, or render nothing
     // if all else fails
-    Oauth._renderOauthResults(res, query);
+    OAuth._renderOauthResults(res, query, credentialSecret);
   }
 };
