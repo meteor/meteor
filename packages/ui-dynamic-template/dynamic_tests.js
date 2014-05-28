@@ -105,3 +105,23 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "test");
   }
 );
+
+Tinytest.add(
+  "ui-dynamic-template - render template " +
+    "dynamically, bad arguments",
+  function (test, expect) {
+    var tmplPrefix = "ui_dynamic_test_bad_args";
+    var errors = [
+      "Must specify 'template' as an argument",
+      "Must specify 'template' as an argument",
+      "Invalid argument to {{> UI.dynamic}}"
+    ];
+
+    for (var i = 0; i < 3; i++) {
+      var tmpl = Template[tmplPrefix + i];
+      test.throws(function () {
+        var div = renderToDiv(tmpl);
+      });
+    }
+  }
+);

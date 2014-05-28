@@ -9,6 +9,7 @@
 </template>
 
 <template name="__dynamic">
+  {{checkContext}}
   {{#if dataContextPresent}}
     {{> __dynamicWithDataContext}}
   {{else}}
