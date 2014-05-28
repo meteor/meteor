@@ -1,5 +1,3 @@
-Spacebars = {};
-
 // * `templateOrFunction` - template (component) or function returning a template
 // or null
 Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock) {

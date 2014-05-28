@@ -12,7 +12,8 @@ Package.describe({
 // Additional tests are in `spacebars-tests`.
 
 Package.on_use(function (api) {
-  api.export('Spacebars');
+  api.use('spacebars-common');
+  api.imply('spacebars-common');
 
   api.use('htmljs');
   api.use('ui');

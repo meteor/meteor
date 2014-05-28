@@ -13,6 +13,7 @@ Package.on_use(function (api) {
   api.use('ordered-dict');
   api.use('minimongo');  // for idStringify
   api.use('observe-sequence');
+  api.use('ui-dynamic-template', { unordered: true });
 
   api.use('htmljs');
   api.imply('htmljs');
