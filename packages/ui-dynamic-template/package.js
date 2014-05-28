@@ -12,5 +12,5 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use(["ui-dynamic-template", "tinytest", "test-helpers"]);
   api.use("templating", "client");
-  api.add_files(["dynamic-tests.html", "dynamic-tests.js"], "client");
+  api.add_files(["dynamic_tests.html", "dynamic_tests.js"], "client");
 });
