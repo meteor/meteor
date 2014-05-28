@@ -124,9 +124,7 @@ _.extend(exports, {
       return process.env.METEOR_PACKAGE_SERVER_URL;
     var host = config.getPackageServerDomain();
 
-    console.log("XXX: currently using http, not https for package server.");
-    return "http://" + host;
-    // return addScheme(host);
+    return addScheme(host);
   },
 
   getPackageServerDomain: function () {
