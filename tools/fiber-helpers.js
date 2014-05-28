@@ -76,3 +76,16 @@ exports.waitForOne = function (/* futures */) {
 
   return combinedFuture.wait();
 };
+
+
+exports.noYieldsAllowed = function (f) {
+  var savedYield = Fiber.yield;
+  Fiber.yield = function () {
+    throw new Error("Can't call yield in a noYieldsAllowed block!");
+  };
+  try {
+    return f();
+  } finally {
+    Fiber.yield = savedYield;
+  }
+};

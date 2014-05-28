@@ -232,6 +232,7 @@ _.extend(CompleteCatalog.prototype, {
     // project root path has not been initialized, we are probably running
     // outside of a project, and have nothing to look at for guidance.
     if (opts.ignoreProjectDeps || !project.rootDir) {
+  console.log("ignore project deps & resolve");
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
 

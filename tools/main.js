@@ -80,7 +80,11 @@ main.WaitForExit = function () {};
 
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the latest available (downloaded) Meteor release.
-main.SpringboardToLatestRelease = function () {};
+// If track is specified, it uses the latest available in the given
+// track instead of the default track.
+main.SpringboardToLatestRelease = function (track) {
+  this.track = track;
+};
 
 // Register a command-line command.
 //
@@ -632,6 +636,7 @@ Fiber(function () {
   // #ImprovingCrossVersionOptionParsing.
 
   var releaseOverride = null;
+  var releaseForced = false;
   if (_.has(rawOptions, '--release')) {
     if (rawOptions['--release'].length > 1) {
       process.stderr.write(
@@ -640,6 +645,7 @@ Fiber(function () {
       process.exit(1);
     }
     releaseOverride = rawOptions['--release'][0];
+    releaseForced = true;
     if (! releaseOverride) {
       process.stderr.write(
 "The --release option needs a value.\n" +
@@ -650,6 +656,12 @@ Fiber(function () {
   }
   if (_.has(process.env, 'METEOR_SPRINGBOARD_RELEASE')) {
     // See #SpringboardEnvironmentVar
+    // Note that this does *NOT* cause release.forced to be true.
+    // release.forced should only be set when the user actually
+    // ran with --release, not just because (eg) they ran
+    // 'meteor update' and we springboarded to the latest release.
+    // (It's important that 'meteor update' be able to tell these
+    // conditions apart even after the springboard!)
     releaseOverride = process.env['METEOR_SPRINGBOARD_RELEASE'];
   }
 
@@ -702,7 +714,7 @@ Fiber(function () {
       }
     } else {
       // Run outside an app dir with no --release flag. Use the latest
-      // release we know about.
+      // release we know about (in the default track).
       releaseName = release.latestDownloaded();
     }
   }
@@ -743,7 +755,7 @@ Fiber(function () {
       throw e;
     }
 
-    release.setCurrent(rel, /* forced */ !! releaseOverride);
+    release.setCurrent(rel, releaseForced);
   }
 
   // If we're not running the correct version of the tools for this
@@ -1054,7 +1066,7 @@ commandName + ": You're not in a Meteor package directory.\n");
     if (e instanceof main.SpringboardToLatestRelease) {
       // Load the latest release's metadata so that we can figure out
       // the tools version that it uses.
-      var latestRelease = release.load(release.latestDownloaded());
+      var latestRelease = release.load(release.latestDownloaded(e.track));
       springboard(latestRelease, latestRelease.name);
       // (does not return)
     }

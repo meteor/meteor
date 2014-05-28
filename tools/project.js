@@ -100,6 +100,7 @@ var Project = function () {
   self._depsUpToDate = false;
 };
 
+<<<<<<< HEAD
 _.extend(Project.prototype, {
   // Set a given root directory as the project's root directory. Figure out all
   // relevant file paths and read in data that is independent of the constraint

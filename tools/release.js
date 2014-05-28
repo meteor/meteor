@@ -37,6 +37,20 @@ _.extend(Release.prototype, {
     return this.name === null;
   },
 
+  getReleaseTrack: function () {
+    var self = this;
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self.name.split('@')[0];
+  },
+
+  getReleaseVersion: function () {
+    var self = this;
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self.name.split('@')[1];
+  },
+
   // Return the package name for the command-line tools that this release
   // uses. Valid only for proper releases.
   getToolsPackage: function () {
@@ -161,14 +175,17 @@ release.usingRightReleaseForApp = function () {
 
 // Return the name of the latest release that is downloaded and ready
 // for use. May not be called when running from a checkout.
-release.latestDownloaded = function () {
+// 'track' is optional (it defaults to the default track).
+release.latestDownloaded = function (track) {
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
   // For self-test only.
   if (process.env.METEOR_TEST_LATEST_RELEASE)
     return process.env.METEOR_TEST_LATEST_RELEASE;
 
+
   var defaultRelease = catalog.official.getDefaultReleaseVersion();
+
   if (!defaultRelease) {
     throw new Error("no latest release available?");
   }

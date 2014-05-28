@@ -308,8 +308,9 @@ main.registerCommand({
   // at the end.)
   if (! release.current.isCheckout() &&
       release.current.name !== release.latestDownloaded() &&
-      ! release.forced)
+      ! release.forced) {
     throw new main.SpringboardToLatestRelease;
+  }
 
   var exampleDir = path.join(__dirname, '..', 'examples');
   var examples = _.reject(fs.readdirSync(exampleDir), function (e) {
@@ -425,18 +426,28 @@ main.registerCommand({
     return 1;
   }
 
-  // Unless --release was passed (meaning that either the user asked for a
-  // particular release, or that we _just did_ this and springboarded at
-  // #UpdateSpringboard), go get the latest release and switch to it. (We
-  // already know what the latest release is because we refreshed the catalog
-  // above.)
+  // This is the release track we'll end up on --- either because it's
+  // the explicitly specified (with --release) track; or because we
+  // didn't specify a release and it's the app's current release (if we're
+  // in an app dir), since non-forced updates don't change the track.
+  // XXX better error checking on release.current.name
+  // XXX add a method to release.current
+  var releaseTrack = release.current.getReleaseTrack();
+
+  // Unless --release was passed (in which case we ought to already have
+  // springboarded to that release), go get the latest release and switch to
+  // it. (We already know what the latest release is because we refreshed the
+  // catalog above.)  Note that after springboarding, we will hit this again
+  // (because springboarding to a specific release does NOT set release.forced),
+  // but it should be a no-op next time (unless there actually was a new latest
+  // release in the interim).
   if (! release.forced) {
     if (! release.current ||
-        release.current.name !== release.latestDownloaded()) {
+        release.current.name !== release.latestDownloaded(releaseTrack)) {
       // The user asked for the latest release (well, they "asked for it" by not
-      // passing --release). We're not currently running the latest release (we
-      // may have even just learned about it).  #UpdateSpringboard
-      throw new main.SpringboardToLatestRelease;
+      // passing --release). We're not currently running the latest release on
+      // this track (we may have even just learned about it). #UpdateSpringboard
+      throw new main.SpringboardToLatestRelease(releaseTrack);
     }
   }
 
@@ -449,7 +460,7 @@ main.registerCommand({
   // If we're not in an app, then we're done (other than maybe printing some
   // stuff).
   if (! options.appDir) {
-    if (release.forced) {
+    if (release.forced || process.env.METEOR_SPRINGBOARD_RELEASE) {
       // We get here if:
       // 1) the user ran 'meteor update' and we found a new version
       // 2) the user ran 'meteor update --release xyz' (regardless of
@@ -457,7 +468,9 @@ main.registerCommand({
       //
       // In case (1), we downloaded and installed the update and then
       // we springboarded (at #UpdateSpringboard above), causing
-      // release.forced to be true.
+      // $METEOR_SPRINGBOARD_RELEASE to be true.
+      // XXX probably should have a better interface than looking directly
+      //     at the env var here
       //
       // In case (2), we downloaded, installed, and springboarded to
       // the requested release in the initialization code, before the
@@ -487,12 +500,6 @@ main.registerCommand({
   // Otherwise, we have to upgrade the app too, if the release changed.
   var appRelease = project.getMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
-    // Note that in this case, release.forced is true iff --release was actually
-    // passed on the command-line: #UpdateSpringboard can't have occured.  Why?
-    // Well, if the user didn't specify --release but we're in an app, then
-    // release.current.name must have been taken from the app, and
-    // #UpdateSpringboard only happens if needs to try to change the app
-    // release, and this is the message for not needing to change the release.
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
     var maybeOnThisComputer =
           couldNotContactServer ? "\ninstalled on this computer" : "";
@@ -504,6 +511,7 @@ main.registerCommand({
 
 
   // OK, let's figure out what release fits with our package constraints!
+<<<<<<< HEAD
   // XXX this will actually be a loop over possible releases in the non-force
   //     case
   // XXX better error checking on name
@@ -534,76 +542,148 @@ main.registerCommand({
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
   // XXX error handling.
-
-  // Find upgraders (in order) necessary to upgrade the app for the new
-  // release (new metadata file formats, etc, or maybe even updating renamed
-  // APIs).
-  //
-  // * If this is a pre-engine app with no .meteor/release file, run
-  //   all upgraders.
-  // * If the app didn't have a release because it was created by a
-  //   checkout, don't run any upgraders.
-  //
-  // We're going to need the list of upgraders from the old release
-  // (the release the app was using previously) to decide what
-  // upgraders to run. It's possible that we don't have it downloaded
-  // yet (if they checked out the project and immediately ran 'meteor
-  // update --release foo'), so it's important to do this before we
-  // actually update the project.
-  var upgradersToRun;
-  if (appRelease === "none") {
-    upgradersToRun = [];
+=======
+  var releaseVersionsToTry;
+  if (release.forced) {
+    releaseVersionsToTry = [release.current.getReleaseVersion()];
   } else {
-    var oldUpgraders;
-
-    if (appRelease === null) {
-      oldUpgraders = [];
-    } else {
-      try {
-        var oldRelease = release.load(appRelease);
-      } catch (e) {
-        if (e instanceof files.OfflineError) {
-          process.stderr.write(
-"You need to be online to do this. Please check your internet connection.\n");
-          return 1;
-        }
-        if (e instanceof warehouse.NoSuchReleaseError) {
-          // In this situation it's tempting to just print a warning and
-          // skip the updaters, but I can't figure out how to explain
-          // what's happening to the user, so let's just do this.
-          process.stderr.write(
-"This project says that it uses version " + appRelease + " of Meteor, but you\n" +
-"don't have that version of Meteor installed and the Meteor update servers\n" +
-"don't have it either. Please edit the .meteor/release file in the project\n" +
-"project and change it to a valid Meteor release.\n");
-          return 1;
-        }
-        throw e;
-      }
-      oldUpgraders = oldRelease.getUpgraders();
+    // XXX clean up all this splitty stuff
+    var appReleaseInfo = catalog.getReleaseVersion(
+      appRelease.split('@')[0], appRelease.split('@')[1]);
+    var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
+    releaseVersionsToTry = catalog.getSortedRecommendedReleaseVersions(
+      releaseTrack, appOrderKey);
+    if (!releaseVersionsToTry.length) {
+      // XXX make error better, and make sure that the "already there" error
+      // above truly does cover every other case
+      var maybeOnThisComputer =
+            couldNotContactServer ? "\ninstalled on this computer" : "";
+      console.log(
+"This project is already at Meteor %s, which is newer than the latest release%s.",
+        appRelease, maybeOnThisComputer);
+      return;
     }
-
-    upgradersToRun = _.difference(release.current.getUpgraders(), oldUpgraders);
   }
 
-  // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(release.current.name);
-
-  // Now run the upgraders.
-  _.each(upgradersToRun, function (upgrader) {
-    require("./upgraders.js").runUpgrader(upgrader, options.appDir);
+  var solutionPackageVersions = null;
+  var directDependencies = project.getDirectDependencies(options.appDir);
+  var previousVersions = project.getIndirectDependencies(options.appDir);
+  var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
+    var releaseRecord = catalog.getReleaseVersion(releaseTrack, versionToTry);
+    if (!releaseRecord)
+      throw Error("missing release record?");
+    var constraints = project.combinedConstraints(
+      directDependencies, releaseRecord.packages);
+    try {
+      solutionPackageVersions = catalog.resolveConstraints(
+        constraints, { previousSolution: previousVersions });
+    } catch (e) {
+      // XXX we should make the error handling explicitly detectable, and not
+      // actually mention failures that are recoverable
+      process.stderr.write(
+        "XXX Update to release " + releaseTrack +
+          "@" + versionToTry + " impossible: " + e.message + "\n");
+      return false;
+    }
+    return true;
   });
+
+  if (!solutionReleaseVersion) {
+    // XXX put an error here when we stop doing an error on every failure above
+    return 1;
+  }
+
+  var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
+
+  // We could at this point springboard to solutionRelease (which is no newer
+  // than the release we are currently running), but there's no clear advantage
+  // to this yet. The main reason might be if we decide to delete some
+  // backward-compatibility code which knows how to deal with an older release,
+  // but if we actually do that, we can change this code to add the extra
+  // springboard at that time.
+
+
+  // XXX did we have to change some package versions? we should probably
+  //     mention that fact.
+
+  // XXX reimplement upgraders (or don't, until we need them).
+  // // Find upgraders (in order) necessary to upgrade the app for the new
+  // // release (new metadata file formats, etc, or maybe even updating renamed
+  // // APIs).
+  // //
+  // // * If this is a pre-engine app with no .meteor/release file, run
+  // //   all upgraders.
+  // // * If the app didn't have a release because it was created by a
+  // //   checkout, don't run any upgraders.
+  // //
+  // // We're going to need the list of upgraders from the old release
+  // // (the release the app was using previously) to decide what
+  // // upgraders to run. It's possible that we don't have it downloaded
+  // // yet (if they checked out the project and immediately ran 'meteor
+  // // update --release foo'), so it's important to do this before we
+  // // actually update the project.
+  // var upgradersToRun;
+  // if (appRelease === "none") {
+  //   upgradersToRun = [];
+  // } else {
+  //   var oldUpgraders;
+
+  //   if (appRelease === null) {
+  //     oldUpgraders = [];
+  //   } else {
+  //     try {
+  //       var oldRelease = release.load(appRelease);
+  //     } catch (e) {
+  //       if (e instanceof files.OfflineError) {
+  //         process.stderr.write(
+  //           "You need to be online to do this. Please check your internet connection.\n");
+  //         return 1;
+  //       }
+  //       if (e instanceof warehouse.NoSuchReleaseError) {
+  //         // In this situation it's tempting to just print a warning and
+  //         // skip the updaters, but I can't figure out how to explain
+  //         // what's happening to the user, so let's just do this.
+  //         process.stderr.write(
+  //           "This project says that it uses version " + appRelease + " of Meteor, but you\n" +
+  //             "don't have that version of Meteor installed and the Meteor update servers\n" +
+  //             "don't have it either. Please edit the .meteor/release file in the project\n" +
+  //             "project and change it to a valid Meteor release.\n");
+  //         return 1;
+  //       }
+  //       throw e;
+  //     }
+  //     oldUpgraders = oldRelease.getUpgraders();
+  //   }
+
+  //   // XXX release.current needs to be replaced with solutionReleaseName
+  //   upgradersToRun = _.difference(release.current.getUpgraders(), oldUpgraders);
+  // }
+
+  // Write the new versions to .meteor/packages and .meteor/versions.
+  project.setDependencies(options.appDir, directDependencies.appDeps,
+                          solutionPackageVersions);
+
+  // Write the release to .meteor/release.
+  project.writeMeteorReleaseVersion(solutionReleaseName);
+
+  // XXX redo upgrader support
+  // // Now run the upgraders.
+  // _.each(upgradersToRun, function (upgrader) {
+  //   require("./upgraders.js").runUpgrader(upgrader, options.appDir);
+  // });
 
   // This is the right spot to do any other changes we need to the app in
   // order to update it for the new release.
 
   console.log("%s: updated to Meteor %s.",
-              path.basename(options.appDir), release.current.name);
+              path.basename(options.appDir), solutionReleaseName);
 
   // Print any notices relevant to this upgrade.
   // XXX This doesn't include package-specific notices for packages that
   // are included transitively (eg, packages used by app packages).
   var packages = project.getConstraints();
+
+  // var packages = project.getPackages(options.appDir);
   // XXX reimplement "notices" for tropohouse
   // warehouse.printNotices(appRelease, release.current.name, packages);
 });
@@ -838,6 +918,7 @@ main.registerCommand({
       process.stderr.write( packageName  + " is not in this project \n");
     }
   });
+
 
   // Get the contents of our versions file, we will want them in order to remove
   // to the user what we removed.

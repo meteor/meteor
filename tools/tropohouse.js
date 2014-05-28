@@ -184,5 +184,17 @@ _.extend(exports.Tropohouse.prototype, {
     unipackage.saveToPath(packageDir);
 
     return true;
+  },
+
+  latestMeteorSymlink: function () {
+    var self = this;
+    var path = path.join(self.root, 'meteor');
+    return fs.readlinkSync(path);
+  },
+
+  replaceLatestMeteorSymlink: function (linkText) {
+    var self = this;
+    var path = path.join(self.root, 'meteor');
+    files.symlinkOverSync(linkText, path);
   }
 });

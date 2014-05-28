@@ -167,7 +167,6 @@ selftest.define("add packages", function () {
   run = s.run("--once");
 
   run = s.run("add", "say-something@1.0.0", "--offline-catalog");
-
   run.match("Successfully added");
 
   checkPackages(s,
