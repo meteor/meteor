@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('templating');
+  api.use('underscore');
   api.add_files(['dynamic.html', 'dynamic.js'], 'client');
 });
 
