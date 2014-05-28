@@ -84,7 +84,7 @@ Tinytest.add(
     "dynamically, data context does not get inherited if " +
     "falsey context is passed in",
   function (test, expect) {
-    var tmpl = Template.ui_dynamic_test_falsey_context;
+    var tmpl = Template.ui_dynamic_test_falsey_inner_context;
 
     var nameVar = new ReactiveVar();
     var dataVar = new ReactiveVar();
@@ -123,5 +123,24 @@ Tinytest.add(
         var div = renderToDiv(tmpl);
       });
     }
+  }
+);
+
+Tinytest.add(
+  "ui-dynamic-template - render template " +
+    "dynamically, falsey context",
+  function (test, expect) {
+    var tmpl = Template.ui_dynamic_test_falsey_context;
+    var subtmpl = Template.ui_dynamic_test_falsey_context_sub;
+
+    var subtmplContext;
+    subtmpl.foo = function () {
+      subtmplContext = this;
+    };
+    var div = renderToDiv(tmpl);
+
+    // Because `this` can only be an object, Blaze normalizes falsey
+    // data contexts to {}.
+    test.equal(subtmplContext, {});
   }
 );

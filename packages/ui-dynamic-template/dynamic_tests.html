@@ -18,7 +18,7 @@
   test{{foo}}
 </template>
 
-<template name="ui_dynamic_test_falsey_context">
+<template name="ui_dynamic_test_falsey_inner_context">
   {{#with foo="bar"}}
     {{> UI.dynamic template=templateName data=context}}
   {{/with}}
@@ -34,4 +34,12 @@
 
 <template name="ui_dynamic_test_bad_args2">
   {{> UI.dynamic template="ui_dynamic_test_sub" foo="bar"}}
+</template>
+
+<template name="ui_dynamic_test_falsey_context">
+  {{> UI.dynamic template="ui_dynamic_test_falsey_context_sub"}}
+</template>
+
+<template name="ui_dynamic_test_falsey_context_sub">
+  {{foo}}
 </template>
