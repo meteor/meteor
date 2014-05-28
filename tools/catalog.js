@@ -14,6 +14,8 @@ var watch = require('./watch.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var baseCatalog = require('./catalog-base.js').BaseCatalog;
+var files = require('./files.js');
+var fiberHelpers = require('./fiber-helpers.js');
 
 var catalog = exports;
 
@@ -53,11 +55,54 @@ _.extend(ServerCatalog.prototype, {
 
     // The server catalog is always initialized.
     self.initialized = true;
+
+  // This is set to an array while refresh() is running; if another refresh()
+  // call happens during a yield, instead of doing a second refresh it just
+  // waits for the first to finish.
+  self._refreshFutures = null;
+
+  },
+
+  // Refresh the packages in the catalog. Print a warning if we cannot connect
+  // to the package server.
+  //
+  // If a refresh is already in progress (which is yielding), it just waits for
+  // the in-progress refresh to finish.
+  refresh: function () {
+    var self = this;
+    self._requireInitialized();
+
+    if (self._refreshFutures) {
+      var f = new Future;
+      self._refreshFutures.push(f);
+      f.wait();
+      return;
+    }
+
+    self._refreshFutures = [];
+
+    var thrownError = null;
+    try {
+      self._refresh();
+    } catch (e) {
+      thrownError = e;
+    }
+
+    while (self._refreshFutures.length) {
+      var fut = self._refreshFutures.pop();
+      if (thrownError) {
+        // XXX is it really right to throw the same error multiple times?
+        fut.throw(thrownError);
+      } else {
+        fut.return();
+      }
+    }
+    self._refreshFutures = null;
   },
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
   // to the package server, and intend to.
-  refresh: function () {
+  _refresh: function () {
     var self = this;
 
     var localData = packageClient.loadCachedServerData();
@@ -232,7 +277,6 @@ _.extend(CompleteCatalog.prototype, {
     // project root path has not been initialized, we are probably running
     // outside of a project, and have nothing to look at for guidance.
     if (opts.ignoreProjectDeps || !project.rootDir) {
-  console.log("ignore project deps & resolve");
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
 

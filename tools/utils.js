@@ -70,7 +70,7 @@ exports.getHost = function () {
     if (output) {
       ret = output.trim();
     }
-  }
+  };
 
   if (archinfo.matches(archinfo.host(), 'os.osx')) {
     // On OSX, to get the human-readable hostname that the user chose,
@@ -273,6 +273,7 @@ exports.isDirectory = function (dir) {
     return false;
   }
   return stats.isDirectory();
+};
 
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 exports.startsWith = function(str, starts) {

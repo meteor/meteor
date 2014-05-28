@@ -511,7 +511,6 @@ main.registerCommand({
 
 
   // OK, let's figure out what release fits with our package constraints!
-<<<<<<< HEAD
   // XXX this will actually be a loop over possible releases in the non-force
   //     case
   // XXX better error checking on name
@@ -542,7 +541,6 @@ main.registerCommand({
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
   // XXX error handling.
-=======
   var releaseVersionsToTry;
   if (release.forced) {
     releaseVersionsToTry = [release.current.getReleaseVersion()];
