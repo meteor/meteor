@@ -1,6 +1,16 @@
-var renderToDiv = function (comp) {
+var renderToDiv = function (comp, optData) {
   var div = document.createElement("DIV");
-  Blaze.renderComponent(comp, div);
+  if (optData == null) {
+    Blaze.renderComponent(comp, div);
+  } else {
+    var constructor =
+          (typeof comp === 'function' ? comp : comp.constructor);
+    Blaze.render(function () {
+      return Blaze.With(optData, function () {
+        return new constructor;
+      });
+    }).attach(div);
+  }
   return div;
 };
 
@@ -223,7 +233,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", functio
     return { baz: this.symbol + R.get() };
   };
 
-  var div = renderToDiv(tmpl.extend({data: {symbol:'%'}}));
+  var div = renderToDiv(tmpl, {symbol:'%'});
   test.equal(initCount, 1);
   test.equal(canonicalizeHtml(div.innerHTML), '[%david]');
 
@@ -249,7 +259,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion slashed args", functi
     return { baz: this.symbol + R.get() };
   };
 
-  var div = renderToDiv(tmpl.extend({data: {symbol:'%'}}));
+  var div = renderToDiv(tmpl, {symbol:'%'});
   test.equal(initCount, 1);
   test.equal(canonicalizeHtml(div.innerHTML), '[%david]');
 });

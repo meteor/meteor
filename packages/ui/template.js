@@ -90,5 +90,9 @@ UI.TemplateComponent = Blaze.Component.extend({
   },
   helpers: function (dict) {
     _.extend(this, dict);
+  },
+  extend: function () {
+    throw new Error(
+      "Component#extend was part of a private API that has been removed");
   }
 });
