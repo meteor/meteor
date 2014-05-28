@@ -3,8 +3,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('spacebars');
-  api.imply('spacebars');
+  api.use('spacebars-common');
+  api.imply('spacebars-common');
 
   // we attach stuff to the global symbol `HTML`, exported
   // by `htmljs` via `html-tools`, so we both use and effectively
@@ -13,7 +13,6 @@ Package.on_use(function (api) {
   api.imply('html-tools');
 
   api.use('underscore');
-  api.use('ui');
   api.use('minifiers', ['server']);
   api.add_files(['tokens.js', 'tojs.js', 'templatetag.js',
                  'spacebars-compiler.js']);
@@ -21,6 +20,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('underscore');
+  api.use('spacebars');
   api.use('spacebars-compiler');
   api.use('tinytest');
   api.add_files('spacebars_tests.js');
