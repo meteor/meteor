@@ -1,3 +1,5 @@
+var url = Npm.require("url");
+
 // Unfortunately we can't use a connect middleware here since
 // sockjs installs itself prior to all existing listeners
 // (meaning prior to any connect middlewares) so we need to take
@@ -39,10 +41,7 @@ httpServer.addListener('request', function (req, res) {
   if (!isLocal && !isSsl) {
     // connection is not cool. send a 302 redirect!
 
-    // if we don't have a host header, there's not a lot we can do. We
-    // don't know how to redirect them.
-    // XXX can we do better here?
-    var host = req.headers.host || 'no-host-header';
+    var host = url.parse(Meteor.absoluteUrl()).hostname;
 
     // strip off the port number. If we went to a URL with a custom
     // port, we don't know what the custom SSL port is anyway.
