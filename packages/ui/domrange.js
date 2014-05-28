@@ -7,29 +7,34 @@
 var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
-//  if (n.nodeType === 1 &&
-//      n.parentNode.$uihooks && n.parentNode.$uihooks.removeElement)
-//    n.parentNode.$uihooks.removeElement(n);
-//  else
+ if (n.nodeType === 1 &&
+     n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+   n.parentNode._uihooks.removeElement(n);
+ } else {
     n.parentNode.removeChild(n);
+ }
 };
 
 var insertNode = function (n, parent, next) {
-//  if (n.nodeType === 1 &&
-//      parent.$uihooks && parent.$uihooks.insertElement)
-//    parent.$uihooks.insertElement(n, parent, next);
-//  else
-    // `|| null` because IE throws an error if 'next' is undefined
-  parent.insertBefore(n, next || null);
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.insertElement) {
+    parent._uihooks.insertElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
 };
 
 var moveNode = function (n, parent, next) {
-//  if (n.nodeType === 1 &&
-//      parent.$uihooks && parent.$uihooks.moveElement)
-//    parent.$uihooks.moveElement(n, parent, next);
-//  else
-    // `|| null` because IE throws an error if 'next' is undefined
-    parent.insertBefore(n, next || null);
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.moveElement) {
+    parent._uihooks.moveElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
 };
 
 // A very basic operation like Underscore's `_.extend` that
@@ -381,6 +386,7 @@ _extend(DomRange.prototype, {
     var member =
           (members.hasOwnProperty(id) &&
            members[id]);
+
     // Don't mind if member doesn't exist.
     if (! member)
       return;

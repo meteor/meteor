@@ -1984,3 +1984,54 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "foo3 foo2");
   }
 );
+
+Tinytest.add(
+  "spacebars - ui hooks",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_hooks;
+    var rv = new ReactiveVar([]);
+    tmpl.items = function () {
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+
+    var hooks = [];
+    var container = div.querySelector(".test-ui-hooks");
+    container._uihooks = {
+      insertElement: function (n, next) {
+        hooks.push("insert");
+        container.insertBefore(n, next);
+      },
+      removeElement: function (n) {
+        hooks.push("remove");
+        container.removeChild(n);
+      },
+      moveElement: function (n, next) {
+        hooks.push("move");
+        container.insertBefore(n, next);
+      }
+    };
+
+    rv.set([{ _id: 'foo1' }]);
+    Deps.flush();
+    test.equal(hooks, ['insert']);
+
+    var newVal = rv.get();
+    newVal.push({ _id: 'foo2' });
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'insert']);
+
+    newVal = rv.get();
+    newVal.reverse();
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'insert', 'move']);
+
+    newVal = [rv.get()[0]];
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'insert', 'move', 'remove']);
+  }
+);
