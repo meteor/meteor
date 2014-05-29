@@ -293,7 +293,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     list: { type: Boolean },
-    example: { type: String }
+    example: { type: String },
   }
 }, function (options) {
   // Suppose you have an app A, and from some directory inside that
@@ -391,6 +391,35 @@ main.registerCommand({
       "   cd " + appPath + "\n" +
       "   meteor\n");
 });
+
+// For now, this literally drops a package into a directory.
+main.registerCommand({
+  name: 'create-package',
+  hidden: true,
+  maxArgs: 1
+}, function (options) {
+
+  var appPath;
+  if (options.args.length === 1)
+    appPath = options.args[0];
+  else if (options.example)
+    appPath = options.example;
+  else
+    throw new main.ShowUsage;
+
+  if (fs.existsSync(appPath)) {
+    process.stderr.write(appPath + ": Already exists\n");
+    return 1;
+  }
+
+  files.cp_r(path.join(__dirname, 'skel-pack'), appPath);
+
+  process.stderr.write(appPath + ": created");
+  process.stderr.write(".\n\n");
+  return 0;
+
+});
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // update
