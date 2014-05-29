@@ -224,9 +224,12 @@ Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", functio
   var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
 
   var initCount = 0;
-  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
-    init: function () { initCount++; }
-  });
+  tmpl.foo = Template.spacebars_template_test_bracketed_this.constructor.extend({
+    constructor: function () {
+      Template.spacebars_template_test_bracketed_this.constructor.call(this);
+      initCount++;
+    }
+  }).prototype;
   var R = ReactiveVar('david');
   tmpl.bar = function () {
     // make sure `this` is bound correctly
