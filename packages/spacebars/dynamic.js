@@ -8,7 +8,7 @@ Template.__dynamic.dataContextPresent = function () {
 
 Template.__dynamic.checkContext = function () {
   if (! _.has(this, "template")) {
-    throw new Error("Must specify 'template' as an argument " +
+    throw new Error("Must specify name in the 'template' argument " +
                     "to {{> UI.dynamic}}.");
   }
 
