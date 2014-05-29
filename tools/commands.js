@@ -1179,6 +1179,73 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// organizations
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'admin create-organization',
+  minArgs: 1,
+  maxArgs: 1
+}, function (options) {
+
+  // XXX Not sure how to test this command now because
+  // createOrganization is only accessible to verified @meteor.com
+  // users.
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to create an organization.\n");
+    return 1;
+  }
+
+  var conn = auth.loggedInAccountsConnection(token);
+  conn.call("createOrganization", options.args[0]);
+  process.stdout.write("Organization " + options.args[0] + " created.\n");
+  return 0;
+});
+
+// List the organizations of which the current user is a member.
+main.registerCommand({
+  name: 'admin list-organizations',
+  minArgs: 0,
+  maxArgs: 0
+}, function (options) {
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    return 1;
+  }
+
+  var url = config.getAccountsApiUrl() + "/organizations";
+  try {
+    var result = httpHelpers.request({
+      url: url,
+      method: "GET",
+      useSessionHeader: true,
+      useAuthHeader: true
+    });
+    var body = JSON.parse(result.body);
+  } catch (err) {
+    console.log(err, result.body);
+    process.stderr.write("Could not list organizations.\n");
+    return 1;
+  }
+
+  if (! body || ! body.organizations) {
+    process.stderr.write("Could not list organizations.\n");
+    return 1;
+  }
+
+  if (body.organizations.length === 0) {
+    process.stdout.write("You are not a member of any organizations.\n");
+  } else {
+    process.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
+  }
+  return 1;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
 // self-test
 ///////////////////////////////////////////////////////////////////////////////
 

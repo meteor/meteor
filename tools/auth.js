@@ -1118,3 +1118,5 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 
   setUpOnReconnect();
 };
+
+exports.loggedInAccountsConnection = loggedInAccountsConnection;
