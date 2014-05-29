@@ -2001,14 +2001,23 @@ Tinytest.add(
     container._uihooks = {
       insertElement: function (n, next) {
         hooks.push("insert");
+
+        // check that the element hasn't actually been added yet
+        test.isTrue(n.parentNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE);
+        test.isFalse(n.parentNode.parentNode);
+
         container.insertBefore(n, next);
       },
       removeElement: function (n) {
         hooks.push("remove");
+        // check that the element hasn't actually been removed yet
+        test.isTrue(n.parentNode === container);
         container.removeChild(n);
       },
       moveElement: function (n, next) {
         hooks.push("move");
+        // check that the element hasn't actually been moved yet
+        test.isFalse(n.nextNode === next);
         container.insertBefore(n, next);
       }
     };
