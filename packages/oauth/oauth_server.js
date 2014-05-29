@@ -231,6 +231,7 @@ OAuth._endOfLoginResponse = function(res, details) {
              (details.error instanceof Error ?
               details.error.message : details.error));
     res.end(content(""), 'utf-8');
+    return;
   }
 
   if ("close" in details.query) {
