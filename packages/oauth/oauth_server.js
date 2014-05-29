@@ -153,8 +153,9 @@ var isSafe = function (value) {
 
 // Internal: used by the oauth1 and oauth2 packages
 OAuth._renderOauthResults = function(res, query, credentialSecret) {
-  // We support ?close and ?redirect=URL. Any other query should just
-  // serve a blank page. For tests, we support the
+  // We expect the ?close parameter to be present, in which case we
+  // close the popup at the end of the OAuth flow. Any other query
+  // string should just serve a blank page. For tests, we support the
   // `only_credential_secret_for_test` parameter, which just returns the
   // credential secret without any surrounding HTML. (The test needs to
   // be able to easily grab the secret and use it to log in.)
@@ -169,14 +170,15 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
     var details = { query: query };
     if (query.error) {
       details.error = query.error;
-    }
-    var token = query.state;
-    var secret = credentialSecret;
-    if (token && secret &&
-        isSafe(token) && isSafe(secret)) {
-      details.credentials = { token: token, secret: secret};
     } else {
-      details.error = "invalid_credential_token_or_secret";
+      var token = query.state;
+      var secret = credentialSecret;
+      if (token && secret &&
+          isSafe(token) && isSafe(secret)) {
+        details.credentials = { token: token, secret: secret};
+      } else {
+        details.error = "invalid_credential_token_or_secret";
+      }
     }
 
     OAuth._endOfLoginResponse(res, details);
@@ -196,7 +198,9 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 // environments where popups and/or `window.opener` don't work. For
 // example, an app could override `OAuth._endOfLoginResponse` to put the
 // credential token and credential secret in the popup URL for the main
-// window to read them there instead of using `window.opener`.
+// window to read them there instead of using `window.opener`. If you
+// override this function, you take responsibility for writing to the
+// request and calling `res.end()` to complete the request.
 //
 // Arguments:
 //   - res: the HTTP response object
@@ -208,17 +212,25 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 //        present, the values have been checked against a limited
 //        character set and are safe to include in HTML.
 //      - error: if present, a string or Error indicating an error that
-//        occurred during the login.
+//        occurred during the login. This can come from the client and
+//        so shouldn't be trusted for security decisions or included in
+//        the response without sanitizing it first. Only one of `error`
+//        or `credentials` should be set.
 OAuth._endOfLoginResponse = function(res, details) {
 
   res.writeHead(200, {'Content-Type': 'text/html'});
+
+  var content = function (setCredentialSecret) {
+    return '<html><head><script>' +
+      setCredentialSecret +
+      'window.close()</script></head></html>';
+  };
 
   if (details.error) {
     Log.warn("Error in OAuth Server: " +
              (details.error instanceof Error ?
               details.error.message : details.error));
-    res.end("", "utf-8");
-    return;
+    res.end(content(""), 'utf-8');
   }
 
   if ("close" in details.query) {
@@ -232,11 +244,7 @@ OAuth._endOfLoginResponse = function(res, details) {
         JSON.stringify(details.credentials.token) + ', ' +
         JSON.stringify(details.credentials.secret) + ');';
     }
-    var content =
-          '<html><head><script>' +
-          setCredentialSecret +
-          'window.close()</script></head></html>';
-    res.end(content, 'utf-8');
+    res.end(content(setCredentialSecret), "utf-8");
   } else {
     res.end("", "utf-8");
   }
