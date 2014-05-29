@@ -1,0 +1,45 @@
+<template name="ui_dynamic_test">
+  {{> UI.dynamic template=templateName data=templateData}}
+</template>
+
+<template name="ui_dynamic_test_no_data">
+  {{> UI.dynamic template=templateName}}
+</template>
+
+<template name="ui_dynamic_test_inherited_data">
+  {{#with context}}
+    {{> UI.dynamic template=templateName}}
+  {{else}}
+    {{> UI.dynamic template=templateName}}
+  {{/with}}
+</template>
+
+<template name="ui_dynamic_test_sub">
+  test{{foo}}
+</template>
+
+<template name="ui_dynamic_test_falsey_inner_context">
+  {{#with foo="bar"}}
+    {{> UI.dynamic template=templateName data=context}}
+  {{/with}}
+</template>
+
+<template name="ui_dynamic_test_bad_args0">
+  {{> UI.dynamic}}
+</template>
+
+<template name="ui_dynamic_test_bad_args1">
+  {{> UI.dynamic foo="bar"}}
+</template>
+
+<template name="ui_dynamic_test_bad_args2">
+  {{> UI.dynamic template="ui_dynamic_test_sub" foo="bar"}}
+</template>
+
+<template name="ui_dynamic_test_falsey_context">
+  {{> UI.dynamic template="ui_dynamic_test_falsey_context_sub"}}
+</template>
+
+<template name="ui_dynamic_test_falsey_context_sub">
+  {{foo}}
+</template>

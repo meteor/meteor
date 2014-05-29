@@ -163,10 +163,22 @@ var builtInBlockHelpers = {
   'each': 'UI.Each'
 };
 
-// These must be prefixed with `UI.` when you use them in a template.
-var builtInLexicals = {
+// Some `UI.*` paths are special in that they generate code that
+// doesn't folow the normal lookup rules for dotted symbols. The
+// following names must be prefixed with `UI.` when you use them in a
+// template.
+var builtInUIPaths = {
+  // `template` is a local variable defined in the generated render
+  // function for the template in which `UI.contentBlock` (or
+  // `UI.elseBlock`) is invoked. `template` is a reference to the
+  // template itself.
   'contentBlock': 'template.__content',
-  'elseBlock': 'template.__elseContent'
+  'elseBlock': 'template.__elseContent',
+
+  // `Template` is the global template namespace. If you define a
+  // template named `foo` in Spacebars, it gets defined as
+  // `Template.foo` in JavaScript.
+  'dynamic': 'Template.__dynamic'
 };
 
 // A "reserved name" can't be used as a <template> name.  This
@@ -288,11 +300,11 @@ var codeGenPath = function (path, opts) {
   // inclusion or as a block helper, in addition to supporting
   // `{{> UI.contentBlock}}`.
   if (path.length >= 2 &&
-      path[0] === 'UI' && builtInLexicals.hasOwnProperty(path[1])) {
+      path[0] === 'UI' && builtInUIPaths.hasOwnProperty(path[1])) {
     if (path.length > 2)
       throw new Error("Unexpected dotted path beginning with " +
                       path[0] + '.' + path[1]);
-    return builtInLexicals[path[1]];
+    return builtInUIPaths[path[1]];
   }
 
   var args = [toJSLiteral(path[0])];

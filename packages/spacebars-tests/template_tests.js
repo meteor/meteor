@@ -1,9 +1,3 @@
-var renderToDiv = function (comp) {
-  var div = document.createElement("DIV");
-  UI.materialize(comp, div);
-  return div;
-};
-
 var divRendersTo = function (test, div, html) {
   Deps.flush({_throwFirstError: true});
   var actual = canonicalizeHtml(div.innerHTML);
