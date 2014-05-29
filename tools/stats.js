@@ -7,6 +7,10 @@ var project = require("./project.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
 
+// The name of the package that you add to your app to opt out of
+// sending stats.
+var optOutPackageName = "package-stats-opt-out";
+
 // Return a list of packages used by this app, both directly and
 // indirectly. Formatted as a list of objects with 'name', 'version'
 // and 'direct', which is how the `recordAppPackages` method on the
@@ -27,6 +31,13 @@ var packageList = function (appDir) {
 };
 
 var recordPackages = function (appDir) {
+  // Before doing anything, look at the app's dependencies to see if the
+  // opt-out package is there; if present, we don't record any stats.
+  var packages = packageList(appDir);
+  if (_.contains(_.pluck(packages, "name"), optOutPackageName)) {
+    return;
+  }
+
   // We do this inside a new fiber to avoid blocking anything on talking
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
@@ -50,7 +61,7 @@ var recordPackages = function (appDir) {
 
       conn.call("recordAppPackages",
                 project.getAppIdentifier(appDir),
-                packageList(appDir));
+                packages);
     } catch (err) {
       // Do nothing. A failure to record package stats shouldn't be
       // visible to the end user and shouldn't affect whatever command

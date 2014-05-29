@@ -9,7 +9,7 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
-selftest.define("report-stats", function () {
+selftest.define("report-stats", ["slow"], function () {
   var s = new Sandbox;
 
   var run = s.run("create", "foo");
@@ -46,8 +46,23 @@ selftest.define("report-stats", function () {
   appPackages = stats.getPackagesForAppIdInTest(s.cwd);
   selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
 
-  // TODO:
-  // - opt out
+  // Add the opt-out package, verify that no stats are recorded for the
+  // app.
+  run = s.run("add", "package-stats-opt-out");
+  run.waitSecs(15);
+  run.expectExit(0);
+  bundleWithFreshIdentifier(s);
+  appPackages = stats.getPackagesForAppIdInTest(s.cwd);
+  selftest.expectEqual(appPackages, undefined);
+
+  // Remove the opt-out package, verify that stats get sent again.
+  run = s.run("remove", "package-stats-opt-out");
+  run.waitSecs(15);
+  run.expectExit(0);
+  bundle(s);
+  appPackages = stats.getPackagesForAppIdInTest(s.cwd);
+  selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
+  selftest.expectEqual(appPackages.packages, stats.packageList(s.cwd));
 });
 
 // Bundle the app in the current working directory after deleting its
@@ -55,6 +70,12 @@ selftest.define("report-stats", function () {
 // @param s {Sandbox}
 var bundleWithFreshIdentifier = function (s) {
   s.unlink(".meteor/identifier");
+  bundle(s);
+};
+
+// Bundle the app in the current working directory.
+// @param s {Sandbox}
+var bundle = function (s) {
   var run = s.run("bundle", "foo.tar.gz");
   run.waitSecs(30);
   run.expectExit(0);
