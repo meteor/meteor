@@ -276,7 +276,7 @@ _.extend(CompleteCatalog.prototype, {
     // see what the project thinks and recalculate everything. Similarly, if the
     // project root path has not been initialized, we are probably running
     // outside of a project, and have nothing to look at for guidance.
-    if (opts.ignoreProjectDeps || !project.rootDir) {
+    if (opts.ignoreProjectDeps || !project.rootDir || !project.safeToUse) {
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
 

@@ -94,6 +94,10 @@ var Project = function () {
   // by any constraint-related operations.
   self.appId = null;
 
+  // Should we use this project as a source for dependencies? Certainly not
+  // until it has a root directory.
+  self.viableDepSource = false;
+
   // Whenever we change the constraints, we invalidate many constraint-related
   // fields. Rather than recomputing immediately, let's wait until we are done
   // and then recompute when needed.
@@ -129,6 +133,10 @@ _.extend(Project.prototype, {
     // dependencies that we counted with the previous rootPath are wrong and we
     // need to recompute them.
     self._depsUpToDate = false;
+
+    // The good news, is that if the catalog is initialized, we can now use this
+    // project's version lock file as a source for our dependencies.
+    self.viableDepSource = true;
   },
 
   // Rereads all the on-disk files by reinitalizing the project with the same directory.
@@ -161,6 +169,12 @@ _.extend(Project.prototype, {
     }
 
     if (!self._depsUpToDate) {
+
+      // We are calculating this project's dependencies, so we obviously should not
+      // use it as a source of version locks (unless specified explicitly through
+      // previousVersions).
+      self.viableDepSource = false;
+
       // Use current release to calculate packages & combined constraints.
       var releasePackages = release.current.isProperRelease() ?
             release.current.getPackages() : {};
@@ -173,8 +187,7 @@ _.extend(Project.prototype, {
       // disaster.
       var newVersions = catalog.complete.resolveConstraints(
         self.combinedConstraints,
-        { previousSolution: self.dependencies },
-        { ignoreProjectDeps: true }
+        { previousSolution: self.dependencies }
       );
 
       // If the result is now what it used to be, rewrite the files on
@@ -194,7 +207,9 @@ _.extend(Project.prototype, {
 
       // We are done!
       self._depsUpToDate = true;
+      self.safeToUse = true;
     }
+
   },
 
   // Given a set of packages from a release, recalculates all the constraints on
