@@ -110,7 +110,7 @@ selftest.define("change packages", function () {
   run.match("localhost");
   // Add the local package 'say-something'. It should print a message.
   s.write(".meteor/packages", "standard-app-packages \n say-something");
-  run.waitSecs(2);
+  run.waitSecs(3);
   run.match("initial");
   run.match("restarted");
 

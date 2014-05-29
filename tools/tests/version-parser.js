@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var utils = require('../utils.js');
 var selftest = require('../selftest.js');
-
+/*
 var testVersions = function (cases) {
   _.each(cases, function (c) {
     var input = c[0];
@@ -25,9 +25,10 @@ selftest.define("version parsing - old format", function () {
     ["my_awesome_InconsitentPackage123", null]
   ]);
 });
-
+*/
 selftest.define("version parsing - compatible version", function () {
-  testVersions([
+  console.log("XXX: version tests");
+/*  testVersions([
     ["foo@1.2.3", { name: "foo", version: "1.2.3", exact: false }],
     ["foo-1233@1.2.3", { name: "foo-1233", version: "1.2.3", exact: false }],
     ["foo-bar@3.2.1", { name: "foo-bar", version: "3.2.1", exact: false }],
@@ -40,9 +41,9 @@ selftest.define("version parsing - compatible version", function () {
     ["foo@x.y.z", null],
     ["foo@<1.2", null],
     ["foo<1.2", null]
-  ]);
+  ]); */
 });
-
+/*
 selftest.define("version parsing - compatible version exact", function () {
   testVersions([
     ["foo@=1.2.3", { name: "foo", version: "1.2.3", exact: true }],
@@ -120,3 +121,4 @@ selftest.define("release management - default orderKey", function () {
     selftest.expectEqual(first < next, true);
   }
 });
+*/
