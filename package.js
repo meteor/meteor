@@ -42,10 +42,6 @@ Package.on_test(function (api) {
   api.use('spacebars-compiler');
 
   api.add_files([
-    'templating_tests.js',
-    'templating_tests.html'
-  ], 'client');
-  api.add_files([
     'plugin/html_scanner.js',
     'scanner_tests.js'
   ], 'server');
