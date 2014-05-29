@@ -35,6 +35,15 @@
 * The legacy polling observe driver handles errors communicating with MongoDB
   better and no longer gets "stuck" in some circumstances.
 
+* Add {{> UI.dynamic}} to make it easier to dynamically render a
+  template with a data context. XXX Update "Using Blaze" wiki page.
+
+* Show the display name of the currently logged-in user after following
+  a verification link or password reset link in `accounts-ui`.
+
+* Use `Meteor.absoluteUrl()` to compute the redirect URI in `force-ssl`
+  instead of the host header.
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
   - uglify-js: 2.4.13 (from 2.4.7)
