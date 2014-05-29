@@ -26,7 +26,7 @@ var addToBody = function (el) {
 };
 
 
-Tinytest.add("templating - assembly", function (test) {
+Tinytest.add("spacebars-tests - templating_tests - assembly", function (test) {
 
   // Test for a bug that made it to production -- after a replacement,
   // we need to also check the newly replaced node for replacements
@@ -56,7 +56,7 @@ Tinytest.add("templating - assembly", function (test) {
 
 
 
-Tinytest.add("templating - table assembly", function(test) {
+Tinytest.add("spacebars-tests - templating_tests - table assembly", function(test) {
   var childWithTag = function(node, tag) {
     return _.find(node.childNodes, function(n) {
       return n.nodeName === tag;
@@ -85,7 +85,7 @@ Tinytest.add("templating - table assembly", function(test) {
   Deps.flush();
 });
 
-Tinytest.add("templating - event handler this", function(test) {
+Tinytest.add("spacebars-tests - templating_tests - event handler this", function(test) {
 
   Template.test_event_data_with.ONE = {str: "one"};
   Template.test_event_data_with.TWO = {str: "two"};
@@ -135,7 +135,7 @@ if (document.addEventListener) {
   // 2. Event should work on every element in the selector and not just the first element
   // This test isn't written against mouseenter because it is synthesized by jQuery,
   // the bug also happened with the play event
-  Tinytest.add("templating - capturing events", function (test) {
+  Tinytest.add("spacebars-tests - templating_tests - capturing events", function (test) {
     var video1Played = 0,
         video2Played = 0;
 
@@ -178,7 +178,7 @@ if (document.addEventListener) {
   });
 }
 
-Tinytest.add("templating - safestring", function(test) {
+Tinytest.add("spacebars-tests - templating_tests - safestring", function(test) {
 
   Template.test_safestring_a.foo = function() {
     return "<br>";
@@ -198,7 +198,7 @@ Tinytest.add("templating - safestring", function(test) {
 
 });
 
-Tinytest.add("templating - helpers and dots", function(test) {
+Tinytest.add("spacebars-tests - templating_tests - helpers and dots", function(test) {
   UI.registerHelper("platypus", function() {
     return "eggs";
   });
@@ -368,7 +368,7 @@ Tinytest.add("templating - helpers and dots", function(test) {
 });
 
 
-Tinytest.add("templating - rendered template", function(test) {
+Tinytest.add("spacebars-tests - templating_tests - rendered template", function(test) {
   var R = ReactiveVar('foo');
   Template.test_render_a.foo = function() {
     R.get();
@@ -424,7 +424,7 @@ Tinytest.add("templating - rendered template", function(test) {
 
 });
 
-Tinytest.add("templating - template arg", function (test) {
+Tinytest.add("spacebars-tests - templating_tests - template arg", function (test) {
   Template.test_template_arg_a.events({
     click: function (event, template) {
       template.firstNode.innerHTML = 'Hello';
@@ -472,7 +472,7 @@ Tinytest.add("templating - template arg", function (test) {
   Deps.flush();
 });
 
-Tinytest.add("templating - helpers", function (test) {
+Tinytest.add("spacebars-tests - templating_tests - helpers", function (test) {
   var tmpl = Template.test_template_helpers_a;
 
   tmpl.foo = 'z';
@@ -511,7 +511,7 @@ Tinytest.add("templating - helpers", function (test) {
   Deps.flush();
 });
 
-Tinytest.add("templating - events", function (test) {
+Tinytest.add("spacebars-tests - templating_tests - events", function (test) {
   var tmpl = Template.test_template_events_a;
 
   var buf = [];
@@ -569,7 +569,7 @@ Tinytest.add("templating - events", function (test) {
 });
 
 
-Tinytest.add('templating - helper typecast Issue #617', function (test) {
+Tinytest.add('spacebars-tests - templating_tests - helper typecast Issue #617', function (test) {
 
   UI.registerHelper('testTypeCasting', function (/*arguments*/) {
     // Return a string representing the arguments passed to this
@@ -596,14 +596,14 @@ Tinytest.add('templating - helper typecast Issue #617', function (test) {
       "[object]");
 });
 
-Tinytest.add('templating - each falsy Issue #801', function (test) {
+Tinytest.add('spacebars-tests - templating_tests - each falsy Issue #801', function (test) {
   //Minor test for issue #801 (#each over array containing nulls)
   Template.test_template_issue801.values = function() { return [0,1,2,null,undefined,false]; };
   var div = renderToDiv(Template.test_template_issue801);
   test.equal(canonicalizeHtml(div.innerHTML), "012");
 });
 
-Tinytest.add('templating - duplicate template error', function (test) {
+Tinytest.add('spacebars-tests - templating_tests - duplicate template error', function (test) {
   Template.__define__("test_duplicate_template", function () {});
   test.throws(function () {
     Template.__define__("test_duplicate_template", function () {});
