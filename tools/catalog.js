@@ -609,6 +609,9 @@ _.extend(CompleteCatalog.prototype, {
     // And put a build record for it in the catalog
     var versionId = self.getLatestVersion(name);
 
+    packageCache.packageCache.cachePackageAtPath(
+      name, sourcePath, unipackage);
+
     self.builds.push({
       packageName: name,
       architecture: unipackage.architectures().join('+'),
@@ -618,11 +621,6 @@ _.extend(CompleteCatalog.prototype, {
       lastUpdated: null,
       buildPublished: null
     });
-
-    // XXX XXX maybe you actually want to, like, save the unipackage
-    // in memory into a cache? rather than leaving packageCache to
-    // reload it? or maybe packageCache is unified into catalog
-    // somehow? sleep on it
   },
   // Add a local package to the catalog. `name` is the name to use for
   // the package and `directory` is the directory that contains the

@@ -44,6 +44,19 @@ _.extend(PackageCache.prototype, {
     self.loadedPackages = {};
   },
 
+
+  cachePackageAtPath : function (name, loadPath, unipackage) {
+    var self = this;
+    var key = name + "@" + loadPath;
+    var buildDir = path.join(loadPath, '.build.'+  name);
+
+    self.loadedPackages[key] = {
+        pkg: unipackage,
+        sourceDir: loadPath,
+        buildDir: buildDir
+      };
+  },
+
   // Given a path to a package on disk, retrieve a Package
   // object.
   //
@@ -90,7 +103,7 @@ _.extend(PackageCache.prototype, {
       }
 
       if (isUpToDate) {
-        // Cache hit
+        // Cache it
         self.loadedPackages[key] = entry;
         return entry.pkg;
       }
@@ -121,7 +134,7 @@ _.extend(PackageCache.prototype, {
     if (fs.existsSync(buildDir)) {
       unipackage = new Unipackage.Unipackage;
       unipackage.initFromPath(name, buildDir);
-       if (compiler.checkUpToDate(packageSource, unipackage)) {
+      if (compiler.checkUpToDate(packageSource, unipackage)) {
         self.loadedPackages[key] = { pkg: unipackage,
                                           sourceDir: loadPath,
                                           buildDir: buildDir
@@ -179,6 +192,7 @@ _.extend(PackageCache.prototype, {
     packageSource.initFromAppDir(appDir, ignoreFiles);
     return compiler.compile(packageSource).unipackage;
   }
+
 });
 
 packageCache.packageCache = new PackageCache;
