@@ -420,12 +420,12 @@ Tinytest.add("ui - render - findAll", function (test) {
       $found = this.$('p');
     },
   });
-  
+
   var div = document.createElement("DIV");
 
   materialize(myComponent, div);
   Deps.flush();
-  
+
   test.equal(_.isArray(found), true);
   test.equal(_.isArray($found), false);
   test.equal(found.length, 2);
