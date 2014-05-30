@@ -44,7 +44,11 @@ _.extend(PackageCache.prototype, {
     self.loadedPackages = {};
   },
 
-
+  // Adds a prebuilt package to the package cache.
+  //
+  // - name: package name
+  // - loadPath: path of the source to the package
+  // - unipackage (prebuilt package)
   cachePackageAtPath : function (name, loadPath, unipackage) {
     var self = this;
     var key = name + "@" + loadPath;

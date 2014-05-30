@@ -157,12 +157,19 @@ var determineBuildTimeDependencies = function (packageSource) {
   }
 
   var constraints = {};
+  var constraints_array = [];
   _.each(dependencyMetadata, function (info, packageName) {
     constraints[packageName] = info.constraint;
+    var version = null;
+    if (info.constraint) {
+      version =  utils.parseVersionConstraint(info.constraint) ;
+    }
+    constraints_array.push({packageName: packageName,
+                            version: version });
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
-  ret.packageDependencies = catalog.complete.resolveConstraints(constraints,
+  ret.packageDependencies = catalog.complete.resolveConstraints(constraints_array,
                                               { previousSolution: versions });
 
   // We care about differentiating between all dependencies (which we save in
@@ -182,18 +189,25 @@ var determineBuildTimeDependencies = function (packageSource) {
   var pluginVersions = packageSource.dependencyVersions.pluginDependencies;
   _.each(packageSource.pluginInfo, function (info) {
     var constraints = {};
+    var constraints_array = [];
 
     // info.uses is currently just an array of strings, and there's
     // no way to specify weak/unordered. Much like an app.
     _.each(info.use, function (spec) {
       var parsedSpec = utils.splitConstraint(spec);
       constraints[parsedSpec.package] = parsedSpec.constraint || null;
+      var version = null;
+      if (parsedSpec.constraint) {
+        version =  utils.parseVersionConstraint(info.constraint) ;
+      }
+      constraints_array.push({packageName: parsedSpec.package,
+                              version: version });
     });
 
     var pluginVersion = pluginVersions[info.name] || {};
     ret.pluginDependencies[info.name] =
       catalog.complete.resolveConstraints(
-        constraints, { previousSolution: pluginVersion  });
+         constraints_array, { previousSolution: pluginVersion  });
   });
 
   // Every time we run the constraint solver, we record the results. This has

@@ -243,33 +243,28 @@ _.extend(CompleteCatalog.prototype, {
       return null;
     };
 
-    // XXX: This should probably be in the constraint solver, but we can put it
-    // here for now and deal with merging the interfaces later. (#Pre0.90)
-    // XXX: This is also a great time to address the lack of consistency.
+    // Looks like we are not going to be able to avoid calling the constraint
+    // solver, so let's process the input (constraints) into the correct
+    // arguments to the constraint solver.
+    //
+    // -deps: list of package names that we depend on
+    // -constr: constraints of form {packageName: String, version: String} with
+    //  {type: exact} for exact constraints.
+    //
+    // Weak dependencies are constraints (they constrain the result), but not
+    // dependencies.
     var deps = [];
     var constr = [];
-    if (_.isArray(constraints)) {
-      _.each(constraints, function (constraint) {
-        constraint = _.clone(constraint);
-        if (!constraint.weak) {
-          deps.push(constraint.packageName);
-        }
-        delete constraint.weak;
-        if (constraint.version) {
-          constr.push(constraint);
-        }
-      });
-    } else {
-      _.each(constraints, function (constraint, packageName) {
-        deps.push(packageName);
-        if (constraint) {
-          var utils = require('./utils.js');
-          var vers = utils.parseVersionConstraint(constraint);
-          vers['packageName'] = packageName;
-          constr.push(vers);
-        }
-     });
-    }
+    _.each(constraints, function (constraint) {
+      constraint = _.clone(constraint);
+      if (!constraint.weak) {
+        deps.push(constraint.packageName);
+      }
+      delete constraint.weak;
+      if (constraint.version) {
+        constr.push(constraint);
+      }
+    });
 
     var project = require("./project.js").project;
     // If we are called with 'ignore projectDeps', then we don't even look to
