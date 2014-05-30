@@ -112,7 +112,7 @@ if (Meteor.isClient) {
       // where we would hook in.  Internal jQuery functions like `dispatch`
       // are too high-level.
       var $target = $jq(event.currentTarget);
-      if ($target.is($elem.find(selector)))
+      if ($target.is(selector))
         handler.call(elem, event);
     };
 
