@@ -1204,6 +1204,24 @@ main.registerCommand({
   return 0;
 });
 
+main.registerCommand({
+  name: 'admin show-organization',
+  minArgs: 1,
+  maxArgs: 1
+}, function (options) {
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to show an organization.\n");
+    return 1;
+  }
+
+  var conn = auth.loggedInAccountsConnection(token);
+  var result = conn.call("showOrganization", options.args[0]);
+  process.stdout.write(result.join("\n") + "\n");
+  return 0;
+});
+
 // List the organizations of which the current user is a member.
 main.registerCommand({
   name: 'admin list-organizations',
@@ -1241,7 +1259,67 @@ main.registerCommand({
   } else {
     process.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
   }
-  return 1;
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin delete-organization',
+  minArgs: 1,
+  maxArgs: 1
+}, function (options) {
+
+  // XXX Not sure how to test this command now because
+  // createOrganization is only accessible to verified @meteor.com
+  // users.
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to delete an organization.\n");
+    return 1;
+  }
+
+  var conn = auth.loggedInAccountsConnection(token);
+  conn.call("deleteOrganization", options.args[0]);
+  process.stdout.write("Organization " + options.args[0] + " deleted.\n");
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin add-member',
+  minArgs: 2,
+  maxArgs: 2
+}, function (options) {
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to edit organizations.\n");
+    return 1;
+  }
+
+  var conn = auth.loggedInAccountsConnection(token);
+  conn.call("addOrganizationMember", options.args[0], options.args[1]);
+  process.stdout.write(options.args[1] + " added to organization " +
+                       options.args[0] + ".\n");
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin remove-member',
+  minArgs: 2,
+  maxArgs: 2
+}, function (options) {
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to edit organizations.\n");
+    return 1;
+  }
+
+  var conn = auth.loggedInAccountsConnection(token);
+  conn.call("removeOrganizationMember", options.args[0], options.args[1]);
+  process.stdout.write(options.args[1] + " removed from organization " +
+                       options.args[0] + ".\n");
+  return 0;
 });
 
 
