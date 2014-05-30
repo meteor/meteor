@@ -2038,3 +2038,50 @@ Tinytest.add(
     test.equal(hooks, ['insert', 'insert', 'move', 'remove']);
   }
 );
+
+Tinytest.add(
+  "spacebars - access template instance from helper",
+  function (test) {
+    // Set a property on the template instance; check that it's still
+    // there from a helper.
+
+    var tmpl = Template.spacebars_test_template_instance_helper;
+    var value = Random.id();
+    var instanceFromHelper;
+
+    tmpl.created = function () {
+      this.value = value;
+    };
+    tmpl.foo = function () {
+      instanceFromHelper = UI._templateInstance();
+    };
+
+    var div = renderToDiv(tmpl);
+    test.equal(instanceFromHelper.value, value);
+  }
+);
+
+Tinytest.add(
+  "spacebars - access template instance from helper, " +
+    "template instance is kept up-to-date",
+  function (test) {
+    var tmpl = Template.spacebars_test_template_instance_helper;
+    var rv = new ReactiveVar("");
+    var instanceFromHelper;
+
+    tmpl.foo = function () {
+      instanceFromHelper = UI._templateInstance();
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+    rv.set("first");
+    Deps.flush();
+    // `nextSibling` because the first node is an empty text node.
+    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "first");
+
+    rv.set("second");
+    Deps.flush();
+    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "second");
+  }
+);

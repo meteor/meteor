@@ -1,6 +1,8 @@
 
 var global = (function () { return this; })();
 
+currentComponent = new Meteor.EnvironmentVariable();
+
 // Searches for the given property in `comp` or a parent,
 // and returns it as is (without call it if it's a function).
 var lookupComponentProp = function (comp, prop) {
@@ -89,10 +91,11 @@ _extend(UI.Component, {
 
     } else {
       // Resolve id `foo` as `data.foo` (with a "soft dot").
-      return function (/*arguments*/) {
+      return function (/* arguments */) {
         var data = getComponentData(self);
         if (template && !(data && _.has(data, id)))
-          throw new Error("Can't find template, helper or data context key: " + id);
+          throw new Error("Can't find template, helper or data context " +
+                          "key: " + id);
         if (! data)
           return data;
         var result = data[id];
@@ -107,8 +110,12 @@ _extend(UI.Component, {
       // This creates a dependency when the result function is called.
       // Don't do this if the function is really just an emboxed constant.
       return function (/*arguments*/) {
-        var data = getComponentData(self);
-        return result.apply(data === null ? {} : data, arguments);
+        var args = arguments;
+        return currentComponent.withValue(self, function () {
+          currentTemplateInstance = null; // lazily computed, since `updateTemplateInstance` is a little slow
+          var data = getComponentData(self);
+          return result.apply(data === null ? {} : data, args);
+        });
       };
     } else {
       return result;
