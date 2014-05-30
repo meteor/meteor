@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* The `findAll` method on template instances now returns a vanilla
+  array, not a jQuery object.  #2039
+
 * Speed up updates of NPM modules by upgrading Node to include our fix for
   https://github.com/npm/npm/issues/3265 instead of passing `--force` to
   `npm install`.
@@ -48,7 +51,7 @@
   - node: 0.10.28 (from 0.10.26)
   - uglify-js: 2.4.13 (from 2.4.7)
 
-Patches contributed by GitHub users awwx
+Patches contributed by GitHub users awwx, subhog
 
 
 ## v.0.8.1.3
