@@ -732,6 +732,30 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
+  testAsyncMulti("passwords - srp to bcrypt upgrade", [
+    logoutStep,
+    // Create user with old SRP credentials in the database.
+    function (test, expect) {
+      Meteor.call("testCreateSRPUser", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    // We are able to login with the old style credentials in the database.
+    function (test, expect) {
+      Meteor.loginWithPassword('srptestuser', 'abcdef', function (error) {
+        console.log('error', error);
+        test.isFalse(error);
+      });
+    },
+    logoutStep,
+    // After the upgrade to bcrypt we're still able to login.
+    function (test, expect) {
+      Meteor.loginWithPassword('srptestuser', 'abcdef', function (error) {
+        test.isFalse(error);
+      });
+    },
+    logoutStep
+  ]);
 }) ();
 
 
@@ -778,16 +802,15 @@ if (Meteor.isServer) (function () {
       // set a new password.
       Accounts.setPassword(userId, 'new password');
       user = Meteor.users.findOne(userId);
-      var oldVerifier = user.services.password.srp;
-      test.isTrue(user.services.password.srp);
+      var oldSaltedHash = user.services.password.bcrypt;
+      test.isTrue(oldSaltedHash);
 
-      // reset with the same password, see we get a different verifier
+      // reset with the same password, see we get a different salted hash
       Accounts.setPassword(userId, 'new password');
       user = Meteor.users.findOne(userId);
-      var newVerifier = user.services.password.srp;
-      test.notEqual(oldVerifier.salt, newVerifier.salt);
-      test.notEqual(oldVerifier.identity, newVerifier.identity);
-      test.notEqual(oldVerifier.verifier, newVerifier.verifier);
+      var newSaltedHash = user.services.password.bcrypt;
+      test.isTrue(newSaltedHash);
+      test.notEqual(oldSaltedHash, newSaltedHash);
 
       // cleanup
       Meteor.users.remove(userId);

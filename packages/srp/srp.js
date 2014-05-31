@@ -8,6 +8,7 @@ SRP = {};
  * options is optional and can include:
  * - identity: String. The SRP username to user. Mostly this is passed
  *   in for testing.  Random UUID if not provided.
+ * - hashedIdentityAndPassword: combined identity and password, already hashed, for the SRP to bcrypt upgrade path.
  * - salt: String. A salt to use.  Mostly this is passed in for
  *   testing.  Random UUID if not provided.
  * - SRP parameters (see _defaults and paramsFromOptions below)
@@ -15,13 +16,18 @@ SRP = {};
 SRP.generateVerifier = function (password, options) {
   var params = paramsFromOptions(options);
 
-  var identity = (options && options.identity) || Random.secret();
   var salt = (options && options.salt) || Random.secret();
 
-  var x = params.hash(salt + params.hash(identity + ":" + password));
+  var identity;
+  var hashedIdentityAndPassword = options && options.hashedIdentityAndPassword;
+  if (!hashedIdentityAndPassword) {
+    identity = (options && options.identity) || Random.secret();
+    hashedIdentityAndPassword = params.hash(identity + ":" + password);
+  }
+
+  var x = params.hash(salt + hashedIdentityAndPassword);
   var xi = new BigInteger(x, 16);
   var v = params.g.modPow(xi, params.N);
-
 
   return {
     identity: identity,
