@@ -56,10 +56,10 @@ _.extend(ServerCatalog.prototype, {
     // The server catalog is always initialized.
     self.initialized = true;
 
-  // This is set to an array while refresh() is running; if another refresh()
-  // call happens during a yield, instead of doing a second refresh it just
-  // waits for the first to finish.
-  self._refreshFutures = null;
+    // This is set to an array while refresh() is running; if another refresh()
+    // call happens during a yield, instead of doing a second refresh it just
+    // waits for the first to finish.
+    self._refreshFutures = null;
 
   },
 
@@ -194,7 +194,7 @@ _.extend(CompleteCatalog.prototype, {
 
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
-    self.refresh(); // don't sync to the server.
+    self.refresh();
 
     // Finally, initialize the constraint solver for this catalog. We have to do
     // this at the end, after we have loaded enough stuff to load packages.
@@ -511,9 +511,23 @@ _.extend(CompleteCatalog.prototype, {
     return null;
   },
 
-  // Recursively builds packages, like a boss.
-  // It sort of takes in the following:
-  //   onStack: stack of packages to be built, to check for circular deps.
+  // Recursively builds packages. Takes a package, builds its dependencies, then
+  // builds the package. Sends the built package to the package cache, to be
+  // pre-cached for future reference. Puts the build record in the built records
+  // collection.
+  //
+  // Takes in the following arguments:
+  //
+  // - name: name of the package
+  // - onStack: stack of packages to be built in this round. Since we are
+  //   building packages recursively, we want to pass the stack around to check
+  //   for circular dependencies.
+  //
+  // Why does this happen in the catalog and not, for example, the package
+  // cache? If we build in package cache, we need to send the record over to the
+  // catalog. If we build in catalog, we need to send the package over to
+  // package cache. It could go either way, but since a lot of the information
+  // that we use is in the catalog already, we build it here.
   _build : function (name, onStack) {
     var self = this;
 
@@ -532,29 +546,27 @@ _.extend(CompleteCatalog.prototype, {
     var deps = compiler.getBuildOrderConstraints(self.packageSources[name]);
     _.each(deps, function (dep) {
 
-      // Not a local package, so we may assume that it has been built.
-      if  (! _.has(self.effectiveLocalPackages, dep.name)) {
+      // We don't need to build non-local packages. It has been built. Return.
+      if  (!self.isLocalPackage(dep.name)) {
         return;
       }
 
       // Make sure that the version we need for this dependency is actually the
-      // right local version. If it is not, then using the local build
-      // will not give us the right answer. This should never happen if the
-      // constraint solver/catalog are doing their jobs right, but we would
+      // right local version. If it is not, then using the local build will not
+      // give us the right answer. This should never happen!... but we would
       // rather fail than surprise someone with an incorrect build.
       //
-      // The catalog doesn't understand buildID versions and doesn't know about
-      // them. We might not even have them yet, so let's strip those out.
-      if (self.isLocalPackage(dep.name)) {
-        var version = self._getLocalVersion(dep.version);
-        var packageVersion =
+      // The catalog doesn't understand buildID versions, so let's strip out the
+      // buildID.
+      var version = self._getLocalVersion(dep.version);
+      var packageVersion =
             self._getLocalVersion(self.packageSources[dep.name].version);
-        if (version !== packageVersion) {
-          throw new Error("unknown version for local package? " + name);
-        }
+      if (version !== packageVersion) {
+        throw new Error("unknown version for local package? " + name);
       }
 
-      // OK, it is a local package. Check to see if this is a circular dependency.
+      // We have the right package. Let's make sure that this is not a circular
+      // dependency that we can't resolve.
       if (_.has(onStack, dep.name)) {
         // Allow a circular dependency if the other thing is already
         // built and doesn't need to be rebuilt.

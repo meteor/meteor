@@ -187,7 +187,9 @@ _.extend(Build.prototype, {
 // packages for which `filter(packageName, version)` returns truthy.
 var getLoadedPackageVersions = function (versions, filter) {
   var result = {};
-  var packageLoader = new PackageLoader({ versions: versions });
+      var PLoader = require("./package-loader.js");
+
+  var packageLoader = new PLoader({ versions: versions });
   _.each(versions, function (version, packageName) {
     if (! filter || filter(packageName, version)) {
       var unipackage = packageLoader.getPackage(packageName);

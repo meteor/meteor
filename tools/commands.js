@@ -1086,8 +1086,6 @@ main.registerCommand({
   stats.recordPackages(options.appDir);
 
   var bundleResult = bundler.bundle({
-    appDir: options.appDir,
-    packageLoader: loader,
     outputPath: bundlePath,
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     buildOptions: {

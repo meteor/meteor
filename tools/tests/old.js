@@ -35,6 +35,8 @@ selftest.define("watch", ["slow"], function () {
 });
 
 selftest.define("bundler-assets", function () {
+  console.log("XXX: SYMLINK?!");
+  console.log("XXX: Meteor test options?");
   runOldTest('test-bundler-assets.js');
 });
 
@@ -84,4 +86,3 @@ selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], functi
   run.match("PASSED\n");
   run.expectExit(0);
 });
-

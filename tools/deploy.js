@@ -375,12 +375,8 @@ var bundleAndDeploy = function (options) {
 
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
-
-    var loader = project.project.getPackageLoader();
     stats.recordPackages();
     var bundleResult = bundler.bundle({
-      appDir: options.appDir,
-      packageLoader: loader,
       outputPath: bundlePath,
       nodeModulesMode: "skip",
       buildOptions: options.buildOptions

@@ -413,15 +413,12 @@ _.extend(AppRunner.prototype, {
       packageCache.packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    var loader = project.getPackageLoader();
     stats.recordPackages();
 
     var bundleResult = bundler.bundle({
-      appDir: self.appDir,
       outputPath: bundlePath,
       nodeModulesMode: "symlink",
-      buildOptions: self.buildOptions,
-      packageLoader: loader
+      buildOptions: self.buildOptions
     });
     var watchSet = bundleResult.watchSet;
 

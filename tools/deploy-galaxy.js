@@ -204,11 +204,8 @@ exports.deploy = function (options) {
 
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-      var loader = project.getPackageLoader(options.appDir);
-      stats.recordPackages(options.appDir);
+      stats.recordPackages();
       var bundleResult = bundler.bundle({
-        appDir: options.appDir,
-        packageLoader: loader,
         outputPath: bundlePath,
         nodeModulesMode: 'skip',
         buildOptions: options.buildOptions

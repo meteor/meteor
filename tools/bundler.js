@@ -1590,17 +1590,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * Builds a Meteor app.
  *
  * options are:
- *
- * - appDir: Required. The top-level directory of the Meteor app to
- *   build
- *
+
  * - outputPath: Required. Path to the directory where the output (a
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
- *
- * - packageLoader: Required. The PackageLoader used to retrieve any
- *   packages needed by the app or its dependencies at the appropriate
- *   versions.
  *
  * - nodeModulesMode: what to do about the core npm modules needed by
  *   the server bootstrap. one of:
@@ -1643,14 +1636,15 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  var appDir = options.appDir;
   var outputPath = options.outputPath;
   var nodeModulesMode = options.nodeModulesMode || 'copy';
-  var packageLoader = options.packageLoader;
   var buildOptions = options.buildOptions || {};
 
   if (! release.usingRightReleaseForApp(appDir))
     throw new Error("running wrong release for app?");
+
+  var appDir = project.project.rootDir;
+  var packageLoader = project.project.getPackageLoader();
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1739,8 +1733,8 @@ exports.bundle = function (options) {
     // Step 1: scan for targets and make a list. We will reload if you create a
     // new subdir in 'programs', or create 'programs' itself.
     var programs = [];
-    var programsDir = project.project.getProgramsDirectory(appDir);
-    var programsSubdirs = project.project.getProgramsSubdirs(appDir, {
+    var programsDir = project.project.getProgramsDirectory();
+    var programsSubdirs = project.project.getProgramsSubdirs({
       watchSet: watchSet
     });
 
