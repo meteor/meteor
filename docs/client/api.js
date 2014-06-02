@@ -404,7 +404,7 @@ Template.api.method_invocation_connection = {
 
 Template.api.error = {
   id: "meteor_error",
-  name: "new Meteor.Error(error, reason, details)",
+  name: "new Meteor.Error(error [, reason] [, details])",
   locus: "Anywhere",
   descr: ["This class represents a symbolic error thrown by a method."],
   args: [
@@ -1805,7 +1805,7 @@ Template.api.template_helpers = {
 
 Template.api.template_findAll = {
   id: "template_findAll",
-  name: "<em>this</em>.findAll(selector)",
+  name: "<em>this</em>.findAll(selector) and <em>this</em>.$(selector)",
   locus: "Client",
   descr: ["Find all elements matching `selector` in this template instance."],
   args: [

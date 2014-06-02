@@ -14,6 +14,7 @@ var VALID_KEYS = [
   'resetPasswordToken',
   'enrollAccountToken',
   'justVerifiedEmail',
+  'justResetPassword',
 
   'configureLoginServiceDialogVisible',
   'configureLoginServiceDialogServiceName',

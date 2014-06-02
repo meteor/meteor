@@ -1,5 +1,6 @@
 <body>
   {{> _resetPasswordDialog}}
+  {{> _justResetPasswordDialog}}
   {{> _enrollAccountDialog}}
   {{> _justVerifiedEmailDialog}}
   {{> _configureLoginServiceDialog}}
@@ -32,6 +33,16 @@
   {{/if}}
 </template>
 
+<template name="_justResetPasswordDialog">
+  {{#if visible}}
+    <div class="accounts-dialog accounts-centered-dialog">
+      Password reset.
+      You are now logged in as {{displayName}}.
+      <div class="login-button" id="just-verified-dismiss-button">Dismiss</div>
+    </div>
+  {{/if}}
+</template>
+
 <template name="_enrollAccountDialog">
   {{#if inEnrollAccountFlow}}
     <div class="hide-background"></div>
@@ -59,7 +70,8 @@
 <template name="_justVerifiedEmailDialog">
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog">
-      Email verified
+      Email verified.
+      You are now logged in as {{displayName}}.
       <div class="login-button" id="just-verified-dismiss-button">Dismiss</div>
     </div>
   {{/if}}
@@ -114,5 +126,3 @@
     </div>
   {{/if}}
 </template>
-
-

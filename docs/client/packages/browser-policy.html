@@ -169,6 +169,12 @@ sites can frame your site, while
 `BrowserPolicy.content.allowFrameOrigin` allows you to control which
 sites can be loaded inside frames on your site.
 
+Adding `browser-policy-content` to your app also tells certain
+browsers to avoid sniffing content types away from the declared type
+(for example, interpreting a text file as JavaScript), using the
+[X-Content-Type-Options](http://msdn.microsoft.com/en-us/library/ie/gg622941(v=vs.85).aspx)
+header. To re-enable content sniffing, you can call
+`BrowserPolicy.content.allowContentTypeSniffing()`.
 
 {{/markdown}}
 </template>

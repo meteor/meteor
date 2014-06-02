@@ -14,7 +14,7 @@ set -e
 set -u
 
 # cd to top level dir
-cd `dirname $0`
+cd "`dirname "$0"`"
 cd ../..
 export TOPDIR=$(pwd)
 

@@ -1,5 +1,63 @@
 ## v.NEXT
 
+* The `findAll` method on template instances now returns a vanilla
+  array, not a jQuery object. The `$` method continues to
+  return a jQuery object. #2039
+
+* Speed up updates of NPM modules by upgrading Node to include our fix for
+  https://github.com/npm/npm/issues/3265 instead of passing `--force` to
+  `npm install`.
+
+* Always rebuild on changes to npm-shrinkwrap.json files.  #1648
+
+* Run server tests from multiple clients serially instead of in
+  parallel. This allows testing features that modify global server
+  state.  #2088
+
+* Add Content-Type headers on JavaScript and CSS resources.
+
+* Add `X-Content-Type-Options: nosniff` header to
+  `browser-policy-content`'s default policy. If you are using
+  `browser-policy-content` and you don't want your app to send this
+  header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
+
+* Fix memory leak (introduced in 0.8.1) by making sure to unregister
+  sessions at the server when they are closed due to heartbeat timeout.
+
+* Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
+  in 0.8.0.1 that broke Atmosphere packages that do OAuth1
+  logins. #2154.
+
+* Add `credentialSecret` argument to `Google.retrieveCredential`, which
+  was forgotten in a previous release.
+
+* Fix a Blaze memory leak by cleaning up event handlers when a template
+  instance is destroyed. #1997
+
+* Allow `check` to work on the server outside of a Fiber. #2136
+
+* EJSON custom type conversion functions should not be permitted to yield. #2136
+
+* The legacy polling observe driver handles errors communicating with MongoDB
+  better and no longer gets "stuck" in some circumstances.
+
+* Add {{> UI.dynamic}} to make it easier to dynamically render a
+  template with a data context. XXX Update "Using Blaze" wiki page.
+
+* Show the display name of the currently logged-in user after following
+  a verification link or password reset link in `accounts-ui`.
+
+* Use `Meteor.absoluteUrl()` to compute the redirect URI in `force-ssl`
+  instead of the host header.
+
+* Upgraded dependencies:
+  - node: 0.10.28 (from 0.10.26)
+  - uglify-js: 2.4.13 (from 2.4.7)
+  - sockjs server: 0.3.9 (from 0.3.8)
+  - websocket-driver: 0.3.4 (from 0.3.2)
+
+Patches contributed by GitHub users awwx, subhog
+
 
 ## v.0.8.1.3
 
@@ -19,7 +77,8 @@
 
 * Add missing `underscore` dependency in the `oauth-encryption` package. #2165
 
-* Fix minification bug that caused some apps to fail to render in IE8. #2037.
+* Work around IE8 bug that caused some apps to fail to render when
+  minified. #2037.
 
 
 ## v.0.8.1.2
@@ -99,6 +158,8 @@
 
 * Clean up autoruns when calling `UI.toHTML`.
 
+* Properly clean up event listeners when removing templates.
+
 * Add support for `{{!-- block comments --}}` in Spacebars. Block comments may
   contain `}}`, so they are more useful than `{{! normal comments}}` for
   commenting out sections of Spacebars templates.
@@ -122,6 +183,12 @@
   that is consistent between method stub and real method execution can
   get one with `DDP.randomStream`.
   https://trello.com/c/moiiS2rP/57-pattern-for-creating-multiple-database-records-from-a-method
+
+* The document passed to the `insert` callback of `allow` and `deny` now only
+  has a `_id` field if the client explicitly specified one; this allows you to
+  use `allow`/`deny` rules to prevent clients from specifying their own
+  `_id`. As an exception, `allow`/`deny` rules with a `transform` always have an
+  `_id`.
 
 * DDP now has an implementation of bidirectional heartbeats which is consistent
   across SockJS and websocket transports. This enables connection keepalive and

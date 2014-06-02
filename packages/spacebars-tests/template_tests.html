@@ -726,3 +726,31 @@ Hi there!
   <img src="{{foo}}" />
   <input value="{{foo}}" />
 </template>
+
+<template name="spacebars_test_event_handler_cleanup">
+  {{#if foo}}
+    {{>spacebars_test_event_handler_cleanup_sub}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_event_handler_cleanup_sub">
+  <div></div>
+</template>
+
+<template name="spacebars_test_each_with_autorun_insert">
+  {{#each items}}
+    {{name}}
+  {{/each}}
+</template>
+
+<template name="spacebars_test_ui_hooks">
+  <div class="test-ui-hooks">
+    {{#each items}}
+      <div>{{name}}</div>
+    {{/each}}
+  </div>
+</template>
+
+<template name="spacebars_test_template_instance_helper">
+  {{foo}}
+</template>

@@ -15,8 +15,6 @@ Tinytest.add("email - dev mode smoke test", function (test) {
       text: "This is the body\nof the message\nFrom us.",
       headers: {'X-Meteor-Test': 'a custom header'}
     });
-    // Note that we use the local "stream" here rather than Email._output_stream
-    // in case a concurrent test run mutates Email._output_stream too.
     // XXX brittle if mailcomposer changes header order, etc
     test.equal(stream.getContentsAsString("utf8"),
                "====== BEGIN MAIL #0 ======\n" +

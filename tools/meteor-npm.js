@@ -153,7 +153,7 @@ meteorNpm.dependenciesArePortable = function (packageNpmDir) {
       if (itemName.match(/\.node$/))
         return true;
       var item = path.join(dir, itemName);
-      if (fs.statSync(item).isDirectory())
+      if (fs.lstatSync(item).isDirectory())
         return search(item);
     }) || false;
   };
@@ -221,7 +221,12 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   if (! fs.existsSync(nodeModulesDir))
     fs.mkdirSync(nodeModulesDir);
 
-  var installedDependencies = getInstalledDependencies(packageNpmDir);
+  var installedDependenciesTree = getInstalledDependenciesTree(packageNpmDir);
+  var installedDependencies = treeToDependencies(installedDependenciesTree);
+  var shrinkwrappedDependenciesTree =
+    getShrinkwrappedDependenciesTree(packageNpmDir);
+  var shrinkwrappedDependencies = treeToDependencies(
+    shrinkwrappedDependenciesTree);
 
   // If we already have the right things installed, life is good.
   // XXX this check is wrong: what if we just pulled a commit that
@@ -229,16 +234,23 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   //     while it might be "correct" to just drop this check we should
   //     be careful not to make the common case of no changes too
   //     slow.
-  if (_.isEqual(installedDependencies, npmDependencies))
-    return;
+  if (_.isEqual(installedDependencies, npmDependencies)) {
+    // OK, so what we have installed matches the top-level dependencies
+    // specified in `Npm.depends`. But what if we just pulled a change in
+    // npm-shrinkwrap.json to an indirectly used module version? We'll have to
+    // compare more carefully.  First, normalize the tree (strip irrelevant
+    // fields and normalize to 'version').
+    var minimizedInstalled = minimizeDependencyTree(installedDependenciesTree);
+    // If what we have installed is the same as what we have shrinkwrapped, then
+    // we're done.
+    if (_.isEqual(minimizedInstalled, shrinkwrappedDependenciesTree)) {
+      return;
+    }
+  }
 
   if (! quiet)
     logUpdateDependencies(packageName, npmDependencies);
 
-  var shrinkwrappedDependenciesTree =
-    getShrinkwrappedDependenciesTree(packageNpmDir);
-  var shrinkwrappedDependencies = treeToDependencies(
-    shrinkwrappedDependenciesTree);
   var preservedShrinkwrap = {dependencies: {}};
   _.each(shrinkwrappedDependencies, function (version, name) {
     if (npmDependencies[name] === version) {
@@ -459,22 +471,25 @@ var installNpmModule = function (name, version, dir) {
   // how to silence all output (specifically the installed tree which
   // is printed out with `console.log`)
   //
-  // We use --force, because the NPM cache is broken! See
-  // https://github.com/isaacs/npm/issues/3265 Basically, switching
+  // We used to use --force here, because the NPM cache is broken! See
+  // https://github.com/npm/npm/issues/3265 Basically, switching
   // back and forth between a tarball fork of version X and the real
-  // version X can confuse NPM. But the main reason to use tarball
+  // version X could confuse NPM. But the main reason to use tarball
   // URLs is to get a fork of the latest version with some fix, so
-  // it's easy to trigger this! So instead, always use --force. (Even
-  // with --force, we still WRITE to the cache, so we can corrupt the
-  // cache for other invocations of npm... ah well.)
+  // it was easy to trigger this!
+  //
+  // We now use a forked version of npm with our PR
+  // https://github.com/npm/npm/pull/5137 to work around this.
   var result =
     meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["install", "--force", installArg],
+                            ["install", installArg],
                             {cwd: dir});
 
   if (! result.success) {
-    var pkgNotFound = "404 '" + name + "' is not in the npm registry";
-    var versionNotFound = "version not found: " + version;
+    var pkgNotFound = "404 '" + utils.quotemeta(name) +
+          "' is not in the npm registry";
+    var versionNotFound = "version not found: " + utils.quotemeta(name) +
+          '@' + utils.quotemeta(version);
     if (result.stderr.match(new RegExp(pkgNotFound))) {
       buildmessage.error("there is no npm package named '" + name + "'");
     } else if (result.stderr.match(new RegExp(versionNotFound))) {
@@ -498,11 +513,10 @@ var installFromShrinkwrap = function (dir) {
 
   ensureConnected();
 
-  // `npm install`, which reads npm-shrinkwrap.json.  See above for why
-  // --force.
+  // `npm install`, which reads npm-shrinkwrap.json.
   var result =
     meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["install", "--force"], {cwd: dir});
+                            ["install"], {cwd: dir});
 
   if (! result.success) {
     // XXX include this in the buildmessage.error instead
@@ -562,7 +576,18 @@ var shrinkwrap = function (dir) {
 // versions in the "version" field.
 var minimizeShrinkwrap = function (dir) {
   var topLevel = getShrinkwrappedDependenciesTree(dir);
+  var minimized = minimizeDependencyTree(topLevel);
 
+  fs.writeFileSync(
+    path.join(dir, 'npm-shrinkwrap.json'),
+    // Matches the formatting done by 'npm shrinkwrap'.
+    JSON.stringify(minimized, null, 2) + '\n');
+};
+
+// Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
+// from npm ls --json) to just the versions we want. Returns an object that does
+// not share state with its input
+var minimizeDependencyTree = function (tree) {
   var minimizeModule = function (module) {
     var version;
     if (module.resolved &&
@@ -585,15 +610,10 @@ var minimizeShrinkwrap = function (dir) {
   };
 
   var newTopLevelDependencies = {};
-  _.each(topLevel.dependencies, function (module, name) {
+  _.each(tree.dependencies, function (module, name) {
     newTopLevelDependencies[name] = minimizeModule(module);
   });
-
-  fs.writeFileSync(
-    path.join(dir, 'npm-shrinkwrap.json'),
-    // Matches the formatting done by 'npm shrinkwrap'.
-    JSON.stringify({dependencies: newTopLevelDependencies}, null, 2)
-      + '\n');
+  return {dependencies: newTopLevelDependencies};
 };
 
 var logUpdateDependencies = function (packageName, npmDependencies) {

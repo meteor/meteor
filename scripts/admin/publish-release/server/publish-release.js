@@ -73,6 +73,9 @@ var configureS3 = function () {
 var getManifest = function(s3, gitSha) {
   var manifestMetas = list3FilesWithPrefix(
     s3, ["unpublished", gitSha, "release.json-"].join("/"));
+  if (! manifestMetas)
+    die("A build for " + gitSha + " can't be found on S3. Maybe you forgot to build it on Jenkins?");
+
   var manifests = _.map(manifestMetas, function (meta) {
     return s3.GetObject({
       BucketName: WAREHOUSE_BUCKET,
@@ -102,6 +105,9 @@ var list3FilesWithPrefix = function (s3, prefix) {
     BucketName: WAREHOUSE_BUCKET,
     Prefix: prefix
   }).Body.ListBucketResult.Contents;
+
+  if (! artifacts)
+    return null;
 
   // We support 3 platforms.
   if (artifacts.length !== 3)

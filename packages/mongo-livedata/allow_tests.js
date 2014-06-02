@@ -837,8 +837,7 @@ if (Meteor.isServer) {
 
   Tinytest.add("collection - global insecure", function (test) {
     // note: This test alters the global insecure status, by sneakily hacking
-    // the global Package object! This may collide with itself if run multiple
-    // times (but is better than the old test which had the same problem)
+    // the global Package object!
     var insecurePackage = Package.insecure;
 
     Package.insecure = {};

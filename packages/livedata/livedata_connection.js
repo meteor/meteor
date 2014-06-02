@@ -181,7 +181,7 @@ var Connection = function (url, options) {
 
   // Reactive userId.
   self._userId = null;
-  self._userIdDeps = (typeof Deps !== "undefined") && new Deps.Dependency;
+  self._userIdDeps = new Deps.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
@@ -522,9 +522,18 @@ _.extend(Connection.prototype, {
         params: EJSON.clone(params),
         inactive: false,
         ready: false,
-        readyDeps: (typeof Deps !== "undefined") && new Deps.Dependency,
+        readyDeps: new Deps.Dependency,
         readyCallback: callbacks.onReady,
-        errorCallback: callbacks.onError
+        errorCallback: callbacks.onError,
+        connection: self,
+        remove: function() {
+          delete this.connection._subscriptions[this.id];
+          this.ready && this.readyDeps.changed();
+        },
+        stop: function() {
+          this.connection._send({msg: 'unsub', id: id});
+          this.remove();
+        }
       };
       self._send({msg: 'sub', id: id, name: name, params: params});
     }
@@ -534,15 +543,15 @@ _.extend(Connection.prototype, {
       stop: function () {
         if (!_.has(self._subscriptions, id))
           return;
-        self._send({msg: 'unsub', id: id});
-        delete self._subscriptions[id];
+        
+        self._subscriptions[id].stop();
       },
       ready: function () {
         // return false if we've unsubscribed.
         if (!_.has(self._subscriptions, id))
           return false;
         var record = self._subscriptions[id];
-        record.readyDeps && record.readyDeps.depend();
+        record.readyDeps.depend();
         return record.ready;
       }
     };
@@ -891,8 +900,7 @@ _.extend(Connection.prototype, {
       // but it doesn't seem worth it yet to have a special API for
       // subscriptions to preserve after unit tests.
       if (sub.name !== 'meteor_autoupdate_clientVersions') {
-        self._send({msg: 'unsub', id: id});
-        delete self._subscriptions[id];
+        self._subscriptions[id].stop();
       }
     });
   },
@@ -1297,7 +1305,7 @@ _.extend(Connection.prototype, {
           return;
         subRecord.readyCallback && subRecord.readyCallback();
         subRecord.ready = true;
-        subRecord.readyDeps && subRecord.readyDeps.changed();
+        subRecord.readyDeps.changed();
       });
     });
   },
@@ -1353,7 +1361,7 @@ _.extend(Connection.prototype, {
     if (!_.has(self._subscriptions, msg.id))
       return;
     var errorCallback = self._subscriptions[msg.id].errorCallback;
-    delete self._subscriptions[msg.id];
+    self._subscriptions[msg.id].remove();
     if (errorCallback && msg.error) {
       errorCallback(new Meteor.Error(
         msg.error.error, msg.error.reason, msg.error.details));
