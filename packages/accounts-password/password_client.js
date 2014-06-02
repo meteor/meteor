@@ -33,22 +33,22 @@ Meteor.loginWithPassword = function (selector, password, callback) {
       hashedPassword: SHA256(password),
     }],
     userCallback: function (error, result) {
-      if (error && error.error === 400 && error.reason === 'old password format') {
+      if (error && error.error === 400 &&
+          error.reason === 'old password format') {
         var details;
         try {
           details = EJSON.parse(error.details);
-        }
-        catch (e) {
-        }
+        } catch (e) {}
         if (!(details && details.format === 'srp'))
           callback(new Error("unknown old password format"));
         else
           srpUpgradePath(selector, password, details.identity, callback);
       }
-      else if (error)
+      else if (error) {
         callback(error);
-      else
+      } else {
         callback();
+      }
     }
   });
 };

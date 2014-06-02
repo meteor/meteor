@@ -137,7 +137,7 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       Accounts.callLoginMethod({
         // wrong password
-        methodArguments: [{user: {username: this.username}, password: 'wrong'}],
+        methodArguments: [{user: {username: this.username}, plaintextPassword: 'wrong'}],
         userCallback: expect(function (error) {
           test.isTrue(error);
           test.isFalse(Meteor.user());
@@ -147,7 +147,7 @@ if (Meteor.isClient) (function () {
       Accounts.callLoginMethod({
         // right password
         methodArguments: [{user: {username: this.username},
-                           password: this.password}],
+                           plaintextPassword: this.password}],
         userCallback: loggedInAs(this.username, test, expect)
       });
     },
@@ -212,7 +212,7 @@ if (Meteor.isClient) (function () {
 
       self.secondConn = DDP.connect(Meteor.absoluteUrl());
       self.secondConn.call('login',
-                { user: { username: self.username }, password: self.password },
+                { user: { username: self.username }, plaintextPassword: self.password },
                 expect(function (err, result) {
                   test.isFalse(err);
                   self.secondConn.setUserId(result.id);
@@ -742,17 +742,21 @@ if (Meteor.isClient) (function () {
     },
     // We are able to login with the old style credentials in the database.
     function (test, expect) {
-      Meteor.loginWithPassword('srptestuser', 'abcdef', function (error) {
-        console.log('error', error);
+      Meteor.loginWithPassword('srptestuser', 'abcdef', expect(function (error) {
         test.isFalse(error);
-      });
+      }));
+    },
+    function (test, expect) {
+      Meteor.call("testSRPUpgrade", expect(function (error) {
+        test.isFalse(error);
+      }));
     },
     logoutStep,
     // After the upgrade to bcrypt we're still able to login.
     function (test, expect) {
-      Meteor.loginWithPassword('srptestuser', 'abcdef', function (error) {
+      Meteor.loginWithPassword('srptestuser', 'abcdef', expect(function (error) {
         test.isFalse(error);
-      });
+      }));
     },
     logoutStep
   ]);
@@ -846,7 +850,7 @@ if (Meteor.isServer) (function () {
           });
           var result = clientConn.call('login', {
             user: {username: username},
-            password: 'password'
+            plaintextPassword: 'password'
           });
           test.isTrue(result);
           var token = Accounts._getAccountData(serverConn.id, 'loginToken');
