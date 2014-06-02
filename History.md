@@ -1,7 +1,8 @@
 ## v.NEXT
 
 * The `findAll` method on template instances now returns a vanilla
-  array, not a jQuery object.  #2039
+  array, not a jQuery object. The `$` method continues to
+  return a jQuery object. #2039
 
 * Speed up updates of NPM modules by upgrading Node to include our fix for
   https://github.com/npm/npm/issues/3265 instead of passing `--force` to
