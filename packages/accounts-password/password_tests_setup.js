@@ -131,5 +131,13 @@ Meteor.methods({
           "verifier" : "2e8bce266b1357edf6952cc56d979db19f699ced97edfb2854b95972f820b0c7006c1a18e98aad40edf3fe111b87c52ef7dd06b320ce452d01376df2d560fdc4d8e74f7a97bca1f67b3cfaef34dee34dd6c76571c247d762624dc166dab5499da06bc9358528efa75bf74e2e7f5a80d09e60acf8856069ae5cfb080f2239ee76"
       } } }
     );
+  },
+
+  testSRPUpgrade: function () {
+    var user = Meteor.users.findOne({username: 'srptestuser'});
+    if (user.services && user.services.password && user.services.password.srp)
+      throw new Error("srp wasn't removed");
+    if (!(user.services && user.services.password && user.services.password.bcrypt))
+      throw new Error("bcrypt wasn't added");
   }
 });
