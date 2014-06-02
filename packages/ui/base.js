@@ -352,3 +352,18 @@ UI._allowJavascriptUrls = function () {
 UI._javascriptUrlsAllowed = function () {
   return jsUrlsAllowed;
 };
+
+UI._templateInstance = function () {
+  var component = currentComponent.get();
+  if (! component) {
+    return null; // not in a helper
+  }
+
+  // Lazily update the template instance for this helper, and do it only
+  // once.
+  if (! currentTemplateInstance) {
+    updateTemplateInstance(component);
+    currentTemplateInstance = component.templateInstance;
+  }
+  return currentTemplateInstance;
+};
