@@ -20,7 +20,6 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('underscore');
-  api.use('spacebars');
   api.use('spacebars-compiler');
   api.use('tinytest');
   api.add_files('spacebars_tests.js');
