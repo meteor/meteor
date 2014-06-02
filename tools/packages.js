@@ -1029,8 +1029,10 @@ _.extend(Package.prototype, {
   _ensurePluginsInitialized: function () {
     var self = this;
 
-    if (! self.pluginsBuilt)
-      throw new Error("running plugins of unbuilt package?");
+    if (! self.pluginsBuilt) {
+      throw new Error("Running plugins of unbuilt package: " + self.name +
+                      ". Do you have a circular dependency?");
+    }
 
     if (self._pluginsInitialized)
       return;
