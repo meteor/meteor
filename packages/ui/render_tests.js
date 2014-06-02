@@ -255,7 +255,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
-    span.className += ' blah';
+    span.className += ' blah'; // change the element's class outside of Blaze. this simulates what a jQuery could do
 
     R.set({'class': 'david smith', id: 'bar'});
     Deps.flush();
