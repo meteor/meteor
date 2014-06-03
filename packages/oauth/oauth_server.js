@@ -241,10 +241,13 @@ OAuth._endOfLoginResponse = function(res, details) {
     var setCredentialSecret = '';
     if (details.credentials.token && details.credentials.secret) {
       
-      setCredentialSecret = 'var credentialsToken = ' + JSON.stringify(details.credentials.token) + ';' +
-        'var credentialsSecret = ' + JSON.stringify(details.credentials.secret) + ';' +
+      setCredentialSecret = 'var credentialToken = ' + 
+        JSON.stringify(details.credentials.token) + ';' +
+        'var credentialSecret = ' + 
+        JSON.stringify(details.credentials.secret) + ';' +
         'window.opener && ' +
-        'window.opener.Package.oauth.OAuth._handleCredentialSecret(credentialsToken, credentialsSecret);';
+        'window.opener.Package.oauth.OAuth._handleCredentialSecret(' +
+        'credentialToken, credentialSecret);';
     }
     res.end(content(setCredentialSecret), "utf-8");
   } else {
