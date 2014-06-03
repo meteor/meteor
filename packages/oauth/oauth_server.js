@@ -240,10 +240,11 @@ OAuth._endOfLoginResponse = function(res, details) {
     // uses the credentialToken and credentialSecret to log in over DDP.
     var setCredentialSecret = '';
     if (details.credentials.token && details.credentials.secret) {
-      setCredentialSecret = 'window.opener && ' +
-        'window.opener.Package.oauth.OAuth._handleCredentialSecret(' +
-        JSON.stringify(details.credentials.token) + ', ' +
-        JSON.stringify(details.credentials.secret) + ');';
+      
+      setCredentialSecret = 'var credentialsToken = ' + JSON.stringify(details.credentials.token) + ';' +
+        'var credentialsSecret = ' + JSON.stringify(details.credentials.secret) + ';' +
+        'window.opener && ' +
+        'window.opener.Package.oauth.OAuth._handleCredentialSecret(credentialsToken, credentialsSecret);';
     }
     res.end(content(setCredentialSecret), "utf-8");
   } else {
