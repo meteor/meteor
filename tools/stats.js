@@ -3,7 +3,7 @@ var _ = require("underscore");
 
 var config = require("./config.js");
 var uniload = require("./uniload.js");
-var project = require("./project.js").project;
+var project = require("./project.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
 
@@ -15,7 +15,7 @@ var packageList = function () {
   var directDeps = project.project.getConstraints();
 
   return _.map(
-    project.getVersions(),
+    project.project.getVersions(),
     function (version, name) {
       return {
         name: name,
@@ -49,7 +49,7 @@ var recordPackages = function () {
       }
 
       conn.call("recordAppPackages",
-                project.getAppIdentifier(),
+                project.project.getAppIdentifier(),
                 packageList());
     } catch (err) {
       // Do nothing. A failure to record package stats shouldn't be
@@ -64,7 +64,7 @@ var recordPackages = function () {
 var getPackagesForAppIdInTest = function () {
   return connectToPackagesStatsServer().call(
     "getPackagesForAppId",
-    project.getAppIdentifier());
+    project.project.getAppIdentifier());
 };
 
 var connectToPackagesStatsServer = function () {
