@@ -653,7 +653,7 @@ _.extend(CompleteCatalog.prototype, {
     // think we'll actually be doing that so this should be fine.
     // #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
-    self.refresh(false /* sync */);
+    self.refresh();
   },
 
   // Reverse the effect of addLocalPackage.
@@ -667,7 +667,7 @@ _.extend(CompleteCatalog.prototype, {
 
     // see #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
-    self.refresh(false /* sync */);
+    self.refresh();
   },
 
   // True if `name` is a local package (is to be loaded via
@@ -779,7 +779,7 @@ _.extend(CompleteCatalog.prototype, {
 
 // This is the catalog that's used to answer the specific question of "so what's
 // on the server?".  It does not contain any local catalogs.  Typically, we call
-// catalog.official.refresh(true) to update data.json.
+// catalog.official.refresh() to update data.json.
 catalog.official = new ServerCatalog();
 
 // This is the catalog that's used to actually drive the constraint solver: it

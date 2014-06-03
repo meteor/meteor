@@ -122,6 +122,10 @@ _.extend(Project.prototype, {
     self.constraints = processPerConstraintLines(
       getLines(appConstraintFile));
 
+    // These will be fixed by _ensureDepsUpToDate.
+    self.combinedConstraints = null;
+    self.packageLoader = null;
+
     // Read in the contents of the .meteor/versions file, so we can give them to
     // the constraint solver as the previous solution.
     self.dependencies = processPerConstraintLines(
@@ -192,7 +196,7 @@ _.extend(Project.prototype, {
 
       // If the result is now what it used to be, rewrite the files on
       // disk. Otherwise, don't bother with I/O operations.
-      if (newVersions !== self.dependencies) {
+      if (!_.isEqual(newVersions, self.dependencies)) {
         // This will set self.dependencies as a side effect.
         self._ensurePackagesExistOnDisk(newVersions);
         self.dependencies = newVersions;
@@ -207,9 +211,8 @@ _.extend(Project.prototype, {
 
       // We are done!
       self._depsUpToDate = true;
-      self.safeToUse = true;
+      self.viableDepSource = true;
     }
-
   },
 
   // Given a set of packages from a release, recalculates all the constraints on
@@ -429,6 +432,8 @@ _.extend(Project.prototype, {
     var lines = getLines(appConstraintFile);
     if (operation === "add") {
       _.each(names, function (name) {
+        // XXX This assumes that the file hasn't been edited since we lasted
+        // loaded it into self.
         if (_.contains(self.constraints, name))
           return;
         if (!self.constraints.length && lines.length)
@@ -436,12 +441,11 @@ _.extend(Project.prototype, {
         lines.push(name);
         self.constraints[name] = null;
       });
+      fs.writeFileSync(appConstraintFile,
+                       lines.join('\n') + '\n', 'utf8');
     } else if (operation == "remove") {
       self._removePackageRecords(names);
     }
-
-    fs.writeFileSync(appConstraintFile,
-                     lines.join('\n') + '\n', 'utf8');
 
     // Any derived values need to be invalidated.
     self._depsUpToDate = false;
@@ -464,6 +468,7 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = getLines(packages);
     lines = _.reject(lines, function (line) {
+      // XXX this won't remove a package if it's there with a @CONSTRAINT
       return _.indexOf(names, trimLine(line)) !== -1;
     });
     fs.writeFileSync(packages,
@@ -530,8 +535,8 @@ _.extend(Project.prototype, {
   // does NOT run the constraint solver, it assumes that newVersions is valid to
   // the full set of project constraints.
   //
-  // - moreDeps: an array of string package constraints to add to the project. This array
-  //   can be empty.
+  // - moreDeps: an object of package constraints to add to the project.
+  //   This object can be empty.
   // - newVersions: a new set of dependencies for this project.
   //
   // returns an object mapping packageName to version of packages that we have
@@ -561,14 +566,14 @@ _.extend(Project.prototype, {
     // file from disk, because we don't store the comments.
     var packages = self._getConstraintFile();
     var lines = getLines(packages);
-    _.each(moreDeps, function (constraint) {
-      lines.push(constraint);
+    _.each(moreDeps, function (constraint, packageName) {
+      // XXX this is wrong for null constraint
+      // XXX need to replace existing lines with the same packageName, ideally
+      //     preserving comment
+      lines.push(packageName + '@' + constraint);
     });
-    lines.sort();
-    lines = _.map(lines, function (line) {
-      return line + "\n";
-    });
-    fs.writeFileSync(packages, lines.join(''), 'utf8');
+    lines.push('\n');
+    fs.writeFileSync(packages, lines.join('\n'), 'utf8');
 
     // Rewrite the versions file.
     self.recordVersions(newVersions);

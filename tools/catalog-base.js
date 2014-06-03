@@ -90,6 +90,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // will just cause us to crash if it doesn't exist, so we are just delaying
   // the inevitable rather than slowing down normal operations)
   _recordOrRefresh: function (recordFinder) {
+    var self = this;
     var record = recordFinder();
     // If we cannot find it maybe refresh.
     if (!record) {

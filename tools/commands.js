@@ -552,9 +552,10 @@ main.registerCommand({
         project.calculateCombinedConstraints(releaseRecord.packages);
   var previousVersions = project.getVersions();
 
-  var solutionVersions = catalog.resolveConstraints(constraints,
-                                              { previousSolution: versions },
-                                              { ignoreProjectDeps: true });
+  var solutionVersions = catalog.resolveConstraints(
+    constraints,
+    { previousSolution: previousVersions },
+    { ignoreProjectDeps: true });
   if (!solutionVersions) {
     // XXX text
     process.stderr.write(
@@ -565,7 +566,7 @@ main.registerCommand({
   // We are not adding any new packages, but we want all the checks associated
   // with adding packages, like making sure that all our packages have been
   // downloaded from troposphere.
-  project.addPackages([], solutionVersions);
+  project.addPackages({}, solutionVersions);
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
@@ -767,6 +768,7 @@ main.registerCommand({
   // we don't specify these constraints until we get them back from the
   // constraint solver.
   var constraints = _.map(options.args, function (packageReq) {
+    // XXX maybe upper case is an error instead?
     return utils.splitConstraint(packageReq.toLowerCase());
   });
 
@@ -849,7 +851,7 @@ main.registerCommand({
   // Install the new versions. If all new versions were installed successfully,
   // then change the .meteor/packages and .meteor/versions to match expected
   // reality.
-  var downloaded = project.addPackages(options.args, newVersions);
+  var downloaded = project.addPackages(constraints, newVersions);
 
   _.each(newVersions, function(version, packageName) {
     if (failed)
