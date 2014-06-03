@@ -44,17 +44,21 @@ var _throwOrLog = function (from, e) {
   }
 };
 
-// Like `Meteor._noYieldsAllowed(function () { f(comp); })` but shorter,
-// and doesn't clutter the stack with an extra frame on the client,
-// where `_noYieldsAllowed` is a no-op.  `f` may be a computation
-// function or an onInvalidate callback.
-var callWithNoYieldsAllowed = function (f, comp) {
+// Takes a function `f`, and wraps it in a `Meteor._noYieldsAllowed`
+// block if we are running on the server. On the client, returns the
+// original function (since `Meteor._noYieldsAllowed` is a
+// no-op). This has the benefit of not adding an unnecessary stack
+// frame on the client.
+var withNoYieldsAllowed = function (f) {
   if ((typeof Meteor === 'undefined') || Meteor.isClient) {
-    f(comp);
+    return f;
   } else {
-    Meteor._noYieldsAllowed(function () {
-      f(comp);
-    });
+    return function () {
+      var args = arguments;
+      Meteor._noYieldsAllowed(function () {
+        f.apply(null, args);
+      });
+    };
   }
 };
 
@@ -140,7 +144,7 @@ _assign(Deps.Computation.prototype, {
 
     if (self.invalidated) {
       Deps.nonreactive(function () {
-        callWithNoYieldsAllowed(f, self);
+        withNoYieldsAllowed(f)(self);
       });
     } else {
       self._onInvalidateCallbacks.push(f);
@@ -164,7 +168,7 @@ _assign(Deps.Computation.prototype, {
       // self.invalidated === true.
       for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++) {
         Deps.nonreactive(function () {
-          callWithNoYieldsAllowed(f, self);
+          withNoYieldsAllowed(f)(self);
         });
       }
       self._onInvalidateCallbacks = [];
@@ -188,7 +192,7 @@ _assign(Deps.Computation.prototype, {
     var previousInCompute = inCompute;
     inCompute = true;
     try {
-      callWithNoYieldsAllowed(self._func, self);
+      withNoYieldsAllowed(self._func)(self);
     } finally {
       setCurrentComputation(previous);
       inCompute = false;
