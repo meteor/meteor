@@ -72,6 +72,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
 
     var collections = serverPackageData.collections;
 
+    if (!collections)
+      return;
+
     _.each(
       ['packages', 'versions', 'builds', 'releaseTracks', 'releaseVersions'],
       function (field) {
