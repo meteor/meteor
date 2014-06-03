@@ -55,8 +55,9 @@
   - uglify-js: 2.4.13 (from 2.4.7)
   - sockjs server: 0.3.9 (from 0.3.8)
   - websocket-driver: 0.3.4 (from 0.3.2)
+  - stylus: 0.46.3 (from 0.42.3)
 
-Patches contributed by GitHub users awwx, subhog
+Patches contributed by GitHub users awwx, mquandalle, subhog
 
 
 ## v.0.8.1.3
