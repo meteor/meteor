@@ -38,13 +38,10 @@ var CanOptimizeVisitor = HTML.Visitor.extend({
   },
   visitTag: function (tag) {
     var tagName = tag.tagName;
-    if (tagName === 'textarea') {
-      // optimizing into a TEXTAREA's RCDATA would require being a little
-      // more clever.
-      return OPTIMIZABLE.NONE;
-    } else if (! (HTML.isKnownElement(tagName) &&
-                  ! HTML.isKnownSVGElement(tagName))) {
-      // foreign elements like SVG can't be stringified for innerHTML.
+    if (tagName === 'textarea' ||  tagName === 'svg') {
+      // optimizing into a TEXTAREA's RCDATA would require being a
+      // little more clever, and foreign elements like SVG can't be
+      // stringified for innerHTML.
       return OPTIMIZABLE.NONE;
     } else if (tagName === 'table') {
       // Avoid ever producing HTML containing `<table><tr>...`, because the

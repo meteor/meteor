@@ -127,9 +127,12 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
     intoArray.push(document.createTextNode(string));
     return intoArray;
   },
-  visitArray: function (array, intoArray) {
+  // Options include:
+  //   - inSVG: boolean. True if the HTMLJS nodes in the array are
+  //     nested inside an <svg> element.
+  visitArray: function (array, intoArray, options) {
     for (var i = 0; i < array.length; i++)
-      this.visit(array[i], intoArray);
+      this.visit(array[i], intoArray, options);
     return intoArray;
   },
   visitComment: function (comment, intoArray) {
@@ -145,10 +148,16 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
 
     return intoArray;
   },
-  visitTag: function (tag, intoArray) {
+  // Options include:
+  //   - inSVG: boolean. True if this tag is nested inside an <svg>
+  //     element.
+  visitTag: function (tag, intoArray, options) {
     var tagName = tag.tagName;
     var elem;
-    if (HTML.isKnownSVGElement(tagName) && document.createElementNS) {
+    options = options || {};
+
+    if ((options.inSVG || tagName === 'svg')
+        && document.createElementNS) {
       // inline SVG
       elem = document.createElementNS('http://www.w3.org/2000/svg', tagName);
     } else {
@@ -182,7 +191,10 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
       }));
     }
 
-    var childNodesAndRanges = this.visit(children, []);
+    if (tagName === 'svg')
+      options.inSVG = true;
+
+    var childNodesAndRanges = this.visit(children, [], options);
     for (var i = 0; i < childNodesAndRanges.length; i++) {
       var x = childNodesAndRanges[i];
       if (x instanceof Blaze.DOMRange)
