@@ -8,7 +8,7 @@ Package.on_use(function (api) {
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
   api.use(['underscore', 'json', 'ejson', 'id-map', 'ordered-dict', 'deps',
-           'random', 'ordered-dict']);
+           'random']);
   // This package is used for geo-location queries such as $near
   api.use('geojson-utils');
   api.add_files([
