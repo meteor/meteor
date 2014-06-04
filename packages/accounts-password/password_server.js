@@ -322,13 +322,16 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 
   var token = Random.secret();
   var when = new Date();
+  var tokenRecord = {
+    token: token,
+    email: email,
+    when: when
+  };
   Meteor.users.update(userId, {$set: {
-    "services.password.reset": {
-      token: token,
-      email: email,
-      when: when
-    }
+    "services.password.reset": tokenRecord
   }});
+  // before passing to template, update user object with new token
+  user.services.password.reset = tokenRecord;
 
   var resetPasswordUrl = Accounts.urls.resetPassword(token);
 
@@ -368,16 +371,18 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
     throw new Error("No such email for user.");
 
-
   var token = Random.secret();
   var when = new Date();
+  var tokenRecord = {
+    token: token,
+    email: email,
+    when: when
+  };
   Meteor.users.update(userId, {$set: {
-    "services.password.reset": {
-      token: token,
-      email: email,
-      when: when
-    }
+    "services.password.reset": tokenRecord
   }});
+  // before passing to template, update user object with new token
+  user.services.password.reset = tokenRecord;
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
 
@@ -501,6 +506,8 @@ Accounts.sendVerificationEmail = function (userId, address) {
   Meteor.users.update(
     {_id: userId},
     {$push: {'services.email.verificationTokens': tokenRecord}});
+  // before passing to template, update user object with new token
+  user.services.email.verificationTokens.push(tokenRecord);
 
   var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
 
