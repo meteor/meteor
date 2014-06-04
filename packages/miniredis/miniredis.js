@@ -2,7 +2,12 @@
 Miniredis = {};
 
 var throwNotImplementedError = function () {
-  throw new Error("The called method is not available in miniredis implementation.");
+  throw new Error("The called method is not available in miniredis implementation");
+};
+
+var throwIncorrectKindOfValueError = function () {
+  // XXX should be a special type of error "WRONGTYPE"
+  throw new Error("Operation against a key holding the wrong kind of value");
 };
 
 // A main store class
@@ -121,6 +126,146 @@ _.extend(Miniredis.RedisStore.prototype, {
       if (returnValue === false)
         return false;
     });
+  },
+
+  // -----
+  // operators on strings
+  // -----
+
+  append: function (key, value) {
+    var self = this;
+    var val = self._kv.has(key) ? self._kv.get(key) : "";
+
+    if (! _.isString(val))
+      throwIncorrectKindOfValueError();
+
+    val += value;
+    self._kv.set(key, val);
+
+    return val.length;
+  },
+  decr: function (key) {
+    var self = this;
+    self.decrby(key, 1);
+  },
+  decrby: function (key, decrement) {
+    var self = this;
+    var val = self._kv.has(key) ? self._kv.get(key) : 0;
+
+    if (! _.isString(val))
+      throwIncorrectKindOfValueError();
+
+    // cast to integer
+    var newVal = val |0;
+
+    if (val !== newVal.toString())
+      throw new Error("Value is not an integer or out of range");
+
+    self._kv.set(key, (newVal - decrement).toString());
+  },
+  get: function (key) {
+    var self = this;
+    var val = self._kv.has(key) ? self._kv.get(key) : null;
+    if (val !== null && ! _.isString(val))
+      throwIncorrectKindOfValueError();
+    return val;
+  },
+  getrange: function (key, start, end) {
+    start = start || 0;
+    end = end || 0;
+
+    var self = this;
+    var val = self._kv.has(key) ? self._kv.get(key) : "";
+
+    if (! _.isString(val))
+      throwIncorrectKindOfValueError();
+    if (val === "")
+      return "";
+
+    var len = val.length;
+    // put start and end into [0, len) range
+    start %= len; if (start < 0) start += len;
+    end %= len; if (end < 0) end += len;
+
+    if (end < start)
+      return "";
+
+    return val.substr(start, end - start + 1);
+  },
+  getset: function (key, value) {
+    var self = this;
+    var val = self.get(key);
+    self.set(key, value);
+    return val;
+  },
+  incr: function (key) {
+    var self = this;
+    self.incrby(key, 1);
+  },
+  incrby: function (key, increment) {
+    var self = this;
+    self.decrby(key, -increment);
+  },
+  incrbyfloat: function (key, increment) {
+    var self = this;
+    var val = self._kv.has(key) ? self._kv.get(key) : 0;
+
+    if (! _.isString(val))
+      throwIncorrectKindOfValueError();
+
+    // cast to integer
+    var newVal = parseFloat(val);
+
+    if (isNaN(newVal))
+      throw new Error("Value is not a valid float");
+
+    self._kv.set(key, (newVal + increment).toString());
+  },
+  mget: function (/* args */) {
+    var self = this;
+    return _.map(arguments, function (key) {
+      return self.get(key);
+    });
+  },
+  mset: function (/* args */) {
+    var self = this;
+    for (var i = 0; i < arguments.length; i += 2) {
+      var key = arguments[i];
+      var value = arguments[i + 1];
+      self.set(key, value);
+    }
+  },
+  msetnx: function (/* args */) {
+    var self = this;
+    if (_.all(arguments, function (key, i) {
+      return (i % 2 === 1) || self._kv.has(key);
+    })) {
+      self.mset.apply(self, arguments);
+      return 1;
+    }
+
+    return 0;
+  },
+  set: function (key, value) {
+    var self = this;
+    self._kv.set(key, EJSON.clone(value));
+  },
+  setnx: function (key, value) {
+    var self = this;
+    if (self._kv.has(key))
+      return 0;
+    self.set(key, value);
+    return 1;
+  },
+  setrange: function (key, offset, value) {
+    // We probably should have an implementation for this one but it requires a
+    // bit more thinking on how do we zero pad the string.
+    throwNotImplementedError();
+  },
+  strlen: function (key) {
+    var self = this;
+    var val = self.get(key);
+    return val ? val.length : 0;
   }
 });
 
