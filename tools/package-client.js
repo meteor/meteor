@@ -398,7 +398,18 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     return 1;
   }
 
-  // XXX: check auth.
+  // Check that we are an authorized maintainer of this package.
+  if (!options['new']) {
+    var catalog = require('./catalog.js');
+    var packRecord = catalog.official.getPackage(name);
+    var authorized = _.indexOf(
+      _.pluck(packRecord.maintainers, 'username'), auth.loggedInUsername());
+    if (authorized == -1) {
+      process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
+      process.stderr.write('Only authorized maintainers may publish new versions. \n');
+      return 1;
+    }
+  }
 
   // We need to build the test package to get all of its sources.
   var testFiles = [];

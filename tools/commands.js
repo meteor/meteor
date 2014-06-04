@@ -2060,7 +2060,7 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX put a check here on the schema? or just trust the server to do it?
+  // Fill in the order key and any other generated release.json fields.
 
   // If you didn't specify an orderKey and it's compatible with our conventional
   // orderKey generation algorithm, use the algorithm. If you explicitly specify
@@ -2074,6 +2074,50 @@ main.registerCommand({
     delete relConf.orderKey;
   }
 
+  // Check that the schema is valid -- release.json contains all the required
+  // fields, does not contain contradicting information, etc. Output all
+  // messages, so the user can fix all errors at once.
+  var badSchema = false;
+  if (!_.has(relConf, 'track')) {
+    process.stderr.write(
+      "Configuration file must specify release track. (track). \n");
+    badSchema = true;
+  }
+  if (!_.has(relConf, 'version')) {
+    process.stderr.write(
+      "Configuration file must specify release version. (version). \n");
+    badSchema = true;
+  }
+  if (!_.has(relConf, 'description')) {
+    process.stderr.write(
+      "Configuration file must contain a description (description). \n");
+    badSchema = true;
+  } else if (relConf['description'].length > 100) {
+    process.stderr.write(
+      "Description must be under 100 characters");
+    badSchema = true;
+  }
+  if (!options['from-checkout']) {
+    if (!_.has(relConf, 'tool')) {
+      process.stderr.write(
+        "Configuration file must specify a tool version (tool). \n ");
+      badSchema = true;
+    }
+    if (!_.has(relConf, 'packages')) {
+      process.stderr.write(
+        "Configuration file must specify package versions (packages). \n");
+      badSchema = true;
+    }
+  }
+  if (!_.has(relConf, 'orderKey') && relConf['recommended']) {
+    process.stderr.write(
+      "Reccommended releases must have order keys. \n");
+    badSchema = true;
+  }
+  if (badSchema) {
+    return 1;
+  }
+
   // Let's check if this is a known release track/ a track to which we are
   // authorized to publish before we do any complicated/long operations, and
   // before we publish its packages.
@@ -2084,8 +2128,14 @@ main.registerCommand({
                            '. If you are creating a new track, use the --create-track flag. \n');
       return 1;
     }
-    console.log(trackRecord);
-    // XXX: check that we are an authorized maintainer as well.
+    var auth = require("./auth.js");
+    var authorized = _.indexOf(
+      _.pluck(trackRecord.maintainers, 'username'), auth.loggedInUsername());
+    if (authorized == -1) {
+      process.stderr.write('You are not an authorized maintainer of ' + relConf.track + ".\n");
+      process.stderr.write('Only authorized maintainers may publish new versions. \n');
+      return 1;
+    }
   }
 
   // This is sort of a hidden option to just take your entire meteor checkout
@@ -2310,15 +2360,16 @@ main.registerCommand({
   process.stdout.write("Creating a new release version... \n");
 
   // Send it over!
-  var uploadInfo = conn.call('createReleaseVersion', {
+  var record = {
     track: relConf.track,
     version: relConf.version,
     orderKey: relConf.orderKey,
     description: relConf.description,
-    recommended: relConf.recommended,
+    recommended: !!relConf.recommended,
     tool: relConf.tool,
     packages: relConf.packages
-  });
+  };
+  var uploadInfo = conn.call('createReleaseVersion', record);
 
   // Get it back.
   officialCatalog.refresh(true);
