@@ -171,6 +171,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     var val = self._kv.has(key) ? self._kv.get(key) : null;
     if (val !== null && ! _.isString(val))
       throwIncorrectKindOfValueError();
+    // XXX shouldn't clone, strings are immutable
     return EJSON.clone(val);
   },
   getrange: function (key, start, end) {
@@ -186,9 +187,9 @@ _.extend(Miniredis.RedisStore.prototype, {
       return "";
 
     var len = val.length;
-    // put start and end into [0, len) range
-    start %= len; if (start < 0) start += len;
-    end %= len; if (end < 0) end += len;
+    var normalizedBounds = normalizeBounds(start, end, len);
+    start = normalizeBounds.start;
+    end = normalizeBounds.end;
 
     if (end < start)
       return "";
@@ -251,6 +252,8 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   set: function (key, value) {
     var self = this;
+    // XXX instead of EJSON.cloning we should probably check for the type and
+    // not bother cloning as strings are immutable
     self._kv.set(key, EJSON.clone(value));
   },
   setnx: function (key, value) {
@@ -279,6 +282,20 @@ Miniredis.unsupportedMethods = ["ttl", "restore", "dump", "expire", "expireat",
 _.each(Miniredis.unsupportedMethods, function (method) {
   Miniredis.RedisStore.prototype[method] = throwNotImplementedError;
 });
+
+
+function normalizeBounds (start, end, len) {
+  // put start and end into [0, len) range
+  start %= len;
+  if (start < 0)
+    start += len;
+  end %= len;
+  if (end < 0)
+    end += len;
+  if (end >= len)
+    end = len - 1;
+  return { start: start, end: end };
+}
 
 function patternToRegexp (pattern) {
   // all special chars except for [, ], *, ?
