@@ -20,6 +20,11 @@ _.extend(Miniredis.RedisStore.prototype, {
 
     return self[method.toLowerCase()].apply(self, args);
   },
+
+  // -----
+  // general operators on keys
+  // -----
+
   del: function (/* args */) {
     var self = this;
     var removedCount = 0;
@@ -32,15 +37,12 @@ _.extend(Miniredis.RedisStore.prototype, {
 
     return removedCount;
   },
-  dump: function () { throwNotImplementedError(); },
   exists: function (key) {
     var self = this;
     if (self._kv.has(key))
       return 1;
     return 0;
   },
-  expire: function () { throwNotImplementedError(); },
-  expireat: function () { throwNotImplementedError(); },
   keys: function (pattern) {
     var self = this;
     var regexp = patternToRegexp(pattern);
@@ -49,25 +51,18 @@ _.extend(Miniredis.RedisStore.prototype, {
       return key.match(regexp);
     });
   },
-  migrate: function () { throwNotImplementedError(); },
-  move: function () { throwNotImplementedError(); },
-  object: function () { throwNotImplementedError(); },
-  persist: function () { throwNotImplementedError(); },
-  pexpire: function () { throwNotImplementedError(); },
-  pexpireat: function () { throwNotImplementedError(); },
-  pttl: function () { throwNotImplementedError(); },
   randomkey: function () {
     var self = this;
     return Random.choice(_.keys(self._kv));
   },
   rename: function (key, newkey) {
     if (key === newkey)
-      throw new Error("source and destination objects are the same");
+      throw new Error("Source and destination objects are the same");
 
     var self = this;
 
     if (! self._kv.has(key))
-      throw new Error("no such key");
+      throw new Error("No such key");
 
     var val = self._kv.get(key);
     self._kv.remove(key);
@@ -82,14 +77,12 @@ _.extend(Miniredis.RedisStore.prototype, {
     self.rename(key, newkey);
     return 1;
   },
-  restore: function () { throwNotImplementedError(); },
   sort: function () {
     // This is a non-trivial operator that requires more thought on the design
     // and implementation. We probably want to implement this as it is the only
     // querying mechanism.
     throwNotImplementedError();
   },
-  ttl: function () { throwNotImplementedError(); },
   type: function (key) {
     var self = this;
 
@@ -129,6 +122,14 @@ _.extend(Miniredis.RedisStore.prototype, {
         return false;
     });
   }
+});
+
+Miniredis.unsupportedMethods = ["ttl", "restore", "dump", "expire", "expireat",
+  "migrate", "move", "object", "persist", "pexpire", "pexpireat", "pttl",
+  "bitcount", "bitop", "bitops", "getbit", "setbit", "setex", "psetex"];
+
+_.each(Miniredis.unsupportedMethods, function (method) {
+  Miniredis.RedisStore.prototype[method] = throwNotImplementedError;
 });
 
 function patternToRegexp (pattern) {
