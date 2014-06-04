@@ -300,3 +300,8 @@ function patternToRegexp (pattern) {
   return new RegExp(regexpStr);
 }
 
+// Test-only export
+MiniredisTest = {
+  patternToRegexp: patternToRegexp
+};
+

@@ -5,6 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('Miniredis');
+  api.export('MiniredisTest', { testOnly: true });
   api.use(['id-map', 'deps', 'underscore', 'ejson', 'random']);
   api.add_files(['miniredis.js']);
 });
