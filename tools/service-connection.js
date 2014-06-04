@@ -83,6 +83,8 @@ _.extend(ServiceConnection.prototype, {
     var fut = new Future;
     self._onConnectionTimeout(function () {
       fut['throw'](new ServiceConnection.ConnectionTimeoutError);
+      // XXX should also disable fut somehow so we don't get a "more than once"
+      // error later
     });
 
     var args = _.toArray(arguments);

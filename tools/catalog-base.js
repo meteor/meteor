@@ -15,9 +15,6 @@ var files = require('./files.js');
 
 var baseCatalog = exports;
 
-// XXX "Meteor-Core"? decide this pre 0.9.0.
-baseCatalog.DEFAULT_TRACK = 'METEOR-CORE';
-
 // This is a basic catalog class. It accesses basic catalog data by looking
 // through the catalog's collections.
 //
@@ -33,6 +30,9 @@ baseCatalog.BaseCatalog = function () {
   self.builds = null;
   self.releaseTracks = null;
   self.releaseVersions = null;
+
+  // XXX "Meteor-Core"? decide this pre 0.9.0.
+  self.DEFAULT_TRACK = 'METEOR-CORE';
 
   // We use the initialization design pattern because it makes it easier to use
   // both of our catalogs as singletons.
@@ -196,6 +196,10 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     // them. Depending on when we build them, we can refer to local packages as
     // 1.0.0+local or 1.0.0+[buildId]. Luckily, we know which packages are
     // local, so just look those up by their local version instead.
+    // XXX ideally we'd only have isLocalPackage in the complete catalog and
+    //     have CompleteCatalog override getVersion, but other things want
+    //     to call isLocalPackage, eg maybeDownloadPackageForArchitectures
+    //     which has the official package when running make-bootstrap-tarballs
     if (self.isLocalPackage(name)) {
       version = self._getLocalVersion(version);
     }
@@ -204,6 +208,13 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return  _.findWhere(self.versions, { packageName: name,
                                            version: version });
     });
+  },
+
+  // Overridden by CompleteCatalog.
+  // XXX this is kinda sketchy, maybe callers should only call this
+  //     on the CompleteCatalog?
+  isLocalPackage: function () {
+    return false;
   },
 
   // As getVersion, but returns info on the latest version of the
@@ -281,9 +292,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     self._requireInitialized();
 
     return self._recordOrRefresh(function () {
-      _.findWhere(self.builds,
-                  { versionId: versionRecord._id,
-                    architecture: archesString });
+      return _.findWhere(self.builds,
+                         { versionId: versionRecord._id,
+                           architecture: archesString });
     });
   },
 
@@ -302,16 +313,18 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // default track. Returns null if no such thing exists (even after syncing
   // with the server, which it only does if there is no eligible release
   // version).
-  getDefaultReleaseVersion: function () {
+  getDefaultReleaseVersion: function (track) {
     var self = this;
     self._requireInitialized();
 
+    if (!track)
+      track = self.DEFAULT_TRACK;
+
     var getDef = function () {
-      var versions = self.getSortedRecommendedReleaseVersions(
-        self.DEFAULT_TRACK);
+      var versions = self.getSortedRecommendedReleaseVersions(track);
       if (!versions.length)
         return null;
-      return {track: self.DEFAULT_TRACK, version: versions[0]};
+      return {track: track, version: versions[0]};
     };
 
     return self._recordOrRefresh(getDef);

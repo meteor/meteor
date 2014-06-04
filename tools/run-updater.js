@@ -35,6 +35,8 @@ _.extend(Updater.prototype, {
       updater.tryToDownloadUpdate({showBanner: true});
     } catch (e) {
       // oh well, this was the background. no need to show any errors.
+      // XXX but during development we are
+      console.log("XXX updater error", e, e.stack);
       return;
     }
   },

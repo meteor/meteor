@@ -1,4 +1,5 @@
 var path = require('path');
+var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var files = require('./files.js');
 var tropohouse = require('./tropohouse.js');
@@ -33,17 +34,23 @@ exports.tryToDownloadUpdate = function (options) {
 var checkForUpdate = function (showBanner) {
   // XXX we should ignore errors here, right?  but still do the "can we update
   // this app with a locally available release" check.
-  catalog.serverCatalog.refresh(true);
+  catalog.official.refresh();
 
-  if (!release.isProperRelease())
+  if (!release.current.isProperRelease())
     return;
 
-  var currentReleaseTrack = release.current.getTrack();
-  var latestRelease = catalog.serverCatalog.getDefaultRelease(
+  var currentReleaseTrack = release.current.getReleaseTrack();
+  var latestReleaseVersion = catalog.official.getDefaultReleaseVersion(
     currentReleaseTrack);
   // Maybe you're on some random track with nothing recommended. That's OK.
-  if (!latestRelease)
+  if (!latestReleaseVersion)
     return;
+
+  var latestRelease = catalog.official.getReleaseVersion(
+    latestReleaseVersion.track, latestReleaseVersion.version);
+  if (!latestRelease)
+    throw Error("latest release doesn't exist?");
+
   var latestReleaseToolParts = latestRelease.tool.split('@');
   var latestReleaseToolPackage = latestReleaseToolParts[0];
   var latestReleaseToolVersion = latestReleaseToolParts[1];
@@ -51,7 +58,7 @@ var checkForUpdate = function (showBanner) {
     latestReleaseToolPackage, latestReleaseToolVersion, true);
 
   var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
-  if (utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
+  if (!utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
     // The latest release from the catalog is not where the ~/.meteor0/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
@@ -73,7 +80,7 @@ var checkForUpdate = function (showBanner) {
       throw Error("latest release has no tool?");
 
     console.log("XXX updating tool symlink for",
-                latestRelease.track + "@" + latestRelease.version);
+                latestReleaseVersion.track + "@" + latestReleaseVersion.version);
 
     tropohouse.default.replaceLatestMeteorSymlink(
       path.join(relativeToolPath, toolRecord.path, 'meteor'));
