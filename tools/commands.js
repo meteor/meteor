@@ -1005,10 +1005,10 @@ main.registerCommand({
   } else if (options.releases) {
     // XXX: We probably want the recommended version rather than all of them,
     // but for now, let's just display some stuff to make sure that it worked.
-    _.each(catalog.getAllReleaseTracks(), function (name) {
-      var versions = catalog.getSortedRecommendedReleaseVersions(name);
+    _.each(officialCatalog.getAllReleaseTracks(), function (name) {
+      var versions = officialCatalog.getSortedRecommendedReleaseVersions(name);
       _.each(versions, function (version) {
-        var versionInfo = catalog.getReleaseVersion(name, version);
+        var versionInfo = officialCatalog.getReleaseVersion(name, version);
         if (versionInfo) {
           items.push({ name: name + " " + version, description: versionInfo.description });
         }
@@ -1028,7 +1028,7 @@ main.registerCommand({
         if (!version) {
           version = versions[name];
         }
-        var versionInfo = catalog.getVersion(name, version);
+        var versionInfo = officialCatalog.getVersion(name, version);
         if (!versionInfo) {
           buildmessage.error("Cannot process package list. Unknown: " + name +
                              " at version " + version + "\n");
@@ -1043,8 +1043,8 @@ main.registerCommand({
       return 1;
     }
   } else {
-    _.each(catalog.getAllPackageNames(), function (name) {
-      var versionInfo = catalog.getLatestVersion(name);
+    _.each(officialCatalog.getAllPackageNames(), function (name) {
+      var versionInfo = officialCatalog.getLatestVersion(name);
       if (versionInfo) {
         items.push({ name: name, description: versionInfo.description });
       }
@@ -2074,6 +2074,20 @@ main.registerCommand({
     delete relConf.orderKey;
   }
 
+  // Let's check if this is a known release track/ a track to which we are
+  // authorized to publish before we do any complicated/long operations, and
+  // before we publish its packages.
+  if (!options['create-track']) {
+    var trackRecord = officialCatalog.getReleaseTrack(relConf.track);
+    if (!trackRecord) {
+      process.stderr.write('There is no release track named ' + relConf.track +
+                           '. If you are creating a new track, use the --create-track flag. \n');
+      return 1;
+    }
+    console.log(trackRecord);
+    // XXX: check that we are an authorized maintainer as well.
+  }
+
   // This is sort of a hidden option to just take your entire meteor checkout
   // and make a release out of it. That's what we do now (that's what releases
   // meant pre-0.90), and it is very convenient to do that here.
@@ -2286,16 +2300,8 @@ main.registerCommand({
    relConf.packages=myPackages;
   }
 
-  // Check if the release track exists. If it doesn't, need the create flag.
-  if (!options['create-track']) {
-    var trackRecord = officialCatalog.getReleaseTrack(relConf.track);
-    if (!trackRecord) {
-      process.stderr.write('There is no release track named ' + relConf.track +
-                           '. If you are creating a new track, use the --create-track flag. \n');
-      return 1;
-    }
-    // XXX: check that we are an authorized maintainer as well.
-  } else {
+  // Create the new track, if we have been told to.
+  if (options['create-track']) {
     process.stdout.write("Creating a new release track... \n");
     var track = conn.call('createReleaseTrack',
                          { name: relConf.track } );
