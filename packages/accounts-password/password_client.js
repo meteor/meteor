@@ -5,7 +5,7 @@ var srpUpgradePath = function (selector, password, identity, callback) {
     methodArguments: [{
       user: selector,
       srp: SHA256(identity + ":" + password),
-      hashedPassword: SHA256(password)
+      password: SHA256(password)
     }],
     userCallback: callback
   });
@@ -30,7 +30,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      hashedPassword: SHA256(password),
+      password: SHA256(password),
     }],
     userCallback: function (error, result) {
       if (error && error.error === 400 &&
