@@ -168,7 +168,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     var val = self._kv.has(key) ? self._kv.get(key) : null;
     if (val !== null && ! _.isString(val))
       throwIncorrectKindOfValueError();
-    return val;
+    return EJSON.clone(val);
   },
   getrange: function (key, start, end) {
     start = start || 0;
