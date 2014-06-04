@@ -39,7 +39,9 @@ Meteor.loginWithPassword = function (selector, password, callback) {
           details = EJSON.parse(error.details);
         } catch (e) {}
         if (!(details && details.format === 'srp'))
-          callback(new Error("unknown old password format"));
+          callback(new Meteor.Error(400,
+                                    "Password is old. Please reset your " +
+                                    "password."));
         else
           srpUpgradePath(selector, password, details.identity, callback);
       }
