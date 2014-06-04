@@ -134,6 +134,8 @@ Blaze._evaluateAttributes = function (attrs) {
 
 ////////////////////////////// Blaze._toDOM
 
+// Obeys the HTML.Visitor interface. Provides methods for
+// converting a tree of HTMLJS objects into a tree of DOM elements.
 Blaze.ToDOMVisitor = HTML.Visitor.extend({
   visitNull: function (x, intoArray) {
     return intoArray;
@@ -225,6 +227,10 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
   }
 });
 
-Blaze._toDOM = function (content) {
+// Converts `content` from an HTMLJS entity into a DOM node.
+// For example, if `content` is a string, it will be converted
+// into a text node. If it is an HTMLJS node, then it will
+// be converted into a DOM element.
+Blaze.toDOM = function (content) {
   return (new Blaze.ToDOMVisitor).visit(content, []);
 };
