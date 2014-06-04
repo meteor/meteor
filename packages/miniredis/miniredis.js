@@ -277,7 +277,8 @@ _.extend(Miniredis.RedisStore.prototype, {
 
 Miniredis.unsupportedMethods = ["ttl", "restore", "dump", "expire", "expireat",
   "migrate", "move", "object", "persist", "pexpire", "pexpireat", "pttl",
-  "bitcount", "bitop", "bitops", "getbit", "setbit", "setex", "psetex"];
+  "bitcount", "bitop", "bitops", "getbit", "setbit", "setex", "psetex",
+  "blpop", "brpop", "brpoplpush", "rpoplpush"];
 
 _.each(Miniredis.unsupportedMethods, function (method) {
   Miniredis.RedisStore.prototype[method] = throwNotImplementedError;
@@ -300,15 +301,17 @@ _.extend(Miniredis.List.prototype, {
   },
   lpop: function () {
     var val = this._list.splice(0, 1)[0];
-    return val;
+    return val === undefined ? null : val;
   },
   rpop: function () {
-    return this._list.pop();
+    var val = this._list.pop();
+    return val === undefined ? null : val;
   },
   lindex: function (index) {
     if (index < 0)
       index = this._list.length + index;
-    return this._list[index];
+    var val = this._list[index];
+    return val === undefined ? null : val;
   },
   linsert: function (isBefore, pivot, value) {
     var self = this;
@@ -338,8 +341,37 @@ _.extend(Miniredis.List.prototype, {
   },
   ltrim: function (start, stop) {
     this._list = this.lrange(start, stop);
-  }
+  },
+  type: function () { return "list"; }
 });
+
+_.each(["lpushx", "rpushx"], function (method) {
+  Miniredis.RedisStore.prototype[method] = function (key/* args */) {
+    var self = this;
+
+    if (! self._kv.has(key))
+      return 0;
+    return self[method.slice(0, -1)].apply(arguments);
+  };
+});
+
+_.each(["lpush", "rpus", "lpop", "rpop", "lindex", "linsert", "lrange",
+        "lset", "ltrim"],
+       function (method) {
+         Miniredis.RedisStore.prototype[method] = function (key/*, args */) {
+           var self = this;
+           var args = _.toArray(arguments).slice(1);
+
+           if (! self._kv.has(key))
+             self._kv.set(key, new Miniredis.List);
+
+           var list = self._kv.get(key);
+           if (! (list instanceof Miniredis.List))
+             throwIncorrectKindOfValueError();
+
+           return Miniredis.List[method].apply(list, args);
+         };
+       });
 
 function normalizeBounds (start, end, len) {
   // put start and end into [0, len) range
