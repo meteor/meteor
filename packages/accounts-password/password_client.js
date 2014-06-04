@@ -1,16 +1,3 @@
-// The server requested an upgrade from the old SRP password format,
-// so supply the needed SRP identity to login.
-var srpUpgradePath = function (selector, password, identity, callback) {
-  Accounts.callLoginMethod({
-    methodArguments: [{
-      user: selector,
-      srp: SHA256(identity + ":" + password),
-      password: SHA256(password)
-    }],
-    userCallback: callback
-  });
-};
-
 // Attempt to log in with a password.
 //
 // @param selector {String|Object} One of the following:
@@ -30,11 +17,23 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      password: SHA256(password),
+      password: SHA256(password)
     }],
     userCallback: function (error, result) {
       if (error && error.error === 400 &&
           error.reason === 'old password format') {
+        // The "reason" string should match the error thrown in the
+        // password login handler in password_server.js.
+
+        // XXX COMPAT WITH 0.8.1.3
+        // If this user's last login was with a previous version of
+        // Meteor that used SRP, then the server throws this error to
+        // indicate that we should try again. The error includes the
+        // user's SRP identity. We provide a value derived from the
+        // identity and the password to prove to the server that we know
+        // the password without requiring a full SRP flow, as well as
+        // SHA256(password), which the server bcrypts and stores in
+        // place of the old SRP information for this user.
         var details;
         try {
           details = EJSON.parse(error.details);
@@ -50,6 +49,20 @@ Meteor.loginWithPassword = function (selector, password, callback) {
         callback();
       }
     }
+  });
+};
+
+// The server requested an upgrade from the old SRP password format,
+// so supply the needed SRP identity to login.
+var srpUpgradePath = function (selector, plaintextPassword,
+                               identity, callback) {
+  Accounts.callLoginMethod({
+    methodArguments: [{
+      user: selector,
+      srp: SHA256(identity + ":" + plaintextPassword),
+      password: SHA256(plaintextPassword)
+    }],
+    userCallback: callback
   });
 };
 

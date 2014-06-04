@@ -4,8 +4,8 @@ var bcrypt = Npm.require('bcrypt');
 var bcryptHash = Meteor._wrapAsync(bcrypt.hash);
 var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 
-// Use bcrypt to hash the password (which was already hashed on the
-// client) for storage in the database.
+// Use bcrypt to hash the password (which was already hashed with SHA256
+// on the client) for storage in the database.
 //
 var hashPassword = function (password) {
   return bcryptHash(password, 10 /* number of rounds */);
@@ -115,7 +115,21 @@ Accounts.registerLoginHandler("password", function (options) {
   );
 });
 
-// Handler to login using the SRP upgrade path.
+// Handler to login using the SRP upgrade path. To use this login
+// handler, the client must provide:
+//   - srp: H(identity + ":" + password)
+//   - plaintextPassword or password (which is the SHA256 of the password)
+//
+// We use `options.srp` to verify that the client knows the correct
+// password without doing a full SRP flow. Once we've checked that, we
+// upgrade the user to bcrypt and remove the SRP information from the
+// user document.
+//
+// The client ends up using this login handler after trying the normal
+// login handler (above), which throws an error telling the client to
+// try the SRP upgrade path.
+//
+// XXX COMPAT WITH 0.8.1.3
 Accounts.registerLoginHandler("password", function (options) {
   if (!options.srp || !(options.password || options.plaintextPassword))
     return undefined; // don't handle
@@ -217,7 +231,7 @@ Accounts.setPassword = function (userId, newPlaintextPassword) {
 
   Meteor.users.update(
     {_id: user._id},
-    { $unset: {'services.password.srp': 1},
+    { $unset: {'services.password.srp': 1}, // XXX COMPAT WITH 0.8.1.3
       $set: {'services.password.bcrypt': hashPassword(SHA256(newPlaintextPassword))} }
   );
 };

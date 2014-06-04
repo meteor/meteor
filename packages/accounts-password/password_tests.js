@@ -736,29 +736,36 @@ if (Meteor.isClient) (function () {
     logoutStep,
     // Create user with old SRP credentials in the database.
     function (test, expect) {
-      Meteor.call("testCreateSRPUser", expect(function (error) {
+      var self = this;
+      Meteor.call("testCreateSRPUser", expect(function (error, result) {
         test.isFalse(error);
+        self.username = result;
       }));
     },
     // We are able to login with the old style credentials in the database.
     function (test, expect) {
-      Meteor.loginWithPassword('srptestuser', 'abcdef', expect(function (error) {
+      Meteor.loginWithPassword(this.username, 'abcdef', expect(function (error) {
         test.isFalse(error);
       }));
     },
     function (test, expect) {
-      Meteor.call("testSRPUpgrade", expect(function (error) {
+      Meteor.call("testSRPUpgrade", this.username, expect(function (error) {
         test.isFalse(error);
       }));
     },
     logoutStep,
     // After the upgrade to bcrypt we're still able to login.
     function (test, expect) {
-      Meteor.loginWithPassword('srptestuser', 'abcdef', expect(function (error) {
+      Meteor.loginWithPassword(this.username, 'abcdef', expect(function (error) {
         test.isFalse(error);
       }));
     },
-    logoutStep
+    logoutStep,
+    function (test, expect) {
+      Meteor.call("removeUser", this.username, expect(function (error) {
+        test.isFalse(error);
+      }));
+    }
   ]);
 }) ();
 

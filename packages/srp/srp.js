@@ -1,5 +1,9 @@
 // This package contains just enough of the original SRP code to
 // support the backwards-compatibility upgrade path.
+//
+// An SRP (and possibly also accounts-srp) package should eventually be
+// available in Atmosphere so that users can continue to use SRP if they
+// want to.
 
 SRP = {};
 
