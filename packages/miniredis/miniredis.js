@@ -283,6 +283,63 @@ _.each(Miniredis.unsupportedMethods, function (method) {
   Miniredis.RedisStore.prototype[method] = throwNotImplementedError;
 });
 
+Miniredis.List = function () {
+  this._list = [];
+};
+
+_.extend(Miniredis.List.prototype, {
+  // since the Miniredis.List will always be used through RedisStore, there
+  // is no point of extra type-checking
+  lpush: function (value) {
+    this._list.splice(0, 0, value);
+    return this._list.length;
+  },
+  rpush: function (value) {
+    this._list.push(value);
+    return this._list.length;
+  },
+  lpop: function () {
+    var val = this._list.splice(0, 1)[0];
+    return val;
+  },
+  rpop: function () {
+    return this._list.pop();
+  },
+  lindex: function (index) {
+    if (index < 0)
+      index = this._list.length + index;
+    return this._list[index];
+  },
+  linsert: function (isBefore, pivot, value) {
+    var self = this;
+    var pos = _.indexOf(self._list, pivot);
+
+    if (pos === -1)
+      return -1;
+
+    self._list.splice(isBefore ? pos : pos + 1, 0, value);
+    return self._list.length;
+  },
+  lrange: function (start, stop) {
+    var self = this;
+    var normalizedBounds = normalizeBounds(start, stop, self._list.length);
+    start = normalizedBounds.start;
+    stop = normalizedBounds.end;
+
+    if (start > stop)
+      return [];
+
+    return self._list.slice(start, stop - start + 1);
+  },
+  lset: function (index, value) {
+    if (index < 0)
+      index = this._length + index;
+    this._list[index] = value;
+  },
+  ltrim: function (start, stop) {
+    this._list = this.lrange(start, stop);
+  }
+});
 
 function normalizeBounds (start, end, len) {
   // put start and end into [0, len) range
