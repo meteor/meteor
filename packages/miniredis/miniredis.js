@@ -355,7 +355,7 @@ _.each(["lpushx", "rpushx"], function (method) {
   };
 });
 
-_.each(["lpush", "rpus", "lpop", "rpop", "lindex", "linsert", "lrange",
+_.each(["lpush", "rpush", "lpop", "rpop", "lindex", "linsert", "lrange",
         "lset", "ltrim"],
        function (method) {
          Miniredis.RedisStore.prototype[method] = function (key/*, args */) {
