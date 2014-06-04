@@ -95,7 +95,10 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (! self._kv.has(key))
       return "none";
 
-    return self._kv.get(key).type();
+    var val = self._kv.get(key);
+    if (_.isString(val))
+      return "string";
+    return val.type();
   },
   // implemented as an iterator similar to _.each
   // the original docs of redis describe a different low-level semantics
