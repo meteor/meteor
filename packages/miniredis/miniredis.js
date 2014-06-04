@@ -281,7 +281,7 @@ function patternToRegexp (pattern) {
   // all special chars except for [, ], *, ?
   // - as they are used as is in patterns
   var specialChars = ".\\^$()+{}";
-  var regexpStr = "";
+  var regexpStr = "^";
 
   _.each(pattern, function (ch) {
     if (_.contains(specialChars, ch))
@@ -296,6 +296,8 @@ function patternToRegexp (pattern) {
 
     regexpStr += ch;
   });
+
+  regexpStr += "$";
 
   return new RegExp(regexpStr);
 }
