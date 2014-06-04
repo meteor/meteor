@@ -1992,6 +1992,12 @@ Tinytest.add(
 
     var hooks = [];
     var container = div.querySelector(".test-ui-hooks");
+
+    // Before we attach the ui hooks, put two items in the DOM.
+    var origVal = [{ _id: 'foo1' }, { _id: 'foo2' }];
+    rv.set(origVal);
+    Deps.flush();
+
     container._uihooks = {
       insertElement: function (n, next) {
         hooks.push("insert");
@@ -1999,43 +2005,44 @@ Tinytest.add(
         // check that the element hasn't actually been added yet
         test.isTrue(n.parentNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE);
         test.isFalse(n.parentNode.parentNode);
-
-        container.insertBefore(n, next);
       },
       removeElement: function (n) {
         hooks.push("remove");
         // check that the element hasn't actually been removed yet
         test.isTrue(n.parentNode === container);
-        container.removeChild(n);
       },
       moveElement: function (n, next) {
         hooks.push("move");
         // check that the element hasn't actually been moved yet
         test.isFalse(n.nextNode === next);
-        container.insertBefore(n, next);
       }
     };
 
-    rv.set([{ _id: 'foo1' }]);
-    Deps.flush();
-    test.equal(hooks, ['insert']);
+    var testDomUnchanged = function () {
+      var items = div.getElementsByClassName("item");
+      test.equal(items.length, 2);
+      test.equal(items[0].innerHTML, "foo1");
+      test.equal(items[1].innerHTML, "foo2");
+    };
 
-    var newVal = rv.get();
-    newVal.push({ _id: 'foo2' });
+    var newVal = _.clone(origVal);
+    newVal.push({ _id: 'foo3' });
     rv.set(newVal);
     Deps.flush();
-    test.equal(hooks, ['insert', 'insert']);
+    test.equal(hooks, ['insert']);
+    testDomUnchanged();
 
-    newVal = rv.get();
     newVal.reverse();
     rv.set(newVal);
     Deps.flush();
-    test.equal(hooks, ['insert', 'insert', 'move']);
+    test.equal(hooks, ['insert', 'move']);
+    testDomUnchanged();
 
-    newVal = [rv.get()[0]];
+    newVal = [origVal[0]];
     rv.set(newVal);
     Deps.flush();
-    test.equal(hooks, ['insert', 'insert', 'move', 'remove']);
+    test.equal(hooks, ['insert', 'move', 'remove']);
+    testDomUnchanged();
   }
 );
 

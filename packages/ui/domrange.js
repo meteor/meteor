@@ -111,7 +111,7 @@ var rangeParented = function (range) {
 
       // get jQuery to tell us when this node is removed
       DomBackend.onRemoveElement(parentNode, function () {
-        rangeRemoved(range);
+        rangeRemoved(range, true /* elementsAlreadyRemoved */);
       });
     }
 
@@ -128,7 +128,7 @@ var rangeParented = function (range) {
   }
 };
 
-var rangeRemoved = function (range) {
+var rangeRemoved = function (range, elementsAlreadyRemoved) {
   if (! range.isRemoved) {
     range.isRemoved = true;
 
@@ -146,29 +146,29 @@ var rangeRemoved = function (range) {
     if (range.removed)
       range.removed();
 
-    membersRemoved(range);
+    membersRemoved(range, elementsAlreadyRemoved);
   }
 };
 
-var nodeRemoved = function (node, viaBackend) {
+var nodeRemoved = function (node, elementsAlreadyRemoved) {
   if (node.nodeType === 1) { // ELEMENT
     var comps = DomRange.getComponents(node);
     for (var i = 0, N = comps.length; i < N; i++)
       rangeRemoved(comps[i]);
 
-    if (! viaBackend)
+    if (! elementsAlreadyRemoved)
       DomBackend.removeElement(node);
   }
 };
 
-var membersRemoved = function (range) {
+var membersRemoved = function (range, elementsAlreadyRemoved) {
   var members = range.members;
   for (var k in members) {
     var mem = members[k];
     if (mem instanceof DomRange)
-      rangeRemoved(mem);
+      rangeRemoved(mem, elementsAlreadyRemoved);
     else
-      nodeRemoved(mem);
+      nodeRemoved(mem, elementsAlreadyRemoved);
   }
 };
 
@@ -230,7 +230,7 @@ _extend(DomRange.prototype, {
     for (var i = 0, N = nodes.length; i < N; i++)
       removeNode(nodes[i]);
 
-    membersRemoved(this);
+    membersRemoved(this, true /* elementsAlreadyRemoved */);
 
     this.members = {};
   },
@@ -341,7 +341,7 @@ _extend(DomRange.prototype, {
       removeNode(this.start);
       removeNode(this.end);
       this.owner = null;
-      rangeRemoved(this);
+      rangeRemoved(this, true /* elementsAlreadyRemoved */);
       return;
     }
 
