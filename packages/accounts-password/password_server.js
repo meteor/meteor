@@ -4,15 +4,15 @@ var bcrypt = Npm.require('bcrypt');
 var bcryptHash = Meteor._wrapAsync(bcrypt.hash);
 var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 
-// Salt the password that was hashed on the client for storage in the
-// database.
+// Use bcrypt to hash the password (which was already hashed on the
+// client) for storage in the database.
 //
 var hashPassword = function (password) {
   return bcryptHash(password, 10 /* number of rounds */);
 };
 
 
-// Check whether the provided hashed password matches the salted
+// Check whether the provided hashed password matches the bcrypt'ed
 // password in the database user record.
 //
 var checkPassword = function (user, password) {
@@ -74,7 +74,7 @@ var userQueryValidator = Match.Where(function (user) {
 
 // Handler to login with a password.
 //
-// The Meteor client uses options.hashedPassword, the password hashed
+// The Meteor client uses options.password, the password hashed
 // with SHA256.
 //
 // For other DDP clients which don't have access to SHA, the handler
@@ -87,11 +87,11 @@ var userQueryValidator = Match.Where(function (user) {
 // Note that neither password option is secure without SSL.
 //
 Accounts.registerLoginHandler("password", function (options) {
-  if (!(options.hashedPassword || options.plaintextPassword) || options.srp)
+  if (!(options.password || options.plaintextPassword) || options.srp)
     return undefined; // don't handle
 
   check(options, Match.OneOf(
-    {user: userQueryValidator, hashedPassword: String},
+    {user: userQueryValidator, password: String},
     {user: userQueryValidator, plaintextPassword: String}
   ));
 
@@ -111,20 +111,20 @@ Accounts.registerLoginHandler("password", function (options) {
 
   return checkPassword(
     user,
-    options.hashedPassword || SHA256(options.plaintextPassword)
+    options.password || SHA256(options.plaintextPassword)
   );
 });
 
 // Handler to login using the SRP upgrade path.
 Accounts.registerLoginHandler("password", function (options) {
-  if (!options.srp || !(options.hashedPassword || options.plaintextPassword))
+  if (!options.srp || !(options.password || options.plaintextPassword))
     return undefined; // don't handle
 
   check(options, Match.OneOf(
-    {user: userQueryValidator, srp: String, hashedPassword: String},
+    {user: userQueryValidator, srp: String, password: String},
     {user: userQueryValidator, srp: String, plaintextPassword: String}
   ));
-  var password = options.hashedPassword || SHA256(options.plaintextPassword);
+  var password = options.password || SHA256(options.plaintextPassword);
 
   var user = findUserFromUserQuery(options.user);
 
