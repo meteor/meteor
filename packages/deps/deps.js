@@ -159,7 +159,7 @@ _assign(Deps.Computation.prototype, {
       // ourselves, since we'll rerun immediately anyway.
       if (! self._recomputing && ! self.stopped) {
         requireFlush();
-        pendingComputations.push(this);
+        pendingComputations.push(self);
       }
 
       self.invalidated = true;
