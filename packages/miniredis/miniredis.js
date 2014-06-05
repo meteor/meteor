@@ -291,12 +291,14 @@ Miniredis.List = function () {
 _.extend(Miniredis.List.prototype, {
   // since the Miniredis.List will always be used through RedisStore, there
   // is no point of extra type-checking
-  lpush: function (value) {
-    this._list.splice(0, 0, value);
+  lpush: function (/* values */) {
+    var values = _.invoke(arguments, "toString");
+    Array.prototype.splice.apply(this._list, [0, 0].concat(values));
     return this._list.length;
   },
-  rpush: function (value) {
-    this._list.push(value);
+  rpush: function (/* values */) {
+    var values = _.invoke(arguments, "toString");
+    Array.prototype.push.apply(this._list, values);
     return this._list.length;
   },
   lpop: function () {
@@ -313,14 +315,15 @@ _.extend(Miniredis.List.prototype, {
     var val = this._list[index];
     return val === undefined ? null : val;
   },
-  linsert: function (isBefore, pivot, value) {
+  linsert: function (beforeAfter, pivot, value) {
     var self = this;
-    var pos = _.indexOf(self._list, pivot);
+    var pos = _.indexOf(self._list, pivot.toString());
+    var isBefore = beforeAfter.toLowerCase() === "before";
 
     if (pos === -1)
       return -1;
 
-    self._list.splice(isBefore ? pos : pos + 1, 0, value);
+    self._list.splice(isBefore ? pos : pos + 1, 0, value.toString());
     return self._list.length;
   },
   lrange: function (start, stop) {
@@ -332,15 +335,18 @@ _.extend(Miniredis.List.prototype, {
     if (start > stop)
       return [];
 
-    return self._list.slice(start, stop - start + 1);
+    return self._list.slice(start, stop + 1);
   },
   lset: function (index, value) {
     if (index < 0)
       index = this._length + index;
-    this._list[index] = value;
+    this._list[index] = value.toString();
   },
   ltrim: function (start, stop) {
     this._list = this.lrange(start, stop);
+  },
+  llen: function () {
+    return this._list.length;
   },
   type: function () { return "list"; }
 });
@@ -356,7 +362,7 @@ _.each(["lpushx", "rpushx"], function (method) {
 });
 
 _.each(["lpush", "rpush", "lpop", "rpop", "lindex", "linsert", "lrange",
-        "lset", "ltrim"],
+        "lset", "ltrim", "llen"],
        function (method) {
          Miniredis.RedisStore.prototype[method] = function (key/*, args */) {
            var self = this;
