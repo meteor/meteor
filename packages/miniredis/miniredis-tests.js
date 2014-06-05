@@ -57,5 +57,42 @@ Tinytest.add("miniredis - strings operations", function (test) {
   test.equal(S.get("key"), "newstring");
 });
 
+Tinytest.add("miniredis - lists operations", function (test) {
+  var S = new Miniredis.RedisStore();
+  test.equal(S.get("k"), null);
+  S.lpushx("k", "0");
+  test.equal(S.get("k"), null);
+  S.rpushx("k", "0");
+  test.equal(S.get("k"), null);
+  S.rpush("k", "1");
+  test.throws(function () { S.get("k"); }, /wrong kind/);
+  test.equal(S.lindex("k", 0), "1");
+  S.lpushx("k", 0);
+  test.equal(S.lindex("k", 0), "0");
+  S.lpush("k", "a");
+  test.equal(S.lindex("k", 0), "a");
+  test.equal(S.lindex("k", 1), "0");
+  test.equal(S.lindex("k", 2), "1");
+  S.rpush("k", 2, 3, 4, 5);
+  test.equal(S.lindex("k", 3), "2");
+  test.equal(S.lindex("k", 4), "3");
+  test.equal(S.lindex("k", 5), "4");
+  test.equal(S.lindex("k", 6), "5");
+  test.equal(S.llen("k"), 7);
+  test.equal(S.lrange("k", 2, -2), ["1", "2", "3", "4"]);
+  S.linsert("k", "BEFORE", "0", "-1");
+  test.equal(S.lrange("k", 0, 7), ["a", "-1", "0", "1", "2", "3", "4", "5"]);
+  S.linsert("k", "AFTER", "a", "b");
+  test.equal(S.lrange("k", 0, 8), ["a", "b", "-1", "0", "1", "2", "3", "4", "5"]);
+  test.equal(S.lpop("k"), "a");
+  test.equal(S.lpop("k"), "b");
+  test.equal(S.lpop("k"), "-1");
+  test.equal(S.llen("k"), 6);
+  test.equal(S.rpop("k"), "5");
+  test.equal(S.rpop("k"), "4");
+  test.equal(S.llen("k"), 4);
+  S.lset("k", "2", "3");
+  test.equal(S.lrange("k", 0, 3), ["0", "1", "3", "3"]);
+  // XXX implement and test LREM
 });
 
