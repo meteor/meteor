@@ -745,6 +745,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   options: {
+    // XXX come up with a better option name, like --allow-downgrades
     force: { type: Boolean, required: false }
   }
 }, function (options) {
