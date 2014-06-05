@@ -91,6 +91,17 @@ CssTools = {
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
       var basePath = path.dirname(rule.position.source);
 
+      // Set the correct basePath based on how the linked asset will be served.
+      // XXX This is wrong. We are coupling the information about how files will
+      // be served by the web server to the information how they were stored
+      // originally on the filesystem in the project structure. Ideally, there
+      // should be some module that tells us precisely how each asset will be
+      // served but for now we are just assuming that everything that comes from
+      // a folder starting with "/packages/" is served on the same path as
+      // it was on the filesystem and everything else is served on root "/".
+      if (! basePath.match(/^\/?packages\//i))
+          basePath = "/";
+
       _.each(rule.declarations, function(declaration, declarationIndex) {
         var parts, resource, absolutePath, quotes, oldCssUrl, newCssUrl;
         var value = declaration.value;
