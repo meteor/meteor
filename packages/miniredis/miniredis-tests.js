@@ -39,3 +39,19 @@ Tinytest.add("miniredis - pattern matching", function (test) {
   F("x.:)(x");
 });
 
+Tinytest.add("miniredis - strings operations", function (test) {
+  var S = new Miniredis.RedisStore();
+
+  test.equal(S.get("key"), null);
+  S.set("key", 123);
+  test.equal(S.get("key"), "123");
+  test.equal(S.append("key", "45"), 5);
+  test.equal(S.get("key"), "12345");
+  S.incrby("key", 4);
+  test.equal(S.get("key"), "12349");
+  S.decrby("key", "11");
+  test.equal(S.get("key"), "12338");
+  test.equal(S.strlen("key"), 5);
+  test.equal(S.getrange("key", -3, -1), "338");
+});
+
