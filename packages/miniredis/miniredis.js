@@ -369,7 +369,7 @@ _.each(["lpush", "rpush", "lpop", "rpop", "lindex", "linsert", "lrange",
            if (! (list instanceof Miniredis.List))
              throwIncorrectKindOfValueError();
 
-           return Miniredis.List[method].apply(list, args);
+           return Miniredis.List.prototype[method].apply(list, args);
          };
        });
 
