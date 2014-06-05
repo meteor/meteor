@@ -351,7 +351,7 @@ _.each(["lpushx", "rpushx"], function (method) {
 
     if (! self._kv.has(key))
       return 0;
-    return self[method.slice(0, -1)].apply(arguments);
+    return self[method.slice(0, -1)].apply(self, arguments);
   };
 });
 
