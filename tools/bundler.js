@@ -158,7 +158,6 @@ var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
-var builder = require(path.join(__dirname, 'builder.js'));
 var uniload = require(path.join(__dirname, 'uniload.js'));
 var watch = require('./watch.js');
 var release = require('./release.js');
