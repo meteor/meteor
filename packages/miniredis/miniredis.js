@@ -49,6 +49,8 @@ _.extend(Miniredis.RedisStore.prototype, {
     return 0;
   },
   keys: function (pattern) {
+    if (! pattern)
+      throw new Error("Wrong number of arguments for 'keys' command");
     var self = this;
     var regexp = patternToRegexp(pattern);
 
@@ -188,8 +190,8 @@ _.extend(Miniredis.RedisStore.prototype, {
 
     var len = val.length;
     var normalizedBounds = normalizeBounds(start, end, len);
-    start = normalizeBounds.start;
-    end = normalizeBounds.end;
+    start = normalizedBounds.start;
+    end = normalizedBounds.end;
 
     if (end < start)
       return "";
@@ -199,7 +201,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   getset: function (key, value) {
     var self = this;
     var val = self.get(key);
-    self.set(key, value);
+    self.set(key, value.toString());
     return val;
   },
   incr: function (key) {
@@ -252,9 +254,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   set: function (key, value) {
     var self = this;
-    // XXX instead of EJSON.cloning we should probably check for the type and
-    // not bother cloning as strings are immutable
-    self._kv.set(key, EJSON.clone(value));
+    self._kv.set(key, value.toString());
   },
   setnx: function (key, value) {
     var self = this;
@@ -378,11 +378,11 @@ function normalizeBounds (start, end, len) {
   start %= len;
   if (start < 0)
     start += len;
+  if (end >= len)
+    end = len - 1;
   end %= len;
   if (end < 0)
     end += len;
-  if (end >= len)
-    end = len - 1;
   return { start: start, end: end };
 }
 
