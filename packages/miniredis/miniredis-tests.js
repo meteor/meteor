@@ -53,5 +53,9 @@ Tinytest.add("miniredis - strings operations", function (test) {
   test.equal(S.get("key"), "12338");
   test.equal(S.strlen("key"), 5);
   test.equal(S.getrange("key", -3, -1), "338");
+  test.equal(S.getset("key", "newstring"), "12338");
+  test.equal(S.get("key"), "newstring");
+});
+
 });
 
