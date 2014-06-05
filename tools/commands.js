@@ -428,25 +428,32 @@ main.registerCommand({
 main.registerCommand({
   name: 'update',
   options: {
-    patch: { type: Boolean, required: false }
+    patch: { type: Boolean, required: false },
+    packages: { type: Boolean, required: false },
+    minor: { type: Boolean, required: false }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
   requiresRelease: false
 }, function (options) {
-  // XXX in the new packaging world it would call the constraint solver similar
-  // to this:
-  // var newVersions = catalog.resolveConstraints(allPackages, {
-  //   previousSolution: versions,
-  //   breaking: !options.minor
-  // });
-
   // XXX clean this up if we don't end up using it, but we probably should be
   // using it on the refresh call
   var couldNotContactServer = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
   officialCatalog.refresh(true);
+
+  if (options.packages) {
+    var versions = project.getVersions();
+    var allPackages = project.getCurrentCombinedConstraints();
+    var newVersions = catalog.resolveConstraints(allPackages, {
+      previousSolution: versions,
+      breaking: !options.minor,
+      upgrade: true
+    });
+    project.setVersions(newVersions);
+    process.exit(0);
+  }
 
   // refuse to update if we're in a git checkout.
   if (! files.usesWarehouse()) {
@@ -524,6 +531,11 @@ main.registerCommand({
       }
     }
     return;
+  }
+
+  if (options.patch) {
+    console.log("Patch update requested \n");
+    process.exit(1);
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
@@ -1883,7 +1895,8 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: 0,
   options: {
-    create: { type: Boolean }
+    create: { type: Boolean },
+    name: { type: String }
   },
   requiresPackage: true
 }, function (options) {
@@ -1912,9 +1925,13 @@ main.registerCommand({
   var messages = buildmessage.capture(
     { title: "building the package" },
     function () {
-      // XXX would be nice to get the name out of the package (while
-      // still confirming that it matches the name of the directory)
       var packageName = path.basename(options.packageDir);
+
+      console.log("XXX: A more elegant override for names");
+      if (packageName !== options.name) {
+        packageName = options.name;
+      }
+
       if (! utils.validPackageName(packageName)) {
         buildmessage.error("Invalid package name:", packageName);
       }
@@ -2031,8 +2048,8 @@ main.registerCommand({
     'from-checkout': { type: Boolean, required: false }
   }
 }, function (options) {
-
   // Refresh the catalog, cacheing the remote package data on the server.
+  process.stdout.write("Resyncing with package server. XXX Why so long? ]\n");
   officialCatalog.refresh(true);
 
   try {
@@ -2061,6 +2078,7 @@ main.registerCommand({
   }
 
   // Fill in the order key and any other generated release.json fields.
+  process.stdout.write("Double-checking release schema ");
 
   // If you didn't specify an orderKey and it's compatible with our conventional
   // orderKey generation algorithm, use the algorithm. If you explicitly specify
@@ -2073,6 +2091,7 @@ main.registerCommand({
   if (relConf.orderKey === null) {
     delete relConf.orderKey;
   }
+  process.stdout.write(".");
 
   // Check that the schema is valid -- release.json contains all the required
   // fields, does not contain contradicting information, etc. Output all
@@ -2117,6 +2136,7 @@ main.registerCommand({
   if (badSchema) {
     return 1;
   }
+  process.stdout.write(".");
 
   // Let's check if this is a known release track/ a track to which we are
   // authorized to publish before we do any complicated/long operations, and
@@ -2137,6 +2157,7 @@ main.registerCommand({
       return 1;
     }
   }
+  process.stdout.write(". OK! \n");
 
   // This is sort of a hidden option to just take your entire meteor checkout
   // and make a release out of it. That's what we do now (that's what releases
@@ -2177,7 +2198,7 @@ main.registerCommand({
       process.stderr.write(
         "Setting the --from-checkout option will use the tool & packages in your meteor " +
         "checkout. \n" +
-        "Your release configuration file should not contain that information.");
+        "Your release configuration file should not contain that information. \n");
       return 1;
     }
 
@@ -2194,6 +2215,7 @@ main.registerCommand({
     var messages = buildmessage.capture(
       {title: "rebuilding local packages"},
       function () {
+        process.stdout.write("Rebuilding local packages... \n");
         _.each(contents, function (item) {
           // We expect the meteor/packages directory to only contain a lot of
           // directories, each of which is a package. This may one day be false,
@@ -2211,6 +2233,8 @@ main.registerCommand({
             buildmessage.enterJob(
               { title: "building package " + item },
               function () {
+                process.stdout.write("  checking consistency of " + item + " ");
+
                 // Initialize the package source. (If we can't do this, then we should
                 // not proceed)
                 packageSource.initFromPackageDir(item, packageDir);
@@ -2228,6 +2252,8 @@ main.registerCommand({
                     path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
+                process.stdout.write(".");
+
                 // Now compile it! Once again, everything should compile, and if
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
@@ -2238,6 +2264,7 @@ main.registerCommand({
                   process.stderr.write("Error compiling unipackage:" + item + "\n");
                   return;
                 };
+                process.stdout.write(".");
 
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
@@ -2247,6 +2274,7 @@ main.registerCommand({
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
+                process.stdout.write(".");
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
@@ -2304,6 +2332,9 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number. \n");
+                    process.stderr.write(" NOT OK \n");
+                  } else {
+                    process.stdout.write("OK! \n");
                   }
                 }
               });
@@ -2369,7 +2400,12 @@ main.registerCommand({
     tool: relConf.tool,
     packages: relConf.packages
   };
-  var uploadInfo = conn.call('createReleaseVersion', record);
+  var uploadInfo;
+  if (!relConf.patchFrom) {
+    uploadInfo = conn.call('createReleaseVersion', record);
+  } else {
+    uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
+  }
 
   // Get it back.
   officialCatalog.refresh(true);

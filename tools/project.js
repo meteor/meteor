@@ -197,10 +197,7 @@ _.extend(Project.prototype, {
       // If the result is now what it used to be, rewrite the files on
       // disk. Otherwise, don't bother with I/O operations.
       if (!_.isEqual(newVersions, self.dependencies)) {
-        // This will set self.dependencies as a side effect.
-        self._ensurePackagesExistOnDisk(newVersions);
-        self.dependencies = newVersions;
-        self.recordVersions();
+        self.setVersions(newVersions);
       };
 
       // Finally, initialize the package loader.
@@ -468,8 +465,8 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = getLines(packages);
     lines = _.reject(lines, function (line) {
-      // XXX this won't remove a package if it's there with a @CONSTRAINT
-      return _.indexOf(names, trimLine(line)) !== -1;
+      var cur = trimLine(line).split('@')[0];
+      return _.indexOf(names, cur) !== -1;
     });
     fs.writeFileSync(packages,
                      lines.join('\n') + '\n', 'utf8');
@@ -485,16 +482,24 @@ _.extend(Project.prototype, {
     // Force a recalculation of all the dependencies, and record them to disk.
     self._depsUpToDate = false;
     self._ensureDepsUpToDate();
-    self.recordVersions();
+    self._recordVersions();
+  },
+
+  // Given a set of versions, makes sure that they exist on disk, and then
+  // writes out the new versions file.
+  setVersions: function (newVersions) {
+    var self = this;
+    self._ensurePackagesExistOnDisk(newVersions);
+    self.dependencies = newVersions;
+    self._recordVersions();
   },
 
   // Recalculates the project dependencies if needed and records them to disk.
-  recordVersions : function (newVersions) {
+  _recordVersions : function () {
     var self = this;
-    var versions = newVersions || self.dependencies;
 
     var lines = [];
-    _.each(versions, function (version, name) {
+    _.each(self.dependencies, function (version, name) {
       lines.push(name + "@" + version + "\n");
     });
     lines.sort();
@@ -561,22 +566,27 @@ _.extend(Project.prototype, {
     self.constraints = _.extend(self.constraints, moreDeps);
     self.dependencies = newVersions;
 
+    // Remove the old constraints on the same constraints, since we are going to
+    // overwrite them.
+    self._removePackageRecords(_.pluck(moreDeps, 'package'));
+
     // Add to the packages file. Do this first, since the versions file is
     // derived from this one and can always be reconstructed later. We read the
     // file from disk, because we don't store the comments.
     var packages = self._getConstraintFile();
     var lines = getLines(packages);
-    _.each(moreDeps, function (constraint, packageName) {
-      // XXX this is wrong for null constraint
-      // XXX need to replace existing lines with the same packageName, ideally
-      //     preserving comment
-      lines.push(packageName + '@' + constraint);
+    _.each(moreDeps, function (constraint) {
+      if (constraint.constraint) {
+        lines.push(constraint.package + '@' + constraint.constraint);
+      } else {
+        lines.push(constraint.package);
+      }
     });
     lines.push('\n');
     fs.writeFileSync(packages, lines.join('\n'), 'utf8');
 
     // Rewrite the versions file.
-    self.recordVersions(newVersions);
+    self._recordVersions();
 
     return downloadedPackages;
   },
