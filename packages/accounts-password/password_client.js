@@ -17,7 +17,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      password: SHA256(password)
+      password: hashPassword(password)
     }],
     userCallback: function (error, result) {
       if (error && error.error === 400 &&
@@ -54,6 +54,13 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
+var hashPassword = function (password) {
+  return {
+    digest: SHA256(password),
+    algorithm: "sha-256"
+  };
+};
+
 // The server requested an upgrade from the old SRP password format,
 // so supply the needed SRP identity to login.
 var srpUpgradePath = function (selector, plaintextPassword,
@@ -62,7 +69,7 @@ var srpUpgradePath = function (selector, plaintextPassword,
     methodArguments: [{
       user: selector,
       srp: SHA256(identity + ":" + plaintextPassword),
-      password: SHA256(plaintextPassword)
+      password: hashPassword(plaintextPassword)
     }],
     userCallback: callback
   });
@@ -77,8 +84,7 @@ Accounts.createUser = function (options, callback) {
     throw new Error("Must set options.password");
 
   // Replace password with the hashed password.
-  options.hashedPassword = SHA256(options.password);
-  delete options.password;
+  options.password = hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
@@ -104,7 +110,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 
   Accounts.connection.apply(
     'changePassword',
-    [oldPassword ? SHA256(oldPassword) : null, SHA256(newPassword)],
+    [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
     function (error, result) {
       if (error || !result) {
         callback && callback(
@@ -142,7 +148,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
-    methodArguments: [token, SHA256(newPassword)],
+    methodArguments: [token, hashPassword(newPassword)],
     userCallback: callback});
 };
 

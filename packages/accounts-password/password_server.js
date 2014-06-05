@@ -4,24 +4,68 @@ var bcrypt = Npm.require('bcrypt');
 var bcryptHash = Meteor._wrapAsync(bcrypt.hash);
 var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 
-// Use bcrypt to hash the password (which was already hashed with SHA256
-// on the client) for storage in the database.
+// User records have a 'services.password.bcrypt' field on them to hold
+// their hashed passwords (unless they have a 'services.password.srp'
+// field, in which case they will be upgraded to bcrypt the next time
+// they log in).
+//
+// When the client sends a password to the server, it can either be a
+// string (the plaintext password) or an object with keys 'digest' and
+// 'algorithm' (must be "sha-256" for now). The Meteor client always sends
+// password objects { digest: *, algorithm: "sha-256" }, but DDP clients
+// that don't have access to SHA can just send plaintext passwords as
+// strings.
+//
+// When the server receives a plaintext password as a string, it always
+// hashes it with SHA256 before passing it into bcrypt. When the server
+// receives a password as an object, it asserts that the algorithm is
+// "sha-256" and then passes the digest to bcrypt.
+
+
+// Given a 'password' from the client, extract the string that we should
+// bcrypt. 'password' can be one of:
+//  - String (the plaintext password)
+//  - Object with 'digest' and 'algorithm' keys. 'algorithm' must be "sha-256".
+//
+var getPasswordString = function (password) {
+  if (typeof password === "string") {
+    password = SHA256(password);
+  } else { // 'password' is an object
+    if (password.algorithm !== "sha-256") {
+      throw new Error("Invalid password hash algorithm. " +
+                      "Only 'sha-256' is allowed.");
+    }
+    password = password.digest;
+  }
+  return password;
+};
+
+// Use bcrypt to hash the password for storage in the database.
+// `password` can be a string (in which case it will be run through
+// SHA256 before bcrypt) or an object with properties `digest` and
+// `algorithm` (in which case we bcrypt `password.digest`).
 //
 var hashPassword = function (password) {
+  password = getPasswordString(password);
   return bcryptHash(password, 10 /* number of rounds */);
 };
 
-
-// Check whether the provided hashed password matches the bcrypt'ed
-// password in the database user record.
+// Check whether the provided password matches the bcrypt'ed password in
+// the database user record. `password` can be a string (in which case
+// it will be run through SHA256 before bcrypt) or an object with
+// properties `digest` and `algorithm` (in which case we bcrypt
+// `password.digest`).
 //
 var checkPassword = function (user, password) {
   var result = {
     userId: user._id
   };
 
-  if (! bcryptCompare(password, user.services.password.bcrypt))
+  password = getPasswordString(password);
+
+  if (! bcryptCompare(password, user.services.password.bcrypt)) {
     result.error = new Meteor.Error(403, "Incorrect password");
+  }
 
   return result;
 };
@@ -72,13 +116,18 @@ var userQueryValidator = Match.Where(function (user) {
   return true;
 });
 
+var passwordValidator = Match.OneOf(
+  String,
+  { digest: String, algorithm: String }
+);
+
 // Handler to login with a password.
 //
-// The Meteor client uses options.password, the password hashed
-// with SHA256.
+// The Meteor client sets options.password to an object with keys
+// 'digest' (set to SHA256(password)) and 'algorithm' ("sha-256").
 //
 // For other DDP clients which don't have access to SHA, the handler
-// also accepts the plaintext password in options.plaintextPassword.
+// also accepts the plaintext password in options.password as a string.
 //
 // (It might be nice if servers could turn the plaintext password
 // option off. Or maybe it should be opt-in, not opt-out?
@@ -87,13 +136,14 @@ var userQueryValidator = Match.Where(function (user) {
 // Note that neither password option is secure without SSL.
 //
 Accounts.registerLoginHandler("password", function (options) {
-  if (!(options.password || options.plaintextPassword) || options.srp)
+  if (! options.password || options.srp)
     return undefined; // don't handle
 
-  check(options, Match.OneOf(
-    {user: userQueryValidator, password: String},
-    {user: userQueryValidator, plaintextPassword: String}
-  ));
+  check(options, {
+    user: userQueryValidator,
+    password: passwordValidator
+  });
+
 
   var user = findUserFromUserQuery(options.user);
 
@@ -111,14 +161,14 @@ Accounts.registerLoginHandler("password", function (options) {
 
   return checkPassword(
     user,
-    options.password || SHA256(options.plaintextPassword)
+    options.password
   );
 });
 
 // Handler to login using the SRP upgrade path. To use this login
 // handler, the client must provide:
 //   - srp: H(identity + ":" + password)
-//   - plaintextPassword or password (which is the SHA256 of the password)
+//   - password: a string or an object with properties 'digest' and 'algorithm'
 //
 // We use `options.srp` to verify that the client knows the correct
 // password without doing a full SRP flow. Once we've checked that, we
@@ -131,21 +181,21 @@ Accounts.registerLoginHandler("password", function (options) {
 //
 // XXX COMPAT WITH 0.8.1.3
 Accounts.registerLoginHandler("password", function (options) {
-  if (!options.srp || !(options.password || options.plaintextPassword))
+  if (!options.srp || !options.password)
     return undefined; // don't handle
 
-  check(options, Match.OneOf(
-    {user: userQueryValidator, srp: String, password: String},
-    {user: userQueryValidator, srp: String, plaintextPassword: String}
-  ));
-  var password = options.password || SHA256(options.plaintextPassword);
+  check(options, {
+    user: userQueryValidator,
+    srp: String,
+    password: passwordValidator
+  });
 
   var user = findUserFromUserQuery(options.user);
 
   // Check to see if another simultaneous login has already upgraded
   // the user record to bcrypt.
   if (user.services && user.services.password && user.services.password.bcrypt)
-    return checkPassword(user, password);
+    return checkPassword(user, options.password);
 
   if (!(user.services && user.services.password && user.services.password.srp))
     throw new Meteor.Error(403, "User has no password set");
@@ -165,7 +215,7 @@ Accounts.registerLoginHandler("password", function (options) {
     };
 
   // Upgrade to bcrypt on successful login.
-  var salted = hashPassword(password);
+  var salted = hashPassword(options.password);
   Meteor.users.update(
     user._id,
     {
@@ -185,8 +235,8 @@ Accounts.registerLoginHandler("password", function (options) {
 // Let the user change their own password if they know the old
 // password.
 Meteor.methods({changePassword: function (oldPassword, newPassword) {
-  check(oldPassword, String);
-  check(newPassword, String);
+  check(oldPassword, passwordValidator);
+  check(newPassword, passwordValidator);
 
   if (!this.userId)
     throw new Meteor.Error(401, "Must be logged in");
@@ -202,7 +252,7 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   if (result.error)
     throw result.error;
 
-  var salted = hashPassword(newPassword);
+  var hashed = hashPassword(newPassword);
 
   // It would be better if this removed ALL existing tokens and replaced
   // the token for the current connection with a new one, but that would
@@ -212,7 +262,7 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   Meteor.users.update(
     { _id: this.userId },
     {
-      $set: { 'services.password.bcrypt': salted },
+      $set: { 'services.password.bcrypt': hashed },
       $pull: {
         'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
       }
@@ -232,7 +282,7 @@ Accounts.setPassword = function (userId, newPlaintextPassword) {
   Meteor.users.update(
     {_id: user._id},
     { $unset: {'services.password.srp': 1}, // XXX COMPAT WITH 0.8.1.3
-      $set: {'services.password.bcrypt': hashPassword(SHA256(newPlaintextPassword))} }
+      $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)} }
   );
 };
 
@@ -355,7 +405,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
     "password",
     function () {
       check(token, String);
-      check(newPassword, String);
+      check(newPassword, passwordValidator);
 
       var user = Meteor.users.findOne({
         "services.password.reset.token": token});
@@ -368,7 +418,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
           error: new Meteor.Error(403, "Token has invalid email address")
         };
 
-      var salted = hashPassword(newPassword);
+      var hashed = hashPassword(newPassword);
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -391,7 +441,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
             'emails.address': email,
             'services.password.reset.token': token
           },
-          {$set: {'services.password.bcrypt': salted,
+          {$set: {'services.password.bcrypt': hashed,
                   'emails.$.verified': true},
            $unset: {'services.password.reset': 1,
                     'services.password.srp': 1}});
@@ -535,8 +585,7 @@ var createUser = function (options) {
   check(options, Match.ObjectIncluding({
     username: Match.Optional(String),
     email: Match.Optional(String),
-    password: Match.Optional(String),
-    hashedPassword: Match.Optional(String)
+    password: Match.Optional(passwordValidator)
   }));
 
   var username = options.username;
@@ -544,20 +593,12 @@ var createUser = function (options) {
   if (!username && !email)
     throw new Meteor.Error(400, "Need to set a username or email");
 
-  // Raw password. The meteor client doesn't send this, but a DDP
-  // client that didn't implement SRP could send this. This should
-  // only be done over SSL.
+  var user = {services: {}};
   if (options.password) {
-    if (options.hashedPassword)
-      throw new Meteor.Error(400, "Don't pass both password and hashedPassword in options");
-    options.hashedPassword = SHA256(options.password);
+    var hashed = hashPassword(options.password);
+    user.services.password = { bcrypt: hashed };
   }
 
-  var user = {services: {}};
-  if (options.hashedPassword) {
-    var salted = hashPassword(options.hashedPassword);
-    user.services.password = { bcrypt: salted };
-  }
   if (username)
     user.username = username;
   if (email)

@@ -137,7 +137,7 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       Accounts.callLoginMethod({
         // wrong password
-        methodArguments: [{user: {username: this.username}, plaintextPassword: 'wrong'}],
+        methodArguments: [{user: {username: this.username}, password: 'wrong'}],
         userCallback: expect(function (error) {
           test.isTrue(error);
           test.isFalse(Meteor.user());
@@ -147,7 +147,7 @@ if (Meteor.isClient) (function () {
       Accounts.callLoginMethod({
         // right password
         methodArguments: [{user: {username: this.username},
-                           plaintextPassword: this.password}],
+                           password: this.password}],
         userCallback: loggedInAs(this.username, test, expect)
       });
     },
@@ -212,7 +212,7 @@ if (Meteor.isClient) (function () {
 
       self.secondConn = DDP.connect(Meteor.absoluteUrl());
       self.secondConn.call('login',
-                { user: { username: self.username }, plaintextPassword: self.password },
+                { user: { username: self.username }, password: self.password },
                 expect(function (err, result) {
                   test.isFalse(err);
                   self.secondConn.setUserId(result.id);
@@ -857,7 +857,7 @@ if (Meteor.isServer) (function () {
           });
           var result = clientConn.call('login', {
             user: {username: username},
-            plaintextPassword: 'password'
+            password: 'password'
           });
           test.isTrue(result);
           var token = Accounts._getAccountData(serverConn.id, 'loginToken');
