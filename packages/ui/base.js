@@ -357,7 +357,7 @@ UI._templateInstance = function () {
   var component = currentComponent.get();
   if (! component) {
     throw new Error("You can only call UI._templateInstance() from within" +
-                    " a helper.");
+                    " a helper function.");
   }
 
   // Lazily update the template instance for this helper, and do it only
