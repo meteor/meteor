@@ -251,7 +251,7 @@ Spacebars.TemplateWith = function (argFunc, contentBlock) {
 };
 
 Spacebars.With2 = function (argFunc, contentFunc, elseContentFunc) {
-  var data = Blaze.Var(argFunc, UI.safeEquals);
+  var data = Blaze.Var(argFunc);
   return Blaze.If(function () { return data.get(); },
                   function () {
                     return Blaze.With(data, contentFunc);
@@ -263,7 +263,7 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
   var seq = new Blaze.Sequence;
   var elseMode = false;
 
-  var argVar = Blaze.Var(argFunc, UI.safeEquals);
+  var argVar = Blaze.Var(argFunc);
   ObserveSequence.observe(function () {
     return argVar.get();
   }, {
@@ -272,7 +272,7 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
         seq.removeItem(0);
         elseMode = false;
       }
-      var dataVar = Blaze.Var(item, UI.safeEquals);
+      var dataVar = Blaze.Var(item);
       var func = function () {
         return Blaze.With(dataVar, contentFunc);
       };
