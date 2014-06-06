@@ -28,8 +28,6 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
           // Remove single-line comments, including line nums from build system.
           string = string.replace(/\/\/.*$/mg, '');
           string = string.replace(/\s+/g, ''); // kill whitespace
-          // collapse identical consecutive parens
-          string = string.replace(/\(+/g, '(').replace(/\)+/g, ')');
         }
         return string;
       };
@@ -46,207 +44,178 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("abc",
       function () {
-        var self = this;
         return "abc";
       });
 
   run("{{foo}}",
       function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"));
-        };
+        return Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self));
+        });
       });
 
   run("{{foo bar}}",
       function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), self.lookup("bar"));
-        };
+        return Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self),
+                                    Blaze.lookup("bar", self));
+        });
       });
 
   run("{{foo x=bar}}",
       function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), Spacebars.kw({
-            x: self.lookup("bar")
+        return Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self), Spacebars.kw({
+            x: Blaze.lookup("bar", self)
           }));
-        };
+        });
       });
 
   run("{{foo.bar baz}}",
       function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(Spacebars.dot(self.lookup("foo"), "bar"), self.lookup("baz"));
-        };
+        return Blaze.Isolate(function() {
+          return Spacebars.mustache(Spacebars.dot(
+                   Blaze.lookup("foo", self), "bar"),
+                   Blaze.lookup("baz", self));
+        });
       });
 
   run("{{foo bar.baz}}",
       function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), Spacebars.dot(self.lookup("bar"), "baz"));
-        };
+        return Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self),
+                 Spacebars.dot(Blaze.lookup("bar", self), "baz"));
+        });
       });
 
   run("{{foo x=bar.baz}}",
       function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), Spacebars.kw({
-            x: Spacebars.dot(self.lookup("bar"), "baz")
+        return Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self), Spacebars.kw({
+            x: Spacebars.dot(Blaze.lookup("bar", self), "baz")
           }));
-        };
+        });
       });
 
   run("{{#foo}}abc{{/foo}}",
       function() {
-        var self = this;
-        return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
-          var self = this;
-          return "abc";
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+            null,
+            (function() { return "abc"; })
+          );
+        });
       });
 
   run("{{#if cond}}aaa{{else}}bbb{{/if}}",
       function() {
-        var self = this;
-        return UI.If(function () {
-          return Spacebars.call(self.lookup("cond"));
-        }, UI.block(function() {
-          var self = this;
+        return Blaze.If(function () {
+          return Spacebars.call(Blaze.lookup("cond", self));
+        }, (function() {
           return "aaa";
-        }), UI.block(function() {
-          var self = this;
+        }), (function() {
           return "bbb";
         }));
       });
 
   run("{{> foo bar}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.call(self.lookup("bar"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+                                    Spacebars.call(Blaze.lookup("bar", self)));
+        });
       });
 
   run("{{> foo x=bar}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return {
-            x: Spacebars.call(self.lookup("bar"))
-          };
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+                                {x: Spacebars.call(Blaze.lookup("bar", self))});
+        });
       });
 
   run("{{> foo bar.baz}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+                 Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self),
+                                              "baz")));
+        });
       });
 
   run("{{> foo x=bar.baz}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return {
-            x: Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"))
-          };
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self), {
+            x: Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self), "baz"))
+          });
+        });
       });
 
   run("{{> foo bar baz}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+                 Spacebars.dataMustache(Blaze.lookup("bar", self),
+                 Blaze.lookup("baz", self)));
+        });
       });
 
   run("{{#foo bar baz}}aaa{{/foo}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
-            var self = this;
-            return "aaa";
-          }));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+                 Spacebars.dataMustache(Blaze.lookup("bar", self),
+                 Blaze.lookup("baz", self)),
+                 (function() {
+                   return "aaa";
+                 }));
+        });
       });
 
   run("{{#foo p.q r.s}}aaa{{/foo}}",
       function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(Spacebars.dot(self.lookup("p"), "q"), Spacebars.dot(self.lookup("r"), "s"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
-            var self = this;
-            return "aaa";
-          }));
-        }));
+        return Blaze.Isolate(function() {
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self),
+                 Spacebars.dataMustache(Spacebars.dot(
+                    Blaze.lookup("p", self), "q"),
+                    Spacebars.dot(Blaze.lookup("r", self), "s")),
+                 (function() {
+                   return "aaa";
+                 }));
+        });
       });
 
   run("<a {{b}}></a>",
       function() {
-        var self = this;
-        return HTML.A(HTML.Attrs(
-          function() {
-            return Spacebars.attrMustache(self.lookup("b"));
-          }));
+        return HTML.A(HTML.Attrs(Blaze.Var(function() {
+          return Spacebars.attrMustache(Blaze.lookup("b", self));
+        })));
       });
 
   run("<a {{b}} c=d{{e}}f></a>",
       function() {
-        var self = this;
         return HTML.A(HTML.Attrs({
-          c: [ "d", function() {
-            return Spacebars.mustache(self.lookup("e"));
-          }, "f" ]
-        }, function() {
-            return Spacebars.attrMustache(self.lookup("b"));
-        }));
+          c: [ "d", Blaze.Isolate(function() {
+            return Spacebars.mustache(Blaze.lookup("e", self));
+          }), "f" ]
+        }, Blaze.Var(function() {
+          return Spacebars.attrMustache(Blaze.lookup("b", self));
+        })));
       });
 
   run("<asdf>{{foo}}</asdf>",
-      function () {
-        var self = this;
-        return HTML.getTag("asdf")(function () {
-          return Spacebars.mustache(self.lookup("foo"));
-        });
+      function() {
+        return HTML.getTag("asdf")(Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self));
+        }));
       });
 
   run("<textarea>{{foo}}</textarea>",
-      function () {
-        var self = this;
-        return HTML.TEXTAREA(function () {
-          return Spacebars.mustache(self.lookup("foo"));
-        });
+      function() {
+        return HTML.TEXTAREA(Blaze.Isolate(function() {
+          return Spacebars.mustache(Blaze.lookup("foo", self));
+        }));
       });
 
 });
