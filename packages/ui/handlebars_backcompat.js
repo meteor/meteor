@@ -1,13 +1,9 @@
 // XXX this file no longer makes sense in isolation.  take it apart as
 // part file reorg on the 'ui' package
-var globalHelpers = {};
+UI._globalHelpers = {};
 
 UI.registerHelper = function (name, func) {
-  globalHelpers[name] = func;
-};
-
-UI._globalHelper = function (name) {
-  return globalHelpers[name];
+  UI._globalHelpers[name] = func;
 };
 
 Handlebars = {};
