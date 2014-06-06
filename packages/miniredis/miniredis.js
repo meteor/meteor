@@ -28,6 +28,10 @@ _.extend(Miniredis.Cursor.prototype, {
     var redisStore = self.redisStore;
     redisStore.observes.push(observeRecord);
 
+    _.each(redisStore.patternFetch(self.pattern), function (kv) {
+      callbacks.added && callbacks.added(kv.key, kv.value);
+    });
+
     return {
       stop: function () {
         redisStore.observes = _.filter(redisStore.observes, function (obs) {
