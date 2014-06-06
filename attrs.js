@@ -98,46 +98,19 @@ var SVGClassHandler = BaseClassHandler.extend({
 
 var BooleanHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    var focused = this.focused(element);
-
-    if (!focused) {
-      var name = this.name;
-      if (value == null) {
-        if (oldValue != null)
-          element[name] = false;
-      } else {
-        element[name] = true;
-      }
-    }
-  },
-  // is the element part of a control which is focused?
-  focused: function (element) {
-    if (element.tagName === 'INPUT') {
-      return element === document.activeElement;
-
-    } else if (element.tagName === 'OPTION') {
-      // find the containing SELECT element, on which focus
-      // is actually set
-      var selectEl = element;
-      while (selectEl && selectEl.tagName !== 'SELECT')
-        selectEl = selectEl.parentNode;
-
-      if (selectEl)
-        return selectEl === document.activeElement;
-      else
-        return false;
+    var name = this.name;
+    if (value == null) {
+      if (oldValue != null)
+        element[name] = false;
     } else {
-      throw new Error("Expected INPUT or OPTION element");
+      element[name] = true;
     }
   }
 });
 
 var ValueHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    var focused = (element === document.activeElement);
-
-    if (!focused)
-      element.value = value;
+    element.value = value;
   }
 });
 
