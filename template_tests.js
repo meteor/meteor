@@ -1954,3 +1954,24 @@ Tinytest.add("spacebars-tests - template_tests - event handlers get cleaned up w
     test.equal(div.$_uievents["mouseover"].handlers.length, 0);
   }
 );
+
+// This test makes sure that Blaze correctly finds the controller
+// heirarchy surrounding an element that itself doesn't have a
+// controller.
+Tinytest.add(
+  "spacebars-tests - template_tests - data context in event handlers on elements inside {{#if}}",
+  function (test) {
+    var tmpl = Template.spacebars_test_data_context_for_event_handler_in_if;
+    var data = null;
+    tmpl.events({
+      'click span': function () {
+        console.log('clicked!');
+        data = this;
+      }
+    });
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    clickIt(div.querySelector('span'));
+    test.equal(data, {foo: "bar"});
+    document.body.removeChild(div);
+  });

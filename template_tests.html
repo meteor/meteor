@@ -736,3 +736,12 @@ Hi there!
 <template name="spacebars_test_event_handler_cleanup_sub">
   <div></div>
 </template>
+
+<template name="spacebars_test_data_context_for_event_handler_in_if">
+  {{#with foo="bar"}}
+    {{#if true}}
+      <span>Click me!</span>
+    {{/if}}
+  {{/with}}
+</template>
+
