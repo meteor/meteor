@@ -150,19 +150,21 @@ _.extend(Miniredis.RedisStore.prototype, {
       self._keyDep(key).depend();
 
       if (_.isString(value))
-        res.push(value);
+        res.push({ key: key, value: value });
       else
-        res.push(value.toArray());
+        res.push({ key: key, value: value.toArray() });
     });
 
     if (! self._patternDependencies[pattern])
       self._patternDependencies[pattern] = new Deps.Dependency();
     self._patternDependencies[pattern].depend();
 
-    Deps.onInvalidate(function (c) {
-      if (c.stopped)
-        delete self._patternDependencies[pattern];
-    });
+    if (Deps.active) {
+      Deps.onInvalidate(function (c) {
+        if (c.stopped)
+          delete self._patternDependencies[pattern];
+      });
+    }
 
     return res;
   },
