@@ -1,19 +1,3 @@
-var renderToDiv = function (comp, optData) {
-  var div = document.createElement("DIV");
-  if (optData == null) {
-    Blaze.renderComponent(comp, div);
-  } else {
-    var constructor =
-          (typeof comp === 'function' ? comp : comp.constructor);
-    Blaze.render(function () {
-      return Blaze.With(optData, function () {
-        return new constructor;
-      });
-    }).attach(div);
-  }
-  return div;
-};
-
 var divRendersTo = function (test, div, html) {
   Deps.flush({_throwFirstError: true});
   var actual = canonicalizeHtml(div.innerHTML);
@@ -1341,22 +1325,15 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
     test.equal(DomUtils.getElementValue(input), "This is a fridge");
 
     if (canFocus) {
-      // ...unless focused
+      // ...if focused, it still updates but focus isn't lost.
       focusElement(input);
+      DomUtils.setElementValue(input, "something else");
       R.set({x:"frog"});
 
       Deps.flush();
-      test.equal(DomUtils.getElementValue(input), "This is a fridge");
-
-      // blurring and re-setting works
-      blurElement(input);
-      Deps.flush();
-      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(DomUtils.getElementValue(input), "This is a frog");
+      test.equal(document.activeElement, input);
     }
-    R.set({x:"new frog"});
-    Deps.flush();
-
-    test.equal(DomUtils.getElementValue(input), "This is a new frog");
 
     // Setting a value (similar to user typing) should prevent value from being
     // reverted if the div is re-rendered but the rendered value (ie, R) does
@@ -1955,3 +1932,158 @@ Tinytest.add(
     test.equal(data, {foo: "bar"});
     document.body.removeChild(div);
   });
+
+// https://github.com/meteor/meteor/issues/2156
+Tinytest.add(
+  "spacebars - template - each with inserts inside autorun",
+  function (test) {
+    var tmpl = Template.spacebars_test_each_with_autorun_insert;
+    var coll = new Meteor.Collection(null);
+    var rv = new ReactiveVar;
+
+    tmpl.items = function () {
+      return coll.find();
+    };
+
+    var div = renderToDiv(tmpl);
+
+    Deps.autorun(function () {
+      if (rv.get()) {
+        coll.insert({ name: rv.get() });
+      }
+    });
+
+    rv.set("foo1");
+    Deps.flush();
+    var firstId = coll.findOne()._id;
+
+    rv.set("foo2");
+    Deps.flush();
+
+    test.equal(canonicalizeHtml(div.innerHTML), "foo1 foo2");
+
+    coll.update(firstId, { $set: { name: "foo3" } });
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "foo3 foo2");
+  }
+);
+
+Tinytest.add(
+  "spacebars - ui hooks",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_hooks;
+    var rv = new ReactiveVar([]);
+    tmpl.items = function () {
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+
+    var hooks = [];
+    var container = div.querySelector(".test-ui-hooks");
+
+    // Before we attach the ui hooks, put two items in the DOM.
+    var origVal = [{ _id: 'foo1' }, { _id: 'foo2' }];
+    rv.set(origVal);
+    Deps.flush();
+
+    container._uihooks = {
+      insertElement: function (n, next) {
+        hooks.push("insert");
+
+        // check that the element hasn't actually been added yet
+        test.isTrue(n.parentNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE);
+        test.isFalse(n.parentNode.parentNode);
+      },
+      removeElement: function (n) {
+        hooks.push("remove");
+        // check that the element hasn't actually been removed yet
+        test.isTrue(n.parentNode === container);
+      },
+      moveElement: function (n, next) {
+        hooks.push("move");
+        // check that the element hasn't actually been moved yet
+        test.isFalse(n.nextNode === next);
+      }
+    };
+
+    var testDomUnchanged = function () {
+      var items = div.getElementsByClassName("item");
+      test.equal(items.length, 2);
+      test.equal(items[0].innerHTML, "foo1");
+      test.equal(items[1].innerHTML, "foo2");
+    };
+
+    var newVal = _.clone(origVal);
+    newVal.push({ _id: 'foo3' });
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert']);
+    testDomUnchanged();
+
+    newVal.reverse();
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'move']);
+    testDomUnchanged();
+
+    newVal = [origVal[0]];
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'move', 'remove']);
+    testDomUnchanged();
+  }
+);
+
+Tinytest.add(
+  "spacebars - access template instance from helper",
+  function (test) {
+    // Set a property on the template instance; check that it's still
+    // there from a helper.
+
+    var tmpl = Template.spacebars_test_template_instance_helper;
+    var value = Random.id();
+    var instanceFromHelper;
+
+    tmpl.created = function () {
+      this.value = value;
+    };
+    tmpl.foo = function () {
+      instanceFromHelper = UI._templateInstance();
+    };
+
+    var div = renderToDiv(tmpl);
+    test.equal(instanceFromHelper.value, value);
+  }
+);
+
+Tinytest.add(
+  "spacebars - access template instance from helper, " +
+    "template instance is kept up-to-date",
+  function (test) {
+    var tmpl = Template.spacebars_test_template_instance_helper;
+    var rv = new ReactiveVar("");
+    var instanceFromHelper;
+
+    tmpl.foo = function () {
+      instanceFromHelper = UI._templateInstance();
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+    rv.set("first");
+    Deps.flush();
+    // `nextSibling` because the first node is an empty text node.
+    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "first");
+
+    rv.set("second");
+    Deps.flush();
+    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "second");
+
+    // UI._templateInstance() should throw when called from not within a
+    // helper.
+    test.throws(function () {
+      UI._templateInstance();
+    });
+  }
+);

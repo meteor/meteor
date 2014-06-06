@@ -737,3 +737,21 @@ Hi there!
   {{/with}}
 </template>
 
+
+<template name="spacebars_test_each_with_autorun_insert">
+  {{#each items}}
+    {{name}}
+  {{/each}}
+</template>
+
+<template name="spacebars_test_ui_hooks">
+  <div class="test-ui-hooks">
+    {{#each items}}
+      <div class="item">{{_id}}</div>
+    {{/each}}
+  </div>
+</template>
+
+<template name="spacebars_test_template_instance_helper">
+  {{foo}}
+</template>
