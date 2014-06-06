@@ -67,7 +67,7 @@ _.extend(CodeGen.prototype, {
             throw new Error("#" + path[0] + " requires an argument");
 
           // `args` must exist (tag.args.length > 0)
-          var dataCode = self.codeGenInclusionArgs(tag.args) || 'null';
+          var dataCode = self.codeGenInclusionDataFunc(tag.args) || 'null';
           // `content` must exist
           var contentBlock = (('content' in tag) ?
                               self.codeGenBlock(tag.content) : null);
@@ -75,8 +75,7 @@ _.extend(CodeGen.prototype, {
           var elseContentBlock = (('elseContent' in tag) ?
                                   self.codeGenBlock(tag.elseContent) : null);
 
-          var callArgs = ['function () { return ' + dataCode + '; }',
-                          contentBlock];
+          var callArgs = [dataCode, contentBlock];
           if (elseContentBlock)
             callArgs.push(elseContentBlock);
 
@@ -86,7 +85,7 @@ _.extend(CodeGen.prototype, {
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
 
-          var dataCode = self.codeGenInclusionArgs(tag.args);
+          var dataCode = self.codeGenInclusionDataFunc(tag.args);
           var content = (('content' in tag) ?
                          self.codeGenBlock(tag.content) : null);
           var elseContent = (('elseContent' in tag) ?
@@ -245,15 +244,7 @@ _.extend(CodeGen.prototype, {
     return SpacebarsCompiler.codeGen(content);
   },
 
-  // Takes an inclusion tag and returns an object containing these properties,
-  // all optional, whose values are JS source code:
-  //
-  // - `dataFunc` - source code of a data function literal
-  // - `content` - source code of a content block
-  // - `elseContent` - source code of an elseContent block
-  //
-  // Implements the calling convention for inclusions.
-  codeGenInclusionArgs: function (args) {
+  codeGenInclusionDataFunc: function (args) {
     var self = this;
 
     var dataFuncCode = null;
@@ -285,7 +276,7 @@ _.extend(CodeGen.prototype, {
                                           'dataMustache');
     }
 
-    return dataFuncCode;
+    return 'function () { return ' + dataFuncCode + '; }';
   }
 
 });
