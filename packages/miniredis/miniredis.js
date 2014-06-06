@@ -16,14 +16,111 @@ Miniredis.RedisStore = function () {
 
   // main key-value storage
   self._kv = new IdMap(EJSON.stringify, EJSON.parse);
+  // fine-grained reactivity per key
+  self._keyDependencies = {};
+  // fine-grained reactivity per non-trivial pattern
+  self._patternDependencies = {};
 };
 
+// A hacky thing to declare an absence of value
+var NON_EXISTANT = "___non_existant___" + Math.random();
 _.extend(Miniredis.RedisStore.prototype, {
+  // -----
+  // convinience wrappers
+  // -----
+  _keyDep: function (key) {
+    var self = this;
+
+    // return the real key-associated dep if such exists
+    if (self._keyDependencies[key])
+      return self._keyDependencies[key];
+
+    // return a dummy if it is not going to be used anyway
+    if (! Deps.active)
+      return { depend: function () {}, changed: function () {} };
+
+    // we need to create a dependency for some key that is not assigned yet but
+    // is tracked
+    // XXX think on how to clean up it later and not leak computations
+    return (self._keyDependencies[key] = new Deps.Dependency());
+  },
+  _has: function (key) {
+    var self = this;
+    self._keyDep(key).depend();
+    return self._kv.has(key);
+  },
+  _get: function (key) {
+    var self = this;
+    self._keyDep(key).depend();
+    return self._kv.get(key);
+  },
+  _set: function (key, value) {
+    var self = this;
+    var oldValue = self._kv.has(key) ? self._kv.get(key) : NON_EXISTANT;
+    self._kv.set(key, value);
+
+    if (! self._keyDependencies[key])
+      self._keyDependencies[key] = new Deps.Dependency();
+    if (oldValue !== value)
+      self._keyDependencies[key].changed();
+    if (oldValue === NON_EXISTANT) {
+      _.each(self._patternDependencies, function (dep, pattern) {
+        if (key.match(patternToRegexp(pattern))) {
+          _.each(dep._dependentsById, function (computation, id) {
+            computation.firstRun = true;
+            computation._compute();
+            computation.firstRun = false;
+          });
+        }
+      });
+    }
+  },
+
+  _remove: function (key) {
+    var self = this;
+    if (! self._kv.has(key))
+      return;
+    self._kv.remove(key);
+    self._keyDependencies[key].changed();
+
+    // sometimes we don't want to remove the dependency even though we already
+    // removed the key-value pair as there might be some computations relying on
+    // this dependency notifying them when the pair comes back up
+    // until the computation is stopped we need to keep the dependency
+    // XXX implement the proper clean up here
+    if (! self._keyDependencies[key].hasDependents())
+      delete self._keyDependencies[key];
+  },
+
+  // -----
+  // main interface built on top of Redis
+  // -----
+
   call: function (method/*, args */) {
     var self = this;
     var args = _.toArray(arguments).slice(1);
 
     return self[method.toLowerCase()].apply(self, args);
+  },
+
+  patternFetch: function (pattern) {
+    var self = this;
+    var res = [];
+
+    self._kv.forEach(function (value, key) {
+      if (! key.match(patternToRegexp(pattern)))
+        return;
+      self._keyDep(key).depend();
+      res.push(value);
+    });
+
+    // XXX this should be properly cleaned up once the computations associated
+    // with this pattern are stopped
+    if (! self._patternDependencies[pattern])
+      self._patternDependencies[pattern] = new Deps.Dependency();
+    self._patternDependencies[pattern].depend();
+
+    return res;
   },
 
   // -----
@@ -34,9 +131,9 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     var removedCount = 0;
     _.each(arguments, function (key) {
-      if (self._kv.has(key)) {
+      if (self._has(key)) {
         removedCount++;
-        self._kv.remove(key);
+        self._remove(key);
       }
     });
 
@@ -44,7 +141,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   exists: function (key) {
     var self = this;
-    if (self._kv.has(key))
+    if (self._has(key))
       return 1;
     return 0;
   },
@@ -68,17 +165,17 @@ _.extend(Miniredis.RedisStore.prototype, {
 
     var self = this;
 
-    if (! self._kv.has(key))
+    if (! self._has(key))
       throw new Error("No such key");
 
-    var val = self._kv.get(key);
-    self._kv.remove(key);
-    self._kv.set(newkey, val);
+    var val = self._get(key);
+    self._remove(key);
+    self._set(newkey, val);
   },
   renamenx: function (key, newkey) {
     var self = this;
 
-    if (self._kv.has(newkey))
+    if (self._has(newkey))
       return 0;
 
     self.rename(key, newkey);
@@ -94,14 +191,15 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
 
     // for unset keys the return value is "none"
-    if (! self._kv.has(key))
+    if (! self._has(key))
       return "none";
 
-    var val = self._kv.get(key);
+    var val = self._get(key);
     if (_.isString(val))
       return "string";
     return val.type();
   },
+  // XXX has no reactivity and probably should be removed from the api entirely
   // implemented as an iterator similar to _.each
   // the original docs of redis describe a different low-level semantics
   // http://redis.io/commands/scan
@@ -139,13 +237,13 @@ _.extend(Miniredis.RedisStore.prototype, {
 
   append: function (key, value) {
     var self = this;
-    var val = self._kv.has(key) ? self._kv.get(key) : "";
+    var val = self._has(key) ? self._get(key) : "";
 
     if (! _.isString(val))
       throwIncorrectKindOfValueError();
 
     val += value;
-    self._kv.set(key, val);
+    self._set(key, val);
 
     return val.length;
   },
@@ -155,7 +253,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   decrby: function (key, decrement) {
     var self = this;
-    var val = self._kv.has(key) ? self._kv.get(key) : 0;
+    var val = self._has(key) ? self._get(key) : 0;
 
     if (! _.isString(val))
       throwIncorrectKindOfValueError();
@@ -166,11 +264,11 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (val !== newVal.toString())
       throw new Error("Value is not an integer or out of range");
 
-    self._kv.set(key, (newVal - decrement).toString());
+    self._set(key, (newVal - decrement).toString());
   },
   get: function (key) {
     var self = this;
-    var val = self._kv.has(key) ? self._kv.get(key) : null;
+    var val = self._has(key) ? self._get(key) : null;
     if (val !== null && ! _.isString(val))
       throwIncorrectKindOfValueError();
     // XXX shouldn't clone, strings are immutable
@@ -181,7 +279,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     end = end || 0;
 
     var self = this;
-    var val = self._kv.has(key) ? self._kv.get(key) : "";
+    var val = self._has(key) ? self._get(key) : "";
 
     if (! _.isString(val))
       throwIncorrectKindOfValueError();
@@ -214,7 +312,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   incrbyfloat: function (key, increment) {
     var self = this;
-    var val = self._kv.has(key) ? self._kv.get(key) : 0;
+    var val = self._has(key) ? self._get(key) : 0;
 
     if (! _.isString(val))
       throwIncorrectKindOfValueError();
@@ -225,7 +323,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (isNaN(newVal))
       throw new Error("Value is not a valid float");
 
-    self._kv.set(key, (newVal + increment).toString());
+    self._set(key, (newVal + increment).toString());
   },
   mget: function (/* args */) {
     var self = this;
@@ -244,7 +342,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   msetnx: function (/* args */) {
     var self = this;
     if (_.all(arguments, function (key, i) {
-      return (i % 2 === 1) || self._kv.has(key);
+      return (i % 2 === 1) || self._has(key);
     })) {
       self.mset.apply(self, arguments);
       return 1;
@@ -254,11 +352,11 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   set: function (key, value) {
     var self = this;
-    self._kv.set(key, value.toString());
+    self._set(key, value.toString());
   },
   setnx: function (key, value) {
     var self = this;
-    if (self._kv.has(key))
+    if (self._has(key))
       return 0;
     self.set(key, value);
     return 1;
@@ -355,7 +453,7 @@ _.each(["lpushx", "rpushx"], function (method) {
   Miniredis.RedisStore.prototype[method] = function (key/* args */) {
     var self = this;
 
-    if (! self._kv.has(key))
+    if (! self._has(key))
       return 0;
     return self[method.slice(0, -1)].apply(self, arguments);
   };
@@ -368,10 +466,10 @@ _.each(["lpush", "rpush", "lpop", "rpop", "lindex", "linsert", "lrange",
            var self = this;
            var args = _.toArray(arguments).slice(1);
 
-           if (! self._kv.has(key))
-             self._kv.set(key, new Miniredis.List);
+           if (! self._has(key))
+             self._set(key, new Miniredis.List);
 
-           var list = self._kv.get(key);
+           var list = self._get(key);
            if (! (list instanceof Miniredis.List))
              throwIncorrectKindOfValueError();
 
