@@ -446,7 +446,12 @@ _.extend(Miniredis.List.prototype, {
     return this._list.length;
   },
   type: function () { return "list"; },
-  toArray: function () { return this._list.slice(0); }
+  toArray: function () { return this._list.slice(0); },
+  clone: function () {
+    var list = new Miniredis.List();
+    list._list = _.clone(this._list);
+    return list;
+  }
 });
 
 _.each(["lpushx", "rpushx"], function (method) {
@@ -473,11 +478,9 @@ _.each(["lpush", "rpush", "lpop", "rpop", "lindex", "linsert", "lrange",
            if (! (list instanceof Miniredis.List))
              throwIncorrectKindOfValueError();
 
-           // reset the value to a dummy value just to trigger invalidate
-           // through _set method
-           self._set(key, "dummy");
-           var res = Miniredis.List.prototype[method].apply(list, args);
-           self._set(key, list);
+           var copy = list.clone();
+           var res = Miniredis.List.prototype[method].apply(copy, args);
+           self._set(key, copy);
            return res;
          };
        });
