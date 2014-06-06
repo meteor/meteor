@@ -87,7 +87,7 @@ _extend(UI.Component, {
     } else if (template && _.has(Template, id)) {
       return Template[id];
 
-    } else if ((result = UI._globalHelper(id))) {
+    } else if ((result = UI._globalHelpers[id])) {
 
     } else {
       // Resolve id `foo` as `data.foo` (with a "soft dot").
