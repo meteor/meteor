@@ -38,13 +38,9 @@ Tinytest.add("miniredis - reactivity - simple strings, pattern", function (test)
   Deps.flush();
   test.equal(aas, ["4", "12"]);
 
-  debugger
   S.del("ab");
-  debugger
   S.del("ac");
-  debugger
   S.del("bb");
-  debugger
   S.del("bc");
   Deps.flush();
   test.equal(_.keys(S._keyDependencies).length, 0, "keys are removed and so should be the deps");

@@ -38,18 +38,14 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (! self._keyDependencies[key])
       self._keyDependencies[key] = new Deps.Dependency()
 
-    var cleanupOrSchedule = function (c) {
+    // for future clean-up
+    Deps.onInvalidate(function () {
       if (! self._keyDependencies[key])
         return;
 
-      if (_.all(self._keyDependencies[key]._dependentsById, function (c) { return c.stopped; }))
+      if (! self._keyDependencies[key].hasDependents())
         delete self._keyDependencies[key];
-      else
-        Deps.afterFlush(function () {c.onInvalidate(cleanupOrSchedule);});
-    };
-
-    // for future clean-up
-    Deps.onInvalidate(cleanupOrSchedule);
+    });
 
     return self._keyDependencies[key];
   },
@@ -75,11 +71,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (oldValue === NON_EXISTANT) {
       _.each(self._patternDependencies, function (dep, pattern) {
         if (key.match(patternToRegexp(pattern))) {
-          _.each(dep._dependentsById, function (computation, id) {
-            computation.firstRun = true;
-            computation._compute();
-            computation.firstRun = false;
-          });
+          dep.changed();
         }
       });
     }
@@ -91,6 +83,9 @@ _.extend(Miniredis.RedisStore.prototype, {
       return;
     self._kv.remove(key);
     self._keyDependencies[key].changed();
+
+    if (self._keyDependencies[key] && ! self._keyDependencies[key].hasDependents())
+      delete self._keyDependencies[key];
   },
 
   // -----
@@ -119,8 +114,6 @@ _.extend(Miniredis.RedisStore.prototype, {
         res.push(value.toArray());
     });
 
-    // XXX this should be properly cleaned up once the computations associated
-    // with this pattern are stopped
     if (! self._patternDependencies[pattern])
       self._patternDependencies[pattern] = new Deps.Dependency();
     self._patternDependencies[pattern].depend();
