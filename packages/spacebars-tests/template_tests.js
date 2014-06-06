@@ -203,17 +203,25 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
   test.isTrue(span1 === span2);
 });
 
+// maybe use created callback on the template instead of this?
+var extendTemplateWithInit = function (template, initFunc) {
+  return template.constructor.extend({
+    constructor: function () {
+      template.constructor.apply(this, arguments);
+      initFunc.call(this);
+    }
+  }).prototype;
+};
+
 Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", function (test) {
   // `{{> foo bar.baz}}`
   var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
 
   var initCount = 0;
-  tmpl.foo = Template.spacebars_template_test_bracketed_this.constructor.extend({
-    constructor: function () {
-      Template.spacebars_template_test_bracketed_this.constructor.call(this);
-      initCount++;
-    }
-  }).prototype;
+  tmpl.foo = extendTemplateWithInit(
+    Template.spacebars_template_test_bracketed_this,
+    function () { initCount++; });
+
   var R = ReactiveVar('david');
   tmpl.bar = function () {
     // make sure `this` is bound correctly
@@ -237,9 +245,9 @@ Tinytest.add("spacebars-tests - template_tests - inclusion slashed args", functi
   var tmpl = Template.spacebars_template_test_inclusion_dotted_args;
 
   var initCount = 0;
-  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
-    init: function () { initCount++; }
-  });
+  tmpl.foo = extendTemplateWithInit(
+    Template.spacebars_template_test_bracketed_this,
+    function () { initCount++; });
   var R = ReactiveVar('david');
   tmpl.bar = function () {
     // make sure `this` is bound correctly
@@ -335,9 +343,9 @@ Tinytest.add("spacebars-tests - template_tests - block helper with dotted arg", 
   var R3 = ReactiveVar(100);
 
   var initCount = 0;
-  tmpl.foo = Template.spacebars_template_test_bracketed_this.extend({
-    init: function () { initCount++; }
-  });
+  tmpl.foo = extendTemplateWithInit(
+    Template.spacebars_template_test_bracketed_this,
+    function () { initCount++; });
   tmpl.bar = function () {
     return {
       r1: R1.get(),
@@ -1119,7 +1127,7 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   var dep = new Deps.Dependency;
   var subtmpl = Template.
         spacebars_template_test_inclusion_helpers_are_isolated_subtemplate
-        .extend({}); // fresh instance
+        .constructor.extend().prototype; // fresh subclass
   var R = new ReactiveVar(subtmpl);
   tmpl.foo = function () {
     dep.depend();
@@ -1156,9 +1164,7 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
   };
 
   var run = function (whichTemplate, data, expectTrue) {
-    var templateWithData = tmpls[whichTemplate].extend({data: function () {
-      return data; }});
-    var div = renderToDiv(templateWithData);
+    var div = renderToDiv(tmpls[whichTemplate], data);
     var input = div.querySelector('input');
     var descr = JSON.stringify([whichTemplate, data, expectTrue]);
     if (expectTrue) {
@@ -1169,7 +1175,7 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
       test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
     }
 
-    var html = UI.toHTML(templateWithData);
+    var html = 'XXX'; //Blaze.toHTML(templateWithData); XXXXXX how?
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
     test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
   };
