@@ -533,13 +533,8 @@ main.registerCommand({
     return;
   }
 
-  if (options.patch) {
-    console.log("Patch update requested \n");
-    process.exit(1);
-  }
-
   // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getMeteorReleaseVersion();
+ var appRelease = project.getMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
     var maybeOnThisComputer =
@@ -550,41 +545,35 @@ main.registerCommand({
     return;
   }
 
+  // XXX: also while we are at it, we should consider disallowing both
+  // options.patch and release.forced. Otherwise, the behavior is... what I had
+  // to use to test this, actually ( update --patch --release
+  // ekate-meteor@5.0.13 updated me to ekate-meteor@5.0.13.1) but that's way too
+  // confusing to make sense.
 
-  // OK, let's figure out what release fits with our package constraints!
-  // XXX this will actually be a loop over possible releases in the non-force
-  //     case
-  // XXX better error checking on name
-  var releaseRecord = catalog.getReleaseVersion(
-    release.current.name.split('@')[0], release.current.name.split('@')[1]);
-  if (!releaseRecord)
-    throw Error("missing release record?");
-
-  var constraints =
-        project.calculateCombinedConstraints(releaseRecord.packages);
-  var previousVersions = project.getVersions();
-
-  var solutionVersions = catalog.resolveConstraints(
-    constraints,
-    { previousSolution: previousVersions },
-    { ignoreProjectDeps: true });
-  if (!solutionVersions) {
-    // XXX text
-    process.stderr.write(
-      "Couldn't solve the update to " + release.current.name + ". Ah well.\n");
-    return 1;
-  }
-
-  // We are not adding any new packages, but we want all the checks associated
-  // with adding packages, like making sure that all our packages have been
-  // downloaded from troposphere.
-  project.addPackages({}, solutionVersions);
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
   // XXX error handling.
   var releaseVersionsToTry;
-  if (release.forced) {
+  if (options.patch) {
+    var appRelease = project.getMeteorReleaseVersion();
+    // XXX: something something something current release
+    if (appRelease == null) {
+      console.log(
+        "Cannot patch update unless a release is set.");
+      process.exit(1);
+    }
+    var r = appRelease.split('@');
+    var record = officialCatalog.getReleaseVersion(r[0], r[1]);
+    var updateTo = record.patchReleaseVersion;
+    if (!updateTo) {
+      console.log(
+        "You are at the latest patch version.");
+      process.exit(1);
+    }
+    releaseVersionsToTry = [updateTo];
+  } else if (release.forced) {
     releaseVersionsToTry = [release.current.getReleaseVersion()];
   } else {
     // XXX clean up all this splitty stuff
@@ -606,13 +595,13 @@ main.registerCommand({
   }
 
   var solutionPackageVersions = null;
-  var directDependencies = project.getDirectDependencies(options.appDir);
-  var previousVersions = project.getIndirectDependencies(options.appDir);
+  var directDependencies = project.getConstraints();
+  var previousVersions = project.getVersions();
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.getReleaseVersion(releaseTrack, versionToTry);
     if (!releaseRecord)
       throw Error("missing release record?");
-    var constraints = project.combinedConstraints(
+    var constraints = project.calculateCombinedConstraints(
       directDependencies, releaseRecord.packages);
     try {
       solutionPackageVersions = catalog.resolveConstraints(
@@ -700,8 +689,7 @@ main.registerCommand({
   // }
 
   // Write the new versions to .meteor/packages and .meteor/versions.
-  project.setDependencies(options.appDir, directDependencies.appDeps,
-                          solutionPackageVersions);
+  project.setVersions(solutionPackageVersions);
 
   // Write the release to .meteor/release.
   project.writeMeteorReleaseVersion(solutionReleaseName);
@@ -2408,7 +2396,7 @@ main.registerCommand({
   }
 
   // Get it back.
-  officialCatalog.refresh(true);
+  officialCatalog.refresh();
 
   process.stdout.write("Done! \n");
   return 0;
