@@ -691,26 +691,6 @@ Tinytest.add('spacebars-tests - template_tests - no data context', function (tes
   test.equal(canonicalizeHtml(div.innerHTML), 'asdf');
 });
 
-// test that #isolate is a no-op, for back compat
-Tinytest.add('spacebars-tests - template_tests - isolate', function (test) {
-  var tmpl = Template.spacebars_template_test_isolate;
-
-  Meteor._suppress_log(1); // we print a deprecation notice
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
-
-});
-
-// test that #constant is a no-op, for back compat
-Tinytest.add('spacebars-tests - template_tests - constant', function (test) {
-  var tmpl = Template.spacebars_template_test_constant;
-
-  Meteor._suppress_log(1); // we print a deprecation notice
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
-
-});
-
 Tinytest.add('spacebars-tests - template_tests - textarea', function (test) {
   var tmpl = Template.spacebars_template_test_textarea;
 
