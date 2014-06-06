@@ -19,5 +19,7 @@ Package.on_test(function (api) {
 
   // Usually using Deps on the server is not a good idea
   api.add_files('miniredis-reactivity-tests.js', 'client');
+  // ObserveChanges is available regardless of Deps
+  api.add_files('miniredis-observe-tests.js');
 });
 
