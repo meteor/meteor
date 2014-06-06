@@ -84,3 +84,32 @@ Tinytest.add("miniredis - reactivity - simple strings, single", function (test) 
     "All dependencies are unset as there are no more computations");
 });
 
+Tinytest.add("miniredis - reactivity - simple lists, single", function (test) {
+  var S = new Miniredis.RedisStore();
+  S.lpush("listA", "1");
+  S.lpush("listA", "0");
+
+  var lists = null;
+  var c = Deps.autorun(function () {
+    lists = S.patternFetch("list[ABC]");
+  });
+
+  test.equal(lists, [["0", "1"]]);
+
+  S.rpush("listA", "2");
+  Deps.flush();
+  test.equal(lists, [["0", "1", "2"]]);
+
+  S.rpush("listB", "A");
+  Deps.flush();
+  test.equal(lists, [["0", "1", "2"], ["A"]]);
+
+  S.lset("listB", 0, "B");
+  Deps.flush();
+  test.equal(lists, [["0", "1", "2"], ["B"]]);
+
+  S.lpush("listD", 0, "nono");
+  Deps.flush();
+  test.equal(lists, [["0", "1", "2"], ["B"]]);
+});
+
