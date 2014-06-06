@@ -31,18 +31,27 @@ _.extend(Miniredis.RedisStore.prototype, {
   _keyDep: function (key) {
     var self = this;
 
-    // return the real key-associated dep if such exists
-    if (self._keyDependencies[key])
-      return self._keyDependencies[key];
-
     // return a dummy if it is not going to be used anyway
     if (! Deps.active)
       return { depend: function () {}, changed: function () {} };
 
-    // we need to create a dependency for some key that is not assigned yet but
-    // is tracked
-    // XXX think on how to clean up it later and not leak computations
-    return (self._keyDependencies[key] = new Deps.Dependency());
+    if (! self._keyDependencies[key])
+      self._keyDependencies[key] = new Deps.Dependency()
+
+    var cleanupOrSchedule = function (c) {
+      if (! self._keyDependencies[key])
+        return;
+
+      if (_.all(self._keyDependencies[key]._dependentsById, function (c) { return c.stopped; }))
+        delete self._keyDependencies[key];
+      else
+        Deps.afterFlush(function () {c.onInvalidate(cleanupOrSchedule);});
+    };
+
+    // for future clean-up
+    Deps.onInvalidate(cleanupOrSchedule);
+
+    return self._keyDependencies[key];
   },
   _has: function (key) {
     var self = this;
@@ -82,14 +91,6 @@ _.extend(Miniredis.RedisStore.prototype, {
       return;
     self._kv.remove(key);
     self._keyDependencies[key].changed();
-
-    // sometimes we don't want to remove the dependency even though we already
-    // removed the key-value pair as there might be some computations relying on
-    // this dependency notifying them when the pair comes back up
-    // until the computation is stopped we need to keep the dependency
-    // XXX implement the proper clean up here
-    if (! self._keyDependencies[key].hasDependents())
-      delete self._keyDependencies[key];
   },
 
   // -----
@@ -111,6 +112,7 @@ _.extend(Miniredis.RedisStore.prototype, {
       if (! key.match(patternToRegexp(pattern)))
         return;
       self._keyDep(key).depend();
+
       if (_.isString(value))
         res.push(value);
       else
@@ -122,6 +124,11 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (! self._patternDependencies[pattern])
       self._patternDependencies[pattern] = new Deps.Dependency();
     self._patternDependencies[pattern].depend();
+
+    Deps.onInvalidate(function (c) {
+      if (c.stopped)
+        delete self._patternDependencies[pattern];
+    });
 
     return res;
   },

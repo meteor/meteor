@@ -38,7 +38,21 @@ Tinytest.add("miniredis - reactivity - simple strings, pattern", function (test)
   Deps.flush();
   test.equal(aas, ["4", "12"]);
 
+  debugger
+  S.del("ab");
+  debugger
+  S.del("ac");
+  debugger
+  S.del("bb");
+  debugger
+  S.del("bc");
+  Deps.flush();
+  test.equal(_.keys(S._keyDependencies).length, 0, "keys are removed and so should be the deps");
   c.stop();
+  Deps.flush();
+  test.equal(_.keys(S._keyDependencies).length +
+             _.keys(S._patternDependencies).length, 0,
+    "All dependencies are unset as there are no more computations");
 });
 
 Tinytest.add("miniredis - reactivity - simple strings, single", function (test) {
@@ -68,5 +82,9 @@ Tinytest.add("miniredis - reactivity - simple strings, single", function (test) 
   test.equal(magic, "123");
 
   c.stop();
+  Deps.flush();
+  test.equal(_.keys(S._keyDependencies).length +
+             _.keys(S._patternDependencies).length, 0,
+    "All dependencies are unset as there are no more computations");
 });
 
