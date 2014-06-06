@@ -1,5 +1,3 @@
-Spacebars = {};
-
 Spacebars.include2 = function (templateOrFunction, dataFunc, contentFunc, elseFunc) {
   var template = Spacebars.call(templateOrFunction);
   if (! (template instanceof Blaze.Component))
