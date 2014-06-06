@@ -32,7 +32,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
 
     if (! self._keyDependencies[key])
-      self._keyDependencies[key] = new Deps.Dependency()
+      self._keyDependencies[key] = new Deps.Dependency();
 
     if (Deps.active) {
       // for future clean-up
