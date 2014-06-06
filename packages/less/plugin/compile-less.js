@@ -44,7 +44,7 @@ Plugin.registerSourceHandler("less", function (compileStep) {
     compileStep.error({
       message: "Less compiler error: " + e.message,
       sourcePath: e.filename || compileStep.inputPath,
-      line: e.line - 1,  // dunno why, but it matches
+      line: e.line,
       column: e.column + 1
     });
     return;
