@@ -2083,5 +2083,11 @@ Tinytest.add(
     rv.set("second");
     Deps.flush();
     test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "second");
+
+    // UI._templateInstance() should throw when called from not within a
+    // helper.
+    test.throws(function () {
+      UI._templateInstance();
+    });
   }
 );

@@ -356,7 +356,8 @@ UI._javascriptUrlsAllowed = function () {
 UI._templateInstance = function () {
   var component = currentComponent.get();
   if (! component) {
-    return null; // not in a helper
+    throw new Error("You can only call UI._templateInstance() from within" +
+                    " a helper.");
   }
 
   // Lazily update the template instance for this helper, and do it only
