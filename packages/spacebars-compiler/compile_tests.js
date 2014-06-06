@@ -57,8 +57,8 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
   run("{{foo bar}}",
       function() {
         return Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self),
-                                    Blaze.lookup("bar", self));
+          return Spacebars.mustache(Blaze.lookup("foo", Blaze),
+                                    self.lookup("bar", self));
         });
       });
 

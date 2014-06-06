@@ -26,12 +26,12 @@ Tinytest.add("templating - html scanner", function (test) {
   // where content is something simple like the string "Hello"
   // (passed in as a source string including the quotes).
   var simpleBody = function (content) {
-    return "\nUI.body.contentParts.push(UI.Component.extend({render: (function() {\n  var self = this;\n  return " + content + ";\n})}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });\n";
+    return "\nUI.body2.contentParts.push((function() {\n  var self = this;\n  return " + content + ";\n}));\nMeteor.startup(function () { if (! UI.body2.domrange) { Blaze.render(function () { return UI.body2; }).attach(document.body); } });\n";
   };
 
   // arguments are quoted strings like '"hello"'
   var simpleTemplate = function (templateName, content) {
-    return '\nTemplate.__define__(' + templateName + ', (function() {\n  var self = this;\n  var template = this;\n  return ' + content + ';\n}));\n';
+    return '\nTemplate.__define__(' + templateName + ', (function() {\n  var template = this;\n  var self = this;\n  return ' + content + ';\n}));\n';
   };
 
   var checkResults = function(results, expectJs, expectHead) {
