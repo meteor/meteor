@@ -280,6 +280,14 @@ var printUnauthorizedMessage = function () {
 // stripping 'http://' or a trailing '/' if present) and return it. If
 // not, print an error message to stderr and return null.
 var canonicalizeSite = function (site) {
+
+  if (site.length > 63) {
+    process.stdout.write(
+"Maximum hostname length currently supported is 63 characters.\n" +
+"Please, try again with a shorter URL for your site.\n");
+    return false;
+  }
+
   var url = site;
   if (!url.match(':\/\/'))
     url = 'http://' + url;
