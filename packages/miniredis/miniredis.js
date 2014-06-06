@@ -23,7 +23,7 @@ Miniredis.RedisStore = function () {
 };
 
 // A hacky thing to declare an absence of value
-var NON_EXISTANT = "___non_existant___" + Math.random();
+var NON_EXISTENT = "___non_existent___" + Math.random();
 _.extend(Miniredis.RedisStore.prototype, {
   // -----
   // convinience wrappers
@@ -31,21 +31,15 @@ _.extend(Miniredis.RedisStore.prototype, {
   _keyDep: function (key) {
     var self = this;
 
-    // return a dummy if it is not going to be used anyway
-    if (! Deps.active)
-      return { depend: function () {}, changed: function () {} };
-
     if (! self._keyDependencies[key])
       self._keyDependencies[key] = new Deps.Dependency()
 
-    // for future clean-up
-    Deps.onInvalidate(function () {
-      if (! self._keyDependencies[key])
-        return;
-
-      if (! self._keyDependencies[key].hasDependents())
-        delete self._keyDependencies[key];
-    });
+    if (Deps.active) {
+      // for future clean-up
+      Deps.onInvalidate(function () {
+        self._tryCleanUpKeyDep(key);
+      });
+    }
 
     return self._keyDependencies[key];
   },
@@ -61,14 +55,12 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   _set: function (key, value) {
     var self = this;
-    var oldValue = self._kv.has(key) ? self._kv.get(key) : NON_EXISTANT;
+    var oldValue = self._kv.has(key) ? self._kv.get(key) : NON_EXISTENT;
     self._kv.set(key, value);
 
-    if (! self._keyDependencies[key])
-      self._keyDependencies[key] = new Deps.Dependency();
     if (oldValue !== value)
-      self._keyDependencies[key].changed();
-    if (oldValue === NON_EXISTANT) {
+      self._keyDep(key).changed();
+    if (oldValue === NON_EXISTENT) {
       _.each(self._patternDependencies, function (dep, pattern) {
         if (key.match(patternToRegexp(pattern))) {
           dep.changed();
@@ -83,7 +75,11 @@ _.extend(Miniredis.RedisStore.prototype, {
       return;
     self._kv.remove(key);
     self._keyDependencies[key].changed();
+    self._tryCleanUpKeyDep(key);
+  },
 
+  _tryCleanUpKeyDep: function (key) {
+    var self = this;
     if (self._keyDependencies[key] && ! self._keyDependencies[key].hasDependents())
       delete self._keyDependencies[key];
   },
