@@ -126,6 +126,8 @@ Blaze.lookup = function (name, component, options) {
     //return Blaze._bindIfIsFunction(component[name], component);
   } else if (isTemplate && _.has(Template, name)) {
     return Template[name];
+  } else if (UI._globalHelpers[name]) {
+    return UI._globalHelpers[name];
   } else {
     var dataVar = Blaze.getCurrentDataVar();
     if (dataVar) {
