@@ -1,4 +1,4 @@
-Tinytest.add("miniredis - reactivity - simple strings", function (test) {
+Tinytest.add("miniredis - reactivity - simple strings, pattern", function (test) {
   var S = new Miniredis.RedisStore();
   S.set("ab", "1");
   S.set("bb", "2");
@@ -37,5 +37,36 @@ Tinytest.add("miniredis - reactivity - simple strings", function (test) {
   S.set("ac", "12");
   Deps.flush();
   test.equal(aas, ["4", "12"]);
+
+  c.stop();
+});
+
+Tinytest.add("miniredis - reactivity - simple strings, single", function (test) {
+  var S = new Miniredis.RedisStore();
+
+  var magic = null;
+  var c = Deps.autorun(function () {
+    magic = S.get("magic");
+  });
+
+  test.equal(magic, null);
+
+  S.set("magic", "abcd");
+  Deps.flush();
+  test.equal(magic, "abcd");
+
+  S.set("magic", "debc");
+  Deps.flush();
+  test.equal(magic, "debc");
+
+  S.del("magic");
+  Deps.flush();
+  test.equal(magic, null);
+
+  S.set("magic", "123");
+  Deps.flush();
+  test.equal(magic, "123");
+
+  c.stop();
 });
 
