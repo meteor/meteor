@@ -120,14 +120,11 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("{{!-- --}}{{#if cond}}aaa{{!\n}}{{else}}{{!}}bbb{{!-- --}}{{/if}}{{!}}",
     function() {
-      var self = this;
-      return UI.If(function () {
-        return Spacebars.call(self.lookup("cond"));
-      }, UI.block(function() {
-        var self = this;
+      return Blaze.If(function () {
+        return Spacebars.call(Blaze.lookup("cond", self));
+      }, (function() {
         return "aaa";
-      }), UI.block(function() {
-        var self = this;
+      }), (function() {
         return "bbb";
       }));
     });
