@@ -5,7 +5,7 @@ Tinytest.add("miniredis - reactivity - simple strings, pattern", function (test)
 
   var aas = null;
   var c = Deps.autorun(function () {
-    aas = S.patternFetch("a?");
+    aas = S.matching("a?").fetch();
   });
 
   test.equal(aas, ["1"]);
@@ -91,7 +91,7 @@ Tinytest.add("miniredis - reactivity - simple lists, single", function (test) {
 
   var lists = null;
   var c = Deps.autorun(function () {
-    lists = S.patternFetch("list[ABC]");
+    lists = S.matching("list[ABC]").fetch();
   });
 
   test.equal(lists, [["0", "1"]]);

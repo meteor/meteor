@@ -10,6 +10,34 @@ var throwIncorrectKindOfValueError = function () {
   throw new Error("Operation against a key holding the wrong kind of value");
 };
 
+// An abstract represtation of a set of keys matching PATTERN
+Miniredis.Cursor = function (redisStore, pattern) {
+  var self = this;
+  self.redisStore = redisStore;
+  self.pattern = pattern;
+};
+
+_.extend(Miniredis.Cursor.prototype, {
+  fetch: function () {
+    var self = this;
+    return self.redisStore.patternFetch(self.pattern);
+  },
+  observeChanges: function (callbacks) {
+    var self = this;
+    var observeRecord = _.extend({ pattern: self.pattern }, callbacks);
+    var redisStore = self.redisStore;
+    redisStore.observes.push(observeRecord);
+
+    return {
+      stop: function () {
+        redisStore.observes = _.filter(redisStore.observes, function (obs) {
+          return obs !== observeRecord;
+        });
+      }
+    };
+  }
+});
+
 // A main store class
 Miniredis.RedisStore = function () {
   var self = this;
@@ -20,6 +48,8 @@ Miniredis.RedisStore = function () {
   self._keyDependencies = {};
   // fine-grained reactivity per non-trivial pattern
   self._patternDependencies = {};
+  // list of observes on cursors
+  self.observes = [];
 };
 
 // A hacky thing to declare an absence of value
@@ -58,14 +88,19 @@ _.extend(Miniredis.RedisStore.prototype, {
     var oldValue = self._kv.has(key) ? self._kv.get(key) : NON_EXISTENT;
     self._kv.set(key, value);
 
-    if (oldValue !== value)
+    if (oldValue !== value) {
       self._keyDep(key).changed();
-    if (oldValue === NON_EXISTENT) {
-      _.each(self._patternDependencies, function (dep, pattern) {
-        if (key.match(patternToRegexp(pattern))) {
-          dep.changed();
-        }
-      });
+      if (oldValue === NON_EXISTENT) {
+        _.each(self._patternDependencies, function (dep, pattern) {
+          if (key.match(patternToRegexp(pattern))) {
+            dep.changed();
+          }
+        });
+
+        self._notifyObserves(key, 'added', value);
+      } else {
+        self._notifyObserves(key, 'changed', value);
+      }
     }
   },
 
@@ -76,12 +111,22 @@ _.extend(Miniredis.RedisStore.prototype, {
     self._kv.remove(key);
     self._keyDependencies[key].changed();
     self._tryCleanUpKeyDep(key);
+    self._notifyObserves(key, 'removed');
   },
 
   _tryCleanUpKeyDep: function (key) {
     var self = this;
     if (self._keyDependencies[key] && ! self._keyDependencies[key].hasDependents())
       delete self._keyDependencies[key];
+  },
+
+  _notifyObserves: function (key, event, value) {
+    var self = this;
+    _.each(self.observes, function (obs) {
+      if (! key.match(patternToRegexp(obs.pattern)))
+        return;
+      obs[event] && obs[event](key, value);
+    });
   },
 
   // -----
@@ -120,6 +165,13 @@ _.extend(Miniredis.RedisStore.prototype, {
     });
 
     return res;
+  },
+
+  // Returns a Cursor
+  matching: function (pattern) {
+    var self = this;
+    var c = new Miniredis.Cursor(self, pattern);
+    return c;
   },
 
   // -----
