@@ -1344,22 +1344,15 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
     test.equal(DomUtils.getElementValue(input), "This is a fridge");
 
     if (canFocus) {
-      // ...unless focused
+      // ...if focused, it still updates but focus isn't lost.
       focusElement(input);
+      DomUtils.setElementValue(input, "something else");
       R.set({x:"frog"});
 
       Deps.flush();
-      test.equal(DomUtils.getElementValue(input), "This is a fridge");
-
-      // blurring and re-setting works
-      blurElement(input);
-      Deps.flush();
-      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(DomUtils.getElementValue(input), "This is a frog");
+      test.equal(document.activeElement, input);
     }
-    R.set({x:"new frog"});
-    Deps.flush();
-
-    test.equal(DomUtils.getElementValue(input), "This is a new frog");
 
     // Setting a value (similar to user typing) should prevent value from being
     // reverted if the div is re-rendered but the rendered value (ie, R) does
