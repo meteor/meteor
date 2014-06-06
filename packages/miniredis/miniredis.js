@@ -111,7 +111,10 @@ _.extend(Miniredis.RedisStore.prototype, {
       if (! key.match(patternToRegexp(pattern)))
         return;
       self._keyDep(key).depend();
-      res.push(value);
+      if (_.isString(value))
+        res.push(value);
+      else
+        res.push(value.toArray());
     });
 
     // XXX this should be properly cleaned up once the computations associated
@@ -446,7 +449,8 @@ _.extend(Miniredis.List.prototype, {
   llen: function () {
     return this._list.length;
   },
-  type: function () { return "list"; }
+  type: function () { return "list"; },
+  toArray: function () { return this._list.slice(0); }
 });
 
 _.each(["lpushx", "rpushx"], function (method) {
@@ -473,7 +477,12 @@ _.each(["lpush", "rpush", "lpop", "rpop", "lindex", "linsert", "lrange",
            if (! (list instanceof Miniredis.List))
              throwIncorrectKindOfValueError();
 
-           return Miniredis.List.prototype[method].apply(list, args);
+           // reset the value to a dummy value just to trigger invalidate
+           // through _set method
+           self._set(key, "dummy");
+           var res = Miniredis.List.prototype[method].apply(list, args);
+           self._set(key, list);
+           return res;
          };
        });
 
