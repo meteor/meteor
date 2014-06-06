@@ -123,6 +123,16 @@ Blaze.Var = function (initializer, equalsFunc) {
   self.inited = true;
 };
 
+Blaze.Var.defaultEquals = function (a, b) {
+  // Two values are equal if they are `===` and are
+  // number, boolean, string, undefined, or null.
+  if (a !== b)
+    return false;
+  else
+    return ((!a) || (typeof a === 'number') || (typeof a === 'boolean') ||
+            (typeof a === 'string'));
+};
+
 _.extend(Blaze.Var.prototype, {
   /**
    * ## Blaze.Var#get()
@@ -147,11 +157,9 @@ _.extend(Blaze.Var.prototype, {
     var oldValue = this.curValue;
 
     if (this.inited &&
-        (equals ? equals(newValue, oldValue) :
-         newValue === oldValue)) {
+        (equals || Blaze.Var.defaultEquals)(newValue, oldValue))
       // value is same as last time
       return;
-    }
 
     this.curValue = newValue;
     this.dep.changed();
