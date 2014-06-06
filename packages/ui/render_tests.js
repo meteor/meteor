@@ -411,6 +411,31 @@ Tinytest.add("ui - render - components", function (test) {
   })();
 });
 
+Tinytest.add("ui - render - findAll", function (test) {
+  var found = null;
+  var $found = null;
+
+  var myComponent = UI.Component.extend({
+    render: function() {
+      return DIV([P('first'), P('second')]);
+    },
+    rendered: function() {
+      found = this.findAll('p');
+      $found = this.$('p');
+    },
+  });
+
+  var div = document.createElement("DIV");
+
+  materialize(myComponent, div);
+  Deps.flush();
+
+  test.equal(_.isArray(found), true);
+  test.equal(_.isArray($found), false);
+  test.equal(found.length, 2);
+  test.equal($found.length, 2);
+});
+
 Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
@@ -557,4 +582,48 @@ Tinytest.add("ui - attributes", function (test) {
     [{x: function () { return 'abc'; } },
      function () { return { x: function () { return 'def'; } }; }]),
              { x: 'def' });
+});
+
+Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
+  _.each([true, false], function (nest) {
+
+    var firstComputation;
+    var rv1 = new ReactiveVar;
+    var rv2 = new ReactiveVar;
+
+    // Render a component in an autorun. Save the current computation
+    // from the first time we run the render function. Invalidate the
+    // autorun, and check whether that stops the computation from the
+    // first time the component rendered.
+
+    var tmpl = UI.Component.extend({
+      render: function () {
+        return function () {
+          if (! firstComputation) {
+            firstComputation = Deps.currentComputation;
+          }
+          return rv1.get();
+        };
+      }
+    });
+
+    Deps.autorun(function () {
+      rv2.get(); // register a dependency
+      UI.render(tmpl, undefined, {
+        _nestInCurrentComputation: nest
+      });
+    });
+
+    rv2.set("foo");
+    Deps.flush();
+
+    // If we nested inside the current computation, then we expect the
+    // computation from within the render function to have been stopped
+    // when the outer computation was invalidated.
+    if (nest) {
+      test.equal(firstComputation.stopped, true);
+    } else {
+      test.equal(firstComputation.stopped, false);
+    }
+  });
 });

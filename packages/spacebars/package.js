@@ -12,10 +12,19 @@ Package.describe({
 // Additional tests are in `spacebars-tests`.
 
 Package.on_use(function (api) {
-  api.export('Spacebars');
+  api.use('spacebars-common');
+  api.imply('spacebars-common');
 
   api.use('htmljs');
   api.use('ui');
   api.use('observe-sequence');
+  api.use('templating');
   api.add_files(['spacebars-runtime.js']);
+  api.add_files(['dynamic.html', 'dynamic.js'], 'client');
+});
+
+Package.on_test(function (api) {
+  api.use(["spacebars", "tinytest", "test-helpers"]);
+  api.use("templating", "client");
+  api.add_files(["dynamic_tests.html", "dynamic_tests.js"], "client");
 });

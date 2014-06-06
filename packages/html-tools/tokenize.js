@@ -215,24 +215,25 @@ var assertIsTemplateTag = function (x) {
 getHTMLToken = HTMLTools.Parse.getHTMLToken = function (scanner, dataMode) {
   var result = null;
   if (scanner.getTemplateTag) {
-    var lastPos = -1;
     // Try to parse a template tag by calling out to the provided
     // `getTemplateTag` function.  If the function returns `null` but
     // consumes characters, it must have parsed a comment or something,
     // so we loop and try it again.  If it ever returns `null` without
     // consuming anything, that means it didn't see anything interesting
     // so we look for a normal token.  If it returns a truthy value,
-    // the value must be instanceof HTMLTools.TemplateTag.
-    while ((! result) && scanner.pos > lastPos) {
-      lastPos = scanner.pos;
-      result = scanner.getTemplateTag(
-        scanner,
-        (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
-         (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
-          TEMPLATE_TAG_POSITION.ELEMENT)));
-    }
+    // the value must be instanceof HTMLTools.TemplateTag.  We wrap it
+    // in a Special token.
+    var lastPos = scanner.pos;
+    result = scanner.getTemplateTag(
+      scanner,
+      (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
+       (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
+        TEMPLATE_TAG_POSITION.ELEMENT)));
+
     if (result)
       return { t: 'TemplateTag', v: assertIsTemplateTag(result) };
+    else if (scanner.pos > lastPos)
+      return null;
   }
 
   var chars = getChars(scanner);

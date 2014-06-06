@@ -720,7 +720,7 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
+_.each(['forEach', 'map', 'fetch', 'count'], function (method) {
   Cursor.prototype[method] = function () {
     var self = this;
 
@@ -742,6 +742,13 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
       self._synchronousCursor, arguments);
   };
 });
+
+// Since we don't actually have a "nextObject" interface, there's really no
+// reason to have a "rewind" interface.  All it did was make multiple calls
+// to fetch/map/forEach return nothing the second time.
+// XXX COMPAT WITH 0.8.1
+Cursor.prototype.rewind = function () {
+};
 
 Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;
@@ -874,6 +881,9 @@ _.extend(SynchronousCursor.prototype, {
   forEach: function (callback, thisArg) {
     var self = this;
 
+    // Get back to the beginning.
+    self._rewind();
+
     // We implement the loop ourself instead of using self._dbCursor.each,
     // because "each" will call its callback outside of a fiber which makes it
     // much more complex to make this function synchronous.
@@ -895,7 +905,7 @@ _.extend(SynchronousCursor.prototype, {
     return res;
   },
 
-  rewind: function () {
+  _rewind: function () {
     var self = this;
 
     // known to be synchronous

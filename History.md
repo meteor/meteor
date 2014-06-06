@@ -1,8 +1,14 @@
 ## v.NEXT
 
+* The `findAll` method on template instances now returns a vanilla
+  array, not a jQuery object. The `$` method continues to
+  return a jQuery object. #2039
+
 * Speed up updates of NPM modules by upgrading Node to include our fix for
   https://github.com/npm/npm/issues/3265 instead of passing `--force` to
   `npm install`.
+
+* Always rebuild on changes to npm-shrinkwrap.json files.  #1648
 
 * Run server tests from multiple clients serially instead of in
   parallel. This allows testing features that modify global server
@@ -35,11 +41,26 @@
 * The legacy polling observe driver handles errors communicating with MongoDB
   better and no longer gets "stuck" in some circumstances.
 
+* Add {{> UI.dynamic}} to make it easier to dynamically render a
+  template with a data context. XXX Update "Using Blaze" wiki page.
+
+* Show the display name of the currently logged-in user after following
+  a verification link or password reset link in `accounts-ui`.
+
+* Use `Meteor.absoluteUrl()` to compute the redirect URI in `force-ssl`
+  instead of the host header.
+
+* Automatically rewind cursors before calls to `fetch`, `forEach`, or `map`. On
+  the client, don't cache the return value of `cursor.count()` (consistently
+  with the server behavior). `cursor.rewind()` is now a no-op. #2114
+
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
   - uglify-js: 2.4.13 (from 2.4.7)
+  - sockjs server: 0.3.9 (from 0.3.8)
+  - websocket-driver: 0.3.4 (from 0.3.2)
 
-Patches contributed by GitHub users awwx
+Patches contributed by GitHub users awwx, subhog
 
 
 ## v.0.8.1.3

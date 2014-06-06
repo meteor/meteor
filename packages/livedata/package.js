@@ -7,7 +7,11 @@ Package.describe({
 // because it's the same library used as a server in sockjs, and it's easiest to
 // deal with a single websocket implementation.  (Plus, its maintainer is easy
 // to work with on pull requests.)
-Npm.depends({sockjs: "0.3.8", "faye-websocket": "0.7.2"});
+//
+// (By listing faye-websocket first, it's more likely that npm deduplication
+// will prevent a second copy of faye-websocket from being installed inside
+// sockjs.)
+Npm.depends({"faye-websocket": "0.7.2", sockjs: "0.3.9"});
 
 Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps',

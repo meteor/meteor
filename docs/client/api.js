@@ -779,14 +779,6 @@ Template.api.cursor_map = {
   ]
 };
 
-Template.api.cursor_rewind = {
-  id: "rewind",
-  name: "<em>cursor</em>.rewind()",
-  locus: "Anywhere",
-  descr: ["Resets the query cursor."],
-  args: [ ]
-};
-
 Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",
@@ -1805,7 +1797,7 @@ Template.api.template_helpers = {
 
 Template.api.template_findAll = {
   id: "template_findAll",
-  name: "<em>this</em>.findAll(selector)",
+  name: "<em>this</em>.findAll(selector) and <em>this</em>.$(selector)",
   locus: "Client",
   descr: ["Find all elements matching `selector` in this template instance."],
   args: [

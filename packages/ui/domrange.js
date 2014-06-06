@@ -7,29 +7,34 @@
 var DOMBackend = UI.DOMBackend;
 
 var removeNode = function (n) {
-//  if (n.nodeType === 1 &&
-//      n.parentNode.$uihooks && n.parentNode.$uihooks.removeElement)
-//    n.parentNode.$uihooks.removeElement(n);
-//  else
+ if (n.nodeType === 1 &&
+     n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+   n.parentNode._uihooks.removeElement(n);
+ } else {
     n.parentNode.removeChild(n);
+ }
 };
 
 var insertNode = function (n, parent, next) {
-//  if (n.nodeType === 1 &&
-//      parent.$uihooks && parent.$uihooks.insertElement)
-//    parent.$uihooks.insertElement(n, parent, next);
-//  else
-    // `|| null` because IE throws an error if 'next' is undefined
-  parent.insertBefore(n, next || null);
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.insertElement) {
+    parent._uihooks.insertElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
 };
 
 var moveNode = function (n, parent, next) {
-//  if (n.nodeType === 1 &&
-//      parent.$uihooks && parent.$uihooks.moveElement)
-//    parent.$uihooks.moveElement(n, parent, next);
-//  else
-    // `|| null` because IE throws an error if 'next' is undefined
-    parent.insertBefore(n, next || null);
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.moveElement) {
+    parent._uihooks.moveElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
 };
 
 // A very basic operation like Underscore's `_.extend` that
@@ -106,7 +111,7 @@ var rangeParented = function (range) {
 
       // get jQuery to tell us when this node is removed
       DOMBackend.onRemoveElement(parentNode, function () {
-        rangeRemoved(range);
+        rangeRemoved(range, true /* elementsAlreadyRemoved */);
       });
     }
 
@@ -123,7 +128,7 @@ var rangeParented = function (range) {
   }
 };
 
-var rangeRemoved = function (range) {
+var rangeRemoved = function (range, elementsAlreadyRemoved) {
   if (! range.isRemoved) {
     range.isRemoved = true;
 
@@ -141,29 +146,29 @@ var rangeRemoved = function (range) {
     if (range.removed)
       range.removed();
 
-    membersRemoved(range);
+    membersRemoved(range, elementsAlreadyRemoved);
   }
 };
 
-var nodeRemoved = function (node, viaBackend) {
+var nodeRemoved = function (node, elementsAlreadyRemoved) {
   if (node.nodeType === 1) { // ELEMENT
     var comps = DomRange.getComponents(node);
     for (var i = 0, N = comps.length; i < N; i++)
       rangeRemoved(comps[i]);
 
-    if (! viaBackend)
+    if (! elementsAlreadyRemoved)
       DOMBackend.removeElement(node);
   }
 };
 
-var membersRemoved = function (range) {
+var membersRemoved = function (range, elementsAlreadyRemoved) {
   var members = range.members;
   for (var k in members) {
     var mem = members[k];
     if (mem instanceof DomRange)
-      rangeRemoved(mem);
+      rangeRemoved(mem, elementsAlreadyRemoved);
     else
-      nodeRemoved(mem);
+      nodeRemoved(mem, elementsAlreadyRemoved);
   }
 };
 
@@ -225,7 +230,7 @@ _extend(DomRange.prototype, {
     for (var i = 0, N = nodes.length; i < N; i++)
       removeNode(nodes[i]);
 
-    membersRemoved(this);
+    membersRemoved(this, true /* elementsAlreadyRemoved */);
 
     this.members = {};
   },
@@ -336,7 +341,7 @@ _extend(DomRange.prototype, {
       removeNode(this.start);
       removeNode(this.end);
       this.owner = null;
-      rangeRemoved(this);
+      rangeRemoved(this, true /* elementsAlreadyRemoved */);
       return;
     }
 
@@ -381,6 +386,7 @@ _extend(DomRange.prototype, {
     var member =
           (members.hasOwnProperty(id) &&
            members[id]);
+
     // Don't mind if member doesn't exist.
     if (! member)
       return;
