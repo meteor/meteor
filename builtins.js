@@ -34,8 +34,7 @@ Blaze.With = Blaze.Controller.extend({
 
     Blaze.With.__super__.constructor.call(this);
 
-    this.dataVar = (data instanceof Blaze.Var) ? data :
-      Blaze.Var(data, UI.safeEquals);
+    this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
     this.func = func;
   },
   render: function () {
