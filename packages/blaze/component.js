@@ -176,8 +176,12 @@ Blaze.getElementController = function (elem) {
   var controller = null;
   while (range && ! controller) {
     controller = (range.controller || null);
-    if (! controller)
-      range = range.parentRange;
+    if (! controller) {
+      if (range.parentRange)
+        range = range.parentRange;
+      else
+        range = Blaze.DOMRange.forElement(range.parentElement);
+    }
   }
   return controller;
 };
