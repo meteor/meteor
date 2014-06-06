@@ -122,7 +122,9 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         return Blaze.Isolate(function() {
           return Spacebars.include2(Blaze.lookupTemplate("foo", self),
-                                    Spacebars.call(Blaze.lookup("bar", self)));
+                                    function () {
+                                      return Spacebars.call(Blaze.lookup("bar", self));
+                                    });
         });
       });
 
@@ -130,7 +132,9 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         return Blaze.Isolate(function() {
           return Spacebars.include2(Blaze.lookupTemplate("foo", self),
-                                {x: Spacebars.call(Blaze.lookup("bar", self))});
+                                function () {
+                                  return {x: Spacebars.call(Blaze.lookup("bar", self))};
+                                });
         });
       });
 
@@ -138,16 +142,20 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         return Blaze.Isolate(function() {
           return Spacebars.include2(Blaze.lookupTemplate("foo", self),
-                 Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self),
-                                              "baz")));
+                 function () {
+                   return Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self),
+                                                "baz"));
+                 });
         });
       });
 
   run("{{> foo x=bar.baz}}",
       function() {
         return Blaze.Isolate(function() {
-          return Spacebars.include2(Blaze.lookupTemplate("foo", self), {
-            x: Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self), "baz"))
+          return Spacebars.include2(Blaze.lookupTemplate("foo", self), function () {
+            return {
+              x: Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self), "baz"))
+            };
           });
         });
       });
@@ -156,8 +164,10 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         return Blaze.Isolate(function() {
           return Spacebars.include2(Blaze.lookupTemplate("foo", self),
-                 Spacebars.dataMustache(Blaze.lookup("bar", self),
-                 Blaze.lookup("baz", self)));
+                 function () {
+                   return Spacebars.dataMustache(Blaze.lookup("bar", self),
+                                                 Blaze.lookup("baz", self));
+                 });
         });
       });
 
@@ -165,8 +175,10 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         return Blaze.Isolate(function() {
           return Spacebars.include2(Blaze.lookupTemplate("foo", self),
-                 Spacebars.dataMustache(Blaze.lookup("bar", self),
-                 Blaze.lookup("baz", self)),
+                 function () {
+                   return Spacebars.dataMustache(Blaze.lookup("bar", self),
+                                                 Blaze.lookup("baz", self));
+                 },
                  (function() {
                    return "aaa";
                  }));
@@ -177,9 +189,11 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         return Blaze.Isolate(function() {
           return Spacebars.include2(Blaze.lookupTemplate("foo", self),
-                 Spacebars.dataMustache(Spacebars.dot(
-                    Blaze.lookup("p", self), "q"),
-                    Spacebars.dot(Blaze.lookup("r", self), "s")),
+                 function () {
+                   return Spacebars.dataMustache(Spacebars.dot(
+                     Blaze.lookup("p", self), "q"),
+                                                 Spacebars.dot(Blaze.lookup("r", self), "s"));
+                 },
                  (function() {
                    return "aaa";
                  }));
