@@ -1201,6 +1201,20 @@ _.extend(PackageSource.prototype, {
     var self = this;
     var versions = _.extend(constraints, {"toolVersion": currentTool });
 
+    // If we are running from checkout and looking at a core package,
+    // don't record its versions. We know what its versions are, and having
+    // those extra version lock files is kind of annoying.
+    //
+    // (This is a medium-term hack. We can build something more modular if
+    //  there is any demand for it)
+    if (files.inCheckout()) {
+      var packDir = path.join(files.getCurrentToolsDir(), 'packages');
+      var myDir = self.sourceRoot.slice(0, packDir.length);
+      if (myDir === packDir) {
+        return;
+      }
+    }
+
     // If nothing has changed, don't bother rewriting the versions file.
     if (_.isEqual(self.dependencyVersions, versions)) return;
 
@@ -1230,10 +1244,6 @@ _.extend(PackageSource.prototype, {
            return pair[0];
         });
     };
-
-    // XXX: I am tired of writing out version files in checkout. I will fix this
-    // to explicitly not do that later.
-    return;
 
     // Both plugins and direct dependencies are objects mapping package name to
     // version number. When we write them on disk, we will convert them to
