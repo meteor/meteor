@@ -57,6 +57,17 @@ UI.TemplateComponent = Blaze.Component.extend({
   renderTemplate: function () { return null; }, // override this
   renderToDOM: function() {
     var range = UI.TemplateComponent.__super__.renderToDOM.call(this);
+    if (! this._eventMaps &&
+        typeof this.events === "object") {
+      // Provide limited back-compat support for `.events = {...}`
+      // syntax.  Pass `this.events` to the original `.events(...)`
+      // function.  This code must run only once per component, in
+      // order to not bind the handlers more than once, which is
+      // ensured by the fact that we only do this when `this._eventMaps`
+      // is falsy, and we cause it to be set now.
+      UI.TemplateComponent.prototype.events.call(this, this.events);
+    }
+
     if (this._eventMaps) {
       _.each(this._eventMaps, function (m) {
         range.addDOMAugmenter(new Blaze.EventAugmenter(m));
