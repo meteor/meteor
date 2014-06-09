@@ -6,6 +6,18 @@ var _onstopForRender = function () {
 
 Blaze.RenderController = Blaze.Controller.extend();
 
+var contentEquals = function (a, b) {
+  if (a instanceof HTML.Raw) {
+    return (b instanceof HTML.Raw) && (a.value === b.value);
+  } else if (a == null) {
+    return (b == null);
+  } else {
+    return (a === b) &&
+      ((typeof a === 'number') || (typeof a === 'boolean') ||
+       (typeof a === 'string'));
+  }
+};
+
 // Takes a function that returns HTMLjs and returns a DOMRange.
 // The function will be reactively re-run.  The resulting DOMRange
 // may be attached to the DOM using `.attach(parentElement, [nextNode])`.
@@ -15,10 +27,14 @@ Blaze.render = function (func) {
   if (! controller)
     controller = new Blaze.RenderController;
 
-  range.computation = Deps.autorun(function () {
+  var oldContent;
+  range.computation = Deps.autorun(function (c) {
     Blaze.withCurrentController(controller, function () {
       var content = func();
-      range.setMembers(Blaze.toDOM(content));
+      if (c.firstRun || ! contentEquals(oldContent, content)) {
+        oldContent = content;
+        range.setMembers(Blaze.toDOM(content));
+      }
     });
   });
   Blaze._wrapAutorun(range.computation);
