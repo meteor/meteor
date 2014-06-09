@@ -97,6 +97,11 @@ _.extend(CodeGen.prototype, {
 
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
+          if (path.length > 1) {
+            // capture reactivity
+            compCode = 'function () { return Spacebars.call(' + compCode +
+              '); }';
+          }
 
           var dataCode = self.codeGenInclusionDataFunc(tag.args);
           var content = (('content' in tag) ?
@@ -106,15 +111,13 @@ _.extend(CodeGen.prototype, {
 
           var includeArgs = [compCode];
           if (content) {
-            // XXX `null` will be the data arg when we change calling convention
-            includeArgs.push('null', content);
+            includeArgs.push(content);
             if (elseContent)
               includeArgs.push(elseContent);
           }
 
           var includeCode =
-                'Blaze.Isolate(function () { return Spacebars.include2(' +
-                includeArgs.join(', ') + '); })';
+                'Spacebars.include2(' + includeArgs.join(', ') + ')';
 
           // calling convention compat -- set the data context around the
           // entire inclusion, so that if the name of the inclusion is
