@@ -1,7 +1,10 @@
 Spacebars.include2 = function (templateOrFunction, dataFunc, contentFunc, elseFunc) {
   var template = Spacebars.call(templateOrFunction);
+  if (template === null)
+    return null;
+
   if (! (template instanceof Blaze.Component))
-    throw new Error("Expected template, found: " + template);
+    throw new Error("Expected template or null, found: " + template);
 
   return new template.constructor(dataFunc, contentFunc, elseFunc);
 };
