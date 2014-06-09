@@ -1,12 +1,20 @@
-Spacebars.include2 = function (templateOrFunction, dataFunc, contentFunc, elseFunc) {
-  var template = Spacebars.call(templateOrFunction);
-  if (template === null)
-    return null;
 
-  if (! (template instanceof Blaze.Component))
-    throw new Error("Expected template or null, found: " + template);
+var tripleEquals = function (a, b) { return a === b; };
 
-  return new template.constructor(dataFunc, contentFunc, elseFunc);
+Spacebars.include2 = function (templateOrFunction, contentFunc, elseFunc) {
+  var templateVar = Blaze.Var(templateOrFunction, tripleEquals);
+  return Blaze.Isolate(function () {
+    var template = templateVar.get();
+    if (template === null)
+      return null;
+
+    if (! (template instanceof Blaze.Component))
+      throw new Error("Expected template or null, found: " + template);
+
+    // Current calling convention (as of 0.8) means we have to wrap data
+    // around the whole inclusion, not pass it here (the `null` arg)
+    return new template.constructor(null, contentFunc, elseFunc);
+  });
 };
 
 // * `templateOrFunction` - template (component) or function returning a template
