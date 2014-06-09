@@ -1,0 +1,16 @@
+{ "track": "METEOR-CORE",
+  "banners": [
+    {
+      "versions": ["850.0", "860.1", "860.0"],
+      "banner": {
+        "text": "You're in the mid-eighties!\nCool!"
+       }
+    },
+    {
+      "versions": ["700.0", "800.0"],
+      "banner": {
+        "text": "You're a hundred!\nCool!"
+       }
+    }
+  ]
+}

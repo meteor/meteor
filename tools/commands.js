@@ -1705,7 +1705,7 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// admin grant
+// admin make-bootstrap-tarballs
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
@@ -1831,6 +1831,47 @@ main.registerCommand({
   return 0;
 });
 
+///////////////////////////////////////////////////////////////////////////////
+// admin set-banners
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'admin set-banners',
+  minArgs: 1,
+  maxArgs: 1
+}, function (options) {
+  var bannersFile = options.args[0];
+  try {
+    var bannersData = fs.readFileSync(bannersFile, 'utf8');
+    bannersData = JSON.parse(bannersData);
+  } catch (e) {
+    process.stderr.write("Could not parse banners file: ");
+    process.stderr.write(e.message + "\n");
+    return 1;
+  }
+  if (!bannersData.track) {
+    process.stderr.write("Banners file should have a 'track' key.\n");
+    return 1;
+  }
+  if (!bannersData.banners) {
+    process.stderr.write("Banners file should have a 'banners' key.\n");
+    return 1;
+  }
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  conn.call('setBannersOnReleases', bannersData.track,
+            bannersData.banners);
+
+  // Refresh afterwards.
+  officialCatalog.refresh();
+  return 0;
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // self-test
@@ -2056,10 +2097,6 @@ main.registerCommand({
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-  if (! conn) {
-    process.stderr.write('No connection: will not be able to publish anything\n');
     return 1;
   }
 
