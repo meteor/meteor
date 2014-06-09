@@ -39,16 +39,20 @@ rm -rf rainforestqa-tmp || true
 mkdir rainforestqa-tmp
 cd rainforestqa-tmp
 
+# Deploy all example apps
 for EXAMPLE in $EXAMPLES ; do
-    HOSTNAME=$PREFIX-$EXAMPLE.meteor.com
+    SITE=$PREFIX-$EXAMPLE.meteor.com
 
     # `|| true` so that the script doesn't fail if the the app doesn't exist
-    meteor deploy -D $HOSTNAME >> $LOG 2>&1 || true
+    meteor deploy -D $SITE >> $LOG 2>&1 || true
     meteor create --example $EXAMPLE --release $RELEASE $EXAMPLE >> $LOG 2>&1
     cd $EXAMPLE
-    echo -n "* Deploying $EXAMPLE to $HOSTNAME... "
-    meteor deploy $HOSTNAME >> $LOG 2>&1
+    echo -n "* Deploying $EXAMPLE to $SITE... "
+    meteor deploy $SITE >> $LOG 2>&1
     echo DONE
     cd ..
 done
+
+# Configure OAuth on parties
+echo "XXX" | meteor mongo $PREFIX-parties.meteor.com
 
