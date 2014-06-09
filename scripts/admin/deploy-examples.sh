@@ -24,6 +24,7 @@ function cleanup {
     echo "Logs can be found at $METEOR_ROOT/rainforestqa-deploy.log"
     cp "$METEORSESSION_RESTORE" ~/.meteorsession
     rm "$METEORSESSION_RESTORE"
+    rm -rf rainforestqa-tmp
 }
 trap cleanup EXIT
 
@@ -54,5 +55,7 @@ for EXAMPLE in $EXAMPLES ; do
 done
 
 # Configure OAuth on parties
-echo "XXX" | meteor mongo $PREFIX-parties.meteor.com
-
+cd .. # meteor root
+echo -n "* Configuring OAuth for $PREFIX-parties.meteor.com... "
+meteor --release $RELEASE mongo $PREFIX-parties.meteor.com >> $LOG 2>&1 < scripts/admin/configure_parties.js
+echo DONE
