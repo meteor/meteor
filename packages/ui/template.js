@@ -37,17 +37,24 @@ UI.TemplateComponent = Blaze.Component.extend({
   constructor: function (dataFunc, contentFunc, elseFunc) {
     UI.TemplateComponent.__super__.constructor.call(this);
 
-    if (dataFunc)
-      this.dataFunc = dataFunc;
-    if (contentFunc)
-      this.contentFunc = contentFunc;
-    if (elseFunc)
-      this.elseFunc = elseFunc;
+    if (dataFunc) {
+      this.__dataFunc = dataFunc;
+    }
+    if (contentFunc) {
+      this.__contentBlock = Blaze.Component.extend({
+        render: function () { return contentFunc(); }
+      }).prototype;
+    }
+    if (elseFunc) {
+      this.__elseBlock = Blaze.Component.extend({
+        render: function () { return elseFunc(); }
+      }).prototype;
+    }
   },
   render: function () {
     var self = this;
-    if (self.dataFunc) {
-      return Blaze.With(self.dataFunc, function () {
+    if (self.__dataFunc) {
+      return Blaze.With(self.__dataFunc, function () {
         return self.renderTemplate();
       });
     } else {
@@ -105,5 +112,7 @@ UI.TemplateComponent = Blaze.Component.extend({
   extend: function () {
     throw new Error(
       "Component#extend was part of a private API that has been removed");
-  }
+  },
+  __contentBlock: null,
+  __elseBlock: null
 });
