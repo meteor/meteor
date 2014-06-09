@@ -104,28 +104,36 @@ _.extend(CodeGen.prototype, {
           var elseContent = (('elseContent' in tag) ?
                              self.codeGenBlock(tag.elseContent) : null);
 
-          var includeArgs = [compCode, dataCode || 'null'];
+          var includeArgs = [compCode];
           if (content) {
-            includeArgs.push(content);
+            // XXX `null` will be the data arg when we change calling convention
+            includeArgs.push('null', content);
             if (elseContent)
               includeArgs.push(elseContent);
           }
 
           var includeCode =
-                'Blaze.Isolate(function () { return Spacebars.include2(' + includeArgs.join(', ') + '); })';
-          /*
+                'Blaze.Isolate(function () { return Spacebars.include2(' +
+                includeArgs.join(', ') + '); })';
+
+          // calling convention compat -- set the data context around the
+          // entire inclusion, so that if the name of the inclusion is
+          // a helper function, it gets the data context in `this`.
+          // This makes for a pretty confusing calling convention --
+          // In `{{#foo bar}}`, `foo` is evaluated in the context of `bar`
+          // -- but it's what we shipped for 0.8.0.  The rationale is that
+          // `{{#foo bar}}` is sugar for `{{#with bar}}{{#foo}}...`.
           if (dataCode) {
             includeCode =
-              'Spacebars.TemplateWith(function () { return ' +
-              dataCode + '; }, UI.block(' +
-              SpacebarsCompiler.codeGen(BlazeTools.EmitCode(includeCode)) + '))';
+              'Spacebars.TemplateWith(' + dataCode + ', function () { return ' +
+              includeCode + '; })';
           }
 
-          if (path[0] === 'UI' &&
+          /*if (path[0] === 'UI' &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
             includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
-          }
-*/
+          }*/
+
           return BlazeTools.EmitCode(includeCode);
         }
       } else {

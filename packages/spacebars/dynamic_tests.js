@@ -1,5 +1,5 @@
 Tinytest.add(
-  "ui-dynamic-template - render template dynamically", function (test, expect) {
+  "spacebars - ui-dynamic-template - render template dynamically", function (test, expect) {
     var tmpl = Template.ui_dynamic_test;
 
     var nameVar = new ReactiveVar;
@@ -30,7 +30,7 @@ Tinytest.add(
 // Same test as above, but the {{> UI.dynamic}} inclusion has no
 // `dataContext` argument.
 Tinytest.add(
-  "ui-dynamic-template - render template dynamically, no data context",
+  "spacebars - ui-dynamic-template - render template dynamically, no data context",
   function (test, expect) {
     var tmpl = Template.ui_dynamic_test_no_data;
 
@@ -49,7 +49,7 @@ Tinytest.add(
 
 
 Tinytest.add(
-  "ui-dynamic-template - render template " +
+  "spacebars - ui-dynamic-template - render template " +
     "dynamically, data context gets inherited",
   function (test, expect) {
     var tmpl = Template.ui_dynamic_test_inherited_data;
@@ -80,7 +80,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "ui-dynamic-template - render template " +
+  "spacebars - ui-dynamic-template - render template " +
     "dynamically, data context does not get inherited if " +
     "falsey context is passed in",
   function (test, expect) {
@@ -107,7 +107,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "ui-dynamic-template - render template " +
+  "spacebars - ui-dynamic-template - render template " +
     "dynamically, bad arguments",
   function (test, expect) {
     var tmplPrefix = "ui_dynamic_test_bad_args";
@@ -127,7 +127,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "ui-dynamic-template - render template " +
+  "spacebars - ui-dynamic-template - render template " +
     "dynamically, falsey context",
   function (test, expect) {
     var tmpl = Template.ui_dynamic_test_falsey_context;
