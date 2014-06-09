@@ -184,7 +184,7 @@ release.latestDownloaded = function (track) {
     return process.env.METEOR_TEST_LATEST_RELEASE;
 
 
-  var defaultRelease = catalog.official.getDefaultReleaseVersion();
+  var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
     throw new Error("no latest release available?");
