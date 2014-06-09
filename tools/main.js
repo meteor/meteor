@@ -1065,7 +1065,8 @@ commandName + ": You're not in a Meteor package directory.\n");
     }
     if (e instanceof main.SpringboardToLatestRelease) {
       // Load the latest release's metadata so that we can figure out
-      // the tools version that it uses.
+      // the tools version that it uses. We should only do this if
+      // we know there is some latest release on this track.
       var latestRelease = release.load(release.latestDownloaded(e.track));
       springboard(latestRelease, latestRelease.name);
       // (does not return)

@@ -478,8 +478,19 @@ main.registerCommand({
   // but it should be a no-op next time (unless there actually was a new latest
   // release in the interim).
   if (! release.forced) {
-    if (! release.current ||
-        release.current.name !== release.latestDownloaded(releaseTrack)) {
+    var latestRelease = release.latestDownloaded(releaseTrack);
+    // Are we on some track without ANY recommended releases at all,
+    // and the user ran 'meteor update' without specifying a release? We
+    // really can't do much here.
+    if (!latestRelease) {
+      // XXX is there a command to get to the latest METEOR-CORE@? Should we
+      // recommend it here?
+      process.stderr.write(
+        "There are no recommended releases on release track " +
+          releaseTrack + ".\n");
+      return 1;
+    }
+    if (! release.current || release.current.name !== latestRelease) {
       // The user asked for the latest release (well, they "asked for it" by not
       // passing --release). We're not currently running the latest release on
       // this track (we may have even just learned about it). #UpdateSpringboard

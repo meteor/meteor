@@ -187,7 +187,10 @@ release.latestDownloaded = function (track) {
   var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
-    throw new Error("no latest release available?");
+    if (!track || track === catalog.official.DEFAULT_TRACK) {
+      throw new Error("no latest release available on default track?");
+    }
+    return null;
   }
   return defaultRelease.track + '@' + defaultRelease.version;
 };
