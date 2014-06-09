@@ -1149,7 +1149,7 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
 
   test.throws(function () {
     Deps.flush({_throwFirstError: true});
-  }, /Expected null or template/);
+  }, /Expected template or null/);
 });
 
 Tinytest.add('spacebars-tests - template_tests - nully attributes', function (test) {
