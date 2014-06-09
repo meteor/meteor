@@ -23,8 +23,8 @@ var builtInUIPaths = {
   // function for the template in which `UI.contentBlock` (or
   // `UI.elseBlock`) is invoked. `template` is a reference to the
   // template itself.
-   'contentBlock': 'template.__content',
-  'elseBlock': 'template.__elseContent',
+  'contentBlock': 'self.__contentBlock',
+  'elseBlock': 'self.__elseBlock',
 
   // `Template` is the global template namespace. If you define a
   // template named `foo` in Spacebars, it gets defined as

@@ -49,16 +49,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     {codegen: codegen})).visit(tree);
 
   var code = '(function () { ';
-  if (isTemplate) {
-    // support `{{> UI.contentBlock}}` and `{{> UI.elseBlock}}` with
-    // lexical scope by creating a local variable in the
-    // template's render function.
-    code += 'var template = this; ';
-  }
   if (isTemplate || isBody) {
-    // XXX This should replace `var template` and `var self` and become
-    // `var self`.  When we're compiling a render method for a component,
-    // there is a "this," but otherwise, there isn't.
     code += 'var self = this; ';
   }
   code += 'return ';
