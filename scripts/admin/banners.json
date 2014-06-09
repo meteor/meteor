@@ -13,9 +13,9 @@
        }
     },
     {
-      "versions": ["900.2"],
+      "versions": ["900.3"],
       "banner": {
-        "text": "=> You are up to datexxx!\n   Yay!"
+        "text": "=> There be a patch yo.  900.3.1!\n   Yay!"
        }
     },
     {

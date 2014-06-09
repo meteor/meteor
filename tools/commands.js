@@ -568,7 +568,6 @@ main.registerCommand({
   // XXX error handling.
   var releaseVersionsToTry;
   if (options.patch) {
-    var appRelease = project.getMeteorReleaseVersion();
     // XXX: something something something current release
     if (appRelease == null) {
       console.log(

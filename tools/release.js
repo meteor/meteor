@@ -137,6 +137,13 @@ _.extend(Release.prototype, {
     if (! self.isProperRelease())
       throw new Error("not a proper release?");
     return self._manifest.banner || null;
+  },
+
+  getPatchReleaseVersion: function () {
+    var self = this;
+    if (! self.isProperRelease())
+      throw new Error("not a proper release?");
+    return self._manifest.patchReleaseVersion || null;
   }
 });
 

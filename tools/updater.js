@@ -47,40 +47,53 @@ var checkForUpdate = function (showBanner) {
 
 var maybeShowBanners = function () {
   var banner = release.current.getBanner();
-  if (!banner)
-    return;
 
-  var bannersShown = {};
-  try {
-    bannersShown = JSON.parse(
-      fs.readFileSync(config.getBannersShownFilename()));
-  } catch (e) {
-    // ... ignore
-  }
+  if (banner) {
+    var bannersShown = {};
+    try {
+      bannersShown = JSON.parse(
+        fs.readFileSync(config.getBannersShownFilename()));
+    } catch (e) {
+      // ... ignore
+    }
 
-  var shouldShowBanner = false;
-  if (_.has(bannersShown, release.current.name)) {
-    // XXX use EJSON so that we can just have Dates
-    var lastShown = new Date(bannersShown[release.current.name]);
-    var bannerUpdated = banner.lastUpdated ?
-          new Date(banner.lastUpdated) : new Date;
-    // XXX should the default really be "once ever" and not eg "once a week"?
-    if (lastShown < bannerUpdated) {
+    var shouldShowBanner = false;
+    if (_.has(bannersShown, release.current.name)) {
+      // XXX use EJSON so that we can just have Dates
+      var lastShown = new Date(bannersShown[release.current.name]);
+      var bannerUpdated = banner.lastUpdated ?
+            new Date(banner.lastUpdated) : new Date;
+      // XXX should the default really be "once ever" and not eg "once a week"?
+      if (lastShown < bannerUpdated) {
+        shouldShowBanner = true;
+      }
+    } else {
       shouldShowBanner = true;
     }
-  } else {
-    shouldShowBanner = true;
+
+    if (shouldShowBanner) {
+      // This banner is new; print it!
+      runLog.log("");
+      runLog.log(banner.text);
+      runLog.log("");
+      bannersShown[release.current.name] = new Date;
+      // XXX ick slightly racy
+      fs.writeFileSync(config.getBannersShownFilename(),
+                       JSON.stringify(bannersShown, null, 2));
+      return;
+    }
   }
 
-  if (shouldShowBanner) {
-    // This banner is new; print it!
-    runLog.log("");
-    runLog.log(banner.text);
-    runLog.log("");
-    bannersShown[release.current.name] = new Date;
-    // XXX ick slightly racy
-    fs.writeFileSync(config.getBannersShownFilename(),
-                     JSON.stringify(bannersShown, null, 2));
+  // Didn't print a banner? Maybe we have a patch release to recommend.
+
+  var patchReleaseVersion = release.current.getPatchReleaseVersion();
+  if (patchReleaseVersion) {
+    var patch =
+          release.current.getReleaseTrack() === catalog.official.DEFAULT_TRACK
+          ? patchReleaseVersion
+          : release.current.getReleaseTrack() + '@' + patchReleaseVersion;
+    runLog.log("=> A patch (" + patch + ") for your current release is available.");
+    runLog.log("   Update this project now with 'meteor update --patch'.");
     return;
   }
 
