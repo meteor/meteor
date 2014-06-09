@@ -7,6 +7,8 @@ var $jq = (typeof jQuery !== 'undefined' ? jQuery :
 if (! $jq)
   throw new Error("jQuery not found");
 
+DOMBackend._$jq = $jq;
+
 DOMBackend.parseHTML = function (html) {
   // Return an array of nodes.
   //
@@ -64,5 +66,50 @@ DOMBackend.Events = {
     if (dotLoc >= 0)
       return type.slice(0, dotLoc);
     return type;
+  }
+};
+
+
+///// Removal detection and interoperability.
+
+// For an explanation of this technique, see:
+// http://bugs.jquery.com/ticket/12213#comment:23 .
+//
+// In short, an element is considered "removed" when jQuery
+// cleans up its *private* userdata on the element,
+// which we can detect using a custom event with a teardown
+// hook.
+
+var NOOP = function () {};
+
+DOMBackend.RemovalWatch = {
+  _JQUERY_EVENT_NAME: 'blaze_removal_watcher',
+  _CB_PROP: '$blaze_removal_callbacks',
+  // Registers a callback function to be called when the given element or
+  // one of its ancestors is removed from the DOM via the backend library.
+  // The callback function is called at most once, and it receives the element
+  // in question as an argument.
+  onRemoveElement: function (elem, func) {
+    var propName = DOMBackend.RemovalWatch._CB_PROP;
+    if (! elem[propName]) {
+      elem[propName] = [];
+
+      // Set up the event, only the first time.
+      $jq(elem).on(DOMBackend.RemovalWatch._JQUERY_EVENT_NAME, NOOP);
+    }
+
+    elem[propName].push(func);
+  }
+};
+
+$jq.event.special[DOMBackend.RemovalWatch._JQUERY_EVENT_NAME] = {
+  teardown: function() {
+    var elem = this;
+    var callbacks = elem[DOMBackend.RemovalWatch._CB_PROP];
+    if (callbacks) {
+      for (var i = 0; i < callbacks.length; i++)
+        callbacks[i](elem);
+      elem[DOMBackend.RemovalWatch._CB_PROP] = null;
+    }
   }
 };
