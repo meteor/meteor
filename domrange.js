@@ -287,8 +287,7 @@ _.extend(Blaze.DOMRange.prototype, {
   }
 });
 
-Blaze.DOMAugmenter = JSClass.create();
-_.extend(Blaze.DOMAugmenter, {
+Blaze.DOMAugmenter = JSClass.create({
   attach: function (range, element) {},
   // arguments are same as were passed to `attach`
   detach: function (range, element) {}

@@ -18,6 +18,14 @@ var contentEquals = function (a, b) {
   }
 };
 
+Blaze.RemovalWatcher = Blaze.DOMAugmenter.extend({
+  attach: function (range, element) {
+    Blaze.DOMBackend.RemovalWatch.onRemoveElement(element, function () {
+      range.stop();
+    });
+  }
+});
+
 // Takes a function that returns HTMLjs and returns a DOMRange.
 // The function will be reactively re-run.  The resulting DOMRange
 // may be attached to the DOM using `.attach(parentElement, [nextNode])`.
@@ -38,10 +46,11 @@ Blaze.render = function (func) {
     });
   });
   Blaze._wrapAutorun(range.computation);
+
   range.onstop(_onstopForRender);
-  // XXX figure how else the autorun gets stopped
-  // (from the app via a "finalize" API call; when the
-  // range is removed from the DOM?)
+
+  range.addDOMAugmenter(new Blaze.RemovalWatcher);
+
   return range;
 };
 
