@@ -2096,6 +2096,7 @@ main.registerCommand({
   // Check that the schema is valid -- release.json contains all the required
   // fields, does not contain contradicting information, etc. Output all
   // messages, so the user can fix all errors at once.
+  // XXX: Check for unknown keys.
   var badSchema = false;
   if (!_.has(relConf, 'track')) {
     process.stderr.write(
@@ -2389,7 +2390,6 @@ main.registerCommand({
   }
 
   process.stdout.write("Creating a new release version... \n");
-
   // Send it over!
   var record = {
     track: relConf.track,
