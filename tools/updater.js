@@ -39,52 +39,7 @@ var checkForUpdate = function (showBanner) {
   if (!release.current.isProperRelease())
     return;
 
-  var currentReleaseTrack = release.current.getReleaseTrack();
-  var latestReleaseVersion = catalog.official.getDefaultReleaseVersion(
-    currentReleaseTrack);
-  // Maybe you're on some random track with nothing recommended. That's OK.
-  if (!latestReleaseVersion)
-    return;
-
-  var latestRelease = catalog.official.getReleaseVersion(
-    latestReleaseVersion.track, latestReleaseVersion.version);
-  if (!latestRelease)
-    throw Error("latest release doesn't exist?");
-
-  var latestReleaseToolParts = latestRelease.tool.split('@');
-  var latestReleaseToolPackage = latestReleaseToolParts[0];
-  var latestReleaseToolVersion = latestReleaseToolParts[1];
-  var relativeToolPath = tropohouse.default.packagePath(
-    latestReleaseToolPackage, latestReleaseToolVersion, true);
-
-  var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
-  if (!utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
-    // The latest release from the catalog is not where the ~/.meteor0/meteor
-    // symlink points to. Let's make sure we have that release on disk,
-    // and then update the symlink.
-    // XXX download the packages too?
-    tropohouse.default.maybeDownloadPackageForArchitectures(
-      {packageName: latestReleaseToolPackage,
-       version: latestReleaseToolVersion},
-      [archinfo.host()]);
-
-    var toolUnipackage = new unipackage.Unipackage;
-    toolUnipackage.initFromPath(
-      latestReleaseToolPackage,
-      tropohouse.default.packagePath(latestReleaseToolPackage,
-                                     latestReleaseToolVersion));
-    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
-                                 {arch: archinfo.host()});
-    // XXX maybe we shouldn't throw from this background thing
-    if (!toolRecord)
-      throw Error("latest release has no tool?");
-
-    console.log("XXX updating tool symlink for",
-                latestReleaseVersion.track + "@" + latestReleaseVersion.version);
-
-    tropohouse.default.replaceLatestMeteorSymlink(
-      path.join(relativeToolPath, toolRecord.path, 'meteor'));
-  }
+  updateMeteorToolSymlink();
 
   // XXX print banners
 
@@ -136,4 +91,58 @@ var checkForUpdate = function (showBanner) {
   //     "=> Meteor " + localLatestRelease +
   //     " is available. Update this project with 'meteor update'.");
   // }
+};
+
+// Update ~/.meteor0/meteor to point to the tool binary from the tools of the
+// latest recommended release on the default release track.
+var updateMeteorToolSymlink = function () {
+  // Get the latest release version of METEOR-CORE. (*Always* of the default
+  // track, not of whatever we happen to be running: we always want the tool
+  // symlink to go to the default track.)
+  var latestReleaseVersion = catalog.official.getDefaultReleaseVersion();
+  // Maybe you're on some random track with nothing recommended. That's OK.
+  if (!latestReleaseVersion)
+    return;
+
+  var latestRelease = catalog.official.getReleaseVersion(
+    latestReleaseVersion.track, latestReleaseVersion.version);
+  if (!latestRelease)
+    throw Error("latest release doesn't exist?");
+  if (!latestRelease.tool)
+    throw Error("latest release doesn't have a tool?");
+
+  var latestReleaseToolParts = latestRelease.tool.split('@');
+  var latestReleaseToolPackage = latestReleaseToolParts[0];
+  var latestReleaseToolVersion = latestReleaseToolParts[1];
+  var relativeToolPath = tropohouse.default.packagePath(
+    latestReleaseToolPackage, latestReleaseToolVersion, true);
+
+  var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
+  if (!utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
+    // The latest release from the catalog is not where the ~/.meteor0/meteor
+    // symlink points to. Let's make sure we have that release on disk,
+    // and then update the symlink.
+    // XXX download the packages too?
+    tropohouse.default.maybeDownloadPackageForArchitectures(
+      {packageName: latestReleaseToolPackage,
+       version: latestReleaseToolVersion},
+      [archinfo.host()]);
+
+    var toolUnipackage = new unipackage.Unipackage;
+    toolUnipackage.initFromPath(
+      latestReleaseToolPackage,
+      tropohouse.default.packagePath(latestReleaseToolPackage,
+                                     latestReleaseToolVersion));
+    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+                                 {arch: archinfo.host()});
+    // XXX maybe we shouldn't throw from this background thing
+    if (!toolRecord)
+      throw Error("latest release has no tool?");
+
+    console.log("XXX updating tool symlink for",
+                latestReleaseVersion.track + "@" + latestReleaseVersion.version);
+
+    tropohouse.default.replaceLatestMeteorSymlink(
+      path.join(relativeToolPath, toolRecord.path, 'meteor'));
+  }
 };
