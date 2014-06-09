@@ -11,6 +11,16 @@
       "banner": {
         "text": "You're a hundred!\nCool!"
        }
+    },
+    {
+      "versions": ["900.2"],
+      "banner": {
+        "text": "=> You are up to datexxx!\n   Yay!"
+       }
+    },
+    {
+      "versions": ["900.1"],
+      "banner": null
     }
   ]
 }

@@ -165,6 +165,11 @@ _.extend(exports, {
     return "1.0";
   },
 
+  getBannersShownFilename: function() {
+    return path.join(tropohouse.default.root,
+                     "package-metadata", "v1", "banners-shown.json");
+  },
+
   // Return the domain name of the current Meteor Accounts server in
   // use. This is used as a key for storing your Meteor Accounts
   // login token.

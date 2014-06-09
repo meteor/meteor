@@ -1,4 +1,5 @@
 var path = require('path');
+var fs = require('fs');
 var _ = require('underscore');
 var inFiber = require('./fiber-helpers.js').inFiber;
 var files = require('./files.js');
@@ -40,6 +41,55 @@ var checkForUpdate = function (showBanner) {
     return;
 
   updateMeteorToolSymlink();
+
+  maybeShowBanners();
+};
+
+var maybeShowBanners = function () {
+  var banner = release.current.getBanner();
+  if (!banner)
+    return;
+
+  var bannersShown = {};
+  try {
+    bannersShown = JSON.parse(
+      fs.readFileSync(config.getBannersShownFilename()));
+  } catch (e) {
+    // ... ignore
+  }
+
+  var shouldShowBanner = false;
+  if (_.has(bannersShown, release.current.name)) {
+    // XXX use EJSON so that we can just have Dates
+    var lastShown = new Date(bannersShown[release.current.name]);
+    var bannerUpdated = banner.lastUpdated ?
+          new Date(banner.lastUpdated) : new Date;
+    // XXX should the default really be "once ever" and not eg "once a week"?
+    if (lastShown < bannerUpdated) {
+      shouldShowBanner = true;
+    }
+  } else {
+    shouldShowBanner = true;
+  }
+
+  if (shouldShowBanner) {
+    // This banner is new; print it!
+    runLog.log("");
+    runLog.log(banner.text);
+    runLog.log("");
+    bannersShown[release.current.name] = new Date;
+    // XXX ick slightly racy
+    fs.writeFileSync(config.getBannersShownFilename(),
+                     JSON.stringify(bannersShown, null, 2));
+    return;
+  }
+
+  //   var currentReleaseTrack = release.current.getReleaseTrack();
+  //   var latestReleaseVersion = catalog.official.getDefaultReleaseVersion(
+  //     currentReleaseTrack);
+  // -  // Maybe you're on some random track with nothing recommended. That's OK.
+  // -  if (!latestReleaseVersion)
+  // -    return;
 
   // XXX print banners
 
