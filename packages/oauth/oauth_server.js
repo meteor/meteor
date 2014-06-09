@@ -235,18 +235,22 @@ OAuth._endOfLoginResponse = function(res, details) {
   }
 
   if ("close" in details.query) {
-    // If we have a credentialSecret, report it back to the parent
-    // window, with the corresponding credentialToken. The parent window
-    // uses the credentialToken and credentialSecret to log in over DDP.
+    // If we have a credentialSecret and parent window, report the
+    // credentialSecret back to the parent window with the corresponding
+    // credentialToken. The parent window uses the credentialToken and
+    // credentialSecret to log in over DDP. If there is no parent window
+    // add the credentialSecret and credentialToken to the hash to expose
+    // it to other parents such as Cordova using an InAppBrowser.
     var setCredentialSecret = '';
     if (details.credentials.token && details.credentials.secret) {
       setCredentialSecret = 'var credentialToken = ' +
         JSON.stringify(details.credentials.token) + ';' +
         'var credentialSecret = ' +
         JSON.stringify(details.credentials.secret) + ';' +
-        'window.opener && ' +
-        'window.opener.Package.oauth.OAuth._handleCredentialSecret(' +
-        'credentialToken, credentialSecret);';
+        'if (window.opener) window.opener.Package.oauth.OAuth._handleCredentialSecret(' +
+        'credentialToken, credentialSecret);' +
+        'else window.location.hash = "credentialToken=" + credentialToken + ' +
+        '"&credentialSecret=" + credentialSecret;';
     }
     res.end(content(setCredentialSecret), "utf-8");
   } else {
