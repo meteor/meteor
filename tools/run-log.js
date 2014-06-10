@@ -41,6 +41,7 @@ var RunLog = function () {
   // message, and the value will be the number of consecutive such
   // messages that have been logged with no other intervening messages
   self.consecutiveRestartMessages = null;
+  self.consecutiveClientRestartMessages = null;
 
   // If non-null, the last thing that was logged was a temporary
   // message (with a carriage return but no newline), and this is its
@@ -63,6 +64,11 @@ _.extend(RunLog.prototype, {
 
     if (self.consecutiveRestartMessages) {
       self.consecutiveRestartMessages = null;
+      process.stdout.write("\n");
+    }
+
+    if (self.consecutiveClientRestartMessages) {
+      self.consecutiveClientRestartMessages = null;
       process.stdout.write("\n");
     }
 
@@ -155,6 +161,33 @@ _.extend(RunLog.prototype, {
     });
   },
 
+  logClientRestart: function () {
+    var self = this;
+
+    if (self.consecutiveClientRestartMessages) {
+      // replace old message in place. this assumes that the new restart message
+      // is not shorter than the old one.
+      process.stdout.write("\r");
+      self.messages.pop();
+      self.consecutiveClientRestartMessages ++;
+    } else {
+      self._clearSpecial();
+      self.consecutiveClientRestartMessages = 1;
+    }
+
+    var message = "=> Client modified -- refreshing";
+    if (self.consecutiveClientRestartMessages > 1)
+      message += " (x" + self.consecutiveClientRestartMessages + ")";
+    // no newline, so that we can overwrite it if we get another
+    // restart message right after this one
+    process.stdout.write(message);
+
+    self._record({
+      time: new Date,
+      message: message
+    });
+  },
+
   finish: function () {
     var self = this;
 
@@ -176,8 +209,8 @@ _.extend(RunLog.prototype, {
 // object you get with require('./run-log.js').
 var runLogInstance = new RunLog;
 _.each(
-  ['log', 'logTemporary', 'logRestart', 'logAppOutput', 'setRawLogs',
-   'finish', 'clearLog', 'getLog'],
+  ['log', 'logTemporary', 'logRestart', 'logClientRestart', 'logAppOutput',
+   'setRawLogs', 'finish', 'clearLog', 'getLog'],
   function (method) {
     exports[method] = _.bind(runLogInstance[method], runLogInstance);
   });

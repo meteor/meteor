@@ -408,6 +408,7 @@ _.extend(Sandbox.prototype, {
                   " to run against clients." );
     }
     _.each(self.clients, function (client) {
+      console.log("testing with " + client.name + "...");
       f(new Run(self.execPath, {
         sandbox: self,
         args: [],
@@ -646,6 +647,7 @@ var PhantomClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
+  self.name = "phantomjs";
   self.process = null;
 };
 
@@ -661,11 +663,7 @@ _.extend(PhantomClient.prototype, {
       '/bin/bash',
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "END\n")], function (err, stdout, stderr) {
-          if (stderr.match(/not found/)) {
-            console.log("ERROR: phantomjs not installed properly.");
-          }
-    });
+        phantomScript + "END\n")]);
   },
   stop: function() {
     var self = this;
@@ -681,6 +679,7 @@ var BrowserStackClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
+  self.name = "BrowserStack";
   self.tunnelProcess = null;
   self.driver = null;
 };

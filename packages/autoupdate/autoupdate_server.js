@@ -37,45 +37,90 @@
 
 Autoupdate = {};
 
+// The collection of acceptable client versions.
+ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
+  { connection: null });
+
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the
 // runtime config before using the client hash as our default auto
 // update version id.
 
 Autoupdate.autoupdateVersion = null;
+Autoupdate.autoupdateVersionRefreshable = null;
+
+var syncQueue = new Meteor._SynchronousQueue();
+var startupVersion = null;
+
+// updateVersions can only be called after the server has fully loaded.
+var updateVersions = function () {
+  syncQueue.runTask(function () {
+    var oldVersion = Autoupdate.autoupdateVersion;
+    var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
+
+    // Step 1: load the current client program on the server and update the
+    // hash values in __meteor_runtime_config__.
+    WebAppInternals.reloadClientProgram();
+
+    if (startupVersion === null) {
+      Autoupdate.autoupdateVersion =
+        __meteor_runtime_config__.autoupdateVersion =
+          process.env.AUTOUPDATE_VERSION ||
+          process.env.SERVER_ID || // XXX COMPAT 0.6.6
+          WebApp.calculateClientHashNonRefreshable();
+    }
+
+    Autoupdate.autoupdateVersionRefreshable =
+      __meteor_runtime_config__.autoupdateVersionRefreshable =
+        process.env.AUTOUPDATE_VERSION ||
+        process.env.SERVER_ID || // XXX COMPAT 0.6.6
+        WebApp.calculateClientHashRefreshable();
+
+    // Step 2: form the new client boilerplate which contains the updated
+    // assets and __meteor_runtime_config__.
+    WebAppInternals.generateBoilerplate();
+
+    if (Autoupdate.autoupdateVersion !== oldVersion) {
+      if (oldVersion) {
+        ClientVersions.remove(oldVersion);
+      }
+
+      ClientVersions.insert({
+        _id: Autoupdate.autoupdateVersion,
+        refreshable: false,
+        current: true,
+      });
+    }
+
+    if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
+      if (oldVersionRefreshable) {
+        ClientVersions.remove(oldVersionRefreshable);
+      }
+      ClientVersions.insert({
+        _id: Autoupdate.autoupdateVersionRefreshable,
+        refreshable: true,
+        assets: WebAppInternals.refreshableAssets
+      });
+    }
+  });
+};
 
 Meteor.startup(function () {
-  // Allow people to override Autoupdate.autoupdateVersion before
-  // startup. Tests do this.
-  if (Autoupdate.autoupdateVersion === null)
-    Autoupdate.autoupdateVersion =
-      process.env.AUTOUPDATE_VERSION ||
-      process.env.SERVER_ID || // XXX COMPAT 0.6.6
-      WebApp.clientHash;
-
-  // Make autoupdateVersion available on the client.
-  __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
+  // Allow people to override Autoupdate.autoupdateVersion before startup.
+  // Tests do this.
+  startupVersion = Autoupdate.autoupdateVersion;
+  WebApp.onListening(updateVersions);
 });
-
 
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function () {
-    var self = this;
-    // Using `autoupdateVersion` here is safe because we can't get a
-    // subscription before webapp starts listening, and it doesn't do
-    // that until the startup hooks have run.
-    if (Autoupdate.autoupdateVersion) {
-      self.added(
-        "meteor_autoupdate_clientVersions",
-        Autoupdate.autoupdateVersion,
-        {current: true}
-      );
-      self.ready();
-    } else {
-      // huh? shouldn't happen. Just error the sub.
-      self.error(new Meteor.Error(500, "Autoupdate.autoupdateVersion not set"));
-    }
+    return ClientVersions.find();
   },
   {is_auto: true}
 );
+
+// Listen for SIGUSR2, which signals that a client asset has changed.
+process.on('SIGUSR2', Meteor.bindEnvironment(function () {
+  updateVersions();
+}));

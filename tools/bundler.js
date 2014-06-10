@@ -1578,17 +1578,23 @@ var writeSiteArchive = function (targets, outputPath, options) {
     builder.writeJson('star.json', json);
 
     // Merge the WatchSet of everything that went into the bundle.
-    var watchSet = new watch.WatchSet();
+    var clientWatchSet = new watch.WatchSet();
+    var serverWatchSet = new watch.WatchSet();
     var dependencySources = [builder].concat(_.values(targets));
     _.each(dependencySources, function (s) {
-      watchSet.merge(s.getWatchSet());
+      if (s instanceof ClientTarget) {
+        clientWatchSet.merge(s.getWatchSet());
+      } else {
+        serverWatchSet.merge(s.getWatchSet());
+      }
     });
 
     // We did it!
     builder.complete();
 
     return {
-      watchSet: watchSet,
+      clientWatchSet: clientWatchSet,
+      serverWatchSet: serverWatchSet,
       starManifest: json
     };
   } catch (e) {
@@ -1669,12 +1675,14 @@ exports.bundle = function (options) {
                             " " + release.current.name : "");
 
   var success = false;
-  var watchSet = new watch.WatchSet();
+  var serverWatchSet = new watch.WatchSet();
+  var clientWatchSet = new watch.WatchSet();
   var starResult = null;
+  var targets = {};
+
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
-    var targets = {};
     var controlProgram = null;
 
     var makeClientTarget = function (app) {
@@ -1730,7 +1738,7 @@ exports.bundle = function (options) {
     // case.)
 
     var includeDefaultTargets = watch.readAndWatchFile(
-      watchSet, path.join(appDir, 'no-default-targets')) === null;
+      serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
       // Create a Unipackage object that represents the app
@@ -1742,7 +1750,8 @@ exports.bundle = function (options) {
       targets.client = client;
 
       // Server
-      var server = makeServerTarget(app, client);
+      var server = options.cachedServerTarget || makeServerTarget(app, client);
+      server.clientTarget = client;
       targets.server = server;
     }
 
@@ -1752,7 +1761,7 @@ exports.bundle = function (options) {
     var programs = [];
     var programsDir = project.project.getProgramsDirectory();
     var programsSubdirs = project.project.getProgramsSubdirs({
-      watchSet: watchSet
+      watchSet: serverWatchSet
     });
 
     _.each(programsSubdirs, function (item) {
@@ -1770,7 +1779,7 @@ exports.bundle = function (options) {
       // the package.js file here, though (but we do restart if it is later
       // added or changed).
       if (watch.readAndWatchFile(
-        watchSet, path.join(programsDir, item, 'package.js')) === null) {
+        serverWatchSet, path.join(programsDir, item, 'package.js')) === null) {
         return;
       }
 
@@ -1780,7 +1789,7 @@ exports.bundle = function (options) {
       var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
       var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
       var attrsJsonContents = watch.readAndWatchFile(
-        watchSet, attrsJsonAbsPath);
+        serverWatchSet, attrsJsonAbsPath);
 
       var attrsJson = {};
       if (attrsJsonContents !== null) {
@@ -1900,7 +1909,8 @@ exports.bundle = function (options) {
       controlProgram: controlProgram,
       releaseName: releaseName
     });
-    watchSet.merge(starResult.watchSet);
+    serverWatchSet.merge(starResult.serverWatchSet);
+    clientWatchSet.merge(starResult.clientWatchSet);
 
     success = true;
   });
@@ -1910,8 +1920,10 @@ exports.bundle = function (options) {
 
   return {
     errors: success ? false : messages,
-    watchSet: watchSet,
-    starManifest: starResult && starResult.starManifest
+    serverWatchSet: serverWatchSet,
+    clientWatchSet: clientWatchSet,
+    starManifest: starResult && starResult.starManifest,
+    serverTarget: targets.server
   };
 };
 
