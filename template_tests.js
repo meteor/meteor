@@ -2005,7 +2005,7 @@ Tinytest.add(
         hooks.push("insert");
 
         // check that the element hasn't actually been added yet
-        test.isTrue(n.parentNode.nodeType === Node.DOCUMENT_FRAGMENT_NODE);
+        test.isTrue(n.parentNode.nodeType === 11 /*DOCUMENT_FRAGMENT_NODE*/);
         test.isFalse(n.parentNode.parentNode);
       },
       removeElement: function (n) {
@@ -2021,10 +2021,10 @@ Tinytest.add(
     };
 
     var testDomUnchanged = function () {
-      var items = div.getElementsByClassName("item");
+      var items = div.querySelectorAll(".item");
       test.equal(items.length, 2);
-      test.equal(items[0].innerHTML, "foo1");
-      test.equal(items[1].innerHTML, "foo2");
+      test.equal(canonicalizeHtml(items[0].innerHTML), "foo1");
+      test.equal(canonicalizeHtml(items[1].innerHTML), "foo2");
     };
 
     var newVal = _.clone(origVal);
@@ -2098,5 +2098,30 @@ Tinytest.add(
     test.throws(function () {
       UI._templateInstance();
     });
+  }
+);
+
+Tinytest.add(
+  "spacebars - {{#with}} autorun is cleaned up",
+  function (test) {
+    var tmpl = Template.spacebars_test_with_cleanup;
+    var rv = new ReactiveVar("");
+    var helperCalled = false;
+    tmpl.foo = function () {
+      helperCalled = true;
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+    rv.set("first");
+    Deps.flush();
+    test.equal(helperCalled, true);
+
+    helperCalled = false;
+    $(div).find(".test-with-cleanup").remove();
+
+    rv.set("second");
+    Deps.flush();
+    test.equal(helperCalled, false);
   }
 );
