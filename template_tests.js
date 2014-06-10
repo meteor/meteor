@@ -1175,7 +1175,10 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
       test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
     }
 
-    var html = 'XXX'; //Blaze.toHTML(templateWithData); XXXXXX how?
+    var html = Blaze.toHTML(Blaze.With(data, function () {
+      return new tmpls[whichTemplate].constructor;
+    }));
+
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
     test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
   };
