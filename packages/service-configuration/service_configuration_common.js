@@ -29,3 +29,10 @@ ServiceConfiguration.ConfigError = function (serviceName) {
 };
 ServiceConfiguration.ConfigError.prototype = new Error();
 ServiceConfiguration.ConfigError.prototype.name = 'ServiceConfiguration.ConfigError';
+
+// loginServiceConfiguration and ConfigError are maintained for backwards compatibility
+Meteor.startup(function () {
+  Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
+  Accounts.ConfigError = ServiceConfiguration.ConfigError;
+});
+
