@@ -2091,3 +2091,28 @@ Tinytest.add(
     });
   }
 );
+
+Tinytest.add(
+  "spacebars - {{#with}} autorun is cleaned up",
+  function (test) {
+    var tmpl = Template.spacebars_test_with_cleanup;
+    var rv = new ReactiveVar("");
+    var helperCalled = false;
+    tmpl.foo = function () {
+      helperCalled = true;
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+    rv.set("first");
+    Deps.flush();
+    test.equal(helperCalled, true);
+
+    helperCalled = false;
+    $(div).find(".test-with-cleanup").remove();
+
+    rv.set("second");
+    Deps.flush();
+    test.equal(helperCalled, false);
+  }
+);
