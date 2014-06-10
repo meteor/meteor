@@ -23,7 +23,7 @@ Blaze.Controller = Blaze.RenderPoint.extend({
   evaluate: function () {
     var self = this;
     return Blaze.withCurrentController(self, function () {
-      return Blaze.evaluate(self.render());
+      return Blaze._evaluate(self.render());
     });
   },
   createDOMRange: function () {
@@ -39,7 +39,7 @@ Blaze.Controller = Blaze.RenderPoint.extend({
   // if you need to.  Call createDOMRange instead, which sets
   // up the pointers between the range and the controller.
   renderToDOM: function () {
-    return new Blaze.DOMRange(Blaze.toDOM(this.render()));
+    return new Blaze.DOMRange(Blaze._toDOM(this.render()));
   }
 });
 
