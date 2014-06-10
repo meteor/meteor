@@ -22,6 +22,8 @@ var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 // "sha-256" and then passes the digest to bcrypt.
 
 
+var BCRYPT_ROUNDS = 10;
+
 // Given a 'password' from the client, extract the string that we should
 // bcrypt. 'password' can be one of:
 //  - String (the plaintext password)
@@ -47,7 +49,7 @@ var getPasswordString = function (password) {
 //
 var hashPassword = function (password) {
   password = getPasswordString(password);
-  return bcryptHash(password, 10 /* number of rounds */);
+  return bcryptHash(password, BCRYPT_ROUNDS);
 };
 
 // Check whether the provided password matches the bcrypt'ed password in
