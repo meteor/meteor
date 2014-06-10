@@ -220,12 +220,17 @@ Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
       return UI.If(this.v, UI.With(this.v, contentBlock), elseContentBlock);
     },
     materialized: (function () {
-      var f = function () {
+      var f = function (range) {
         var self = this;
         if (Deps.active) {
           Deps.onInvalidate(function () {
             self.v.stop();
           });
+        }
+        if (range) {
+          range.removed = function () {
+            self.v.stop();
+          };
         }
       };
       f.isWith = true;
