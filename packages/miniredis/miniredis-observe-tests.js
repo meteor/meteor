@@ -6,15 +6,16 @@ Tinytest.add("miniredis - observe - simple strings", function (test) {
   S.set("cb", "abc");
 
   var events = [];
-  var h = S.matching("a?").observeChanges({
-    added: function (key, value) {
-      events.push({ event: "added", key: key, value: value });
+  var h = S.matching("a?").observe({
+    added: function (doc) {
+      events.push({ event: "added", key: doc._id, value: doc.value });
     },
-    changed: function (key, value) {
-      events.push({ event: "changed", key: key, value: value });
+    changed: function (oldDoc, newDoc) {
+      events.push({ event: "changed", key: newDoc._id,
+                    value: newDoc.value, oldValue: oldDoc.value });
     },
-    removed: function (key) {
-      events.push({ event: "removed", key: key });
+    removed: function (doc) {
+      events.push({ event: "removed", key: doc._id, value: doc.value });
     }
   });
 
@@ -28,11 +29,11 @@ Tinytest.add("miniredis - observe - simple strings", function (test) {
   S.set("cbs", "tbbt");
 
   test.length(events, 1);
-  test.equal(events.shift(), { event: "changed", key: "ab", value: "333" });
+  test.equal(events.shift(), { event: "changed", key: "ab", value: "333", oldValue: "421" });
 
   S.del("aa");
   test.length(events, 1);
-  test.equal(events.shift(), { event: "removed", key: "aa" });
+  test.equal(events.shift(), { event: "removed", key: "aa", value: "123" });
 
   h.stop();
 

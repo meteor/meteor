@@ -22,14 +22,14 @@ _.extend(Miniredis.Cursor.prototype, {
     var self = this;
     return self.redisStore.patternFetch(self.pattern);
   },
-  observeChanges: function (callbacks) {
+  observe: function (callbacks) {
     var self = this;
     var observeRecord = _.extend({ pattern: self.pattern }, callbacks);
     var redisStore = self.redisStore;
     redisStore.observes.push(observeRecord);
 
     _.each(redisStore.patternFetch(self.pattern), function (kv) {
-      callbacks.added && callbacks.added(kv.key, kv.value);
+      callbacks.added && callbacks.added({ _id: kv.key, value: kv.value  });
     });
 
     return {
@@ -103,7 +103,7 @@ _.extend(Miniredis.RedisStore.prototype, {
 
         self._notifyObserves(key, 'added', value);
       } else {
-        self._notifyObserves(key, 'changed', value);
+        self._notifyObserves(key, 'changed', oldValue, value);
       }
     }
   },
@@ -112,10 +112,11 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     if (! self._kv.has(key))
       return;
+    var oldValue = self._kv.get(key);
     self._kv.remove(key);
     self._keyDependencies[key].changed();
     self._tryCleanUpKeyDep(key);
-    self._notifyObserves(key, 'removed');
+    self._notifyObserves(key, 'removed', oldValue);
   },
 
   _tryCleanUpKeyDep: function (key) {
@@ -124,12 +125,17 @@ _.extend(Miniredis.RedisStore.prototype, {
       delete self._keyDependencies[key];
   },
 
-  _notifyObserves: function (key, event, value) {
+  _notifyObserves: function (key, event, value, newValue) {
     var self = this;
     _.each(self.observes, function (obs) {
       if (! key.match(patternToRegexp(obs.pattern)))
         return;
-      obs[event] && obs[event](key, value);
+      if (event === "changed") {
+        obs[event] && obs[event]({ _id: key, value: value },
+                                 { _id: key, value: newValue });
+      } else {
+        obs[event] && obs[event]({ _id: key, value: value });
+      }
     });
   },
 
