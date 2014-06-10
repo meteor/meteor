@@ -9,17 +9,29 @@ if (Meteor.isClient) {
     }).join('\n'));
   };
 
-  Meteor.call("clientLoad");
-  var numCssChanges = 0;
-  var oldCss = allCss();
-  Meteor.call("newStylesheet", numCssChanges, oldCss);
-  setInterval(function () {
-    var newCss = allCss();
-    if (oldCss !== newCss) {
-      oldCss = newCss;
-      Meteor.call("newStylesheet", ++numCssChanges, newCss);
-    }
-  }, 500);
+  Meteor.startup(function () {
+    Meteor.call("clientLoad");
+    var numCssChanges = 0;
+    var oldCss = allCss();
+    Meteor.call("newStylesheet", numCssChanges, oldCss);
+    var callingServer = false;
+    Meteor.setInterval(function () {
+      if (callingServer)
+        return;
+
+      var newCss = allCss();
+      if (oldCss !== newCss) {
+        callingServer = true;
+        // give the client some time to load the new css
+        Meteor.setTimeout(function () {
+          var newCss = allCss();
+          oldCss = newCss;
+          Meteor.call("newStylesheet", ++numCssChanges, newCss);
+          callingServer = false;
+        }, 1000);
+      }
+    }, 500);
+  });
 }
 
 if (Meteor.isServer) {
@@ -30,7 +42,7 @@ if (Meteor.isServer) {
 
     newStylesheet: function (numCssChanges, cssText) {
       console.log("numCssChanges: " + numCssChanges);
-      console.log("new css: " + cssText);
+      console.log("css: " + cssText);
     }
   });
 }

@@ -390,8 +390,15 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = path.resolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = path.basename(relPath);
-    var file = watch.readAndWatchFileWithHash(watchSet, absPath);
+    var sourceWatchSet = new watch.WatchSet();
+    var file = watch.readAndWatchFileWithHash(sourceWatchSet, absPath);
     var contents = file.contents;
+
+    // Only add the source file to the WatchSet if it's actually added to
+    // the build. This is a hacky workaround because plugins do not register
+    // themselves as "client" or "server", so we need to detect whether a file
+    // is actually added to the client/server program.
+    var sourceIsWatched = false;
 
     sources.push(relPath);
 
@@ -563,6 +570,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
           throw new Error("'section' must be 'head' or 'body'");
         if (typeof options.data !== "string")
           throw new Error("'data' option to appendDocument must be a string");
+        sourceIsWatched = true;
         resources.push({
           type: options.section,
           data: new Buffer(options.data, 'utf8')
@@ -574,8 +582,10 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
                           "browser targets");
         if (typeof options.data !== "string")
           throw new Error("'data' option to addStylesheet must be a string");
+        sourceIsWatched = true;
         resources.push({
           type: "css",
+          refreshable: true,
           data: new Buffer(options.data, 'utf8'),
           servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
           sourceMap: options.sourceMap
@@ -588,6 +598,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
         if (options.bare && ! archinfo.matches(inputSourceArch.arch, "browser"))
           throw new Error("'bare' option may only be used for browser targets");
+        sourceIsWatched = true;
         js.push({
           source: options.data,
           sourcePath: options.sourcePath,
@@ -599,6 +610,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
       addAsset: function (options) {
         if (! (options.data instanceof Buffer))
           throw new Error("'data' option to addAsset must be a Buffer");
+        sourceIsWatched = true;
         addAsset(options.data, options.path);
       },
       error: function (options) {
@@ -619,6 +631,10 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
 
       // Recover by ignoring this source file (as best we can -- the
       // handler might already have emitted resources)
+    }
+
+    if (sourceIsWatched) {
+      watchSet.merge(sourceWatchSet);
     }
   });
 
