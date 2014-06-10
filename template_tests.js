@@ -1175,9 +1175,11 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
       test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
     }
 
-    var html = Blaze.toHTML(Blaze.With(data, function () {
-      return new tmpls[whichTemplate].constructor;
-    }));
+    var html = Blaze.toHTML(function () {
+      return Blaze.With(data, function () {
+        return new tmpls[whichTemplate].constructor;
+      });
+    });
 
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
     test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
@@ -1762,7 +1764,7 @@ Tinytest.add("spacebars-tests - template_tests - jQuery.trigger extraParameters 
   }
 );
 
-Tinytest.add("spacebars-tests - template_tests - UI.toHTML", function (test) {
+Tinytest.add("spacebars-tests - template_tests - toHTML", function (test) {
   // run once, verifying that autoruns are stopped
   var once = function (tmplToRender, tmplForHelper, helper, val) {
     var count = 0;
@@ -1774,7 +1776,9 @@ Tinytest.add("spacebars-tests - template_tests - UI.toHTML", function (test) {
 
     R.set(val);
     tmplForHelper[helper] = getR;
-    test.equal(canonicalizeHtml(UI.toHTML(tmplToRender)), "bar");
+    test.equal(canonicalizeHtml(Blaze.toHTML(function () {
+      return new tmplToRender.constructor;
+    })), "bar");
     test.equal(count, 1);
     R.set("");
     Deps.flush();
@@ -1894,7 +1898,7 @@ Tinytest.add("spacebars-tests - template_tests - javascript scheme urls",
   }
 );
 
-Tinytest.add("spacebars-tests - template_tests - event handlers get cleaned up with template is removed",
+Tinytest.add("spacebars-tests - template_tests - event handlers get cleaned up when template is removed",
   function (test) {
     var tmpl = Template.spacebars_test_event_handler_cleanup;
     var subtmpl = Template.spacebars_test_event_handler_cleanup_sub;
