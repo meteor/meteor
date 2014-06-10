@@ -48,40 +48,42 @@ AttributeHandler.extend = function (options) {
   return subType;
 };
 
-// Apply the diff between the tokens of "oldValue" and "value" to "element."
+/// Apply the diff between the attributes of "oldValue" and "value" to "element."
+//
+// Each subclass must implement a parseValue method which takes a string
+// as an input and returns a dict of attributes. The keys of the dict
+// are unique identifiers (ie. css properties in the case of styles), and the
+// values are the entire attribute which will be injected into the element.
+//
 // Extended below to support classes, SVG elements and styles.
-var BaseTokenHandler = AttributeHandler.extend({
+
+var DiffingAttributeHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    if (!this.getCurrentValue || !this.setValue ||
-        !this.tokenize || !this.stringify)
-      throw new Error("Missing methods in subclass of 'BaseTokenHandler'");
+    if (!this.getCurrentValue || !this.setValue || !this.parseValue)
+      throw new Error("Missing methods in subclass of 'DiffingAttributeHandler'");
 
-    var oldTokens = oldValue ? _.compact(this.tokenize(oldValue)) : [];
-    var newTokens = value ? _.compact(this.tokenize(value)) : [];
+    var oldAttrsMap = oldValue ? this.parseValue(oldValue) : {};
+    var newAttrsMap = value ? this.parseValue(value) : {};
 
-    // the current classes on the element, which we will mutate.
+    // the current attributes on the element, which we will mutate.
 
-    var tokenString = this.getCurrentValue(element);
-    var tokens = tokenString ? _.compact(this.tokenize(tokenString)) : [];
+    var attrString = this.getCurrentValue(element);
+    var attrsMap = attrString ? this.parseValue(attrString) : {};
 
-    // optimize this later (to be asymptotically faster) if necessary
-    for (var i = 0; i < oldTokens.length; i++) {
-      var c = oldTokens[i];
-      if (! _.contains(newTokens, c))
-        tokens = _.without(tokens, c);
-    }
-    for (var i = 0; i < newTokens.length; i++) {
-      var c = newTokens[i];
-      if ((! _.contains(oldTokens, c)) &&
-          (! _.contains(tokens, c)))
-        tokens.push(c);
-    }
+    _.each(_.keys(oldAttrsMap), function (t) {
+      if (! (t in newAttrsMap))
+        delete attrsMap[t];
+    });
 
-    this.setValue(element, this.stringify(tokens));
+    _.each(_.keys(newAttrsMap), function (t) {
+      attrsMap[t] = newAttrsMap[t];
+    });
+
+    this.setValue(element, _.values(attrsMap).join(' '));
   }
 });
 
-var ClassHandler = BaseTokenHandler.extend({
+var ClassHandler = DiffingAttributeHandler.extend({
   // @param rawValue {String}
   getCurrentValue: function (element) {
     return element.className;
@@ -89,52 +91,55 @@ var ClassHandler = BaseTokenHandler.extend({
   setValue: function (element, className) {
     element.className = className;
   },
-  tokenize: function (attrString) {
-    return attrString.split(' ');
-  },
-  stringify: function (tokens) {
-    return tokens.join(' ');
+  parseValue: function (attrString) {
+    var tokens = {};
+
+    _.each(attrString.split(' '), function(token) {
+      if (token)
+        tokens[token] = token;
+    });
+    return tokens;
   }
 });
 
-var SVGClassHandler = BaseTokenHandler.extend({
+var SVGClassHandler = ClassHandler.extend({
   getCurrentValue: function (element) {
     return element.className.baseVal;
   },
   setValue: function (element, className) {
     element.setAttribute('class', className);
-  },
-  tokenize: function (attrString) {
-    return attrString.split(' ');
-  },
-  stringify: function (tokens) {
-    return tokens.join(' ');
   }
 });
 
-var StyleHandler = BaseTokenHandler.extend({
+var StyleHandler = DiffingAttributeHandler.extend({
   getCurrentValue: function (element) {
     return element.getAttribute("style") || '';
   },
   setValue: function (element, style) {
     element.setAttribute("style", style);
   },
-  tokenize: function (attrString) {
-    var tokens = [];
 
-    // Regex for parsing a css attribute declaration, taken from css-parse.
-    var regex = /(\*?[-#\/\*\\\w]+(?:\[[0-9a-z_-]+\])?)\s*:\s*((?:'(?:\\'|.)*?'|"(?:\\"|.)*?"|\([^\)]*?\)|[^};])+)[;\s]*/g;
+  // Parse a string to produce a map from property to attribute string.
+  //
+  // Example:
+  // "color:red; foo:12px" produces a token {color: "color:red", foo:"foo:12px"}
+  parseValue: function (attrString) {
+    var tokens = {};
+
+    // Regex for parsing a css attribute declaration, taken from css-parse:
+    // https://github.com/reworkcss/css-parse/blob/7cef3658d0bba872cde05a85339034b187cb3397/index.js#L219
+    var regex = /(\*?[-#\/\*\\\w]+(?:\[[0-9a-z_-]+\])?)\s*:\s*(?:\'(?:\\\'|.)*?\'|"(?:\\"|.)*?"|\([^\)]*?\)|[^};])+[;\s]*/g;
     var match = regex.exec(attrString);
     while (match) {
-      var token = match[1] + ":" + match[2];
-      tokens.push(token);
+      // match[0] = entire matching string
+      // match[1] = css property
+      // Prefix the token to prevent conflicts with existing properties.
+      tokens[' ' + match[1]] = match[0].trim();
+
       match = regex.exec(attrString);
     }
 
     return tokens;
-  },
-  stringify: function (tokens) {
-    return tokens.join('; ') + ';';
   }
 });
 

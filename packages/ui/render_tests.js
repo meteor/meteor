@@ -271,7 +271,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
   // Test styles.
   (function () {
     // Test the case where there is a semicolon in the css attribute.
-    var R = ReactiveVar({'style': ['foo:"a;aa"; bar: b;'],
+    var R = ReactiveVar({'style': 'foo:"a;aa"; bar: b;',
       id: 'foo'});
 
     var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
@@ -282,28 +282,61 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var div = document.createElement("DIV");
     materialize(spanCode, div);
-    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo:&quot;a;aa&quot;; bar:b;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo:&quot;a;aa&quot;; bar: b;"></span>');
 
     test.equal(R.numListeners(), 1);
 
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
-    console.log(span.getAttribute("style"));
-    span.setAttribute("style", 'jquery-style: hidden; ' + span.getAttribute("style"));
+    span.setAttribute("style", 'jquery-style: hidden;' + span.getAttribute("style"));
 
     R.set({'style': 'foo:"a;zz;aa"', id: 'bar'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style:hidden; foo:&quot;a;zz;aa&quot;;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
     test.equal(R.numListeners(), 1);
 
     R.set({});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style:hidden;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style: hidden;"></span>');
     test.equal(R.numListeners(), 1);
 
     $(div).remove();
 
     test.equal(R.numListeners(), 0);
+  })();
+
+  // Test that identical styles are successfully overwritten.
+  (function () {
+    var R = ReactiveVar({'style': 'foo:a;'});
+
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+
+    var div = document.createElement("DIV");
+    materialize(spanCode, div);
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:a;"></span>');
+
+    var span = div.firstChild;
+    test.equal(span.nodeName, 'SPAN');
+    span.setAttribute("style", 'foo:b;');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:b;"></span>');
+
+    R.set({'style': 'foo:c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:c;"></span>');
+
+    // Test malformed styles
+    R.set({'style': 'foo:a; bar::d;:e; baz:c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:a; bar::d; baz:c;"></span>');
+
+    // Test strange styles
+    R.set({'style': 'constructor:a; __proto__:b; foo:c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:c; constructor:a; __proto__:b;"></span>');
+
+    R.set({});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style=""></span>');
   })();
 
   // Test `null`, `undefined`, and `[]` attributes
