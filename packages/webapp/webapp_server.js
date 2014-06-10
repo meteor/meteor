@@ -448,15 +448,15 @@ var runWebAppServer = function () {
   });
 
   // Will be updated by main before we listen.
-  var boilerplateTemplate = null;
+  var boilerplateFunc = null;
   var boilerplateBaseData = null;
   var boilerplateByAttributes = {};
   app.use(function (req, res, next) {
     if (! appUrl(req.url))
       return next();
 
-    if (!boilerplateTemplate)
-      throw new Error("boilerplateTemplate should be set before listening!");
+    if (!boilerplateFunc)
+      throw new Error("boilerplateFunc should be set before listening!");
     if (!boilerplateBaseData)
       throw new Error("boilerplateBaseData should be set before listening!");
 
@@ -489,10 +489,10 @@ var runWebAppServer = function () {
       try {
         var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
                                        boilerplateBaseData);
-        var boilerplateHtmlJs =
-              Blaze.With(boilerplateData, boilerplateTemplate);
         boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
-          Blaze.toHTML(boilerplateHtmlJs);
+          Blaze.toHTML(function () {
+            return Blaze.With(boilerplateData, boilerplateFunc);
+          });
       } catch (e) {
         Log.error("Error running template: " + e.stack);
         res.writeHead(500, headers);
@@ -636,9 +636,7 @@ var runWebAppServer = function () {
 
     // Note that we are actually depending on eval's local environment capture
     // so that UI and HTML are visible to the eval'd code.
-    var boilerplateRender = eval(boilerplateRenderCode);
-
-    boilerplateTemplate = boilerplateRender;
+    boilerplateFunc = eval(boilerplateRenderCode);
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;

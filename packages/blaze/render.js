@@ -41,7 +41,7 @@ Blaze.render = function (func) {
       var content = func();
       if (c.firstRun || ! contentEquals(oldContent, content)) {
         oldContent = content;
-        range.setMembers(Blaze.toDOM(content));
+        range.setMembers(Blaze._toDOM(content));
       }
     });
   });

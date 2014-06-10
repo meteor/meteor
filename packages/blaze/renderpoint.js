@@ -119,16 +119,16 @@ Blaze.RenderPoint = JSClass.create({
   // Subclasses can override evaluate, toText, toHTML, and createDOMRange
   // as they see fit.
   evaluate: function () {
-    return Blaze.evaluate(this.render());
+    return Blaze._evaluate(this.render());
   },
   toText: function (textMode) {
-    return Blaze.toText(this.evaluate(), textMode);
+    return Blaze._toText(this.evaluate(), textMode);
   },
   toHTML: function () {
-    return Blaze.toHTML(this.evaluate());
+    return Blaze._toHTML(this.evaluate());
   },
   createDOMRange: function () {
-    return new Blaze.DOMRange(Blaze.toDOM(this.render()));
+    return new Blaze.DOMRange(Blaze._toDOM(this.render()));
   }
 });
 

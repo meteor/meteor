@@ -1,5 +1,3 @@
-var materialize = UI.materialize;
-var toHTML = UI.toHTML;
 var toCode = BlazeTools.toJS;
 
 var P = HTML.P;
@@ -15,8 +13,16 @@ var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
 
-var evaluateAndFlattenAttributes = function (attrs) {
-  return HTML.flattenAttributes(UI.evaluateAttributes(attrs));
+var materialize = function (content, parent) {
+  Blaze.render(function () {
+    return content;
+  }).attach(parent);
+};
+
+var toHTML = function (htmljs) {
+  return Blaze.toHTML(function () {
+    return htmljs;
+  });
 };
 
 Tinytest.add("ui - render - basic", function (test) {
@@ -88,8 +94,8 @@ Tinytest.add("ui - render - basic", function (test) {
       'HTML.BR({a: [[""]]})');
 
   run(BR({
-    x: function () { return function () { return []; }; },
-    a: function () { return function () { return ''; }; }}),
+    x: Blaze.Isolate(function () { return Blaze.Isolate(function () { return []; }); }),
+    a: Blaze.Isolate(function () { return Blaze.Isolate(function () { return ''; }); }) }),
       '<br a="">',
       '<br a="">');
 });
@@ -100,7 +106,7 @@ Tinytest.add("ui - render - basic", function (test) {
 Tinytest.add("ui - render - input - value", function (test) {
   var R = ReactiveVar("hello");
   var div = document.createElement("DIV");
-  materialize(INPUT({value: function () { return R.get(); }}), div);
+  materialize(INPUT({value: Blaze.Isolate(function () { return R.get(); })}), div);
   var inputEl = div.querySelector('input');
   test.equal(inputEl.value, "hello");
   inputEl.value = "goodbye";
@@ -115,7 +121,7 @@ Tinytest.add("ui - render - input - value", function (test) {
 Tinytest.add("ui - render - input - checked", function (test) {
   var R = ReactiveVar(null);
   var div = document.createElement("DIV");
-  materialize(INPUT({type: "checkbox", checked: function () { return R.get(); }}), div);
+  materialize(INPUT({type: "checkbox", checked: Blaze.Isolate(function () { return R.get(); })}), div);
   var inputEl = div.querySelector('input');
   test.equal(inputEl.checked, false);
   inputEl.checked = true;
@@ -166,18 +172,18 @@ Tinytest.add("ui - render - textarea", function (test) {
       '<textarea>&amp;</textarea>',
       'HTML.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
 
-  run(['a', function () { return 'b'; }, 'c'],
+  run(['a', Blaze.Isolate(function () { return 'b'; }), 'c'],
       'abc',
       '<textarea>abc</textarea>');
 
 });
 
-Tinytest.add("ui - render - closures", function (test) {
+Tinytest.add("ui - render - isolates", function (test) {
 
   // Reactively change a text node
   (function () {
     var R = ReactiveVar('Hello');
-    var test1 = P(function () { return R.get(); });
+    var test1 = P(Blaze.Isolate(function () { return R.get(); }));
 
     test.equal(toHTML(test1), '<p>Hello</p>');
 
@@ -193,7 +199,7 @@ Tinytest.add("ui - render - closures", function (test) {
   // Reactively change an array of text nodes
   (function () {
     var R = ReactiveVar(['Hello', ' World']);
-    var test1 = P(function () { return R.get(); });
+    var test1 = P(Blaze.Isolate(function () { return R.get(); }));
 
     test.equal(toHTML(test1), '<p>Hello World</p>');
 
@@ -208,11 +214,11 @@ Tinytest.add("ui - render - closures", function (test) {
 
 });
 
-Tinytest.add("ui - render - closure GC", function (test) {
+Tinytest.add("ui - render - isolate GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
     var R = ReactiveVar('Hello');
-    var test1 = P(function () { return R.get(); });
+    var test1 = P(Blaze.Isolate(function () { return R.get(); }));
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -241,14 +247,18 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'class': ['david gre', CharRef({html: '&euml;', str: '\u00eb'}), 'nspan'],
                          id: 'foo'});
 
-    var spanCode = SPAN(HTML.Attrs(function () { return R.get(); }));
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(
+        Blaze.Var(function () { return R.get(); })));
+    };
 
-    test.equal(toHTML(spanCode), '<span class="david gre&euml;nspan" id="foo"></span>');
+    test.equal(Blaze.toHTML(spanFunc),
+               '<span class="david gre&euml;nspan" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david gre\u00ebnspan" id="foo"></span>');
 
     test.equal(R.numListeners(), 1);
@@ -283,14 +293,17 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
                          fff: [[]],
                          ggg: ['x', ['y', ['z']]]});
 
-    var spanCode = SPAN(HTML.Attrs(function () { return R.get(); }));
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(
+        Blaze.Var(function () { return R.get(); })));
+    };
 
-    test.equal(toHTML(spanCode), '<span id="foo" ggg="xyz"></span>');
+    test.equal(Blaze.toHTML(spanFunc), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),
                'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
 
@@ -307,7 +320,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span ggg="" id="foo"></span>');
 
-    $(span).remove();
+    $(div).remove();
 
     test.equal(R.numListeners(), 0);
   })();
@@ -318,8 +331,10 @@ Tinytest.add("ui - render - components", function (test) {
     var counter = 1;
     var buf = [];
 
-    var myComponent = UI.Component.extend({
-      init: function () {
+    var myComponent = Blaze.Component.extend({
+      constructor: function () {
+        myComponent.__super__.constructor.call(this);
+
         // `this` is the component instance
         var number = counter++;
         this.number = number;
@@ -339,7 +354,7 @@ Tinytest.add("ui - render - components", function (test) {
         // `this` is the component instance
         return [String(this.number),
 
-                (this.number < 3 ? myComponent : HR())];
+                (this.number < 3 ? new myComponent : HR())];
       },
       rendered: function () {
         // `this` is the template instance
@@ -373,7 +388,7 @@ Tinytest.add("ui - render - components", function (test) {
 
     var div = document.createElement("DIV");
 
-    materialize(myComponent, div);
+    Blaze.renderComponent(myComponent, div);
     buf.push('---flush---');
     Deps.flush();
     test.equal(buf, ['created 1',
@@ -399,7 +414,9 @@ Tinytest.add("ui - render - components", function (test) {
     buf.length = 0;
     counter = 1;
 
-    var html = toHTML(myComponent);
+    var html = Blaze.toHTML(function () {
+      return new myComponent;
+    });
 
     test.equal(buf, ['created 1',
                      'parent of 2 is 1',
@@ -422,12 +439,12 @@ Tinytest.add("ui - render - findAll", function (test) {
     rendered: function() {
       found = this.findAll('p');
       $found = this.$('p');
-    },
+    }
   });
 
   var div = document.createElement("DIV");
 
-  materialize(myComponent, div);
+  Blaze.renderComponent(myComponent, div);
   Deps.flush();
 
   test.equal(_.isArray(found), true);
@@ -440,14 +457,16 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
 
-  var spanCode = SPAN(HTML.Attrs(
-    { blah: function () { return R1.get(); } },
-    function () { return { blah: [function () { return R2.get(); }] }; }));
+  var spanFunc = function () {
+    return SPAN(HTML.Attrs(
+      { blah: Blaze.Isolate(function () { return R1.get(); }) },
+      Blaze.Var(function () { return { blah: R2.get() }; })));
+  };
 
   var div = document.createElement("DIV");
-  materialize(spanCode, div);
+  Blaze.render(spanFunc).attach(div);
   var check = function (expected) {
-    test.equal(toHTML(spanCode), expected);
+    test.equal(Blaze.toHTML(spanFunc), expected);
     test.equal(canonicalizeHtml(div.innerHTML), expected);
   };
   check('<span blah="bar"></span>');
@@ -458,19 +477,16 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   R2.set([[]]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[[]]]`, which is nully.
-  test.equal(evaluateAndFlattenAttributes(spanCode.attrs).blah, ["foo"]);
   check('<span blah="foo"></span>');
 
   R2.set([['']]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[['']]]`, which is non-nully.
-  test.equal(evaluateAndFlattenAttributes(spanCode.attrs).blah, [[['']]]);
   check('<span blah=""></span>');
 
   R2.set(null);
   Deps.flush();
   // We combine `['foo']` with `[null]`, which is nully.
-  test.equal(evaluateAndFlattenAttributes(spanCode.attrs).blah, ['foo']);
   check('<span blah="foo"></span>');
 
   R1.set([[], []]);
@@ -503,8 +519,8 @@ Tinytest.add("ui - render - SVG", function (test) {
     {width: 100, height: 100},
     HTML.CIRCLE({cx: 50, cy: 50, r: 40,
                  stroke: 'black', 'stroke-width': 3,
-                 'class': function () { return classes.get(); },
-                 fill: function () { return fillColor.get(); }})));
+                 'class': Blaze.Isolate(function () { return classes.get(); }),
+                 fill: Blaze.Isolate(function () { return fillColor.get(); })})));
 
   var div = document.createElement("DIV");
   materialize(content, div);
@@ -571,17 +587,6 @@ Tinytest.add("ui - attributes", function (test) {
 
   test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
              '<span title="M&amp;Ms">M&amp;M candies</span>');
-
-  // test that evaluateAttributes calls functions in both normal and dynamic attributes
-  test.equal(evaluateAndFlattenAttributes({x: function () { return 'abc'; }}),
-             { x: 'abc' });
-  test.equal(evaluateAndFlattenAttributes([{x: function () { return 'abc'; } },
-                                    {}]),
-             { x: 'abc' });
-  test.equal(evaluateAndFlattenAttributes(
-    [{x: function () { return 'abc'; } },
-     function () { return { x: function () { return 'def'; } }; }]),
-             { x: 'def' });
 });
 
 Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {

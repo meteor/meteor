@@ -8,7 +8,7 @@ if (Package.blaze) {
       this.contentFunc = contentFunc;
     },
     render: function () {
-      var text = Blaze.toText(this.contentFunc(), HTML.TEXTMODE.STRING);
+      var text = Blaze.toText(this.contentFunc, HTML.TEXTMODE.STRING);
       var converter = new Showdown.converter();
       return HTML.Raw(converter.makeHtml(text));
     }

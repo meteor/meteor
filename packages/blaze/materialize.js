@@ -12,7 +12,7 @@ Blaze._inDummyComputation = function (f) {
   return ret;
 };
 
-////////////////////////////// Blaze.toText
+////////////////////////////// Blaze._toText
 
 Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
   visitObject: function (x) {
@@ -22,21 +22,21 @@ Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
     throw new Error("Unexpected object in htmljs in toText: " + x);
   },
   toHTML: function (node) {
-    return Blaze.toHTML(node);
+    return Blaze._toHTML(node);
   }
 });
 
 Blaze.ToTextController = Blaze.Controller.extend();
 
-Blaze.toText = function (content, textMode) {
+Blaze._toText = function (content, textMode) {
   if (! Deps.active) {
     return Blaze._inDummyComputation(function () {
-      return Blaze.toText(content, textMode);
+      return Blaze._toText(content, textMode);
     });
   }
 
   if (! textMode)
-    throw new Error("textMode required for Blaze.toText");
+    throw new Error("textMode required for Blaze._toText");
   if (! (textMode === HTML.TEXTMODE.STRING ||
          textMode === HTML.TEXTMODE.RCDATA ||
          textMode === HTML.TEXTMODE.ATTRIBUTE))
@@ -51,7 +51,15 @@ Blaze.toText = function (content, textMode) {
   });
 };
 
-////////////////////////////// Blaze.toHTML
+Blaze.toText = function (func, textMode) {
+  if (typeof func !== 'function')
+    throw new Error("Expected function");
+
+  return Blaze._toText(Blaze.Isolate(func), textMode);
+};
+
+
+////////////////////////////// Blaze._toHTML
 
 Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
   visitObject: function (x) {
@@ -61,7 +69,7 @@ Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
     throw new Error("Unexpected object in htmljs in toHTML: " + x);
   },
   toText: function (node, textMode) {
-    return Blaze.toText(node, textMode);
+    return Blaze._toText(node, textMode);
   }
 });
 
@@ -69,10 +77,10 @@ Blaze.ToHTMLController = Blaze.Controller.extend();
 
 // This function is mainly for server-side rendering and is not in the normal
 // code path for client-side rendering.
-Blaze.toHTML = function (content) {
+Blaze._toHTML = function (content) {
   if (! Deps.active) {
     return Blaze._inDummyComputation(function () {
-      return Blaze.toHTML(content);
+      return Blaze._toHTML(content);
     });
   }
   var controller = (Blaze.currentController || new Blaze.ToHTMLController);
@@ -82,7 +90,15 @@ Blaze.toHTML = function (content) {
 };
 
 
-////////////////////////////// Blaze.evaluate
+Blaze.toHTML = function (func) {
+  if (typeof func !== 'function')
+    throw new Error("Expected function");
+
+  return Blaze._toHTML(Blaze.Isolate(func));
+};
+
+
+////////////////////////////// Blaze._evaluate
 
 Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend({
   visitObject: function (x) {
@@ -102,21 +118,21 @@ Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend({
 });
 
 // Expand all Vars and components, making the current computation depend on them.
-Blaze.evaluate = function (content) {
+Blaze._evaluate = function (content) {
   if (! (Blaze.currentController && Deps.active))
-    throw new Error("Can only use Blaze.evaluate during rendering");
+    throw new Error("Can only use Blaze._evaluate during rendering");
 
   return (new Blaze.EvaluatingVisitor).visit(content);
 };
 
-Blaze.evaluateAttributes = function (attrs) {
+Blaze._evaluateAttributes = function (attrs) {
   if (! (Blaze.currentController && Deps.active))
-    throw new Error("Can only use Blaze.evaluate during rendering");
+    throw new Error("Can only use Blaze._evaluate during rendering");
 
   return (new Blaze.EvaluatingVisitor).visitAttributes(attrs);
 };
 
-////////////////////////////// Blaze.toDOM
+////////////////////////////// Blaze._toDOM
 
 Blaze.ToDOMVisitor = HTML.Visitor.extend({
   visitNull: function (x, intoArray) {
@@ -126,6 +142,9 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
     var string = String(primitive);
     intoArray.push(document.createTextNode(string));
     return intoArray;
+  },
+  visitCharRef: function (charRef, intoArray) {
+    return this.visitPrimitive(charRef.str, intoArray);
   },
   visitArray: function (array, intoArray) {
     for (var i = 0; i < array.length; i++)
@@ -170,12 +189,12 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
       var controller = Blaze.currentController;
       Blaze._wrapAutorun(Deps.autorun(function (c) {
         Blaze.withCurrentController(controller, function () {
-          var evaledAttrs = Blaze.evaluateAttributes(rawAttrs);
+          var evaledAttrs = Blaze._evaluateAttributes(rawAttrs);
           var flattenedAttrs = HTML.flattenAttributes(evaledAttrs);
           var stringAttrs = {};
           for (var attrName in flattenedAttrs) {
-            stringAttrs[attrName] = Blaze.toText(flattenedAttrs[attrName],
-                                                 HTML.TEXTMODE.STRING);
+            stringAttrs[attrName] = Blaze._toText(flattenedAttrs[attrName],
+                                                  HTML.TEXTMODE.STRING);
           }
           attrUpdater.update(stringAttrs);
         });
@@ -206,6 +225,6 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
   }
 });
 
-Blaze.toDOM = function (content) {
+Blaze._toDOM = function (content) {
   return (new Blaze.ToDOMVisitor).visit(content, []);
 };
