@@ -132,18 +132,11 @@ _.extend(Release.prototype, {
     return self._manifest.packages;
   },
 
-  getBanner: function () {
+  getCatalogReleaseData: function () {
     var self = this;
     if (! self.isProperRelease())
       throw new Error("not a proper release?");
-    return self._manifest.banner || null;
-  },
-
-  getPatchReleaseVersion: function () {
-    var self = this;
-    if (! self.isProperRelease())
-      throw new Error("not a proper release?");
-    return self._manifest.patchReleaseVersion || null;
+    return self._manifest;
   }
 });
 

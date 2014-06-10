@@ -46,8 +46,9 @@ var checkForUpdate = function (showBanner) {
 };
 
 var maybeShowBanners = function () {
-  var banner = release.current.getBanner();
+  var releaseData = release.current.getCatalogReleaseData();
 
+  var banner = releaseData.banner;
   if (banner) {
     var bannersShown = {};
     try {
@@ -84,76 +85,33 @@ var maybeShowBanners = function () {
     }
   }
 
-  // Didn't print a banner? Maybe we have a patch release to recommend.
+  var displayRelease = function (version) {
+    if (release.current.getReleaseTrack() === catalog.official.DEFAULT_TRACK)
+      return "Meteor " + version;
+    return release.current.getReleaseTrack() + '@' + patchReleaseVersion;
+  };
 
-  var patchReleaseVersion = release.current.getPatchReleaseVersion();
+  // Didn't print a banner? Maybe we have a patch release to recommend.
+  var patchReleaseVersion = releaseData.patchReleaseVersion;
   if (patchReleaseVersion) {
-    var patch =
-          release.current.getReleaseTrack() === catalog.official.DEFAULT_TRACK
-          ? patchReleaseVersion
-          : release.current.getReleaseTrack() + '@' + patchReleaseVersion;
-    runLog.log("=> A patch (" + patch + ") for your current release is available.");
+    runLog.log("=> A patch (" + displayRelease(patchReleaseVersion) +
+               ") for your current release is available!");
     runLog.log("   Update this project now with 'meteor update --patch'.");
     return;
   }
 
-  //   var currentReleaseTrack = release.current.getReleaseTrack();
-  //   var latestReleaseVersion = catalog.official.getDefaultReleaseVersion(
-  //     currentReleaseTrack);
-  // -  // Maybe you're on some random track with nothing recommended. That's OK.
-  // -  if (!latestReleaseVersion)
-  // -    return;
-
-  // XXX print banners
-
-  // var manifestLatestRelease =
-  //   manifest && manifest.releases && manifest.releases.stable &&
-  //   manifest.releases.stable.version;
-  // var localLatestRelease = warehouse.latestRelease();
-  // if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
-  //   // The manifest is telling us about a release that isn't our latest
-  //   // release! First, print a banner... but only if we've never printed a
-  //   // banner for this release before. (Or, well... only if this release isn't
-  //   // the last release which has had a banner printed.)
-  //   if (manifest.releases.stable.banner &&
-  //       warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
-  //     if (showBanner) {
-  //       runLog.log("");
-  //       runLog.log(manifest.releases.stable.banner);
-  //       runLog.log("");
-  //     }
-  //     warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
-  //   } else {
-  //     // Already printed this banner, or maybe there is no banner.
-  //     if (showBanner) {
-  //       runLog.log("=> Meteor " + manifestLatestRelease +
-  //                  " is being downloaded in the background.");
-  //     }
-  //   }
-  //   warehouse.fetchLatestRelease();
-  //   // We should now have fetched the latest release, which *probably* is
-  //   // manifestLatestRelease. As long as it's changed from the one it was
-  //   // before we tried to fetch it, print that out.
-  //   var newLatestRelease = warehouse.latestRelease();
-  //   if (showBanner && newLatestRelease !== localLatestRelease) {
-  //     runLog.log(
-  //       "=> Meteor " + newLatestRelease +
-  //       " is available. Update this project with 'meteor update'.");
-  //   }
-  //   return;
-  // }
-
-  // // We didn't do a global update (or we're not online), but do we need to
-  // // update this app? Specifically: is our local latest release something
-  // // other than this app's release, and the user didn't specify a specific
-  // // release at the command line with --release?
-  // if (showBanner &&
-  //     localLatestRelease !== release.current.name &&
-  //     ! release.forced) {
-  //   runLog.log(
-  //     "=> Meteor " + localLatestRelease +
-  //     " is available. Update this project with 'meteor update'.");
-  // }
+  // There's no patch (so no urgent exclamation!) but there may be something
+  // worth mentioning.
+  // XXX maybe run constraint solver to change the message depending on whether
+  //     or not it will actually work?
+  var currentReleaseOrderKey = releaseData.orderKey || null;
+  var futureReleases = catalog.official.getSortedRecommendedReleaseVersions(
+    release.current.getReleaseTrack(), currentReleaseOrderKey);
+  if (futureReleases.length) {
+    runLog.log(
+      "=> " + displayRelease(futureReleases[0]) + " is available. Update this project with 'meteor update'.");
+    return;
+  }
 };
 
 // Update ~/.meteor0/meteor to point to the tool binary from the tools of the

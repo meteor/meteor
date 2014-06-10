@@ -580,10 +580,10 @@ main.registerCommand({
     releaseVersionsToTry = [release.current.getReleaseVersion()];
   } else {
     // XXX clean up all this splitty stuff
-    var appReleaseInfo = catalog.complete.getReleaseVersion(
+    var appReleaseInfo = catalog.official.getReleaseVersion(
       appRelease.split('@')[0], appRelease.split('@')[1]);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
-    releaseVersionsToTry = catalog.complete.getSortedRecommendedReleaseVersions(
+    releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
       releaseTrack, appOrderKey);
     if (!releaseVersionsToTry.length) {
       // XXX make error better, and make sure that the "already there" error
