@@ -225,24 +225,20 @@ if (Meteor.isClient) {
   var anchorForNormalization = document.createElement('A');
 }
 
-var normalizeUrl = function (url) {
+var getUrlProtocol = function (url) {
   if (Meteor.isClient) {
     anchorForNormalization.href = url;
-    return anchorForNormalization.href;
+    return (anchorForNormalization.protocol || "").toLowerCase();
   } else {
-    throw new Error('normalizeUrl not implemented on the server');
+    throw new Error('getUrlProtocol not implemented on the server');
   }
 };
 
 // UrlHandler is an attribute handler for all HTML attributes that take
 // URL values. It disallows javascript: URLs, unless
 // UI._allowJavascriptUrls() has been called. To detect javascript:
-// urls, we set the attribute and then reads the attribute out of the
-// DOM, in order to avoid writing our own URL normalization code. (We
-// don't want to be fooled by ' javascript:alert(1)' or
-// 'jAvAsCrIpT:alert(1)'.) In future, when the URL interface is more
-// widely supported, we can use that, which will be
-// cleaner.  https://developer.mozilla.org/en-US/docs/Web/API/URL
+// urls, we set the attribute on a dummy anchor element and then read
+// out the 'protocol' property of the attribute.
 var origUpdate = AttributeHandler.prototype.update;
 var UrlHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
@@ -252,8 +248,7 @@ var UrlHandler = AttributeHandler.extend({
     if (UI._javascriptUrlsAllowed()) {
       origUpdate.apply(self, args);
     } else {
-      var isJavascriptProtocol =
-            (normalizeUrl(value).indexOf('javascript:') === 0);
+      var isJavascriptProtocol = (getUrlProtocol(value) === "javascript:");
       if (isJavascriptProtocol) {
         Meteor._debug("URLs that use the 'javascript:' protocol are not " +
                       "allowed in URL attribute values. " +
