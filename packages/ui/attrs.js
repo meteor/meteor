@@ -48,51 +48,93 @@ AttributeHandler.extend = function (options) {
   return subType;
 };
 
-// Extended below to support both regular and SVG elements
-var BaseClassHandler = AttributeHandler.extend({
+// Apply the diff between the tokens of "oldValue" and "value" to "element."
+// Extended below to support classes, SVG elements and styles.
+var BaseTokenHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    if (!this.getCurrentValue || !this.setValue)
-      throw new Error("Missing methods in subclass of 'BaseClassHandler'");
+    if (!this.getCurrentValue || !this.setValue ||
+        !this.tokenize || !this.stringify)
+      throw new Error("Missing methods in subclass of 'BaseTokenHandler'");
 
-    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
-    var newClasses = value ? _.compact(value.split(' ')) : [];
+    var oldTokens = oldValue ? _.compact(this.tokenize(oldValue)) : [];
+    var newTokens = value ? _.compact(this.tokenize(value)) : [];
 
     // the current classes on the element, which we will mutate.
-    var classes = _.compact(this.getCurrentValue(element).split(' '));
+
+    var tokenString = this.getCurrentValue(element);
+    var tokens = tokenString ? _.compact(this.tokenize(tokenString)) : [];
 
     // optimize this later (to be asymptotically faster) if necessary
-    for (var i = 0; i < oldClasses.length; i++) {
-      var c = oldClasses[i];
-      if (! _.contains(newClasses, c))
-        classes = _.without(classes, c);
+    for (var i = 0; i < oldTokens.length; i++) {
+      var c = oldTokens[i];
+      if (! _.contains(newTokens, c))
+        tokens = _.without(tokens, c);
     }
-    for (var i = 0; i < newClasses.length; i++) {
-      var c = newClasses[i];
-      if ((! _.contains(oldClasses, c)) &&
-          (! _.contains(classes, c)))
-        classes.push(c);
+    for (var i = 0; i < newTokens.length; i++) {
+      var c = newTokens[i];
+      if ((! _.contains(oldTokens, c)) &&
+          (! _.contains(tokens, c)))
+        tokens.push(c);
     }
 
-    this.setValue(element, classes.join(' '));
+    this.setValue(element, this.stringify(tokens));
   }
 });
 
-var ClassHandler = BaseClassHandler.extend({
+var ClassHandler = BaseTokenHandler.extend({
   // @param rawValue {String}
   getCurrentValue: function (element) {
     return element.className;
   },
   setValue: function (element, className) {
     element.className = className;
+  },
+  tokenize: function (attrString) {
+    return attrString.split(' ');
+  },
+  stringify: function (tokens) {
+    return tokens.join(' ');
   }
 });
 
-var SVGClassHandler = BaseClassHandler.extend({
+var SVGClassHandler = BaseTokenHandler.extend({
   getCurrentValue: function (element) {
     return element.className.baseVal;
   },
   setValue: function (element, className) {
     element.setAttribute('class', className);
+  },
+  tokenize: function (attrString) {
+    return attrString.split(' ');
+  },
+  stringify: function (tokens) {
+    return tokens.join(' ');
+  }
+});
+
+var StyleHandler = BaseTokenHandler.extend({
+  getCurrentValue: function (element) {
+    return element.getAttribute("style") || '';
+  },
+  setValue: function (element, style) {
+    element.setAttribute("style", style);
+  },
+  tokenize: function (attrString) {
+    var tokens = [];
+
+    // Regex for parsing a css attribute declaration, taken from css-parse.
+    var regex = /(\*?[-#\/\*\\\w]+(?:\[[0-9a-z_-]+\])?)\s*:\s*((?:'(?:\\'|.)*?'|"(?:\\"|.)*?"|\([^\)]*?\)|[^};])+)[;\s]*/g;
+    var match = regex.exec(attrString);
+    while (match) {
+      var token = match[1] + ":" + match[2];
+      tokens.push(token);
+      match = regex.exec(attrString);
+    }
+
+    return tokens;
+  },
+  stringify: function (tokens) {
+    return tokens.join('; ') + ';';
   }
 });
 
@@ -230,6 +272,8 @@ makeAttributeHandler = function (elem, name, value) {
     } else {
       return new ClassHandler(name, value);
     }
+  } else if (name === 'style') {
+    return new StyleHandler(name, value);
   } else if ((elem.tagName === 'OPTION' && name === 'selected') ||
              (elem.tagName === 'INPUT' && name === 'checked')) {
     return new BooleanHandler(name, value);

@@ -268,6 +268,44 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(R.numListeners(), 0);
   })();
 
+  // Test styles.
+  (function () {
+    // Test the case where there is a semicolon in the css attribute.
+    var R = ReactiveVar({'style': ['foo:"a;aa"; bar: b;'],
+      id: 'foo'});
+
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+
+    test.equal(toHTML(spanCode), '<span style="foo:&quot;a;aa&quot;; bar: b;" id="foo"></span>');
+
+    test.equal(R.numListeners(), 0);
+
+    var div = document.createElement("DIV");
+    materialize(spanCode, div);
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo:&quot;a;aa&quot;; bar:b;"></span>');
+
+    test.equal(R.numListeners(), 1);
+
+    var span = div.firstChild;
+    test.equal(span.nodeName, 'SPAN');
+    console.log(span.getAttribute("style"));
+    span.setAttribute("style", 'jquery-style: hidden; ' + span.getAttribute("style"));
+
+    R.set({'style': 'foo:"a;zz;aa"', id: 'bar'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style:hidden; foo:&quot;a;zz;aa&quot;;"></span>');
+    test.equal(R.numListeners(), 1);
+
+    R.set({});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style:hidden;"></span>');
+    test.equal(R.numListeners(), 1);
+
+    $(div).remove();
+
+    test.equal(R.numListeners(), 0);
+  })();
+
   // Test `null`, `undefined`, and `[]` attributes
   (function () {
     var R = ReactiveVar({id: 'foo',
