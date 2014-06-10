@@ -107,7 +107,7 @@
 //
 //  - client: the client program that should be served up by HTTP,
 //    expressed as a path (relative to program.json) to the *client's*
-//    program.json.
+//    program.json. XXX update
 //
 //  - meteorRelease: the value to use for Meteor.release, if any
 //
@@ -449,7 +449,7 @@ _.extend(Target.prototype, {
     self._emitResources();
 
     // Preprocess and concatenate CSS files for client targets.
-    if (self instanceof ClientTarget) {
+    if (self instanceof RefreshableClientTarget) {
       self.mergeCss();
     }
 
@@ -461,7 +461,7 @@ _.extend(Target.prototype, {
       self.minifyJs(minifiers);
 
       // CSS is minified only for client targets.
-      if (self instanceof ClientTarget) {
+      if (self instanceof RefreshableClientTarget) {
         self.minifyCss(minifiers);
       }
     }
@@ -753,7 +753,7 @@ _.extend(Target.prototype, {
 
 //////////////////// ClientTarget ////////////////////
 
-var ClientTarget = function (options) {
+var BaseClientTarget = function (options) {
   var self = this;
   Target.apply(this, arguments);
 
@@ -768,12 +768,16 @@ var ClientTarget = function (options) {
   self.body = [];
 
   if (! archinfo.matches(self.arch, "browser"))
-    throw new Error("ClientTarget targeting something that isn't a browser?");
+    throw new Error("BaseClientTarget targeting something that isn't a browser?");
+
+  if (!this.getResourceExtensions)
+      throw new Error("Missing methods in subclass of 'BaseClassHandler'");
+
 };
 
-inherits(ClientTarget, Target);
+inherits(BaseClientTarget, Target);
 
-_.extend(ClientTarget.prototype, {
+_.extend(BaseClientTarget.prototype, {
   // Lints CSS files and merges them into one file, fixing up source maps and
   // pulling any @import directives up to the top since the CSS spec does not
   // allow them to appear in the middle of a file.
@@ -879,7 +883,7 @@ _.extend(ClientTarget.prototype, {
 
     // Helper to iterate over all resources that we serve over HTTP.
     var eachResource = function (f) {
-      _.each(["js", "css", "asset"], function (type) {
+      _.each(self.getResourceExtensions(), function (type) {
         _.each(self[type], function (file) {
           f(file, type);
         });
@@ -959,11 +963,136 @@ _.extend(ClientTarget.prototype, {
     });
 
     // Control file
-    builder.writeJson('program.json', {
+    builder.writeJson("program.json", {
       format: "browser-program-pre1",
       manifest: manifest
     });
     return "program.json";
+  }
+});
+
+var RefreshableClientTarget = function (options) {
+  var self = this;
+  BaseClientTarget.apply(this, arguments);
+
+  // CSS files. List of File. They will be loaded in the order given.
+  self.css = [];
+  // Cached CSS AST. If non-null, self.css has one item in it, processed CSS
+  // from merged input files, and this is its parse tree.
+  self._cssAstCache = null;
+};
+
+inherits(RefreshableClientTarget, BaseClientTarget);
+
+_.extend(RefreshableClientTarget.prototype, {
+  // Lints CSS files and merges them into one file, fixing up source maps and
+  // pulling any @import directives up to the top since the CSS spec does not
+  // allow them to appear in the middle of a file.
+  mergeCss: function () {
+    var self = this;
+    var minifiers = uniload.load({
+      packages: ['minifiers']
+    }).minifiers;
+    var CssTools = minifiers.CssTools;
+
+    // Filenames passed to AST manipulator mapped to their original files
+    var originals = {};
+
+    var cssAsts = _.map(self.css, function (file) {
+      var filename = file.url.replace(/^\//, '');
+      originals[filename] = file;
+      try {
+        var parseOptions = { source: filename, position: true };
+        var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
+        ast.filename = filename;
+      } catch (e) {
+        buildmessage.error(e.message, { file: filename });
+        return { type: "stylesheet", stylesheet: { rules: [] },
+                 filename: filename };
+      }
+
+      return ast;
+    });
+
+    var warnCb = function (filename, msg) {
+      // XXX make this a buildmessage.warning call rather than a random log.
+      //     this API would be like buildmessage.error, but wouldn't cause
+      //     the build to fail.
+      runLog.log(filename + ': warn: ' + msg);
+    };
+
+    // Other build phases might need this AST later
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
+
+    // Overwrite the CSS files list with the new concatenated file
+    var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
+                                               { sourcemap: true });
+    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
+
+    // Add the contents of the input files to the source map of the new file
+    stringifiedCss.map.sourcesContent =
+      _.map(stringifiedCss.map.sources, function (filename) {
+        return originals[filename].contents('utf8');
+      });
+
+    // If any input files had source maps, apply them.
+    // Ex.: less -> css source map should be composed with css -> css source map
+    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
+      new sourcemap.SourceMapConsumer(stringifiedCss.map));
+
+    _.each(originals, function (file, name) {
+      if (! file.sourceMap)
+        return;
+      try {
+        newMap.applySourceMap(
+          new sourcemap.SourceMapConsumer(file.sourceMap), name);
+      } catch (err) {
+        // If we can't apply the source map, silently drop it.
+        //
+        // XXX This is here because there are some less files that
+        // produce source maps that throw when consumed. We should
+        // figure out exactly why and fix it, but this will do for now.
+      }
+    });
+
+    self.css[0].setSourceMap(JSON.stringify(newMap));
+    self.css[0].setUrlToHash(".css");
+  },
+  // Minify the CSS in this target
+  minifyCss: function (minifiers) {
+    var self = this;
+    var minifiedCss = '';
+
+    // If there is an AST already calculated, don't waste time on parsing it
+    // again.
+    if (self._cssAstCache) {
+      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAstCache);
+    } else if (self.css) {
+      var allCss = _.map(self.css, function (file) {
+        return file.contents('utf8');
+      }).join('\n');
+
+      minifiedCss = minifiers.CssTools.minifyCss(allCss);
+    }
+
+    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
+    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
+  },
+  getResourceExtensions: function() {
+    return ["css"];
+  }
+});
+
+var NonRefreshableClientTarget = function (options) {
+  var self = this;
+  BaseClientTarget.apply(this, arguments);
+};
+
+inherits(NonRefreshableClientTarget, BaseClientTarget);
+
+_.extend(NonRefreshableClientTarget.prototype, {
+  getResourceExtensions: function() {
+    return ["js", "assets"];
   }
 });
 
@@ -1316,13 +1445,13 @@ _.extend(JsImageTarget.prototype, {
 //////////////////// ServerTarget ////////////////////
 
 // options:
-// - clientTarget: the ClientTarget to serve up over HTTP as our client
+// - clientTargets: a list of ClientTargets to serve up over HTTP as our client
 // - releaseName: the Meteor release name (for retrieval at runtime)
 var ServerTarget = function (options) {
   var self = this;
   JsImageTarget.apply(this, arguments);
 
-  self.clientTarget = options.clientTarget;
+  self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
   self.packageLoader = options.packageLoader;
 
@@ -1354,19 +1483,22 @@ _.extend(ServerTarget.prototype, {
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
-    // Relative path to our client, if we have one (hack)
-    var clientTargetPath;
-    if (self.clientTarget) {
-      clientTargetPath = path.join(options.getRelativeTargetPath({
-        forTarget: self.clientTarget, relativeTo: self}),
-                                   'program.json');
-    }
+    // Map form client name to info about the client
+    // - path: path to client directory
+    var clientTargetInfo = {};
+
+    _.each(self.clientTargets, function (clientTarget, name) {
+      var clientTargetPath = path.join(options.getRelativeTargetPath({
+        forTarget: clientTarget, relativeTo: self}),
+                                   "program.json");
+      clientTargetInfo[name] = { path: clientTargetPath };
+    });
 
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
-      client: clientTargetPath || undefined
+      clientInfo: clientTargetInfo || undefined
     });
 
     if (! options.omitDependencyKit)
@@ -1659,42 +1791,62 @@ exports.bundle = function (options) {
     var targets = {};
     var controlProgram = null;
 
-    var makeClientTarget = function (app) {
-      var client = new ClientTarget({
+    var makeClientTargets = function (app) {
+      var refreshableClient = new RefreshableClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
       });
-
-      client.make({
+      refreshableClient.make({
         packages: [app],
         minify: buildOptions.minify,
         addCacheBusters: true
       });
 
-      return client;
-    };
-
-    var makeBlankClientTarget = function () {
-      var client = new ClientTarget({
+      var nonRefreshableClient = new NonRefreshableClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
       });
-      client.make({
+      nonRefreshableClient.make({
+        packages: [app],
         minify: buildOptions.minify,
         addCacheBusters: true
       });
 
-      return client;
+      return { refreshable: refreshableClient,
+               nonRefreshable: nonRefreshableClient };
     };
 
-    var makeServerTarget = function (app, clientTarget) {
+    var makeBlankClientTargets = function () {
+      var refreshableClient = new RefreshableClientTarget({
+        packageLoader: packageLoader,
+        arch: "browser"
+      });
+      refreshableClient.make({
+        minify: buildOptions.minify,
+        addCacheBusters: true
+      });
+
+      var nonRefreshableClient = new NonRefreshableClientTarget({
+        packageLoader: packageLoader,
+        arch: "browser"
+      });
+      nonRefreshableClient.make({
+        minify: buildOptions.minify,
+        addCacheBusters: true
+      });
+
+      return { refreshable: refreshableClient,
+               nonRefreshable: nonRefreshableClient };
+    };
+
+    var makeServerTarget = function (app, clientTargets) {
       var targetOptions = {
         packageLoader: packageLoader,
         arch: buildOptions.arch || archinfo.host(),
         releaseName: releaseName
       };
-      if (clientTarget)
-        targetOptions.clientTarget = clientTarget;
+      if (clientTargets)
+        targetOptions.clientTargets = clientTargets;
 
       var server = new ServerTarget(targetOptions);
 
@@ -1720,11 +1872,14 @@ exports.bundle = function (options) {
         appDir, exports.ignoreFiles);
 
       // Client
-      var client = makeClientTarget(app);
-      targets.client = client;
+      var clients = makeClientTargets(app);
+
+      _.each(clients, function (client, name) {
+        targets[name] = client;
+      });
 
       // Server
-      var server = makeServerTarget(app, client);
+      var server = makeServerTarget(app, clients);
       targets.server = server;
     }
 
@@ -1838,7 +1993,7 @@ exports.bundle = function (options) {
         if (! p.client) {
           if (! blankClientTarget) {
             clientTarget = blankClientTarget = targets._blank =
-              makeBlankClientTarget();
+              makeBlankClientTargets(); // XXX fix this
           } else {
             clientTarget = blankClientTarget;
           }
@@ -1858,7 +2013,7 @@ exports.bundle = function (options) {
         target = makeServerTarget(pkg, clientTarget);
         break;
       case "client":
-        target = makeClientTarget(pkg);
+        target = makeClientTargets(pkg); // XXX fix this
         break;
       default:
         buildmessage.error(

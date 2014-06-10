@@ -26,7 +26,6 @@
 // browser.
 var autoupdateVersion = __meteor_runtime_config__.autoupdateVersion || "unknown";
 
-
 // The collection of acceptable client versions.
 var ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
 
@@ -77,10 +76,15 @@ Autoupdate._retrySubscription = function () {
     onReady: function () {
       if (Package.reload) {
         Deps.autorun(function (computation) {
-          if (ClientVersions.findOne({current: true}) &&
+          if (ClientVersions.findOne({ refreshable: false,
+                                       current: true }) &&
               (! ClientVersions.findOne({_id: autoupdateVersion}))) {
             computation.stop();
             Package.reload.Reload._reload();
+          } else if (ClientVersions.findOne({ refreshable: true,
+                                              current: true }) &&
+              (! ClientVersions.findOne({_id: autoupdateVersion}))) {
+            console.log("refreshable asset loaded!");
           }
         });
       }
