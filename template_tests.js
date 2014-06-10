@@ -1730,6 +1730,60 @@ Tinytest.add(
   }
 );
 
+// Make sure that if you bind an event on "div p", for example,
+// both the div and the p need to be in the template.  jQuery's
+// `$(elem).find(...)` works this way, but the browser's
+// querySelector doesn't.
+Tinytest.add(
+  "spacebars - template - event map selector scope",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_selectors1;
+    var tmpl2 = Template.spacebars_test_event_selectors2;
+    var buf = [];
+    tmpl2.events({
+      'click div p': function (evt) { buf.push(evt.currentTarget.className); }
+    });
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    test.equal(buf.join(), '');
+    clickIt(div.querySelector('.p1'));
+    test.equal(buf.join(), '');
+    clickIt(div.querySelector('.p2'));
+    test.equal(buf.join(), 'p2');
+    document.body.removeChild(div);
+  }
+);
+
+if (document.addEventListener) {
+  // see note about non-bubbling events in the "capuring events"
+  // templating test for why we use the VIDEO tag.  (It would be
+  // nice to get rid of the network dependency, though.)
+  // We skip this test in IE 8.
+  Tinytest.add(
+    "spacebars - template - event map selector scope (capturing)",
+    function (test) {
+      var tmpl = Template.spacebars_test_event_selectors_capturing1;
+      var tmpl2 = Template.spacebars_test_event_selectors_capturing2;
+      var buf = [];
+      tmpl2.events({
+        'play div video': function (evt) { buf.push(evt.currentTarget.className); }
+      });
+
+      var div = renderToDiv(tmpl);
+      document.body.appendChild(div);
+      test.equal(buf.join(), '');
+      simulateEvent(div.querySelector(".video1"),
+                    "play", {}, {bubbles: false});
+      test.equal(buf.join(), '');
+      simulateEvent(div.querySelector(".video2"),
+                    "play", {}, {bubbles: false});
+      test.equal(buf.join(), 'video2');
+      document.body.removeChild(div);
+    }
+  );
+}
+
 Tinytest.add("spacebars - template - tables", function (test) {
   var tmpl1 = Template.spacebars_test_tables1;
 
