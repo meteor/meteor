@@ -1,7 +1,7 @@
 Package.describe({
-  name: "meteor-tool",
+  name: "ekate:meteor-tool",
   summary: "The Meteor command-line tool",
-  version: '1.0.0',
+  version: '2.0.0',
   internal: true
 });
 

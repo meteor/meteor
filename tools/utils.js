@@ -280,3 +280,24 @@ exports.startsWith = function(str, starts) {
   return str.length >= starts.length &&
     str.substring(0, starts.length) === starts;
 };
+
+// Read a file in line by line. Returns an array of lines to be processed
+//  individually.
+exports.getLines = function (file) {
+  if (!fs.existsSync(file)) {
+    return [];
+  }
+
+  var raw = fs.readFileSync(file, 'utf8');
+  var lines = raw.split(/\r*\n\r*/);
+
+  // strip blank lines at the end
+  while (lines.length) {
+    var line = lines[lines.length - 1];
+    if (line.match(/\S/))
+      break;
+    lines.pop();
+  }
+
+  return lines;
+};

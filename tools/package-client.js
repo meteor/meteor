@@ -265,8 +265,6 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   };
 };
 
-
-
 var uploadTarball = function (putUrl, tarball) {
   var size = fs.statSync(tarball).size;
   var rs = fs.createReadStream(tarball);
@@ -393,8 +391,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 
   // Check that the version description is under the character limit.
   if (packageSource.metadata.summary.length > 100) {
-    process.stderr.write("Description must be under 100 chars.");
-    process.stderr.write("Publish failed.");
+    process.stderr.write("Description must be under 100 chars. \n");
+    process.stderr.write("Publish failed. \n");
     return 1;
   }
 
@@ -402,6 +400,12 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   if (!options['new']) {
     var catalog = require('./catalog.js');
     var packRecord = catalog.official.getPackage(name);
+    if (!packRecord) {
+      process.stderr.write('There is no package named ' + name +
+                           '. If you are creating a new package, use the --create-track flag. \n');
+      process.stderr.write("Publish failed. \n");
+      return 1;
+    }
     var authorized = _.indexOf(
       _.pluck(packRecord.maintainers, 'username'), auth.loggedInUsername());
     if (authorized == -1) {
@@ -409,6 +413,55 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
     }
+  }
+
+  var changelog = require('./changelog.js');
+  var changeFile = changelog.getChangelogFile(packageSource.sourceRoot);
+  var changeLines = changelog.readChangelog(changeFile);
+  var changeExists = !_.isEqual(changeLines, {});
+  // XXX: For now, if there is no changelog, we won't nag you about it.
+  if (changeExists && !changeLines[version]) {
+    process.stdout.write("-------\n");
+    if (_.has(changeLines,"NEXT") && !_.isEqual(changeLines["NEXT"], [])) {
+      changelog.rewriteNextChangelog(changeFile, version);
+      process.stdout.write(" changelog: Changing v.NEXT to current version.\n");
+    } else {
+      // There is a stub of v.NEXT, but there is nothing there. Kill it.
+      if (_.has(changeLines, "NEXT")) {
+        changelog.eraseNextChangelog(changeFile);
+      }
+      // Changelog data is invalid and we have to rewrite it.
+      process.stderr.write(" You are publishing version " + version +
+                           ", but your changelog has no information about it! \n");
+      process.stderr.write(" Please enter a changelog entry. \n");
+
+      // Use '*' as the command on the prompt and read from prompt.
+      var readMyPrompt = function () {
+        return utils.readLine({
+          echo: true,
+          prompt: " * ",
+          stream: process.stderr
+        });
+      };
+
+      var foo = readMyPrompt();
+      var lines = [];
+      while (foo !== "q") {
+        lines.unshift(foo);
+        process.stderr.write(" Anything else? ( or q to quit) \n");
+        foo = readMyPrompt();
+      }
+      changelog.prependChangelog(changeFile, version, lines);
+      process.stdout.write(" Thanks! Changelog edited.\n");
+    }
+
+    // Regardless of what the changelog status was, show what it says.
+    changeLines = changelog.readChangelog(changeFile);
+    process.stdout.write(" According to your History.md file," + name +
+                         "@" + version +" contains the following changes: \n");
+    changelog.printLines(changeLines[version], "  ");
+    process.stdout.write("\n");
+    process.stdout.write("-------\n");
   }
 
   // We need to build the test package to get all of its sources.
@@ -479,10 +532,21 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   uploadTarball(uploadInfo.uploadUrl,
                               bundleResult.sourceTarball);
 
+  if (changeExists) {
+    process.stdout.write('Uploading changelog...\n');
+    uploadTarball(uploadInfo.changelogUrl, changeFile);
+  }
+
   process.stdout.write('Publishing package version...\n');
   conn.call('publishPackageVersion',
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
+
+  if (changeExists) {
+    // Update the changelog to have a v.NEXT.
+    changelog.prependChangelog(changeFile, "NEXT", []);
+  }
+
   return 0;
 };

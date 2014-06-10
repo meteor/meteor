@@ -1960,8 +1960,11 @@ main.registerCommand({
     function () {
       var packageName = path.basename(options.packageDir);
 
-      console.log("XXX: A more elegant override for names");
-      if (packageName !== options.name) {
+      // XXX: This override is kind of gross because it requires you to set name
+      // in package.js as well. We should just read out of that. On the other
+      // hand, this is mostly used for forks, which are not quite a real thing in
+      // 0.90.
+      if (options.name && packageName !== options.name) {
         packageName = options.name;
       }
 
@@ -1996,6 +1999,8 @@ main.registerCommand({
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.
   conn.close();
+
+  catalog.official.refresh();
   return ec;
 });
 
@@ -2068,6 +2073,8 @@ main.registerCommand({
   }
   packageClient.createAndPublishBuiltPackage(conn, unipackage);
 
+
+  catalog.official.refresh();
   return 0;
 });
 
@@ -2325,6 +2332,7 @@ main.registerCommand({
                   }
                   toPublish[item] = {source: packageSource,
                                      compileResult: compileResult};
+                  process.stdout.write("IT IS NEW! \n");
                   return;
                 } else {
                   var existingBuild = catalog.official.getBuildWithArchesString(
@@ -2462,6 +2470,50 @@ main.registerCommand({
 
   return deploy.listSites();
 });
+
+///////////////////////////////////////////////////////////////////////////////
+// search
+///////////////////////////////////////////////////////////////////////////////
+
+
+main.registerCommand({
+  name: 'search',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    details: { type: Boolean, required: false }
+  },
+  hidden: true
+}, function (options) {
+
+  catalog.official.refresh();
+
+  if (options.details) {
+    var changelog = require('./changelog.js');
+    var packageName = options.args[0];
+    var packageRecord = catalog.official.getPackage(packageName);
+    var versions = catalog.official.getSortedVersions(packageName);
+    var lastVersion =  catalog.official.getVersion(
+      packageName, versions[versions.length - 1]);
+    var changelogUrl = lastVersion.changelog;
+    var myChangelog = httpHelpers.getUrl({
+      url: changelogUrl,
+      encoding: null
+    });
+    var sourcePath = "/tmp/change";
+    fs.writeFileSync(sourcePath, myChangelog);
+    var ch = changelog.readChangelog(sourcePath);
+    _.each(versions, function (v) {
+      console.log("Version " + v + ":");
+      changelog.printLines(ch[v], "             ");
+    });
+    console.log("\n");
+    console.log("The package " + packageName + " : " + lastVersion.description);
+    console.log("Maintained by " + _.pluck(packageRecord.maintainers, 'username')
+                + " at https://github.com/meteor/meteor ");
+  }
+});
+
 
 
 ///////////////////////////////////////////////////////////////////////////////

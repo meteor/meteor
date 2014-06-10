@@ -20,27 +20,6 @@ var trimLine = function (line) {
   return line;
 };
 
-// Reads in a file, stripping blank lines in the end. Returns an array of lines
-// in the file, to be processed individually.
-var getLines = function (file) {
-  if (!fs.existsSync(file)) {
-    return [];
-  }
-
-  var raw = fs.readFileSync(file, 'utf8');
-  var lines = raw.split(/\r*\n\r*/);
-
-  // strip blank lines at the end
-  while (lines.length) {
-    var line = lines[lines.length - 1];
-    if (line.match(/\S/))
-      break;
-    lines.pop();
-  }
-
-  return lines;
-};
-
 // Given a set of lines, each of the form "foo@bar", return an array of form
 // [{packageName: foo, versionConstraint: bar}]. If there is bar,
 // versionConstraint is null.
@@ -120,7 +99,7 @@ _.extend(Project.prototype, {
     // Read in the contents of the .meteor/packages file.
     var appConstraintFile = self._getConstraintFile();
     self.constraints = processPerConstraintLines(
-      getLines(appConstraintFile));
+      utils.getLines(appConstraintFile));
 
     // These will be fixed by _ensureDepsUpToDate.
     self.combinedConstraints = null;
@@ -129,7 +108,7 @@ _.extend(Project.prototype, {
     // Read in the contents of the .meteor/versions file, so we can give them to
     // the constraint solver as the previous solution.
     self.dependencies = processPerConstraintLines(
-      getLines(self._getVersionsFile()));
+      utils.getLines(self._getVersionsFile()));
     // Also, make sure we have an app identifier for this app.
     self.ensureAppIdentifier();
 
@@ -379,13 +358,14 @@ _.extend(Project.prototype, {
   // to memorize the result of this, just to disincentivize accidentally using
   // this value.
   //
-  // (XXX: we should move this to release.js, and move the getLines
-  // function into utils)
+  // This refers to the release that the project is pinned to, rather than
+  // the release that we are actually running or anything like that, so it
+  // lives in the project.
   getMeteorReleaseVersion : function () {
     var self = this;
     var releasePath = self._meteorReleaseFilePath();
     try {
-      var lines = getLines(releasePath);
+      var lines = utils.getLines(releasePath);
     } catch (e) {
       return null;
     }
@@ -426,7 +406,7 @@ _.extend(Project.prototype, {
     var self = this;
 
     var appConstraintFile = self._getConstraintFile();
-    var lines = getLines(appConstraintFile);
+    var lines = utils.getLines(appConstraintFile);
     if (operation === "add") {
       _.each(names, function (name) {
         // XXX This assumes that the file hasn't been edited since we lasted
@@ -463,7 +443,7 @@ _.extend(Project.prototype, {
     // Record the packages results to disk. This is a slightly annoying
     // operation because we want to keep all the comments intact.
     var packages = self._getConstraintFile();
-    var lines = getLines(packages);
+    var lines = utils.getLines(packages);
     lines = _.reject(lines, function (line) {
       var cur = trimLine(line).split('@')[0];
       return _.indexOf(names, cur) !== -1;
@@ -574,7 +554,7 @@ _.extend(Project.prototype, {
     // derived from this one and can always be reconstructed later. We read the
     // file from disk, because we don't store the comments.
     var packages = self._getConstraintFile();
-    var lines = getLines(packages);
+    var lines = utils.getLines(packages);
     _.each(moreDeps, function (constraint) {
       if (constraint.constraint) {
         lines.push(constraint.package + '@' + constraint.constraint);
