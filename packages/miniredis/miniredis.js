@@ -256,37 +256,6 @@ _.extend(Miniredis.RedisStore.prototype, {
       return "string";
     return val.type();
   },
-  // XXX has no reactivity and probably should be removed from the api entirely
-  // implemented as an iterator similar to _.each
-  // the original docs of redis describe a different low-level semantics
-  // http://redis.io/commands/scan
-  //
-  // options:
-  //  - count - defaults to 10
-  //  - pattern - defaults to no pattern
-  // iterator:
-  //   is called with value and key as arguments
-  //   stops iteration if the return value is false
-  scan: function (options, iterator) {
-    var self = this;
-    var count = options.count;
-    if (count === undefined) count = 10;
-    var regexp = options.pattern && patternToRegexp(options.pattern);
-
-    self._kv.forEach(function (value, key) {
-      // break if we called enough times
-      if (! count)
-        return false;
-
-      if (regexp && ! key.match(regexp))
-        return;
-
-      count--;
-      var returnValue = iterator(value, key);
-      if (returnValue === false)
-        return false;
-    });
-  },
 
   // -----
   // operators on strings
