@@ -754,3 +754,11 @@ Hi there!
 <template name="spacebars_test_template_instance_helper">
   {{foo}}
 </template>
+
+<template name="spacebars_test_with_cleanup">
+  <div class="test-with-cleanup">
+    {{#with foo}}
+      {{this}}
+    {{/with}}
+  </div>
+</template>

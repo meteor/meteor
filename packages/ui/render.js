@@ -398,7 +398,7 @@ var materialize = function (node, parent, before, parentComponent) {
     // Call internal callback, which may take advantage of the current
     // Deps computation.
     if (instance.materialized)
-      instance.materialized();
+      instance.materialized(instance.dom);
 
     insert(instance.dom, parent, before);
   } else if (node instanceof HTML.CharRef) {
