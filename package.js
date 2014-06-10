@@ -5,7 +5,7 @@ Package.describe({
 Npm.depends({later: "1.1.6"});
 
 Package.on_use(function (api) {
-  api.use('underscore', 'server');
+  api.use(['underscore', 'check'], 'server');
   
   api.add_files(['synced-cron-server.js'], "server");
   
