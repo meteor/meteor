@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Migrate from SRP to bcrypt in `accounts-password`. Users will be
+  transparently upgraded when they log in.
+
 * The `findAll` method on template instances now returns a vanilla
   array, not a jQuery object. The `$` method continues to
   return a jQuery object. #2039
