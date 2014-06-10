@@ -172,5 +172,8 @@ _.extend(Blaze.Var.prototype, {
    */
   toString: function () {
     return 'Var{' + this.get() + '}';
+  },
+  stop: function () {
+    this.computation && this.computation.stop();
   }
 });
