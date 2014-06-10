@@ -27,12 +27,17 @@ Meteor.methods({
     check(pathPrefix, Match.Optional([String]));
     this.unblock();
 
-    // XXX using private API === lame
-    var path = Npm.require('path');
-    var Future = Npm.require(path.join('fibers', 'future'));
-    var future = new Future;
-
     reportsForRun[runId] = {};
+
+    var addReport = function (key, report) {
+      var fields = {};
+      fields[key] = report;
+      _.each(handlesForRun[runId], function (handle) {
+        handle.changed(Meteor._ServerTestResultsCollection, runId, fields);
+      });
+      // Save for future subscriptions.
+      reportsForRun[runId][key] = report;
+    };
 
     var onReport = function (report) {
       if (! Fiber.current) {
@@ -41,22 +46,21 @@ Meteor.methods({
         console.trace();
       }
       var dummyKey = Random.id();
-      var fields = {};
-      fields[dummyKey] = report;
-      _.each(handlesForRun[runId], function (handle) {
-        handle.changed(Meteor._ServerTestResultsCollection, runId, fields);
-      });
-      // Save for future subscriptions.
-      reportsForRun[runId][dummyKey] = report;
+      addReport(dummyKey, report);
     };
 
     var onComplete = function() {
-      future['return']();
+      if (! Fiber.current) {
+        Meteor._debug("Trying to report a test not in a fiber! "+
+                      "You probably forgot to wrap a callback in bindEnvironment.");
+        console.trace();
+      }
+      var report = { done: true };
+      var doneKey = 'done';
+      addReport(doneKey, report);
     };
 
     Tinytest._runTests(onReport, onComplete, pathPrefix);
-
-    future.wait();
   },
   'tinytest/clearResults': function (runId) {
     check(runId, String);
