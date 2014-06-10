@@ -40,5 +40,16 @@ Blaze.With = Blaze.Controller.extend({
   render: function () {
     var func = this.func;
     return func();
-  }
+  }/*,
+    XXX janky code to stop With when parent is removed;
+    think about this
+  createDOMRange: function () {
+    var self = this;
+    var range = Blaze.With.__super__.createDOMRange.call(self);
+    range.addDOMAugmenter(new Blaze.RemovalWatcher);
+    range.onstop(function () {
+      self.dataVar.computation && self.dataVar.computation.stop();
+    });
+    return range;
+  }*/
 });
