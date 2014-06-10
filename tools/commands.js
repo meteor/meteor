@@ -22,16 +22,9 @@ var packageCache = require('./package-cache.js');
 var PackageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
-var catalogs = require('./catalog.js');
+var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
-
-// Reminder: we have two catalogs. The complete catalog contains local packages,
-// and uses them to override the server data. The official catalog only knows
-// about server packages. All query operations on package server contents should
-// refer to the /official/ catalog.
-var catalog = catalogs.complete;
-var officialCatalog = catalogs.official;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -64,10 +57,10 @@ var hostedWithGalaxy = function (site) {
 var getLocalPackages = function () {
   var ret = {};
 
-  var names = catalog.getAllPackageNames();
+  var names = catalog.complete.getAllPackageNames();
   _.each(names, function (name) {
-    if (catalog.isLocalPackage(name)) {
-      ret[name] = catalog.getLatestVersion(name);
+    if (catalog.complete.isLocalPackage(name)) {
+      ret[name] = catalog.complete.getLatestVersion(name);
     }
   });
 
@@ -441,12 +434,12 @@ main.registerCommand({
   var couldNotContactServer = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  officialCatalog.refresh(true);
+  catalog.official.refresh(true);
 
   if (options.packages) {
     var versions = project.getVersions();
     var allPackages = project.getCurrentCombinedConstraints();
-    var newVersions = catalog.resolveConstraints(allPackages, {
+    var newVersions = catalog.complete.resolveConstraints(allPackages, {
       previousSolution: versions,
       breaking: !options.minor,
       upgrade: true
@@ -575,7 +568,7 @@ main.registerCommand({
       process.exit(1);
     }
     var r = appRelease.split('@');
-    var record = officialCatalog.getReleaseVersion(r[0], r[1]);
+    var record = catalog.official.getReleaseVersion(r[0], r[1]);
     var updateTo = record.patchReleaseVersion;
     if (!updateTo) {
       console.log(
@@ -587,10 +580,10 @@ main.registerCommand({
     releaseVersionsToTry = [release.current.getReleaseVersion()];
   } else {
     // XXX clean up all this splitty stuff
-    var appReleaseInfo = catalog.getReleaseVersion(
+    var appReleaseInfo = catalog.complete.getReleaseVersion(
       appRelease.split('@')[0], appRelease.split('@')[1]);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
-    releaseVersionsToTry = catalog.getSortedRecommendedReleaseVersions(
+    releaseVersionsToTry = catalog.complete.getSortedRecommendedReleaseVersions(
       releaseTrack, appOrderKey);
     if (!releaseVersionsToTry.length) {
       // XXX make error better, and make sure that the "already there" error
@@ -608,13 +601,13 @@ main.registerCommand({
   var directDependencies = project.getConstraints();
   var previousVersions = project.getVersions();
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
-    var releaseRecord = catalog.getReleaseVersion(releaseTrack, versionToTry);
+    var releaseRecord = catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
     if (!releaseRecord)
       throw Error("missing release record?");
     var constraints = project.calculateCombinedConstraints(
       directDependencies, releaseRecord.packages);
     try {
-      solutionPackageVersions = catalog.resolveConstraints(
+      solutionPackageVersions = catalog.complete.resolveConstraints(
         constraints, { previousSolution: previousVersions });
     } catch (e) {
       // XXX we should make the error handling explicitly detectable, and not
@@ -763,7 +756,7 @@ main.registerCommand({
   var failed = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  officialCatalog.refresh();
+  catalog.official.refresh();
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -785,7 +778,7 @@ main.registerCommand({
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    if (! catalog.getPackage(constraint.package)) {
+    if (! catalog.complete.getPackage(constraint.package)) {
       process.stderr.write(constraint.package + ": no such package\n");
       failed = true;
       return;
@@ -793,7 +786,7 @@ main.registerCommand({
 
     // If the version was specified, check that the version exists.
     if ( constraint.constraint !== null) {
-      var versionInfo = catalog.getVersion(
+      var versionInfo = catalog.complete.getVersion(
         constraint.package,
         constraint.constraint);
       if (! versionInfo) {
@@ -840,7 +833,7 @@ main.registerCommand({
     previousSolution: versions,
     breaking: !!options.force
   };
-  var newVersions = catalog.resolveConstraints(allPackages,
+  var newVersions = catalog.complete.resolveConstraints(allPackages,
                                                resolverOpts,
                                                { ignoreProjectDeps: true });
   if ( ! newVersions) {
@@ -914,7 +907,7 @@ main.registerCommand({
   process.stdout.write("Successfully added the following packages. \n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.package];
-    var versionRecord = catalog.getVersion(constraint.package, version);
+    var versionRecord = catalog.complete.getVersion(constraint.package, version);
     if (constraint.constraint !== null &&
         version !== constraint.constraint) {
       process.stdout.write("Added " + constraint.package + " at version " + version +
@@ -942,7 +935,7 @@ main.registerCommand({
   // server. Technically, we don't need to do this, since it is unlikely that
   // new data will change our constraint solver decisions. But as a user, I
   // would expect this command to update the local catalog.
-  officialCatalog.refresh(true);
+  catalog.official.refresh(true);
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -1009,17 +1002,17 @@ main.registerCommand({
   // are only calling 'using', this is not nessessary, but, once again, as a
   // user, I would not be surprised to see this contact the server. In the
   // future, we should move this call to sync somewhere in the background.
-  officialCatalog.refresh(true);
+  catalog.official.refresh(true);
 
   if (options.releases && options.using) {
      console.log("XXX: The contents of your release file.");
   } else if (options.releases) {
     // XXX: We probably want the recommended version rather than all of them,
     // but for now, let's just display some stuff to make sure that it worked.
-    _.each(officialCatalog.getAllReleaseTracks(), function (name) {
-      var versions = officialCatalog.getSortedRecommendedReleaseVersions(name);
+    _.each(catalog.official.getAllReleaseTracks(), function (name) {
+      var versions = catalog.official.getSortedRecommendedReleaseVersions(name);
       _.each(versions, function (version) {
-        var versionInfo = officialCatalog.getReleaseVersion(name, version);
+        var versionInfo = catalog.official.getReleaseVersion(name, version);
         if (versionInfo) {
           items.push({ name: name + " " + version, description: versionInfo.description });
         }
@@ -1039,7 +1032,7 @@ main.registerCommand({
         if (!version) {
           version = versions[name];
         }
-        var versionInfo = officialCatalog.getVersion(name, version);
+        var versionInfo = catalog.official.getVersion(name, version);
         if (!versionInfo) {
           buildmessage.error("Cannot process package list. Unknown: " + name +
                              " at version " + version + "\n");
@@ -1054,8 +1047,8 @@ main.registerCommand({
       return 1;
     }
   } else {
-    _.each(officialCatalog.getAllPackageNames(), function (name) {
-      var versionInfo = officialCatalog.getLatestVersion(name);
+    _.each(catalog.official.getAllPackageNames(), function (name) {
+      var versionInfo = catalog.official.getLatestVersion(name);
       if (versionInfo) {
         items.push({ name: name, description: versionInfo.description });
       }
@@ -1519,7 +1512,7 @@ main.registerCommand({
         // state) but it'll do for now.
         var packageDir = path.resolve(p);
         var packageName = path.basename(packageDir);
-        catalog.addLocalPackage(packageName, packageDir);
+        catalog.complete.addLocalPackage(packageName, packageDir);
         localPackageNames.push(packageName);
         return packageName;
       });
@@ -1557,7 +1550,7 @@ main.registerCommand({
   // as they work together.
   var tests = [];
   _.each(testPackages, function(name) {
-    var versionRecord = catalog.getLatestVersion(name);
+    var versionRecord = catalog.complete.getLatestVersion(name);
     if (versionRecord && versionRecord.testName) {
       tests.push(versionRecord.testName);
     }
@@ -1597,7 +1590,7 @@ main.registerCommand({
   }
 
   _.each(localPackageNames, function (name) {
-    catalog.removeLocalPackage(name);
+    catalog.complete.removeLocalPackage(name);
   });
 
   return ret;
@@ -1631,7 +1624,7 @@ main.registerCommand({
     }
 
     messages = buildmessage.capture(function () {
-      count = catalog.rebuildLocalPackages();
+      count = catalog.complete.rebuildLocalPackages();
     });
   } else {
     messages = buildmessage.capture(function () {
@@ -1643,7 +1636,7 @@ main.registerCommand({
 
       _.each(options.args, function (p) {
         // Let's remove the old unipackage directory first.
-        var packpath = catalog.getLoadPathForPackage(p, null);
+        var packpath = catalog.complete.getLoadPathForPackage(p, null);
         files.rm_recursive(path.join(packpath, ".build."+p));
         console.log(path.join(packpath, ".build."+p));
 
@@ -1718,13 +1711,13 @@ main.registerCommand({
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  officialCatalog.refresh();
+  catalog.official.refresh();
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
     throw new main.ShowUsage;
 
-  var release = officialCatalog.getReleaseVersion(parsed.package,
+  var release = catalog.official.getReleaseVersion(parsed.package,
                                                 parsed.constraint);
   if (!release) {
     // XXX this could also mean package unknown.
@@ -1735,7 +1728,7 @@ main.registerCommand({
   var toolPkg = release.tool && utils.splitConstraint(release.tool);
   if (! (toolPkg && toolPkg.constraint))
     throw new Error("bad tool in release: " + toolPkg);
-  var toolPkgBuilds = officialCatalog.getAllBuilds(
+  var toolPkgBuilds = catalog.official.getAllBuilds(
     toolPkg.package, toolPkg.constraint);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
@@ -1769,7 +1762,7 @@ main.registerCommand({
   // need for the OSes that the tool is built for.
   _.each(osArches, function (osArch) {
     _.each(release.packages, function (pkgVersion, pkgName) {
-      if (!officialCatalog.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
+      if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
         throw Error("missing build of " + pkgName + "@" + pkgVersion +
                     " for " + osArch);
       }
@@ -1781,11 +1774,11 @@ main.registerCommand({
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     // We're going to build and tar up a tropohouse in a temporary directory; we
-    // don't want to use any of our local packages, so we use officialCatalog
+    // don't want to use any of our local packages, so we use catalog.official
     // instead of catalog.
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
-      path.join(tmpdir, '.meteor0'), officialCatalog);
+      path.join(tmpdir, '.meteor0'), catalog.official);
     tmpTropo.maybeDownloadPackageForArchitectures(
       {packageName: toolPkg.package, version: toolPkg.constraint},
       [osArch]);  // XXX 'browser' too?
@@ -1868,7 +1861,7 @@ main.registerCommand({
             bannersData.banners);
 
   // Refresh afterwards.
-  officialCatalog.refresh();
+  catalog.official.refresh();
   return 0;
 });
 
@@ -1944,7 +1937,7 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  officialCatalog.refresh(true);
+  catalog.official.refresh(true);
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -2017,13 +2010,13 @@ main.registerCommand({
 }, function (options) {
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  officialCatalog.refresh(true);
+  catalog.official.refresh(true);
 
-  if (! catalog.getPackage(options.name)) {
+  if (! catalog.complete.getPackage(options.name)) {
     process.stderr.write('No package named ' + options.name);
     return 1;
   }
-  var pkgVersion = officialCatalog.getVersion(options.name, options.versionString);
+  var pkgVersion = catalog.official.getVersion(options.name, options.versionString);
   if (! pkgVersion) {
     process.stderr.write('There is no version ' +
                          options.versionString + ' for package ' +
@@ -2090,7 +2083,7 @@ main.registerCommand({
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
   process.stdout.write("Resyncing with package server. XXX Why so long? ]\n");
-  officialCatalog.refresh(true);
+  catalog.official.refresh(true);
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -2179,7 +2172,7 @@ main.registerCommand({
   // authorized to publish before we do any complicated/long operations, and
   // before we publish its packages.
   if (!options['create-track']) {
-    var trackRecord = officialCatalog.getReleaseTrack(relConf.track);
+    var trackRecord = catalog.official.getReleaseTrack(relConf.track);
     if (!trackRecord) {
       process.stderr.write('There is no release track named ' + relConf.track +
                            '. If you are creating a new track, use the --create-track flag. \n');
@@ -2306,7 +2299,7 @@ main.registerCommand({
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
                 // that the contents are the same.
-                var oldVersion = officialCatalog.getVersion
+                var oldVersion = catalog.official.getVersion
                                    (item, packageSource.version);
 
                 // Include this package in our release.
@@ -2334,7 +2327,7 @@ main.registerCommand({
                                      compileResult: compileResult};
                   return;
                 } else {
-                  var existingBuild = officialCatalog.getBuildWithArchesString(
+                  var existingBuild = catalog.official.getBuildWithArchesString(
                     oldVersion,
                     compileResult.unipackage.architecturesString());
 
@@ -2389,7 +2382,7 @@ main.registerCommand({
   _.each(toPublish,
    function(prebuilt, name) {
      var opts = {
-       new: !officialCatalog.getPackage(name)
+       new: !catalog.official.getPackage(name)
      };
      process.stdout.write("Publishing package: " + name + "\n");
 
@@ -2444,7 +2437,7 @@ main.registerCommand({
   }
 
   // Get it back.
-  officialCatalog.refresh();
+  catalog.official.refresh();
 
   process.stdout.write("Done! \n");
   return 0;
