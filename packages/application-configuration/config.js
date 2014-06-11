@@ -73,6 +73,9 @@ try {
         'mongo-livedata': {
           url: process.env.MONGO_URL,
           oplog: process.env.MONGO_OPLOG_URL
+        },
+        'redis-livedata': {
+          url: process.env.REDIS_URL
         }
       }
     };
