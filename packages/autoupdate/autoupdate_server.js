@@ -44,7 +44,6 @@ Autoupdate = {};
 
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
-var oldVersionRefreshable = null;
 
 Meteor.startup(function () {
   // Allow people to override Autoupdate.autoupdateVersion before
@@ -54,7 +53,6 @@ Meteor.startup(function () {
       process.env.AUTOUPDATE_VERSION ||
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHashNonRefreshable;
-
 
   if (Autoupdate.autoupdateVersionRefreshable === null)
     Autoupdate.autoupdateVersionRefreshable =
@@ -74,7 +72,6 @@ Meteor.publish(
   function () {
     var self = this;
     var shouldCallReady = false;
-
     // Using `autoupdateVersion` here is safe because we can't get a
     // subscription before webapp starts listening, and it doesn't do
     // that until the startup hooks have run.

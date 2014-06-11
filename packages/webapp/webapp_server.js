@@ -182,9 +182,9 @@ var appUrl = function (url) {
 var calculateClientHash = function (programName) {
   var hash = crypto.createHash('sha1');
   hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
-
   var program = WebApp.clientPrograms[programName];
-  // XXX error message if program is not found
+  if (! program)
+    throw new Error('Program ' + programName ' not found.');
 
   _.each(program.manifest, function (resource) {
     if (resource.where === 'client' || resource.where === 'internal') {
@@ -214,8 +214,8 @@ var calculateClientHash = function (programName) {
 // the right moment.
 
 Meteor.startup(function () {
-  WebApp.clientHashRefreshable = calculateClientHash("refreshable");
-  WebApp.clientHashNonRefreshable = calculateClientHash("nonRefreshable");
+  WebApp.clientHashRefreshable = calculateClientHash('refreshable');
+  WebApp.clientHashNonRefreshable = calculateClientHash('nonRefreshable');
 });
 
 
@@ -286,9 +286,14 @@ var runWebAppServer = function () {
   };
 
   var staticFiles = {};
+
+  // A map of names to client programs. A client program consists of:
+  // - clientDir: the relative directory from the server
+  //              where the program is located,
+  // - manifest: a list of items in the client program
   var clientPrograms = {};
 
-  // read the control for the client we'll be serving up
+  // read the control files for the client we'll be serving up
   _.each(__meteor_bootstrap__.configJson.clientInfo, function (clientInfo, name) {
     var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                    clientInfo.path);
@@ -327,6 +332,7 @@ var runWebAppServer = function () {
 
   // Exported for tests.
   WebAppInternals.staticFiles = staticFiles;
+
 
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
@@ -583,7 +589,6 @@ var runWebAppServer = function () {
     httpServer: httpServer,
     // metadata about the client program that we serve
     clientPrograms: clientPrograms,
-
     // For testing.
     suppressConnectErrors: function () {
       suppressConnectErrors = true;
@@ -644,7 +649,6 @@ var runWebAppServer = function () {
       });
     });
 
-
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = Spacebars.compile(
       boilerplateTemplateSource, { isBody: true });
@@ -658,7 +662,9 @@ var runWebAppServer = function () {
       render: boilerplateRender
     });
 
-    // XXX document
+    // Export the 'refreshableAssets' of the build. Refreshable assets are
+    // assets which can be loaded on the client without requiring a full
+    // page refresh or server restart.
     WebApp.refreshableAssets = { css: boilerplateBaseData.css };
 
     // only start listening after all the startup code has run.

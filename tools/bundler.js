@@ -105,9 +105,11 @@
 //
 // /config.json:
 //
-//  - client: the client program that should be served up by HTTP,
-//    expressed as a path (relative to program.json) to the *client's*
-//    program.json. XXX update
+//  - clients: the client programs that should be served up by HTTP,
+//    expressed as a map from client program name to info about the client.
+//    The info on each client consists of:
+//    - path: path (relative to program.json) to the *client's*
+//            program.json.
 //
 //  - meteorRelease: the value to use for Meteor.release, if any
 //
@@ -768,10 +770,8 @@ var BaseClientTarget = function (options) {
 
   if (! archinfo.matches(self.arch, "browser"))
     throw new Error("BaseClientTarget targeting something that isn't a browser?");
-
-  if (!this.getResourceExtensions)
-      throw new Error("Missing methods in subclass of 'BaseClassHandler'");
-
+  if (! this.getResourceExtensions)
+      throw new Error("Missing methods in subclass of 'BaseClientTarget'");
 };
 
 inherits(BaseClientTarget, Target);
@@ -1382,7 +1382,7 @@ _.extend(ServerTarget.prototype, {
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
-    // Map form client name to info about the client
+    // Map from client target name to info:
     // - path: path to client directory
     var clientTargetInfo = {};
 
@@ -1690,6 +1690,7 @@ exports.bundle = function (options) {
     var targets = {};
     var controlProgram = null;
 
+    // Returns a map of target names to client targets.
     var makeClientTargets = function (options) {
       var refreshableClient = new RefreshableClientTarget({
         packageLoader: packageLoader,

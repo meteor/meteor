@@ -111,7 +111,6 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   manifest += "CACHE:" + "\n";
   manifest += "/" + "\n";
-
   _.each(WebApp.clientPrograms["nonRefreshable"].manifest, function (resource) {
     if (resource.where === 'client' && ! RoutePolicy.classify(resource.url)) {
       manifest += resource.url;
@@ -128,7 +127,6 @@ WebApp.connectHandlers.use(function(req, res, next) {
       manifest += "\n";
     }
   });
-
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
@@ -142,12 +140,14 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
   _.each(WebApp.clientPrograms["nonRefreshable"].manifest, function (resource) {
-    if (resource.where === 'client' && ! RoutePolicy.classify(resource.url) &&
+    if (resource.where === 'client' &&
+        ! RoutePolicy.classify(resource.url) &&
         ! resource.cacheable) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
     }
   });
+
   manifest += "\n";
 
   manifest += "NETWORK:\n";

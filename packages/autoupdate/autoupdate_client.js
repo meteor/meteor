@@ -31,6 +31,7 @@ var autoupdateVersionRefreshable =
 // The collection of acceptable client versions.
 var ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
 
+
 Autoupdate = {};
 
 Autoupdate.newClientAvailable = function () {
