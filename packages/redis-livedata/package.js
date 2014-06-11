@@ -57,7 +57,7 @@ Package.on_use(function (api) {
                 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');
-  api.add_files('collection.js', ['client', 'server']);
+  api.add_files('redis_collection.js', ['client', 'server']);
 });
 
 Package.on_test(function (api) {
@@ -69,7 +69,7 @@ Package.on_test(function (api) {
   // fails if it is run before redis_livedata_tests.
   api.add_files('redis_livedata_tests.js', ['client', 'server']);
   api.add_files('allow_tests.js', ['client', 'server']);
-  api.add_files('collection_tests.js', ['client', 'server']);
+  api.add_files('redis_collection_tests.js', ['client', 'server']);
   api.add_files('observe_changes_tests.js', ['client', 'server']);
   api.add_files('oplog_tests.js', 'server');
   api.add_files('doc_fetcher_tests.js', 'server');
