@@ -664,6 +664,34 @@ Hi there!
   <a href="#bad-url" id="spacebars_test_event_returns_false_link">click me</a>
 </template>
 
+<template name="spacebars_test_event_selectors1">
+  <div>{{> spacebars_test_event_selectors2}}</div>
+</template>
+
+<template name="spacebars_test_event_selectors2">
+  <p class="p1">Not it</p>
+  <div><p class="p2">It</p></div>
+</template>
+
+<template name="spacebars_test_event_selectors_capturing1">
+  <div>{{> spacebars_test_event_selectors_capturing2}}</div>
+</template>
+
+<template name="spacebars_test_event_selectors_capturing2">
+  <video class='video1'>
+    <source id='mp4'
+      src="http://media.w3.org/2010/05/sintel/trailer.mp4"
+      type='video/mp4'>
+  </video>
+  <div>
+    <video class='video2'>
+      <source id='mp4'
+        src="http://media.w3.org/2010/05/sintel/trailer.mp4"
+        type='video/mp4'>
+    </video>
+  </div>
+</template>
+
 <template name="spacebars_test_tables1">
   <table><tr><td>Foo</td></tr></table>
 </template>
@@ -725,4 +753,40 @@ Hi there!
   <form action="{{foo}}"></form>
   <img src="{{foo}}" />
   <input value="{{foo}}" />
+</template>
+
+<template name="spacebars_test_event_handler_cleanup">
+  {{#if foo}}
+    {{>spacebars_test_event_handler_cleanup_sub}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_event_handler_cleanup_sub">
+  <div></div>
+</template>
+
+<template name="spacebars_test_each_with_autorun_insert">
+  {{#each items}}
+    {{name}}
+  {{/each}}
+</template>
+
+<template name="spacebars_test_ui_hooks">
+  <div class="test-ui-hooks">
+    {{#each items}}
+      <div class="item">{{_id}}</div>
+    {{/each}}
+  </div>
+</template>
+
+<template name="spacebars_test_template_instance_helper">
+  {{foo}}
+</template>
+
+<template name="spacebars_test_with_cleanup">
+  <div class="test-with-cleanup">
+    {{#with foo}}
+      {{this}}
+    {{/with}}
+  </div>
 </template>
