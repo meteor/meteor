@@ -967,12 +967,17 @@ main.registerCommand({
     // Let's update packages to the latest version. That's easy.
     var versions = project.getVersions();
     var allPackages = project.getCurrentCombinedConstraints();
-
-    // XXX: Updating individual packages and the constraint solver
+    var upgradePackages;
+    if (options.args.length === 0) {
+      upgradePackages = allPackages;
+    } else {
+      upgradePackages = options.args;
+    }
+    console.log( _.pluck(upgradePackages, 'packageName'));
     var newVersions = catalog.complete.resolveConstraints(allPackages, {
       previousSolution: versions,
       breaking: !options.minor,
-      upgrade: true
+      upgrade: _.pluck(upgradePackages, 'packageName')
     });
     project.setVersions(newVersions);
     process.exit(0);
