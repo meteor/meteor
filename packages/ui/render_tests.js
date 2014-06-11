@@ -271,18 +271,18 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
   // Test styles.
   (function () {
     // Test the case where there is a semicolon in the css attribute.
-    var R = ReactiveVar({'style': 'foo:"a;aa"; bar: b;',
+    var R = ReactiveVar({'style': 'foo: "a;aa"; bar: b;',
       id: 'foo'});
 
     var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
 
-    test.equal(toHTML(spanCode), '<span style="foo:&quot;a;aa&quot;; bar: b;" id="foo"></span>');
+    test.equal(toHTML(spanCode), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
     materialize(spanCode, div);
-    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo:&quot;a;aa&quot;; bar: b;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b;"></span>');
 
     test.equal(R.numListeners(), 1);
 
@@ -292,7 +292,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     R.set({'style': 'foo:"a;zz;aa"', id: 'bar'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML, true), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
     test.equal(R.numListeners(), 1);
 
     R.set({});
