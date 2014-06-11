@@ -108,8 +108,8 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 //  - version - string constraint (ex.: "1.2.3", ">=2.3.4", "=3.3.3")
 // options:
 //  - breaking - set this flag to true if breaking upgrades are allowed
-//  - upgrade - set this flag to true if upgrading direct dependencies is more
-//  prioritized than keeping old versions the same
+//  - upgrade - list of dependencies for which upgrade is prioritized higher
+//  than keeping the old version
 //  - previousSolution - mapping from package name to a version that was used in
 //  the previous constraint solver run
 ConstraintSolver.PackagesResolver.prototype.resolve =
@@ -119,7 +119,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   options = _.defaults(options || {}, {
     _testing: false,
     breaking: false,
-    upgrade: false
+    upgrade: []
   });
 
   check(dependencies, [String]);
@@ -127,20 +127,28 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   check(options, {
     _testing: Match.Optional(Boolean),
     breaking: Match.Optional(Boolean),
-    upgrade: Match.Optional(Boolean),
+    upgrade: [String],
     previousSolution: Match.Optional(Object)
   });
 
+  // XXX glasser and ekate added this filter to strip some undefineds that
+  // were causing crashes, but maybe the real answer is that there shouldn't
+  // have been undefineds?
   if (options.previousSolution) {
-    // XXX glasser and ekate added this filter to strip some undefineds that
-    // were causing crashes, but maybe the real answer is that there shouldn't
-    // have been undefineds?
     options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
       return _.map(self._buildsForPackage(packageName), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     })), _.identity);
   }
+
+  // split every package name to one or more archs belonging to that package
+  // (["foobar"] => ["foobar#os", "foobar#browser"])
+  options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (version, packageName) {
+    return _.map(self._buildsForPackage(packageName), function (unitName) {
+      return self.resolver._unitsVersionsMap[unitName + "@" + version];
+    });
+  })), _.identity);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
@@ -286,8 +294,10 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
     // if the upgrade is preferred over preserving previous solution, pretend
     // there are no previous solution
-    if (! options.upgrade)
-      _.each(prevSol, function (uv) { prevSolMapping[uv.name] = uv; });
+    _.each(prevSol, function (uv) {
+      if (! _.contains(options.upgrade, uv.name))
+        prevSolMapping[uv.name] = uv;
+    });
 
     resolverOptions.costFunction = function (state, options) {
       options = options || {};
