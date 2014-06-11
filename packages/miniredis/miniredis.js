@@ -21,7 +21,7 @@ Miniredis.Cursor = function (redisStore, pattern) {
 var insPos = function (arr, x) {
   var l = 0, r = arr.length - 1;
   while (l <= r) {
-    var m = (l + r) / 2;
+    var m = (l + r) >> 1;
     if (arr[m] <= x)
       l = m + 1;
     else
