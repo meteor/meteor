@@ -54,15 +54,18 @@ Meteor.startup(function () {
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHashNonRefreshable;
 
-  // Make autoupdateVersion available on the client.
-  __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
 
   if (Autoupdate.autoupdateVersionRefreshable === null)
     Autoupdate.autoupdateVersionRefreshable =
       process.env.AUTOUPDATE_VERSION ||
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHashRefreshable;
+  console.log("refreshable hash: " + WebApp.clientHashRefreshable);
 
+  // Make autoupdateVersion available on the client.
+  __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
+  __meteor_runtime_config__.autoupdateVersionRefreshable =
+    Autoupdate.autoupdateVersionRefreshable;
 });
 
 
@@ -70,10 +73,12 @@ Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function () {
     var self = this;
+    console.log("Updating");
     // Using `autoupdateVersion` here is safe because we can't get a
     // subscription before webapp starts listening, and it doesn't do
     // that until the startup hooks have run.
     if (Autoupdate.autoupdateVersion) {
+      console.log("updating non refreshable");
       self.added(
         "meteor_autoupdate_clientVersions",
         Autoupdate.autoupdateVersion,
@@ -86,9 +91,10 @@ Meteor.publish(
     }
 
     if (Autoupdate.autoupdateVersionRefreshable) {
+      console.log("updating refreshable");
       self.added(
         "meteor_autoupdate_clientVersions",
-        Autoupdate.autoupdateVersion,
+        Autoupdate.autoupdateVersionRefreshable,
         {refreshable: true, current: true}
       );
       self.ready();

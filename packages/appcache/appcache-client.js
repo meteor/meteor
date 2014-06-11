@@ -56,6 +56,7 @@ window.applicationCache.addEventListener('noupdate', cacheIsNowUpToDate, false);
 // Reload to get the new non-cached code.
 
 window.applicationCache.addEventListener('obsolete', (function() {
+  console.log("OBSOLETE - RELOADING!");
   if (reloadRetry) {
     cacheIsNowUpToDate();
   } else {

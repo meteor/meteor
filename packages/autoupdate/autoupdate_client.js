@@ -25,6 +25,8 @@
 // The client version of the client code currently running in the
 // browser.
 var autoupdateVersion = __meteor_runtime_config__.autoupdateVersion || "unknown";
+var autoupdateVersionRefreshable =
+  __meteor_runtime_config__.autoupdateVersionRefreshable || "unknown";
 
 // The collection of acceptable client versions.
 var ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
@@ -83,7 +85,7 @@ Autoupdate._retrySubscription = function () {
             Package.reload.Reload._reload();
           } else if (ClientVersions.findOne({ refreshable: true,
                                               current: true }) &&
-              (! ClientVersions.findOne({_id: autoupdateVersion}))) {
+              (! ClientVersions.findOne({_id: autoupdateVersionRefreshable}))) {
             console.log("refreshable asset loaded!");
           }
         });

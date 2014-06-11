@@ -305,7 +305,7 @@ var runWebAppServer = function () {
       if (item.url && item.where === "client") {
         staticFiles[getItemPathname(item.url)] = {
           path: item.path,
-          clientDir: clientDir,
+          fullPath: path.join(clientDir, item.path),
           cacheable: item.cacheable,
           // Link from source to its map
           sourceMapUrl: item.sourceMapUrl,
@@ -317,6 +317,7 @@ var runWebAppServer = function () {
           // source maps are cacheable.
           staticFiles[getItemPathname(item.sourceMapUrl)] = {
             path: item.sourceMap,
+            fullPath: path.join(clientDir, item.sourceMap),
             cacheable: true
           };
         }
@@ -425,7 +426,7 @@ var runWebAppServer = function () {
       res.setHeader("Content-Type", "text/css; charset=UTF-8");
     }
 
-    send(req, path.join(info.clientDir, info.path))
+    send(req, info.fullPath)
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
       .on('error', function (err) {
@@ -434,8 +435,7 @@ var runWebAppServer = function () {
         res.end();
       })
       .on('directory', function () {
-        Log.error("Unexpected directory " + path.join(info.clientDir,
-                                                      info.path));
+        Log.error("Unexpected directory " + info.fullPath);
         res.writeHead(500);
         res.end();
       })
