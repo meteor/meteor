@@ -347,7 +347,7 @@ var createNodeVersion = function (newPackageNpmDir) {
 meteorNpm._execFileSync = function (file, args, opts) {
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
     process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' +
-                         args.join(' ') + ' ... ');
+                         args.join(' ') + ' ...\n');
 
   var future = new Future;
 

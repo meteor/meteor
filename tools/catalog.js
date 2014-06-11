@@ -198,12 +198,7 @@ _.extend(CompleteCatalog.prototype, {
 
     // Finally, initialize the constraint solver for this catalog. We have to do
     // this at the end, after we have loaded enough stuff to load packages.
-    var uniload = require('./uniload.js');
-    var constraintSolverPackage =  uniload.load({
-      packages: [ 'constraint-solver']
-    })['constraint-solver'];
-    self.resolver =
-      new constraintSolverPackage.ConstraintSolver.PackagesResolver(self);
+    self._initializeResolver();
   },
 
   // Given a set of constraints, returns a det of dependencies that satisfy the
@@ -310,11 +305,26 @@ _.extend(CompleteCatalog.prototype, {
     self.reset();
     var localData = packageClient.loadCachedServerData();
     self._insertServerPackages(localData);
+    self._recomputeEffectiveLocalPackages();
     self._addLocalPackageOverrides();
 
     self.initialized = true;
+
+    // Rebuild the resolver, since packages may have changed.
+    self._initializeResolver();
   },
-    // Compute self.effectiveLocalPackages from self.localPackageDirs
+
+  _initializeResolver: function () {
+    var self = this;
+    var uniload = require('./uniload.js');
+    var constraintSolverPackage =  uniload.load({
+      packages: [ 'constraint-solver']
+    })['constraint-solver'];
+    self.resolver =
+      new constraintSolverPackage.ConstraintSolver.PackagesResolver(self);
+  },
+
+  // Compute self.effectiveLocalPackages from self.localPackageDirs
   // and self.localPackages.
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
