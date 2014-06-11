@@ -67,8 +67,6 @@ WebApp.connectHandlers.use(function(req, res, next) {
     return next();
   }
 
-  console.log("calculate cache");
-
   // Browsers will get confused if we unconditionally serve the
   // manifest and then disable the app cache for that browser.  If
   // the app cache had previously been enabled for a browser, it
@@ -107,15 +105,6 @@ WebApp.connectHandlers.use(function(req, res, next) {
     var version = Package.autoupdate.Autoupdate.autoupdateVersion;
     if (version !== WebApp.clientHashNonRefreshable)
       manifest += "# " + version + "\n";
-
-    if (Autoupdate.autoupdateVersionRefreshable) {
-      console.log("updating refreshable in appcache");
-      Meteor.publish(
-        "meteor_autoupdate_clientVersions", {refreshable: true, current: true});
-    } else {
-      // huh? shouldn't happen. Just error the sub.
-      self.error(new Meteor.Error(500, "Autoupdate.autoupdateVersionRefreshable not set"));
-    }
   }
 
   manifest += "\n";
@@ -124,8 +113,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   manifest += "/" + "\n";
 
   _.each(WebApp.clientPrograms["nonRefreshable"].manifest, function (resource) {
-    if (resource.where === 'client' &&
-      ! RoutePolicy.classify(resource.url)) {
+    if (resource.where === 'client' && ! RoutePolicy.classify(resource.url)) {
       manifest += resource.url;
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
@@ -154,15 +142,12 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
   _.each(WebApp.clientPrograms["nonRefreshable"].manifest, function (resource) {
-
-    if (resource.where === 'client' &&
-      ! RoutePolicy.classify(resource.url) &&
-      !resource.cacheable) {
+    if (resource.where === 'client' && ! RoutePolicy.classify(resource.url) &&
+        ! resource.cacheable) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
     }
   });
-
   manifest += "\n";
 
   manifest += "NETWORK:\n";

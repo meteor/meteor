@@ -54,7 +54,6 @@ Autoupdate.newRefreshableClientAvailable = function () {
 };
 
 
-
 var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
   // in normal operation, this is a wacky failure. We don't want to retry

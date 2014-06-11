@@ -449,7 +449,7 @@ _.extend(Target.prototype, {
     self._emitResources();
 
     // Preprocess and concatenate CSS files for client targets.
-    if (self.minifyCss)
+    if (self.mergeCss)
       self.mergeCss();
 
     // Minify, if requested
@@ -460,7 +460,7 @@ _.extend(Target.prototype, {
       self.minifyJs(minifiers);
 
       // CSS is minified only for client targets.
-      if (self instanceof RefreshableClientTarget) {
+      if (self.minifyCss) {
         self.minifyCss(minifiers);
       }
     }
