@@ -144,10 +144,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 
   // split every package name to one or more archs belonging to that package
   // (["foobar"] => ["foobar#os", "foobar#browser"])
-  options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (version, packageName) {
-    return _.map(self._buildsForPackage(packageName), function (unitName) {
-      return self.resolver._unitsVersionsMap[unitName + "@" + version];
-    });
+  // XXX for now just put #os and #browser
+  options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (packageName) {
+    return [packageName + "#os", packageName + "#browser"];
   })), _.identity);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
