@@ -259,8 +259,39 @@ main.registerCommand({
   options: {
     list: { type: Boolean },
     example: { type: String },
+    package: { type: Boolean }
   }
 }, function (options) {
+
+  // Creating a package is much easier than creating an app, so if that's what
+  // we are doing, do that first. (For example, we don't springboard to the
+  // latest release to create a package if we are inside an app)
+  if (options.package) {
+    var packageName = options.args[0];
+
+    // Cannot create a package from example yet!
+    if (options.example) {
+      process.stderr.write("Cannot create a package from example. \n\n");
+      throw new main.ShowUsage;
+    }
+    // No package examples exist yet.
+    if (options.list) {
+      process.stderr.write("No package examples exist at this time. \n\n");
+      throw new main.ShowUsage;
+    }
+
+    if (fs.existsSync(packageName)) {
+      process.stderr.write(appPath + ": Already exists\n");
+      return 1;
+    }
+
+    // XXX: Make this cooler.
+    files.cp_r(path.join(__dirname, 'skel-pack'), packageName);
+
+    process.stderr.write(packageName + ": created \n");
+    return 0;
+  }
+
   // Suppose you have an app A, and from some directory inside that
   // app, you run 'meteor create /my/new/app'. The new app should use
   // the latest available Meteor release, not the release that A
@@ -355,279 +386,6 @@ main.registerCommand({
     "To run your new app:\n" +
       "   cd " + appPath + "\n" +
       "   meteor\n");
-});
-
-// For now, this literally drops a package into a directory.
-main.registerCommand({
-  name: 'create-package',
-  hidden: true,
-  maxArgs: 1
-}, function (options) {
-
-  var appPath;
-  if (options.args.length === 1)
-    appPath = options.args[0];
-  else if (options.example)
-    appPath = options.example;
-  else
-    throw new main.ShowUsage;
-
-  if (fs.existsSync(appPath)) {
-    process.stderr.write(appPath + ": Already exists\n");
-    return 1;
-  }
-
-  files.cp_r(path.join(__dirname, 'skel-pack'), appPath);
-
-  process.stderr.write(appPath + ": created");
-  process.stderr.write(".\n\n");
-  return 0;
-
-});
-
-
-///////////////////////////////////////////////////////////////////////////////
-// update
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'update',
-  options: {
-    patch: { type: Boolean, required: false },
-    packages: { type: Boolean, required: false },
-    minor: { type: Boolean, required: false }
-  },
-  // We have to be able to work without a release, since 'meteor
-  // update' is how you fix apps that don't have a release.
-  requiresRelease: false
-}, function (options) {
-  // XXX clean this up if we don't end up using it, but we probably should be
-  // using it on the refresh call
-  var couldNotContactServer = false;
-
-  // Refresh the catalog, cacheing the remote package data on the server.
-  catalog.official.refresh(true);
-
-  if (options.packages) {
-    var versions = project.getVersions();
-    var allPackages = project.getCurrentCombinedConstraints();
-    var newVersions = catalog.complete.resolveConstraints(allPackages, {
-      previousSolution: versions,
-      breaking: !options.minor,
-      upgrade: true
-    });
-    project.setVersions(newVersions);
-    process.exit(0);
-  }
-
-  // refuse to update if we're in a git checkout.
-  if (! files.usesWarehouse()) {
-    process.stderr.write(
-      "update: can only be run from official releases, not from checkouts\n");
-    return 1;
-  }
-
-  // This is the release track we'll end up on --- either because it's
-  // the explicitly specified (with --release) track; or because we
-  // didn't specify a release and it's the app's current release (if we're
-  // in an app dir), since non-forced updates don't change the track.
-  // XXX better error checking on release.current.name
-  // XXX add a method to release.current
-  var releaseTrack = release.current.getReleaseTrack();
-
-  // Unless --release was passed (in which case we ought to already have
-  // springboarded to that release), go get the latest release and switch to
-  // it. (We already know what the latest release is because we refreshed the
-  // catalog above.)  Note that after springboarding, we will hit this again
-  // (because springboarding to a specific release does NOT set release.forced),
-  // but it should be a no-op next time (unless there actually was a new latest
-  // release in the interim).
-  if (! release.forced) {
-    var latestRelease = release.latestDownloaded(releaseTrack);
-    // Are we on some track without ANY recommended releases at all,
-    // and the user ran 'meteor update' without specifying a release? We
-    // really can't do much here.
-    if (!latestRelease) {
-      // XXX is there a command to get to the latest METEOR-CORE@? Should we
-      // recommend it here?
-      process.stderr.write(
-        "There are no recommended releases on release track " +
-          releaseTrack + ".\n");
-      return 1;
-    }
-    if (! release.current || release.current.name !== latestRelease) {
-      // The user asked for the latest release (well, they "asked for it" by not
-      // passing --release). We're not currently running the latest release on
-      // this track (we may have even just learned about it). #UpdateSpringboard
-      throw new main.SpringboardToLatestRelease(releaseTrack);
-    }
-  }
-
-  // At this point we should have a release. (If we didn't to start
-  // with, #UpdateSpringboard fixed that.) And it can't be a checkout,
-  // because we checked for that at the very beginning.
-  if (! release.current || ! release.current.isProperRelease())
-    throw new Error("don't have a proper release?");
-
-  // If we're not in an app, then we're done (other than maybe printing some
-  // stuff).
-  if (! options.appDir) {
-    if (release.forced || process.env.METEOR_SPRINGBOARD_RELEASE) {
-      // We get here if:
-      // 1) the user ran 'meteor update' and we found a new version
-      // 2) the user ran 'meteor update --release xyz' (regardless of
-      //    whether we found a new release)
-      //
-      // In case (1), we downloaded and installed the update and then
-      // we springboarded (at #UpdateSpringboard above), causing
-      // $METEOR_SPRINGBOARD_RELEASE to be true.
-      // XXX probably should have a better interface than looking directly
-      //     at the env var here
-      //
-      // In case (2), we downloaded, installed, and springboarded to
-      // the requested release in the initialization code, before the
-      // command even ran. They could equivalently have run 'meteor
-      // help --release xyz'.
-      console.log(
-"Installed. Run 'meteor update' inside of a particular project\n" +
-"directory to update that project to Meteor %s.", release.current.name);
-    } else {
-      // We get here if the user ran 'meteor update' and we didn't
-      // find a new version.
-
-      if (couldNotContactServer) {
-        // We already printed an error message about our inability to
-        // ask the server if we're up to date.
-      } else {
-        console.log(
-"The latest version of Meteor, %s, is already installed on this\n" +
-"computer. Run 'meteor update' inside of a particular project\n" +
-"directory to update that project to Meteor %s.",
-          release.current.name, release.current.name);
-      }
-    }
-    return;
-  }
-
-  // Otherwise, we have to upgrade the app too, if the release changed.
- var appRelease = project.getMeteorReleaseVersion();
-  if (appRelease !== null && appRelease === release.current.name) {
-    var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
-    var maybeOnThisComputer =
-          couldNotContactServer ? "\ninstalled on this computer" : "";
-    console.log(
-"This project is already at Meteor %s%s%s.",
-      appRelease, maybeTheLatestRelease, maybeOnThisComputer);
-    return;
-  }
-
-  // XXX: also while we are at it, we should consider disallowing both
-  // options.patch and release.forced. Otherwise, the behavior is... what I had
-  // to use to test this, actually ( update --patch --release
-  // ekate-meteor@5.0.13 updated me to ekate-meteor@5.0.13.1) but that's way too
-  // confusing to make sense.
-
-
-  // XXX did we have to change some package versions? we should probably
-  //     mention that fact.
-  // XXX error handling.
-  var releaseVersionsToTry;
-  if (options.patch) {
-    // XXX: something something something current release
-    if (appRelease == null) {
-      console.log(
-        "Cannot patch update unless a release is set.");
-      process.exit(1);
-    }
-    var r = appRelease.split('@');
-    var record = catalog.official.getReleaseVersion(r[0], r[1]);
-    var updateTo = record.patchReleaseVersion;
-    if (!updateTo) {
-      console.log(
-        "You are at the latest patch version.");
-      process.exit(1);
-    }
-    releaseVersionsToTry = [updateTo];
-  } else if (release.forced) {
-    releaseVersionsToTry = [release.current.getReleaseVersion()];
-  } else {
-    // XXX clean up all this splitty stuff
-    var appReleaseInfo = catalog.official.getReleaseVersion(
-      appRelease.split('@')[0], appRelease.split('@')[1]);
-    var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
-    releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      releaseTrack, appOrderKey);
-    if (!releaseVersionsToTry.length) {
-      // XXX make error better, and make sure that the "already there" error
-      // above truly does cover every other case
-      var maybeOnThisComputer =
-            couldNotContactServer ? "\ninstalled on this computer" : "";
-      console.log(
-"This project is already at Meteor %s, which is newer than the latest release%s.",
-        appRelease, maybeOnThisComputer);
-      return;
-    }
-  }
-
-  var solutionPackageVersions = null;
-  var directDependencies = project.getConstraints();
-  var previousVersions = project.getVersions();
-  var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
-    var releaseRecord = catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
-    if (!releaseRecord)
-      throw Error("missing release record?");
-    var constraints = project.calculateCombinedConstraints(
-      directDependencies, releaseRecord.packages);
-    try {
-      solutionPackageVersions = catalog.complete.resolveConstraints(
-        constraints, { previousSolution: previousVersions });
-    } catch (e) {
-      // XXX we should make the error handling explicitly detectable, and not
-      // actually mention failures that are recoverable
-      process.stderr.write(
-        "XXX Update to release " + releaseTrack +
-          "@" + versionToTry + " impossible: " + e.message + "\n");
-      return false;
-    }
-    return true;
-  });
-
-  if (!solutionReleaseVersion) {
-    // XXX put an error here when we stop doing an error on every failure above
-    return 1;
-  }
-
-  var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
-
-  // We could at this point springboard to solutionRelease (which is no newer
-  // than the release we are currently running), but there's no clear advantage
-  // to this yet. The main reason might be if we decide to delete some
-  // backward-compatibility code which knows how to deal with an older release,
-  // but if we actually do that, we can change this code to add the extra
-  // springboard at that time.
-
-  var upgraders = require('./upgraders.js');
-  var upgradersToRun = upgraders.upgradersToRun();
-
-  // XXX did we have to change some package versions? we should probably
-  //     mention that fact.
-
-  // Write the new versions to .meteor/packages and .meteor/versions.
-  project.setVersions(solutionPackageVersions);
-
-  // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(solutionReleaseName);
-
-  console.log("%s: updated to Meteor %s.",
-              path.basename(options.appDir), solutionReleaseName);
-
-  // Now run the upgraders.
-  // XXX should we also run upgraders on other random commands, in case there
-  // was a crash after changing .meteor/release but before running them?
-  _.each(upgradersToRun, function (upgrader) {
-    upgraders.runUpgrader(upgrader);
-    project.appendFinishedUpgrader(upgrader);
-  });
 });
 
 ///////////////////////////////////////////////////////////////////////////////
