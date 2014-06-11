@@ -292,7 +292,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     R.set({'style': 'foo:"a;zz;aa"', id: 'bar'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML, true), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
     test.equal(R.numListeners(), 1);
 
     R.set({});
