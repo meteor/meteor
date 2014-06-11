@@ -1,5 +1,8 @@
 Package.describe({
+  name: "sha",
+  test: "sha-test",
   summary: "SHA256 implementation",
+  version: "1.0.0",
   internal: true
 });
 
