@@ -82,7 +82,7 @@ Template.lists.loading = function () {
 };
 
 Template.lists.lists = function () {
-  return Lists.find({}, {sort: {name: 1}});
+  return Lists.find({}, {sort: {name: 1}}); // Find all list items and sort by name
 };
 
 Template.lists.events({
@@ -110,7 +110,7 @@ Template.lists.events(okCancelEvents(
       evt.target.value = "";
     }
   }));
-
+// Attach events to keydown, keyup, and blur on the "List Name" input box.
 Template.lists.events(okCancelEvents(
   '#list-name-input',
   {
