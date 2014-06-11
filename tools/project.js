@@ -469,9 +469,10 @@ _.extend(Project.prototype, {
   // writes out the new versions file.
   setVersions: function (newVersions) {
     var self = this;
-    self._ensurePackagesExistOnDisk(newVersions);
+    var downloaded = self._ensurePackagesExistOnDisk(newVersions);
     self.dependencies = newVersions;
     self._recordVersions();
+    return downloaded;
   },
 
   // Recalculates the project dependencies if needed and records them to disk.

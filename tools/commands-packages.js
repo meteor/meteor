@@ -55,6 +55,72 @@ var formatList = function (items) {
 };
 
 
+var showPackageChanges = function (versions, newVersions, options) {
+  // options.skipPackages
+  // options.ondiskPackages
+
+  // Don't tell the user what all the operations were until we finish -- we
+  // don't want to give a false sense of completeness until everything is
+  // written to disk.
+  var messageLog = [];
+  var failed = false;
+
+  // Remove the versions that don't exist
+  var removed = _.difference(_.keys(versions), _.keys(newVersions));
+  _.each(removed, function(packageName) {
+    messageLog.push("removed dependency on " + packageName);
+  });
+
+  _.each(newVersions, function(version, packageName) {
+    if (failed)
+      return;
+
+    if (_.has(versions, packageName) &&
+         versions[packageName] === version) {
+      // Nothing changed. Skip this.
+      return;
+    }
+
+    if (options.onDiskPackages &&
+        (! options.onDiskPackages[packageName] ||
+          options.onDiskPackages[packageName] !== version)) {
+      // XXX maybe we shouldn't be letting the constraint solver choose
+      // things that don't have the right arches?
+      process.stderr.write("Package " + packageName +
+                           " has no compatible build for version " +
+                           version + "\n");
+      failed = true;
+      return;
+    }
+
+    // Add a message to the update logs to show the user what we have done.
+    if ( _.contains(options.skipPackages, packageName)) {
+      // If we asked for this, we will log it later in more detail.
+      return;
+    }
+
+    // If the previous versions file had this, then we are upgrading, if it did
+    // not, then we must be adding this package anew.
+    if (_.has(versions, packageName)) {
+      messageLog.push("  upgraded " + packageName + " from version " +
+                      versions[packageName] +
+                      " to version " + newVersions[packageName]);
+    } else {
+      messageLog.push("  added " + packageName +
+                      " at version " + newVersions[packageName]);
+    };
+  });
+
+  if (failed)
+    return 1;
+
+  // Show the user the messageLog of packages we added.
+  _.each(messageLog, function (msg) {
+    process.stdout.write(msg + "\n");
+  });
+  return 0;
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // publish a package
@@ -743,6 +809,12 @@ main.registerCommand({
     options["packages-only"] = true;
   }
 
+  // Some basic checks to make sure that this command is being used correctly.
+  if (options["packages-only"] && options["patch"]) {
+    process.stderr.write("There is no such thing as a patch update to packages.");
+    process.exit(1);
+  }
+
   if (!options["packages-only"]) {
 
     // refuse to update the release if we're in a git checkout.
@@ -960,25 +1032,245 @@ main.registerCommand({
   //
   // XXX: Can we figure out if we got here with update --release foo,
   // or just with update?
-  if (options['packages-only'] && !options['patch']) {
+  if (!options['patch']) {
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 
-    // Let's update packages to the latest version. That's easy.
     var versions = project.getVersions();
     var allPackages = project.getCurrentCombinedConstraints();
     var upgradePackages;
+
+    // If no packages have been specified, then we will send in a request to
+    // update all direct dependencies. If a specific list of packages has been
+    // specified, then only upgrade those.
     if (options.args.length === 0) {
       upgradePackages = allPackages;
     } else {
       upgradePackages = options.args;
     }
+
+    // Call the constraint solver. This should not fail, since we are not adding
+    // any constraints that we didn't have before.
     var newVersions = catalog.complete.resolveConstraints(allPackages, {
       previousSolution: versions,
       breaking: !options.minor,
       upgrade: _.pluck(upgradePackages, 'packageName')
     });
-    project.setVersions(newVersions);
-    process.exit(0);
+
+    // Just for the sake of good messages, check to see if anything changed.
+    if (_.isEqual(newVersions, versions)) {
+      process.stdout.write("All your package dependencies are already up to date.\n");
+      return 0;
+    }
+
+    // Set our versions and download the new packages.
+    var downloaded = project.setVersions(newVersions);
+
+    // Display changes: what we have added/removed/upgraded.
+    showPackageChanges(versions, newVersions, {
+       ondiskPackages: downloaded});
   }
+  return 0;
+});
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// add
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'add',
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true,
+  options: {
+    // XXX come up with a better option name, like --allow-downgrades
+    force: { type: Boolean, required: false }
+  }
+}, function (options) {
+
+  var failed = false;
+
+  // Refresh the catalog, cacheing the remote package data on the server.
+  catalog.official.refresh();
+
+  // Read in existing package dependencies.
+  var packages = project.getConstraints();
+
+  // Combine into one object mapping package name to list of
+  // constraints, to pass in to the constraint solver.
+  var allPackages = project.getCurrentCombinedConstraints();
+
+  // For every package name specified, add it to our list of package
+  // constraints. Don't run the constraint solver until you have added all of
+  // them -- add should be an atomic operation regardless of the package
+  // order. Even though the package file should specify versions of its inputs,
+  // we don't specify these constraints until we get them back from the
+  // constraint solver.
+  var constraints = _.map(options.args, function (packageReq) {
+    // XXX maybe upper case is an error instead?
+    return utils.splitConstraint(packageReq.toLowerCase());
+  });
+
+  _.each(constraints, function (constraint) {
+    // Check that the package exists.
+    if (! catalog.complete.getPackage(constraint.package)) {
+      process.stderr.write(constraint.package + ": no such package\n");
+      failed = true;
+      return;
+    }
+
+    // If the version was specified, check that the version exists.
+    if ( constraint.constraint !== null) {
+      var versionInfo = catalog.complete.getVersion(
+        constraint.package,
+        constraint.constraint);
+      if (! versionInfo) {
+        process.stderr.write(
+          constraint.package + "@" + constraint.constraint  + ": no such version\n");
+        failed = true;
+        return;
+      }
+    }
+    // Check that the constraint is new. If we are already using the package at
+    // the same constraint in the app, return from this function.
+    if (_.has(packages, constraint.package)) {
+      if  (packages[constraint.package] === constraint.constraint) {
+      process.stderr.write(constraint.package + " with version constraint " +
+                           constraint.constraint + " has already been added.\n");
+      failed = true;
+      } else {
+        process.stdout.write("Currently using "+  constraint.package +
+                             " with version constraint " + packages[constraint.package]);
+        process.stdout.write("Constraint will be changed to " +
+                              constraint.constraint + "/n");
+      }
+    }
+
+    // Add the package to our direct dependency constraints that we get
+    // from .meteor/packages.
+    packages[constraint.package] = constraint.constraint;
+
+    // Also, add it to all of our combined dependencies.
+    allPackages.push(
+      _.extend({ packageName: constraint.package },
+                 utils.parseVersionConstraint(constraint.constraint)));
+  });
+
+  // If the user asked for invalid packages, then the user probably expects a
+  // different result than what they are going to get. We have already logged an
+  // error, so we should exit.
+  if ( failed ) {
+    return 1;
+  }
+
+  // Get the contents of our versions file. We need to pass them to the
+  // constraint solver, because our contract with the user says that we will
+  // never downgrade a dependency.
+  var versions = project.getVersions();
+
+
+  // Call the constraint solver.
+  var resolverOpts =  {
+    previousSolution: versions,
+    breaking: !!options.force
+  };
+  var newVersions = catalog.complete.resolveConstraints(allPackages,
+                                               resolverOpts,
+                                               { ignoreProjectDeps: true });
+  if ( ! newVersions) {
+    // XXX: Better error handling.
+    process.stderr.write("Cannot resolve package dependencies.");
+  }
+
+  // Don't tell the user what all the operations were until we finish -- we
+  // don't want to give a false sense of completeness until everything is
+  // written to disk.
+  var messageLog = [];
+
+
+  // Install the new versions. If all new versions were installed successfully,
+  // then change the .meteor/packages and .meteor/versions to match expected
+  // reality.
+  var downloaded = project.addPackages(constraints, newVersions);
+
+  showPackageChanges(versions, newVersions, {
+    skipPackages: constraints,
+    ondiskPackages: downloaded});
+
+  // Show the user the messageLog of the packages that they installed.
+  process.stdout.write("Successfully added the following packages. \n");
+  _.each(constraints, function (constraint) {
+    var version = newVersions[constraint.package];
+    var versionRecord = catalog.complete.getVersion(constraint.package, version);
+    if (constraint.constraint !== null &&
+        version !== constraint.constraint) {
+      process.stdout.write("Added " + constraint.package + " at version " + version +
+                           " to avoid conflicting dependencies. \n");
+    }
+    process.stdout.write(constraint.package + " : " + versionRecord.description + "\n");
+  });
+
+  return 0;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// remove
+///////////////////////////////////////////////////////////////////////////////
+main.registerCommand({
+  name: 'remove',
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true
+}, function (options) {
+  // Refresh the catalog, checking the remote package data on the
+  // server. Technically, we don't need to do this, since it is unlikely that
+  // new data will change our constraint solver decisions. But as a user, I
+  // would expect this command to update the local catalog.
+  catalog.official.refresh(true);
+
+  // Read in existing package dependencies.
+  var packages = project.getConstraints();
+
+  // For each package name specified, check if we already have it and warn the
+  // user. Because removing each package is a completely atomic operation that
+  // has no chance of failure, this is just a warning message, it doesn't cause
+  // us to stop.
+  _.each(options.args, function (packageName) {
+    // Check that we are using the package. We don't check if the package
+    // exists. You should be able to remove non-existent packages.
+    if (! _.has(packages, packageName)) {
+      process.stderr.write( packageName  + " is not in this project \n");
+    }
+  });
+
+
+  // Get the contents of our versions file, we will want them in order to remove
+  // to the user what we removed.
+  var versions = project.getVersions();
+
+  // Remove the packages from the project! There is really no way for this to
+  // fail, unless something has gone horribly wrong, so we don't need to check
+  // for it.
+  project.removePackages(options.args);
+
+  // Retrieve the new dependency versions that we have chosen for this project
+  // and do some pretty output reporting.
+  var newVersions = project.getVersions();
+
+  // Show what we did. (We removed some things)
+  showPackageChanges(versions, newVersions, {
+    skipPackages: options.args });
+
+  // Log that we removed the constraints. It is possible that there are
+  // constraints that we officially removed that the project still 'depends' on,
+  // which is why there are these two tiers of error messages.
+  _.each(options.args, function (packageName) {
+      process.stdout.write("Removed constraint " + packageName + " from project \n");
+  });
+
+  return 0;
 });
