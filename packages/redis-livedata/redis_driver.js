@@ -9,6 +9,8 @@
 
 var path = Npm.require('path');
 var RedisNpm = Npm.require('redis');
+var UrlNpm = Npm.require('url');
+
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
@@ -148,9 +150,10 @@ RedisConnection = function (url, options) {
 //    mongoOptions.replSet.poolSize = options.poolSize;
 //  }
 
-  // XXX: Parse URL
-  var port = 6379;
-  var host = "127.0.0.1";
+  var parsedUrl = UrlNpm.parse(url);
+  var host = parsedUrl.hostname || '127.0.0.1';
+  var port = parseInt(parseUrl.port || '6379');
+
   self.db = RedisNpm.createClient(port, host, redisOptions);
   
 //  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
