@@ -44,6 +44,7 @@ Autoupdate = {};
 
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
+var oldVersionRefreshable = null;
 
 Meteor.startup(function () {
   // Allow people to override Autoupdate.autoupdateVersion before
@@ -60,7 +61,6 @@ Meteor.startup(function () {
       process.env.AUTOUPDATE_VERSION ||
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHashRefreshable;
-  console.log("refreshable hash: " + WebApp.clientHashRefreshable);
 
   // Make autoupdateVersion available on the client.
   __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
@@ -73,35 +73,38 @@ Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function () {
     var self = this;
-    console.log("Updating");
+    var shouldCallReady = false;
+
     // Using `autoupdateVersion` here is safe because we can't get a
     // subscription before webapp starts listening, and it doesn't do
     // that until the startup hooks have run.
     if (Autoupdate.autoupdateVersion) {
-      console.log("updating non refreshable");
       self.added(
         "meteor_autoupdate_clientVersions",
         Autoupdate.autoupdateVersion,
         {refreshable: false, current: true}
       );
-      self.ready();
+      shouldCallReady = true;
     } else {
       // huh? shouldn't happen. Just error the sub.
       self.error(new Meteor.Error(500, "Autoupdate.autoupdateVersion not set"));
     }
 
     if (Autoupdate.autoupdateVersionRefreshable) {
-      console.log("updating refreshable");
       self.added(
         "meteor_autoupdate_clientVersions",
         Autoupdate.autoupdateVersionRefreshable,
         {refreshable: true, current: true, assets: WebApp.refreshableAssets }
       );
-      self.ready();
+      shouldCallReady = true;
     } else {
       // huh? shouldn't happen. Just error the sub.
-      self.error(new Meteor.Error(500, "Autoupdate.autoupdateVersionRefreshable not set"));
+      self.error(new Meteor.Error(500,
+        "Autoupdate.autoupdateVersionRefreshable not set"));
     }
+
+    if (shouldCallReady)
+      self.ready();
   },
   {is_auto: true}
 );

@@ -449,9 +449,8 @@ _.extend(Target.prototype, {
     self._emitResources();
 
     // Preprocess and concatenate CSS files for client targets.
-    if (self instanceof RefreshableClientTarget) {
+    if (self.minifyCss)
       self.mergeCss();
-    }
 
     // Minify, if requested
     if (options.minify) {
@@ -778,100 +777,6 @@ var BaseClientTarget = function (options) {
 inherits(BaseClientTarget, Target);
 
 _.extend(BaseClientTarget.prototype, {
-  // Lints CSS files and merges them into one file, fixing up source maps and
-  // pulling any @import directives up to the top since the CSS spec does not
-  // allow them to appear in the middle of a file.
-  mergeCss: function () {
-    var self = this;
-    var minifiers = uniload.load({
-      packages: ['minifiers']
-    }).minifiers;
-    var CssTools = minifiers.CssTools;
-
-    // Filenames passed to AST manipulator mapped to their original files
-    var originals = {};
-
-    var cssAsts = _.map(self.css, function (file) {
-      var filename = file.url.replace(/^\//, '');
-      originals[filename] = file;
-      try {
-        var parseOptions = { source: filename, position: true };
-        var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
-        ast.filename = filename;
-      } catch (e) {
-        buildmessage.error(e.message, { file: filename });
-        return { type: "stylesheet", stylesheet: { rules: [] },
-                 filename: filename };
-      }
-
-      return ast;
-    });
-
-    var warnCb = function (filename, msg) {
-      // XXX make this a buildmessage.warning call rather than a random log.
-      //     this API would be like buildmessage.error, but wouldn't cause
-      //     the build to fail.
-      runLog.log(filename + ': warn: ' + msg);
-    };
-
-    // Other build phases might need this AST later
-    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
-
-    // Overwrite the CSS files list with the new concatenated file
-    var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
-                                               { sourcemap: true });
-    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
-
-    // Add the contents of the input files to the source map of the new file
-    stringifiedCss.map.sourcesContent =
-      _.map(stringifiedCss.map.sources, function (filename) {
-        return originals[filename].contents('utf8');
-      });
-
-    // If any input files had source maps, apply them.
-    // Ex.: less -> css source map should be composed with css -> css source map
-    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
-      new sourcemap.SourceMapConsumer(stringifiedCss.map));
-
-    _.each(originals, function (file, name) {
-      if (! file.sourceMap)
-        return;
-      try {
-        newMap.applySourceMap(
-          new sourcemap.SourceMapConsumer(file.sourceMap), name);
-      } catch (err) {
-        // If we can't apply the source map, silently drop it.
-        //
-        // XXX This is here because there are some less files that
-        // produce source maps that throw when consumed. We should
-        // figure out exactly why and fix it, but this will do for now.
-      }
-    });
-
-    self.css[0].setSourceMap(JSON.stringify(newMap));
-    self.css[0].setUrlToHash(".css");
-  },
-  // Minify the CSS in this target
-  minifyCss: function (minifiers) {
-    var self = this;
-    var minifiedCss = '';
-
-    // If there is an AST already calculated, don't waste time on parsing it
-    // again.
-    if (self._cssAstCache) {
-      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAstCache);
-    } else if (self.css) {
-      var allCss = _.map(self.css, function (file) {
-        return file.contents('utf8');
-      }).join('\n');
-
-      minifiedCss = minifiers.CssTools.minifyCss(allCss);
-    }
-
-    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
-  },
-
   // Output the finished target to disk
   //
   // Returns the path (relative to 'builder') of the control file for
@@ -974,12 +879,6 @@ _.extend(BaseClientTarget.prototype, {
 var RefreshableClientTarget = function (options) {
   var self = this;
   BaseClientTarget.apply(this, arguments);
-
-  // CSS files. List of File. They will be loaded in the order given.
-  self.css = [];
-  // Cached CSS AST. If non-null, self.css has one item in it, processed CSS
-  // from merged input files, and this is its parse tree.
-  self._cssAstCache = null;
 };
 
 inherits(RefreshableClientTarget, BaseClientTarget);
@@ -1791,52 +1690,36 @@ exports.bundle = function (options) {
     var targets = {};
     var controlProgram = null;
 
-    var makeClientTargets = function (app) {
+    var makeClientTargets = function (options) {
       var refreshableClient = new RefreshableClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
       });
-      refreshableClient.make({
-        packages: [app],
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
+      refreshableClient.make(options);
 
       var nonRefreshableClient = new NonRefreshableClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
       });
-      nonRefreshableClient.make({
-        packages: [app],
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
+      nonRefreshableClient.make(options);
 
       return { refreshable: refreshableClient,
                nonRefreshable: nonRefreshableClient };
     };
 
+    var makeAppClientTargets = function (app) {
+      return makeClientTargets({
+        packages: [app],
+        minify: buildOptions.minify,
+        addCacheBusters: true
+      });
+    };
+
     var makeBlankClientTargets = function () {
-      var refreshableClient = new RefreshableClientTarget({
-        packageLoader: packageLoader,
-        arch: "browser"
-      });
-      refreshableClient.make({
+      return makeClientTargets({
         minify: buildOptions.minify,
         addCacheBusters: true
       });
-
-      var nonRefreshableClient = new NonRefreshableClientTarget({
-        packageLoader: packageLoader,
-        arch: "browser"
-      });
-      nonRefreshableClient.make({
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
-
-      return { refreshable: refreshableClient,
-               nonRefreshable: nonRefreshableClient };
     };
 
     var makeServerTarget = function (app, clientTargets) {
@@ -1872,7 +1755,7 @@ exports.bundle = function (options) {
         appDir, exports.ignoreFiles);
 
       // Client
-      var clients = makeClientTargets(app);
+      var clients = makeAppClientTargets(app);
 
       _.each(clients, function (client, name) {
         targets[name] = client;
