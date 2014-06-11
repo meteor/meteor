@@ -152,7 +152,7 @@ RedisConnection = function (url, options) {
 
   var parsedUrl = UrlNpm.parse(url);
   var host = parsedUrl.hostname || '127.0.0.1';
-  var port = parseInt(parseUrl.port || '6379');
+  var port = parseInt(parsedUrl.port || '6379');
 
   self.db = RedisNpm.createClient(port, host, redisOptions);
   
