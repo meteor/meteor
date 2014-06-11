@@ -24,7 +24,7 @@ exports.getChangelogFile = function (sourceDir) {
 // Returns an object, mapping the version string to an array of lines,
 // represneting its changelog contents.
 exports.readChangelog = function (filename) {
-  var lines = utils.getLines(filename);
+  var lines = files.getLines(filename);
 
   // Remove leading & trailing whitespace off a line.
   var trimWhitespace = function (line) {
@@ -64,7 +64,7 @@ exports.readChangelog = function (filename) {
 //
 // Returns true on success and false on failure.
 exports.prependChangelog = function (filename, version, changelogLines) {
-  var logLines = utils.getLines(filename);
+  var logLines = files.getLines(filename);
   if (!logLines) {
     return false;
   }
@@ -81,7 +81,7 @@ exports.prependChangelog = function (filename, version, changelogLines) {
 
 // Change v.NEXT in the changelog to the current version.
 exports.rewriteNextChangelog = function (filename, version) {
-  var logLines = utils.getLines(filename);
+  var logLines = files.getLines(filename);
   if (!logLines) {
     return false;
   }
@@ -96,7 +96,7 @@ exports.rewriteNextChangelog = function (filename, version) {
 
 // Remove v.NEXT in the changelog.
 exports.eraseNextChangelog = function (filename, version) {
-  var logLines = utils.getLines(filename);
+  var logLines = files.getLines(filename);
   if (!logLines) {
     return false;
   }

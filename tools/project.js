@@ -99,7 +99,7 @@ _.extend(Project.prototype, {
     // Read in the contents of the .meteor/packages file.
     var appConstraintFile = self._getConstraintFile();
     self.constraints = processPerConstraintLines(
-      utils.getLines(appConstraintFile));
+      files.getLines(appConstraintFile));
 
     // These will be fixed by _ensureDepsUpToDate.
     self.combinedConstraints = null;
@@ -108,7 +108,7 @@ _.extend(Project.prototype, {
     // Read in the contents of the .meteor/versions file, so we can give them to
     // the constraint solver as the previous solution.
     self.dependencies = processPerConstraintLines(
-      utils.getLines(self._getVersionsFile()));
+      files.getLines(self._getVersionsFile()));
     // Also, make sure we have an app identifier for this app.
     self.ensureAppIdentifier();
 
@@ -365,7 +365,7 @@ _.extend(Project.prototype, {
     var self = this;
     var releasePath = self._meteorReleaseFilePath();
     try {
-      var lines = utils.getLines(releasePath);
+      var lines = files.getLines(releasePath);
     } catch (e) {
       return null;
     }
@@ -406,7 +406,7 @@ _.extend(Project.prototype, {
     var self = this;
 
     var appConstraintFile = self._getConstraintFile();
-    var lines = utils.getLines(appConstraintFile);
+    var lines = files.getLines(appConstraintFile);
     if (operation === "add") {
       _.each(names, function (name) {
         // XXX This assumes that the file hasn't been edited since we lasted
@@ -443,7 +443,7 @@ _.extend(Project.prototype, {
     // Record the packages results to disk. This is a slightly annoying
     // operation because we want to keep all the comments intact.
     var packages = self._getConstraintFile();
-    var lines = utils.getLines(packages);
+    var lines = files.getLines(packages);
     lines = _.reject(lines, function (line) {
       var cur = trimLine(line).split('@')[0];
       return _.indexOf(names, cur) !== -1;
@@ -554,7 +554,7 @@ _.extend(Project.prototype, {
     // derived from this one and can always be reconstructed later. We read the
     // file from disk, because we don't store the comments.
     var packages = self._getConstraintFile();
-    var lines = utils.getLines(packages);
+    var lines = files.getLines(packages);
     _.each(moreDeps, function (constraint) {
       if (constraint.constraint) {
         lines.push(constraint.package + '@' + constraint.constraint);
@@ -622,7 +622,7 @@ _.extend(Project.prototype, {
 
   getFinishedUpgraders: function () {
     var self = this;
-    var lines = utils.getLines(self._finishedUpgradersFile());
+    var lines = files.getLines(self._finishedUpgradersFile());
     return _.filter(_.map(lines, trimLine), _.identity);
   },
 

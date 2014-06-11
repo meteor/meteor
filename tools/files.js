@@ -820,3 +820,27 @@ files.readdirNoDots = function (path) {
     return entry && entry[0] !== '.';
   });
 };
+
+// Read a file in line by line. Returns an array of lines to be processed
+//  individually.
+exports.getLines = function (file) {
+  try {
+    var raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return [];
+    throw e;
+  }
+
+  var lines = raw.split(/\r*\n\r*/);
+
+  // strip blank lines at the end
+  while (lines.length) {
+    var line = lines[lines.length - 1];
+    if (line.match(/\S/))
+      break;
+    lines.pop();
+  }
+
+  return lines;
+};
