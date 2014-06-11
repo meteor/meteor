@@ -280,6 +280,21 @@ var printUnauthorizedMessage = function () {
 // stripping 'http://' or a trailing '/' if present) and return it. If
 // not, print an error message to stderr and return null.
 var canonicalizeSite = function (site) {
+  // There are actually two different bugs here. One is that the meteor deploy
+  // server does not support apps whose total site length is greater than 63
+  // (because of how it generates Mongo database names); that can be fixed on
+  // the server. After that, this check will be too strong, but we still will
+  // want to check that each *component* of the hostname is at most 63
+  // characters (url.parse will do something very strange if a component is
+  // larger than 63, which is the maximum legal length).
+  if (site.length > 63) {
+    process.stdout.write(
+"The maximum hostname length currently supported is 63 characters.\n" +
+site + " is too long.\n" +
+"Please try again with a shorter URL for your site.\n");
+    return false;
+  }
+
   var url = site;
   if (!url.match(':\/\/'))
     url = 'http://' + url;
