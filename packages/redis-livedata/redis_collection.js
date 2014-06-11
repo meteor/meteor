@@ -53,7 +53,12 @@ Meteor.RedisCollection = function (name, options) {
     break;
   }
 
-  self._transform = LocalCollection.wrapTransform(options.transform);
+  if (options.transform) {
+    throw Exception("transform not supported for redis");
+    //self._transform = LocalCollection.wrapTransform(options.transform);
+  } else {
+    self._transform = null;
+  }
 
   if (! name || options.connection === null)
     // note: nameless collections never have a connection
