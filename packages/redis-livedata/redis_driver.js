@@ -1212,4 +1212,4 @@ RedisConnection.prototype._observeChangesTailable = function (
 //RedisInternals.MongoTimestamp = MongoDB.Timestamp;
 
 RedisInternals.Connection = RedisConnection;
-RedisInternals.NpmModule = MongoDB;
+RedisInternals.NpmModule = RedisNpm;

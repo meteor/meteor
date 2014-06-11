@@ -16,15 +16,15 @@ Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
 
   supported(true, "asdf");
   supported(true, 1234);
-  supported(true, new Meteor.RedisCollection.ObjectID());
+  //supported(true, new Meteor.RedisCollection.ObjectID());
 
   supported(true, {_id: "asdf"});
   supported(true, {_id: 1234});
-  supported(true, {_id: new Meteor.RedisCollection.ObjectID()});
+  //supported(true, {_id: new Meteor.RedisCollection.ObjectID()});
 
   supported(true, {foo: "asdf",
                    bar: 1234,
-                   baz: new Meteor.RedisCollection.ObjectID(),
+                   //baz: new Meteor.RedisCollection.ObjectID(),
                    eeney: true,
                    miney: false,
                    moe: null});

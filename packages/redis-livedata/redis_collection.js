@@ -38,12 +38,12 @@ Meteor.RedisCollection = function (name, options) {
   }, options);
 
   switch (options.idGeneration) {
-  case 'MONGO':
-    self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
-      return new Meteor.RedisCollection.ObjectID(src.hexString(24));
-    };
-    break;
+//  case 'MONGO':
+//    self._makeNewID = function () {
+//      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+//      return new Meteor.RedisCollection.ObjectID(src.hexString(24));
+//    };
+//    break;
   case 'STRING':
   default:
     self._makeNewID = function () {
@@ -372,9 +372,8 @@ _.each(["insert", "update", "remove"], function (name) {
       args[0] = _.extend({}, args[0]);
       if ('_id' in args[0]) {
         insertId = args[0]._id;
-        if (!insertId || !(typeof insertId === 'string'
-              || insertId instanceof Meteor.RedisCollection.ObjectID))
-          throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+        if (!insertId || !(typeof insertId === 'string'))
+          throw new Error("Meteor requires document _id fields to be non-empty strings");
       } else {
         var generateId = true;
         // Don't generate the id if we're the client and the 'outermost' call
@@ -402,9 +401,8 @@ _.each(["insert", "update", "remove"], function (name) {
         if (options && typeof options !== "function" && options.upsert) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
           if (options.insertedId) {
-            if (!(typeof options.insertedId === 'string'
-                  || options.insertedId instanceof Meteor.RedisCollection.ObjectID))
-              throw new Error("insertedId must be string or ObjectID");
+            if (!(typeof options.insertedId === 'string'))
+              throw new Error("insertedId must be string");
           } else {
             options.insertedId = self._makeNewID();
           }
@@ -530,7 +528,7 @@ Meteor.RedisCollection.prototype._createCappedCollection = function (byteSize) {
   self._collection._createCappedCollection(byteSize);
 };
 
-Meteor.RedisCollection.ObjectID = LocalCollection._ObjectID;
+//Meteor.RedisCollection.ObjectID = LocalCollection._ObjectID;
 
 ///
 /// Remote methods and access control.

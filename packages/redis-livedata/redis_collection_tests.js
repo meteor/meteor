@@ -5,7 +5,7 @@ Tinytest.add(
       function () {
         Meteor.RedisCollection(null);
       },
-      /use "new" to construct a Meteor\.Collection/
+      /use "new" to construct a Meteor\.RedisCollection/
     );
   }
 );

@@ -1644,8 +1644,8 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
         // Test values that require transformation to go into Mongo:
 
-        var t1 = new Meteor.RedisCollection.ObjectID();
-        var t2 = new Meteor.RedisCollection.ObjectID();
+        var t1 = Random.hexString(24); //new Meteor.RedisCollection.ObjectID();
+        var t2 = Random.hexString(24); //new Meteor.RedisCollection.ObjectID();
         var result3 = upsert(coll, useUpdate, {foo: t1}, {foo: t1});
         test.equal(result3.numberAffected, 1);
         if (! skipIds)
@@ -1834,8 +1834,8 @@ _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
 
           // Test values that require transformation to go into Mongo:
 
-          t1 = new Meteor.RedisCollection.ObjectID();
-          t2 = new Meteor.RedisCollection.ObjectID();
+          t1 = Random.hexString(24); //new Meteor.RedisCollection.ObjectID();
+          t2 = Random.hexString(24); //new Meteor.RedisCollection.ObjectID();
           upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
         };
 
@@ -2154,7 +2154,7 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
     ]}
   );
 
-  var oid = new Meteor.RedisCollection.ObjectID();
+  var oid = Random.hexString(24); //new Meteor.RedisCollection.ObjectID();
   test.equal(Meteor.RedisCollection._rewriteSelector(oid),
              {_id: oid});
 });
@@ -2838,7 +2838,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
     self.collection = new Meteor.RedisCollection(collectionName);
     self.date = new Date;
-    self.objId = new Meteor.RedisCollection.ObjectID;
+    self.objId = Random.hexString(24); //new Meteor.RedisCollection.ObjectID;
 
     self.id = self.collection.insert(
       {d: self.date, oi: self.objId,
@@ -2903,7 +2903,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
     // Update a date and an ObjectID too.
     self.date2 = new Date(self.date.valueOf() + 1000);
-    self.objId2 = new Meteor.RedisCollection.ObjectID;
+    self.objId2 = Random.hexString(24); //new Meteor.RedisCollection.ObjectID;
     runInFence(function () {
       self.collection.update(
         self.id, {$set: {d: self.date2, oi: self.objId2}},
