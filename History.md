@@ -24,16 +24,6 @@
   `browser-policy-content` and you don't want your app to send this
   header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
 
-* Fix memory leak (introduced in 0.8.1) by making sure to unregister
-  sessions at the server when they are closed due to heartbeat timeout.
-
-* Fix hardcoded Twitter URL in `oauth1` package. This fixes a regression
-  in 0.8.0.1 that broke Atmosphere packages that do OAuth1
-  logins. #2154.
-
-* Add `credentialSecret` argument to `Google.retrieveCredential`, which
-  was forgotten in a previous release.
-
 * Fix a Blaze memory leak by cleaning up event handlers when a template
   instance is destroyed. #1997
 
@@ -57,9 +47,80 @@
   the client, don't cache the return value of `cursor.count()` (consistently
   with the server behavior). `cursor.rewind()` is now a no-op. #2114
 
-* Allow externally applied CSS style attributes to interop with Blaze dynamic style attributes.
+* Allow externally applied CSS style attributes to interop with Blaze
+  dynamic style attributes.
 
 * Add `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
+
+* Fix uninformative error message when deploying to long hostnames. #1208
+
+* Ensure that the user object has updated token information on it before
+  it is passed to email template functions. #2210
+
+* Remove an obsolete hack in reporting line numbers for LESS errors. #2216
+
+* Fix a bug where helpers used by {{#with}} were still re-running when
+  their reactive data sources change after they have been removed from
+  the DOM.
+
+* Avoid exceptions when accessing localStorage in certain Internet
+  Explorer configurations. #1291, #1688.
+
+* Add `UI._templateInstance()` for accessing the current template
+  instance from within a block helper.
+
+* Stop not updating form controls if they're focused. If a field is
+  edited by one user while another user is focused on it, it will just
+  lose its value but maintain its focus. #1965
+
+* Add tentative API for registering hooks to run when Blaze intends to
+  insert, move, or remove DOM elements. XXX more detail
+
+* Export the function that serves the HTTP response at the end of an
+  OAuth flow as `OAuth._endOfLoginResponse`. This function can be
+  overridden to make the OAuth popup flow work in certain mobile
+  environments where `window.opener` is not supported.
+
+* Remove support for OAuth redirect URLs where a `redirect` query
+  parameter. This OAuth flow was never documented and never fully
+  worked.
+
+* Add `_nestInCurrentComputation` option to `UI.render`, fixing a bug in
+  {{#each}} when an item is added inside a computation that subsequently
+  gets invalidated. #2156
+
+* Fix bug where "=" was not allowed in helper arguments. #2157
+
+* Fix bug when a template tag immediately follows a Spacebars block
+  comment. #2175
+
+* Make `handle.ready()` reactively stop, where `handle` is a
+  subscription handle.
+
+* Increase a buffer size to avoid failing when running MongoDB due to a
+  large number of processes running on the machine, and fix the error
+  message when the failure does occur. #2158
+
+* Fix an error message from `audit-argument-checks` after login.
+
+* Add --directory flag to `meteor bundle`. Setting this flag outputs a
+  directory rather than a tarball.
+
+* Make the DDP server send an error if the client sends a connect
+  message with a missing or malformed `support` field. #2125
+
+* Fix missing `jquery` dependency in the `amplify` package. #2113
+
+* Ban inserting EJSON custom types as documents. #2095
+
+* Clarify a `meteor mongo` error message when using the MONGO_URL
+  environment variable. #1256
+
+* XXX 1e4838ccd38c2df142591a67d675ac38eb8a5630 #2106
+
+* XXX df2820ffd92
+
+* XXX 00157d8aed23fc290fb985fef73b1c293fa24e63
 
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
