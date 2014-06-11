@@ -39,7 +39,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._tailHandle = null;
   self._readyFuture = new Future();
   self._crossbar = new DDPServer._Crossbar({
-    factPackage: "mongo-livedata", factName: "oplog-watchers"
+    factPackage: "redis-livedata", factName: "oplog-watchers"
   });
   self._lastProcessedTS = null;
   self._baseOplogSelector = {

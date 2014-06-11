@@ -77,7 +77,7 @@ OplogObserveDriver = function (options) {
   self._stopHandles = [];
 
   Package.facts && Package.facts.Facts.incrementServerFact(
-    "mongo-livedata", "observe-drivers-oplog", 1);
+    "redis-livedata", "observe-drivers-oplog", 1);
 
   self._registerPhaseChange(PHASE.QUERYING);
 
@@ -810,7 +810,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._listenersHandle = null;
 
     Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-drivers-oplog", -1);
+      "redis-livedata", "observe-drivers-oplog", -1);
   },
 
   _registerPhaseChange: function (phase) {
@@ -820,7 +820,7 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._phase) {
       var timeDiff = now - self._phaseStartTime;
       Package.facts && Package.facts.Facts.incrementServerFact(
-        "mongo-livedata", "time-spent-in-" + self._phase + "-phase", timeDiff);
+        "redis-livedata", "time-spent-in-" + self._phase + "-phase", timeDiff);
     }
 
     self._phase = phase;

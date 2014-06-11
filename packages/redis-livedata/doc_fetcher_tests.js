@@ -1,7 +1,7 @@
 var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
-testAsyncMulti("mongo-livedata - doc fetcher", [
+testAsyncMulti("redis-livedata - doc fetcher", [
   function (test, expect) {
     var self = this;
     var collName = "docfetcher-" + Random.id();

@@ -7,7 +7,7 @@ ObserveMultiplexer = function (options) {
     throw Error("must specified ordered");
 
   Package.facts && Package.facts.Facts.incrementServerFact(
-    "mongo-livedata", "observe-multiplexers", 1);
+    "redis-livedata", "observe-multiplexers", 1);
 
   self._ordered = options.ordered;
   self._onStop = options.onStop || function () {};
@@ -42,7 +42,7 @@ _.extend(ObserveMultiplexer.prototype, {
     ++self._addHandleTasksScheduledButNotPerformed;
 
     Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", 1);
+      "redis-livedata", "observe-handles", 1);
 
     self._queue.runTask(function () {
       self._handles[handle._id] = handle;
@@ -73,7 +73,7 @@ _.extend(ObserveMultiplexer.prototype, {
     delete self._handles[id];
 
     Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", -1);
+      "redis-livedata", "observe-handles", -1);
 
     if (_.isEmpty(self._handles) &&
         self._addHandleTasksScheduledButNotPerformed === 0) {
@@ -91,7 +91,7 @@ _.extend(ObserveMultiplexer.prototype, {
     // callbacks and removes us from the connection's dictionary).
     self._onStop();
     Package.facts && Package.facts.Facts.incrementServerFact(
-      "mongo-livedata", "observe-multiplexers", -1);
+      "redis-livedata", "observe-multiplexers", -1);
 
     // Cause future addHandleAndSendInitialAdds calls to throw (but the onStop
     // callback should make our connection forget about us).
