@@ -728,10 +728,10 @@ CursorDescription = function (collectionName, selector, options) {
   self.options = options || {};
 };
 
-Cursor = function (mongo, cursorDescription) {
+Cursor = function (connection, cursorDescription) {
   var self = this;
 
-  self._mongo = mongo;
+  self._connection = connection;
   self._cursorDescription = cursorDescription;
   self._synchronousCursor = null;
 };
@@ -745,7 +745,7 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
       throw new Error("Cannot call " + method + " on a tailable cursor");
 
     if (!self._synchronousCursor) {
-      self._synchronousCursor = self._mongo._createSynchronousCursor(
+      self._synchronousCursor = self._connection._createSynchronousCursor(
         self._cursorDescription, {
           // Make sure that the "self" argument to forEach/map callbacks is the
           // Cursor, not the SynchronousCursor.
@@ -789,7 +789,7 @@ Cursor.prototype.observe = function (callbacks) {
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
-  return self._mongo._observeChanges(
+  return self._connection._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
 
