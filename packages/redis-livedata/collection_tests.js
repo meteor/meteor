@@ -1,9 +1,9 @@
 Tinytest.add(
-  'collection - call Meteor.Collection without new',
+  'collection - call Meteor.RedisCollection without new',
   function (test) {
     test.throws(
       function () {
-        Meteor.Collection(null);
+        Meteor.RedisCollection(null);
       },
       /use "new" to construct a Meteor\.Collection/
     );

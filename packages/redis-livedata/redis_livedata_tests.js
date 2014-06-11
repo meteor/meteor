@@ -18,7 +18,7 @@ if (Meteor.isServer) {
       if (options && options.transformName) {
         options.transform = TRANSFORMS[options.transformName];
       }
-      var c = new Meteor.Collection(name, options);
+      var c = new Meteor.RedisCollection(name, options);
       COLLECTIONS[name] = c;
       c._insecure = true;
       Meteor.publish('c-' + name, function () {
@@ -163,14 +163,14 @@ if (Meteor.isServer) {
   m[upsertTestMethod] = function (run, useUpdate, options) {
     check(run, String);
     check(useUpdate, Boolean);
-    upsertTestMethodColl = new Meteor.Collection(upsertTestMethod + "_collection_" + run, options);
+    upsertTestMethodColl = new Meteor.RedisCollection(upsertTestMethod + "_collection_" + run, options);
     upsertTestMethodImpl(upsertTestMethodColl, useUpdate);
   };
   Meteor.methods(m);
 }
 
 Meteor._FailureTestCollection =
-  new Meteor.Collection("___meteor_failure_test_collection");
+  new Meteor.RedisCollection("___meteor_failure_test_collection");
 
 // For test "document with a custom type"
 var Dog = function (name, color, actions) {
@@ -242,11 +242,11 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   var run = test.runId();
   var coll, coll2;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null, collectionOptions) ; // local, unmanaged
-    coll2 = new Meteor.Collection(null, collectionOptions); // local, unmanaged
+    coll = new Meteor.RedisCollection(null, collectionOptions) ; // local, unmanaged
+    coll2 = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("livedata_test_collection_"+run, collectionOptions);
-    coll2 = new Meteor.Collection("livedata_test_collection_2_"+run, collectionOptions);
+    coll = new Meteor.RedisCollection("livedata_test_collection_"+run, collectionOptions);
+    coll2 = new Meteor.RedisCollection("livedata_test_collection_2_"+run, collectionOptions);
   }
 
   var log = '';
@@ -393,9 +393,9 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
   var run = Random.id();
   var coll;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
+    coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("livedata_test_collection_"+run, collectionOptions);
+    coll = new Meteor.RedisCollection("livedata_test_collection_"+run, collectionOptions);
   }
 
   // fuzz test of observe(), especially the server-side diffing
@@ -522,9 +522,9 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
   var run = test.runId();
   var coll;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
+    coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("livedata_test_collection_"+run, collectionOptions);
+    coll = new Meteor.RedisCollection("livedata_test_collection_"+run, collectionOptions);
   }
 
   var numAddeds = 0;
@@ -552,9 +552,9 @@ Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, f
   var run = Random.id();
   var coll;
   if (Meteor.isClient) {
-    coll = new Meteor.Collection(null, collectionOptions); // local, unmanaged
+    coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
   } else {
-    coll = new Meteor.Collection("stopHandleInCallback-"+run, collectionOptions);
+    coll = new Meteor.RedisCollection("stopHandleInCallback-"+run, collectionOptions);
   }
 
   var output = [];
@@ -605,7 +605,7 @@ Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, f
 if (Meteor.isServer) {
   Tinytest.addAsync("mongo-livedata - recursive observe throws, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("observeInCallback-"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("observeInCallback-"+run, collectionOptions);
 
     var callbackCalled = false;
     var handle = coll.find({}).observe({
@@ -630,7 +630,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync("mongo-livedata - cursor dedup, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("cursorDedup-"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("cursorDedup-"+run, collectionOptions);
 
     var observer = function (noAdded) {
       var output = [];
@@ -738,7 +738,7 @@ if (Meteor.isServer) {
     // Tests that insert returns before the callback runs. Relies on the fact
     // that mongo does not run the callback before spinning off the event loop.
     var cname = Random.id();
-    var coll = new Meteor.Collection(cname);
+    var coll = new Meteor.RedisCollection(cname);
     var doc = { foo: "bar" };
     var x = 0;
     coll.insert(doc, function (err, result) {
@@ -752,7 +752,7 @@ if (Meteor.isServer) {
   Tinytest.addAsync("mongo-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
     // Tests that update returns before the callback runs.
     var cname = Random.id();
-    var coll = new Meteor.Collection(cname);
+    var coll = new Meteor.RedisCollection(cname);
     var doc = { foo: "bar" };
     var x = 0;
     var id = coll.insert(doc);
@@ -768,7 +768,7 @@ if (Meteor.isServer) {
   Tinytest.addAsync("mongo-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
     // Tests that remove returns before the callback runs.
     var cname = Random.id();
-    var coll = new Meteor.Collection(cname);
+    var coll = new Meteor.RedisCollection(cname);
     var doc = { foo: "bar" };
     var x = 0;
     var id = coll.insert(doc);
@@ -792,7 +792,7 @@ if (Meteor.isServer) {
   // queries. Compitablity with poll-diff is added as well.
   Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("observeLimit-"+run, collectionOptions);
 
     var observer = function () {
       var state = {};
@@ -1062,7 +1062,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("observeLimit-"+run, collectionOptions);
 
     var observer = function () {
       var state = {};
@@ -1138,7 +1138,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("observeLimit-"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("observeLimit-"+run, collectionOptions);
 
     var observer = function () {
       var state = {};
@@ -1257,7 +1257,7 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
   }, function (test, expect) {
-    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
+    var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
 
     coll.insert({}, expect(function (err, id) {
       test.isFalse(err);
@@ -1278,7 +1278,7 @@ testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
     }
   }, function (test, expect) {
     var self = this;
-    var coll = self.coll = new Meteor.Collection(self.collectionName, collectionOptions);
+    var coll = self.coll = new Meteor.RedisCollection(self.collectionName, collectionOptions);
 
     coll.insert({foo: 'x', length: 0}, expect(function (err, id) {
       test.isFalse(err);
@@ -1308,7 +1308,7 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
     }
   }, function (test, expect) {
 
-    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
+    var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
     var docId;
     coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
       test.isFalse(err);
@@ -1341,7 +1341,7 @@ testAsyncMulti('mongo-livedata - document goes through a transform, ' + idGenera
     }
   }, function (test, expect) {
     var self = this;
-    self.coll = new Meteor.Collection(self.collectionName, self.collectionOptions);
+    self.coll = new Meteor.RedisCollection(self.collectionName, self.collectionOptions);
     var obs;
     var expectAdd = expect(function (doc) {
       test.equal(doc.seconds(), 50);
@@ -1402,7 +1402,7 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
     }
   }, function (test, expect) {
     var self = this;
-    self.coll = new Meteor.Collection(this.collectionName, collectionOptions);
+    self.coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
     self.coll.insert({}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
@@ -1429,7 +1429,7 @@ testAsyncMulti('mongo-livedata - document with binary data, ' + idGeneration, [
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
   }, function (test, expect) {
-    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
+    var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
     var docId;
     coll.insert({b: bin}, expect(function (err, id) {
       test.isFalse(err);
@@ -1453,7 +1453,7 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
     }
   }, function (test, expect) {
     var self = this;
-    self.coll = new Meteor.Collection(this.collectionName, collectionOptions);
+    self.coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
     var docId;
     // Dog is implemented at the top of the file, outside of the idGeneration
     // loop (so that we only call EJSON.addType once).
@@ -1480,7 +1480,7 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
 if (Meteor.isServer) {
   Tinytest.addAsync("mongo-livedata - update return values, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("livedata_update_result_"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("livedata_update_result_"+run, collectionOptions);
 
     coll.insert({ foo: "bar" });
     coll.insert({ foo: "baz" });
@@ -1495,7 +1495,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync("mongo-livedata - remove return values, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("livedata_update_result_"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("livedata_update_result_"+run, collectionOptions);
 
     coll.insert({ foo: "bar" });
     coll.insert({ foo: "baz" });
@@ -1512,7 +1512,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync("mongo-livedata - id-based invalidation, " + idGeneration, function (test, onComplete) {
     var run = test.runId();
-    var coll = new Meteor.Collection("livedata_invalidation_collection_"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("livedata_invalidation_collection_"+run, collectionOptions);
 
     coll.allow({
       update: function () {return true;},
@@ -1581,7 +1581,7 @@ if (Meteor.isServer) {
 
   Tinytest.add("mongo-livedata - upsert error parse, " + idGeneration, function (test) {
     var run = test.runId();
-    var coll = new Meteor.Collection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
+    var coll = new Meteor.RedisCollection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
 
     coll.insert({_id: 'foobar'});
     var err;
@@ -1618,7 +1618,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
         var skipIds = useUpdate || (! minimongo && useDirectCollection);
         if (minimongo)
           options = _.extend({}, collectionOptions, { connection: null });
-        var coll = new Meteor.Collection(
+        var coll = new Meteor.RedisCollection(
           "livedata_upsert_collection_"+run+
             (useUpdate ? "_update_" : "") +
             (minimongo ? "_minimongo_" : "") +
@@ -1644,8 +1644,8 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
         // Test values that require transformation to go into Mongo:
 
-        var t1 = new Meteor.Collection.ObjectID();
-        var t2 = new Meteor.Collection.ObjectID();
+        var t1 = new Meteor.RedisCollection.ObjectID();
+        var t2 = new Meteor.RedisCollection.ObjectID();
         var result3 = upsert(coll, useUpdate, {foo: t1}, {foo: t1});
         test.equal(result3.numberAffected, 1);
         if (! skipIds)
@@ -1772,9 +1772,9 @@ var asyncUpsertTestName = function (useNetwork, useDirectCollection,
 
 // This is a duplicate of the test above, with some changes to make it work for
 // callback style. On the client, we test server-backed and in-memory
-// collections, and run the tests for both the Meteor.Collection and the
+// collections, and run the tests for both the Meteor.RedisCollection and the
 // LocalCollection. On the server, we test mongo-backed collections, for both
-// the Meteor.Collection and the MongoConnection.
+// the Meteor.RedisCollection and the MongoConnection.
 //
 // XXX Rewrite with testAsyncMulti, that would simplify things a lot!
 _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
@@ -1795,13 +1795,13 @@ _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
 
         if (useNetwork) {
           Meteor.call("createInsecureCollection", collName, collectionOptions);
-          coll = new Meteor.Collection(collName, collectionOptions);
+          coll = new Meteor.RedisCollection(collName, collectionOptions);
           Meteor.subscribe("c-" + collName, next0);
         } else {
           var opts = _.clone(collectionOptions);
           if (Meteor.isClient)
             opts.connection = null;
-          coll = new Meteor.Collection(collName, opts);
+          coll = new Meteor.RedisCollection(collName, opts);
           if (useDirectCollection)
             coll = coll._collection;
         }
@@ -1834,8 +1834,8 @@ _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
 
           // Test values that require transformation to go into Mongo:
 
-          t1 = new Meteor.Collection.ObjectID();
-          t2 = new Meteor.Collection.ObjectID();
+          t1 = new Meteor.RedisCollection.ObjectID();
+          t2 = new Meteor.RedisCollection.ObjectID();
           upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
         };
 
@@ -1960,7 +1960,7 @@ if (Meteor.isClient) {
     var run = test.runId();
     var collName = "livedata_upsert_collection_"+run;
     Meteor.call("createInsecureCollection", collName, collectionOptions);
-    coll = new Meteor.Collection(collName, collectionOptions);
+    coll = new Meteor.RedisCollection(collName, collectionOptions);
     Meteor.subscribe("c-" + collName, function () {
       coll.insert({ _id: "foo" });
       coll.insert({ _id: "bar" });
@@ -1993,7 +1993,7 @@ if (Meteor.isClient) {
   _.each([true, false], function (useUpdate) {
     Tinytest.addAsync("mongo-livedata - " + (useUpdate ? "update " : "") + "upsert in method, " + idGeneration, function (test, onComplete) {
       var run = test.runId();
-      upsertTestMethodColl = new Meteor.Collection(upsertTestMethod + "_collection_" + run, collectionOptions);
+      upsertTestMethodColl = new Meteor.RedisCollection(upsertTestMethod + "_collection_" + run, collectionOptions);
       var m = {};
       delete Meteor.connection._methodHandlers[upsertTestMethod];
       m[upsertTestMethod] = function (run, useUpdate, options) {
@@ -2015,7 +2015,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       var options = collectionOptions;
       if (minimongo)
         options = _.extend({}, collectionOptions, { connection: null });
-      var coll = new Meteor.Collection("livedata_upsert_by_id_collection_"+run, options);
+      var coll = new Meteor.RedisCollection("livedata_upsert_by_id_collection_"+run, options);
 
       var ret;
       ret = upsert(coll, useUpdate, {_id: 'foo'}, {$set: {x: 1}});
@@ -2088,19 +2088,19 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
-  test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/im}),
+  test.equal(Meteor.RedisCollection._rewriteSelector({x: /^o+B/im}),
              {x: {$regex: '^o+B', $options: 'im'}});
-  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/im}}),
+  test.equal(Meteor.RedisCollection._rewriteSelector({x: {$regex: /^o+B/im}}),
              {x: {$regex: '^o+B', $options: 'im'}});
-  test.equal(Meteor.Collection._rewriteSelector({x: /^o+B/}),
+  test.equal(Meteor.RedisCollection._rewriteSelector({x: /^o+B/}),
              {x: {$regex: '^o+B'}});
-  test.equal(Meteor.Collection._rewriteSelector({x: {$regex: /^o+B/}}),
+  test.equal(Meteor.RedisCollection._rewriteSelector({x: {$regex: /^o+B/}}),
              {x: {$regex: '^o+B'}});
-  test.equal(Meteor.Collection._rewriteSelector('foo'),
+  test.equal(Meteor.RedisCollection._rewriteSelector('foo'),
              {_id: 'foo'});
 
   test.equal(
-    Meteor.Collection._rewriteSelector(
+    Meteor.RedisCollection._rewriteSelector(
       {'$or': [
         {x: /^o/},
         {y: /^p/},
@@ -2117,7 +2117,7 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
   );
 
   test.equal(
-    Meteor.Collection._rewriteSelector(
+    Meteor.RedisCollection._rewriteSelector(
       {'$or': [
         {'$and': [
           {x: /^a/i},
@@ -2154,8 +2154,8 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
     ]}
   );
 
-  var oid = new Meteor.Collection.ObjectID();
-  test.equal(Meteor.Collection._rewriteSelector(oid),
+  var oid = new Meteor.RedisCollection.ObjectID();
+  test.equal(Meteor.RedisCollection._rewriteSelector(oid),
              {_id: oid});
 });
 
@@ -2172,7 +2172,7 @@ testAsyncMulti('mongo-livedata - specified _id', [
       var doc = coll.findOne();
       test.equal(doc.name, "foo");
     });
-    var coll = new Meteor.Collection(this.collectionName);
+    var coll = new Meteor.RedisCollection(this.collectionName);
     coll.insert({_id: "foo", name: "foo"}, expect(function (err1, id) {
       test.equal(id, "foo");
       var doc = coll.findOne();
@@ -2351,7 +2351,7 @@ _.each( ['STRING', 'MONGO'], function (idGeneration) {
         cleanups.push(function (expect) { Meteor.call('dropInsecureCollection', collectionName, expect(function () {})); });
       }
 
-      var collection = new Meteor.Collection(collectionName, collectionOptions);
+      var collection = new Meteor.RedisCollection(collectionName, collectionOptions);
       if (Meteor.isServer) {
         cleanups.push(function () { collection._dropCollection(); });
       }
@@ -2387,7 +2387,7 @@ testAsyncMulti('mongo-livedata - empty string _id', [
       Meteor.call('createInsecureCollection', self.collectionName);
       Meteor.subscribe('c-' + self.collectionName, expect());
     }
-    self.coll = new Meteor.Collection(self.collectionName);
+    self.coll = new Meteor.RedisCollection(self.collectionName);
     try {
       self.coll.insert({_id: "", f: "foo"});
       test.fail("Insert with an empty _id should fail");
@@ -2420,7 +2420,7 @@ if (Meteor.isServer) {
       var self = this;
       Meteor._debug("connection setup");
       self.id = Random.id();
-      var C = self.C = new Meteor.Collection("ServerMinimongo_" + self.id);
+      var C = self.C = new Meteor.RedisCollection("ServerMinimongo_" + self.id);
       C.allow({
         insert: function () {return true;},
         update: function () {return true;},
@@ -2442,7 +2442,7 @@ if (Meteor.isServer) {
     function (test, expect) {
       var self = this;
       if (self.conn.status().connected) {
-        self.miniC = new Meteor.Collection("ServerMinimongo_" + self.id, {
+        self.miniC = new Meteor.RedisCollection("ServerMinimongo_" + self.id, {
           connection: self.conn
         });
         var exp = expect(function (err) {
@@ -2479,7 +2479,7 @@ if (Meteor.isServer) {
     function (test, expect) {
       var self = this;
       self.id = Random.id();
-      self.C = new Meteor.Collection("ServerMinimongoObserve_" + self.id);
+      self.C = new Meteor.RedisCollection("ServerMinimongoObserve_" + self.id);
       self.events = [];
 
       Meteor.publish(self.id, function () {
@@ -2495,7 +2495,7 @@ if (Meteor.isServer) {
     function (test, expect) {
       var self = this;
       if (self.conn.status().connected) {
-        self.miniC = new Meteor.Collection("ServerMinimongoObserve_" + self.id, {
+        self.miniC = new Meteor.RedisCollection("ServerMinimongoObserve_" + self.id, {
           connection: self.conn
         });
         var exp = expect(function (err) {
@@ -2544,9 +2544,9 @@ if (Meteor.isServer) {
 Tinytest.addAsync("mongo-livedata - local collections with different connections", function (test, onComplete) {
   var cname = Random.id();
   var cname2 = Random.id();
-  var coll1 = new Meteor.Collection(cname);
+  var coll1 = new Meteor.RedisCollection(cname);
   var doc = { foo: "bar" };
-  var coll2 = new Meteor.Collection(cname2, { connection: null });
+  var coll2 = new Meteor.RedisCollection(cname2, { connection: null });
   coll2.insert(doc, function (err, id) {
     test.equal(coll1.find(doc).count(), 0);
     test.equal(coll2.find(doc).count(), 1);
@@ -2556,7 +2556,7 @@ Tinytest.addAsync("mongo-livedata - local collections with different connections
 
 Tinytest.addAsync("mongo-livedata - local collection with null connection, w/ callback", function (test, onComplete) {
   var cname = Random.id();
-  var coll1 = new Meteor.Collection(cname, { connection: null });
+  var coll1 = new Meteor.RedisCollection(cname, { connection: null });
   var doc = { foo: "bar" };
   var docId = coll1.insert(doc, function (err, id) {
     test.equal(docId, id);
@@ -2567,7 +2567,7 @@ Tinytest.addAsync("mongo-livedata - local collection with null connection, w/ ca
 
 Tinytest.addAsync("mongo-livedata - local collection with null connection, w/o callback", function (test, onComplete) {
   var cname = Random.id();
-  var coll1 = new Meteor.Collection(cname, { connection: null });
+  var coll1 = new Meteor.RedisCollection(cname, { connection: null });
   var doc = { foo: "bar" };
   var docId = coll1.insert(doc);
   test.equal(coll1.findOne(doc)._id, docId);
@@ -2583,7 +2583,7 @@ testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
       Meteor.subscribe('c-' + collectionName, expect());
     }
 
-    self.collection = new Meteor.Collection(collectionName);
+    self.collection = new Meteor.RedisCollection(collectionName);
 
     self.id = self.collection.insert(
       {name: 'jens', elements: ['X', 'Y']}, expect(function (err, res) {
@@ -2609,7 +2609,7 @@ testAsyncMulti("mongo-livedata - update handles $push with $each correctly", [
 
 if (Meteor.isServer) {
   Tinytest.add("mongo-livedata - upsert handles $push with $each correctly", function (test) {
-    var collection = new Meteor.Collection(Random.id());
+    var collection = new Meteor.RedisCollection(Random.id());
 
     var result = collection.upsert(
       {name: 'jens'},
@@ -2643,7 +2643,7 @@ if (Meteor.isServer) {
 // This is a VERY white-box test.
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
   var collName = Random.id();
-  var coll = new Meteor.Collection(collName);
+  var coll = new Meteor.RedisCollection(collName);
   if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
     var observeWithOplog = coll.find({x: 5})
           .observeChanges({added: function () {}});
@@ -2658,7 +2658,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", functi
 
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector fields", function (test) {
   var collName = "includeSelector" + Random.id();
-  var coll = new Meteor.Collection(collName);
+  var coll = new Meteor.RedisCollection(collName);
 
   var docId = coll.insert({a: 1, b: [3, 2], c: 'foo'});
   test.isTrue(docId);
@@ -2700,7 +2700,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
 
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (test) {
   var collName = "oplogTransform" + Random.id();
-  var coll = new Meteor.Collection(collName);
+  var coll = new Meteor.RedisCollection(collName);
 
   var docId = coll.insert({a: 25, x: {x: 5, y: 9}});
   test.isTrue(docId);
@@ -2740,7 +2740,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
 
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", function (test) {
   var collName = "dropCollection" + Random.id();
-  var coll = new Meteor.Collection(collName);
+  var coll = new Meteor.RedisCollection(collName);
 
   var doc1Id = coll.insert({a: 'foo', c: 1});
   var doc2Id = coll.insert({b: 'bar'});
@@ -2836,9 +2836,9 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
       Meteor.subscribe('c-' + collectionName, expect());
     }
 
-    self.collection = new Meteor.Collection(collectionName);
+    self.collection = new Meteor.RedisCollection(collectionName);
     self.date = new Date;
-    self.objId = new Meteor.Collection.ObjectID;
+    self.objId = new Meteor.RedisCollection.ObjectID;
 
     self.id = self.collection.insert(
       {d: self.date, oi: self.objId,
@@ -2903,7 +2903,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
     // Update a date and an ObjectID too.
     self.date2 = new Date(self.date.valueOf() + 1000);
-    self.objId2 = new Meteor.Collection.ObjectID;
+    self.objId2 = new Meteor.RedisCollection.ObjectID;
     runInFence(function () {
       self.collection.update(
         self.id, {$set: {d: self.date2, oi: self.objId2}},
@@ -2932,7 +2932,7 @@ var waitUntilOplogCaughtUp = function () {
 
 
 Meteor.isServer && Tinytest.add("mongo-livedata - cursor dedup stop", function (test) {
-  var coll = new Meteor.Collection(Random.id());
+  var coll = new Meteor.RedisCollection(Random.id());
   _.times(100, function () {
     coll.insert({foo: 'baz'});
   });
@@ -2960,7 +2960,7 @@ testAsyncMulti("mongo-livedata - undefined find options", [
   },
   function (test, expect) {
     var self = this;
-    self.coll = new Meteor.Collection(self.collName);
+    self.coll = new Meteor.RedisCollection(self.collName);
     self.doc = { foo: 1, bar: 2, _id: "foobar" };
     self.coll.insert(self.doc, expect(function (err, id) {
       test.isFalse(err);

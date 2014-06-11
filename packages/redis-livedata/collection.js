@@ -1,10 +1,10 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
-Meteor.Collection = function (name, options) {
+Meteor.RedisCollection = function (name, options) {
   var self = this;
-  if (! (self instanceof Meteor.Collection))
-    throw new Error('use "new" to construct a Meteor.Collection');
+  if (! (self instanceof Meteor.RedisCollection))
+    throw new Error('use "new" to construct a Meteor.RedisCollection');
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -15,7 +15,7 @@ Meteor.Collection = function (name, options) {
 
   if (name !== null && typeof name !== "string") {
     throw new Error(
-      "First argument to new Meteor.Collection must be a string or null");
+      "First argument to new Meteor.RedisCollection must be a string or null");
   }
 
   if (options && options.methods) {
@@ -41,7 +41,7 @@ Meteor.Collection = function (name, options) {
   case 'MONGO':
     self._makeNewID = function () {
       var src = name ? DDP.randomStream('/collection/' + name) : Random;
-      return new Meteor.Collection.ObjectID(src.hexString(24));
+      return new Meteor.RedisCollection.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
@@ -195,7 +195,7 @@ Meteor.Collection = function (name, options) {
 ///
 
 
-_.extend(Meteor.Collection.prototype, {
+_.extend(Meteor.RedisCollection.prototype, {
 
   _getFindSelector: function (args) {
     if (args.length == 0)
@@ -241,7 +241,7 @@ _.extend(Meteor.Collection.prototype, {
 
 });
 
-Meteor.Collection._publishCursor = function (cursor, sub, collection) {
+Meteor.RedisCollection._publishCursor = function (cursor, sub, collection) {
   var observeHandle = cursor.observeChanges({
     added: function (id, fields) {
       sub.added(collection, id, fields);
@@ -265,7 +265,7 @@ Meteor.Collection._publishCursor = function (cursor, sub, collection) {
 // likely programmer error, and not what you want, particularly for destructive
 // operations.  JS regexps don't serialize over DDP but can be trivially
 // replaced by $regex.
-Meteor.Collection._rewriteSelector = function (selector) {
+Meteor.RedisCollection._rewriteSelector = function (selector) {
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
@@ -289,7 +289,7 @@ Meteor.Collection._rewriteSelector = function (selector) {
     else if (_.contains(['$or','$and','$nor'], key)) {
       // Translate lower levels of $and/$or/$nor
       ret[key] = _.map(value, function (v) {
-        return Meteor.Collection._rewriteSelector(v);
+        return Meteor.RedisCollection._rewriteSelector(v);
       });
     } else {
       ret[key] = value;
@@ -355,7 +355,7 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 // them. In the future maybe we should provide a flag to turn this
 // off.
 _.each(["insert", "update", "remove"], function (name) {
-  Meteor.Collection.prototype[name] = function (/* arguments */) {
+  Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
@@ -373,7 +373,7 @@ _.each(["insert", "update", "remove"], function (name) {
       if ('_id' in args[0]) {
         insertId = args[0]._id;
         if (!insertId || !(typeof insertId === 'string'
-              || insertId instanceof Meteor.Collection.ObjectID))
+              || insertId instanceof Meteor.RedisCollection.ObjectID))
           throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
         var generateId = true;
@@ -391,7 +391,7 @@ _.each(["insert", "update", "remove"], function (name) {
         }
       }
     } else {
-      args[0] = Meteor.Collection._rewriteSelector(args[0]);
+      args[0] = Meteor.RedisCollection._rewriteSelector(args[0]);
 
       if (name === "update") {
         // Mutate args but copy the original options object. We need to add
@@ -403,7 +403,7 @@ _.each(["insert", "update", "remove"], function (name) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
           if (options.insertedId) {
             if (!(typeof options.insertedId === 'string'
-                  || options.insertedId instanceof Meteor.Collection.ObjectID))
+                  || options.insertedId instanceof Meteor.RedisCollection.ObjectID))
               throw new Error("insertedId must be string or ObjectID");
           } else {
             options.insertedId = self._makeNewID();
@@ -491,7 +491,7 @@ _.each(["insert", "update", "remove"], function (name) {
   };
 });
 
-Meteor.Collection.prototype.upsert = function (selector, modifier,
+Meteor.RedisCollection.prototype.upsert = function (selector, modifier,
                                                options, callback) {
   var self = this;
   if (! callback && typeof options === "function") {
@@ -505,32 +505,32 @@ Meteor.Collection.prototype.upsert = function (selector, modifier,
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-Meteor.Collection.prototype._ensureIndex = function (index, options) {
+Meteor.RedisCollection.prototype._ensureIndex = function (index, options) {
   var self = this;
   if (!self._collection._ensureIndex)
     throw new Error("Can only call _ensureIndex on server collections");
   self._collection._ensureIndex(index, options);
 };
-Meteor.Collection.prototype._dropIndex = function (index) {
+Meteor.RedisCollection.prototype._dropIndex = function (index) {
   var self = this;
   if (!self._collection._dropIndex)
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
 };
-Meteor.Collection.prototype._dropCollection = function () {
+Meteor.RedisCollection.prototype._dropCollection = function () {
   var self = this;
   if (!self._collection.dropCollection)
     throw new Error("Can only call _dropCollection on server collections");
   self._collection.dropCollection();
 };
-Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
+Meteor.RedisCollection.prototype._createCappedCollection = function (byteSize) {
   var self = this;
   if (!self._collection._createCappedCollection)
     throw new Error("Can only call _createCappedCollection on server collections");
   self._collection._createCappedCollection(byteSize);
 };
 
-Meteor.Collection.ObjectID = LocalCollection._ObjectID;
+Meteor.RedisCollection.ObjectID = LocalCollection._ObjectID;
 
 ///
 /// Remote methods and access control.
@@ -609,16 +609,16 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
     }
   };
 
-  Meteor.Collection.prototype.allow = function(options) {
+  Meteor.RedisCollection.prototype.allow = function(options) {
     addValidator.call(this, 'allow', options);
   };
-  Meteor.Collection.prototype.deny = function(options) {
+  Meteor.RedisCollection.prototype.deny = function(options) {
     addValidator.call(this, 'deny', options);
   };
 })();
 
 
-Meteor.Collection.prototype._defineMutationMethods = function() {
+Meteor.RedisCollection.prototype._defineMutationMethods = function() {
   var self = this;
 
   // set to true once we call any allow or deny methods. If true, use
@@ -730,7 +730,7 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
 };
 
 
-Meteor.Collection.prototype._updateFetch = function (fields) {
+Meteor.RedisCollection.prototype._updateFetch = function (fields) {
   var self = this;
 
   if (!self._validators.fetchAllFields) {
@@ -744,7 +744,7 @@ Meteor.Collection.prototype._updateFetch = function (fields) {
   }
 };
 
-Meteor.Collection.prototype._isInsecure = function () {
+Meteor.RedisCollection.prototype._isInsecure = function () {
   var self = this;
   if (self._insecure === undefined)
     return !!Package.insecure;
@@ -768,7 +768,7 @@ var docToValidate = function (validator, doc, generatedId) {
   return ret;
 };
 
-Meteor.Collection.prototype._validatedInsert = function (userId, doc,
+Meteor.RedisCollection.prototype._validatedInsert = function (userId, doc,
                                                          generatedId) {
   var self = this;
 
@@ -804,7 +804,7 @@ var transformDoc = function (validator, doc) {
 // control rules set by calls to `allow/deny` are satisfied. If all
 // pass, rewrite the mongo operation to use $in to set the list of
 // document ids to change ##ValidatedChange
-Meteor.Collection.prototype._validatedUpdate = function(
+Meteor.RedisCollection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
@@ -902,7 +902,7 @@ var ALLOWED_UPDATE_OPERATIONS = {
 
 // Simulate a mongo `remove` operation while validating access control
 // rules. See #ValidatedChange
-Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
+Meteor.RedisCollection.prototype._validatedRemove = function(userId, selector) {
   var self = this;
 
   var findOptions = {transform: null};
