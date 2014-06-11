@@ -36,18 +36,24 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // Set constraints and dependencies between units
   forEveryVersion(function (packageName, version, versionDef) {
     var builds = {};
+    // XXX in theory there might be different archs but in practice they are
+    // always "os" and "browser". Fix this once we actually have different
+    // archs used.
+    _.each(["os", "browser"], function (arch) {
+      var unitName = packageName + "#" + arch;
+      builds[unitName] = new ConstraintSolver.UnitVersion(
+        unitName, version, versionDef.earliestCompatibleVersion);
+      unitVersion = builds[unitName];
+      self.resolver.addUnitVersion(unitVersion);
+    });
+
     _.each(versionDef.dependencies, function (dep, depName) {
       _.each(dep.references, function (ref) {
         var unitName = packageName + "#" + ref.arch;
         var unitVersion = builds[unitName];
-        if (! unitVersion) {
-          // if it is first time we met the build of this version, register it
-          // in resolver.
-          builds[unitName] = new ConstraintSolver.UnitVersion(
-            unitName, version, versionDef.earliestCompatibleVersion);
-          unitVersion = builds[unitName];
-          self.resolver.addUnitVersion(unitVersion);
-        }
+
+        if (! unitVersion)
+          throw new Error("A non-standard arch " + ref.arch + " for package " + packageName);
 
         var targetUnitName = depName + "#" + ref.arch;
 
@@ -63,31 +69,6 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
         }
       });
     });
-
-    if (_.isEmpty(builds)) {
-      // XXX this is a hack to temporary solve the problem with packages w/o
-      // dependencies. Right now in order to understand what are builds of
-      // package, we look into its dependencies build-wise. W/o dependencies we
-      // would need to do something else, like see what builds other builds
-      // depend on. Also if depending builds of other packages don't specify the
-      // version, there is no way we can resolve what builds different versions
-      // have as different versions of the same package can in theory have
-      // diverging sets of builds.
-      //
-      // But in practive we always have main + os builds. So we
-      // will just hardcode two most improtant builds at the moment. Fix it
-      // later.
-      _.each(["os", "browser"], function (arch) {
-        var unitName = packageName + "#" + arch;
-        var unitVersion = builds[unitName];
-        if (! unitVersion) {
-          builds[unitName] = new ConstraintSolver.UnitVersion(
-            unitName, version, versionDef.earliestCompatibleVersion);
-          unitVersion = builds[unitName];
-          self.resolver.addUnitVersion(unitVersion);
-        }
-      });
-    }
 
     // Every build implies that if it is picked, other builds are constrained to
     // the same version.
