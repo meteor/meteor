@@ -294,7 +294,8 @@ var runWebAppServer = function () {
   var clientPrograms = {};
 
   // read the control files for the client we'll be serving up
-  _.each(__meteor_bootstrap__.configJson.clientInfo, function (clientInfo, name) {
+  _.each(__meteor_bootstrap__.configJson.clientInfo,
+      function (clientInfo, name) {
     var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                    clientInfo.path);
     var clientDir = path.dirname(clientJsonPath);
