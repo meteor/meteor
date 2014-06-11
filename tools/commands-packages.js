@@ -973,7 +973,6 @@ main.registerCommand({
     } else {
       upgradePackages = options.args;
     }
-    console.log( _.pluck(upgradePackages, 'packageName'));
     var newVersions = catalog.complete.resolveConstraints(allPackages, {
       previousSolution: versions,
       breaking: !options.minor,
