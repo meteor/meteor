@@ -2,7 +2,7 @@ var _ = require('underscore');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
-var PackageLoader = require("./package-loader.js");
+var PackageLoader = require("./package-loader.js").PackageLoader;
 var packageCache = require("./package-cache.js");
 var files = require('./files.js');
 

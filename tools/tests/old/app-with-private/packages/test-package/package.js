@@ -1,3 +1,8 @@
+Package.describe({
+  name: "test-package",
+  version: "1.0.0"
+});
+
 Package._transitional_registerBuildPlugin({
   name: 'addTxt',
   use: [],

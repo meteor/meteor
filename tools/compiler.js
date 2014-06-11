@@ -5,7 +5,7 @@ var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var Unipackage = require('./unipackage.js').Unipackage;
-var PackageLoader = require('./package-loader.js');
+var packageLoaderModule = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');
@@ -704,7 +704,7 @@ compiler.compile = function (packageSource, options) {
       rootPath: packageSource.sourceRoot
     }, function () {
 
-      var packageLoader = new PackageLoader({
+      var packageLoader = new packageLoaderModule.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name]
       });
 
@@ -782,7 +782,7 @@ compiler.compile = function (packageSource, options) {
   });
 
   // Compile builds. Might use our plugins, so needs to happen second.
-  var packageLoader = new PackageLoader({
+  var packageLoader = new packageLoaderModule.PackageLoader({
     versions: buildTimeDeps.packageDependencies
   });
 
@@ -916,7 +916,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     return false;
   }
 
-  var directDepsPackageLoader = new PackageLoader({
+  var directDepsPackageLoader = new packageLoaderModule.PackageLoader({
     versions: buildTimeDeps.directDependencies
   });
   var directDepsMatch = _.all(
@@ -949,7 +949,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
 
       // For each plugin, check that the resolved build-time deps for
       // that plugin match the unipackage's build time deps for it.
-      var packageLoaderForPlugin = new PackageLoader({
+      var packageLoaderForPlugin = new packageLoaderModule.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[pluginName]
       });
       var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];

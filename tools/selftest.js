@@ -320,8 +320,9 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
-  console.log("\n XXX warehouse is commented out");
-  if (_.has(options, 'warehouse') && false) {
+  if (_.has(options, 'warehouse') &&
+    console.log("\n XXX warehouse is commented out") &&
+    false) {
     // Make a directory to hold our new warehouse
     self.warehouse = path.join(self.root, 'warehouse');
     fs.mkdirSync(self.warehouse, 0755);

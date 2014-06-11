@@ -13,13 +13,13 @@ var unipackage = require('./unipackage.js');
 //  - uniloadDir: if specified, versions should be null, and this loader will
 //    *only* load packages that are already unipackages and are in this
 //    directory
-var PackageLoader = function (options) {
+exports.PackageLoader = function (options) {
   var self = this;
   self.versions = options.versions || null;
   self.uniloadDir = options.uniloadDir;
 };
 
-_.extend(PackageLoader.prototype, {
+_.extend(exports.PackageLoader.prototype, {
   // Given the name of a package, return a Unipackage object, or throw an
   // error if the package wasn't included in the 'versions' passed on
   // initalization or isn't available (for example, hasn't been
@@ -118,5 +118,3 @@ _.extend(PackageLoader.prototype, {
     return pkg.getBuildAtArch(arch);
   }
 });
-
-module.exports = PackageLoader;

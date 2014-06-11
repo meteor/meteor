@@ -8,8 +8,6 @@ var loginTimeoutSecs = 2;
 selftest.define("login", ['net'], function () {
   var s = new Sandbox;
 
-  console.log("XXX: added another timeout between login and username for package loading.");
-  console.log("Tune these timeouts once constraint solver & desclicification are done.");
   var run = s.run("whoami");
   run.matchErr("Not logged in");
   run.expectExit(1);

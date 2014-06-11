@@ -10,7 +10,6 @@ var testUtils = require('../test-utils.js');
 // 'app-for-selftest-test-owned'
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
-console.log("XXX: another instance of login taking a while");
 var loginTimeoutSecs = 2;
 
 // Run 'meteor logs' or 'meteor mongo' against an app. Options:

@@ -180,7 +180,7 @@ _.extend(Project.prototype, {
       };
 
       // Finally, initialize the package loader.
-      var PackageLoader = require('./package-loader.js');
+      var PackageLoader = require('./package-loader.js').PackageLoader;
       self.packageLoader = new PackageLoader({
         versions: newVersions
       });

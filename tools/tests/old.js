@@ -35,12 +35,12 @@ selftest.define("watch", ["slow"], function () {
 });
 
 selftest.define("bundler-assets", function () {
-  console.log("XXX: SYMLINK?!");
-  console.log("XXX: Meteor test options?");
   runOldTest('test-bundler-assets.js');
 });
 
 selftest.define("bundler-options", function () {
+  console.log("XXX: SYMLINK?!");
+  console.log("XXX: Meteor test options?");
   runOldTest('test-bundler-options.js');
 });
 

@@ -8,7 +8,7 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
-var PackageLoader = require('./package-loader.js');
+var PackageLoader = require('./package-loader.js').PackageLoader;
 var catalog = require('./catalog.js');
 var files = require('./files.js');
 var Future = require('fibers/future');
@@ -187,7 +187,7 @@ _.extend(Build.prototype, {
 // packages for which `filter(packageName, version)` returns truthy.
 var getLoadedPackageVersions = function (versions, filter) {
   var result = {};
-      var PLoader = require("./package-loader.js");
+      var PLoader = require("./package-loader.js").PackageLoader;
 
   var packageLoader = new PLoader({ versions: versions });
   _.each(versions, function (version, packageName) {

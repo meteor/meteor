@@ -13,7 +13,7 @@ var inFiber = require('./fiber-helpers.js').inFiber;
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var packageCache = require('./package-cache.js');
-var PackageLoader = require('./package-loader.js');
+var PackageLoader = require('./package-loader.js').PackageLoader;
 var stats = require('./stats.js');
 
 // Parse out s as if it were a bash command line.
