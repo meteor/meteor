@@ -367,9 +367,9 @@ command.
 
 >>> publish-release
 Publish a new release
-Usage: meteor publish-release --config <release.json>
+Usage: meteor publish-release <release.json>
 
 Publish a new release.
 
 Options:
-  -- create  publish a new release track.
+  --create-track  publish a new release track.
