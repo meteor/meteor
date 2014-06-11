@@ -207,6 +207,7 @@ main.registerCommand = function (options, func) {
 // NB: files required up to this point may not define commands
 
 require('./commands.js');
+require('./commands-packages.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Long-form help
