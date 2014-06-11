@@ -35,7 +35,7 @@ Package.on_use(function (api) {
   // Allow us to detect 'disable-oplog', which turns off oplog tailing for your
   // app even if it's configured in the environment. (This package will be
   // probably be removed before 1.0.)
-  api.use('disable-oplog', 'server', {weak: true});
+//  api.use('disable-oplog', 'server', {weak: true});
 
   // defaultRemoteCollectionDriver gets its deployConfig from something that is
   // (for questionable reasons) initialized by the webapp package.

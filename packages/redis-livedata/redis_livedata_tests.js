@@ -1614,7 +1614,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
         var run = test.runId();
         var options = collectionOptions;
         // We don't get ids back when we use update() to upsert, or when we are
-        // directly calling MongoConnection.upsert().
+        // directly calling RedisConnection.upsert().
         var skipIds = useUpdate || (! minimongo && useDirectCollection);
         if (minimongo)
           options = _.extend({}, collectionOptions, { connection: null });
@@ -1774,7 +1774,7 @@ var asyncUpsertTestName = function (useNetwork, useDirectCollection,
 // callback style. On the client, we test server-backed and in-memory
 // collections, and run the tests for both the Meteor.RedisCollection and the
 // LocalCollection. On the server, we test mongo-backed collections, for both
-// the Meteor.RedisCollection and the MongoConnection.
+// the Meteor.RedisCollection and the RedisConnection.
 //
 // XXX Rewrite with testAsyncMulti, that would simplify things a lot!
 _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {

@@ -8,7 +8,7 @@
  */
 
 var path = Npm.require('path');
-var MongoDB = Npm.require('mongodb');
+var RedisNpm = Npm.require('redis');
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
@@ -34,53 +34,53 @@ var replaceNames = function (filter, thing) {
 // Ensure that EJSON.clone keeps a Timestamp as a Timestamp (instead of just
 // doing a structural clone).
 // XXX how ok is this? what if there are multiple copies of MongoDB loaded?
-MongoDB.Timestamp.prototype.clone = function () {
-  // Timestamps should be immutable.
-  return this;
-};
+//MongoDB.Timestamp.prototype.clone = function () {
+//  // Timestamps should be immutable.
+//  return this;
+//};
 
 var makeMongoLegal = function (name) { return "EJSON" + name; };
 var unmakeMongoLegal = function (name) { return name.substr(5); };
 
-var replaceMongoAtomWithMeteor = function (document) {
-  if (document instanceof MongoDB.Binary) {
-    var buffer = document.value(true);
-    return new Uint8Array(buffer);
-  }
-  if (document instanceof MongoDB.ObjectID) {
-    return new Meteor.RedisCollection.ObjectID(document.toHexString());
-  }
+var replaceRedisAtomWithMeteor = function (document) {
+//  if (document instanceof MongoDB.Binary) {
+//    var buffer = document.value(true);
+//    return new Uint8Array(buffer);
+//  }
+//  if (document instanceof MongoDB.ObjectID) {
+//    return new Meteor.RedisCollection.ObjectID(document.toHexString());
+//  }
   if (document["EJSON$type"] && document["EJSON$value"]
       && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
-  if (document instanceof MongoDB.Timestamp) {
-    // For now, the Meteor representation of a Mongo timestamp type (not a date!
-    // this is a weird internal thing used in the oplog!) is the same as the
-    // Mongo representation. We need to do this explicitly or else we would do a
-    // structural clone and lose the prototype.
-    return document;
-  }
+//  if (document instanceof MongoDB.Timestamp) {
+//    // For now, the Meteor representation of a Mongo timestamp type (not a date!
+//    // this is a weird internal thing used in the oplog!) is the same as the
+//    // Mongo representation. We need to do this explicitly or else we would do a
+//    // structural clone and lose the prototype.
+//    return document;
+//  }
   return undefined;
 };
 
-var replaceMeteorAtomWithMongo = function (document) {
-  if (EJSON.isBinary(document)) {
-    // This does more copies than we'd like, but is necessary because
-    // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
-    // serialize it correctly).
-    return new MongoDB.Binary(new Buffer(document));
-  }
-  if (document instanceof Meteor.RedisCollection.ObjectID) {
-    return new MongoDB.ObjectID(document.toHexString());
-  }
-  if (document instanceof MongoDB.Timestamp) {
-    // For now, the Meteor representation of a Mongo timestamp type (not a date!
-    // this is a weird internal thing used in the oplog!) is the same as the
-    // Mongo representation. We need to do this explicitly or else we would do a
-    // structural clone and lose the prototype.
-    return document;
-  }
+var replaceMeteorAtomWithRedis = function (document) {
+//  if (EJSON.isBinary(document)) {
+//    // This does more copies than we'd like, but is necessary because
+//    // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
+//    // serialize it correctly).
+//    return new MongoDB.Binary(new Buffer(document));
+//  }
+//  if (document instanceof Meteor.RedisCollection.ObjectID) {
+//    return new MongoDB.ObjectID(document.toHexString());
+//  }
+//  if (document instanceof MongoDB.Timestamp) {
+//    // For now, the Meteor representation of a Mongo timestamp type (not a date!
+//    // this is a weird internal thing used in the oplog!) is the same as the
+//    // Mongo representation. We need to do this explicitly or else we would do a
+//    // structural clone and lose the prototype.
+//    return document;
+//  }
   if (EJSON._isCustomType(document)) {
     return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
   }
@@ -111,21 +111,21 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = function (url, options) {
+RedisConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._connectCallbacks = [];
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
-  var mongoOptions = {db: {safe: true}, server: {}, replSet: {}};
+  var redisOptions = {}; // {db: {safe: true}, server: {}, replSet: {}};
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
   // would want to set autoReconnect to false, I'm not really sure, but
   // keeping this for backwards compatibility for now.
-  if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
-    mongoOptions.server.auto_reconnect = true;
-  }
+//  if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
+//    mongoOptions.server.auto_reconnect = true;
+//  }
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
@@ -135,69 +135,82 @@ MongoConnection = function (url, options) {
   // - Binary modules don't yet work when you bundle and move the bundle
   //   to a different platform (aka deploy)
   // We should revisit this after binary npm module support lands.
-  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    mongoOptions.db.native_parser = false;
-  }
+//  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
+//    mongoOptions.db.native_parser = false;
+//  }
 
   // XXX maybe we should have a better way of allowing users to configure the
   // underlying Mongo driver
-  if (_.has(options, 'poolSize')) {
-    // If we just set this for "server", replSet will override it. If we just
-    // set it for replSet, it will be ignored if we're not using a replSet.
-    mongoOptions.server.poolSize = options.poolSize;
-    mongoOptions.replSet.poolSize = options.poolSize;
-  }
+//  if (_.has(options, 'poolSize')) {
+//    // If we just set this for "server", replSet will override it. If we just
+//    // set it for replSet, it will be ignored if we're not using a replSet.
+//    mongoOptions.server.poolSize = options.poolSize;
+//    mongoOptions.replSet.poolSize = options.poolSize;
+//  }
 
-  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
-    if (err)
-      throw err;
-    self.db = db;
-    // We keep track of the ReplSet's primary, so that we can trigger hooks when
-    // it changes.  The Node driver's joined callback seems to fire way too
-    // often, which is why we need to track it ourselves.
-    self._primary = null;
-    // First, figure out what the current primary is, if any.
-    if (self.db.serverConfig._state.master)
-      self._primary = self.db.serverConfig._state.master.name;
-    self.db.serverConfig.on(
-      'joined', Meteor.bindEnvironment(function (kind, doc) {
-        if (kind === 'primary') {
-          if (doc.primary !== self._primary) {
-            self._primary = doc.primary;
-            self._onFailoverHook.each(function (callback) {
-              callback();
-              return true;
-            });
-          }
-        } else if (doc.me === self._primary) {
-          // The thing we thought was primary is now something other than
-          // primary.  Forget that we thought it was primary.  (This means that
-          // if a server stops being primary and then starts being primary again
-          // without another server becoming primary in the middle, we'll
-          // correctly count it as a failover.)
-          self._primary = null;
-        }
-    }));
+  // XXX: Parse URL
+  var port = 6379;
+  var host = "127.0.0.1";
+  self.db = RedisNpm.createClient(port, host, redisOptions);
+  
+//  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
+//    if (err)
+//      throw err;
+//    self.db = db;
+//    // We keep track of the ReplSet's primary, so that we can trigger hooks when
+//    // it changes.  The Node driver's joined callback seems to fire way too
+//    // often, which is why we need to track it ourselves.
+//    self._primary = null;
+//    // First, figure out what the current primary is, if any.
+//    if (self.db.serverConfig._state.master)
+//      self._primary = self.db.serverConfig._state.master.name;
+//    self.db.serverConfig.on(
+//      'joined', Meteor.bindEnvironment(function (kind, doc) {
+//        if (kind === 'primary') {
+//          if (doc.primary !== self._primary) {
+//            self._primary = doc.primary;
+//            self._onFailoverHook.each(function (callback) {
+//              callback();
+//              return true;
+//            });
+//          }
+//        } else if (doc.me === self._primary) {
+//          // The thing we thought was primary is now something other than
+//          // primary.  Forget that we thought it was primary.  (This means that
+//          // if a server stops being primary and then starts being primary again
+//          // without another server becoming primary in the middle, we'll
+//          // correctly count it as a failover.)
+//          self._primary = null;
+//        }
+//    }));
+//
+//    // drain queue of pending callbacks
+//    _.each(self._connectCallbacks, function (c) {
+//      c(db);
+//    });
+//  }));
+  
+  // XXX: Authenticated connections?
 
-    // drain queue of pending callbacks
-    _.each(self._connectCallbacks, function (c) {
-      c(db);
-    });
-  }));
+  // XXX: Wait until 'ready' event?
+  // drain queue of pending callbacks
+  _.each(self._connectCallbacks, function (c) {
+    c(db);
+  });
 
   self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
 
-  if (options.oplogUrl && !Package['disable-oplog']) {
-    var dbNameFuture = new Future;
-    self._withDb(function (db) {
-      dbNameFuture.return(db.databaseName);
-    });
-    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
-  }
+//  if (options.oplogUrl && !Package['disable-oplog']) {
+//    var dbNameFuture = new Future;
+//    self._withDb(function (db) {
+//      dbNameFuture.return(db.databaseName);
+//    });
+//    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
+//  }
 };
 
-MongoConnection.prototype.close = function() {
+RedisConnection.prototype.close = function() {
   var self = this;
 
   // XXX probably untested
@@ -212,7 +225,7 @@ MongoConnection.prototype.close = function() {
   Future.wrap(_.bind(self.db.close, self.db))(true).wait();
 };
 
-MongoConnection.prototype._withDb = function (callback) {
+RedisConnection.prototype._withDb = function (callback) {
   var self = this;
   if (self.db) {
     callback(self.db);
@@ -222,7 +235,7 @@ MongoConnection.prototype._withDb = function (callback) {
 };
 
 // Returns the Mongo Collection object; may yield.
-MongoConnection.prototype._getCollection = function (collectionName) {
+RedisConnection.prototype._getCollection = function (collectionName) {
   var self = this;
 
   var future = new Future;
@@ -232,7 +245,7 @@ MongoConnection.prototype._getCollection = function (collectionName) {
   return future.wait();
 };
 
-MongoConnection.prototype._createCappedCollection = function (collectionName,
+RedisConnection.prototype._createCappedCollection = function (collectionName,
                                                               byteSize) {
   var self = this;
   var future = new Future();
@@ -248,7 +261,7 @@ MongoConnection.prototype._createCappedCollection = function (collectionName,
 // the write, and after observers have been notified (or at least,
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
-MongoConnection.prototype._maybeBeginWrite = function () {
+RedisConnection.prototype._maybeBeginWrite = function () {
   var self = this;
   var fence = DDPServer._CurrentWriteFence.get();
   if (fence)
@@ -259,7 +272,7 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 
 // Internal interface: adds a callback which is called when the Mongo primary
 // changes. Returns a stop handle.
-MongoConnection.prototype._onFailover = function (callback) {
+RedisConnection.prototype._onFailover = function (callback) {
   return this._onFailoverHook.register(callback);
 };
 
@@ -300,7 +313,7 @@ var bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
-MongoConnection.prototype._insert = function (collection_name, document,
+RedisConnection.prototype._insert = function (collection_name, document,
                                               callback) {
   var self = this;
 
@@ -331,7 +344,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self._getCollection(collection_name);
-    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
+    collection.insert(replaceTypes(document, replaceMeteorAtomWithRedis),
                       {safe: true}, callback);
   } catch (e) {
     write.committed();
@@ -341,7 +354,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
-MongoConnection.prototype._refresh = function (collectionName, selector) {
+RedisConnection.prototype._refresh = function (collectionName, selector) {
   var self = this;
   var refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
@@ -358,7 +371,7 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   }
 };
 
-MongoConnection.prototype._remove = function (collection_name, selector,
+RedisConnection.prototype._remove = function (collection_name, selector,
                                               callback) {
   var self = this;
 
@@ -379,7 +392,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   try {
     var collection = self._getCollection(collection_name);
-    collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
+    collection.remove(replaceTypes(selector, replaceMeteorAtomWithRedis),
                       {safe: true}, callback);
   } catch (e) {
     write.committed();
@@ -387,7 +400,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   }
 };
 
-MongoConnection.prototype._dropCollection = function (collectionName, cb) {
+RedisConnection.prototype._dropCollection = function (collectionName, cb) {
   var self = this;
 
   var write = self._maybeBeginWrite();
@@ -406,7 +419,7 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   }
 };
 
-MongoConnection.prototype._update = function (collection_name, selector, mod,
+RedisConnection.prototype._update = function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
 
@@ -446,8 +459,8 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
 
-    var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
-    var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
+    var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithRedis);
+    var mongoMod = replaceTypes(mod, replaceMeteorAtomWithRedis);
 
     var isModify = isModificationMod(mongoMod);
     var knownId = (isModify ? selector._id : mod._id);
@@ -506,7 +519,7 @@ var isModificationMod = function (mod) {
 var NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
-MongoConnection._isCannotChangeIdError = function (err) {
+RedisConnection._isCannotChangeIdError = function (err) {
   // either of these checks should work, but just to be safe...
   return (err.code === 13596 ||
           err.err.indexOf("cannot change _id of a document") === 0);
@@ -532,7 +545,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // Run this code up front so that it fails fast if someone uses
   // a Mongo update operator we don't support.
   if (isModify) {
-    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+    // We've already run replaceTypes/replaceMeteorAtomWithRedis on
     // selector and mod.  We assume it doesn't matter, as far as
     // the behavior of modifiers is concerned, whether `_modify`
     // is run on EJSON or on mongo-converted EJSON.
@@ -576,7 +589,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 
   var doConditionalInsert = function () {
     var replacementWithId = _.extend(
-      replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
+      replaceTypes({_id: insertedId}, replaceMeteorAtomWithRedis),
       newDoc);
     collection.update(selector, replacementWithId, mongoOptsForInsert,
                       bindEnvironmentForWrite(function (err, result) {
@@ -584,7 +597,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           // figure out if this is a
                           // "cannot change _id of document" error, and
                           // if so, try doUpdate() again, up to 3 times.
-                          if (MongoConnection._isCannotChangeIdError(err)) {
+                          if (RedisConnection._isCannotChangeIdError(err)) {
                             doUpdate();
                           } else {
                             callback(err);
@@ -602,16 +615,16 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 };
 
 _.each(["insert", "update", "remove", "dropCollection"], function (method) {
-  MongoConnection.prototype[method] = function (/* arguments */) {
+  RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
 
-// XXX MongoConnection.upsert() does not return the id of the inserted document
+// XXX RedisConnection.upsert() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
-MongoConnection.prototype.upsert = function (collectionName, selector, mod,
+RedisConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
   var self = this;
   if (typeof options === "function" && ! callback) {
@@ -626,7 +639,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
                      }), callback);
 };
 
-MongoConnection.prototype.find = function (collectionName, selector, options) {
+RedisConnection.prototype.find = function (collectionName, selector, options) {
   var self = this;
 
   if (arguments.length === 1)
@@ -636,7 +649,7 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
+RedisConnection.prototype.findOne = function (collection_name, selector,
                                               options) {
   var self = this;
   if (arguments.length === 1)
@@ -649,7 +662,7 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-MongoConnection.prototype._ensureIndex = function (collectionName, index,
+RedisConnection.prototype._ensureIndex = function (collectionName, index,
                                                    options) {
   var self = this;
   options = _.extend({safe: true}, options);
@@ -661,7 +674,7 @@ MongoConnection.prototype._ensureIndex = function (collectionName, index,
   var indexName = collection.ensureIndex(index, options, future.resolver());
   future.wait();
 };
-MongoConnection.prototype._dropIndex = function (collectionName, index) {
+RedisConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 
   // This function is only used by test code, not within a method, so we don't
@@ -777,7 +790,7 @@ Cursor.prototype.observeChanges = function (callbacks) {
     self._cursorDescription, ordered, callbacks);
 };
 
-MongoConnection.prototype._createSynchronousCursor = function(
+RedisConnection.prototype._createSynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
@@ -812,7 +825,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
   }
 
   var dbCursor = collection.find(
-    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithRedis),
     cursorOptions.fields, mongoOptions);
 
   return new SynchronousCursor(dbCursor, cursorDescription, options);
@@ -851,7 +864,7 @@ _.extend(SynchronousCursor.prototype, {
       var doc = self._synchronousNextObject().wait();
 
       if (!doc) return null;
-      doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+      doc = replaceTypes(doc, replaceRedisAtomWithMeteor);
 
       if (!self._cursorDescription.options.tailable && _.has(doc, '_id')) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
@@ -936,7 +949,7 @@ _.extend(SynchronousCursor.prototype, {
   }
 });
 
-MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
+RedisConnection.prototype.tail = function (cursorDescription, docCallback) {
   var self = this;
   if (!cursorDescription.options.tailable)
     throw new Error("Can only tail a tailable cursor");
@@ -996,7 +1009,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
   };
 };
 
-MongoConnection.prototype._observeChanges = function (
+RedisConnection.prototype._observeChanges = function (
     cursorDescription, ordered, callbacks) {
   var self = this;
 
@@ -1164,7 +1177,7 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
 //     enough to accurately evaluate the query against the write fence, we
 //     should be able to do this...  Of course, minimongo doesn't even support
 //     Mongo Timestamps yet.
-MongoConnection.prototype._observeChangesTailable = function (
+RedisConnection.prototype._observeChangesTailable = function (
     cursorDescription, ordered, callbacks) {
   var self = this;
 
@@ -1193,7 +1206,7 @@ MongoConnection.prototype._observeChangesTailable = function (
 // XXX We probably need to find a better way to expose this. Right now
 // it's only used by tests, but in fact you need it in normal
 // operation to interact with capped collections (eg, Galaxy uses it).
-RedisInternals.MongoTimestamp = MongoDB.Timestamp;
+//RedisInternals.MongoTimestamp = MongoDB.Timestamp;
 
-RedisInternals.Connection = MongoConnection;
+RedisInternals.Connection = RedisConnection;
 RedisInternals.NpmModule = MongoDB;
