@@ -39,6 +39,31 @@ _.extend(Miniredis.Cursor.prototype, {
         });
       }
     };
+  },
+  observeChanges: function (callbacks) {
+    var self = this;
+    var newCallbacks = {};
+
+    if (callbacks.added)
+      newCallbacks.added = function (doc) {
+        var id = doc._id;
+        delete doc._id;
+        callbacks.added(id, doc);
+      };
+    if (callbacks.changed)
+      newCallbacks.changed = function (oldDoc, newDoc) {
+        var id = newDoc._id;
+        delete newDoc._id;
+        // effectively the diff document is just {value} doc, as there is always
+        // a single top-level field with the value
+        callbacks.changed(id, newDoc);
+      };
+    if (callbacks.removed)
+      newCallbacks.removed = function (doc) {
+        callbacks.removed(doc._id);
+      };
+
+    return self.observe(newCallbacks);
   }
 });
 
