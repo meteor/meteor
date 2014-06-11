@@ -95,7 +95,7 @@ Meteor.publish(
       self.added(
         "meteor_autoupdate_clientVersions",
         Autoupdate.autoupdateVersionRefreshable,
-        {refreshable: true, current: true}
+        {refreshable: true, current: true, assets: WebApp.refreshableAssets }
       );
       self.ready();
     } else {

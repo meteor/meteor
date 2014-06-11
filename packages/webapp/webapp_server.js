@@ -644,6 +644,7 @@ var runWebAppServer = function () {
       });
     });
 
+
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = Spacebars.compile(
       boilerplateTemplateSource, { isBody: true });
@@ -656,6 +657,9 @@ var runWebAppServer = function () {
       kind: "MainPage",
       render: boilerplateRender
     });
+
+    // XXX document
+    WebApp.refreshableAssets = { css: boilerplateBaseData.css };
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;

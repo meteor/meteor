@@ -78,15 +78,18 @@ Autoupdate._retrySubscription = function () {
     onReady: function () {
       if (Package.reload) {
         Deps.autorun(function (computation) {
+          console.log("in 'onReady'");
           if (ClientVersions.findOne({ refreshable: false,
                                        current: true }) &&
               (! ClientVersions.findOne({_id: autoupdateVersion}))) {
             computation.stop();
             Package.reload.Reload._reload();
-          } else if (ClientVersions.findOne({ refreshable: true,
-                                              current: true }) &&
-              (! ClientVersions.findOne({_id: autoupdateVersionRefreshable}))) {
-            console.log("refreshable asset loaded!");
+          } else if
+            (! ClientVersions.findOne({_id: autoupdateVersionRefreshable})) {
+            var doc = ClientVersions.findOne({ refreshable: true,
+                                               current: true });
+            if (doc) {
+              document.getElementsByTagName("link")[0].href = doc.assets.css[0].url;            }
           }
         });
       }
