@@ -184,7 +184,7 @@ var calculateClientHash = function (programName) {
   hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
   var program = WebApp.clientPrograms[programName];
   if (! program)
-    throw new Error('Program ' + programName ' not found.');
+    throw new Error('Program ' + programName + ' not found.');
 
   _.each(program.manifest, function (resource) {
     if (resource.where === 'client' || resource.where === 'internal') {
