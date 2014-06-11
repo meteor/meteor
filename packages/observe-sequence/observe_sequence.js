@@ -116,7 +116,8 @@ ObserveSequence = {
 
             var idString = idStringify(id);
             if (idsUsed[idString]) {
-              warn("duplicate id " + id + " in", seq);
+              if (typeof item === 'object' && '_id' in item)
+                warn("duplicate id " + id + " in", seq);
               id = Random.id();
             } else {
               idsUsed[idString] = true;
