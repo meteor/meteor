@@ -8,16 +8,16 @@
 // minutiae.
 
 Package.describe({
-  summary: "Adaptor for using MongoDB and Minimongo over DDP",
+  summary: "Adaptor for using Redis and Miniredis over DDP",
   internal: true
 });
 
 Npm.depends({
-  mongodb: "1.4.1"
+  redis: "0.10.3"
 });
 
 Package.on_use(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
+  api.use(['random', 'ejson', 'json', 'underscore', 'miniredis', 'logging',
            'livedata', 'deps', 'application-configuration'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
@@ -47,11 +47,11 @@ Package.on_use(function (api) {
   api.use('callback-hook', 'server');
 
   // Stuff that should be exposed via a real API, but we haven't yet.
-  api.export('MongoInternals', 'server');
+  api.export('RedisInternals', 'server');
   // For tests only.
-  api.export('MongoTest', 'server', {testOnly: true});
+  api.export('RedisTest', 'server', {testOnly: true});
 
-  api.add_files(['mongo_driver.js', 'oplog_tailing.js',
+  api.add_files(['redis_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
                  'polling_observe_driver.js','oplog_observe_driver.js'],
                 'server');
@@ -61,13 +61,13 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('mongo-livedata');
+  api.use('redis-livedata');
   api.use('check');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'livedata']);
   // XXX test order dependency: the allow_tests "partial allow" test
-  // fails if it is run before mongo_livedata_tests.
-  api.add_files('mongo_livedata_tests.js', ['client', 'server']);
+  // fails if it is run before redis_livedata_tests.
+  api.add_files('redis_livedata_tests.js', ['client', 'server']);
   api.add_files('allow_tests.js', ['client', 'server']);
   api.add_files('collection_tests.js', ['client', 'server']);
   api.add_files('observe_changes_tests.js', ['client', 'server']);
