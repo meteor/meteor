@@ -129,7 +129,9 @@
   - websocket-driver: 0.3.4 (from 0.3.2)
   - stylus: 0.46.3 (from 0.42.3)
 
-Patches contributed by GitHub users awwx, mquandalle, subhog
+Patches contributed by GitHub users awwx, babenzele, Cangit, dandv,
+ducdigital, emgee3, felixrabe, FredericoC, jbruni, kentonv, mizzao,
+mquandalle, subhog, tbjers, tmeasday.
 
 
 ## v.0.8.1.3
