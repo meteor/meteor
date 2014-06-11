@@ -13,7 +13,7 @@ var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
 RedisInternals = {};
-MongoTest = {};
+RedisTest = {};
 
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!

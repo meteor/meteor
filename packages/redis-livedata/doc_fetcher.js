@@ -61,4 +61,4 @@ _.extend(DocFetcher.prototype, {
   }
 });
 
-MongoTest.DocFetcher = DocFetcher;
+RedisTest.DocFetcher = DocFetcher;

@@ -9,7 +9,7 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     var id1 = collection.insert({x: 1});
     var id2 = collection.insert({y: 2});
 
-    var fetcher = new MongoTest.DocFetcher(
+    var fetcher = new RedisTest.DocFetcher(
       RedisInternals.defaultRemoteCollectionDriver().mongo);
 
     // Test basic operation.
