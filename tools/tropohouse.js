@@ -128,7 +128,7 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX this is kinda bogus right now and needs to be fixed when we actually
   // get around to implement cross-linking (which is the point)
-  maybeDownloadPackageForArchitectures: function (versionInfo, requiredArches) {
+  maybeDownloadPackageForArchitectures: function (versionInfo, requiredArches, verbose) {
     var self = this;
     var packageName = versionInfo.packageName;
     var version = versionInfo.version;
@@ -164,11 +164,21 @@ _.extend(exports.Tropohouse.prototype, {
         return false;
       }
 
+      // XXX replace with a real progress bar in _ensurePackagesExistOnDisk
+      if (verbose) {
+        process.stderr.write(
+          "Downloading " + packageName + "@" + version + "...");
+      }
+
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
         self.downloadSpecifiedBuild(build);
       });
+
+      if (verbose) {
+        process.stderr.write(" done\n");
+      }
     }
 
     // We need to turn our builds into a unipackage.

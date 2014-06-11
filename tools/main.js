@@ -313,7 +313,9 @@ var springboard = function (rel, releaseOverride) {
   // XXX split better
   tropohouse.default.maybeDownloadPackageForArchitectures(
     {packageName: toolsPkg, version: toolsVersion},
-    [archinfo.host()]);
+    [archinfo.host()],
+    true /* print downloading message */
+  );
 
   // XXX support warehouse too
 

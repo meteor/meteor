@@ -503,7 +503,8 @@ _.extend(Project.prototype, {
       // XXX error handling
       var available = tropohouse.default.maybeDownloadPackageForArchitectures(
         packageVersionInfo,
-        ['browser', archinfo.host()]
+        ['browser', archinfo.host()],
+        true /* print downloading message */
       );
       if (available) {
         downloadedPackages[name] = version;

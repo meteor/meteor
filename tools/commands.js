@@ -1379,11 +1379,13 @@ main.registerCommand({
       path.join(tmpdir, '.meteor0'), catalog.official);
     tmpTropo.maybeDownloadPackageForArchitectures(
       {packageName: toolPkg.package, version: toolPkg.constraint},
-      [osArch]);  // XXX 'browser' too?
+      [osArch],  // XXX 'browser' too?
+      true);
     _.each(release.packages, function (pkgVersion, pkgName) {
       tmpTropo.maybeDownloadPackageForArchitectures(
         {packageName: pkgName, version: pkgVersion},
-        [osArch]);  // XXX 'browser' too?
+        [osArch],  // XXX 'browser' too?
+        true);
     });
 
     // Delete the downloaded-builds directory which basically just has a second
