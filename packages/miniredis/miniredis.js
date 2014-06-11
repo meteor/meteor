@@ -17,6 +17,85 @@ Miniredis.Cursor = function (redisStore, pattern) {
   self.pattern = pattern;
 };
 
+// returns the position where x should be inserted in a sorted array
+var insPos = function (arr, x) {
+  var l = 0, r = arr.length - 1;
+  while (l <= r) {
+    var m = (l + r) / 2;
+    if (arr[m] <= x)
+      l = m + 1;
+    else
+      r = m - 1;
+  }
+
+  return l;
+};
+
+// returns added/changed/removed callbacks which call the passed ordered
+// callbacks addedAt/changedAt/removedAt/movedTo
+var translateToOrderedCallbacks = function (orderedCallbacks) {
+  var queryResult = [];
+  return {
+    added: function (doc) {
+      var pos = insPos(queryResult, doc._id);
+      var before = queryResult[pos];
+      queryResult.splice(pos, 0, doc._id);
+      orderedCallbacks.addedAt && orderedCallbacks.addedAt(doc, pos, before);
+    },
+    changed: function (oldDoc, newDoc) {
+      var pos = insPos(queryResult, newDoc._id);
+      orderedCallbacks.changedAt && orderedCallbacks.changedAt(oldDoc, newDoc, pos);
+    },
+    removed: function (doc) {
+      var pos = insPos(queryResult, doc._id);
+      queryResult.splice(pos, 1);
+      orderedCallbacks.removedAt && orderedCallbacks.removedAt(doc, pos);
+    }
+  };
+};
+
+// returns added/changed/removed/addedAt callbacks which call the passed
+// added/changed/removed/addedAt/changedAt/removedAt callbacks within
+// observeChanges API
+var translateToChangesCallbacks = function (changesCallbacks) {
+  var newCallbacks = {};
+
+  if (changesCallbacks.added)
+    newCallbacks.added = function (doc) {
+      var id = doc._id;
+      delete doc._id;
+      changesCallbacks.added(id, doc);
+    };
+  if (changesCallbacks.addedAt)
+    newCallbacks.addedAt = function (doc, atIndex, before) {
+      var id = doc._id;
+      delete doc._id;
+      changesCallbacks.addedBefore(id, doc, before);
+    };
+
+  var changedCallback = function (oldDoc, newDoc) {
+    var id = newDoc._id;
+    delete newDoc._id;
+    // effectively the diff document is just {value} doc, as there is always
+    // a single top-level field with the value
+    changesCallbacks.changed(id, newDoc);
+  };
+  if (changesCallbacks.changed)
+    newCallbacks.changed = changedCallback;
+  if (changesCallbacks.changedAt)
+    newCallbacks.changedAt = changedCallback;
+
+  var removedCallback = function (doc) {
+    changesCallbacks.removed(doc._id);
+  };
+  if (changesCallbacks.removed)
+    newCallbacks.removed = removedCallback;
+  if (changesCallbacks.removedAt)
+    newCallbacks.removedAt = removedCallback;
+
+  return newCallbacks;
+};
+
 _.extend(Miniredis.Cursor.prototype, {
   fetch: function () {
     var self = this;
@@ -24,6 +103,11 @@ _.extend(Miniredis.Cursor.prototype, {
   },
   observe: function (callbacks) {
     var self = this;
+
+    if (callbacks.addedAt || callbacks.changedAt || callbacks.removedAt || callbacks.movedTo) {
+      return self.observe(translateToOrderedCallbacks(callbacks));
+    }
+
     var observeRecord = _.extend({ pattern: self.pattern }, callbacks);
     var redisStore = self.redisStore;
     redisStore.observes.push(observeRecord);
@@ -42,28 +126,12 @@ _.extend(Miniredis.Cursor.prototype, {
   },
   observeChanges: function (callbacks) {
     var self = this;
-    var newCallbacks = {};
 
-    if (callbacks.added)
-      newCallbacks.added = function (doc) {
-        var id = doc._id;
-        delete doc._id;
-        callbacks.added(id, doc);
-      };
-    if (callbacks.changed)
-      newCallbacks.changed = function (oldDoc, newDoc) {
-        var id = newDoc._id;
-        delete newDoc._id;
-        // effectively the diff document is just {value} doc, as there is always
-        // a single top-level field with the value
-        callbacks.changed(id, newDoc);
-      };
-    if (callbacks.removed)
-      newCallbacks.removed = function (doc) {
-        callbacks.removed(doc._id);
-      };
+    if (callbacks.addedBefore || callbacks.movedBefore) {
+      return self.observe(translateToChangesCallbacks(translateToOrderedCallbacks(callbacks)));
+    }
 
-    return self.observe(newCallbacks);
+    return self.observe(translateToChangesCallbacks(callbacks));
   }
 });
 
