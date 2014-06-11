@@ -668,7 +668,7 @@ main.registerCommand({
           }
         });
       });
-
+    }
   }
 });
 
