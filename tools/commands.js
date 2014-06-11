@@ -2356,6 +2356,8 @@ main.registerCommand({
                     if (bundleBuildResult.treeHash !==
                         existingBuild.build.treeHash) {
                       somethingChanged = true;
+                    } else {
+                      process.stdout.write("NEW VERSION! \n");
                     }
                   }
 
