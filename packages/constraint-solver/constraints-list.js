@@ -6,6 +6,15 @@ var semver = Npm.require('semver');
 ////////////////////////////////////////////////////////////////////////////////
 // A persistent data-structure that keeps references to Constraint objects
 // arranged by the "name" field of Constraint, exact field and version.
+//
+// Internal structure has the "length" field for the number of elements stored
+// and the "byName" map that has the following structure:
+// byName:
+//   - nameOfPackage:
+//     - exact:
+//       - versionString <=> exactConstraintInstance
+//     - inexact:
+//       - versionString <=> inexactConstraintInstance
 ConstraintSolver.ConstraintsList = function (prev) {
   var self = this;
 
