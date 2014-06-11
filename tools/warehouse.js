@@ -345,66 +345,6 @@ _.extend(warehouse, {
       fs.writeFileSync(warehouse.getToolsFreshFile(toolsVersion), '');
   },
 
-  printNotices: function (fromRelease, toRelease, packages) {
-    var noticesPath = path.join(
-      warehouse.getWarehouseDir(), 'releases', toRelease + '.notices.json');
-
-    try {
-      var notices = JSON.parse(fs.readFileSync(noticesPath));
-    } catch (e) {
-      // It's valid for this file to not exist (if it's an unblessed version)
-      // and eh, if the JSON is bad then the user doesn't really care.
-      return;
-    }
-
-    var noticesToPrint = [];
-    // If we are updating from an app with no .meteor/release, print all
-    // entries up to toRelease.
-    var foundFromRelease = !fromRelease;
-    for (var i = 0; i < notices.length; ++i) {
-      var record = notices[i];
-      // We want to print the notices for releases newer than fromRelease, and
-      // we always want to print toRelease even if we're updating from something
-      // that's not in the notices file at all.
-      if (foundFromRelease || record.release === toRelease) {
-        var noticesForRelease = record.notices || [];
-        _.each(record.packageNotices, function (lines, pkgName) {
-          if (_.contains(packages, pkgName)) {
-            if (!_.isEmpty(noticesForRelease))
-              noticesForRelease.push('');
-            noticesForRelease.push.apply(noticesForRelease, lines);
-          }
-        });
-
-        if (!_.isEmpty(noticesForRelease)) {
-          noticesToPrint.push({release: record.release,
-                               notices: noticesForRelease});
-        }
-      }
-      // Nothing newer than toRelease.
-      if (record.release === toRelease)
-        break;
-      if (!foundFromRelease && record.release === fromRelease)
-        foundFromRelease = true;
-    }
-
-    if (_.isEmpty(noticesToPrint))
-      return;
-
-    console.log();
-    console.log("-- Notice --");
-    console.log();
-    _.each(noticesToPrint, function (record) {
-      var header = record.release + ': ';
-      _.each(record.notices, function (line, i) {
-        console.log(header + line);
-        if (i === 0)
-          header = header.replace(/./g, ' ');
-      });
-      console.log();
-    });
-  },
-
   // this function is also used by bless-release.js
   downloadPackagesToWarehouse: function (packagesToDownload,
                                          platform,
