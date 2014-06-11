@@ -39,8 +39,6 @@ selftest.define("bundler-assets", function () {
 });
 
 selftest.define("bundler-options", function () {
-  console.log("XXX: SYMLINK?!");
-  console.log("XXX: Meteor test options?");
   runOldTest('test-bundler-options.js');
 });
 

@@ -17,6 +17,22 @@ var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
+var setAppDir = function (appDir) {
+  project.project.setRootDir(appDir);
+
+  var localPackageDirs = [path.join(appDir, 'packages')];
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
+  catalog.complete.initialize({
+    localPackageDirs: localPackageDirs
+  });
+};
+
 var runTest = function () {
   var readManifest = function (tmpOutputDir) {
     return JSON.parse(fs.readFileSync(
@@ -24,15 +40,13 @@ var runTest = function () {
       "utf8")).manifest;
   };
 
-  project.project.setRootDir(emptyAppDir);
+  setAppDir(emptyAppDir);
   var loader = project.project.getPackageLoader();
 
   console.log("nodeModules: 'skip'");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
-
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
       nodeModulesMode: 'skip',
       buildOptions: { minify: true },
@@ -65,7 +79,6 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
       nodeModulesMode: 'skip',
       buildOptions: { minify: false },
@@ -97,35 +110,10 @@ var runTest = function () {
     assert(foundDeps);
   });
 
-  console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      appDir: emptyAppDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
-      buildOptions: { minify: false, testPackages: ['meteor'] },
-      packageLoader: loader
-    });
-    assert.strictEqual(result.errors, false);
-
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-
-    console.log("XXX: Meteor test options?");
-    // verify that tests for the meteor package are included
-/*    var manifest = readManifest(tmpOutputDir);
-    assert(_.find(manifest, function (item) {
-      return item.type === 'js' && item.path === 'packages/meteor:tests.js';
-    })); */
-  });
-
   console.log("nodeModules: 'copy'");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
       nodeModulesMode: 'copy',
       packageLoader: loader
@@ -145,7 +133,6 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
       nodeModulesMode: 'symlink',
       packageLoader: loader
@@ -159,11 +146,10 @@ var runTest = function () {
     assert(fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
     // node_modules contains fibers
     assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-console.log("XXX: SYMLINK?!");
     // package node_modules directory also a symlink
-/*    assert(fs.lstatSync(path.join(
-      tmpOutputDir, "programs", "server", "npm", "livedata", "main", "node_modules"))
-           .isSymbolicLink()); */
+    assert(fs.lstatSync(path.join(
+      tmpOutputDir, "programs", "server", "npm", "livedata", "node_modules"))
+           .isSymbolicLink());
   });
 };
 
@@ -171,20 +157,6 @@ console.log("XXX: SYMLINK?!");
 var Fiber = require('fibers');
 Fiber(function () {
   release._setCurrentForOldTest();
-
-  var localPackageDirs = [];
-  if (!files.usesWarehouse()) {
-    // Running from a checkout, so use the Meteor core packages from
-    // the checkout.
-    localPackageDirs.push(path.join(
-      files.getCurrentToolsDir(), 'packages'));
-  }
-
-  var LP = require('../../package-loader.js');
-
-  catalog.complete.initialize({
-    localPackageDirs: localPackageDirs
-  });
 
   try {
     runTest();
