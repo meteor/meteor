@@ -877,4 +877,4 @@ var modifierCanBeDirectlyApplied = function (modifier) {
   });
 };
 
-MongoInternals.OplogObserveDriver = OplogObserveDriver;
+RedisInternals.OplogObserveDriver = OplogObserveDriver;

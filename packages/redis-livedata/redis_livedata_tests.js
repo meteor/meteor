@@ -1591,7 +1591,7 @@ if (Meteor.isServer) {
       err = e;
     }
     test.isTrue(err);
-    test.isTrue(MongoInternals.Connection._isCannotChangeIdError(err));
+    test.isTrue(RedisInternals.Connection._isCannotChangeIdError(err));
 
     try {
       coll.insert({_id: 'foobar'});
@@ -1600,7 +1600,7 @@ if (Meteor.isServer) {
     }
     test.isTrue(err);
     // duplicate id error is not same as change id error
-    test.isFalse(MongoInternals.Connection._isCannotChangeIdError(err));
+    test.isFalse(RedisInternals.Connection._isCannotChangeIdError(err));
   });
 
 } // end Meteor.isServer
@@ -2644,7 +2644,7 @@ if (Meteor.isServer) {
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
   var collName = Random.id();
   var coll = new Meteor.RedisCollection(collName);
-  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+  if (RedisInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
     var observeWithOplog = coll.find({x: 5})
           .observeChanges({added: function () {}});
     test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
@@ -2925,7 +2925,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
 var waitUntilOplogCaughtUp = function () {
   var oplogHandle =
-        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+        RedisInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
   if (oplogHandle)
     oplogHandle.waitUntilCaughtUp();
 };

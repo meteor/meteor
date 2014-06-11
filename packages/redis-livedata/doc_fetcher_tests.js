@@ -10,7 +10,7 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     var id2 = collection.insert({y: 2});
 
     var fetcher = new MongoTest.DocFetcher(
-      MongoInternals.defaultRemoteCollectionDriver().mongo);
+      RedisInternals.defaultRemoteCollectionDriver().mongo);
 
     // Test basic operation.
     fetcher.fetch(collName, id1, Random.id(), expect(null, {_id: id1, x: 1}));

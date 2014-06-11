@@ -2,7 +2,7 @@ var OplogCollection = new Meteor.RedisCollection("oplog-" + Random.id());
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var oplogEnabled =
-        !!MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+        !!RedisInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
 
   var supported = function (expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);

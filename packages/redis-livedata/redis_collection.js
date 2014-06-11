@@ -67,9 +67,9 @@ Meteor.RedisCollection = function (name, options) {
 
   if (!options._driver) {
     if (name && self._connection === Meteor.server &&
-        typeof MongoInternals !== "undefined" &&
-        MongoInternals.defaultRemoteCollectionDriver) {
-      options._driver = MongoInternals.defaultRemoteCollectionDriver();
+        typeof RedisInternals !== "undefined" &&
+        RedisInternals.defaultRemoteCollectionDriver) {
+      options._driver = RedisInternals.defaultRemoteCollectionDriver();
     } else {
       options._driver = LocalCollectionDriver;
     }
