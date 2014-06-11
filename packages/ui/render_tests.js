@@ -15,6 +15,11 @@ var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
 
+var isIE = function () {
+  var myNav = navigator.userAgent.toLowerCase();
+  return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
+};
+
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
     var div = document.createElement("DIV");
@@ -285,14 +290,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b;"></span>');
 
     test.equal(R.numListeners(), 1);
-
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
-    span.setAttribute("style", 'jquery-style: hidden;' + span.getAttribute("style"));
+    span.setAttribute("style", span.getAttribute("style") + 'jquery-style: hidden;');
 
-    R.set({'style': 'foo:"a;zz;aa"', id: 'bar'});
+    R.set({'style': 'foo: "a;zz;aa";', id: 'bar'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML, true), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
     test.equal(R.numListeners(), 1);
 
     R.set({});
@@ -307,36 +311,41 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
   // Test that identical styles are successfully overwritten.
   (function () {
-    var R = ReactiveVar({'style': 'foo:a;'});
+
+    var R = ReactiveVar({'style': 'foo: a;'});
 
     var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
 
     var div = document.createElement("DIV");
+    document.body.appendChild(div);
     materialize(spanCode, div);
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:a;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a;"></span>');
 
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
-    span.setAttribute("style", 'foo:b;');
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:b;"></span>');
+    span.setAttribute("style", 'foo: b;');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: b;"></span>');
 
-    R.set({'style': 'foo:c;'});
+    R.set({'style': 'foo: c;'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:c;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c;"></span>');
 
-    // Test malformed styles
-    R.set({'style': 'foo:a; bar::d;:e; baz:c;'});
+    // XXX test malformed styles - different expectations in IE from Chrome
+    R.set({'style': 'foo: a; bar::d;:e; baz: c;'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:a; bar::d; baz:c;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML),
+      isIE() ? '<span style="foo: a; baz: c;"></span>' : '<span style="foo: a; bar::d; baz: c;"></span>');
 
     // Test strange styles
-    R.set({'style': 'constructor:a; __proto__:b; foo:c;'});
+    R.set({'style': 'constructor: a; __proto__: b; foo: c;'});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:c; constructor:a; __proto__:b;"></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c; constructor: a; __proto__: b;"></span>');
 
+    // XXX test clearing styles - different expectations in IE from Chrome
     R.set({});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), '<span style=""></span>');
+    test.equal(canonicalizeHtml(div.innerHTML),
+      isIE() ? '<span></span>' : '<span style=""></span>');
   })();
 
   // Test `null`, `undefined`, and `[]` attributes
