@@ -26,6 +26,7 @@
 // browser.
 var autoupdateVersion = __meteor_runtime_config__.autoupdateVersion || "unknown";
 
+
 // The collection of acceptable client versions.
 var ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
 
@@ -41,6 +42,8 @@ Autoupdate.newClientAvailable = function () {
     ]}
   );
 };
+
+
 
 var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
@@ -92,7 +95,7 @@ Autoupdate._retrySubscription = function () {
           }
         });
       }
-    }
+  }
   });
 };
 Autoupdate._retrySubscription();
