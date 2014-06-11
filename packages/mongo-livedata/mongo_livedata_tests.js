@@ -24,6 +24,10 @@ if (Meteor.isServer) {
       Meteor.publish('c-' + name, function () {
         return c.find();
       });
+    },
+    dropInsecureCollection: function(name) {
+      var c = COLLECTIONS[name];
+      c._dropCollection();
     }
   });
 }
@@ -330,7 +334,6 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   }, context);
   test.equal(total, 14);
 
-  cur.rewind();
   index = 0;
   test.equal(cur.map(function (doc, i, cursor) {
     // XXX we could theoretically make map run its iterations in parallel or
@@ -2338,14 +2341,21 @@ _.each( ['STRING', 'MONGO'], function (idGeneration) {
   testAsyncMulti('mongo-livedata - consistent _id generation ' + name + ', ' + repetitions + ' repetitions on ' + collectionCount + ' collections, idGeneration=' + idGeneration, [ function (test, expect) {
     var collectionOptions = { idGeneration: idGeneration };
 
+    var cleanups = this.cleanups = [];
     this.collections = _.times(collectionCount, function () {
       var collectionName = "consistentid_" + Random.id();
       if (Meteor.isClient) {
         Meteor.call('createInsecureCollection', collectionName, collectionOptions);
         Meteor.subscribe('c-' + collectionName, expect());
+        cleanups.push(function (expect) { Meteor.call('dropInsecureCollection', collectionName, expect(function () {})); });
       }
 
-      return (COLLECTIONS[collectionName] = new Meteor.Collection(collectionName, collectionOptions));
+      var collection = new Meteor.Collection(collectionName, collectionOptions);
+      if (Meteor.isServer) {
+        cleanups.push(function () { collection._dropCollection(); });
+      }
+      COLLECTIONS[collectionName] = collection;
+      return collection;
     });
   }, function (test, expect) {
     // now run the actual test
@@ -2354,6 +2364,11 @@ _.each( ['STRING', 'MONGO'], function (idGeneration) {
         fn(test, expect, this.collections[j], i);
       }
     }
+  }, function (test, expect) {
+    // Run any registered cleanup functions (e.g. to drop collections)
+    _.each(this.cleanups, function(cleanup) {
+      cleanup(expect);
+    });
   }]);
 
 });

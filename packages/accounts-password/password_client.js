@@ -8,41 +8,71 @@
 // @param password {String}
 // @param callback {Function(error|undefined)}
 Meteor.loginWithPassword = function (selector, password, callback) {
-  var srp = new SRP.Client(password);
-  var request = srp.startExchange();
-
   if (typeof selector === 'string')
     if (selector.indexOf('@') === -1)
       selector = {username: selector};
     else
       selector = {email: selector};
 
-  request.user = selector;
+  Accounts.callLoginMethod({
+    methodArguments: [{
+      user: selector,
+      password: hashPassword(password)
+    }],
+    userCallback: function (error, result) {
+      if (error && error.error === 400 &&
+          error.reason === 'old password format') {
+        // The "reason" string should match the error thrown in the
+        // password login handler in password_server.js.
 
-  // Normally, we only set Meteor.loggingIn() to true within
-  // Accounts.callLoginMethod, but we'd also like it to be true during the
-  // password exchange. So we set it to true here, and clear it on error; in
-  // the non-error case, it gets cleared by callLoginMethod.
-  Accounts._setLoggingIn(true);
-  Accounts.connection.apply(
-    'beginPasswordExchange', [request], function (error, result) {
-      if (error || !result) {
-        Accounts._setLoggingIn(false);
-        error = error ||
-          new Error("No result from call to beginPasswordExchange");
-        callback && callback(error);
-        return;
+        // XXX COMPAT WITH 0.8.1.3
+        // If this user's last login was with a previous version of
+        // Meteor that used SRP, then the server throws this error to
+        // indicate that we should try again. The error includes the
+        // user's SRP identity. We provide a value derived from the
+        // identity and the password to prove to the server that we know
+        // the password without requiring a full SRP flow, as well as
+        // SHA256(password), which the server bcrypts and stores in
+        // place of the old SRP information for this user.
+        var details;
+        try {
+          details = EJSON.parse(error.details);
+        } catch (e) {}
+        if (!(details && details.format === 'srp'))
+          callback(new Meteor.Error(400,
+                                    "Password is old. Please reset your " +
+                                    "password."));
+        else
+          srpUpgradePath(selector, password, details.identity, callback);
       }
+      else if (error) {
+        callback(error);
+      } else {
+        callback();
+      }
+    }
+  });
+};
 
-      var response = srp.respondToChallenge(result);
-      Accounts.callLoginMethod({
-        methodArguments: [{srp: response}],
-        validateResult: function (result) {
-          if (!srp.verifyConfirmation({HAMK: result.HAMK}))
-            throw new Error("Server is cheating!");
-        },
-        userCallback: callback});
-    });
+var hashPassword = function (password) {
+  return {
+    digest: SHA256(password),
+    algorithm: "sha-256"
+  };
+};
+
+// The server requested an upgrade from the old SRP password format,
+// so supply the needed SRP identity to login.
+var srpUpgradePath = function (selector, plaintextPassword,
+                               identity, callback) {
+  Accounts.callLoginMethod({
+    methodArguments: [{
+      user: selector,
+      srp: SHA256(identity + ":" + plaintextPassword),
+      password: hashPassword(plaintextPassword)
+    }],
+    userCallback: callback
+  });
 };
 
 
@@ -52,10 +82,9 @@ Accounts.createUser = function (options, callback) {
 
   if (!options.password)
     throw new Error("Must set options.password");
-  var verifier = SRP.generateVerifier(options.password);
-  // strip old password, replacing with the verifier object
-  delete options.password;
-  options.srp = verifier;
+
+  // Replace password with the hashed password.
+  options.password = hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
@@ -79,49 +108,18 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
     return;
   }
 
-  var verifier = SRP.generateVerifier(newPassword);
-
-  if (!oldPassword) {
-    Accounts.connection.apply(
-      'changePassword', [{srp: verifier}], function (error, result) {
-        if (error || !result) {
-          callback && callback(
-            error || new Error("No result from changePassword."));
-        } else {
-          callback && callback();
-        }
-      });
-  } else { // oldPassword
-    var srp = new SRP.Client(oldPassword);
-    var request = srp.startExchange();
-    request.user = {id: Meteor.user()._id};
-    Accounts.connection.apply(
-      'beginPasswordExchange', [request], function (error, result) {
-        if (error || !result) {
-          callback && callback(
-            error || new Error("No result from call to beginPasswordExchange"));
-          return;
-        }
-
-        var response = srp.respondToChallenge(result);
-        response.srp = verifier;
-        Accounts.connection.apply(
-          'changePassword', [response],function (error, result) {
-            if (error || !result) {
-              callback && callback(
-                error || new Error("No result from changePassword."));
-            } else {
-              if (!srp.verifyConfirmation(result)) {
-                // Monkey business!
-                callback &&
-                  callback(new Error("Old password verification failed."));
-              } else {
-                callback && callback();
-              }
-            }
-          });
-      });
-  }
+  Accounts.connection.apply(
+    'changePassword',
+    [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
+    function (error, result) {
+      if (error || !result) {
+        callback && callback(
+          error || new Error("No result from changePassword."));
+      } else {
+        callback && callback();
+      }
+    }
+  );
 };
 
 // Sends an email to a user with a link that can be used to reset
@@ -148,10 +146,9 @@ Accounts.resetPassword = function(token, newPassword, callback) {
   if (!newPassword)
     throw new Error("Need to pass newPassword");
 
-  var verifier = SRP.generateVerifier(newPassword);
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
-    methodArguments: [token, verifier],
+    methodArguments: [token, hashPassword(newPassword)],
     userCallback: callback});
 };
 

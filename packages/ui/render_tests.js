@@ -268,6 +268,77 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(R.numListeners(), 0);
   })();
 
+  // Test styles.
+  (function () {
+    // Test the case where there is a semicolon in the css attribute.
+    var R = ReactiveVar({'style': 'foo:"a;aa"; bar: b;',
+      id: 'foo'});
+
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+
+    test.equal(toHTML(spanCode), '<span style="foo:&quot;a;aa&quot;; bar: b;" id="foo"></span>');
+
+    test.equal(R.numListeners(), 0);
+
+    var div = document.createElement("DIV");
+    materialize(spanCode, div);
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo:&quot;a;aa&quot;; bar: b;"></span>');
+
+    test.equal(R.numListeners(), 1);
+
+    var span = div.firstChild;
+    test.equal(span.nodeName, 'SPAN');
+    span.setAttribute("style", 'jquery-style: hidden;' + span.getAttribute("style"));
+
+    R.set({'style': 'foo:"a;zz;aa"', id: 'bar'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="bar" style="jquery-style: hidden; foo:&quot;a;zz;aa&quot;"></span>');
+    test.equal(R.numListeners(), 1);
+
+    R.set({});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style: hidden;"></span>');
+    test.equal(R.numListeners(), 1);
+
+    $(div).remove();
+
+    test.equal(R.numListeners(), 0);
+  })();
+
+  // Test that identical styles are successfully overwritten.
+  (function () {
+    var R = ReactiveVar({'style': 'foo:a;'});
+
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+
+    var div = document.createElement("DIV");
+    materialize(spanCode, div);
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:a;"></span>');
+
+    var span = div.firstChild;
+    test.equal(span.nodeName, 'SPAN');
+    span.setAttribute("style", 'foo:b;');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:b;"></span>');
+
+    R.set({'style': 'foo:c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:c;"></span>');
+
+    // Test malformed styles
+    R.set({'style': 'foo:a; bar::d;:e; baz:c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:a; bar::d; baz:c;"></span>');
+
+    // Test strange styles
+    R.set({'style': 'constructor:a; __proto__:b; foo:c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo:c; constructor:a; __proto__:b;"></span>');
+
+    R.set({});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style=""></span>');
+  })();
+
   // Test `null`, `undefined`, and `[]` attributes
   (function () {
     var R = ReactiveVar({id: 'foo',
@@ -407,6 +478,31 @@ Tinytest.add("ui - render - components", function (test) {
   })();
 });
 
+Tinytest.add("ui - render - findAll", function (test) {
+  var found = null;
+  var $found = null;
+
+  var myComponent = UI.Component.extend({
+    render: function() {
+      return DIV([P('first'), P('second')]);
+    },
+    rendered: function() {
+      found = this.findAll('p');
+      $found = this.$('p');
+    },
+  });
+
+  var div = document.createElement("DIV");
+
+  materialize(myComponent, div);
+  Deps.flush();
+
+  test.equal(_.isArray(found), true);
+  test.equal(_.isArray($found), false);
+  test.equal(found.length, 2);
+  test.equal($found.length, 2);
+});
+
 Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
@@ -535,4 +631,48 @@ Tinytest.add("ui - UI.getDataContext", function (test) {
   var span = $(div).children('SPAN')[0];
   test.isTrue(span);
   test.equal(UI.getElementData(span), {foo: "bar"});
+});
+
+Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
+  _.each([true, false], function (nest) {
+
+    var firstComputation;
+    var rv1 = new ReactiveVar;
+    var rv2 = new ReactiveVar;
+
+    // Render a component in an autorun. Save the current computation
+    // from the first time we run the render function. Invalidate the
+    // autorun, and check whether that stops the computation from the
+    // first time the component rendered.
+
+    var tmpl = UI.Component.extend({
+      render: function () {
+        return function () {
+          if (! firstComputation) {
+            firstComputation = Deps.currentComputation;
+          }
+          return rv1.get();
+        };
+      }
+    });
+
+    Deps.autorun(function () {
+      rv2.get(); // register a dependency
+      UI.render(tmpl, undefined, {
+        _nestInCurrentComputation: nest
+      });
+    });
+
+    rv2.set("foo");
+    Deps.flush();
+
+    // If we nested inside the current computation, then we expect the
+    // computation from within the render function to have been stopped
+    // when the outer computation was invalidated.
+    if (nest) {
+      test.equal(firstComputation.stopped, true);
+    } else {
+      test.equal(firstComputation.stopped, false);
+    }
+  });
 });

@@ -113,20 +113,16 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
-  // db_objects is an array of the objects that match the cursor. (It's always
-  // an array, never an IdMap: LocalCollection.Cursor is always ordered.)
-  self.db_objects = null;
-  self.cursor_pos = 0;
-
   // by default, queries register w/ Deps when it is available.
   if (typeof Deps !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
+// Since we don't actually have a "nextObject" interface, there's really no
+// reason to have a "rewind" interface.  All it did was make multiple calls
+// to fetch/map/forEach return nothing the second time.
+// XXX COMPAT WITH 0.8.1
 LocalCollection.Cursor.prototype.rewind = function () {
-  var self = this;
-  self.db_objects = null;
-  self.cursor_pos = 0;
 };
 
 LocalCollection.prototype.findOne = function (selector, options) {
@@ -150,25 +146,52 @@ LocalCollection.prototype.findOne = function (selector, options) {
 LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects({ordered: true});
+  var docs;
+  var needsClone = true;
+  if (self.reactive && Deps.active) {
+    // Ensure that we invalidate the current computation if the result of this
+    // query changes. We also piggy-back on top of the query done by
+    // observeChanges so we don't need to do another query.
+    var computation = Deps.currentComputation;
+    var invalidate = function () {
+      computation.invalidate();
+    };
+    var initial = true;
+    docs = [];
+    // observeChanges will stop() when this computation is invalidated
+    self.observeChanges({
+      added: function (id, fields) {
+        if (initial) {
+          fields._id = id;
+          docs.push(fields);
+        } else {
+          invalidate();
+        }
+      },
+      changed: invalidate,
+      removed: invalidate,
+      movedBefore: invalidate
+    });
+    initial = false;
+    needsClone = false;  // observeChanges gives us cloned docs
+  } else {
+    docs = self._getRawObjects({ordered: true});
+  }
 
-  if (self.reactive)
-    self._depend({
-      addedBefore: true,
-      removed: true,
-      changed: true,
-      movedBefore: true});
-
-  while (self.cursor_pos < self.db_objects.length) {
-    var elt = EJSON.clone(self.db_objects[self.cursor_pos]);
-    if (self.projectionFn)
+  _.each(docs, function (elt, i) {
+    if (self.projectionFn) {
       elt = self.projectionFn(elt);
+    } else if (needsClone) {
+      // projection functions always clone the pieces they use, and
+      // observeChanges callbacks got a cloned document, but otherwise we have
+      // to do it here.
+      elt = EJSON.clone(elt);
+    }
+
     if (self._transform)
       elt = self._transform(elt);
-    callback.call(thisArg, elt, self.cursor_pos, self);
-    ++self.cursor_pos;
-  }
+    callback.call(thisArg, elt, i, self);
+  });
 };
 
 LocalCollection.Cursor.prototype.getTransform = function () {
@@ -196,14 +219,34 @@ LocalCollection.Cursor.prototype.fetch = function () {
 LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
-  if (self.reactive)
-    self._depend({added: true, removed: true},
-                 true /* allow the observe to be unordered */);
+  if (self.reactive && Deps.active) {
+    // Ensure that we invalidate the current computation if the result of this
+    // query changes. We also piggy-back on top of the query done by
+    // observeChanges so we don't need to do another query.
+    var computation = Deps.currentComputation;
+    var invalidate = function () {
+      computation.invalidate();
+    };
+    var initial = true;
+    var count = 0;
+    // observeChanges will stop() when this computation is invalidated
+    self.observeChanges({
+      // we have to use addedBefore rather than added, because observeChanges in
+      // unordered (added) mode doesn't support skip/limit
+      addedBefore: function () {
+        if (initial) {
+          count++;
+        } else {
+          invalidate();
+        }
+      },
+      removed: invalidate
+    });
+    initial = false;
+    return count;
+  }
 
-  if (self.db_objects === null)
-    self.db_objects = self._getRawObjects({ordered: true});
-
-  return self.db_objects.length;
+  return self._getRawObjects({ordered: true}).length;
 };
 
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {
@@ -277,7 +320,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     // unordered observe.  eg, update's EJSON.clone, and the "there are several"
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
-    if (!options._allow_unordered && !ordered && (self.skip || self.limit))
+    if (!ordered && (self.skip || self.limit))
       throw new Error("must use ordered observe with skip or limit");
 
     if (self.fields && (self.fields._id === 0 || self.fields._id === false))
@@ -470,31 +513,6 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
   var idx_start = self.skip || 0;
   var idx_end = self.limit ? (self.limit + idx_start) : results.length;
   return results.slice(idx_start, idx_end);
-};
-
-// XXX Maybe we need a version of observe that just calls a callback if
-// anything changed.
-LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered) {
-  var self = this;
-
-  if (Deps.active) {
-    var v = new Deps.Dependency;
-    v.depend();
-    var notifyChange = _.bind(v.changed, v);
-
-    var options = {
-      _suppress_initial: true,
-      _allow_unordered: _allow_unordered
-    };
-    _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
-           function (fnName) {
-             if (changers[fnName])
-               options[fnName] = notifyChange;
-           });
-
-    // observeChanges will stop() when this computation is invalidated
-    self.observeChanges(options);
-  }
 };
 
 // XXX enforce rule that field names can't start with '$' or contain '.'

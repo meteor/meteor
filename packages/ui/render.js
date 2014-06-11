@@ -15,12 +15,15 @@ UI.Component.instantiate = function (parent) {
 
   // XXX messy to define this here
   inst.templateInstance = {
-    findAll: function (selector) {
+    $: function(selector) {
       // XXX check that `.dom` exists here?
       return inst.dom.$(selector);
     },
+    findAll: function (selector) {
+      return $.makeArray(this.$(selector));
+    },
     find: function (selector) {
-      var result = this.findAll(selector);
+      var result = this.$(selector);
       return result[0] || null;
     },
     firstNode: null,
@@ -28,7 +31,6 @@ UI.Component.instantiate = function (parent) {
     data: null,
     __component__: inst
   };
-  inst.templateInstance.$ = inst.templateInstance.findAll;
 
   inst.parent = (parent || null);
 
@@ -198,7 +200,16 @@ var insert = function (nodeOrRange, parent, before) {
   }
 };
 
-UI.render = function (kind, parentComponent) {
+// options include:
+//   - _nestInCurrentComputation: defaults to false. If true, then
+//     `render`'s autoruns will be nested inside the current
+//     computation, so if the current computation is invalidated, then
+//     the autoruns set up inside `render` will be stopped. If false,
+//     the autoruns will be set up in a fresh Deps context, so
+//     invalidating the current computation will have no effect on them.
+UI.render = function (kind, parentComponent, options) {
+  options = options || {};
+
   if (kind.isInited)
     throw new Error("Can't render component instance, only component kind");
 
@@ -214,9 +225,15 @@ UI.render = function (kind, parentComponent) {
     inst.dom = range;
     range.component = inst;
 
+    if (! options._nestInCurrentComputation) {
+      materialize(content, range, null, inst);
+    }
+
   });
 
-  materialize(content, range, null, inst);
+  if (options._nestInCurrentComputation) {
+    materialize(content, range, null, inst);
+  }
 
   range.removed = function () {
     inst.isDestroyed = true;
@@ -231,7 +248,8 @@ UI.render = function (kind, parentComponent) {
   return inst;
 };
 
-UI.renderWithData = function (kind, data, parentComponent) {
+// options are the same as for UI.render.
+UI.renderWithData = function (kind, data, parentComponent, options) {
   if (! UI.isComponent(kind))
     throw new Error("Component required here");
   if (kind.isInited)
@@ -240,7 +258,7 @@ UI.renderWithData = function (kind, data, parentComponent) {
     throw new Error("Data argument can't be a function");
 
   return UI.render(kind.extend({data: function () { return data; }}),
-                   parentComponent);
+                   parentComponent, options);
 };
 
 var contentEquals = function (a, b) {
@@ -373,12 +391,14 @@ var materialize = function (node, parent, before, parentComponent) {
     insert(elem, parent, before);
   } else if (typeof node.instantiate === 'function') {
     // component
-    var instance = UI.render(node, parentComponent);
+    var instance = UI.render(node, parentComponent, {
+      _nestInCurrentComputation: true
+    });
 
     // Call internal callback, which may take advantage of the current
     // Deps computation.
     if (instance.materialized)
-      instance.materialized();
+      instance.materialized(instance.dom);
 
     insert(instance.dom, parent, before);
   } else if (node instanceof HTML.CharRef) {

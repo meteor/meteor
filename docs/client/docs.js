@@ -181,7 +181,6 @@ var toc = [
         {instance: "cursor", name: "map"},
         {instance: "cursor", name: "fetch"},
         {instance: "cursor", name: "count"},
-        {instance: "cursor", name: "rewind"},
         {instance: "cursor", name: "observe"},
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
@@ -250,6 +249,7 @@ var toc = [
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "this", name: "findAll", id: "template_findAll"},
+        {instance: "this", name: "$", id: "template_findAll"},
         {instance: "this", name: "find", id: "template_find"},
         {instance: "this", name: "firstNode", id: "template_firstNode"},
         {instance: "this", name: "lastNode", id: "template_lastNode"},
@@ -260,7 +260,8 @@ var toc = [
         "UI.body",
         "UI.render",
         "UI.renderWithData",
-        "UI.insert"
+        "UI.insert",
+        "UI.getElementData"
       ],
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}

@@ -21,4 +21,14 @@ Package.on_test(function (api) {
     'template_tests.html',
     'template_tests.js'
   ], 'client');
+
+  api.add_files('template_tests_server.js', 'server');
+
+  api.add_files([
+    'assets/markdown_basic.html',
+    'assets/markdown_if1.html',
+    'assets/markdown_if2.html',
+    'assets/markdown_each1.html',
+    'assets/markdown_each2.html'
+  ], 'server', { isAsset: true });
 });

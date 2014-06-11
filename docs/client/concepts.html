@@ -140,9 +140,8 @@ functions, available under the `Template` namespace.  It's
 a really convenient way to ship HTML templates to the client.
 See the [templates](#livehtmltemplates) section for more.
 
-Lastly, the Meteor server will serve any files under the `public`
-directory, just like in a Rails or Django project.  This is the place
-for images, `favicon.ico`, `robots.txt`, and anything else.
+Lastly, the Meteor server will serve any files under the `public` directory.
+This is the place for images, `favicon.ico`, `robots.txt`, and anything else.
 
 It is best to write your application in such a way that it is
 insensitive to the order in which files are loaded, for example by
@@ -448,7 +447,7 @@ extension. In the file, make a `<template>` tag and give it a
 will precompile the template, ship it down to the client, and make it
 available as on the global `Template` object.
 
-When you app is loaded, it automatically renders the special template called
+When your app is loaded, it automatically renders the special template called
 `<body>`, which is written using the `<body>` element instead of a
 `<template>`. You insert a template inside another template by using the
 `{{dstache}}> inclusion}}` operator.

@@ -1117,12 +1117,6 @@ Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
-{{> api_box cursor_rewind}}
-
-The `forEach`, `map`, or `fetch` methods can only be called once on a
-cursor.  To access the data in a cursor more than once, use `rewind` to
-reset the cursor.
-
 {{> api_box cursor_observe}}
 
 Establishes a *live query* that invokes callbacks when the result of
@@ -2154,11 +2148,11 @@ in the DOM.
 
 {{> api_box template_findAll}}
 
-Returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of DOM elements
-matching `selector`. This object is similar to an array but has other methods
-defined by the jQuery library.
+`this.findAll` returns an array of DOM elements matching `selector`.
 
-You can also call this function as `this.$(selector)`.
+`this.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
+those same elements. jQuery objects are similar to arrays, with
+additional methods defined by the jQuery library.
 
 The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
@@ -2230,6 +2224,8 @@ data used changes.
 {{> api_box ui_renderwithdata}}
 
 {{> api_box ui_insert}}
+
+{{> api_box ui_getelementdata}}
 
 
 
@@ -3166,9 +3162,4 @@ code can read `data.txt` by running:
 <dd>{{#markdown}}{{{descr}}}{{/markdown}}</dd>
 {{/each}}
 </dl>
-</template>
-
-
-<template name="api_section">
-<h2 id="{{id}}"><a href="#{{id}}" class="selflink"><span>{{name}}</span></a></h2>
 </template>

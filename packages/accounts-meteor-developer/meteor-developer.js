@@ -10,7 +10,7 @@ if (Meteor.isClient) {
 
     var credentialRequestCompleteCallback =
           Accounts.oauth.credentialRequestCompleteHandler(callback);
-    MeteorDeveloperAccounts.requestCredential(credentialRequestCompleteCallback);
+    MeteorDeveloperAccounts.requestCredential(options, credentialRequestCompleteCallback);
   };
 } else {
   Accounts.addAutopublishFields({

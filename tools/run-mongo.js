@@ -50,9 +50,14 @@ var findMongoPids = function (appDir, port) {
   var child_process = require('child_process');
   child_process.exec(
     'ps ax',
+    // we don't want this to randomly fail just because you're running lots of
+    // processes. 10MB should be more than ps ax will ever spit out; the default
+    // is 200K, which at least one person hit (#2158).
+    {maxBuffer: 1024 * 1024 * 10},
     function (error, stdout, stderr) {
       if (error) {
-        fut['throw'](new Error("Couldn't run ps ax: " + JSON.stringify(error)));
+        fut['throw'](new Error("Couldn't run ps ax: " + JSON.stringify(error) +
+                               "; " + error.message));
         return;
       }
 

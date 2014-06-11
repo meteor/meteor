@@ -125,6 +125,20 @@ Tinytest.add("spacebars - compiler output", function (test) {
         }));
       });
 
+  run("{{!-- --}}{{#if cond}}aaa{{!\n}}{{else}}{{!}}bbb{{!-- --}}{{/if}}{{!}}",
+    function() {
+      var self = this;
+      return UI.If(function () {
+        return Spacebars.call(self.lookup("cond"));
+      }, UI.block(function() {
+        var self = this;
+        return "aaa";
+      }), UI.block(function() {
+        var self = this;
+        return "bbb";
+      }));
+    });
+
   run("{{> foo bar}}",
       function() {
         var self = this;

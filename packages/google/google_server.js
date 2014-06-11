@@ -78,6 +78,6 @@ var getIdentity = function (accessToken) {
 };
 
 
-Google.retrieveCredential = function(credentialToken) {
-  return OAuth.retrieveCredential(credentialToken);
+Google.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };

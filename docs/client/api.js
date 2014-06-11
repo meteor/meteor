@@ -779,14 +779,6 @@ Template.api.cursor_map = {
   ]
 };
 
-Template.api.cursor_rewind = {
-  id: "rewind",
-  name: "<em>cursor</em>.rewind()",
-  locus: "Anywhere",
-  descr: ["Resets the query cursor."],
-  args: [ ]
-};
-
 Template.api.cursor_observe = {
   id: "observe",
   name: "<em>cursor</em>.observe(callbacks)",
@@ -1133,6 +1125,11 @@ Template.api.loginWithExternalService = {
       name: "forceApprovalPrompt",
       type: "Boolean",
       descr: "If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google."
+    },
+    {
+      name: "userEmail",
+      type: "String",
+      descr: "An email address that the external service will use to pre-fill the login prompt. Currently only supported with Meteor developer accounts."
     }
   ]
 };
@@ -1805,7 +1802,7 @@ Template.api.template_helpers = {
 
 Template.api.template_findAll = {
   id: "template_findAll",
-  name: "<em>this</em>.findAll(selector)",
+  name: "<em>this</em>.findAll(selector) and <em>this</em>.$(selector)",
   locus: "Client",
   descr: ["Find all elements matching `selector` in this template instance."],
   args: [
@@ -1917,6 +1914,18 @@ Template.api.ui_insert = {
     {name: "nextNode",
      type: "DOM Node",
      descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child."
+    }]
+};
+
+Template.api.ui_getelementdata = {
+  id: "ui_getelementdata",
+  name: "UI.getElementData(el)",
+  locus: "Client",
+  descr: ["Returns the data context that was used when rendering a DOM element from a Meteor template."],
+  args: [
+    {name: "el",
+     type: "DOM Element",
+     descr: "An element that was rendered by a Meteor template"
     }]
 };
 

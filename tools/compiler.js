@@ -334,6 +334,23 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // determine its source files.
   var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
 
+  if (nodeModulesPath) {
+    // If this slice has node modules, we should consider the shrinkwrap file
+    // to be part of its inputs. (This is a little racy because there's no
+    // guarantee that what we read here is precisely the version that's used,
+    // but it's better than nothing at all.)
+    //
+    // Note that this also means that npm modules used by plugins will get
+    // this npm-shrinkwrap.json in their pluginDependencies (including for all
+    // packages that depend on us)!  This is good: this means that a tweak to
+    // an indirect dependency of the coffee-script npm module used by the
+    // coffeescript package will correctly cause packages with *.coffee files
+    // to be rebuilt.
+    var shrinkwrapPath = nodeModulesPath.replace(
+        /node_modules$/, 'npm-shrinkwrap.json');
+    watch.readAndWatchFile(watchSet, shrinkwrapPath);
+  }
+
   // *** Process each source file
   var addAsset = function (contents, relPath, hash) {
     // XXX hack

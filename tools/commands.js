@@ -1008,6 +1008,7 @@ main.registerCommand({
   requiresApp: true,
   options: {
     debug: { type: Boolean },
+    directory: { type: Boolean },
     // Undocumented
     'for-deploy': { type: Boolean }
   }
@@ -1023,8 +1024,9 @@ main.registerCommand({
   // machines, but worth it for humans)
 
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var bundlePath = path.join(buildDir, 'bundle');
   var outputPath = path.resolve(options.args[0]); // get absolute path
+  var bundlePath = options['directory'] ?
+      outputPath : path.join(buildDir, 'bundle');
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.getPackageLoader();
@@ -1044,11 +1046,13 @@ main.registerCommand({
     return 1;
   }
 
-  try {
-    files.createTarball(path.join(buildDir, 'bundle'), outputPath);
-  } catch (err) {
-    console.log(JSON.stringify(err));
-    process.stderr.write("Couldn't create tarball\n");
+  if (!options['directory']) {
+    try {
+      files.createTarball(path.join(buildDir, 'bundle'), outputPath);
+    } catch (err) {
+      console.log(JSON.stringify(err));
+      process.stderr.write("Couldn't create tarball\n");
+    }
   }
   files.rm_recursive(buildDir);
 });
@@ -1313,8 +1317,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    add: { type: String },
-    remove: { type: String },
+    add: { type: String, short: "a" },
+    remove: { type: String, short: "r" },
     list: { type: Boolean }
   }
 }, function (options) {

@@ -10,6 +10,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export("OAuthEncryption", ["server"]);
+  api.use("underscore");
   api.add_files("encrypt.js", ["server"]);
 });
 

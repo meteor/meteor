@@ -167,7 +167,7 @@ TemplateTag.parse = function (scannerOrString) {
   // Result is either the keyword matched, or null
   // if we're not at a keyword argument position.
   var scanArgKeyword = function () {
-    var match = /^([^\{\}\(\)\>#=\s]+)\s*=\s*/.exec(scanner.rest());
+    var match = /^([^\{\}\(\)\>#=\s"'\[\]]+)\s*=\s*/.exec(scanner.rest());
     if (match) {
       scanner.pos += match[0].length;
       return match[1];

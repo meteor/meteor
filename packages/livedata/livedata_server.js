@@ -403,13 +403,16 @@ _.extend(Session.prototype, {
     });
   },
 
-  // Destroy this session. Stop all processing and tear everything
-  // down. If a socket was attached, close it.
-  destroy: function () {
+  // Destroy this session and unregister it at the server.
+  close: function () {
     var self = this;
 
+    // Destroy this session, even if it's not registered at the
+    // server. Stop all processing and tear everything down. If a socket
+    // was attached, close it.
+
     // Already destroyed.
-    if (!self.inQueue)
+    if (! self.inQueue)
       return;
 
     if (self.heartbeat) {
@@ -430,7 +433,7 @@ _.extend(Session.prototype, {
       "livedata", "sessions", -1);
 
     Meteor.defer(function () {
-      // stop callbacks can yield, so we defer this on destroy.
+      // stop callbacks can yield, so we defer this on close.
       // sub._isDeactivated() detects that we set inQueue to null and
       // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
@@ -441,19 +444,9 @@ _.extend(Session.prototype, {
         callback();
       });
     });
-  },
 
-  // Destroy this session and unregister it at the server.
-  close: function () {
-    var self = this;
-
-    // Unconditionally destroy this session, even if it's not
-    // registered at the server.
-    self.destroy();
-
-    // Unregister the session.  This will also call `destroy`, but
-    // that's OK because `destroy` is idempotent.
-    self.server._closeSession(self);
+    // Unregister the session.
+    self.server._removeSession(self);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
@@ -920,6 +913,9 @@ _.extend(Subscription.prototype, {
     try {
       var res = maybeAuditArgumentChecks(
         self._handler, self, EJSON.clone(self._params),
+        // It's OK that this would look weird for universal subscriptions,
+        // because they have no arguments so there can never be an
+        // audit-argument-checks failure.
         "publisher '" + self._name + "'");
     } catch (e) {
       self.error(e);
@@ -1035,7 +1031,8 @@ _.extend(Subscription.prototype, {
   _recreate: function () {
     var self = this;
     return new Subscription(
-      self._session, self._handler, self._subscriptionId, self._params);
+      self._session, self._handler, self._subscriptionId, self._params,
+      self._name);
   },
 
   error: function (error) {
@@ -1326,11 +1323,10 @@ _.extend(Server.prototype, {
     }
   },
 
-  _closeSession: function (session) {
+  _removeSession: function (session) {
     var self = this;
     if (self.sessions[session.id]) {
       delete self.sessions[session.id];
-      session.destroy();
     }
   },
 
