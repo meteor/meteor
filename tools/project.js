@@ -613,6 +613,46 @@ _.extend(Project.prototype, {
     } else {
       throw new Error("Expected a file at " + identifierFile);
     }
+  },
+
+  _finishedUpgradersFile: function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'finished-upgraders');
+  },
+
+  getFinishedUpgraders: function () {
+    var self = this;
+    var lines = utils.getLines(self._finishedUpgradersFile());
+    return _.filter(_.map(lines, trimLine), _.identity);
+  },
+
+  appendFinishedUpgrader: function (upgrader) {
+    var self = this;
+
+    var current = null;
+    try {
+      current = fs.readFileSync(self._finishedUpgradersFile(), 'utf8');
+    } catch (e) {
+      if (e.code !== 'ENOENT')
+        throw e;
+    }
+
+    var appendText = '';
+    if (current === null) {
+      // We're creating this file for the first time. Include a helpful comment.
+      appendText =
+"# This file contains information which helps Meteor properly upgrade your\n" +
+"# app when you run 'meteor update'. You should check it into version control\n" +
+"# with your project.\n" +
+"\n";
+    } else if (current.length && current[current.length - 1] !== '\n') {
+      // File has an unterminated last line. Let's terminate it.
+      appendText = '\n';
+    }
+
+    appendText += upgrader + '\n';
+
+    fs.appendFileSync(self._finishedUpgradersFile(), appendText);
   }
 });
 

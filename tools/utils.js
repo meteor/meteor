@@ -284,11 +284,14 @@ exports.startsWith = function(str, starts) {
 // Read a file in line by line. Returns an array of lines to be processed
 //  individually.
 exports.getLines = function (file) {
-  if (!fs.existsSync(file)) {
-    return [];
+  try {
+    var raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return [];
+    throw e;
   }
 
-  var raw = fs.readFileSync(file, 'utf8');
   var lines = raw.split(/\r*\n\r*/);
 
   // strip blank lines at the end

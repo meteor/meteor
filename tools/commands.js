@@ -634,62 +634,11 @@ main.registerCommand({
   // but if we actually do that, we can change this code to add the extra
   // springboard at that time.
 
+  var upgraders = require('./upgraders.js');
+  var upgradersToRun = upgraders.upgradersToRun();
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
-
-  // XXX reimplement upgraders (or don't, until we need them).
-  // // Find upgraders (in order) necessary to upgrade the app for the new
-  // // release (new metadata file formats, etc, or maybe even updating renamed
-  // // APIs).
-  // //
-  // // * If this is a pre-engine app with no .meteor/release file, run
-  // //   all upgraders.
-  // // * If the app didn't have a release because it was created by a
-  // //   checkout, don't run any upgraders.
-  // //
-  // // We're going to need the list of upgraders from the old release
-  // // (the release the app was using previously) to decide what
-  // // upgraders to run. It's possible that we don't have it downloaded
-  // // yet (if they checked out the project and immediately ran 'meteor
-  // // update --release foo'), so it's important to do this before we
-  // // actually update the project.
-  // var upgradersToRun;
-  // if (appRelease === "none") {
-  //   upgradersToRun = [];
-  // } else {
-  //   var oldUpgraders;
-
-  //   if (appRelease === null) {
-  //     oldUpgraders = [];
-  //   } else {
-  //     try {
-  //       var oldRelease = release.load(appRelease);
-  //     } catch (e) {
-  //       if (e instanceof files.OfflineError) {
-  //         process.stderr.write(
-  //           "You need to be online to do this. Please check your internet connection.\n");
-  //         return 1;
-  //       }
-  //       if (e instanceof warehouse.NoSuchReleaseError) {
-  //         // In this situation it's tempting to just print a warning and
-  //         // skip the updaters, but I can't figure out how to explain
-  //         // what's happening to the user, so let's just do this.
-  //         process.stderr.write(
-  //           "This project says that it uses version " + appRelease + " of Meteor, but you\n" +
-  //             "don't have that version of Meteor installed and the Meteor update servers\n" +
-  //             "don't have it either. Please edit the .meteor/release file in the project\n" +
-  //             "project and change it to a valid Meteor release.\n");
-  //         return 1;
-  //       }
-  //       throw e;
-  //     }
-  //     oldUpgraders = oldRelease.getUpgraders();
-  //   }
-
-  //   // XXX release.current needs to be replaced with solutionReleaseName
-  //   upgradersToRun = _.difference(release.current.getUpgraders(), oldUpgraders);
-  // }
 
   // Write the new versions to .meteor/packages and .meteor/versions.
   project.setVersions(solutionPackageVersions);
@@ -697,26 +646,16 @@ main.registerCommand({
   // Write the release to .meteor/release.
   project.writeMeteorReleaseVersion(solutionReleaseName);
 
-  // XXX redo upgrader support
-  // // Now run the upgraders.
-  // _.each(upgradersToRun, function (upgrader) {
-  //   require("./upgraders.js").runUpgrader(upgrader, options.appDir);
-  // });
-
-  // This is the right spot to do any other changes we need to the app in
-  // order to update it for the new release.
-
   console.log("%s: updated to Meteor %s.",
               path.basename(options.appDir), solutionReleaseName);
 
-  // Print any notices relevant to this upgrade.
-  // XXX This doesn't include package-specific notices for packages that
-  // are included transitively (eg, packages used by app packages).
-  var packages = project.getConstraints();
-
-  // var packages = project.getPackages(options.appDir);
-  // XXX reimplement "notices" for tropohouse
-  // warehouse.printNotices(appRelease, release.current.name, packages);
+  // Now run the upgraders.
+  // XXX should we also run upgraders on other random commands, in case there
+  // was a crash after changing .meteor/release but before running them?
+  _.each(upgradersToRun, function (upgrader) {
+    upgraders.runUpgrader(upgrader);
+    project.appendFinishedUpgrader(upgrader);
+  });
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -735,7 +674,7 @@ main.registerCommand({
   var upgraders = require("./upgraders.js");
   console.log("%s: running upgrader %s.",
               path.basename(options.appDir), upgrader);
-  upgraders.runUpgrader(upgrader, options.appDir);
+  upgraders.runUpgrader(upgrader);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

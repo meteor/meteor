@@ -8,73 +8,66 @@ var project = require('./project.js');
 //
 // You can test upgraders by running "meteor run-upgrader myupgradername".
 //
-// Upgraders are run automatically by "meteor update" by comparing the
-// "upgraders" field of the release JSON file. Add upgraders to the JSON blob in
-// scripts/admin/build-release.sh. Upgraders are run in the order found in that
-// file, after removing all upgraders in the pre-update release
-// manifest. Basically, once an upgrader is added to the list it should stay
-// there forever (or at least until we no longer are interested in allowing
-// updates from that release).
+// Upgraders are run automatically by "meteor update". It looks at the
+// .meteor/finished-upgraders file in the app and runs every upgrader listed
+// here that is not in that file; then it appends their names to that file.
+// Upgraders are run in the order they are listed in upgradersByName below.
 
-
-// This upgrader implements two changes made in 0.6.5 as part of the Linker
-// project.
-//
-// First, linker changed how "app packages" (packages in the "packages"
-// directory in an app) are treated.  Before 0.6.5, all app packages were
-// implicitly "use"d by the app. This meant there was no way to have an app
-// package that was intended only to be "use" by the test slices of other app
-// packages. In 0.6.5, you have to explicitly "meteor add" app packages to
-// .meteor/packages in order for them to be used by your app.  This upgrader
-// adds all existing packages found in the packages/ directory to
-// .meteor/packages. (If you had such test helpers, you can remove them
-// afterwards.)
-//
-// Second, linker changed how the standard set of packages used by apps is
-// included. Instead of being hard-coded into initFromAppDir, the standard
-// packages are "implied" by the new "standard-app-packages" package, which is
-// explicitly listed in .meteor/packages. So we need to add
-// "standard-app-packages" to .meteor/packages when upgrading.
-var addAppPackagesAndStandardAppPackages = function (appDir) {
-  project.project.forceEditPackages(['standard-app-packages'], 'add');
-
-  var appPackageDir = path.join(appDir, 'packages');
-  try {
-    var appPackages = fs.readdirSync(appPackageDir);
-  } catch (e) {
-    if (!(e && e.code === 'ENOENT'))
-      throw e;
-  }
-
-  _.each(appPackages, function (p) {
-    // We can ignore empty directories, etc. Packages have to have a
-    // package.js. (In 0.6.5, they can also be built packages with
-    // unipackage.json... but that surely is irrelevant for this upgrade.)
-    if (fs.existsSync(path.join(appPackageDir, p, 'package.js')))
-      project.project.forceEditPackages(['p'], 'add');
-  });
-};
-
-// In Meteor 0.8.0, preserve-inputs became a no-op, because Blaze doesn't
-// require manual preserve directives any more. We print a deprecation message
-// on apps that use it, but it's part of the default app skeleton, and we don't
-// want literally every user to have to type the same "meteor remove
-// preserve-inputs" command. So we do it for them.
-var noPreserveInputs = function (appDir) {
-  project.project.forceEditPackages(['preserve-inputs'], 'remove');
+var printedNoticeHeaderThisProcess = false;
+var maybePrintNoticeHeader = function () {
+  if (printedNoticeHeaderThisProcess)
+    return;
+  console.log();
+  console.log("-- Notice --");
+  console.log();
+  printedNoticeHeaderThisProcess = true;
 };
 
 
 var upgradersByName = {
-  "app-packages": addAppPackagesAndStandardAppPackages,
-  "no-preserve-inputs": noPreserveInputs
+  "notices-for-1.7.0": function () {
+    maybePrintNoticeHeader();
+    console.log(
+"1.7.0: Something super awesome happened. You should fix your\n" +
+"       code to make sure it works still.");
+    if (_.has(project.project.getConstraints(), 'accounts-ui')) {
+      console.log(
+"\n" +
+"       Accounts UI has totally changed, yo.");
+    }
+    console.log();
+  },
+  "notices-for-1.7.1": function () {
+    maybePrintNoticeHeader();
+    console.log(
+"1.7.1: Oh we changed our minds again completely, sorry.");
+    console.log();
+  },
+  "notices-for-1.7.2": function () {
+    maybePrintNoticeHeader();
+    console.log(
+"1.7.2: Oh gosh never mind, change all your code again.");
+    console.log();
+  }
 };
 
-exports.runUpgrader = function (upgraderName, appDir) {
+exports.runUpgrader = function (upgraderName) {
   // This should only be called from the hidden run-upgrader command or by
   // "meteor update" with an upgrader from one of our releases, so it's OK if
   // error handling is just an exception.
   if (! _.has(upgradersByName, upgraderName))
     throw new Error("Unknown upgrader: " + upgraderName);
-  upgradersByName[upgraderName](appDir);
+  upgradersByName[upgraderName]();
+};
+
+exports.upgradersToRun = function () {
+  var ret = [];
+  var finishedUpgraders = project.project.getFinishedUpgraders();
+  // This relies on the fact that Node guarantees object iteration ordering.
+  _.each(upgradersByName, function (func, name) {
+    if (!_.contains(finishedUpgraders, name)) {
+      ret.push(name);
+    }
+  });
+  return ret;
 };
