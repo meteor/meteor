@@ -1756,14 +1756,14 @@ exports.bundle = function (options) {
         appDir, exports.ignoreFiles);
 
       // Client
-      var clients = makeAppClientTargets(app);
+      var clientTargets = makeAppClientTargets(app);
 
-      _.each(clients, function (client, name) {
-        targets[name] = client;
+      _.each(clientTargets, function (client, name) {
+        targets['client/' + name] = client;
       });
 
       // Server
-      var server = makeServerTarget(app, clients);
+      var server = makeServerTarget(app, clientTargets);
       targets.server = server;
     }
 

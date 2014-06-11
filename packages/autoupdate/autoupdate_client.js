@@ -25,8 +25,6 @@
 // The client version of the client code currently running in the
 // browser.
 var autoupdateVersion = __meteor_runtime_config__.autoupdateVersion || "unknown";
-var autoupdateVersionRefreshable =
-  __meteor_runtime_config__.autoupdateVersionRefreshable || "unknown";
 
 // The collection of acceptable client versions.
 var ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
@@ -43,17 +41,6 @@ Autoupdate.newClientAvailable = function () {
     ]}
   );
 };
-
-Autoupdate.newRefreshableClientAvailable = function () {
-  return !! ClientVersions.findOne(
-    {$and: [
-      {current: true},
-      {refreshable: true},
-      {_id: {$ne: autoupdateVersionRefreshable}}
-    ]}
-  );
-};
-
 
 var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
@@ -93,20 +80,19 @@ Autoupdate._retrySubscription = function () {
               (! ClientVersions.findOne({_id: autoupdateVersion}))) {
             computation.stop();
             Package.reload.Reload._reload();
-          } else if
-            (! ClientVersions.findOne({_id: autoupdateVersionRefreshable})) {
+          } else {
             var doc = ClientVersions.findOne({ refreshable: true,
-                                               current: true });
+                                              current: true });
             if (doc) {
-              // XXX hacky way to replace the css link
+              // XXX hack to replace the css link
               document.getElementsByTagName("link")[0].href =
                 doc.assets.css[0].url;
-              autoupdateVersionRefreshable = doc._id;
+              ClientVersions.update(doc._id, {$set: { current: false }});
             }
           }
         });
       }
-  }
+    }
   });
 };
 Autoupdate._retrySubscription();

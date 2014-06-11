@@ -43,7 +43,8 @@ Autoupdate = {};
 // update version id.
 
 Autoupdate.autoupdateVersion = null;
-Autoupdate.autoupdateVersionRefreshable = null;
+
+var autoupdateVersionRefreshable = null;
 
 Meteor.startup(function () {
   // Allow people to override Autoupdate.autoupdateVersion before
@@ -54,16 +55,14 @@ Meteor.startup(function () {
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHashNonRefreshable;
 
-  if (Autoupdate.autoupdateVersionRefreshable === null)
-    Autoupdate.autoupdateVersionRefreshable =
+  // Make autoupdateVersion available on the client.
+  __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
+
+  if (autoupdateVersionRefreshable === null)
+    autoupdateVersionRefreshable =
       process.env.AUTOUPDATE_VERSION ||
       process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.clientHashRefreshable;
-
-  // Make autoupdateVersion available on the client.
-  __meteor_runtime_config__.autoupdateVersion = Autoupdate.autoupdateVersion;
-  __meteor_runtime_config__.autoupdateVersionRefreshable =
-    Autoupdate.autoupdateVersionRefreshable;
 });
 
 
@@ -87,10 +86,10 @@ Meteor.publish(
       self.error(new Meteor.Error(500, "Autoupdate.autoupdateVersion not set"));
     }
 
-    if (Autoupdate.autoupdateVersionRefreshable) {
+    if (autoupdateVersionRefreshable) {
       self.added(
         "meteor_autoupdate_clientVersions",
-        Autoupdate.autoupdateVersionRefreshable,
+        autoupdateVersionRefreshable,
         {refreshable: true, current: true, assets: WebApp.refreshableAssets }
       );
       shouldCallReady = true;
