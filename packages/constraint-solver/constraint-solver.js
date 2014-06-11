@@ -248,12 +248,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var self = this;
 
   var semverToNum = function (version) {
-    version = version.split("+")[0];
-    var v = _.map(version.split('.'), function (x) {
-      return parseInt(x);
-    });
-
-    return v[0] * 10000 + v[1] * 100 + v[2];
+    var v = semver.parse(version);
+    return v.major * 10000 + v.minor * 100 + v.patch;
   };
 
   var resolverOptions = {};
