@@ -381,7 +381,9 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   Meteor.users.update(userId, {$set: {
     "services.password.reset": tokenRecord
   }});
+
   // before passing to template, update user object with new token
+  Meteor._ensure(user, "services", "password");
   user.services.password.reset = tokenRecord;
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
@@ -506,7 +508,12 @@ Accounts.sendVerificationEmail = function (userId, address) {
   Meteor.users.update(
     {_id: userId},
     {$push: {'services.email.verificationTokens': tokenRecord}});
+
   // before passing to template, update user object with new token
+  Meteor._ensure(user, "services", "email");
+  if (! user.services.email.verificationTokens) {
+    user.services.email.verificationTokens = [];
+  }
   user.services.email.verificationTokens.push(tokenRecord);
 
   var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
