@@ -19,9 +19,13 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 
   // XXX for now we convert builds to unit versions as "deps#os"
 
+  var allPackageNames = catalog.getAllPackageNames();
+  var sortedVersionsForPackage = {};
   var forEveryVersion = function (iter) {
-    _.each(catalog.getAllPackageNames(), function (packageName) {
-      _.each(catalog.getSortedVersions(packageName), function (version) {
+    _.each(allPackageNames, function (packageName) {
+      if (! sortedVersionsForPackage[packageName])
+        sortedVersionsForPackage[packageName] = catalog.getSortedVersions(packageName);
+      _.each(sortedVersionsForPackage[packageName], function (version) {
         var versionDef = catalog.getVersion(packageName, version);
         iter(packageName, version, versionDef);
       });
