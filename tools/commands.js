@@ -141,11 +141,16 @@ main.registerCommand({
 //
 // This does NOT guarantee a rebuild of all local packages (though it will
 // download any new dependencies). If you want to rebuild all local packages,
-// call meteor rebuild.
+// call meteor rebuild. (You don't need to be online to rebuild packages)
 main.registerCommand({
   name: '--get-ready',
   requiresApp: true
 }, function (options) {
+
+  // It is not strictly needed, but it is thematically a good idea to refresh
+  // the official catalog when we call get-ready, since it is an
+  // internet-requiring action.
+  catalog.official.refresh();
 
   // Then get the list of packages that we need to get and build. Calling
   // getVersions on the project will ensureDepsUpToDate which will ensure that

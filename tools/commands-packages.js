@@ -26,6 +26,37 @@ var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
 
+// Returns an object with keys:
+//  record : (a package or version record)
+//  release : true if it is a release instead of a package.
+var getReleaseOrPackageRecord = function(name) {
+  // Too lazy to do string parsing.
+  var rec = catalog.official.getPackage(name);
+  var rel = false;
+  if (!rec) {
+    // Not a package! But is it a release track?
+    rec = catalog.official.getReleaseTrack(name);
+    if (rec)
+      rel = true;
+  }
+  return { record: rec, release: rel };
+};
+
+
+// Checks to see if you are an authorized maintainer for a given
+// release/package. If you are not, calls process.exit
+// explaining that you can't take that action.
+//   record:  package or track record
+//   action:  string for error handling
+var checkAuthorizedPackageMaintainer = function (record, action) {
+  var authorized = _.indexOf(
+      _.pluck(record.maintainers, 'username'), auth.loggedInUsername());
+  if (authorized == -1) {
+      process.stderr.write('You are not an authorized maintainer of ' + record.name + ".\n");
+      process.stderr.write('Only authorized maintainers may ' + action + ".\n");
+      process.exit(1);
+  }
+};
 
 // Returns a pretty list suitable for showing to the user. Input is an
 // array of objects with keys 'name' and 'description'.
@@ -701,7 +732,7 @@ main.registerCommand({
     var packageName = options.args[0];
     var packageRecord = catalog.official.getPackage(packageName);
     if (!packageRecord) {
-      console.log("Unknown package: ", packageName);
+      console.log("Unknown package or release: ", packageName);
       return 1;
     }
     var versions = catalog.official.getSortedVersions(packageName);
@@ -1292,6 +1323,145 @@ main.registerCommand({
   _.each(options.args, function (packageName) {
       process.stdout.write("Removed constraint " + packageName + " from project \n");
   });
+
+  return 0;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// admin
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'admin maintainers',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    add: { type: String, short: "a" },
+    remove: { type: String, short: "r" },
+    list: { type: Boolean }
+  }
+}, function (options) {
+
+  // We want the most recent information.
+  catalog.official.refresh();
+  var name = options.args[0];
+
+  // Yay, checking that options are correct.
+  if (options.add && options.remove) {
+    process.stderr.write(
+      "Sorry, you can only add or remove one user at a time.\n");
+    return 1;
+  }
+  if ((options.add || options.remove) && options.list) {
+    process.stderr.write(
+"Sorry, you can't change the users at the same time as you're listing them.\n");
+    return 1;
+  }
+  if (!options.add && !options.remove && !options.list) {
+     throw new main.ShowUsage;
+  }
+
+  // Now let's get down to business! Fetching the thing.
+  var fullRecord = getReleaseOrPackageRecord(name);
+  var record = fullRecord.record;
+  if (!options.list) {
+
+    checkAuthorizedPackageMaintainer(record, " add or remove maintainers");
+
+    try {
+      var conn = packageClient.loggedInPackagesConnection();
+    } catch (err) {
+      packageClient.handlePackageServerConnectionError(err);
+      return 1;
+    }
+
+    try {
+      if (options.add) {
+        process.stdout.write("Adding a maintainer to " + name + "...");
+        if (fullRecord.release) {
+          conn.call('addReleaseMaintainer', name, options.add);
+        } else {
+          conn.call('addMaintainer', name, options.add);
+        }
+      } else if (options.remove) {
+        process.stdout.write("Removing a maintainer from " + name + "...");
+        if (fullRecord.release) {
+          conn.call('removeReleaseMaintainer', name, options.remove);
+        } else {
+          conn.call('removeMaintainer', name, options.remove);
+        }
+        process.stdout.write(" Done! \n");
+      }
+    } catch (err) {
+      process.stdout.write("\n" + err + "\n");
+    }
+    conn.close();
+    catalog.official.refresh();
+  }
+  process.stdout.write("The maintainers for " + name + " are: \n");
+  _.each(record.maintainers, function (user) {
+    if (! user || !user.username)
+      process.stdout.write("<unknown>" + "\n");
+    else
+      process.stdout.write(user.username + "\n");
+  });
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin recommendRelease',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    unrecommend: { type: Boolean, short: "u" }
+  }
+}, function (options) {
+
+  // We want the most recent information.
+  catalog.official.refresh();
+  var release = options.args[0].split('@');
+  var name = release[0];
+  var version = release[1];
+  if (!version) {
+      process.stderr.write('\n Must specify release version (track@version) \n');
+      return 1;
+  }
+
+  // Now let's get down to business! Fetching the thing.
+  var fullRecord = getReleaseOrPackageRecord(name);
+  var record = catalog.official.getReleaseTrack(name);
+  if (!record) {
+      process.stderr.write('\n There is no release track named ' + name + '\n');
+      return 1;
+  }
+
+  checkAuthorizedPackageMaintainer(record, " recommend or unrecommend release");
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+    if (options.unrecommend) {
+      process.stdout.write("Unrecommending " + options.args[0] + "...");
+      conn.call('unrecommendVersion', name, version);
+      process.stdout.write("Done! \n " + options[0] +
+                           " is no longer a recommended release \n");
+    } else {
+      process.stdout.write("Recommending " + options.args[0] + "...");
+      conn.call('ecommendVersion', name, version);
+      process.stdout.write("Done! \n " + options[0] +
+                           " is now  a recommended release \n");
+    }
+  } catch (err) {
+    process.stdout.write("\n" + err + "\n");
+  }
+  conn.close();
+  catalog.official.refresh();
 
   return 0;
 });
