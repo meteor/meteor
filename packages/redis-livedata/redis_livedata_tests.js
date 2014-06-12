@@ -268,7 +268,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //    },
     update: function (key) {
       if (key.indexOf(coll._keyPrefix) != 0) {
-        throw new Error("Expected key to start with prefix");
+        throw new Error("Expected key to start with prefix, was: " + key);
       }
       var withoutPrefix = key.substr(coll._keyPrefix.length);
       log += 'u(' + withoutPrefix + ')';
@@ -307,15 +307,16 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.equal(coll.hgetall(coll._keyPrefix + id).x, '1');
     //test.equal(coll.findOne({run: run}).x, 1);
   });
-//
-//  expectObserve('a(4,1,null)', function () {
-//    var id2 = Random.id();
-//    coll.hmset(id, {run: run, x: 4});
-//    test.equal(coll.keys('*').count(), 2);
-//    test.equal(coll.keys(id2).count(), 1);
-//    test.equal(coll.hgetall(id2).x, 4);
-//  });
-//
+
+  expectObserve('u(4)', function () {
+    var id2 = '4';
+    coll.hmset(coll._keyPrefix + id2, {run: run, x: 4});
+    test.equal(coll.keys(coll._keyPrefix + '*').length, 2);
+    test.equal(coll.keys(coll._keyPrefix + id2).length, 1);
+    test.equal(coll.hgetall(coll._keyPrefix + id2).x, '4');
+  });
+
+  // (We don't support sorting)
 //  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 0}).x, 1);
 //  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 1}).x, 4);
 //  test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 0}).x, 4);
@@ -364,14 +365,18 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //    var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
 //    test.equal(count, 0);
 //  });
-//
-//  expectObserve('c(3,0,1)c(6,1,4)', function () {
+
+  expectObserve('u(1)', function () {
 //    var count = coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
 //    test.equal(count, 2);
+    var newValue = coll.hincrby(coll._keyPrefix + '1', 'x', 2);
+    test.equal(newValue, 3);
+
 //    test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
 //               [6, 3]);
-//  });
-//
+    test.equal(coll.hgetall(coll._keyPrefix + '1').x, '3');
+  });
+
 //  expectObserve(['c(13,0,3)m(13,0,1)', 'm(6,1,0)c(13,1,3)',
 //                 'c(13,0,3)m(6,1,0)', 'm(3,0,1)c(13,1,3)'], function () {
 //    coll.update({run: run, x: 3}, {$inc: {x: 10}}, {multi: true});

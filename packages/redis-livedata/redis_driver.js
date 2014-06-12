@@ -118,6 +118,8 @@ RedisObserver = function (watcher, observer) {
     var methodName;
     if (message == 'hset') {
       methodName = 'update';
+    } else if (message == 'hincrby') {
+      methodName = 'update';
     }
     
     if (!methodName) {
@@ -710,6 +712,12 @@ RedisConnection.prototype.hmset = function (key, object) {
   var self = this;
   return Future.wrap(_.bind(self._client.hmset, self._client))(key, object).wait();
 };
+
+RedisConnection.prototype.hincrby = function (key, field, delta) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.hincrby, self._client))(key, field, delta).wait();
+};
+
 
 RedisConnection.prototype.observe = function (observer) {
   var self = this;

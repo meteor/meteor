@@ -83,6 +83,12 @@ RedisClient.prototype.hmset = function (key, object, callback) {
   self._connection.hmset(key, object, Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.hincrby = function (key, field, delta, callback) {
+  var self = this;
+
+  self._connection.hincrby(key, field, delta, Meteor.bindEnvironment(callback));
+};
+
 
 RedisClient.prototype.incr = function (key, callback) {
   var self = this;
