@@ -8,8 +8,6 @@
  */
 
 var path = Npm.require('path');
-var RedisNpm = Npm.require('redis');
-var UrlNpm = Npm.require('url');
 
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
@@ -138,7 +136,7 @@ RedisConnection = function (url, options) {
   //   to a different platform (aka deploy)
   // We should revisit this after binary npm module support lands.
 //  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-//    mongoOptions.db.native_parser = false;
+//    mongoOptions._client.native_parser = false;
 //  }
 
   // XXX maybe we should have a better way of allowing users to configure the
@@ -150,24 +148,20 @@ RedisConnection = function (url, options) {
 //    mongoOptions.replSet.poolSize = options.poolSize;
 //  }
 
-  var parsedUrl = UrlNpm.parse(url);
-  var host = parsedUrl.hostname || '127.0.0.1';
-  var port = parseInt(parsedUrl.port || '6379');
-
-  self.db = RedisNpm.createClient(port, host, redisOptions);
+  var client = self._client = new RedisClient(url, redisOptions);
   
 //  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
 //    if (err)
 //      throw err;
-//    self.db = db;
+//    self._client = db;
 //    // We keep track of the ReplSet's primary, so that we can trigger hooks when
 //    // it changes.  The Node driver's joined callback seems to fire way too
 //    // often, which is why we need to track it ourselves.
 //    self._primary = null;
 //    // First, figure out what the current primary is, if any.
-//    if (self.db.serverConfig._state.master)
-//      self._primary = self.db.serverConfig._state.master.name;
-//    self.db.serverConfig.on(
+//    if (self._client.serverConfig._state.master)
+//      self._primary = self._client.serverConfig._state.master.name;
+//    self._client.serverConfig.on(
 //      'joined', Meteor.bindEnvironment(function (kind, doc) {
 //        if (kind === 'primary') {
 //          if (doc.primary !== self._primary) {
@@ -189,7 +183,7 @@ RedisConnection = function (url, options) {
 //
 //    // drain queue of pending callbacks
 //    _.each(self._connectCallbacks, function (c) {
-//      c(db);
+//      c(_client);
 //    });
 //  }));
   
@@ -198,7 +192,7 @@ RedisConnection = function (url, options) {
   // XXX: Wait until 'ready' event?
   // drain queue of pending callbacks
   _.each(self._connectCallbacks, function (c) {
-    c(db);
+    c(client);
   });
 
   self._docFetcher = new DocFetcher(self);
@@ -225,13 +219,13 @@ RedisConnection.prototype.close = function() {
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.db.close, self.db))(true).wait();
+  Future.wrap(_.bind(self._client.close, self._client))(true).wait();
 };
 
 RedisConnection.prototype._withDb = function (callback) {
   var self = this;
-  if (self.db) {
-    callback(self.db);
+  if (self._client) {
+    callback(self._client);
   } else {
     self._connectCallbacks.push(callback);
   }
@@ -661,6 +655,16 @@ RedisConnection.prototype.findOne = function (collection_name, selector,
   options = options || {};
   options.limit = 1;
   return self.find(collection_name, selector, options).fetch()[0];
+};
+
+RedisConnection.prototype.keys = function (matcher) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.keys, self._client))(matcher).wait();
+};
+
+RedisConnection.prototype.hgetall = function (key) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.hgetall, self._client))(key).wait();
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -1212,4 +1216,3 @@ RedisConnection.prototype._observeChangesTailable = function (
 //RedisInternals.MongoTimestamp = MongoDB.Timestamp;
 
 RedisInternals.Connection = RedisConnection;
-RedisInternals.NpmModule = RedisNpm;

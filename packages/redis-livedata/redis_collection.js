@@ -1,19 +1,19 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
-Meteor.RedisCollection = function (name, options) {
+Meteor.RedisCollection = function (keyPrefix, options) {
   var self = this;
   if (! (self instanceof Meteor.RedisCollection))
     throw new Error('use "new" to construct a Meteor.RedisCollection');
 
-  if (!name && (name !== null)) {
+  if (!keyPrefix && (keyPrefix !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
                   "saved or synchronized over the network. (Pass null for " +
                   "the collection name to turn off this warning.)");
-    name = null;
+    keyPrefix = null;
   }
 
-  if (name !== null && typeof name !== "string") {
+  if (keyPrefix !== null && typeof keyPrefix !== "string") {
     throw new Error(
       "First argument to new Meteor.RedisCollection must be a string or null");
   }
@@ -47,7 +47,7 @@ Meteor.RedisCollection = function (name, options) {
   case 'STRING':
   default:
     self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      var src = keyPrefix ? DDP.randomStream('/collection/' + keyPrefix) : Random;
       return src.id();
     };
     break;
@@ -60,7 +60,7 @@ Meteor.RedisCollection = function (name, options) {
     self._transform = null;
   }
 
-  if (! name || options.connection === null)
+  if (! keyPrefix || options.connection === null)
     // note: nameless collections never have a connection
     self._connection = null;
   else if (options.connection)
@@ -71,7 +71,7 @@ Meteor.RedisCollection = function (name, options) {
     self._connection = Meteor.server;
 
   if (!options._driver) {
-    if (name && self._connection === Meteor.server &&
+    if (keyPrefix && self._connection === Meteor.server &&
         typeof RedisInternals !== "undefined" &&
         RedisInternals.defaultRemoteCollectionDriver) {
       options._driver = RedisInternals.defaultRemoteCollectionDriver();
@@ -80,14 +80,14 @@ Meteor.RedisCollection = function (name, options) {
     }
   }
 
-  self._collection = options._driver.open(name, self._connection);
-  self._name = name;
+  self._collection = options._driver.open(keyPrefix, self._connection);
+  self._keyPrefix = keyPrefix;
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    var ok = self._connection.registerStore(name, {
+    var ok = self._connection.registerStore(keyPrefix, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
@@ -181,7 +181,7 @@ Meteor.RedisCollection = function (name, options) {
     });
 
     if (!ok)
-      throw new Error("There is already a collection named '" + name + "'");
+      throw new Error("There is already a collection named '" + keyPrefix + "'");
   }
 
   self._defineMutationMethods();
@@ -242,6 +242,10 @@ _.extend(Meteor.RedisCollection.prototype, {
     var argArray = _.toArray(arguments);
     return self._collection.findOne(self._getFindSelector(argArray),
                                     self._getFindOptions(argArray));
+  },
+  
+  observe: function (observer) {
+    // XXX Implement
   }
 
 });
@@ -491,6 +495,30 @@ _.each(["insert", "update", "remove"], function (name) {
     // (new document ID for insert, num affected for update/remove, object with
     // numberAffected and maybe insertedId for upsert).
     return ret;
+  };
+});
+
+_.each(["keys", "hgetall"], function (name) {
+  Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+//    var callback;
+    var ret;
+
+//    if (args.length && args[args.length - 1] instanceof Function)
+//      callback = args.pop();
+
+    try {
+//      args.push(callback);
+      var ret = self._collection[name].apply(self._collection, args);
+      return ret;
+    } catch (e) {
+//      if (callback) {
+//        callback(e);
+//        return null;
+//      }
+      throw e;
+    }
   };
 });
 

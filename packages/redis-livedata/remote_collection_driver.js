@@ -11,7 +11,8 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
     _.each(
       ['find', 'findOne', 'insert', 'update', , 'upsert',
        'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection',
-       'dropCollection'],
+       'dropCollection',
+       'keys', 'hgetall'],
       function (m) {
         ret[m] = _.bind(self.connection[m], self.connection, name);
       });
