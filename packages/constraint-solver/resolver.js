@@ -91,7 +91,7 @@ ConstraintSolver.Resolver.prototype.resolve =
     constraintAncestor[c.toString()] = c.name;
   });
 
-  dependencies = ConstraintSolver.DependenciesList.fromArray(dependencies, true);
+  dependencies = ConstraintSolver.DependenciesList.fromArray(dependencies);
   constraints = ConstraintSolver.ConstraintsList.fromArray(constraints);
 
   // create a fake unit version to represnt the app or the build target
@@ -122,6 +122,12 @@ ConstraintSolver.Resolver.prototype.resolve =
   pq.push(startState, [estimatedStartingCost, 0]);
 
   var naughtinessRating = {};
+
+  // put direct dependencies on higher priority
+  dependencies.each(function (dep) {
+    naughtinessRating[dep] = 100;
+  });
+
   var someError = null;
   var solution = null;
   while (! pq.empty()) {

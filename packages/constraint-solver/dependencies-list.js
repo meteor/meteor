@@ -10,10 +10,8 @@ ConstraintSolver.DependenciesList = function (prev) {
 
   if (prev) {
     self._mapping = prev._mapping;
-    self._prioritized = prev._prioritized;
   } else {
     self._mapping = mori.hash_map();
-    self._prioritized = mori.list();
   }
 };
 
@@ -40,19 +38,11 @@ ConstraintSolver.DependenciesList.prototype.remove = function (d) {
   var newList = new ConstraintSolver.DependenciesList(self);
   newList._mapping = mori.dissoc(self._mapping, d);
 
-  if (mori.peek(newList._prioritized) === d)
-    newList._prioritized = mori.pop(newList._prioritized);
-
   return newList;
 };
 
 ConstraintSolver.DependenciesList.prototype.peek = function () {
   var self = this;
-  var prioritized = mori.peek(self._prioritized);
-
-  if (prioritized)
-    return prioritized;
-
   return mori.last(mori.first(self._mapping));
 };
 
@@ -125,7 +115,7 @@ ConstraintSolver.DependenciesList.prototype.toArray = function () {
   return arr;
 };
 
-ConstraintSolver.DependenciesList.fromArray = function (arr, prioritized) {
+ConstraintSolver.DependenciesList.fromArray = function (arr) {
   var list = new ConstraintSolver.DependenciesList();
   var args = [];
   _.each(arr, function (d) {
@@ -134,14 +124,6 @@ ConstraintSolver.DependenciesList.fromArray = function (arr, prioritized) {
   });
 
   list._mapping = mori.hash_map.apply(mori, args);
-
-  // the whole list should also be added as prioritized
-  if (prioritized) {
-    _.each(arr, function (d) {
-      list._prioritized = mori.conj(list._prioritized, d);
-    });
-  }
-
   return list;
 };
 
