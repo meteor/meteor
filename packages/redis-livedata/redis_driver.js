@@ -149,7 +149,8 @@ RedisConnection = function (url, options) {
 //  }
 
   var client = self._client = new RedisClient(url, redisOptions);
-  
+  self._watcher = new RedisWatcher(url);
+
 //  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
 //    if (err)
 //      throw err;
@@ -671,6 +672,37 @@ RedisConnection.prototype.hmset = function (key, object) {
   var self = this;
   return Future.wrap(_.bind(self._client.hmset, self._client))(key, object).wait();
 };
+
+RedisConnection.prototype.observe = function (observer) {
+  var self = this;
+  self._watcher.addListener(function (key, message) {
+    var methodName;
+    if (message == 'hset') {
+      methodName = 'update';
+    }
+    
+    if (!methodName) {
+      Meteor._debug("RedisConnection::observe: Unknown message: " + message);
+    } else {
+      if (_.isFunction(observer[methodName])) {
+        observer[methodName](key, message);
+      }
+    }
+//      addedAt: function (doc, before_index, before) {
+//        log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
+//      },
+//      changedAt: function (new_doc, old_doc, at_index) {
+//        log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
+//      },
+//      movedTo: function (doc, old_index, new_index) {
+//        log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
+//      },
+//      removedAt: function (doc, at_index) {
+//        log += 'r(' + doc.x + ',' + at_index + ')';
+//      }
+  });
+};
+
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.

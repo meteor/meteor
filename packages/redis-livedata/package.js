@@ -54,7 +54,8 @@ Package.on_use(function (api) {
   api.add_files(['redis_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
                  'polling_observe_driver.js','oplog_observe_driver.js',
-                 'redis_client.js'],
+                 'redis_client.js',
+                 'redis_watcher.js'],
                 'server');
   api.add_files('local_collection_driver.js', ['client', 'server']);
   api.add_files('remote_collection_driver.js', 'server');

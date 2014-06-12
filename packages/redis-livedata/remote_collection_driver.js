@@ -1,7 +1,7 @@
 RedisInternals.RemoteCollectionDriver = function (
-  mongo_url, options) {
+  url, options) {
   var self = this;
-  self.connection = new RedisConnection(mongo_url, options);
+  self.connection = new RedisConnection(url, options);
 };
 
 _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
@@ -16,7 +16,7 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
         ret[m] = _.bind(self.connection[m], self.connection, name);
       });
     _.each(
-        ['keys', 'hgetall', 'hmset'],
+        ['keys', 'hgetall', 'hmset', 'observe'],
         function (m) {
           ret[m] = _.bind(self.connection[m], self.connection);
         });

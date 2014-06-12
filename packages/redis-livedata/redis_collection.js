@@ -245,7 +245,8 @@ _.extend(Meteor.RedisCollection.prototype, {
   },
   
   observe: function (observer) {
-    // XXX Implement
+    var self = this;
+    return self._collection.observe(observer);
   }
 
 });

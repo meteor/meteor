@@ -254,17 +254,24 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 
   var log = '';
   var obs = coll./*find('*', {sort: ["x"]}).*/observe({
-    addedAt: function (doc, before_index, before) {
-      log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
-    },
-    changedAt: function (new_doc, old_doc, at_index) {
-      log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
-    },
-    movedTo: function (doc, old_index, new_index) {
-      log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
-    },
-    removedAt: function (doc, at_index) {
-      log += 'r(' + doc.x + ',' + at_index + ')';
+//    addedAt: function (doc, before_index, before) {
+//      log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
+//    },
+//    changedAt: function (new_doc, old_doc, at_index) {
+//      log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
+//    },
+//    movedTo: function (doc, old_index, new_index) {
+//      log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
+//    },
+//    removedAt: function (doc, at_index) {
+//      log += 'r(' + doc.x + ',' + at_index + ')';
+//    },
+    update: function (key) {
+      if (key.indexOf(coll._keyPrefix) != 0) {
+        throw new Error("Expected key to start with prefix");
+      }
+      var withoutPrefix = key.substr(coll._keyPrefix.length);
+      log += 'u(' + withoutPrefix + ')';
     }
   });
 
@@ -293,8 +300,8 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.hgetall(coll._keyPrefix + "abc"), undefined);
   //test.equal(coll.findOne({run: run}), undefined);
 
-  expectObserve('a(1,0,null)', function () {
-    var id = coll._makeNewID();
+  expectObserve('u(1)', function () {
+    var id = '1';
     coll.hmset(coll._keyPrefix + id, {run: run, x: 1});
     test.equal(coll.keys(coll._keyPrefix + '*').length, 1);
     test.equal(coll.hgetall(coll._keyPrefix + id).x, '1');
