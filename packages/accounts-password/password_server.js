@@ -154,11 +154,30 @@ Accounts.registerLoginHandler("password", function (options) {
     throw new Meteor.Error(403, "User has no password set");
 
   if (!user.services.password.bcrypt) {
-    // Tell the client to use the SRP upgrade process.
-    throw new Meteor.Error(400, "old password format", EJSON.stringify({
-      format: 'srp',
-      identity: user.services.password.srp.identity
-    }));
+    if (typeof options.password === "string") {
+      // The client has presented a plaintext password, and the user is
+      // not upgraded to bcrypt yet. We don't attempt to tell the client
+      // to upgrade to bcrypt, because it might be a standalone DDP
+      // client doesn't know how to do such a thing.
+      var verifier = user.services.password.srp;
+      var newVerifier = SRP.generateVerifier(options.password, {
+        identity: verifier.identity, salt: verifier.salt});
+
+      if (verifier.verifier !== newVerifier.verifier) {
+        return {
+          userId: user._id,
+          error: new Meteor.Error(403, "Incorrect password")
+        };
+      }
+
+      return {userId: user._id};
+    } else {
+      // Tell the client to use the SRP upgrade process.
+      throw new Meteor.Error(400, "old password format", EJSON.stringify({
+        format: 'srp',
+        identity: user.services.password.srp.identity
+      }));
+    }
   }
 
   return checkPassword(
