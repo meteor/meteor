@@ -398,7 +398,18 @@ _.extend(CompleteCatalog.prototype, {
 
     var initVersionRecordFromSource =  function (packageDir, name) {
       var packageSource = new PackageSource;
-      packageSource.initFromPackageDir(name, packageDir);
+      var broken = false;
+      buildmessage.enterJob({
+        title: "reading package `" + name + "`",
+        rootPath: packageDir
+      }, function () {
+        packageSource.initFromPackageDir(name, packageDir);
+        if (buildmessage.jobHasMessages())
+          broken = true;
+      });
+      if (broken)
+        return;  // recover by ignoring
+
       packageSources[name] = packageSource;
 
       self.packages.push({

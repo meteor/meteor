@@ -12,6 +12,7 @@ var release = require('./release.js');
 var project = require('./project.js');
 var fs = require('fs');
 var catalog = require('./catalog.js');
+var buildmessage = require('./buildmessage.js');
 var main = exports;
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -615,27 +616,32 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  // Initialize the complete Catalog, which we use to retrieve packages. Only
-  // after this point is the Catalog (and therefore uniload) usable.
-  catalog.complete.initialize({
-    localPackageDirs: localPackageDirs
-  });
+  var messages = buildmessage.capture(function () {
+    // Initialize the complete Catalog, which we use to retrieve packages. Only
+    // after this point is the Catalog (and therefore uniload) usable.
+    catalog.complete.initialize({
+      localPackageDirs: localPackageDirs
+    });
 
-  // Initialize the server catalog. We don't load data into the server catalog
-  // until refresh is called, so this probably doesn't take up too much
-  // memory. We could move this initialization to commands.js or something, but
-  // this makes it easier to not bother propagating the offline-catalog option
-  // through every command that might care about it.
-  //
-  // If the --offline-catalog option is set, the
-  // catalog will be offline and will never attempt to contact the server for
-  // more recent data. Otherwise, the catalog will attempt to synchronize with
-  // the remote package server.
-  catalog.official.initialize({
-    offline: _.has(rawOptions, '--offline-catalog')
+    // Initialize the server catalog. We don't load data into the server catalog
+    // until refresh is called, so this probably doesn't take up too much
+    // memory. We could move this initialization to commands.js or something,
+    // but this makes it easier to not bother propagating the offline-catalog
+    // option through every command that might care about it.
+    //
+    // If the --offline-catalog option is set, the catalog will be offline and
+    // will never attempt to contact the server for more recent data. Otherwise,
+    // the catalog will attempt to synchronize with the remote package server.
+    catalog.official.initialize({
+      offline: _.has(rawOptions, '--offline-catalog')
+    });
+    // Delete the offline option.
+    delete rawOptions['--offline-catalog'];
   });
-  // Delete the offline option.
-  delete rawOptions['--offline-catalog'];
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    process.exit(1);
+  }
 
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,

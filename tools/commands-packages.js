@@ -653,7 +653,7 @@ main.registerCommand({
   catalog.official.refresh();
 
   process.stdout.write("Done creating " + relConf.track  + "@" +
-                       relConf.version + !\n");
+                       relConf.version + "!\n");
   return 0;
 });
 
