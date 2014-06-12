@@ -134,7 +134,11 @@ var StyleHandler = DiffingAttributeHandler.extend({
       // match[0] = entire matching string
       // match[1] = css property
       // Prefix the token to prevent conflicts with existing properties.
-      tokens[' ' + match[1]] = match[0].trim();
+
+      // XXX No `String.trim` on Safari 4. Swap out $.trim if we want to
+      // remove strong dep on jquery.
+      tokens[' ' + match[1]] = match[0].trim ?
+        match[0].trim() : $.trim(match[0]);
 
       match = regex.exec(attrString);
     }
