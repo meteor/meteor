@@ -560,7 +560,7 @@ main.registerCommand({
                         existingBuild.build.treeHash) {
                       somethingChanged = true;
                     } else {
-                      process.stdout.write("NEW VERSION! \n");
+                      process.stdout.write("NEW VERSION! ");
                     }
                   }
 
@@ -652,7 +652,8 @@ main.registerCommand({
   // Get it back.
   catalog.official.refresh();
 
-  process.stdout.write("Done! \n");
+  process.stdout.write("Done creating " + relConf.track  + "@" +
+                       relConf.version + !\n");
   return 0;
 });
 

@@ -346,6 +346,19 @@ var springboard = function (rel, releaseOverride) {
   throw Error('exec failed?');
 };
 
+// Springboard to a pre-0.9.0 release.
+var oldSpringboard = function (toolsVersion) {
+  // Strip off the "node" and "meteor.js" from argv and replace it with the
+  // appropriate tools's meteor shell script.
+  var newArgv = process.argv.slice(2);
+  var cmd = path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
+
+  // Now exec; we're not coming back.
+  require('kexec')(cmd, newArgv);
+  throw Error('exec failed?');
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Main entry point
 ///////////////////////////////////////////////////////////////////////////////
@@ -738,21 +751,32 @@ Fiber(function () {
 "Please check to make sure that you are online.\n");
         }
         process.exit(1);
-      }
-
-      if (e instanceof warehouse.NoSuchReleaseError) {
-        if (releaseOverride) {
-          process.stderr.write(name + ": unknown release.\n");
-        } else if (appDir) {
-          process.stderr.write(
+      } else if (e instanceof release.NoSuchReleaseError) {
+        // OK, this release doesn't exist... unless it's an old pre-0.9.0
+        // release. Let's try using the legacy "warehouse" module to load it.
+        try {
+          var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+            releaseName);
+        } catch (e) {
+          // XXX handle OfflineError too?
+          if (e instanceof warehouse.NoSuchReleaseError) {
+            if (releaseOverride) {
+              process.stderr.write(name + ": unknown release.\n");
+            } else if (appDir) {
+              process.stderr.write(
 "Problem! This project says that it uses version " + name + " of Meteor,\n" +
 "but you don't have that version of Meteor installed and the Meteor update\n" +
 "servers don't have it either. Please edit the .meteor/release file in the\n" +
 "project and change it to a valid Meteor release.\n");
-        } else {
-          throw new Error("can't load latest release?");
+            } else {
+              throw new Error("can't load latest release?");
+            }
+            process.exit(1);
+          }
+          throw e;
         }
-        process.exit(1);
+        // OK, it was an old release. We should old-springboard to it.
+        oldSpringboard(manifest.tools);
       }
 
       throw e;

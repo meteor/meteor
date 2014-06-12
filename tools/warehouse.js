@@ -1,3 +1,19 @@
+// This file is used to access the "warehouse" of pre-0.9.0 releases. This code
+// is now legacy, but we keep it around so that you can still use the same
+// `meteor` entry point to run pre-0.9.0 and post-0.9.0 releases, for now. All
+// it knows how to do is download old releases and explain to main.js how to
+// exec them.
+//
+// Because of this, we do have to be careful that the files used by this code
+// and the files used by tropohouse.js (the modern version of the warehouse)
+// don't overlap. tropohouse does not use tools or releases directorys, and
+// while they both have packages directories with similar structures, the
+// version names should not overlap: warehouse versions are SHAs and tropohouse
+// versions are semvers.  Additionally, while they do both use the 'meteor'
+// symlink at the top level, there's no actual code in this file to write that
+// symlink (it was just created by the bootstrap tarball release process).
+
+
 /// We store a "warehouse" of tools, releases and packages on
 /// disk. This warehouse is populated from our servers, as needed.
 ///

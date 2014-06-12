@@ -244,16 +244,8 @@ release.load = function (name, options) {
 
   var releaseVersion = catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
-    // XXX check the warehouse too, or maybe before refresh
-    // XXX Pre090 better error, probably something like
-    //     warehouse.NoSuchReleaseError
-    throw Error("unknown tropohouse release");
+    throw new release.NoSuchReleaseError;
   }
-
-  // // Go download the release if necessary.
-  // // (can throw files.OfflineError or warehouse.NoSuchReleaseError)
-  // var manifest =
-  //   warehouse.ensureReleaseExistsAndReturnManifest(name, options.quiet);
 
   return new Release({
     name: name,
@@ -284,3 +276,9 @@ release._setCurrentForOldTest = function () {
     release.setCurrent(release.load(null));
   }
 };
+
+// An exception meaning that you asked for a release that doesn't exist in the
+// new packaging world.  (It may still exist in the pre-0.9.0 packaging world.)
+release.NoSuchReleaseError = function () {
+};
+
