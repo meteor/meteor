@@ -70,11 +70,11 @@ ConstraintSolver.Resolver.prototype.getConstraint =
 // - combineCostFunction: function (cost, cost) - given two costs (obtained by
 // evaluating states with costFunction and estimateCostFunction)
 ConstraintSolver.Resolver.prototype.resolve =
-  function (dependencies, constraints, choices, options) {
+  function (dependencies, constraints, options) {
   var self = this;
 
   constraints = constraints || [];
-  choices = choices || [];
+  var choices = [];
   options = _.extend({
     costFunction: function (state) { return 0; },
     estimateCostFunction: function (state) {
@@ -95,7 +95,7 @@ ConstraintSolver.Resolver.prototype.resolve =
   constraints = ConstraintSolver.ConstraintsList.fromArray(constraints);
 
   // create a fake unit version to represnt the app or the build target
-  var appUV = new ConstraintSolver.UnitVersion("target", "1.0.0", "0.0.0");
+  var appUV = new ConstraintSolver.UnitVersion("###TARGET###", "1.0.0", "0.0.0");
   appUV.dependencies = dependencies;
   appUV.constraints = constraints;
 
@@ -105,7 +105,7 @@ ConstraintSolver.Resolver.prototype.resolve =
   // - choices: array of UnitVersion
   // - constraintAncestor: mapping Constraint.toString() -> Constraint
   var startState = self._propagateExactTransDeps(appUV, dependencies, constraints, choices, constraintAncestor);
-  startState.choices = _.filter(startState.choices, function (uv) { return uv.name !== "target"; });
+  startState.choices = _.filter(startState.choices, function (uv) { return uv.name !== "###TARGET###"; });
 
   if (options.stopAfterFirstPropagation)
     return startState.choices;
@@ -121,11 +121,17 @@ ConstraintSolver.Resolver.prototype.resolve =
 
   pq.push(startState, [estimatedStartingCost, 0]);
 
-  var naughtinessRating = {};
+  // Mapping that assigns every package an integer priority. We compute this
+  // dynamically and in the process of resolution we try to resolve packages
+  // with higher priority first. This helps the resolver a lot because if some
+  // package has a higher weight to the solution (like a direct dependency) or
+  // is more likely to break our solution in the future than others, it would be
+  // great to try out and evaluate all versions early in the decision tree.
+  var resolutionPriority = {};
 
   // put direct dependencies on higher priority
   dependencies.each(function (dep) {
-    naughtinessRating[dep] = 100;
+    resolutionPriority[dep] = 100;
   });
 
   var someError = null;
@@ -138,11 +144,11 @@ ConstraintSolver.Resolver.prototype.resolve =
       break;
     }
 
-    var neighborsObj = self._stateNeighbors(currentState, naughtinessRating);
+    var neighborsObj = self._stateNeighbors(currentState, resolutionPriority);
 
     if (! neighborsObj.success) {
       someError = someError || neighborsObj.failureMsg;
-      naughtinessRating[neighborsObj.conflictingUnit] = (naughtinessRating[neighborsObj.conflictingUnit] || 0) + 1;
+      resolutionPriority[neighborsObj.conflictingUnit] = (resolutionPriority[neighborsObj.conflictingUnit] || 0) + 1;
     } else {
       _.each(neighborsObj.neighbors, function (state) {
         var tentativeCost =
@@ -182,7 +188,7 @@ ConstraintSolver.Resolver.prototype.resolve =
 //
 // NOTE: assumes that exact dependencies are already propagated
 ConstraintSolver.Resolver.prototype._stateNeighbors =
-  function (state, naughtinessRating) {
+  function (state, resolutionPriority) {
   var self = this;
 
   var dependencies = state.dependencies;
@@ -191,10 +197,10 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var constraintAncestor = state.constraintAncestor;
 
   var candidateName = dependencies.peek();
-  var currentNaughtiness = naughtinessRating[candidateName] || 0;
+  var currentNaughtiness = resolutionPriority[candidateName] || 0;
 
   dependencies.each(function (d) {
-    var r = naughtinessRating[d] || 0;
+    var r = resolutionPriority[d] || 0;
     if (r > currentNaughtiness) {
       currentNaughtiness = r;
       candidateName = d;
@@ -205,7 +211,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
 
   var edgeVersions = constraints.edgeMatchingVersionsFor(candidateName, self);
 
-  edgeVersions.earliest = edgeVersions.earliest || { version: "100.100.100" };
+  edgeVersions.earliest = edgeVersions.earliest || { version: "1000.1000.1000" };
   edgeVersions.latest = edgeVersions.latest || { version: "0.0.0" };
 
   var candidateVersions =
@@ -218,15 +224,17 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     var directDepsString = "";
 
     _.each(violatedConstraints, function (c) {
+      if (directDepsString !== "")
+        directDepsString += ", ";
       directDepsString += constraintAncestor[c.toString()] +
-        "(" + c.toString() + "), ";
+        "(" + c.toString() + ")";
     });
 
     return {
       success: false,
       // XXX We really want to say "directDep1 depends on X@1.0 and
       // directDep2 depends on X@2.0"
-      failureMsg: "Direct dependencies " + directDepsString + "conflict on " + uv.name,
+      failureMsg: "Direct dependencies " + directDepsString + " conflict on " + uv.name,
       conflictingUnit: candidateName
     };
   };

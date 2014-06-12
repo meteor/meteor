@@ -157,8 +157,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints, [],
-                                  resolverOptions);
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints, resolverOptions);
 
   var resultChoices = {};
   _.each(res, function (uv) {
@@ -184,7 +183,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints, null,
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints,
                                   { stopAfterFirstPropagation: true });
 
   var resultChoices = {};

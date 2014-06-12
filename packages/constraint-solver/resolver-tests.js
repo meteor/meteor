@@ -62,7 +62,7 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
   B100.addConstraint(resolver.getConstraint("C", "1.1.0"));
 
   // Run looking for a conservative solution for A
-  var AOnlySolution = resolver.resolve(["A"], [], [], {
+  var AOnlySolution = resolver.resolve(["A"], [], {
     costFunction: function (state) {
       var choices = state.choices;
       var A = _.find(choices, function (uv) { return uv.name === "A"; });
@@ -73,7 +73,7 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
 
   test.equal(AOnlySolution, [A100, C100]);
 
-  var AnBSolution = resolver.resolve(["A", "B"], [], [], {
+  var AnBSolution = resolver.resolve(["A", "B"], [], {
     costFunction: function (state) {
       var choices = state.choices;
       var C = _.find(choices, function (uv) { return uv.name === "C"; });
@@ -111,7 +111,7 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
   // constraint solver should keep B from upgrading by picking a newer version
   // of A that uses C.
   var lockedVersions = [B100];
-  var solution = resolver.resolve(["A", "B"], [], [], {
+  var solution = resolver.resolve(["A", "B"], [], {
     costFunction: function (state) {
       var choices = state.choices;
       return _.reduce(choices, function (sum, uv) {
