@@ -99,37 +99,6 @@ _.extend(warehouse, {
     return warehouse._populateWarehouseForRelease(release, !quiet);
   },
 
-  _latestReleaseSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'releases', 'latest');
-  },
-
-  // look in the warehouse for the latest release version. if no
-  // releases are found, return null.
-  latestRelease: function () {
-    var latestReleaseSymlink = warehouse._latestReleaseSymlinkPath();
-    // This throws if the symlink doesn't exist, but it really should, since
-    // it exists in bootstrap tarballs and is never deleted.
-    var linkText = fs.readlinkSync(latestReleaseSymlink);
-    return linkText.replace(/\.release\.json$/, '');
-  },
-
-  _latestToolsSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'tools', 'latest');
-  },
-
-  // Look in the warehouse for the latest tools version. (This is the one that
-  // the meteor shell script runs initially). If the symlink doesn't exist
-  // (which shouldn't happen, since it is provided in the bootstrap tarball)
-  // returns null.
-  latestTools: function () {
-    var latestToolsSymlink = warehouse._latestToolsSymlinkPath();
-    try {
-      return fs.readlinkSync(latestToolsSymlink);
-    } catch (e) {
-      return null;
-    }
-  },
-
   packageExistsInWarehouse: function (name, version) {
     // A package exists if its directory exists. (We used to look for a
     // particular file name ("package.js") inside the directory, but since we
@@ -379,26 +348,6 @@ _.extend(warehouse, {
         if (!dontWriteFreshFile)
           fs.writeFileSync(warehouse.getPackageFreshFile(name, version), '');
       });
-  },
-
-  _lastPrintedBannerReleaseFile: function () {
-    return path.join(warehouse.getWarehouseDir(),
-                     'releases', '.last-printed-banner');
-  },
-
-  lastPrintedBannerRelease: function () {
-    // Calculate filename outside of try block, because getWarehouseDir can
-    // throw.
-    var filename = warehouse._lastPrintedBannerReleaseFile();
-    try {
-      return fs.readFileSync(filename, 'utf8');
-    } catch (e) {
-      return null;
-    }
-  },
-
-  writeLastPrintedBannerRelease: function (release) {
-    fs.writeFileSync(warehouse._lastPrintedBannerReleaseFile(), release);
   },
 
   _platform: function () {
