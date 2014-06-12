@@ -11,11 +11,15 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
     _.each(
       ['find', 'findOne', 'insert', 'update', , 'upsert',
        'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection',
-       'dropCollection',
-       'keys', 'hgetall'],
+       'dropCollection'],
       function (m) {
         ret[m] = _.bind(self.connection[m], self.connection, name);
       });
+    _.each(
+        ['keys', 'hgetall', 'hmset'],
+        function (m) {
+          ret[m] = _.bind(self.connection[m], self.connection);
+        });
     return ret;
   }
 });

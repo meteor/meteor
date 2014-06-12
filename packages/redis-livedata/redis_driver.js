@@ -667,6 +667,11 @@ RedisConnection.prototype.hgetall = function (key) {
   return Future.wrap(_.bind(self._client.hgetall, self._client))(key).wait();
 };
 
+RedisConnection.prototype.hmset = function (key, object) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.hmset, self._client))(key, object).wait();
+};
+
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
 RedisConnection.prototype._ensureIndex = function (collectionName, index,

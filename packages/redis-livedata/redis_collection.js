@@ -498,7 +498,7 @@ _.each(["insert", "update", "remove"], function (name) {
   };
 });
 
-_.each(["keys", "hgetall"], function (name) {
+_.each(["keys", "hgetall", "hmset"], function (name) {
   Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);

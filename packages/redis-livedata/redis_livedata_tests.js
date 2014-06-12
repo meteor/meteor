@@ -289,15 +289,15 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.include(expected, captureObserve(f));
   };
 
-  test.equal(coll.keys('*').length, 0);
-  test.equal(coll.hgetall("abc"), undefined);
+  test.equal(coll.keys(coll._keyPrefix + '*').length, 0);
+  test.equal(coll.hgetall(coll._keyPrefix + "abc"), undefined);
   //test.equal(coll.findOne({run: run}), undefined);
 
   expectObserve('a(1,0,null)', function () {
     var id = coll._makeNewID();
-    coll.hmset(id, {run: run, x: 1});
-    test.equal(coll.keys('*').count(), 1);
-    test.equal(coll.hgetall(id).x, 1);
+    coll.hmset(coll._keyPrefix + id, {run: run, x: 1});
+    test.equal(coll.keys(coll._keyPrefix + '*').length, 1);
+    test.equal(coll.hgetall(coll._keyPrefix + id).x, '1');
     //test.equal(coll.findOne({run: run}).x, 1);
   });
 //

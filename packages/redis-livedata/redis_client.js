@@ -77,6 +77,12 @@ RedisClient.prototype.hgetall = function (key, callback) {
   }));
 };
 
+RedisClient.prototype.hmset = function (key, object, callback) {
+  var self = this;
+
+  self._connection.hmset(key, object, Meteor.bindEnvironment(callback));
+};
+
 
 RedisClient.prototype.incr = function (key, callback) {
   var self = this;
