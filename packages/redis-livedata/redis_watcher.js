@@ -24,6 +24,10 @@ _.extend(RedisWatcher.prototype, {
     var self = this;
     self._listeners.push(listener);
   },
+  removeListener: function (listener) {
+    var self = this;
+    self._listeners = _.without(self._listeners, listener);
+  },
   _start: function () {
     var self = this;
     self._watchConnection = new RedisClient(self._url);

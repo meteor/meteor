@@ -111,6 +111,44 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
+RedisObserver = function (watcher, observer) {
+  var self = this;
+  self._watcher = watcher;
+  var listener = function (key, message) {
+    var methodName;
+    if (message == 'hset') {
+      methodName = 'update';
+    }
+    
+    if (!methodName) {
+      Meteor._debug("RedisConnection::observe: Unknown message: " + message);
+    } else {
+      if (_.isFunction(observer[methodName])) {
+        observer[methodName](key, message);
+      }
+    }
+//      addedAt: function (doc, before_index, before) {
+//        log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
+//      },
+//      changedAt: function (new_doc, old_doc, at_index) {
+//        log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
+//      },
+//      movedTo: function (doc, old_index, new_index) {
+//        log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
+//      },
+//      removedAt: function (doc, at_index) {
+//        log += 'r(' + doc.x + ',' + at_index + ')';
+//      }
+  };
+  self._listener = listener;
+  watcher.addListener(listener);
+};
+
+RedisObserver.prototype.stop = function () {
+  var self = this;
+  self._watcher.removeListener(self._listener);
+};
+
 RedisConnection = function (url, options) {
   var self = this;
   options = options || {};
@@ -675,32 +713,7 @@ RedisConnection.prototype.hmset = function (key, object) {
 
 RedisConnection.prototype.observe = function (observer) {
   var self = this;
-  self._watcher.addListener(function (key, message) {
-    var methodName;
-    if (message == 'hset') {
-      methodName = 'update';
-    }
-    
-    if (!methodName) {
-      Meteor._debug("RedisConnection::observe: Unknown message: " + message);
-    } else {
-      if (_.isFunction(observer[methodName])) {
-        observer[methodName](key, message);
-      }
-    }
-//      addedAt: function (doc, before_index, before) {
-//        log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
-//      },
-//      changedAt: function (new_doc, old_doc, at_index) {
-//        log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
-//      },
-//      movedTo: function (doc, old_index, new_index) {
-//        log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
-//      },
-//      removedAt: function (doc, at_index) {
-//        log += 'r(' + doc.x + ',' + at_index + ')';
-//      }
-  });
+  return new RedisObserver(self._watcher, observer);
 };
 
 
