@@ -81,7 +81,7 @@ Meteor.RedisCollection = function (keyPrefix, options) {
   }
 
   self._collection = options._driver.open(keyPrefix, self._connection);
-  self._keyPrefix = keyPrefix;
+  self._keyPrefix = keyPrefix || "";
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote

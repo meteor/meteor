@@ -121,14 +121,15 @@ RedisObserver = function (watcher, observer) {
     } else if (message == 'hincrby') {
       methodName = 'updated';
     } else if (message == 'del') {
-      methodName = 'deleted';
+      methodName = 'removed';
     }
     
     if (!methodName) {
       Meteor._debug("RedisConnection::observe: Unknown message: " + message);
     } else {
       if (_.isFunction(observer[methodName])) {
-        observer[methodName](key, message);
+        var o = { _id: key };
+        observer[methodName](o);
       }
     }
 //      addedAt: function (doc, before_index, before) {

@@ -17,6 +17,15 @@ Miniredis.Cursor = function (redisStore, pattern) {
   self.pattern = pattern;
 };
 
+// XXX Not clear if we should forward these or just use the RedisStore
+_.each(['keys', 'hgetall', 'hmset', 'hincrby', 'del'], function (name) {
+  Miniredis.Cursor.prototype[name] = function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+    return self.redisStore[name].apply(self.redisStore, args);
+  }
+});
+
 // returns the position where x should be inserted in a sorted array
 var insPos = function (arr, x) {
   var l = 0, r = arr.length - 1;
@@ -198,6 +207,8 @@ _.extend(Miniredis.RedisStore.prototype, {
       } else {
         self._notifyObserves(key, 'changed', oldValue, value);
       }
+      // XXX: Redis keyspace notifications don't really differentiate between added vs changed...
+      self._notifyObserves(key, 'updated', value);
     }
   },
 
@@ -226,6 +237,8 @@ _.extend(Miniredis.RedisStore.prototype, {
       if (event === "changed") {
         obs[event] && obs[event]({ _id: key, value: value },
                                  { _id: key, value: newValue });
+      } else if (event === "updated") {
+        obs[event] && obs[event]({ _id: key, value: value});
       } else {
         obs[event] && obs[event]({ _id: key, value: value });
       }
@@ -495,7 +508,56 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     var val = self.get(key);
     return val ? val.length : 0;
-  }
+  },
+
+  // -----
+  // operators on hashes
+  // -----
+
+  hgetall: function (key) {
+    var self = this;
+    if (!self._has(key)) {
+      return undefined;
+    }
+    var val = self._get(key);
+    if (! _.isObject(val))
+      throwIncorrectKindOfValueError();
+    return EJSON.clone(val);
+  },
+  
+  hmset: function (key, o) {
+    var self = this;
+    if (! _.isObject(o))
+      throwIncorrectKindOfValueError();
+    var val = {};
+    _.each(_.keys(o), function (key) {
+      val[key.toString()] = o[key].toString();
+    });
+    self._set(key, val);
+  },
+
+  hincrby: function (key, field, delta) {
+    var self = this;
+    var o = self._has(key) ? self._get(key) : {};
+
+    if (! _.isObject(o))
+      throwIncorrectKindOfValueError();
+
+    var val = _.has(o, field) ? o[field] : 0;
+    // cast to integer
+    var newVal = val |0;
+
+    if (val !== newVal.toString())
+      throw new Error("Value is not an integer or out of range");
+
+    newVal += delta;
+    var newObj = EJSON.clone(o);
+    newObj[field] = newVal.toString();
+    self._set(key, newObj);
+    
+    return newVal;
+  },
+
 });
 
 Miniredis.unsupportedMethods = ["ttl", "restore", "dump", "expire", "expireat",

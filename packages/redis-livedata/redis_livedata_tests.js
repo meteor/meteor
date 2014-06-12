@@ -169,8 +169,8 @@ if (Meteor.isServer) {
   Meteor.methods(m);
 }
 
-Meteor._FailureTestCollection =
-  new Meteor.RedisCollection("___meteor_failure_test_collection");
+//Meteor._FailureTestCollection =
+//  new Meteor.RedisCollection("___meteor_failure_test_collection");
 
 // For test "document with a custom type"
 var Dog = function (name, color, actions) {
@@ -272,13 +272,15 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
       }
       return key.substr(coll._keyPrefix.length);
     },
-    updated: function (key) {
+    updated: function (change) {
       var self = this;
+      var key = change._id;
       var withoutPrefix = self._withoutPrefix(key);
       log += 'u(' + withoutPrefix + ')';
     },
-    deleted: function (key) {
+    removed: function (change) {
       var self = this;
+      var key = change._id;
       var withoutPrefix = self._withoutPrefix(key);
       log += 'r(' + withoutPrefix + ')';
     }
@@ -369,7 +371,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //
 //  test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
 //             [4, 1]);
-//
+
 //  expectObserve('', function () {
 //    var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
 //    test.equal(count, 0);
