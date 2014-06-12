@@ -67,12 +67,13 @@ Meteor.startup(function () {
       }
     });
   }, function () {
-    if (failed > 0) {
-      console.log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
-    }
     console.log("passed/expected/failed/total",
                 passed, "/", expected, "/", failed, "/", _.size(resultSet));
-
+    if (failed > 0) {
+      console.log("TESTS FAILED");
+    } else {
+      console.log("ALL TESTS PASSED");
+    }
     process.exit(failed ? 1 : 0);
   });
 });

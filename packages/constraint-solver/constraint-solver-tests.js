@@ -190,7 +190,9 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
   test.equal(versions.sparkle, "2.1.1");
 });
 
-Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
+var runBenchmarks = !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
+
+runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
   var r = new ConstraintSolver.PackagesResolver(getCatalogStub(sinatraGems));
 
   var args = splitArgs({
@@ -210,7 +212,7 @@ Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) 
 });
 
 var railsCatalog = getCatalogStub(railsGems);
-Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
+runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
   var args = splitArgs({
@@ -220,7 +222,7 @@ Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
   r.resolve(args.dependencies, args.constraints);
 });
 
-Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq", function (test) {
+runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
   var args = splitArgs({
@@ -299,7 +301,7 @@ Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq", function
   r.resolve(args.dependencies, args.constraints);
 });
 
-Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq, additions to the existing smaller solution", function (test) {
+runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gitlabhq, additions to the existing smaller solution", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
   var args = splitArgs({
