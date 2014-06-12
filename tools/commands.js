@@ -139,19 +139,22 @@ main.registerCommand({
 // cloning an app from github, running this command, then getting on an
 // airplane.
 //
-// XXX: What happens if you run from checkout and want to build all local
-// packages, is this a thing right now? Unclear.
+// This does NOT guarantee a rebuild of all local packages (though it will
+// download any new dependencies). If you want to rebuild all local packages,
+// call meteor rebuild.
 main.registerCommand({
   name: '--get-ready',
   requiresApp: true
 }, function (options) {
 
+  // Then get the list of packages that we need to get and build. Calling
+  // getVersions on the project will ensureDepsUpToDate which will ensure that
+  // all builds of everything we need from versions have been downloaded.
+  var allPackages = project.getVersions();
+
   // We need the package loader to compile our packages, so let's make sure to
   // get one.
   var loader = project.getPackageLoader();
-
-  // Then get the list of packages that we need to get and build.
-  var allPackages = project.getVersions();
 
   var messages = buildmessage.capture(function () {
     _.forEach(allPackages, function (versions, name) {
@@ -166,6 +169,8 @@ main.registerCommand({
     process.stdout.write("\n" + messages.formatMessages());
     return 1;
   };
+
+  console.log("You are ready!");
 
   return 0;
 });

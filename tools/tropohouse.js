@@ -167,7 +167,7 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX replace with a real progress bar in _ensurePackagesExistOnDisk
       if (verbose) {
         process.stderr.write(
-          "Downloading " + packageName + "@" + version + " ... ");
+          "  downloading " + packageName + " at version " + version + " ... ");
       }
 
       // XXX how does concurrency work here?  we could just get errors if we try
