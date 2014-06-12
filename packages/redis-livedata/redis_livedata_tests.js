@@ -404,17 +404,24 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.equal(coll.hgetall(coll._keyPrefix + '1'), undefined);
   });
 
-//  expectObserve('r(6,0)', function () {
+  expectObserve('r(4)', function () {
 //    coll.remove({run: run});
 //    test.equal(coll.find({run: run}).count(), 0);
-//  });
-//
-//  expectObserve('', function () {
+    
+    coll.del(coll._keyPrefix + '4');
+    test.equal(coll.keys(coll._keyPrefix + '*').length, 0);
+  });
+
+  expectObserve('', function () {
 //    var count = coll.remove({run: run});
 //    test.equal(count, 0);
 //    test.equal(coll.find({run: run}).count(), 0);
-//  });
-//
+
+    var count = coll.del(coll._keyPrefix + '4');
+    test.equal(count, 0);
+    test.equal(coll.keys(coll._keyPrefix + '*').length, 0);
+  });
+
   obs.stop();
   onComplete();
 });
