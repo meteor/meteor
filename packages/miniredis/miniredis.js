@@ -320,9 +320,13 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     var regexp = patternToRegexp(pattern);
 
-    return _.filter(_.keys(self._kv), function (key) {
-      return key.match(regexp);
+    var keys = [];
+    self._kv.forEach(function (value, key) {
+      if (! key.match(regexp))
+        return;
+      keys.push(key);
     });
+    return keys;
   },
   randomkey: function () {
     var self = this;
