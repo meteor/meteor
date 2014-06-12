@@ -117,9 +117,11 @@ RedisObserver = function (watcher, observer) {
   var listener = function (key, message) {
     var methodName;
     if (message == 'hset') {
-      methodName = 'update';
+      methodName = 'updated';
     } else if (message == 'hincrby') {
-      methodName = 'update';
+      methodName = 'updated';
+    } else if (message == 'del') {
+      methodName = 'deleted';
     }
     
     if (!methodName) {
@@ -718,6 +720,10 @@ RedisConnection.prototype.hincrby = function (key, field, delta) {
   return Future.wrap(_.bind(self._client.hincrby, self._client))(key, field, delta).wait();
 };
 
+RedisConnection.prototype.del = function (keys) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.del, self._client))(keys).wait();
+};
 
 RedisConnection.prototype.observe = function (observer) {
   var self = this;

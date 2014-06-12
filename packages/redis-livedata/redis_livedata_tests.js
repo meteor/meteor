@@ -266,12 +266,21 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //    removedAt: function (doc, at_index) {
 //      log += 'r(' + doc.x + ',' + at_index + ')';
 //    },
-    update: function (key) {
+    _withoutPrefix: function (key) {
       if (key.indexOf(coll._keyPrefix) != 0) {
         throw new Error("Expected key to start with prefix, was: " + key);
       }
-      var withoutPrefix = key.substr(coll._keyPrefix.length);
+      return key.substr(coll._keyPrefix.length);
+    },
+    updated: function (key) {
+      var self = this;
+      var withoutPrefix = self._withoutPrefix(key);
       log += 'u(' + withoutPrefix + ')';
+    },
+    deleted: function (key) {
+      var self = this;
+      var withoutPrefix = self._withoutPrefix(key);
+      log += 'r(' + withoutPrefix + ')';
     }
   });
 
@@ -383,13 +392,18 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //    test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
 //               [13, 6]);
 //  });
-//
-//  expectObserve('r(13,1)', function () {
+
+  expectObserve('r(1)', function () {
 //    var count = coll.remove({run: run, x: {$gt: 10}});
 //    test.equal(count, 1);
 //    test.equal(coll.find({run: run}).count(), 1);
-//  });
-//
+
+    var count = coll.del(coll._keyPrefix + '1');
+    test.equal(count, 1);
+    test.equal(coll.keys(coll._keyPrefix + '*').length, 1);
+    test.equal(coll.hgetall(coll._keyPrefix + '1'), undefined);
+  });
+
 //  expectObserve('r(6,0)', function () {
 //    coll.remove({run: run});
 //    test.equal(coll.find({run: run}).count(), 0);
