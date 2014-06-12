@@ -659,6 +659,7 @@ _.extend(Project.prototype, {
 });
 
 // The project is currently a singleton, but there is no universal reason for
-// this to be the case. Let's use this design pattern to begin with, so that if
-// we want to expose Project() and allow multiple projects, we could do so easily.
+// this to be the case. In any case, the project.project thing is kind of
+// cumbersome, that is our general design pattern for singletons (ex:
+// packageCache.packageCache, etc)
 project.project = new Project();
