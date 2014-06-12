@@ -742,28 +742,31 @@ main.registerCommand({
       console.log("No versions of package " + packageName + " exist.");
       console.log("It is maintained by " +
                   _.pluck(packageRecord.maintainers, 'username')
-                  + " at https://github.com/meteor/meteor ");
+                  + " at " + packageRecord.repositoryUrl);
       return 1;
     } else if (!lastVersion || !lastVersion.changelog) {
       console.log("No details available.");
     } else {
-      var changelogUrl = lastVersion.changelog;
+
+/*      var changelogUrl = lastVersion.changelog;
       var myChangelog = httpHelpers.getUrl({
         url: changelogUrl,
         encoding: null
       });
+
       var sourcePath = "/tmp/change";
       fs.writeFileSync(sourcePath, myChangelog);
-      var ch = changelog.readChangelog(sourcePath);
+      var ch = changelog.readChangelog(sourcePath); */
       _.each(versions, function (v) {
-        console.log("Version " + v + ":");
-        changelog.printLines(ch[v], "             ");
+        var versionRecord = catalog.official.getVersion(packageName, v);
+        console.log("Version " + v + " : " + versionRecord.earliestCompatibleVersion);
+//        changelog.printLines(ver, "             ");
       });
       console.log("\n");
     }
     console.log("The package " + packageName + " : " + lastVersion.description);
     console.log("Maintained by " + _.pluck(packageRecord.maintainers, 'username')
-                + " at https://github.com/meteor/meteor ");
+                + " at " + packageRecord.repositoryUrl);
   } else {
     console.log("XXXX: SEARCH UNIMPLEMENTED");
 
@@ -1332,6 +1335,11 @@ main.registerCommand({
 // admin
 ///////////////////////////////////////////////////////////////////////////////
 
+// For admin commands, at least in preview0.90, we can be kind of lazy and not bother
+// to pre-check if the command will suceed client-side. That's because we both
+// don't expect them to be called often and don't expect them to be called by
+// inexperienced users, so waiting to get rejected by the server is OK.
+
 main.registerCommand({
   name: 'admin maintainers',
   minArgs: 1,
@@ -1410,7 +1418,7 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: 'admin recommendRelease',
+  name: 'admin recommend-release',
   minArgs: 1,
   maxArgs: 1,
   options: {
@@ -1429,7 +1437,6 @@ main.registerCommand({
   }
 
   // Now let's get down to business! Fetching the thing.
-  var fullRecord = getReleaseOrPackageRecord(name);
   var record = catalog.official.getReleaseTrack(name);
   if (!record) {
       process.stderr.write('\n There is no release track named ' + name + '\n');
@@ -1453,10 +1460,104 @@ main.registerCommand({
                            " is no longer a recommended release \n");
     } else {
       process.stdout.write("Recommending " + options.args[0] + "...");
-      conn.call('ecommendVersion', name, version);
+      conn.call('recommendVersion', name, version);
       process.stdout.write("Done! \n " + options[0] +
                            " is now  a recommended release \n");
     }
+  } catch (err) {
+    process.stdout.write("\n" + err + "\n");
+  }
+  conn.close();
+  catalog.official.refresh();
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: 'admin set-earliest-compatible-version',
+  minArgs: 2,
+  maxArgs: 2
+}, function (options) {
+
+  // We want the most recent information.
+  catalog.official.refresh();
+  var package = options.args[0].split('@');
+  var name = package[0];
+  var version = package[1];
+  if (!version) {
+      process.stderr.write('\n Must specify release version (track@version) \n');
+      return 1;
+  }
+  var ecv = options.args[1];
+
+  // Now let's get down to business! Fetching the thing.
+  var record = catalog.official.getPackage(name);
+  if (!record) {
+      process.stderr.write('\n There is no package named ' + name + '\n');
+      return 1;
+  }
+
+  checkAuthorizedPackageMaintainer(record, " set earliest recommended version");
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+      process.stdout.write(
+        "Setting earliest compatible version on "
+          + options.args[0] + " to " + ecv + "...");
+      var versionInfo = { name : name,
+                          version : version };
+      conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
+      process.stdout.write("Done! \n");
+  } catch (err) {
+    process.stdout.write("\n" + err + "\n");
+  }
+  conn.close();
+  catalog.official.refresh();
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: 'admin change-package-url',
+  minArgs: 2,
+  maxArgs: 2
+}, function (options) {
+
+  // We want the most recent information.
+  catalog.official.refresh();
+  var name = options.args[0];
+  var url = options.args[1];
+
+  // Now let's get down to business! Fetching the thing.
+  var record = catalog.official.getPackage(name);
+  if (!record) {
+      process.stderr.write('\n There is no package named ' + name + '\n');
+      return 1;
+  }
+
+  checkAuthorizedPackageMaintainer(record, " change repository URL");
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+      process.stdout.write(
+        "Changing package repository URL on  "
+          + name + " to " + url + "...");
+      conn.call('_changePackageUrl', name, url);
+      process.stdout.write("Done! \n");
   } catch (err) {
     process.stdout.write("\n" + err + "\n");
   }
