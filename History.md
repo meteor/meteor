@@ -13,7 +13,7 @@
 
 * Add `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
 
-* Ensure that the user object has updated token information on it before
+* Ensure that the user object has updated token information before
   it is passed to email template functions. #2210
 
 * Export the function that serves the HTTP response at the end of an
@@ -21,14 +21,14 @@
   overridden to make the OAuth popup flow work in certain mobile
   environments where `window.opener` is not supported.
 
-* Remove support for OAuth redirect URLs where a `redirect` query
+* Remove support for OAuth redirect URLs with a `redirect` query
   parameter. This OAuth flow was never documented and never fully
   worked.
 
 
 #### Blaze
 
-* Allow externally applied CSS style attributes to interop with Blaze
+* Allow externally applied CSS style attributes to interoperate with Blaze
   dynamic style attributes.
 
 * The `findAll` method on template instances now returns a vanilla
@@ -65,7 +65,10 @@
   comment. #2175
 
 
-### Tool
+#### Command-line tool
+
+* Add --directory flag to `meteor bundle`. Setting this flag outputs a
+  directory rather than a tarball.
 
 * Speed up updates of NPM modules by upgrading Node to include our fix for
   https://github.com/npm/npm/issues/3265 instead of passing `--force` to
@@ -79,21 +82,18 @@
   large number of processes running on the machine, and fix the error
   message when the failure does occur. #2158
 
-* Add --directory flag to `meteor bundle`. Setting this flag outputs a
-  directory rather than a tarball.
-
 * Clarify a `meteor mongo` error message when using the MONGO_URL
   environment variable. #1256
 
 
-### Testing
+#### Testing
 
 * Run server tests from multiple clients serially instead of in
   parallel. This allows testing features that modify global server
   state.  #2088
 
 
-### Security
+#### Security
 
 * Add Content-Type headers on JavaScript and CSS resources.
 
@@ -102,11 +102,11 @@
   `browser-policy-content` and you don't want your app to send this
   header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
 
-* Use `Meteor.absoluteUrl()` to compute the redirect URI in `force-ssl`
-  instead of the host header.
+* Use `Meteor.absoluteUrl()` to compute the redirect URL in the `force-ssl`
+  package (instead of the host header).
 
 
-### Miscellaneous
+#### Miscellaneous
 
 * Allow `check` to work on the server outside of a Fiber. #2136
 
