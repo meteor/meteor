@@ -163,6 +163,10 @@ release.current = null;
 // a checkin.) null if release.current is null.
 release.forced = null;
 
+// True if the release was explicitly specified by the user with the --release
+// flag. Useful for update semantics.
+release.explicit = null;
+
 // True if release.current is the release we'd use if we wanted to run the app
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
@@ -259,12 +263,14 @@ release.load = function (name, options) {
 // - releaseObject: a Release as returned from release.load()
 // - forced: true if the chosen release was forced from the command
 //   line (by the user or by the update springboard).
-release.setCurrent = function (releaseObject, forced) {
+// - explicit: true if the release was specifically requested by the user.
+release.setCurrent = function (releaseObject, forced, explicit) {
   if (release.current)
     throw new Error("release set twice?");
 
   release.current = releaseObject;
   release.forced = !! forced;
+  release.explicit = !! explicit;
 };
 
 // XXX hack
@@ -281,4 +287,3 @@ release._setCurrentForOldTest = function () {
 // new packaging world.  (It may still exist in the pre-0.9.0 packaging world.)
 release.NoSuchReleaseError = function () {
 };
-

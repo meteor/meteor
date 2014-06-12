@@ -1050,11 +1050,10 @@ main.registerCommand({
   }
 
   // Update the packages to the latest version. We don't do this for patch
-  // releases.
-  //
-  // XXX: Can we figure out if we got here with update --release foo,
-  // or just with update?
-  if (!options['patch']) {
+  // releases, or if you specified the release with a --release flag.  (Why?
+  // Because it sure seems like you probably care about the release at that
+  // point, that's what --release would look like anyway)
+  if (!options['patch'] && !release.explicit) {
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 

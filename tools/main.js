@@ -659,6 +659,7 @@ Fiber(function () {
 
   var releaseOverride = null;
   var releaseForced = false;
+  var releaseExplicit = false;
   if (_.has(rawOptions, '--release')) {
     if (rawOptions['--release'].length > 1) {
       process.stderr.write(
@@ -676,6 +677,13 @@ Fiber(function () {
     }
     delete rawOptions['--release'];
   }
+
+  // Let's keep track of whether this is an explicit release, due to different
+  // update behavior.
+  if (releaseOverride) {
+   releaseExplicit = true;
+  }
+
   if (_.has(process.env, 'METEOR_SPRINGBOARD_RELEASE')) {
     // See #SpringboardEnvironmentVar
     // Note that this does *NOT* cause release.forced to be true.
@@ -788,7 +796,7 @@ Fiber(function () {
       throw e;
     }
 
-    release.setCurrent(rel, releaseForced);
+    release.setCurrent(rel, releaseForced, releaseExplicit);
   }
 
   // If we're not running the correct version of the tools for this
