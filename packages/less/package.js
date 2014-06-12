@@ -14,6 +14,6 @@ Package._transitional_registerBuildPlugin({
 Package.on_test(function (api) {
   api.use(['test-helpers', 'tinytest', 'less', 'templating']);
   api.add_files(['less_tests.less', 'less_tests.js', 'less_tests.html',
-                 'less_tests.import.less', 'less_tests_empty.less'],
+                 'less_tests_empty.less'],
                 'client');
 });
