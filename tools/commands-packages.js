@@ -292,7 +292,7 @@ main.registerCommand({
   }
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
-  process.stdout.write("Resyncing with package server. XXX Why so long? ]\n");
+  process.stdout.write("Resyncing with package server...\n");
   catalog.official.refresh(true);
 
   try {
@@ -338,40 +338,61 @@ main.registerCommand({
   // XXX: Check for unknown keys.
   var badSchema = false;
   if (!_.has(relConf, 'track')) {
-    process.stderr.write(
+   process.stderr.write(
       "Configuration file must specify release track. (track). \n");
     badSchema = true;
   }
   if (!_.has(relConf, 'version')) {
+    if (!badSchema) process.stderr.write("\n");
     process.stderr.write(
       "Configuration file must specify release version. (version). \n");
     badSchema = true;
   }
   if (!_.has(relConf, 'description')) {
+    if (!badSchema) process.stderr.write("\n");
     process.stderr.write(
       "Configuration file must contain a description (description). \n");
     badSchema = true;
   } else if (relConf['description'].length > 100) {
+    if (!badSchema) process.stderr.write("\n");
     process.stderr.write(
       "Description must be under 100 characters");
     badSchema = true;
   }
   if (!options['from-checkout']) {
     if (!_.has(relConf, 'tool')) {
+      if (!badSchema) process.stderr.write("\n");
       process.stderr.write(
-        "Configuration file must specify a tool version (tool). \n ");
+        "Configuration file must specify a tool version (tool). \n");
       badSchema = true;
     }
     if (!_.has(relConf, 'packages')) {
+      if (!badSchema) process.stderr.write("\n");
       process.stderr.write(
         "Configuration file must specify package versions (packages). \n");
       badSchema = true;
     }
   }
   if (!_.has(relConf, 'orderKey') && relConf['recommended']) {
+    if (!badSchema) process.stderr.write("\n");
     process.stderr.write(
       "Reccommended releases must have order keys. \n");
     badSchema = true;
+  }
+  // On the main release track, we can't name the release anything beginning
+  // with 0.8 and below, because those are taken for pre-troposphere releases.
+  if ((relConf.track === catalog.official.DEFAULT_TRACK)) {
+    var start = relConf.version.slice(0,4);
+    if (start === "0.8." || start === "0.7." ||
+        start === "0.6." || start === "0.5.") {
+      if (!badSchema) process.stderr.write("\n");
+      process.stderr.write(
+        "It looks like you are trying to publish a pre-package-server meteor release. \n");
+      process.stderr.write(
+        "Doing this through the package server is going to cause a lot of confusion. \n" +
+        "Please use the old release process. \n");
+      badSchema = true;
+    }
   }
   if (badSchema) {
     return 1;
@@ -384,7 +405,7 @@ main.registerCommand({
   if (!options['create-track']) {
     var trackRecord = catalog.official.getReleaseTrack(relConf.track);
     if (!trackRecord) {
-      process.stderr.write('There is no release track named ' + relConf.track +
+      process.stderr.write('\n There is no release track named ' + relConf.track +
                            '. If you are creating a new track, use the --create-track flag. \n');
       return 1;
     }
@@ -392,7 +413,7 @@ main.registerCommand({
     var authorized = _.indexOf(
       _.pluck(trackRecord.maintainers, 'username'), auth.loggedInUsername());
     if (authorized == -1) {
-      process.stderr.write('You are not an authorized maintainer of ' + relConf.track + ".\n");
+      process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
     }
