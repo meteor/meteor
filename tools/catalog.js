@@ -738,16 +738,18 @@ _.extend(CompleteCatalog.prototype, {
     // Clear any cached builds in the package cache.
     packageCache.packageCache.refresh();
 
-    // Delete any that are source packages with builds.
+    // Go through the local packages and remove all of their build
+    // directories. Now, no package will be up to date and all of them will have
+    // to be rebuilt.
     var count = 0;
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
       var buildDir = path.join(loadPath, '.build.' + name);
       files.rm_recursive(buildDir);
     });
 
-    // Now reload them, forcing a rebuild. We have to do this in two
-    // passes because otherwise we might end up rebuilding a package
-    // and then immediately deleting it.
+    // Now, go (again) through the local packages and ask the packageCache to
+    // load each one of them. Since the packageCache will not find any old
+    // builds (and have no cache), it will be forced to recompile them.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
       packageCache.packageCache.loadPackageAtPath(name, loadPath);
       count ++;

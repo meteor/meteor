@@ -159,10 +159,9 @@ _.extend(PackageCache.prototype, {
       // build() as a hacky way of dealing with build-time
       // dependencies.
       //
-      // We don't do that anymore and ..
-      // XXX at the moment, rely on catalog to initalize ahead of us
-      // and swoop in and build all of the local packages informed by
-      // a topological sort
+      // We don't do that anymore and at the moment, we rely on catalog to
+      // initalize ahead of us and swoop in and build all of the local packages
+      // informed by a topological sort
       var unipackage = compiler.compile(packageSource).unipackage;
       self.loadedPackages[key] = {
         pkg: unipackage,
