@@ -1,6 +1,7 @@
 var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
 var watch = require('./watch.js');
+var files = require('./files.js');
 var fs = require('fs');
 var _ = require('underscore');
 
@@ -392,11 +393,9 @@ _.extend(Builder.prototype, {
           return;
         }
 
-        // XXX avoid reading whole file into memory
-        var data = fs.readFileSync(thisAbsFrom);
+        files.copyFile(thisAbsFrom, path.resolve(self.buildPath, thisRelTo),
+                       fileStatus.mode);
 
-        fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data,
-                         { mode: fileStatus.mode });
         self.usedAsFile[thisRelTo] = true;
       });
     };
