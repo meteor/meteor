@@ -93,6 +93,7 @@ exports.createAndDeployApp = function (sandbox, options) {
   var name = options.appName || randomAppName();
   sandbox.createApp(name, options.templateApp || 'empty');
   sandbox.cd(name);
+  name = name + "." + (process.env.DEPLOY_HOSTNAME || "meteor.com");
   var runArgs = ['deploy', name];
   if (options.settingsFile) {
     runArgs.push('--settings');
@@ -100,7 +101,7 @@ exports.createAndDeployApp = function (sandbox, options) {
   }
   var run = sandbox.run.apply(sandbox, runArgs);
   run.waitSecs(90);
-  run.match('Now serving at ' + name + '.meteor.com');
+  run.match('Now serving at ' + name);
   run.waitSecs(10);
   run.expectExit(0);
   return name;

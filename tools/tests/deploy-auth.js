@@ -189,7 +189,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Password:');
   run.write('testtest\n');
   run.waitSecs(90);
-  run.match('Now serving at ' + appName + '.meteor.com');
+  run.match('Now serving at ' + appName);
   run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
 

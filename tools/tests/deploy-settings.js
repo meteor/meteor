@@ -9,10 +9,10 @@ var httpHelpers = require('../http-helpers.js');
 // if the settings aren't found after a timeout.
 var checkForSettings = function (appName, settings, timeoutSecs) {
   var timer = setTimeout(function () {
-    throw new Error('Expected settings not found on app ', appName);
+    throw new Error("Expected settings not found on app " + appName);
   }, timeoutSecs * 1000);
   while (true) {
-    var result = httpHelpers.request('http://' + appName + '.meteor.com');
+    var result = httpHelpers.request('http://' + appName);
 
     // XXX This is brittle; the test will break if we start formatting the
     // __meteor_runtime_config__ JS differently. Ideally we'd do something
@@ -57,8 +57,9 @@ selftest.define('deploy - with settings', ['net', 'slow'], function () {
   s.cd('..');
   testUtils.createAndDeployApp(s, {
     templateApp: 'standard-app',
-    appName: appName
+    appName: appName.split(".")[0]
   });
+
   // It takes a few seconds for the app to actually update, and we don't
   // want to get a false positive in the meantime (i.e., if the settings
   // disappear, we don't want to send our request before the app has
@@ -74,7 +75,7 @@ selftest.define('deploy - with settings', ['net', 'slow'], function () {
   testUtils.createAndDeployApp(s, {
     templateApp: 'standard-app',
     settingsFile: '../settings.json',
-    appName: appName
+    appName: appName.split(".")[0]
   });
   checkForSettings(appName, settings, 10);
 

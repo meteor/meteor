@@ -70,7 +70,7 @@ selftest.define("authorized", ['net', 'slow'], function () {
   run.expectExit(0);
 
   run = s.run("authorized", appName, "--add", "test");
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(commandTimeoutSecs * 2);
   run.matchErr("Couldn't change authorized users: test: already an authorized user");
   run.expectExit(1);
 

@@ -135,22 +135,23 @@ _.each([false, true], function (loggedIn) {
           run.expectExit(1);
         }
 
+        var suffix = "." + (process.env.DEPLOY_HOSTNAME || "meteor.com");
         logsOrMongoForApp(s, command,
-                          'legacy-no-password-app-for-selftest', {
+                          'legacy-no-password-app-for-selftest' + suffix, {
                             legacy: true,
                             passwordProtected: false,
                             loggedIn: loggedIn
                           });
 
         logsOrMongoForApp(s, command,
-                          'legacy-password-app-for-selftest', {
+                          'legacy-password-app-for-selftest' + suffix, {
                             legacy: true,
                             passwordProtected: true,
                             loggedIn: loggedIn
                           });
 
         logsOrMongoForApp(s, command,
-                          'app-for-selftest-not-test-owned', {
+                          'app-for-selftest-not-test-owned' + suffix, {
                             loggedIn: loggedIn,
                             authorized: false,
                             testReprompt: true
@@ -166,7 +167,7 @@ _.each([false, true], function (loggedIn) {
         }
 
         logsOrMongoForApp(s, command,
-                          'app-for-selftest-test-owned', {
+                          'app-for-selftest-test-owned' + suffix, {
                             loggedIn: loggedIn,
                             authorized: true
                           });

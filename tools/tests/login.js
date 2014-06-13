@@ -61,7 +61,6 @@ selftest.define("login", ['net'], function () {
 
   run = s.run("whoami");
   run.read("test\n");
-  run.expectEnd();
   run.expectExit(0);
 
   run = s.run("logout");
