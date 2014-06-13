@@ -28,6 +28,7 @@ reload@1.0.0+local
 retry@1.0.0+local
 routepolicy@1.0.0+local
 session@1.0.0+local
+spacebars-common@1.0.0+local
 spacebars-compiler@1.0.0+local
 spacebars@1.0.0+local
 standard-app-packages@1.0.0+local

@@ -817,7 +817,8 @@ main.registerCommand({
       if (!version) {
         version = versions[name];
       }
-      var versionInfo = catalog.official.getVersion(name, version);
+      // Use complete catalog to get the local versions of local packages.
+      var versionInfo = catalog.complete.getVersion(name, version);
       if (!versionInfo) {
         buildmessage.error("Cannot process package list. Unknown: " + name +
                            " at version " + version + "\n");

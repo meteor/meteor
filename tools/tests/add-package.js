@@ -147,7 +147,7 @@ selftest.define("change packages", function () {
 
 
 // Add packages through the command line, and make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list --using.
+// changes is reflected in .meteor/packages, .meteor/versions and list
 selftest.define("add packages", function () {
   var s = new Sandbox();
   var run;
@@ -157,12 +157,11 @@ selftest.define("add packages", function () {
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
 
-  console.log("XXX: this assumes that we are running from checkout");
   run = s.run("add", "accounts-base", "--offline-catalog");
 
   run.match("Successfully added");
   checkPackages(s,
-                ["accounts-base", "standard-app-packages"]);
+                ["standard-app-packages", "accounts-base"]);
 
   run = s.run("--once");
 
@@ -170,13 +169,13 @@ selftest.define("add packages", function () {
   run.match("Successfully added");
 
   checkPackages(s,
-                ["accounts-base",  "say-something@1.0.0", "standard-app-packages"]);
+                ["standard-app-packages", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin", "--offline-catalog");
   run.match("Successfully added");
   checkPackages(s,
-                ["accounts-base",  "depends-on-plugin",
-                 "say-something@1.0.0",  "standard-app-packages"]);
+                ["standard-app-packages", "accounts-base",
+                 "say-something@1.0.0", "depends-on-plugin"]);
 
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
@@ -197,18 +196,18 @@ selftest.define("add packages", function () {
   checkVersions(s,
                 ["accounts-base",
                  "standard-app-packages"]);
-  run = s.run("list", "--using", "--offline-catalog");
-  run.match("accounts-base");
+  run = s.run("list", "--offline-catalog");
   run.match("standard-app-packages");
+  run.match("accounts-base");
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
 
   // Don't add the file to packages.
-  run = s.run("list", "--using", "--offline-catalog");
-  run.match("accounts-base");
+  run = s.run("list", "--offline-catalog");
   run.match("standard-app-packages");
+  run.match("accounts-base");
 
   // Do add the file to versions.
   checkVersions(s,
