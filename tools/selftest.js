@@ -455,7 +455,8 @@ _.extend(Sandbox.prototype, {
   createApp: function (to, template) {
     var self = this;
     files.cp_r(path.join(__dirname, 'tests', 'apps', template),
-               path.join(self.cwd, to));
+               path.join(self.cwd, to),
+               { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (!self.warehouse && release.current.isProperRelease()) {
