@@ -31,12 +31,15 @@ canonicalizeHtml = function(html) {
     attrs = attrs.replace(/\s+/g, ' ');
     // quote unquoted attribute values, as in `type=checkbox`.  This
     // will do the wrong thing if there's an `=` in an attribute value.
-    attrs = attrs.replace(/(\w)=([^" >/]+)/g, '$1="$2"');
-    // for the purpose of splitting attributes in a string like
-    // 'a="b" c="d"', assume they are separated by a single space
-    // and values are double-quoted, but allow for spaces inside
-    // the quotes.  Split on space following quote.
-    var attrList = attrs.replace(/" /g, '"\u0000').split('\u0000');
+    attrs = attrs.replace(/(\w)=([^'" >/]+)/g, '$1="$2"');
+
+    // for the purpose of splitting attributes in a string like 'a="b"
+    // c="d"', assume they are separated by a single space and values
+    // are double- or single-quoted, but allow for spaces inside the
+    // quotes.  Split on space following quote.
+    var attrList = attrs.replace(/(\w)='([^']+)' /g, "$1='$2'\u0000");
+    attrList = attrList.replace(/(\w)="([^"]+)" /g, '$1="$2"\u0000');
+    attrList = attrList.split("\u0000");
     // put attributes in alphabetical order
     attrList.sort();
 
@@ -59,11 +62,21 @@ canonicalizeHtml = function(html) {
       if (key === 'sizset')
         continue;
       var value = a[1];
-      value = value.replace(/["'`]/g, '"');
-      // this check is probably made unreachable by a regex above
-      // that quotes unquoted attribute values
-      if (value.charAt(0) !== '"')
-        value = '"'+value+'"';
+
+      // make sure the attribute is doubled-quoted
+      if (value.charAt(0) === '"') {
+        // Do nothing
+      } else {
+        if (value.charAt(0) !== "'") {
+          // attribute is unquoted. should be unreachable because of
+          // regex above.
+          value = '"' + value + '"';
+        } else {
+          // attribute is single-quoted. make it double-quoted.
+          value = value.replace(/\"/g, "&quot;");
+        }
+        value = value.replace(/["'`]/g, '"');
+      }
       tagContents.push(key+'='+value);
     }
     return '<'+tagContents.join(' ')+'>';
