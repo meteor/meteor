@@ -787,7 +787,7 @@ _.extend(Connection.prototype, {
         // result of the RPC. If an error occurred then print the error
         // to the console.
         callback = function (err) {
-          err && Meteor._debug("Error from Method '" + name + "' invocation:",
+          err && Meteor._debug("Error invoking Method '" + name + "':",
                                err.message);
         };
       } else {
