@@ -784,8 +784,11 @@ _.extend(Connection.prototype, {
       if (Meteor.isClient) {
         // On the client, we don't have fibers, so we can't block. The
         // only thing we can do is to return undefined and discard the
-        // result of the RPC.
-        callback = function () {};
+        // result of the RPC. If an error occurred then print the error
+        // to the console.
+        callback = function (err) {
+          err && Meteor._debug("Error from Method invocation:", err.stack);
+        };
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
