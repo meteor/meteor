@@ -353,7 +353,8 @@ files.mkdir_p = function (dir, mode) {
 //
 // The output files will be readable and writable by everyone that the umask
 // allows, and executable by everyone (modulo umask) if the original file was
-// owner-executabale.
+// owner-executable. Symlinks are treated transparently (ie the contents behind
+// them are copied, and it's an error if that points nowhere).
 //
 // If options.transform{Filename, Contents} is present, it should
 // be a function, and the contents (as a buffer) or filename will be
@@ -362,36 +363,11 @@ files.mkdir_p = function (dir, mode) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-//
-// If options.include is present, it should be a list of filenames
-// (either absolute or will be interpreted relative to `from`). Only
-// files matching those filenames will be copied. options.ignore will
-// override options.include. Any directories beneath `from` are only
-// included if they contain any files in options.include, or are
-// themselves explicitly listed in options.include.
 files.cp_r = function (from, to, options) {
   options = options || {};
 
-  // We resolve to absolute paths at the beginning so that the caller
-  // can specify relative paths that will be resolved relative to
-  // `from`. If we didn't do this and instead resolved when we do the
-  // options.include check below, then we would be resolving relative to
-  // `from` after recursing, whcih is not useful.
-  if (options.include) {
-    options.include = _.map(
-      options.include,
-      function (filename) {
-        return path.resolve(from, filename);
-      }
-    );
-  }
-
   var absFrom = path.resolve(from);
-  if (! options.include || _.any(options.include, function (include) {
-    return include === absFrom || include.indexOf(absFrom + "/") === 0;
-  })) {
-    files.mkdir_p(to, 0755);
-  }
+  files.mkdir_p(to, 0755);
 
   _.each(fs.readdirSync(from), function (f) {
     if (_.any(options.ignore || [], function (pattern) {
@@ -402,27 +378,11 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    var stats = fs.lstatSync(fullFrom);
+    var stats = fs.statSync(fullFrom);
     if (stats.isDirectory()) {
       files.cp_r(fullFrom, fullTo, options);
     } else {
       var absFullFrom = path.resolve(fullFrom);
-      // If it's not one of the particular sources we're asked to include,
-      // skip it.
-      if (options.include && ! _.contains(options.include, absFullFrom))
-        return;
-
-      // If it's a symlink, we want to copy it as if it were the underlying file
-      // (contents and mode). This mostly occurs in the usage by bundleSource
-      // when building a package: if a source file is a symlink to something
-      // random on your disk, we should include the source file. But we're
-      // careful not to call statSync until after checking options.include;
-      // otherwise we'd crash if there's something that we're skipping anyway
-      // that's a broken symlink (eg, emacs sometimes writes .#foo files which
-      // are stored as symlinks but don't actually link anywhere real).
-      if (stats.isSymbolicLink()) {
-        stats = fs.statSync(fullFrom);
-      }
 
       // Create the file as readable and writable by everyone, and executable by
       // everyone if the original file is executably by owner. (This mode will
@@ -433,9 +393,7 @@ files.cp_r = function (from, to, options) {
       if (! options.include ||
           _.contains(options.include, absFullFrom)) {
         if (!options.transformContents) {
-          // XXX reads full file into memory.. lame.
-          fs.writeFileSync(fullTo, fs.readFileSync(fullFrom),
-                           { mode: mode });
+          copyFileHelper(fullFrom, fullTo, mode);
         } else {
           var contents = fs.readFileSync(fullFrom);
           contents = options.transformContents(contents, f);
@@ -444,6 +402,45 @@ files.cp_r = function (from, to, options) {
       }
     }
   });
+};
+
+// Copies a file, which is expected to exist. Parent directories of "to" do not
+// have to exist. Treats symbolic links transparently (copies the contents, not
+// the link itself, and it's an error if the link doesn't point to a file).
+files.copyFile = function (from, to) {
+  files.mkdir_p(path.dirname(path.resolve(to)), 0755);
+
+  var stats = fs.statSync(from);
+  if (!stats.isFile()) {
+    throw Error("cannot copy non-files");
+  }
+
+  // Create the file as readable and writable by everyone, and executable by
+  // everyone if the original file is executably by owner. (This mode will be
+  // modified by umask.) We don't copy the mode *directly* because this function
+  // is used by 'meteor create' which is copying from the read-only tools tree
+  // into a writable app.
+  var mode = (stats.mode & 0100) ? 0777 : 0666;
+
+  copyFileHelper(from, to, mode);
+};
+
+var copyFileHelper = function (from, to, mode) {
+  var readStream = fs.createReadStream(from);
+  var writeStream = fs.createWriteStream(to, { mode: mode });
+  var future = new Future;
+  var onError = function (e) {
+    future.isResolved() || future.throw(e);
+  };
+  readStream.on('error', onError);
+  writeStream.on('error', onError);
+  writeStream.on('open', function () {
+    readStream.pipe(writeStream);
+  });
+  writeStream.once('finish', function () {
+    future.isResolved() || future.return();
+  });
+  future.wait();
 };
 
 // Make a temporary directory. Returns the path to the newly created

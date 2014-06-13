@@ -246,8 +246,9 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   // as we can tell, this is the only way to get a tarball with the
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
-  files.cp_r(packageDir, sourcePackageDir, {
-    include: includeSources
+  _.each(includeSources, function (f) {
+    files.copyFile(path.join(packageDir, f),
+                   path.join(sourcePackageDir, f));
   });
 
   // We put this inside the temp dir because mkdtemp makes sure that the
