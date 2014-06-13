@@ -59,3 +59,13 @@ cd .. # meteor root
 echo -n "* Configuring OAuth for $PREFIX-parties.meteor.com... "
 meteor --release $RELEASE mongo $PREFIX-parties.meteor.com >> $LOG 2>&1 < scripts/admin/configure_parties.js
 echo DONE
+
+echo -n "* Testing spiderable on $PREFIX-todos.meteor.com... "
+(curl "http://$PREFIX-todos.meteor.com?_escaped_fragment_=1" 2> $LOG |
+    (grep Lovelace >> $LOG 2>&1))
+if [ $? -eq 0 ]; then
+    echo DONE
+else
+    echo FAILED
+    exit 1
+fi
