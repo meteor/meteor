@@ -768,29 +768,55 @@ main.registerCommand({
     console.log("Maintained by " + _.pluck(packageRecord.maintainers, 'username')
                 + " at " + packageRecord.repositoryUrl);
   } else {
-    console.log("XXXX: SEARCH UNIMPLEMENTED");
+    var search = options.args[0];
 
-    // Refresh the catalog, checking the remote package data on the server. If we
-    // are only calling 'using', this is not nessessary, but, once again, as a
-    // user, I would not be surprised to see this contact the server. In the
-    // future, we should move this call to sync somewhere in the background.
-    catalog.official.refresh(true);
+    var allPackages = catalog.official.getAllPackageNames();
+    var allReleases = catalog.official.getAllReleaseTracks();
+    var matchingPackages = [];
+    var matchingReleases = [];
 
-    if (options.releases && options.using) {
-      console.log("XXX: The contents of your release file.");
-    } else if (options.releases) {
-      // XXX: We probably want the recommended version rather than all of them,
-      // but for now, let's just display some stuff to make sure that it worked.
-      _.each(catalog.official.getAllReleaseTracks(), function (name) {
-        var versions = catalog.official.getSortedRecommendedReleaseVersions(name);
-        _.each(versions, function (version) {
-          var versionInfo = catalog.official.getReleaseVersion(name, version);
-          if (versionInfo) {
-            items.push({ name: name + " " + version, description: versionInfo.description });
-          }
-        });
-      });
+    _.each(allPackages, function (pack) {
+      if (pack.match(search)) {
+        var vr = catalog.official.getLatestVersion(pack);
+        if (vr) {
+          matchingPackages.push(
+            { name: pack, description: vr.description });
+        }
+      }
+    });
+    _.each(allReleases, function (track) {
+      if (track.match(search)) {
+        var vr = catalog.official.getDefaultReleaseVersion(track);
+        if (vr) {
+          var vrlong =
+                catalog.official.getReleaseVersion(track, vr.version);
+          matchingReleases.push(
+            { name: track, description: vrlong.description });
+        }
+      }
+    });
+
+    var output = false;
+    if (!_.isEqual(matchingPackages, [])) {
+      output = true;
+      console.log("Found the following packages:");
+      process.stdout.write(formatList(matchingPackages) + "\n");
     }
+
+    if (!_.isEqual(matchingReleases, [])) {
+      output = true;
+      console.log("Found the following releases:");
+      process.stdout.write(formatList(matchingReleases) + "\n");
+    }
+
+    if (!output) {
+      console.log(
+"Neither packages nor releases containing the string \'" + search + "\' could be found.");
+    } else {
+      console.log(
+"To get more information on a specific item, use meteor search --details.");
+    }
+
   }
 });
 
