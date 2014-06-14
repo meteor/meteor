@@ -283,14 +283,14 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // requiring an app dir
-  run = s.run("list", "--using");
+  run = s.run("list");
   run.matchErr("not in a Meteor project");
   run.matchErr("meteor create"); // new user help
   run.expectExit(1);
 
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
-    run = s.run("list", "--using");
+    run = s.run("list");
     run.expectExit(0);
   });
 });

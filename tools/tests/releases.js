@@ -116,7 +116,7 @@ selftest.define("checkout", ['checkout'], function () {
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     s.write(".meteor/release", "something");
-    run = s.run("list", "--using");
+    run = s.run("list");
     run.readErr("=> Running Meteor from a checkout");
     run.matchErr("project version (something)\n");
     run.expectExit(0);
