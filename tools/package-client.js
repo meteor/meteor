@@ -18,9 +18,6 @@ var compiler = require('./compiler.js');
 //
 // meteor: base package and prerequsite for all others.
 // livedata: DDP client interface to make a connection to the package server.
-//
-// Like all tools, this uses the current release to find the right versions.
-// XXX: Does it really?
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
@@ -28,6 +25,62 @@ var getLoadedPackages = _.once(function () {
   });
 });
 
+
+// Read the changelog, if applicable & prompt the user to fill it out if it is
+// blank (once again, if applicable). Return the lines for the current version.
+var dealWithChangelog = function(packageSource) {
+  var changelog = require('./changelog.js');
+  var version = packageSource.version;
+  var name = packageSource.name;
+  var changeFile = changelog.getChangelogFile(packageSource.sourceRoot);
+  var changeLines = changelog.readChangelog(changeFile);
+  var changeExists = !_.isEqual(changeLines, {});
+  // XXX: For now, if there is no changelog, we won't nag you about it.
+  if (changeExists && !changeLines[version]) {
+    process.stdout.write("-------\n");
+    if (_.has(changeLines,"NEXT") && !_.isEqual(changeLines["NEXT"], [])) {
+      changelog.rewriteNextChangelog(changeFile, version);
+      process.stdout.write(" changelog: Changing v.NEXT to current version.\n");
+    } else {
+      // There is a stub of v.NEXT, but there is nothing there. Kill it.
+      if (_.has(changeLines, "NEXT")) {
+        changelog.eraseNextChangelog(changeFile);
+      }
+      // Changelog data is invalid and we have to rewrite it.
+      process.stderr.write(" You are publishing version " + version +
+                           ", but your changelog has no information about it! \n");
+      process.stderr.write(" Please enter a changelog entry. \n");
+
+      // Use '*' as the command on the prompt and read from prompt.
+      var readMyPrompt = function () {
+        return utils.readLine({
+          echo: true,
+          prompt: " * ",
+          stream: process.stderr
+        });
+      };
+
+      var foo = readMyPrompt();
+      var lines = [];
+      while (foo !== "q") {
+        lines.unshift(foo);
+        process.stderr.write(" Anything else? ( or q to quit) \n");
+        foo = readMyPrompt();
+      }
+      changelog.prependChangelog(changeFile, version, lines);
+      process.stdout.write(" Thanks! Changelog edited.\n");
+    }
+
+    // Regardless of what the changelog status was, show what it says.
+    changeLines = changelog.readChangelog(changeFile);
+    process.stdout.write(" According to your History.md file," + name +
+                         "@" + version +" contains the following changes: \n");
+    changelog.printLines(changeLines[version], "  ");
+    process.stdout.write("\n");
+    process.stdout.write("-------\n");
+    changelog.prependChangelog(changeFile, "NEXT", []);
+  };
+};
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -378,7 +431,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   if (! utils.validPackageName(name) ) {
     process.stderr.write(
       "Package name invalid. Package names can only contain \n" +
-      "lowercase ASCII alphanumerics, dash, and dot, and must contain at least one letter. \n" +
+      "lowercase ASCII alphanumerics, dash, and dot, and " +
+      "must contain at least one letter. \n" +
       "Package names cannot begin with a dot. \n");
     return 1;
   }
@@ -416,54 +470,31 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     }
   }
 
-  var changelog = require('./changelog.js');
-  var changeFile = changelog.getChangelogFile(packageSource.sourceRoot);
-  var changeLines = changelog.readChangelog(changeFile);
-  var changeExists = !_.isEqual(changeLines, {});
-  // XXX: For now, if there is no changelog, we won't nag you about it.
-  if (changeExists && !changeLines[version]) {
-    process.stdout.write("-------\n");
-    if (_.has(changeLines,"NEXT") && !_.isEqual(changeLines["NEXT"], [])) {
-      changelog.rewriteNextChangelog(changeFile, version);
-      process.stdout.write(" changelog: Changing v.NEXT to current version.\n");
-    } else {
-      // There is a stub of v.NEXT, but there is nothing there. Kill it.
-      if (_.has(changeLines, "NEXT")) {
-        changelog.eraseNextChangelog(changeFile);
-      }
-      // Changelog data is invalid and we have to rewrite it.
-      process.stderr.write(" You are publishing version " + version +
-                           ", but your changelog has no information about it! \n");
-      process.stderr.write(" Please enter a changelog entry. \n");
-
-      // Use '*' as the command on the prompt and read from prompt.
-      var readMyPrompt = function () {
-        return utils.readLine({
-          echo: true,
-          prompt: " * ",
-          stream: process.stderr
-        });
-      };
-
-      var foo = readMyPrompt();
-      var lines = [];
-      while (foo !== "q") {
-        lines.unshift(foo);
-        process.stderr.write(" Anything else? ( or q to quit) \n");
-        foo = readMyPrompt();
-      }
-      changelog.prependChangelog(changeFile, version, lines);
-      process.stdout.write(" Thanks! Changelog edited.\n");
+  // Check that the package does not have any unconstrained references.
+  var packageDeps =  packageSource.getDependencyMetadata();
+  var badConstraints = [];
+  _.each(packageDeps, function(refs, label) {
+    // HACK: we automatically include the meteor package and there is no way for
+    // anyone to set its dependency data correctly, so I guess we shouldn't
+    // penalize the user for not doing that. It will be resolved at runtime
+    // anyway.
+    if (label !== "meteor" &&
+        refs.constraint == null) {
+      badConstraints.push(label);
     }
-
-    // Regardless of what the changelog status was, show what it says.
-    changeLines = changelog.readChangelog(changeFile);
-    process.stdout.write(" According to your History.md file," + name +
-                         "@" + version +" contains the following changes: \n");
-    changelog.printLines(changeLines[version], "  ");
-    process.stdout.write("\n");
-    process.stdout.write("-------\n");
+  });
+  if (!_.isEqual(badConstraints, [])) {
+    process.stderr.write(
+"You must specify a version constraint for the following packages:");
+    _.each(badConstraints, function(bad) {
+      process.stderr.write(" " + bad);
+    });
+    process.stderr.write(". \n" );
+    process.exit(1);
   }
+
+  // Get the changeLines from the changelog.
+  var changeLines = dealWithChangelog(packageSource);
 
   // We need to build the test package to get all of its sources.
   var testFiles = [];
@@ -525,7 +556,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     compilerVersion: compiler.BUILT_BY,
     containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageSource.getDependencyMetadata()
+    dependencies: packageDeps,
   };
   var uploadInfo = conn.call('createPackageVersion', uploadRec);
 
@@ -537,9 +568,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   uploadTarball(uploadInfo.uploadUrl,
                               bundleResult.sourceTarball);
 
-  if (changeExists) {
+  if (changeLines) {
     process.stdout.write('Uploading changelog...\n');
-    uploadTarball(uploadInfo.changelogUrl, changeFile);
   }
 
   process.stdout.write('Publishing package version...\n');
@@ -547,11 +577,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
             uploadInfo.uploadToken, bundleResult.tarballHash);
 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
-
-  if (changeExists) {
-    // Update the changelog to have a v.NEXT.
-    changelog.prependChangelog(changeFile, "NEXT", []);
-  }
 
   return 0;
 };

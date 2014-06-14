@@ -771,7 +771,7 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
-        release: function (release) {
+        source: function (release) {
           var relInf = release.split('@');
           // XXX: Error handling
           if (relInf.length !== 2)
