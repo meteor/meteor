@@ -22,7 +22,7 @@ var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 // "sha-256" and then passes the digest to bcrypt.
 
 
-var BCRYPT_ROUNDS = 10;
+Accounts._bcryptRounds = 10;
 
 // Given a 'password' from the client, extract the string that we should
 // bcrypt. 'password' can be one of:
@@ -49,7 +49,7 @@ var getPasswordString = function (password) {
 //
 var hashPassword = function (password) {
   password = getPasswordString(password);
-  return bcryptHash(password, BCRYPT_ROUNDS);
+  return bcryptHash(password, Accounts._bcryptRounds);
 };
 
 // Check whether the provided password matches the bcrypt'ed password in
@@ -58,7 +58,7 @@ var hashPassword = function (password) {
 // properties `digest` and `algorithm` (in which case we bcrypt
 // `password.digest`).
 //
-var checkPassword = function (user, password) {
+Accounts._checkPassword = function (user, password) {
   var result = {
     userId: user._id
   };
@@ -71,7 +71,7 @@ var checkPassword = function (user, password) {
 
   return result;
 };
-
+var checkPassword = Accounts._checkPassword;
 
 ///
 /// LOGIN
