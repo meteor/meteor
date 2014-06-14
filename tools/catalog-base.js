@@ -24,9 +24,9 @@ var baseCatalog = exports;
 baseCatalog.BaseCatalog = function () {
   var self = this;
 
-  // Package server data. Arrays of objects.
+  // Package server data. Mostly arrays of objects.
   self.packages = null;
-  self.versions = null;
+  self.versions = null;  // package name -> version -> object
   self.builds = null;
   self.releaseTracks = null;
   self.releaseVersions = null;
@@ -49,7 +49,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
 
     // Initialize everything to its default version.
     self.packages = [];
-    self.versions = [];
+    self.versions = {};
     self.builds = [];
     self.releaseTracks = [];
     self.releaseVersions = [];
@@ -76,10 +76,18 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return;
 
     _.each(
-      ['packages', 'versions', 'builds', 'releaseTracks', 'releaseVersions'],
+      ['packages', 'builds', 'releaseTracks', 'releaseVersions'],
       function (field) {
         self[field].push.apply(self[field], collections[field]);
       });
+
+    // Convert versions from array format to nested object format.
+    _.each(collections.versions, function (record) {
+      if (!_.has(self.versions, record.packageName)) {
+        self.versions[record.packageName] = {};
+      }
+      self.versions[record.packageName][record.version] = record;
+    });
   },
 
   // Accessor methods below. The primary function of both catalogs is to provide
@@ -183,8 +191,10 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getSortedVersions: function (name) {
     var self = this;
     self._requireInitialized();
-    var ret = _.pluck(_.where(self.versions, { packageName: name }),
-                      'version');
+    if (!_.has(self.versions, name)) {
+      return [];
+    }
+    var ret = _.keys(self.versions[name]);
     ret.sort(semver.compare);
     return ret;
   },
@@ -208,8 +218,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     }
 
     return self._recordOrRefresh(function () {
-      return  _.findWhere(self.versions, { packageName: name,
-                                           version: version });
+      return _.has(self.versions, name) &&
+        _.has(self.versions[name], version) &&
+        self.versions[name][version];
     });
   },
 

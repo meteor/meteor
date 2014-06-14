@@ -374,13 +374,13 @@ _.extend(CompleteCatalog.prototype, {
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.
     var removedVersionIds = {};
-    self.versions = _.filter(self.versions, function (version) {
-      if (_.has(self.effectiveLocalPackages, version.packageName)) {
-        // Remove this one
-        removedVersionIds[version._id] = true;
-        return false;
-      }
-      return true;
+    _.each(self.effectiveLocalPackages, function (dir, packageName) {
+      if (!_.has(self.versions, packageName))
+        return;
+      _.each(self.versions[packageName], function (record) {
+        removedVersionIds[record._id] = true;
+      });
+      delete self.versions[packageName];
     });
 
     self.builds = _.filter(self.builds, function (build) {
@@ -465,7 +465,10 @@ _.extend(CompleteCatalog.prototype, {
         throw new Error("version already has a buildid?");
       version = version + "+local";
 
-      self.versions.push({
+      if (_.has(self.versions, name))
+        throw Error("should have deleted " + name + " above?");
+      self.versions[name] = {};
+      self.versions[name][version] = {
         _id: versionId,
         packageName: name,
         testName: packageSource.testName,
@@ -480,7 +483,7 @@ _.extend(CompleteCatalog.prototype, {
         published: null,
         isTest: packageSource.isTest,
         containsPlugins: packageSource.containsPlugins()
-      });
+      };
 
       // Test packages are not allowed to have tests. Any time we recurse into
       // this function, it will be with test marked as true, so recursion
