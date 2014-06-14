@@ -1207,6 +1207,7 @@ _.extend(PackageSource.prototype, {
     //
     // (This is a medium-term hack. We can build something more modular if
     //  there is any demand for it)
+    // See #PackageVersionFilesHack
     if (files.inCheckout()) {
       var packDir = path.join(files.getCurrentToolsDir(), 'packages');
       var myDir = self.sourceRoot.slice(0, packDir.length);

@@ -500,7 +500,11 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // Send the versions lock file over to the server! We should make sure to use
   // the same version lock file when we build this source elsewhere (ex:
   // publish-for-arch).
-  sources.push(packageSource.versionsFileName());
+  // But see also #PackageVersionFilesHack
+  var versionsFileName = packageSource.versionsFileName();
+  if (fs.existsSync(path.join(packageSource.sourceRoot, versionsFileName))) {
+    sources.push(versionsFileName);
+  }
   var bundleResult = bundleSource(compileResult.unipackage,
                                                 sources,
                                                 packageSource.sourceRoot);
