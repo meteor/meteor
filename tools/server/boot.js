@@ -151,7 +151,10 @@ Fiber(function () {
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Npm, Assets){" + code + "\n})";
 
-    var func = require('vm').runInThisContext(wrapped, fileInfo.path, true);
+    // It is safer to use the absolute path as different tooling, such as
+    // node-inspector, can get confused on relative urls.
+    var absoluteFilePath = __dirname + "/" + fileInfo.path;
+    var func = require('vm').runInThisContext(wrapped, absoluteFilePath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
 
