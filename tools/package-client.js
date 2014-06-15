@@ -483,7 +483,11 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       badConstraints.push(label);
     }
   });
-  if (!_.isEqual(badConstraints, [])) {
+
+  // If we are not a core package and some of our constraints are unspecified,
+  // then we should force the user to specify them. This is because we are not
+  // sure about pre-0.90 package versions yet.
+  if (!packageSource.isCore && !_.isEqual(badConstraints, [])) {
     process.stderr.write(
 "You must specify a version constraint for the following packages:");
     _.each(badConstraints, function(bad) {

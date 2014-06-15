@@ -264,6 +264,14 @@ var PackageSource = function () {
   // (package.js and version lock file) as we did when it was created. If we
   // ever need to modify it, we should throw instead.
   self.immutable = false;
+
+  // Is this a core package? Core packages don't record version files, because
+  // core packages are only ever run from checkout. For the preview release,
+  // core packages do not need to specify their versions at publication (since
+  // there isn't likely to be any exciting version skew yet), but we will
+  // specify the correct restrictions at 0.90.
+  // XXX: 0.90 package versions.
+  self.isCore = false;
 };
 
 
@@ -355,6 +363,17 @@ _.extend(PackageSource.prototype, {
     self.name = name;
     self.sourceRoot = dir;
     self.serveRoot = path.join(path.sep, 'packages', name);
+
+    // If we are running from checkout we may be looking at a core package. If
+    // we are, let's remember this for things like not recording version files.
+    if (files.inCheckout()) {
+      var packDir = path.join(files.getCurrentToolsDir(), 'packages');
+      var myDir = self.sourceRoot.slice(0, packDir.length);
+      if (myDir === packDir) {
+        self.isCore = true;
+      }
+    }
+
 
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
@@ -1208,12 +1227,8 @@ _.extend(PackageSource.prototype, {
     // (This is a medium-term hack. We can build something more modular if
     //  there is any demand for it)
     // See #PackageVersionFilesHack
-    if (files.inCheckout()) {
-      var packDir = path.join(files.getCurrentToolsDir(), 'packages');
-      var myDir = self.sourceRoot.slice(0, packDir.length);
-      if (myDir === packDir) {
-        return;
-      }
+    if (self.isCore) {
+      return;
     }
 
     // If nothing has changed, don't bother rewriting the versions file.
