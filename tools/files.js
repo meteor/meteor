@@ -287,13 +287,21 @@ files.treeHash = function (root) {
   var crypto = require('crypto');
   var hash = crypto.createHash('sha256');
 
+  var hashLog = process.env.TREE_HASH_DEBUG ?
+        ['\n\nTREE HASH for ' + root + '\n'] : null;
+
+  var updateHash = function (text) {
+    hashLog && hashLog.push(text);
+    hash.update(text);
+  };
+
   var traverse = function (relativePath) {
     var absPath = path.join(root, relativePath);
     var stat = fs.lstatSync(absPath);
 
     if (stat.isDirectory()) {
       if (relativePath) {
-        hash.update('dir ' + JSON.stringify(relativePath) + '\n');
+        updateHash('dir ' + JSON.stringify(relativePath) + '\n');
       }
       _.each(fs.readdirSync(absPath), function (entry) {
         traverse(path.join(relativePath, entry));
@@ -302,22 +310,23 @@ files.treeHash = function (root) {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
-      hash.update('file ' + JSON.stringify(relativePath) + ' ' +
+      updateHash('file ' + JSON.stringify(relativePath) + ' ' +
                   stat.size + ' ' + files.fileHash(absPath) + '\n');
       if (stat.mode & 0100) {
-        hash.update('exec\n');
+        updateHash('exec\n');
       }
     } else if (stat.isSymbolicLink()) {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
-      hash.update('symlink ' + JSON.stringify(relativePath) + ' ' +
-                  JSON.stringify(fs.readlinkSync(absPath)) + '\n');
+      updateHash('symlink ' + JSON.stringify(relativePath) + ' ' +
+                 JSON.stringify(fs.readlinkSync(absPath)) + '\n');
     }
     // ignore anything weirder
   };
 
   traverse('');
+  hashLog && fs.appendFileSync(process.env.TREE_HASH_DEBUG, hashLog.join(''));
   return hash.digest('base64');
 };
 
