@@ -415,7 +415,6 @@ _.extend(AppRunner.prototype, {
       packageCache.packageCache.refresh(true); // pick up changes to packages
 
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    var loader = project.generatePackageLoader(self.appDir);
     if (self.recordPackageUsage)
       stats.recordPackages(self.appDir);
 
