@@ -390,15 +390,12 @@ files.cp_r = function (from, to, options) {
       // function is used by 'meteor create' which is copying from the read-only
       // tools tree into a writable app.
       var mode = (stats.mode & 0100) ? 0777 : 0666;
-      if (! options.include ||
-          _.contains(options.include, absFullFrom)) {
-        if (!options.transformContents) {
-          copyFileHelper(fullFrom, fullTo, mode);
-        } else {
-          var contents = fs.readFileSync(fullFrom);
-          contents = options.transformContents(contents, f);
-          fs.writeFileSync(fullTo, contents, { mode: mode });
-        }
+      if (!options.transformContents) {
+        copyFileHelper(fullFrom, fullTo, mode);
+      } else {
+        var contents = fs.readFileSync(fullFrom);
+        contents = options.transformContents(contents, f);
+        fs.writeFileSync(fullTo, contents, { mode: mode });
       }
     }
   });
