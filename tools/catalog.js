@@ -732,19 +732,39 @@ _.extend(CompleteCatalog.prototype, {
   // have the same name only the one that we would load will get
   // rebuilt.
   //
+  // If namedPackages is provided, it is an array of the only packages that need
+  // to be rebuilt.
+  //
   // Returns a count of packages rebuilt.
-  rebuildLocalPackages: function () {
+  rebuildLocalPackages: function (namedPackages) {
     var self = this;
     self._requireInitialized();
 
     // Clear any cached builds in the package cache.
     packageCache.packageCache.refresh();
 
+    if (namedPackages) {
+      var bad = false;
+      _.each(namedPackages, function (namedPackage) {
+        if (!_.has(self.effectiveLocalPackages, namedPackage)) {
+          buildmessage.enterJob(
+            { title: "rebuilding " + namedPackage }, function () {
+              buildmessage.error("unknown package");
+            });
+          bad = true;
+        }
+      });
+      if (bad)
+        return;
+    }
+
     // Go through the local packages and remove all of their build
     // directories. Now, no package will be up to date and all of them will have
     // to be rebuilt.
     var count = 0;
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
+      if (namedPackages && !_.contains(namedPackages, name))
+        return;
       var buildDir = path.join(loadPath, '.build.' + name);
       files.rm_recursive(buildDir);
     });
@@ -753,6 +773,8 @@ _.extend(CompleteCatalog.prototype, {
     // load each one of them. Since the packageCache will not find any old
     // builds (and have no cache), it will be forced to recompile them.
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
+      if (namedPackages && !_.contains(namedPackages, name))
+        return;
       packageCache.packageCache.loadPackageAtPath(name, loadPath);
       count ++;
     });

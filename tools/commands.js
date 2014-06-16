@@ -993,24 +993,7 @@ main.registerCommand({
     });
   } else {
     messages = buildmessage.capture(function () {
-      // Initialize a new package loader, but only for local packages (since we
-      // are not going to rebuild non-local packages.)
-      var loader = new PackageLoader({
-          versions: null,
-       });
-
-      _.each(options.args, function (p) {
-        // Let's remove the old unipackage directory first.
-        var packpath = catalog.complete.getLoadPathForPackage(p, null);
-        files.rm_recursive(path.join(packpath, ".build."+p));
-        console.log(path.join(packpath, ".build."+p));
-
-        // Getting the package from the package loader will cause it to be
-        // rebuilt if it is not built (which it isn't, since we just deleted the
-        // unipackage).
-        loader.getPackage(p);
-        count++;
-      });
+      count = catalog.complete.rebuildLocalPackages(options.args);
     });
   }
   if (count)
