@@ -722,7 +722,6 @@ main.registerCommand({
   options: {
     details: { type: Boolean, required: false }
   },
-  hidden: true
 }, function (options) {
 
   catalog.official.refresh();

@@ -359,6 +359,7 @@ configuration file, which must have the following keys:
   version: the version of this release
   recommended: is this a recommended release? (see below)
   description: a brief description of the release
+  patchFrom: (Optional) an array of strings specifying releases from which this is a patch
   tool: <package name>@<version> of the meteor tool that this release specifies
   packages: object of <package name> to <version> for specified package versions
 
@@ -366,6 +367,9 @@ Set the recommended flag to true for recommended releases (ex: METEOR-CORE@0.90)
 and false for release candidates, experimental releases, etc. You must publish
 all package versions to the package server before you can specify them in a
 release.
+
+Use the patchFrom flag to submit a patch release. This will automatically
+unrecommend the releases specified by the patchFrom flag.
 
 Use the --create-track to publish a new release track.
 
@@ -434,7 +438,7 @@ Options:
   --details  show detailed information on a specific package or release
 
 
->>admin maintainers
+>>> admin maintainers
 View or change authorized maintainers for a package
 Usage: meteor admin maintainers <package name> [--list]
        meteor admin maintainers <package name> --add <username>
@@ -457,13 +461,35 @@ Options:
   --list        list authorized maintainers (the default)
 
 
->>admin recommend-release
-XXX: WRITE
+>>> admin recommend-release
+Recommend a previously published release.
+Usage: meteor admin recommend-release <release track>@<release version> [--unrecomend]
+
+Recommend a version of a meteor release. Users can be upgraded to recommended
+releases automatically when they run meteor update. Users will never be updated
+to unrecommended releases unless they explicitly specify that release with a
+--release argument.
+
+Use unrecommended releases for release candidates, one-of experiments, etc. Use
+recommended releases for official supported releases.
+
+Options:
+  --unrecommend         unrecommend a previously recommended release
 
 
->>admin change-package-url
-XXX: WRITE
+>>> admin change-package-url
+Change the repository url of a package.
+Usage: meteor admin change-package-url <package name> <new url>
+
+Change the url of the source code repository of a previously published
+package.
 
 
->>admin set-earliest-compatible-version
+>>> admin set-earliest-compatible-version
+Mark a given version as containing breaking changes.
+Usage: stuff
+
+Mark a given package version as containing breaking changes.
+
+
 XXX: WRITE (after glasser is done)

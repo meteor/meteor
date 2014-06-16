@@ -1066,7 +1066,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin make-bootstrap-tarballs',
   minArgs: 2,
-  maxArgs: 2
+  maxArgs: 2,
+  hidden: true,
 }, function (options) {
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
