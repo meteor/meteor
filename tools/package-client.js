@@ -32,8 +32,8 @@ var openPackageServerConnection = function () {
   return new ServiceConnection(
     getLoadedPackages(),
     config.getPackageServerUrl(),
-    { 'User-Agent': httpHelpers.getUserAgent() }
-  );
+    {headers: {"User-Agent": httpHelpers.getUserAgent()},
+     _dontPrintErrors: true});
 };
 
 

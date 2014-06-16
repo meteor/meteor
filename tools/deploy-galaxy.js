@@ -78,7 +78,9 @@ var galaxyServiceConnection = function (galaxy, service) {
     throw new Error("not logged in to galaxy?");
 
   return new ServiceConnection(Package, endpointUrl, {
-    cookie: "GALAXY_AUTH=" + authToken
+    headers: {
+      cookie: "GALAXY_AUTH=" + authToken
+    }
   });
 };
 

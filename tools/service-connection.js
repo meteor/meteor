@@ -12,17 +12,17 @@ var TIMEOUT_SEC = 15;
 // - Package: a Package object as returned from uniload.load, containing
 //   the livedata and meteor packages
 // - endpointUrl: the url to connect to
-// - headers: an object containing extra headers to use when opening the
-//   DDP connection
-var ServiceConnection = function (Package, endpointUrl, headers) {
+// - options:
+//   - headers: an object containing extra headers to use when opening the
+//              DDP connection
+//   - _dontPrintErrors: boolean
+//   ...and anything else you'd normally pass as options to DDP.connect
+//
+var ServiceConnection = function (Package, endpointUrl, options) {
   var self = this;
   self.Package = Package;
   ensureConnectionTimeoutErrorDefined(Package.meteor.Meteor);
 
-  var options = {};
-  if (headers) {
-    options.headers = headers;
-  }
   self.connection = Package.livedata.DDP.connect(endpointUrl, options);
 
   self.connectionTimeoutCallbacks = [];

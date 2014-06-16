@@ -55,7 +55,7 @@ var recordPackages = function () {
             "package-stats-server"
           );
         } catch (err) {
-          maybeLogError(err);
+          logErrorIfRunningMeteorRelease(err);
           // Do nothing. If we can't log in, we should continue and report
           // stats anonymously.
         }
@@ -65,7 +65,7 @@ var recordPackages = function () {
                 project.project.getAppIdentifier(),
                 packages);
     } catch (err) {
-      maybeLogError(err);
+      logErrorIfRunningMeteorRelease(err);
       // Do nothing. A failure to record package stats shouldn't be
       // visible to the end user and shouldn't affect whatever command
       // they are running.
@@ -73,8 +73,7 @@ var recordPackages = function () {
   }).run();
 };
 
-// Log an error only if we're running Meteor from a checkout
-var maybeLogError = function (err) {
+var logErrorIfRunningMeteorRelease = function (err) {
   if (files.inCheckout()) {
     process.stderr.write("Failed to record package usage.\n");
     process.stderr.write(err.stack || err);
@@ -96,7 +95,8 @@ var connectToPackagesStatsServer = function () {
   });
   var conn = new ServiceConnection(
     Package,
-    config.getPackageStatsServerUrl()
+    config.getPackageStatsServerUrl(),
+    {_dontPrintErrors: true}
   );
   return conn;
 };
