@@ -52,7 +52,7 @@ ServiceConnection.ConnectionTimeoutError = _.extend(
 // can't run this at the top-level since we're not in a fiber. see
 // comment before ServiceConnection.ConnectionTimeoutError.
 ensureConnectionTimeoutErrorDefined = function (Meteor) {
-  if (! ServiceConnection.ConnectionTimeoutError.uninitialized) {
+  if (ServiceConnection.ConnectionTimeoutError.uninitialized) {
     ServiceConnection.ConnectionTimeoutError = Meteor.makeErrorType(
       "ServiceConnection.ConnectionTimeoutError", /*name*/
       function () {
