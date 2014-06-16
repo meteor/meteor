@@ -475,7 +475,6 @@ _.extend(CompleteCatalog.prototype, {
         version: version,
         publishedBy: null,
         earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-        changelog: null, // XXX get actual changelog when we have it?
         description: packageSource.metadata.summary,
         dependencies: packageSource.getDependencyMetadata(),
         source: null,

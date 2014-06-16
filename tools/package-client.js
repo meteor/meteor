@@ -25,63 +25,6 @@ var getLoadedPackages = _.once(function () {
   });
 });
 
-
-// Read the changelog, if applicable & prompt the user to fill it out if it is
-// blank (once again, if applicable). Return the lines for the current version.
-var dealWithChangelog = function(packageSource) {
-  var changelog = require('./changelog.js');
-  var version = packageSource.version;
-  var name = packageSource.name;
-  var changeFile = changelog.getChangelogFile(packageSource.sourceRoot);
-  var changeLines = changelog.readChangelog(changeFile);
-  var changeExists = !_.isEqual(changeLines, {});
-  // XXX: For now, if there is no changelog, we won't nag you about it.
-  if (changeExists && !changeLines[version]) {
-    process.stdout.write("-------\n");
-    if (_.has(changeLines,"NEXT") && !_.isEqual(changeLines["NEXT"], [])) {
-      changelog.rewriteNextChangelog(changeFile, version);
-      process.stdout.write(" changelog: Changing v.NEXT to current version.\n");
-    } else {
-      // There is a stub of v.NEXT, but there is nothing there. Kill it.
-      if (_.has(changeLines, "NEXT")) {
-        changelog.eraseNextChangelog(changeFile);
-      }
-      // Changelog data is invalid and we have to rewrite it.
-      process.stderr.write(" You are publishing version " + version +
-                           ", but your changelog has no information about it! \n");
-      process.stderr.write(" Please enter a changelog entry. \n");
-
-      // Use '*' as the command on the prompt and read from prompt.
-      var readMyPrompt = function () {
-        return utils.readLine({
-          echo: true,
-          prompt: " * ",
-          stream: process.stderr
-        });
-      };
-
-      var foo = readMyPrompt();
-      var lines = [];
-      while (foo !== "q") {
-        lines.unshift(foo);
-        process.stderr.write(" Anything else? ( or q to quit) \n");
-        foo = readMyPrompt();
-      }
-      changelog.prependChangelog(changeFile, version, lines);
-      process.stdout.write(" Thanks! Changelog edited.\n");
-    }
-
-    // Regardless of what the changelog status was, show what it says.
-    changeLines = changelog.readChangelog(changeFile);
-    process.stdout.write(" According to your History.md file," + name +
-                         "@" + version +" contains the following changes: \n");
-    changelog.printLines(changeLines[version], "  ");
-    process.stdout.write("\n");
-    process.stdout.write("-------\n");
-    changelog.prependChangelog(changeFile, "NEXT", []);
-  };
-};
-
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
@@ -497,9 +440,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     process.exit(1);
   }
 
-  // Get the changeLines from the changelog.
-  var changeLines = dealWithChangelog(packageSource);
-
   // We need to build the test package to get all of its sources.
   var testFiles = [];
   var messages = buildmessage.capture(
@@ -560,7 +500,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     compilerVersion: compiler.BUILT_BY,
     containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageDeps,
+    dependencies: packageDeps
   };
   var uploadInfo = conn.call('createPackageVersion', uploadRec);
 
@@ -571,10 +511,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   process.stdout.write('Uploading source...\n');
   uploadTarball(uploadInfo.uploadUrl,
                               bundleResult.sourceTarball);
-
-  if (changeLines) {
-    process.stdout.write('Uploading changelog...\n');
-  }
 
   process.stdout.write('Publishing package version...\n');
   conn.call('publishPackageVersion',

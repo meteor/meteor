@@ -727,7 +727,6 @@ main.registerCommand({
   catalog.official.refresh();
 
   if (options.details) {
-    var changelog = require('./changelog.js');
     var packageName = options.args[0];
     var packageRecord = catalog.official.getPackage(packageName);
     if (!packageRecord) {
@@ -743,23 +742,13 @@ main.registerCommand({
                   _.pluck(packageRecord.maintainers, 'username')
                   + " at " + packageRecord.repositoryUrl);
       return 1;
-    } else if (!lastVersion || !lastVersion.changelog) {
-      console.log("No details available.");
+    } else if (!lastVersion) {
+      console.log("No versions are available.");
     } else {
-
-/*      var changelogUrl = lastVersion.changelog;
-      var myChangelog = httpHelpers.getUrl({
-        url: changelogUrl,
-        encoding: null
-      });
-
-      var sourcePath = "/tmp/change";
-      fs.writeFileSync(sourcePath, myChangelog);
-      var ch = changelog.readChangelog(sourcePath); */
       _.each(versions, function (v) {
         var versionRecord = catalog.official.getVersion(packageName, v);
-        console.log("Version " + v + " : " + versionRecord.earliestCompatibleVersion);
-//        changelog.printLines(ver, "             ");
+        // XXX: should we print out something other than decription here?
+        console.log("Version " + v + " : " + versionRecord.description);
       });
       console.log("\n");
     }
