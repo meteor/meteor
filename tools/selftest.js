@@ -411,10 +411,8 @@ var Sandbox = function (options) {
   // Figure out the 'meteor' to run
   if (self.warehouse)
     self.execPath = path.join(self.warehouse, 'meteor');
-  else if (release.current.isCheckout())
-    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
   else
-    self.execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
+    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
 };
 
 _.extend(Sandbox.prototype, {
