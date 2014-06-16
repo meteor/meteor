@@ -12,6 +12,18 @@ var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 
+// XXX: This is a medium-term hack, to avoid having the user set a package name
+// & test-name in package.describe. We will change this in the new control file
+// world in some way.
+var AUTO_TEST_POSTFIX = "-localtest";
+var isTestName = function (name) {
+  var nameEnd = name.substr(name.length - AUTO_TEST_POSTFIX.length);
+  return nameEnd === AUTO_TEST_POSTFIX;
+};
+var genTestName = function (name) {
+  return name + AUTO_TEST_POSTFIX;
+};
+
 // Given a semver version string, return the earliest semver for which
 // we are a replacement. This is used to compute the default
 // earliestCompatibleVersion.
@@ -360,9 +372,11 @@ _.extend(PackageSource.prototype, {
   initFromPackageDir: function (name, dir, immutable) {
     var self = this;
     var isPortable = true;
+
     self.name = name;
     self.sourceRoot = dir;
     self.serveRoot = path.join(path.sep, 'packages', name);
+    self.isTest = isTestName(name);
 
     // If we are running from checkout we may be looking at a core package. If
     // we are, let's remember this for things like not recording version files.
@@ -393,9 +407,6 @@ _.extend(PackageSource.prototype, {
     // an asset.
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
-    // Let's make sure that we are initializing either the main package or the
-    // test package for now. Otherwise, fail.
-    var tempName;
     // == 'Package' object visible in package.js ==
     var Package = {
       // Set package metadata. Options:
@@ -418,16 +429,8 @@ _.extend(PackageSource.prototype, {
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
           } else if (key === "name") {
-            tempName = self.name;
-            // Do nothing, actually. This tells us that we are not building a
-            // test package, but that's roughly what we assumed anyway.
           }
           else if (key === "test") {
-            if (name === value) {
-              self.isTest = true;
-            } else {
-              self.testName = value;
-            }
           }
           else {
             buildmessage.error("unknown attribute '" + key + "' " +
@@ -449,6 +452,19 @@ _.extend(PackageSource.prototype, {
       },
 
       on_test: function (f) {
+        // If we are not initializing the test package, then we are initializing
+        // the normal package and have now noticed that it has tests. So, let's
+        // register the test. This is a medium-length hack until we have new
+        // control files.
+        if (!self.isTest) {
+          if (self.name !== "!oauth!" && self.name !== "!spiderable" &&
+              self.name !== "!showdown") {
+            self.testName = genTestName(self.name);
+          }
+          return;
+        }
+
+        // We are initializing the test, so proceed as normal.
         if (self.isTest) {
           if (fileAndDepLoader) {
             buildmessage.error("duplicate on_test handler; a package may have " +
@@ -625,10 +641,6 @@ _.extend(PackageSource.prototype, {
     if (self.version && ! self.earliestCompatibleVersion) {
       self.earliestCompatibleVersion =
         earliestCompatible(self.version);
-    }
-
-    if (tempName && (self.name !== tempName) && (!self.isTest)) {
-      buildmessage.error("Can only build main or test package.");
     }
 
     if (!utils.validPackageName(self.name)) {

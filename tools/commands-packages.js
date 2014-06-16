@@ -1180,8 +1180,7 @@ main.registerCommand({
   // we don't specify these constraints until we get them back from the
   // constraint solver.
   var constraints = _.map(options.args, function (packageReq) {
-    // XXX maybe upper case is an error instead?
-    return utils.splitConstraint(packageReq.toLowerCase());
+    return utils.splitConstraint(packageReq);
   });
 
   _.each(constraints, function (constraint) {
