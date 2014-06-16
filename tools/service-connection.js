@@ -27,6 +27,10 @@ var ServiceConnection = function (Package, endpointUrl, headers) {
 
   self.connectionTimeoutCallbacks = [];
   self.connectionTimer = Package.meteor.Meteor.setTimeout(function () {
+    // XXX This check seems bogus: it could fire during a very brief
+    // disconnection/reconnect cycle, but it seems like it's intended to mean
+    // "didn't ever connect for TIMEOUT_SEC". Really, the ddp client should
+    // handle this natively.
     if (self.connection.status().status !== "connected") {
       self.connection = null;
       _.each(self.connectionTimeoutCallbacks, function (f) {
