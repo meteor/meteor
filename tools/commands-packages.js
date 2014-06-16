@@ -587,7 +587,7 @@ main.registerCommand({
                   }
                   toPublish[item] = {source: packageSource,
                                      compileResult: compileResult};
-                  process.stdout.write("IT IS NEW! \n");
+                  process.stdout.write("new package\n");
                   return;
                 } else {
                   var existingBuild = catalog.official.getBuildWithArchesString(
@@ -611,8 +611,6 @@ main.registerCommand({
                     if (bundleBuildResult.treeHash !==
                         existingBuild.build.treeHash) {
                       somethingChanged = true;
-                    } else {
-                      process.stdout.write("NEW VERSION! ");
                     }
                   }
 
@@ -627,9 +625,9 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number. \n");
-                    process.stderr.write(" NOT OK \n");
+                    process.stderr.write("NOT OK\n");
                   } else {
-                    process.stdout.write("OK! \n");
+                    process.stdout.write("ok\n");
                   }
                 }
               });
