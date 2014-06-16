@@ -457,10 +457,7 @@ _.extend(PackageSource.prototype, {
         // register the test. This is a medium-length hack until we have new
         // control files.
         if (!self.isTest) {
-          if (self.name !== "!oauth!" && self.name !== "!spiderable" &&
-              self.name !== "!showdown") {
-            self.testName = genTestName(self.name);
-          }
+          self.testName = genTestName(self.name);
           return;
         }
 
