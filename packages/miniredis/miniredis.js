@@ -318,15 +318,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (! pattern)
       throw new Error("Wrong number of arguments for 'keys' command");
     var self = this;
-    var regexp = patternToRegexp(pattern);
-
-    var keys = [];
-    self._kv.forEach(function (value, key) {
-      if (! key.match(regexp))
-        return;
-      keys.push(key);
-    });
-    return keys;
+    return _.pluck(self.matching(pattern).fetch(), 'key');
   },
   randomkey: function () {
     var self = this;
@@ -528,7 +520,7 @@ _.extend(Miniredis.RedisStore.prototype, {
       throwIncorrectKindOfValueError();
     return EJSON.clone(val);
   },
-  
+
   hmset: function (key, o) {
     var self = this;
     if (! _.isObject(o))
@@ -558,7 +550,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     var newObj = EJSON.clone(o);
     newObj[field] = newVal.toString();
     self._set(key, newObj);
-    
+
     return newVal;
   },
 
