@@ -302,6 +302,8 @@ _.extend(Builder.prototype, {
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
   //
+  // Unlike with files.cp_r, if a symlink is found, it is copied as a symlink.
+  //
   // This does NOT add anything to the WatchSet.
   //
   // Options:
@@ -378,25 +380,28 @@ _.extend(Builder.prototype, {
           return;
         }
 
-        var fileStatus = fs.statSync(thisAbsFrom);
-        var isDir = fileStatus.isDirectory();
-        var itemForMatch = item;
-        if (isDir)
-          itemForMatch += '/';
+        var fileStatus = fs.lstatSync(thisAbsFrom);
 
+        var itemForMatch = item;
+        if (fileStatus.isDirectory())
+          itemForMatch += '/';
         if (_.any(ignore, function (pattern) {
           return itemForMatch.match(pattern);
         })) return; // skip excluded files
 
-        if (isDir) {
+        if (fileStatus.isDirectory()) {
           walk(thisAbsFrom, thisRelTo);
-          return;
+        } else if (fileStatus.isSymbolicLink()) {
+          fs.symlinkSync(fs.readlinkSync(thisAbsFrom),
+                         path.resolve(self.buildPath, thisRelTo));
+          // A symlink counts as a file, as far as "can you put something under
+          // it" goes.
+          self.usedAsFile[thisRelTo] = true;
+        } else {
+          files.copyFile(thisAbsFrom, path.resolve(self.buildPath, thisRelTo),
+                         fileStatus.mode);
+          self.usedAsFile[thisRelTo] = true;
         }
-
-        files.copyFile(thisAbsFrom, path.resolve(self.buildPath, thisRelTo),
-                       fileStatus.mode);
-
-        self.usedAsFile[thisRelTo] = true;
       });
     };
 
