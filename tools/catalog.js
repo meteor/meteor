@@ -185,6 +185,11 @@ _.extend(CompleteCatalog.prototype, {
 
     options = options || {};
 
+    // initializing this here to make it clear that this exists and we have
+    // access to it -- a map of names of local packages to their package
+    // sources. We call upon this when we compile the package.
+    self.packageSources = {};
+
     // At this point, effectiveLocalPackageDirs is just the local package
     // directories, since we haven't had a chance to add any other local
     // packages. Nonetheless, let's set those.
@@ -527,7 +532,7 @@ _.extend(CompleteCatalog.prototype, {
     if (fs.existsSync(buildDir)) {
       var unipackage = new Unipackage;
       unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
-      if (compiler.checkUpToDate(this.packageSources[name], unipackage)) {
+      if (compiler.checkUpToDate(self.packageSources[name], unipackage)) {
         return unipackage;
       }
     }
