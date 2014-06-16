@@ -11,7 +11,7 @@ var ensureCollection = function (store, pattern, collections) {
 };
 
 _.extend(LocalCollectionDriver.prototype, {
-  open: function (pattern, conn) {
+  open: function (name, conn) {
     var self = this;
 
     var store;
@@ -26,8 +26,11 @@ _.extend(LocalCollectionDriver.prototype, {
         store = self.noConnStore = new Miniredis.RedisStore();
       }
     }
-    if (!pattern)
-      return store.matching("*");
+    // XXX Redis doesn't have the concept of collections so for now the only
+    // possible collection name is "redis"
+    if (name !== "redis") {
+      throw new Error("The only valid RedisCollection name is 'redis'");
+    }
     if (! conn) {
       return ensureCollection(store, pattern, self.noConnCollections);
     }

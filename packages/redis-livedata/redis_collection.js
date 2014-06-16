@@ -1,66 +1,55 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
-Meteor.RedisCollection = function (keyPrefix, options) {
+Meteor.RedisCollection = function (name, options) {
   var self = this;
   if (! (self instanceof Meteor.RedisCollection))
     throw new Error('use "new" to construct a Meteor.RedisCollection');
 
-  if (!keyPrefix && (keyPrefix !== null)) {
+  if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
                   "saved or synchronized over the network. (Pass null for " +
                   "the collection name to turn off this warning.)");
-    keyPrefix = null;
+    name = null;
   }
 
-  if (keyPrefix !== null && typeof keyPrefix !== "string") {
+  if (name !== null && typeof name !== "string") {
     throw new Error(
       "First argument to new Meteor.RedisCollection must be a string or null");
   }
 
-  if (options && options.methods) {
-    // Backwards compatibility hack with original signature (which passed
-    // "connection" directly instead of in options. (Connections must have a "methods"
-    // method.)
-    // XXX remove before 1.0
-    options = {connection: options};
-  }
-  // Backwards compatibility: "connection" used to be called "manager".
-  if (options && options.manager && !options.connection) {
-    options.connection = options.manager;
-  }
   options = _.extend({
     connection: undefined,
-    idGeneration: 'STRING',
-    transform: null,
+//    idGeneration: 'STRING',
+//    transform: null,
     _driver: undefined,
     _preventAutopublish: false
   }, options);
 
-  switch (options.idGeneration) {
+//  switch (options.idGeneration) {
 //  case 'MONGO':
 //    self._makeNewID = function () {
 //      var src = name ? DDP.randomStream('/collection/' + name) : Random;
 //      return new Meteor.RedisCollection.ObjectID(src.hexString(24));
 //    };
 //    break;
-  case 'STRING':
-  default:
+//  case 'STRING':
+//  default:
     self._makeNewID = function () {
-      var src = keyPrefix ? DDP.randomStream('/collection/' + keyPrefix) : Random;
+      var src = name ? DDP.randomStream('/collection/' + name) : Random;
       return src.id();
     };
-    break;
-  }
+//    break;
+//  }
 
-  if (options.transform) {
-    throw Exception("transform not supported for redis");
-    //self._transform = LocalCollection.wrapTransform(options.transform);
-  } else {
-    self._transform = null;
-  }
+//  if (options.transform) {
+//    throw Exception("transform not supported for redis");
+//    //self._transform = LocalCollection.wrapTransform(options.transform);
+//  } else {
+//    self._transform = null;
+//  }
 
-  if (! keyPrefix || options.connection === null)
+  if (! name || options.connection === null)
     // note: nameless collections never have a connection
     self._connection = null;
   else if (options.connection)
@@ -71,7 +60,7 @@ Meteor.RedisCollection = function (keyPrefix, options) {
     self._connection = Meteor.server;
 
   if (!options._driver) {
-    if (keyPrefix && self._connection === Meteor.server &&
+    if (name && self._connection === Meteor.server &&
         typeof RedisInternals !== "undefined" &&
         RedisInternals.defaultRemoteCollectionDriver) {
       options._driver = RedisInternals.defaultRemoteCollectionDriver();
@@ -80,14 +69,14 @@ Meteor.RedisCollection = function (keyPrefix, options) {
     }
   }
 
-  self._collection = options._driver.open(keyPrefix, self._connection);
-  self._keyPrefix = keyPrefix || "";
+  self._collection = options._driver.open(name, self._connection);
+  self._name = name || "";
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    var ok = self._connection.registerStore(keyPrefix, {
+    var ok = self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
@@ -181,7 +170,7 @@ Meteor.RedisCollection = function (keyPrefix, options) {
     });
 
     if (!ok)
-      throw new Error("There is already a collection named '" + keyPrefix + "'");
+      throw new Error("There is already a collection named '" + name + "'");
   }
 
   self._defineMutationMethods();
@@ -243,7 +232,7 @@ _.extend(Meteor.RedisCollection.prototype, {
     return self._collection.findOne(self._getFindSelector(argArray),
                                     self._getFindOptions(argArray));
   },
-  
+
   observe: function (observer) {
     var self = this;
     return self._collection.observe(observer);
