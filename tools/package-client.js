@@ -457,7 +457,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     var packRecord = catalog.official.getPackage(name);
     if (!packRecord) {
       process.stderr.write('There is no package named ' + name +
-                           '. If you are creating a new package, use the --create-track flag. \n');
+                           '. If you are creating a new package, use the --create flag. \n');
       process.stderr.write("Publish failed. \n");
       return 1;
     }
