@@ -113,3 +113,11 @@ $jq.event.special[DOMBackend.RemovalWatch._JQUERY_EVENT_NAME] = {
     }
   }
 };
+
+
+// Must use jQuery semantics for `context`, not
+// querySelectorAll's.  In other words, all the parts
+// of `selector` must be found under `context`.
+DOMBackend.findBySelector = function (selector, context) {
+  return $jq(selector, context);
+};

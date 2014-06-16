@@ -284,6 +284,62 @@ _.extend(Blaze.DOMRange.prototype, {
     if (this.augmenters === _emptyArray)
       this.augmenters = [];
     this.augmenters.push(augmenter);
+  },
+  $: function (selector) {
+    var self = this;
+
+    var parentNode = this.parentElement;
+    if (! parentNode)
+      throw new Error("Can't select in removed DomRange");
+
+    // Strategy: Find all selector matches under parentNode,
+    // then filter out the ones that aren't in this DomRange
+    // using `DOMRange#containsElement`.  This is
+    // asymptotically slow in the presence of O(N) sibling
+    // content that is under parentNode but not in our range,
+    // so if performance is an issue, the selector should be
+    // run on a child element.
+
+    // Since jQuery can't run selectors on a DocumentFragment,
+    // we don't expect findBySelector to work.
+    if (parentNode.nodeType === 11 /* DocumentFragment */)
+      throw new Error("Can't use $ on an offscreen range");
+
+    var results = Blaze.DOMBackend.findBySelector(selector, parentNode);
+
+    // We don't assume `results` has jQuery API; a plain array
+    // should do just as well.  However, if we do have a jQuery
+    // array, we want to end up with one also, so we use
+    // `.filter`.
+
+    // Function that selects only elements that are actually
+    // in this DomRange, rather than simply descending from
+    // `parentNode`.
+    var filterFunc = function (elem) {
+      // handle jQuery's arguments to filter, where the node
+      // is in `this` and the index is the first argument.
+      if (typeof elem === 'number')
+        elem = this;
+
+      return self.containsElement(elem);
+    };
+
+    if (! results.filter) {
+      // not a jQuery array, and not a browser with
+      // Array.prototype.filter (e.g. IE <9)
+      var newResults = [];
+      for (var i = 0; i < results.length; i++) {
+        var x = results[i];
+        if (filterFunc(x))
+          newResults.push(x);
+      }
+      results = newResults;
+    } else {
+      // `results.filter` is either jQuery's or ECMAScript's `filter`
+      results = results.filter(filterFunc);
+    }
+
+    return results;
   }
 });
 

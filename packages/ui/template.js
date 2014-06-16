@@ -1,7 +1,7 @@
 UI.body2 = new Blaze.Component();
 
 _.extend(UI.body2, {
-  // content parts are render methods (expect `UI.body2` in `this`)
+  // content parts are render methods (which expect `UI.body2` in `this`)
   contentParts: [],
   render: function () {
     var self = this;
@@ -10,6 +10,48 @@ _.extend(UI.body2, {
     });
   }
 });
+
+updateTemplateInstance = function (comp) {
+  // Populate `comp.templateInstance.{firstNode,lastNode,data}`
+  // on demand.
+  var tmpl = comp._templateInstance;
+  if (! tmpl) {
+    tmpl = comp._templateInstance = {
+      $: function (selector) {
+        if (! comp.domrange)
+          throw new Error("Can't use $ on component with no DOM");
+        return comp.domrange.$(selector);
+      },
+      findAll: function (selector) {
+        return Array.prototype.slice.call(this.$(selector));
+      },
+      find: function (selector) {
+        var result = this.$(selector);
+        return result[0] || null;
+      },
+      data: null,
+      firstNode: null,
+      lastNode: null,
+      __component__: comp
+    };
+  }
+  // assume `comp` is a UI.TemplateComponent, for now
+  if (comp.__dataFunc)
+    tmpl.data = comp.__dataFunc();
+  else
+    tmpl.data = null;
+
+  if (comp.domrange && !comp.isFinalized) {
+    tmpl.firstNode = comp.domrange.firstNode();
+    tmpl.lastNode = comp.domrange.lastNode();
+  } else {
+    // on 'created' or 'destroyed' callbacks we don't have a DomRange
+    tmpl.firstNode = null;
+    tmpl.lastNode = null;
+  }
+
+  return tmpl;
+};
 
 if (Meteor.isClient) {
   UI.TemplateRenderedAugmenter = Blaze.DOMAugmenter.extend({
@@ -23,7 +65,7 @@ if (Meteor.isClient) {
         if (tmpl.rendered && ! tmpl.isFinalized) {
           Deps.afterFlush(function () {
             if (! tmpl.isFinalized) {
-              var templateInstance = {}; // XXX
+              var templateInstance = updateTemplateInstance(tmpl);
               tmpl.rendered.call(templateInstance);
             }
           });
@@ -53,6 +95,15 @@ UI.TemplateComponent = Blaze.Component.extend({
   },
   render: function () {
     var self = this;
+
+    var self = this;
+    if (self.created) {
+      var templateInstance = updateTemplateInstance(self);
+      Deps.nonreactive(function () {
+        self.created.call(templateInstance);
+      });
+    }
+
     if (self.__dataFunc) {
       return Blaze.With(self.__dataFunc, function () {
         return self.renderTemplate();
@@ -86,7 +137,8 @@ UI.TemplateComponent = Blaze.Component.extend({
     return range;
   },
   events: function (eventMap) {
-    this._eventMaps = (this._eventMaps || []);
+    var self = this;
+    self._eventMaps = (self._eventMaps || []);
     // implement "old this"
     var eventMap2 = {};
     for (var k in eventMap) {
@@ -97,14 +149,14 @@ UI.TemplateComponent = Blaze.Component.extend({
           if (data == null)
             data = {};
           var args = Array.prototype.slice.call(arguments);
-          var tmplInstance = {}; // XXX
+          var tmplInstance = updateTemplateInstance(self);
           args.splice(1, 0, tmplInstance);
           return v.apply(data, args);
         };
       })(k, eventMap[k]);
     }
 
-    this._eventMaps.push(eventMap2);
+    self._eventMaps.push(eventMap2);
   },
   helpers: function (dict) {
     _.extend(this, dict);
@@ -114,5 +166,14 @@ UI.TemplateComponent = Blaze.Component.extend({
       "Component#extend was part of a private API that has been removed");
   },
   __contentBlock: null,
-  __elseBlock: null
+  __elseBlock: null,
+  finalize: function () {
+    var self = this;
+    if (self.destroyed) {
+      var templateInstance = updateTemplateInstance(self);
+      Deps.nonreactive(function () {
+        self.destroyed.call(templateInstance);
+      });
+    }
+  }
 });

@@ -331,26 +331,26 @@ Tinytest.add("ui - render - components", function (test) {
     var counter = 1;
     var buf = [];
 
-    var myComponent = Blaze.Component.extend({
+    var myComponent = UI.TemplateComponent.extend({
       constructor: function () {
-        myComponent.__super__.constructor.call(this);
+        var self = this;
+        myComponent.__super__.constructor.call(self, function () {
+          return self.number;
+        });
 
         // `this` is the component instance
         var number = counter++;
-        this.number = number;
+        self.number = number;
 
-        if (this.parent)
-          buf.push('parent of ' + this.number + ' is ' + this.parent.number);
-
-        this.data = function () {
-          return this.number;
-        };
+        var parent = Blaze.getParentControllerOfType(self, myComponent);
+        if (parent)
+          buf.push('parent of ' + self.number + ' is ' + parent.number);
       },
       created: function () {
         // `this` is the template instance
         buf.push('created ' + this.data);
       },
-      render: function () {
+      renderTemplate: function () {
         // `this` is the component instance
         return [String(this.number),
 
@@ -398,9 +398,9 @@ Tinytest.add("ui - render - components", function (test) {
                      'created 3',
                      '---flush---',
                      // (proper order for these has not be thought out:)
-                     'dom-1 is 1..HR',
+                     'dom-3 is 3..HR',
                      'dom-2 is 2..HR',
-                     'dom-3 is 3..HR']);
+                     'dom-1 is 1..HR']);
 
     test.equal(canonicalizeHtml(div.innerHTML), '123<hr>');
 
@@ -432,8 +432,8 @@ Tinytest.add("ui - render - findAll", function (test) {
   var found = null;
   var $found = null;
 
-  var myComponent = UI.Component.extend({
-    render: function() {
+  var myComponent = UI.TemplateComponent.extend({
+    renderTemplate: function() {
       return DIV([P('first'), P('second')]);
     },
     rendered: function() {
