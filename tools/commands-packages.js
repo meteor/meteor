@@ -1393,9 +1393,6 @@ main.registerCommand({
 "Sorry, you can't change the users at the same time as you're listing them.\n");
     return 1;
   }
-  if (!options.add && !options.remove && !options.list) {
-     throw new main.ShowUsage;
-  }
 
   // Now let's get down to business! Fetching the thing.
   var fullRecord = getReleaseOrPackageRecord(name);
@@ -1434,7 +1431,8 @@ main.registerCommand({
     conn.close();
     catalog.official.refresh();
   }
-  process.stdout.write("The maintainers for " + name + " are: \n");
+
+  process.stdout.write("\n The maintainers for " + name + " are: \n");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
       process.stdout.write("<unknown>" + "\n");

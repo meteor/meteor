@@ -435,7 +435,26 @@ Options:
 
 
 >>admin maintainers
-XXX: WRITE
+View or change authorized maintainers for a package
+Usage: meteor admin maintainers <package name> [--list]
+       meteor admin maintainers <package name> --add <username>
+       meteor admin maintainers <package name> --remove <username>
+
+Without an argument (or with --list), list the users that are
+maintainers for a particular package.
+
+With --add, add an authorized maintainer to a package. Use this to give your
+collaborators the ability to work with your packages.
+
+With --remove, remove an authorized maintainer from a package. You cannot remove
+yourself if you are the last maintainer on a package.
+
+You can only add or remove one maintainer at a time.
+
+Options:
+  --add         add an authorized maintainer
+  --remove      remove an authorized maintainer
+  --list        list authorized maintainers (the default)
 
 
 >>admin recommend-release
