@@ -648,7 +648,6 @@ _.extend(CompleteCatalog.prototype, {
       name, sourcePath, unipackage);
 
     self.builds.push({
-      packageName: name,
       architecture: unipackage.architectures().join('+'),
       builtBy: null,
       build: null, // this would be the URL and hash
