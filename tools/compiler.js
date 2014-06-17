@@ -18,9 +18,10 @@ var compiler = exports;
 // Whenever you change anything about the code that generates unipackages, bump
 // this version number. The idea is that the "format" field of the unipackage
 // JSON file only changes when the actual specified structure of the
-// unipackage/build changes, but this version (which is build-tool-specific) can
-// change when the the contents (not structure) of the built output changes. So
-// eg, if we improve the linker's static analysis, this should be bumped.
+// unipackage/unibuild changes, but this version (which is build-tool-specific)
+// can change when the the contents (not structure) of the built output
+// changes. So eg, if we improve the linker's static analysis, this should be
+// bumped.
 //
 // You should also update this whenever you update any of the packages used
 // directly by the unipackage creation process (eg js-analyze) since they do not
@@ -32,11 +33,11 @@ compiler.BUILT_BY = 'meteor/11';
 // XXX where should this go? I'll make it a random utility function
 // for now
 //
-// 'dependencies' is the 'uses' attribute from a Build. Call
-// 'callback' with each build (of architecture matching `arch`)
+// 'dependencies' is the 'uses' attribute from a Unibuild. Call
+// 'callback' with each unibuild (of architecture matching `arch`)
 // referenced by that dependency list. This includes directly used
-// builds, and builds that are transitively "implied" by used
-// builds. (But not builds that are used by builds that we use!)
+// unibuilds, and unibuilds that are transitively "implied" by used
+// unibuilds. (But not unibuilds that are used by unibuilds that we use!)
 //
 // Options are:
 //  - skipUnordered: ignore direct dependencies that are unordered
@@ -46,14 +47,14 @@ compiler.BUILT_BY = 'meteor/11';
 //
 // (Why does we need to list acceptable weak packages here rather than just
 // implement a skipWeak flag and allow the caller to filter the ones they care
-// about? Well, we want to avoid even calling packageLoader.getBuild on
+// about? Well, we want to avoid even calling packageLoader.getUnibuild on
 // dependencies that aren't going to get included, because in the uniload case,
 // the weak dependency might not even be there at all.)
 //
 // packageLoader is the PackageLoader that should be used to resolve
 // the dependencies.
-compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
-                                   callback) {
+compiler.eachUsedUnibuild = function (
+    dependencies, arch, packageLoader, options, callback) {
   if (typeof options === "function") {
     callback = options;
     options = {};
@@ -73,18 +74,18 @@ compiler.eachUsedBuild = function (dependencies, arch, packageLoader, options,
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var build = packageLoader.getBuild(use["package"], arch);
+    var unibuild = packageLoader.getUnibuild(use["package"], arch);
 
-    if (_.has(processedBuildId, build.id))
+    if (_.has(processedBuildId, unibuild.id))
       continue;
-    processedBuildId[build.id] = true;
+    processedBuildId[unibuild.id] = true;
 
-    callback(build, {
+    callback(unibuild, {
       unordered: !!use.unordered,
       weak: !!use.weak
     });
 
-    _.each(build.implies, function (implied) {
+    _.each(unibuild.implies, function (implied) {
       usesToProcess.push(implied);
     });
   }
@@ -231,7 +232,7 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 
 // inputSourceArch is a SourceArch to compile. Process all source files through
 // the appropriate handlers and run the prelink phase on any resulting
-// JavaScript. Create a new Build and add it to 'unipackage'.
+// JavaScript. Create a new Unibuild and add it to 'unipackage'.
 //
 // packageLoader is a PackageLoader that can load our build-time
 // direct dependencies at the correct versions. It is only used to
@@ -239,8 +240,8 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileBuild = function (unipackage, inputSourceArch, packageLoader,
-                             nodeModulesPath, isPortable) {
+var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
+                                nodeModulesPath, isPortable) {
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
   var js = [];
@@ -254,10 +255,10 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // a special "use" role anymore. it's not totally clear to me what
   // the correct behavior should be -- we need to resolve whether we
   // think about extensions as being global to a package or particular
-  // to a build.
+  // to a unibuild.
 
   // (there's also some weirdness here with handling implies, because
-  // the implies field is on the target build, but we really only care
+  // the implies field is on the target unibuild, but we really only care
   // about packages.)
   var activePluginPackages = [unipackage];
 
@@ -272,17 +273,17 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // case because uniload doesn't know how to check to see if a package has
   // plugins.
   //
-  // eachUsedBuild takes care of pulling in implied dependencies for us (eg,
+  // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
   // templating from standard-app-packages).
   if (!inputSourceArch.noSources) {
-    compiler.eachUsedBuild(
+    compiler.eachUsedUnibuild(
       inputSourceArch.uses, inputSourceArch.arch,
-      packageLoader, {skipUnordered: true}, function (build) {
-        if (build.pkg.name === unipackage.name)
+      packageLoader, {skipUnordered: true}, function (unibuild) {
+        if (unibuild.pkg.name === unipackage.name)
           return;
-        if (_.isEmpty(build.pkg.plugins))
+        if (_.isEmpty(unibuild.pkg.plugins))
           return;
-        activePluginPackages.push(build.pkg);
+        activePluginPackages.push(unibuild.pkg);
       });
   }
 
@@ -432,8 +433,8 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
     // - fileOptions: any options passed to "api.add_files"; for
     //   use by the plugin. The built-in "js" plugin uses the "bare"
     //   option for files that shouldn't be wrapped in a closure.
-    // - declaredExports: An array of symbols exported by this build, or null
-    //   if it may not export any symbols (eg, test builds). This is used by
+    // - declaredExports: An array of symbols exported by this unibuild, or null
+    //   if it may not export any symbols (eg, test unibuilds). This is used by
     //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
     // - read(n): read from the input file. If n is given it should
     //   be an integer, and you will receive the next n bytes of the
@@ -484,12 +485,12 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
     // (code that isn't dependent on the arch, other than 'browser'
     // vs 'os') -- they can look at the arch that is provided
     // but they can't rely on the running on that particular arch
-    // (in the end, an arch-specific build will be emitted only if
+    // (in the end, an arch-specific unibuild will be emitted only if
     // there are native node modules). Obviously this should
     // change. A first step would be a setOutputArch() function
     // analogous to what we do with native node modules, but maybe
     // what we want is the ability to ask the plugin ahead of time
-    // how specific it would like to force builds to be.
+    // how specific it would like to force unibuilds to be.
     //
     // XXX we handle encodings in a rather cavalier way and I
     // suspect we effectively end up assuming utf8. We can do better
@@ -609,7 +610,7 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
 
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
-  // default build is not allowed to depend on anything!)
+  // default unibuild is not allowed to depend on anything!)
   var jsAnalyze = null;
   if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
     jsAnalyze = uniload.load({
@@ -655,7 +656,7 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
   // *** Consider npm dependencies and portability
   var arch = inputSourceArch.arch;
   if (arch === "os" && ! isPortable) {
-    // Contains non-portable npm module builds, so set arch correctly
+    // Contains non-portable compiled npm modules, so set arch correctly
     arch = archinfo.host();
   }
   if (! archinfo.matches(arch, "os")) {
@@ -663,8 +664,8 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
     nodeModulesPath = undefined;
   }
 
-  // *** Output build object
-  unipackage.addBuild({
+  // *** Output unibuild object
+  unipackage.addUnibuild({
     name: inputSourceArch.archName,
     arch: inputSourceArch.arch,
     uses: inputSourceArch.uses,
@@ -699,9 +700,9 @@ var compileBuild = function (unipackage, inputSourceArch, packageLoader,
 //    running 'meteor publish-for-arch'.
 //
 // Returns an object with keys:
-// - unipackage: the build Unipackage
+// - unipackage: the built Unipackage
 // - sources: array of source files (identified by their path on local
-//   disk) that were used by the build (the source files you'd have to
+//   disk) that were used by the compilation (the source files you'd have to
 //   ship to a different machine to replicate the build there)
 compiler.compile = function (packageSource, options) {
   var sources = [];
@@ -747,8 +748,8 @@ compiler.compile = function (packageSource, options) {
 
       // Add this plugin's dependencies to our "plugin dependency"
       // WatchSet. buildResult.watchSet will end up being the merged
-      // watchSets of all of the builds of the plugin -- plugins have
-      // only one build and this should end up essentially being just
+      // watchSets of all of the unibuilds of the plugin -- plugins have
+      // only one unibuild and this should end up essentially being just
       // the source files of the plugin.
       pluginWatchSet.merge(buildResult.watchSet);
 
@@ -798,15 +799,15 @@ compiler.compile = function (packageSource, options) {
     includeTool: packageSource.includeTool
   });
 
-  // Compile builds. Might use our plugins, so needs to happen second.
+  // Compile unibuilds. Might use our plugins, so needs to happen second.
   var packageLoader = new packageLoaderModule.PackageLoader({
     versions: buildTimeDeps.packageDependencies
   });
 
-  _.each(packageSource.architectures, function (build) {
-    var buildSources = compileBuild(unipackage, build, packageLoader,
+  _.each(packageSource.architectures, function (unibuild) {
+    var unibuildSources = compileUnibuild(unipackage, unibuild, packageLoader,
                                     nodeModulesPath, isPortable);
-    sources.push.apply(sources, buildSources);
+    sources.push.apply(sources, unibuildSources);
   });
 
   // XXX what should we do if the PackageSource doesn't have a version?
@@ -988,8 +989,8 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
 
   var watchSet = new watch.WatchSet();
   watchSet.merge(unipackage.pluginWatchSet);
-  _.each(unipackage.builds, function (build) {
-    watchSet.merge(build.watchSet);
+  _.each(unipackage.unibuilds, function (unibuild) {
+    watchSet.merge(unibuild.watchSet);
   });
 
   if (! watch.isUpToDate(watchSet)) {
