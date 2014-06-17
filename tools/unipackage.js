@@ -19,7 +19,7 @@ var rejectBadPath = function (p) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Build
+// Unibuild
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
@@ -34,7 +34,7 @@ var rejectBadPath = function (p) {
 // - resources
 
 var nextBuildId = 1;
-var Build = function (unipackage, options) {
+var Unibuild = function (unipackage, options) {
   var self = this;
   options = options || {};
   self.pkg = unipackage;
@@ -46,14 +46,14 @@ var Build = function (unipackage, options) {
 
   // This WatchSet will end up having the watch items from the
   // SourceArch (such as package.js or .meteor/packages), plus all of
-  // the actual source files for the build (including items that we
+  // the actual source files for the unibuild (including items that we
   // looked at to find the source files, such as directories we
   // scanned).
   self.watchSet = options.watchSet || new watch.WatchSet();
 
-  // Each Build is given a unique id when it's loaded (it is
+  // Each Unibuild is given a unique id when it's loaded (it is
   // not saved to disk). This is just a convenience to make it easier
-  // to keep track of Builds in a map; it's used by bundler
+  // to keep track of Unibuilds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
   self.id = unipackage.name + "." + self.pkg.name + "@" + self.arch + "#" +
@@ -70,7 +70,7 @@ var Build = function (unipackage, options) {
   // closure. A list of objects with keys 'name' (required) and
   // 'export' (true, 'tests', or falsy).
   //
-  // Both of these are saved into builds on disk, and are inputs into the final
+  // Both of these are saved into unibuilds on disk, and are inputs into the final
   // link phase, which inserts the final JavaScript resources into
   // 'resources'.
   self.prelinkFiles = options.prelinkFiles;
@@ -97,12 +97,12 @@ var Build = function (unipackage, options) {
   self.resources = options.resources;
 
   // Absolute path to the node_modules directory to use at runtime to
-  // resolve Npm.require() calls in this build. null if this build
+  // resolve Npm.require() calls in this unibuild. null if this unibuild
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
 };
 
-_.extend(Build.prototype, {
+_.extend(Unibuild.prototype, {
   // Get the resources that this function contributes to a bundle, in
   // the same format as self.resources as documented above. This
   // includes static assets and fully linked JavaScript.
@@ -123,7 +123,7 @@ _.extend(Build.prototype, {
     var self = this;
 
     if (! archinfo.matches(bundleArch, self.arch))
-      throw new Error("build of arch '" + self.arch + "' does not support '" +
+      throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
                       bundleArch + "'?");
 
     // Compute imports by merging the exports of all of the packages
@@ -135,15 +135,15 @@ _.extend(Build.prototype, {
     // shouldn't be affected by the non-local decision of whether or not an
     // unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
-    compiler.eachUsedBuild(
+    compiler.eachUsedUnibuild(
       self.uses,
       bundleArch, packageLoader,
-      {skipUnordered: true}, function (depBuild) {
-        _.each(depBuild.packageVariables, function (symbol) {
+      {skipUnordered: true}, function (depUnibuild) {
+        _.each(depUnibuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||
               (symbol.export === "tests" && self.pkg.isTest))
-            imports[symbol.name] = depBuild.pkg.name;
+            imports[symbol.name] = depUnibuild.pkg.name;
         });
       });
 
@@ -210,8 +210,8 @@ var Unipackage = function () {
   self.earliestCompatibleVersion = null;
   self.isTest = false;
 
-  // Builds, an array of class Build.
-  self.builds = [];
+  // Unibuilds, an array of class Unibuild.
+  self.unibuilds = [];
 
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
   self.plugins = {};
@@ -275,7 +275,7 @@ _.extend(Unipackage.prototype, {
   },
 
   // This is primarily intended to be used by the compiler. After
-  // calling this, call addBuild to add the builds.
+  // calling this, call addUnibuild to add the unibuilds.
   initFromOptions: function (options) {
     var self = this;
     self.name = options.name;
@@ -290,18 +290,18 @@ _.extend(Unipackage.prototype, {
     self.includeTool = options.includeTool;
   },
 
-  // Programmatically add a build to this Unipackage. Should only be
+  // Programmatically add a unibuild to this Unipackage. Should only be
   // called as part of building up a new Unipackage using
-  // initFromOptions. 'options' are the options to the Build
+  // initFromOptions. 'options' are the options to the Unibuild
   // constructor.
-  addBuild: function (options) {
+  addUnibuild: function (options) {
     var self = this;
-    self.builds.push(new Build(self, options));
+    self.unibuilds.push(new Unibuild(self, options));
   },
 
   architectures: function () {
     var self = this;
-    return _.uniq(_.pluck(self.builds, 'arch').concat(self._toolArchitectures())).sort();
+    return _.uniq(_.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())).sort();
   },
 
   architecturesString: function () {
@@ -321,24 +321,24 @@ _.extend(Unipackage.prototype, {
     return _.uniq(toolArches).sort();
   },
 
-  // Return the build of the package to use for a given target architecture (eg,
+  // Return the unibuild of the package to use for a given target architecture (eg,
   // 'os.linux.x86_64' or 'browser'), or throw an exception if that packages
   // can't be loaded under these circumstances.
-  getBuildAtArch: function (arch) {
+  getUnibuildAtArch: function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(
-      arch, _.pluck(self.builds, 'arch'));
+      arch, _.pluck(self.unibuilds, 'arch'));
 
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
           " is not compatible with architecture '" + arch + "'",
         { secondary: true });
-      // recover by returning by no builds
+      // recover by returning by no unibuilds
       return null;
     }
-    return _.findWhere(self.builds, { arch: chosenArch });
+    return _.findWhere(self.unibuilds, { arch: chosenArch });
   },
 
   // Load this package's plugins into memory, if they haven't already
@@ -432,10 +432,10 @@ _.extend(Unipackage.prototype, {
     options = _.clone(options || {});
     options.firstUnipackage = true;
 
-    return self._loadBuildsFromPath(name, dir, options);
+    return self._loadUnibuildsFromPath(name, dir, options);
   },
 
-  _loadBuildsFromPath: function (name, dir, options) {
+  _loadUnibuildsFromPath: function (name, dir, options) {
     var self = this;
     options = options || {};
 
@@ -485,10 +485,10 @@ _.extend(Unipackage.prototype, {
       self.forceNotUpToDate = true;
     }
 
-    // Read the watch sets for each build
-    var buildWatchSets = {};
-    _.each(buildInfoJson.buildDependencies, function (watchSetJSON, buildTag) {
-      buildWatchSets[buildTag] = watch.WatchSet.fromJSON(watchSetJSON);
+    // Read the watch sets for each unibuild
+    var unibuildWatchSets = {};
+    _.each(buildInfoJson.buildDependencies, function (watchSetJSON, unibuildTag) {
+      unibuildWatchSets[unibuildTag] = watch.WatchSet.fromJSON(watchSetJSON);
     });
 
     // Read pluginWatchSet and pluginProviderPackageDirs. (In the
@@ -526,36 +526,36 @@ _.extend(Unipackage.prototype, {
     });
     self.pluginsBuilt = true;
 
-    _.each(mainJson.builds, function (buildMeta) {
+    _.each(mainJson.unibuilds, function (unibuildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
-      rejectBadPath(buildMeta.path);
+      rejectBadPath(unibuildMeta.path);
 
-      // Skip builds we already have.
-      var alreadyHaveBuild = _.find(self.builds, function (build) {
-        return build.arch === buildMeta.arch;
+      // Skip unibuilds we already have.
+      var alreadyHaveUnibuild = _.find(self.unibuilds, function (unibuild) {
+        return unibuild.arch === unibuildMeta.arch;
       });
-      if (alreadyHaveBuild)
+      if (alreadyHaveUnibuild)
         return;
 
-      var buildJson = JSON.parse(
-        fs.readFileSync(path.join(dir, buildMeta.path)));
-      var buildBasePath = path.dirname(path.join(dir, buildMeta.path));
+      var unibuildJson = JSON.parse(
+        fs.readFileSync(path.join(dir, unibuildMeta.path)));
+      var unibuildBasePath = path.dirname(path.join(dir, unibuildMeta.path));
 
-      if (buildJson.format!== "unipackage-build-pre1")
-        throw new Error("Unsupported unipackage build format: " +
-                        JSON.stringify(buildJson.format));
+      if (unibuildJson.format !== "unipackage-unibuild-pre1")
+        throw new Error("Unsupported unipackage unibuild format: " +
+                        JSON.stringify(unibuildJson.format));
 
       var nodeModulesPath = null;
-      if (buildJson.node_modules) {
-        rejectBadPath(buildJson.node_modules);
-        nodeModulesPath = path.join(buildBasePath, buildJson.node_modules);
+      if (unibuildJson.node_modules) {
+        rejectBadPath(unibuildJson.node_modules);
+        nodeModulesPath = path.join(unibuildBasePath, unibuildJson.node_modules);
       }
 
       var prelinkFiles = [];
       var resources = [];
 
-      _.each(buildJson.resources, function (resource) {
+      _.each(unibuildJson.resources, function (resource) {
         rejectBadPath(resource.file);
 
         var data = new Buffer(resource.length);
@@ -564,7 +564,7 @@ _.extend(Unipackage.prototype, {
         // throws instead of acting like POSIX read:
         // https://github.com/joyent/node/issues/5685
         if (resource.length > 0) {
-          var fd = fs.openSync(path.join(buildBasePath, resource.file), "r");
+          var fd = fs.openSync(path.join(unibuildBasePath, resource.file), "r");
           try {
             var count = fs.readSync(
               fd, data, 0, resource.length, resource.offset);
@@ -583,7 +583,7 @@ _.extend(Unipackage.prototype, {
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
             prelinkFile.sourceMap = fs.readFileSync(
-              path.join(buildBasePath, resource.sourceMap), 'utf8');
+              path.join(unibuildBasePath, resource.sourceMap), 'utf8');
           }
           prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "asset"],
@@ -599,15 +599,15 @@ _.extend(Unipackage.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      self.builds.push(new Build(self, {
-        name: buildMeta.name,
-        arch: buildMeta.arch,
-        uses: buildJson.uses,
-        implies: buildJson.implies,
-        watchSet: buildWatchSets[buildMeta.path],
+      self.unibuilds.push(new Unibuild(self, {
+        name: unibuildMeta.name,
+        arch: unibuildMeta.arch,
+        uses: unibuildJson.uses,
+        implies: unibuildJson.implies,
+        watchSet: unibuildWatchSets[unibuildMeta.path],
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
-        packageVariables: buildJson.packageVariables || [],
+        packageVariables: unibuildJson.packageVariables || [],
         resources: resources
       }));
     });
@@ -652,7 +652,7 @@ _.extend(Unipackage.prototype, {
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
-        builds: [],
+        unibuilds: [],
         plugins: []
       };
 
@@ -661,6 +661,7 @@ _.extend(Unipackage.prototype, {
       // built package's warehouse version. So it should not contain
       // platform-dependent data and should contain all sources of change to the
       // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
+      // XXX this script is no longer relevant; we use "build IDs" now instead
       var buildTimeDirectDeps = getLoadedPackageVersions(
         self.buildTimeDirectDependencies);
       var buildTimePluginDeps = {};
@@ -683,11 +684,12 @@ _.extend(Unipackage.prototype, {
       builder.reserve("head");
       builder.reserve("body");
 
-      // Map from absolute path to npm directory in the build, to the generated
-      // filename in the unipackage we're writing.  Multiple builds can use the
-      // same npm modules (eg, for now, main and tests builds), but also there
-      // can be different sets of directories as well (eg, for a unipackage
-      // merged with from multiple unipackages with _loadBuildsFromPath).
+      // Map from absolute path to npm directory in the unibuild, to the
+      // generated filename in the unipackage we're writing.  Multiple unibuilds
+      // can use the same npm modules (though maybe not any more, since tests
+      // have been separated?), but also there can be different sets of
+      // directories as well (eg, for a unipackage merged with from multiple
+      // unipackages with _loadUnibuildsFromPath).
       var npmDirectories = {};
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to
@@ -706,57 +708,56 @@ _.extend(Unipackage.prototype, {
           "utf8")
       });
 
-      // Builds
-      _.each(self.builds, function (build) {
-        // Make up a filename for this build
-        var baseBuildName = build.arch;
-        var buildDir =
-          builder.generateFilename(baseBuildName, { directory: true });
-        var buildJsonFile =
-          builder.generateFilename(baseBuildName + ".json");
+      // Unibuilds
+      _.each(self.unibuilds, function (unibuild) {
+        // Make up a filename for this unibuild
+        var baseUnibuildName = unibuild.arch;
+        var unibuildDir =
+          builder.generateFilename(baseUnibuildName, { directory: true });
+        var unibuildJsonFile =
+          builder.generateFilename(baseUnibuildName + ".json");
 
-        mainJson.builds.push({
-          arch: build.arch,
-          path: buildJsonFile
+        mainJson.unibuilds.push({
+          arch: unibuild.arch,
+          path: unibuildJsonFile
         });
 
-        // Save build dependencies. Keyed by the json path rather than thinking
+        // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
-        buildInfoJson.buildDependencies[buildJsonFile] =
-          build.watchSet.toJSON();
+        buildInfoJson.buildDependencies[unibuildJsonFile] =
+          unibuild.watchSet.toJSON();
 
         // Figure out where the npm dependencies go.
         var nodeModulesPath = undefined;
         var needToCopyNodeModules = false;
-        if (build.nodeModulesPath) {
-          if (_.has(npmDirectories, build.nodeModulesPath)) {
-            // We already have this npm directory from another build.
-            nodeModulesPath = npmDirectories[build.nodeModulesPath];
+        if (unibuild.nodeModulesPath) {
+          if (_.has(npmDirectories, unibuild.nodeModulesPath)) {
+            // We already have this npm directory from another unibuild.
+            nodeModulesPath = npmDirectories[unibuild.nodeModulesPath];
           } else {
             // It's important not to put node_modules at the top level of the
             // unipackage, so that it is not visible from within plugins.
-            nodeModulesPath = npmDirectories[build.nodeModulesPath] =
+            nodeModulesPath = npmDirectories[unibuild.nodeModulesPath] =
               builder.generateFilename("npm/node_modules", {directory: true});
             needToCopyNodeModules = true;
           }
         }
 
-        // Construct build metadata
-        var buildJson = {
-          format: "unipackage-build-pre1",
-          packageVariables: build.packageVariables,
-          uses: _.map(build.uses, function (u) {
+        // Construct unibuild metadata
+        var unibuildJson = {
+          format: "unipackage-unibuild-pre1",
+          packageVariables: unibuild.packageVariables,
+          uses: _.map(unibuild.uses, function (u) {
             return {
               'package': u.package,
               // For cosmetic value, leave false values for these options out of
               // the JSON file.
               constraint: u.constraint || undefined,
-              build: u.build || undefined,
               unordered: u.unordered || undefined,
               weak: u.weak || undefined
             };
           }),
-          implies: (_.isEmpty(build.implies) ? undefined : build.implies),
+          implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
           node_modules: nodeModulesPath,
           resources: []
         };
@@ -764,7 +765,7 @@ _.extend(Unipackage.prototype, {
         // Output 'head', 'body' resources nicely
         var concat = { head: [], body: [] };
         var offset = { head: 0, body: 0 };
-        _.each(build.resources, function (resource) {
+        _.each(unibuild.resources, function (resource) {
           if (_.contains(["head", "body"], resource.type)) {
             if (concat[resource.type].length) {
               concat[resource.type].push(new Buffer("\n", "utf8"));
@@ -772,9 +773,9 @@ _.extend(Unipackage.prototype, {
             }
             if (! (resource.data instanceof Buffer))
               throw new Error("Resource data must be a Buffer");
-            buildJson.resources.push({
+            unibuildJson.resources.push({
               type: resource.type,
-              file: path.join(buildDir, resource.type),
+              file: path.join(unibuildDir, resource.type),
               length: resource.data.length,
               offset: offset[resource.type]
             });
@@ -784,21 +785,21 @@ _.extend(Unipackage.prototype, {
         });
         _.each(concat, function (parts, type) {
           if (parts.length) {
-            builder.write(path.join(buildDir, type), {
+            builder.write(path.join(unibuildDir, type), {
               data: Buffer.concat(concat[type], offset[type])
             });
           }
         });
 
         // Output other resources each to their own file
-        _.each(build.resources, function (resource) {
+        _.each(unibuild.resources, function (resource) {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
-          buildJson.resources.push({
+          unibuildJson.resources.push({
             type: resource.type,
             file: builder.writeToGeneratedFilename(
-              path.join(buildDir, resource.servePath),
+              path.join(unibuildDir, resource.servePath),
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
@@ -808,12 +809,12 @@ _.extend(Unipackage.prototype, {
         });
 
         // Output prelink resources
-        _.each(build.prelinkFiles, function (file) {
+        _.each(unibuild.prelinkFiles, function (file) {
           var data = new Buffer(file.source, 'utf8');
           var resource = {
             type: 'prelink',
             file: builder.writeToGeneratedFilename(
-              path.join(buildDir, file.servePath),
+              path.join(unibuildDir, file.servePath),
               { data: data }),
             length: data.length,
             offset: 0,
@@ -823,24 +824,24 @@ _.extend(Unipackage.prototype, {
           if (file.sourceMap) {
             // Write the source map.
             resource.sourceMap = builder.writeToGeneratedFilename(
-              path.join(buildDir, file.servePath + '.map'),
+              path.join(unibuildDir, file.servePath + '.map'),
               { data: new Buffer(file.sourceMap, 'utf8') }
             );
           }
 
-          buildJson.resources.push(resource);
+          unibuildJson.resources.push(resource);
         });
 
-        // If build has included node_modules, copy them in
+        // If unibuild has included node_modules, copy them in
         if (needToCopyNodeModules) {
           builder.copyDirectory({
-            from: build.nodeModulesPath,
+            from: unibuild.nodeModulesPath,
             to: nodeModulesPath
           });
         }
 
-        // Control file for build
-        builder.writeJson(buildJsonFile, buildJson);
+        // Control file for unibuild
+        builder.writeJson(unibuildJsonFile, unibuildJson);
       });
 
       // Plugins
@@ -946,7 +947,7 @@ _.extend(Unipackage.prototype, {
   },
 
   // Computes a hash of the versions of all the package's dependencies
-  // (direct and plugin dependencies) and the builds' and plugins' watch
+  // (direct and plugin dependencies) and the unibuilds' and plugins' watch
   // sets. Options are:
   //  - relativeTo: if provided, the watch set file paths are
   //    relativized to this path. If not provided, we use absolute
@@ -1018,12 +1019,12 @@ _.extend(Unipackage.prototype, {
     pluginDeps = _.sortBy(pluginDeps, "0");
 
     // Now that we have versions for all our dependencies, canonicalize
-    // the builds' and plugins' watch sets.
+    // the unibuilds' and plugins' watch sets.
     var watchFiles = [];
     var watchSet = new watch.WatchSet();
     watchSet.merge(self.pluginWatchSet);
-    _.each(self.builds, function (build) {
-      watchSet.merge(build.watchSet);
+    _.each(self.unibuilds, function (unibuild) {
+      watchSet.merge(unibuild.watchSet);
     });
     _.each(watchSet.files, function (hash, fileAbsPath) {
       var watchFilePath = fileAbsPath;

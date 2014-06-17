@@ -181,11 +181,11 @@ _.extend(exports.Tropohouse.prototype, {
       }
     }
 
-    // We need to turn our builds into a unipackage.
+    // We need to turn our builds into a single unipackage.
     var unipackage = new Unipackage;
     var builds = self.downloadedBuilds(packageName, version);
     _.each(builds, function (build, i) {
-      unipackage._loadBuildsFromPath(
+      unipackage._loadUnibuildsFromPath(
         packageName,
         self.downloadedBuildPath(packageName, version, build),
         {firstUnipackage: i === 0});
