@@ -1141,24 +1141,30 @@ _.extend(JsImage.prototype, {
       if (! item.targetPath)
         throw new Error("No targetPath?");
 
-      var loadPath = builder.writeToGeneratedFilename(
-        item.targetPath,
-        { data: new Buffer(item.source, 'utf8') });
       var loadItem = {
-        path: loadPath,
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined
       };
 
       if (item.sourceMap) {
+        // Reference the source map in the source. Looked up later by
+        // node-inspector.
+        var sourceMapBaseName = item.targetPath + ".map";
+
         // Write the source map.
-        // XXX this code is very similar to saveAsUnipackage.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
-          item.targetPath + '.map',
+          sourceMapBaseName,
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
+
+        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
+
+      loadItem.path = builder.writeToGeneratedFilename(
+        item.targetPath,
+        { data: new Buffer(item.source, 'utf8') });
 
       if (!_.isEmpty(item.assets)) {
         // For package code, static assets go inside a directory inside

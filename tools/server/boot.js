@@ -57,7 +57,7 @@ _.each(serverJson.load, function (fileInfo) {
       parsedSourceMap.sourceRoot = path.join(
         fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
     }
-    parsedSourceMaps[fileInfo.path] = parsedSourceMap;
+    parsedSourceMaps[path.resolve(__dirname, fileInfo.path)] = parsedSourceMap;
   }
 });
 
@@ -151,7 +151,13 @@ Fiber(function () {
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Npm, Assets){" + code + "\n})";
 
-    var func = require('vm').runInThisContext(wrapped, fileInfo.path, true);
+    // It is safer to use the absolute path when source map is present as
+    // different tooling, such as node-inspector, can get confused on relative
+    // urls.
+    var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
+    var scriptPath =
+      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+    var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
 
