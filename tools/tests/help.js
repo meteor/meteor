@@ -34,7 +34,7 @@ selftest.define("help", function () {
   var checkSubcommandList = function (run) {
     run.read("Usage: meteor admin <command>");
     run.match("Commands:");
-    run.match(/make-bootstrap-tarballs\s*Makes bootstrap tarballs/);
+    run.match(/recommend-release\s*Recommend a previously published/);
     run.expectExit(0);
   };
   checkSubcommandList(s.run("help", "admin"));
