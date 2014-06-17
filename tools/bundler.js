@@ -1147,7 +1147,8 @@ _.extend(JsImage.prototype, {
       };
 
       if (item.sourceMap) {
-        // Reference the source map in the source. Looked up later by node-inspector.
+        // Reference the source map in the source. Looked up later by
+        // node-inspector.
         var sourceMapBaseName = item.targetPath + ".map";
 
         // Write the source map.
@@ -1157,7 +1158,7 @@ _.extend(JsImage.prototype, {
         );
 
         var sourceMapFileName = path.basename(loadItem.sourceMap);
-        item.source = item.source.concat("\n//# sourceMappingURL=" + sourceMapFileName + "\n");
+        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
