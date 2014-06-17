@@ -156,8 +156,9 @@ selftest.define("add packages", function () {
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  run = s.run("add", "accounts-base", "--offline-catalog");
+  run = s.run("add", "accounts-base");
 
   run.match("Successfully added");
   checkPackages(s,
@@ -165,13 +166,13 @@ selftest.define("add packages", function () {
 
   run = s.run("--once");
 
-  run = s.run("add", "say-something@1.0.0", "--offline-catalog");
+  run = s.run("add", "say-something@1.0.0");
   run.match("Successfully added");
 
   checkPackages(s,
                 ["standard-app-packages", "accounts-base",  "say-something@1.0.0"]);
 
-  run = s.run("add", "depends-on-plugin", "--offline-catalog");
+  run = s.run("add", "depends-on-plugin");
   run.match("Successfully added");
   checkPackages(s,
                 ["standard-app-packages", "accounts-base",
@@ -182,21 +183,21 @@ selftest.define("add packages", function () {
                  "say-something",  "standard-app-packages",
                  "contains-plugin@1.1.0+local"]);
 
-  run = s.run("remove", "say-something", "--offline-catalog");
+  run = s.run("remove", "say-something");
   run.match("Removed constraint say-something");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "standard-app-packages",
                  "contains-plugin"]);
 
-  run = s.run("remove", "depends-on-plugin", "--offline-catalog");
+  run = s.run("remove", "depends-on-plugin");
   run.match("removed dependency on contains-plugin");
   run.match("Removed constraint depends-on-plugin");
 
   checkVersions(s,
                 ["accounts-base",
                  "standard-app-packages"]);
-  run = s.run("list", "--offline-catalog");
+  run = s.run("list");
   run.match("standard-app-packages");
   run.match("accounts-base");
 
@@ -205,7 +206,7 @@ selftest.define("add packages", function () {
   copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
 
   // Don't add the file to packages.
-  run = s.run("list", "--offline-catalog");
+  run = s.run("list");
   run.match("standard-app-packages");
   run.match("accounts-base");
 
