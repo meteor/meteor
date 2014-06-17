@@ -151,8 +151,9 @@ Fiber(function () {
     // \n is necessary in case final line is a //-comment
     var wrapped = "(function(Npm, Assets){" + code + "\n})";
 
-    // It is safer to use the absolute path as different tooling, such as
-    // node-inspector, can get confused on relative urls.
+    // It is safer to use the absolute path when source map is present as
+    // different tooling, such as node-inspector, can get confused on relative
+    // urls.
     var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
