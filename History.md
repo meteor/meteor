@@ -69,7 +69,7 @@
 * Add `UI._templateInstance()` for accessing the current template
   instance from within a block helper.
 
-* Add 'UI._parentData(n)' for accessing parent data contexts from
+* Add `UI._parentData(n)` for accessing parent data contexts from
   within a block helper.
 
 * Stop not updating form controls if they're focused. If a field is
