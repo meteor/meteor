@@ -85,16 +85,18 @@ var maybeShowBanners = function () {
     }
   }
 
-  var displayRelease = function (version) {
-    if (release.current.getReleaseTrack() === catalog.official.DEFAULT_TRACK)
-      return "Meteor " + version;
-    return release.current.getReleaseTrack() + '@' + patchReleaseVersion;
-  };
+  // We now consider printing some simpler banners, if this isn't the latest
+  // release. But if the user specified a release manually with --release, we
+  // don't bother: we only want to tell users about ways to update *their app*.
+  if (release.forced)
+    return;
 
   // Didn't print a banner? Maybe we have a patch release to recommend.
+  var track = release.current.getReleaseTrack();
   var patchReleaseVersion = releaseData.patchReleaseVersion;
   if (patchReleaseVersion) {
-    runLog.log("=> A patch (" + displayRelease(patchReleaseVersion) +
+    runLog.log("=> A patch (" +
+               utils.displayRelease(track, patchReleaseVersion) +
                ") for your current release is available!");
     runLog.log("   Update this project now with 'meteor update --patch'.");
     return;
@@ -106,10 +108,11 @@ var maybeShowBanners = function () {
   //     or not it will actually work?
   var currentReleaseOrderKey = releaseData.orderKey || null;
   var futureReleases = catalog.official.getSortedRecommendedReleaseVersions(
-    release.current.getReleaseTrack(), currentReleaseOrderKey);
+    track, currentReleaseOrderKey);
   if (futureReleases.length) {
     runLog.log(
-      "=> " + displayRelease(futureReleases[0]) + " is available. Update this project with 'meteor update'.");
+      "=> " + utils.displayRelease(track, futureReleases[0]) +
+        " is available. Update this project with 'meteor update'.");
     return;
   }
 };
@@ -143,11 +146,16 @@ var updateMeteorToolSymlink = function () {
     // The latest release from the catalog is not where the ~/.meteor0/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
-    // XXX download the packages too?
     tropohouse.default.maybeDownloadPackageForArchitectures(
       {packageName: latestReleaseToolPackage,
        version: latestReleaseToolVersion},
       [archinfo.host()]);
+
+    _.each(latestRelease.packages, function (version, packageName) {
+      tropohouse.default.maybeDownloadPackageForArchitectures(
+        { packageName: packageName, version: version },
+        ['browser', archinfo.host()]);
+    });
 
     var toolUnipackage = new unipackage.Unipackage;
     toolUnipackage.initFromPath(

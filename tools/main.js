@@ -302,8 +302,8 @@ var longHelp = function (commandName) {
 //   us to use when restarting (this functions exactly like --release
 //   and will cause release.forced to be true).
 var springboard = function (rel, releaseOverride) {
-  // The new way of building tools doesn't support springboarding yet.
-  console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
+  if (process.env.METEOR_DEBUG_SPRINGBOARD)
+    console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
   var archinfo = require('./archinfo.js');
   var unipackage = require('./unipackage.js');

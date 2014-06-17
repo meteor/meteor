@@ -4,6 +4,7 @@ var files = require('./files.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
+var utils = require('./utils.js');
 
 var release = exports;
 
@@ -137,6 +138,12 @@ _.extend(Release.prototype, {
     if (! self.isProperRelease())
       throw new Error("not a proper release?");
     return self._manifest;
+  },
+
+  getDisplayName: function () {
+    var self = this;
+    return utils.displayRelease(self.getReleaseTrack(),
+                                self.getReleaseVersion());
   }
 });
 

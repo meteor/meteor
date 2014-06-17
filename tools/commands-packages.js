@@ -991,8 +991,9 @@ main.registerCommand({
       var maybeOnThisComputer =
             couldNotContactServer ? "\ninstalled on this computer" : "";
       console.log(
-        "This project is already at Meteor %s%s%s.",
-        appRelease, maybeTheLatestRelease, maybeOnThisComputer);
+        "This project is already at %s%s%s.",
+        release.current.getDisplayName(), maybeTheLatestRelease,
+        maybeOnThisComputer);
       return;
     }
 
@@ -1093,8 +1094,9 @@ main.registerCommand({
     // Write the release to .meteor/release.
     project.writeMeteorReleaseVersion(solutionReleaseName);
 
-    console.log("%s: updated to Meteor %s.",
-                path.basename(options.appDir), solutionReleaseName);
+    console.log("%s: updated to %s.",
+                path.basename(options.appDir),
+                utils.displayRelease(releaseTrack, solutionReleaseVersion));
 
     // Now run the upgraders.
     // XXX should we also run upgraders on other random commands, in case there

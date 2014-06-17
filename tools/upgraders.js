@@ -23,32 +23,34 @@ var maybePrintNoticeHeader = function () {
   printedNoticeHeaderThisProcess = true;
 };
 
-
+// We don't have any upgraders now, but this is an example of how to write
+// some.  (It probably makes sense to extract "print this message" or "print
+// this message if a package is directly used" into helpers.)
 var upgradersByName = {
-  "notices-for-1.7.0": function () {
-    maybePrintNoticeHeader();
-    console.log(
-"1.7.0: Something super awesome happened. You should fix your\n" +
-"       code to make sure it works still.");
-    if (_.has(project.project.getConstraints(), 'accounts-ui')) {
-      console.log(
-"\n" +
-"       Accounts UI has totally changed, yo.");
-    }
-    console.log();
-  },
-  "notices-for-1.7.1": function () {
-    maybePrintNoticeHeader();
-    console.log(
-"1.7.1: Oh we changed our minds again completely, sorry.");
-    console.log();
-  },
-  "notices-for-1.7.2": function () {
-    maybePrintNoticeHeader();
-    console.log(
-"1.7.2: Oh gosh never mind, change all your code again.");
-    console.log();
-  }
+//   "notices-for-1.7.0": function () {
+//     maybePrintNoticeHeader();
+//     console.log(
+// "1.7.0: Something super awesome happened. You should fix your\n" +
+// "       code to make sure it works still.");
+//     if (_.has(project.project.getConstraints(), 'accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
+//     console.log();
+//   },
+//   "notices-for-1.7.1": function () {
+//     maybePrintNoticeHeader();
+//     console.log(
+// "1.7.1: Oh we changed our minds again completely, sorry.");
+//     console.log();
+//   },
+//   "notices-for-1.7.2": function () {
+//     maybePrintNoticeHeader();
+//     console.log(
+// "1.7.2: Oh gosh never mind, change all your code again.");
+//     console.log();
+//   }
 };
 
 exports.runUpgrader = function (upgraderName) {

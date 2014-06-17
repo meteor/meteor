@@ -11,6 +11,7 @@ var meteorNpm = require('./meteor-npm.js');
 var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
+var catalog = require('./catalog.js');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -945,7 +946,8 @@ _.extend(PackageSource.prototype, {
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
       // XXX add a better API for js-analyze to declare itself here
-      if (name !== "meteor" && name !== "js-analyze") {
+      if (name !== "meteor" && name !== "js-analyze" &&
+          !process.env.NO_METEOR_PACKAGE) {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
         // we'd add here. This is necessary to resolve the circular dependency

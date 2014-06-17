@@ -305,7 +305,7 @@ selftest.define("command-like options", function () {
     run.matchErr("Unreleased");
     run.expectExit(1);
   } else {
-    run.read("Release " + release.current.name + "\n");
+    run.read(release.current.getDisplayName() + "\n");
     run.expectEnd();
     run.expectExit(0);
   }

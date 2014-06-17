@@ -36,14 +36,14 @@ exports.parse = function (err) {
       //
       // In that last example, it is not at all clear to me what the
       // 'as' stanza refers to, but it is in m[3] if you find a use for it.
-      if (m[1].match(/\.__top_mark__$/)) {
+      if (m[1].match(/(?:^|\.)__top_mark__$/)) {
         // m[1] could be Object.__top_mark__ or something like that
         // depending on where exactly you put the function returned by
         // markTop
         ret = [];
         return;
       }
-      if (m[1].match(/\.__bottom_mark__$/)) {
+      if (m[1].match(/(?:^|\.)__bottom_mark__$/)) {
         stop = true;
         return;
       }

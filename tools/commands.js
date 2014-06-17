@@ -106,7 +106,7 @@ main.registerCommand({
     return 1;
   }
 
-  console.log("Release " + release.current.name);
+  console.log(release.current.getDisplayName());
 });
 
 // Internal use only. For automated testing.

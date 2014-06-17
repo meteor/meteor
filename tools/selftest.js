@@ -5,6 +5,8 @@ var files = require('./files.js');
 var utils = require('./utils.js');
 var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
+var catalog = require('./catalog.js');
+var archinfo = require('./archinfo.js');
 var Future = require('fibers/future');
 
 // Exception representing a test failure
@@ -320,92 +322,11 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
-  if (_.has(options, 'warehouse') &&
-    console.log("\n XXX warehouse is commented out") &&
-    false) {
-    // Make a directory to hold our new warehouse
-    self.warehouse = path.join(self.root, 'warehouse');
-    fs.mkdirSync(self.warehouse, 0755);
-    fs.mkdirSync(path.join(self.warehouse, 'releases'), 0755);
-    fs.mkdirSync(path.join(self.warehouse, 'tools'), 0755);
-    fs.mkdirSync(path.join(self.warehouse, 'packages'), 0755);
-
-    // Build all packages and symlink them into the warehouse. Make up
-    // random version names for each one.
-     throw new Error("XXX self-test warehouse creation is currently broken " +
-                    "and will presumably stay that way until we figure out " +
-                    "what it means in a post-package-server world");
-    // XXX (the following code isn't going to work, first of all
-    // because release.current.library doesn't exist anymore) */
-
-    // Build all packages here.
-    // XXX: Which packages?
-
-    var listResult = release.current.library.list();
-    var pkgVersions = {};
-    if (! listResult.packages)
-      throw new TestFailure('build-failure', { messages: listResult.messages });
-    var packages = listResult.packages;
-    _.each(packages, function (pkg, name) {
-      // XXX we rely on the fact that library.list() forces all of the
-      // packages to be built. #ListingPackagesImpliesBuildingThem
-      var version = 'v' + ('' + Math.random()).substr(2, 4); // eg, "v5324"
-      pkgVersions[name] = version;
-      fs.mkdirSync(path.join(self.warehouse, 'packages', name), 0755);
-      fs.symlinkSync(
-        path.resolve(files.getCurrentToolsDir(), 'packages', name, '.build'),
-        path.join(self.warehouse, 'packages', name, version)
-      );
-    });
-
-    // Now create each requested release.
-    var seenLatest = false;
-    var createdTools = {};
-    _.each(options.warehouse, function (config, releaseName) {
-      var toolsVersion = config.tools || releaseName;
-
-      // Release info
-      var manifest = {
-        tools: toolsVersion,
-        packages: pkgVersions,
-        upgraders: config.upgraders
-      };
-      fs.writeFileSync(path.join(self.warehouse, 'releases',
-                                 releaseName + ".release.json"),
-                       JSON.stringify(manifest), 'utf8');
-      if (config.notices) {
-        fs.writeFileSync(path.join(self.warehouse, 'releases',
-                                   releaseName + ".notices.json"),
-                         JSON.stringify(config.notices), 'utf8');
-      }
-
-      // Tools
-      if (! createdTools[toolsVersion]) {
-        fs.symlinkSync(buildTools(toolsVersion),
-                       path.join(self.warehouse, 'tools', toolsVersion));
-        createdTools[toolsVersion] = true;
-      }
-
-      // Latest?
-      if (config.latest) {
-        if (seenLatest)
-          throw new Error("multiple releases marked as latest?");
-        fs.symlinkSync(
-          releaseName + ".release.json",
-          path.join(self.warehouse, 'releases', 'latest')
-        );
-        fs.symlinkSync(toolsVersion,
-                       path.join(self.warehouse, 'tools', 'latest'));
-        seenLatest = true;
-      }
-    });
-
-    if (! seenLatest)
-      throw new Error("no release marked as latest?");
-
-    // And a cherry on top
-    fs.symlinkSync("tools/latest/bin/meteor",
-                   path.join(self.warehouse, 'meteor'));
+  if (_.has(options, 'warehouse')) {
+    if (!files.inCheckout())
+      throw Error("make only use a fake warehouse in a checkout");
+    self.warehouse = path.join(self.root, 'tropohouse');
+    self._makeWarehouse(options.warehouse);
   }
 
   // Figure out the 'meteor' to run
@@ -423,8 +344,13 @@ _.extend(Sandbox.prototype, {
     var env = _.clone(self.env);
     env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
 
-    if (self.warehouse)
+    if (self.warehouse) {
+      // Tell it where the warehouse lives.
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      // Don't ever try to refresh the stub catalog we made.
+      env.METEOR_OFFLINE_CATALOG = "t";
+    }
+
     // By default (ie, with no mock warehouse and no --release arg) we should be
     // testing the actual release this is built in, so we pretend that it is the
     // latest release.
@@ -535,6 +461,89 @@ _.extend(Sandbox.prototype, {
     var self = this;
     return fs.writeFileSync(path.join(self.root, '.meteorsession'),
                             contents, 'utf8');
+  },
+
+  // Writes a stub warehouse (really a tropohouse) to the directory
+  // self.warehouse. This warehouse only contains a meteor-tool package and some
+  // releases containing that tool only (and no packages).
+  _makeWarehouse: function (releases) {
+    var self = this;
+    files.mkdir_p(path.join(self.warehouse, 'packages'), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
+
+    var stubCatalog = {
+      syncToken: "NOPE",
+      formatVersion: "1.0",
+      collections: {
+        packages: [],
+        versions: [],
+        builds: [],
+        releaseTracks: [],
+        releaseVersions: []
+      }
+    };
+
+    // Build all packages and symlink them into the warehouse. Remember
+    // their versions (which happen to contain build IDs).
+    var toolPackageName = 'meteor-tool';
+    // Rebuild the tool package --- necessary because we don't actually
+    // rebuild the tool in the cached version every time.
+    if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
+      throw Error("didn't rebuild meteor-tool?");
+    }
+    var loader = new (require('./package-loader.js').PackageLoader)({
+      versions: null});
+    var toolPackage = loader.getPackage(toolPackageName);
+    toolPackage.saveToPath(path.join(self.warehouse, 'packages',
+                                     toolPackageName, toolPackage.version));
+    stubCatalog.collections.packages.push({
+      name: toolPackageName,
+      _id: utils.randomToken()
+    });
+    var toolVersionId = utils.randomToken();
+    stubCatalog.collections.versions.push({
+      packageName: toolPackageName,
+      version: toolPackage.version,
+      earliestCompatibleVersion: toolPackage.version,
+      containsPlugins: false,
+      description: toolPackage.metadata.summary,
+      dependencies: {},
+      compilerVersion: require('./compiler.js').BUILT_BY,
+      _id: toolVersionId
+    });
+    stubCatalog.collections.builds.push({
+      architecture: toolPackage.architecturesString(),
+      versionId: toolVersionId,
+      _id: utils.randomToken()
+    });
+    stubCatalog.collections.releaseTracks.push({
+      name: catalog.complete.DEFAULT_TRACK,
+      _id: utils.randomToken()
+    });
+
+    // Now create each requested release.
+    _.each(releases, function (config, releaseName) {
+      // Release info
+      stubCatalog.collections.releaseVersions.push({
+        track: catalog.complete.DEFAULT_TRACK,
+        version: releaseName,
+        orderKey: releaseName,
+        description: "test release " + releaseName,
+        recommended: !!config.recommended,
+        // XXX support multiple tools packages for springboard tests
+        tool: toolPackageName + "@" + toolPackage.version,
+        packages: {}
+      });
+    });
+
+    fs.writeFileSync(
+      path.join(self.warehouse, 'package-metadata', 'v1', 'data.json'),
+      JSON.stringify(stubCatalog, null, 2));
+
+    // And a cherry on top
+    fs.symlinkSync(path.join('packages', toolPackageName, toolPackage.version,
+                             'meteor-tool-' + archinfo.host(), 'meteor'),
+                   path.join(self.warehouse, 'meteor'));
   }
 });
 
