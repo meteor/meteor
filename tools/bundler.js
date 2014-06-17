@@ -1152,9 +1152,21 @@ _.extend(JsImage.prototype, {
         item.targetPath,
         { data: new Buffer(item.source, 'utf8') });
       var loadItem = {
-        path: loadPath,
-        node_modules: item.nodeModulesDirectory ?
-          item.nodeModulesDirectory.preferredBundlePath : undefined
+        path: loadPath
+      };
+
+      if (item.nodeModulesDirectory) {
+        // We need to make sure to use the directory name we got from
+        // builder.generateFilename here.
+        // XXX these two parallel data structures of self.jsToLoad and
+        //     self.nodeModulesDirectories are confusing
+        var generatedNMD = _.findWhere(
+          nodeModulesDirectories,
+          {sourcePath: item.nodeModulesDirectory.sourcePath}
+        );
+        if (generatedNMD) {
+          loadItem.node_modules = generatedNMD.preferredBundlePath;
+        }
       };
 
       if (item.sourceMap) {
