@@ -5,13 +5,30 @@
 
 #### Meteor Accounts
 
-* Migrate from SRP to bcrypt in `accounts-password`. Users will be
-  transparently upgraded when they log in.
+* Switch `accounts-password` to use bcrypt to store passwords on the
+  server. (Previous versions of Meteor used a protocol called SRP.)
+  Users will be transparently transitioned when they log in. This
+  transition is one-way, so you cannot downgrade a production app once
+  you upgrade to 0.8.2. If you are maintaining an authenticating DDP
+  client:
+     - Clients that use the plaintext password login handler (i.e. call
+       the `login` method with argument `{ password: <plaintext
+       password> }`) will continue to work, but users will not be
+       transitioned from SRP to bcrypt when logging in with this login
+       handler.
+     - Clients that use SRP will no longer work. These clients should
+       instead directly call the `login` method, as in
+       `Meteor.loginWithPassword`. The argument to the `login` method
+       can be either:
+         - `{ password: <plaintext password> }`, or
+         - `{ password: { digest: <password hash>, algorithm: "sha-256" } }`,
+           where the password hash is the hex-encoded SHA256 hash of the
+           plaintext password.
 
 * Show the display name of the currently logged-in user after following
   a verification link or password reset link in `accounts-ui`.
 
-* Add `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
+* Add a `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
 
 * Ensure that the user object has updated token information before
   it is passed to email template functions. #2210
