@@ -153,7 +153,7 @@ Fiber(function () {
 
     // It is safer to use the absolute path as different tooling, such as
     // node-inspector, can get confused on relative urls.
-    var absoluteFilePath = __dirname + "/" + fileInfo.path;
+    var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
     var func = require('vm').runInThisContext(wrapped, absoluteFilePath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
