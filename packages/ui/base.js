@@ -206,6 +206,16 @@ findComponentWithProp = function (id, comp) {
   return null;
 };
 
+var findHelperHostComponent = function (comp) {
+  while (comp) {
+    if (comp.__helperHost) {
+      return comp;
+    }
+    comp = comp.parent;
+  }
+  return null;
+};
+
 findComponentWithHelper = function (id, comp) {
   while (comp) {
     if (comp.__helperHost) {
@@ -354,17 +364,25 @@ UI._javascriptUrlsAllowed = function () {
 };
 
 UI._templateInstance = function () {
-  var component = currentComponent.get();
-  if (! component) {
+  var currentComp = currentComponent.get();
+  if (! currentComp) {
     throw new Error("You can only call UI._templateInstance() from within" +
                     " a helper function.");
+  }
+
+  // Find the enclosing component that is a template. (`currentComp`
+  // could be, for example, an #if or #with, and we want the component
+  // that is the surrounding template.)
+  var template = findHelperHostComponent(currentComp);
+  if (! template) {
+    throw new Error("Current component is not inside a template?");
   }
 
   // Lazily update the template instance for this helper, and do it only
   // once.
   if (! currentTemplateInstance) {
-    updateTemplateInstance(component);
-    currentTemplateInstance = component.templateInstance;
+    updateTemplateInstance(template);
+    currentTemplateInstance = template.templateInstance;
   }
   return currentTemplateInstance;
 };

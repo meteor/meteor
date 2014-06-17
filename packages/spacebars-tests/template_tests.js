@@ -2115,6 +2115,17 @@ Tinytest.add(
   }
 );
 
+// XXX This is for traversing empty text nodes and should be removed
+// on blaze-refactor.
+var getSiblingText = function (node, siblingNum) {
+  var sibling = node;
+  for (var i = 0; i < siblingNum; i++) {
+    if (sibling)
+      sibling = sibling.nextSibling;
+  }
+  return $(sibling).text();
+};
+
 Tinytest.add(
   "spacebars - access template instance from helper, " +
     "template instance is kept up-to-date",
@@ -2132,11 +2143,13 @@ Tinytest.add(
     rv.set("first");
     Deps.flush();
     // `nextSibling` because the first node is an empty text node.
-    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "first");
+    test.equal(getSiblingText(instanceFromHelper.firstNode, 4),
+               "first");
 
     rv.set("second");
     Deps.flush();
-    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "second");
+    test.equal(getSiblingText(instanceFromHelper.firstNode, 4),
+               "second");
 
     // UI._templateInstance() should throw when called from not within a
     // helper.
