@@ -102,7 +102,7 @@ _.extend(PackageCache.prototype, {
         var packageSource = new PackageSource;
         // For now, if it turns into a unipackage, it should have a version.
         packageSource.initFromPackageDir(name, loadPath, {
-          requireVersions: true });
+          requireVersion: true });
         unipackage = new Unipackage.Unipackage;
         unipackage.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);

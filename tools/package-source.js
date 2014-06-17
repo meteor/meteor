@@ -387,6 +387,7 @@ _.extend(PackageSource.prototype, {
   initFromPackageDir: function (name, dir, options) {
     var self = this;
     var isPortable = true;
+    options = options || {};
 
     self.name = name;
     self.sourceRoot = dir;
