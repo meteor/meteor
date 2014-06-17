@@ -1,7 +1,10 @@
+var _ = require('underscore');
+
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
+var project = require('../project.js');
 
 var testStatsServer = "https://test-package-stats.meteor.com";
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
@@ -15,6 +18,8 @@ selftest.define("report-stats", ["slow"], function () {
   var run = s.run("create", "foo");
   run.expectExit(0);
   s.cd("foo");
+
+  project.project.setRootDir(s.cwd);
 
   // verify that identifier file exists for new apps
   var identifier = s.read(".meteor/identifier");
@@ -31,19 +36,21 @@ selftest.define("report-stats", ["slow"], function () {
   // we just ran 'meteor bundle' so let's test that we actually sent
   // package usage stats
   var usage = fetchPackageUsageForApp(identifier);
-  selftest.expectEqual(usage.packages, stats.packageList(s.cwd));
+  selftest.expectEqual(_.sortBy(usage.packages, "name"),
+                       _.sortBy(stats.packageList(), "name"));
 
   // verify that the stats server recorded that with no userId
-  var appPackages = stats.getPackagesForAppIdInTest(s.cwd);
+  var appPackages = stats.getPackagesForAppIdInTest();
   selftest.expectEqual(appPackages.appId, identifier);
   selftest.expectEqual(appPackages.userId, null);
-  selftest.expectEqual(appPackages.packages, stats.packageList(s.cwd));
+  selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
+                       _.sortBy(stats.packageList(), "name"));
 
   // now bundle again while logged in. verify that the stats server
   // recorded that with the right userId
   testUtils.login(s, "test", "testtest");
   bundleWithFreshIdentifier(s);
-  appPackages = stats.getPackagesForAppIdInTest(s.cwd);
+  appPackages = stats.getPackagesForAppIdInTest();
   selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
 
   // Add the opt-out package, verify that no stats are recorded for the
@@ -52,7 +59,7 @@ selftest.define("report-stats", ["slow"], function () {
   run.waitSecs(15);
   run.expectExit(0);
   bundleWithFreshIdentifier(s);
-  appPackages = stats.getPackagesForAppIdInTest(s.cwd);
+  appPackages = stats.getPackagesForAppIdInTest();
   selftest.expectEqual(appPackages, undefined);
 
   // Remove the opt-out package, verify that stats get sent again.
@@ -60,9 +67,10 @@ selftest.define("report-stats", ["slow"], function () {
   run.waitSecs(15);
   run.expectExit(0);
   bundle(s);
-  appPackages = stats.getPackagesForAppIdInTest(s.cwd);
+  appPackages = stats.getPackagesForAppIdInTest();
   selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
-  selftest.expectEqual(appPackages.packages, stats.packageList(s.cwd));
+  selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
+                       _.sortBy(stats.packageList(), "name"));
 });
 
 // Bundle the app in the current working directory after deleting its
@@ -79,6 +87,11 @@ var bundle = function (s) {
   var run = s.run("bundle", "foo.tar.gz");
   run.waitSecs(30);
   run.expectExit(0);
+  // pick up new app identifier and/or packages added/removed
+  // XXX not sure why this is necessary (i.e. why project can't detect
+  // that .meteor/identifier or .meteor/packages has changed and figure
+  // out that it needs to reload itself)
+  project.project.reload();
 };
 
 // Contact the package stats server and look for a given app
