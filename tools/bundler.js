@@ -1149,14 +1149,15 @@ _.extend(JsImage.prototype, {
       if (item.sourceMap) {
         // Reference the source map in the source. Looked up later by node-inspector.
         var sourceMapBaseName = item.targetPath + ".map";
-        var sourceMapFileName = path.basename(sourceMapBaseName);
-        item.source = item.source.concat("\n//# sourceMappingURL=" + sourceMapFileName + "\n");
 
         // Write the source map.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
           sourceMapBaseName,
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
+
+        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        item.source = item.source.concat("\n//# sourceMappingURL=" + sourceMapFileName + "\n");
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
