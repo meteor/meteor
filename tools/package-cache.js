@@ -100,7 +100,9 @@ _.extend(PackageCache.prototype, {
         isUpToDate = true;
       } else {
         var packageSource = new PackageSource;
-        packageSource.initFromPackageDir(name, loadPath);
+        // For now, if it turns into a unipackage, it should have a version.
+        packageSource.initFromPackageDir(name, loadPath, {
+          requireVersions: true });
         unipackage = new Unipackage.Unipackage;
         unipackage.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
@@ -129,9 +131,11 @@ _.extend(PackageCache.prototype, {
       return unipackage;
     };
 
-    // It's a source tree. Load it.
-    var packageSource = new PackageSource;
-    packageSource.initFromPackageDir(name, loadPath);
+    // It's a source tree. Load it. It is going to turn into a unipackage, so it
+    // requires a version.
+    packageSource = new PackageSource;
+    packageSource.initFromPackageDir(name, loadPath,  {
+        requireVersion: true });
 
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);

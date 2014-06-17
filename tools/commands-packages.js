@@ -207,7 +207,10 @@ main.registerCommand({
       }
 
       packageSource = new PackageSource;
-      packageSource.initFromPackageDir(packageName, options.packageDir);
+
+      // Anything published to the server must have a version.
+      packageSource.initFromPackageDir(packageName, options.packageDir, {
+        requireVersion: true });
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
 
@@ -293,7 +296,11 @@ main.registerCommand({
   // immutable. It should be built exactly as is. If we need to modify anything,
   // such as the version lock file, something has gone terribly wrong and we
   // should throw.
-  packageSource.initFromPackageDir(options.name, packageDir, true /* immutable */);
+  packageSource.initFromPackageDir(options.name, packageDir,  {
+        requireVersion: true,
+        immutable: true
+  });
+
   var unipkg = compiler.compile(packageSource, {
     officialBuild: true
   }).unipackage;
@@ -529,7 +536,9 @@ main.registerCommand({
 
                 // Initialize the package source. (If we can't do this, then we should
                 // not proceed)
-                packageSource.initFromPackageDir(item, packageDir);
+                packageSource.initFromPackageDir(item, packageDir,  {
+                  requireVersion: true });
+
                 if (buildmessage.jobHasMessages()) {
                   process.stderr.write("Error reading package:" + item + "\n");
                   return;

@@ -284,6 +284,12 @@ var PackageSource = function () {
   // specify the correct restrictions at 0.90.
   // XXX: 0.90 package versions.
   self.isCore = false;
+
+  // Alternatively, we can also specify noVersionFile directly. Useful for not
+  // recording version files for js images of plugins, since those go into the
+  // overall package versions file (if one exists). In the future, we can make
+  // this option transparent to the user in package.js.
+  self.noVersionFile = false;
 };
 
 
@@ -360,6 +366,8 @@ _.extend(PackageSource.prototype, {
 
     self.dependencyVersions = options.dependencyVersions ||
         {dependencies: {}, pluginDependencies: {}};
+
+    self.noVersionFile = options.noVersionFile;
   },
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
@@ -369,7 +377,14 @@ _.extend(PackageSource.prototype, {
   //
   // name: name of the package.
   // dir: location of directory on disk.
-  initFromPackageDir: function (name, dir, immutable) {
+  // options:
+  //   -requireVersion: This is a package that is going in a catalog or being
+  //    published to the server. It must have a version. (as opposed to, for
+  //    example, a program)
+  //   -immutable: This package source is immutable. Do not write anything,
+  //    including version files. Instead, its only purpose is to be used as
+  //    guideline for a repeatable build.
+  initFromPackageDir: function (name, dir, options) {
     var self = this;
     var isPortable = true;
 
@@ -616,7 +631,7 @@ _.extend(PackageSource.prototype, {
       npmDependencies = null;
     }
 
-    if (! self.version) {
+    if (! self.version && options.requireVersion) {
       if (! buildmessage.jobHasMessages()) {
         // Only write the error if there have been no errors so
         // far. (Otherwise if there is a parse error we'll always get
@@ -988,7 +1003,7 @@ _.extend(PackageSource.prototype, {
     // If immutable is set, then we should make a note to never mutate this
     // packageSource. We should never change its dependency versions, for
     // example.
-    if (immutable) {
+    if (options.immutable) {
       self.immutable = true;
     };
 
@@ -1237,6 +1252,13 @@ _.extend(PackageSource.prototype, {
     //  there is any demand for it)
     // See #PackageVersionFilesHack
     if (self.isCore) {
+      return;
+    }
+
+    // If we have specified to not record a version file for this package,
+    // don't. Currently used to avoid recording version files for separately
+    // compiled plugins.
+    if (self.noVersionFile) {
       return;
     }
 

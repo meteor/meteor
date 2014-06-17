@@ -408,7 +408,10 @@ _.extend(CompleteCatalog.prototype, {
         title: "reading package `" + name + "`",
         rootPath: packageDir
       }, function () {
-        packageSource.initFromPackageDir(name, packageDir);
+        // All packages in the catalog must have versions.
+        packageSource.initFromPackageDir(name, packageDir, {
+          requireVersion: true
+        });
         if (buildmessage.jobHasMessages())
           broken = true;
       });
