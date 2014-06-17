@@ -87,7 +87,7 @@ _.extend(Module.prototype, {
   getPrelinkedFiles: function () {
     var self = this;
 
-    // If there are no files *and* we are a no-exports-at-all build, then
+    // If there are no files *and* we are a no-exports-at-all unibuild, then
     // generate no prelink output.
     //
     // If there are no files, but we are a non-test package (and thus
@@ -478,7 +478,7 @@ var bannerPadding = function (bannerWidth) {
 // the servePath to use for it.
 //
 // jsAnalyze: if possible, the JSAnalyze object from the js-analyze
-// package. (This is not possible if we are currently linking the main build of
+// package. (This is not possible if we are currently linking the main unibuild of
 // the js-analyze package!)
 //
 // Output is an object with keys:
