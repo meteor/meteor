@@ -109,12 +109,12 @@ _.extend(exports.PackageLoader.prototype, {
     return catalogs.complete.getLoadPathForPackage(name, version);
   },
 
-  // Given a package name like "ddp" and an architecture, get the build of that
+  // Given a package name like "ddp" and an architecture, get the unibuild of that
   // package at the right architecture.
-  getBuild: function (packageName, arch) {
+  getUnibuild: function (packageName, arch) {
     var self = this;
 
     var pkg = self.getPackage(packageName, { throwOnError: true });
-    return pkg.getBuildAtArch(arch);
+    return pkg.getUnibuildAtArch(arch);
   }
 });
