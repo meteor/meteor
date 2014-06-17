@@ -442,7 +442,12 @@ _.extend(Unipackage.prototype, {
     var mainJson =
       JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
 
-    if (mainJson.format !== "unipackage-pre1")
+    // We don't support pre-0.9.0 unipackages, but we do know enough to delete
+    // them if we find them in .build.* somehow (rather than crash).
+    if (mainJson.format === "unipackage-pre1")
+      throw new exports.OldUnipackageFormatError;
+
+    if (mainJson.format !== "unipackage-pre2")
       throw new Error("Unsupported unipackage format: " +
                       JSON.stringify(mainJson.format));
 
@@ -645,7 +650,7 @@ _.extend(Unipackage.prototype, {
     try {
 
       var mainJson = {
-        format: "unipackage-pre1",
+        format: "unipackage-pre2",
         name: self.name,
         summary: self.metadata.summary,
         internal: self.metadata.internal,
@@ -1060,3 +1065,9 @@ _.extend(Unipackage.prototype, {
 });
 
 exports.Unipackage = Unipackage;
+
+exports.OldUnipackageFormatError = function () {
+  // This should always be caught anywhere where it can appear (ie, anywhere
+  // that isn't definitely loading something from the tropohouse).
+  this.toString = function () { return "old unipackage format!" };
+};
