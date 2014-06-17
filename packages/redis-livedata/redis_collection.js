@@ -79,32 +79,21 @@ Meteor.RedisCollection = function (name, options) {
     var ok = self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
-      //
-      // XXX This interface is pretty janky. reset probably ought to go back to
-      // being its own function, and callers shouldn't have to calculate
-      // batchSize. The optimization of not calling pause/remove should be
-      // delayed until later: the first call to update() should buffer its
-      // message, and then we can either directly apply it at endUpdate time if
-      // it was the only update, or do pauseObservers/apply/apply at the next
-      // update() if there's another one.
       beginUpdate: function (batchSize, reset) {
-        // pause observers so users don't see flicker when updating several
-        // objects at once (including the post-reconnect reset-and-reapply
-        // stage), and so that a re-sorting of a query can take advantage of the
-        // full _diffQuery moved calculation instead of applying change one at a
-        // time.
-        if (batchSize > 1 || reset)
-          self._collection.pauseObservers();
+        if (batchSize > 1 || reset) {
+          // XXX enable this once Miniredis supports pausable observes
+          //self._collection.pauseObservers();
+        }
 
         if (reset)
-          self._collection.remove({});
+          self._collection._drop();
       },
 
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = LocalCollection._idParse(msg.id);
-        var doc = self._collection.findOne(mongoId);
+        var key = msg.id;
+        var doc = self._collection._get(key);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -113,40 +102,25 @@ Meteor.RedisCollection = function (name, options) {
           var replace = msg.replace;
           if (!replace) {
             if (doc)
-              self._collection.remove(mongoId);
-          } else if (!doc) {
-            self._collection.insert(replace);
+              self._collection._remove(key);
           } else {
-            // XXX check that replace has no $ ops
-            self._collection.update(mongoId, replace);
+            self._collection._set(key, replace.value);
           }
           return;
         } else if (msg.msg === 'added') {
           if (doc) {
             throw new Error("Expected not to find a document already present for an add");
           }
-          self._collection.insert(_.extend({_id: mongoId}, msg.fields));
+          self._collection._set(key, msg.fields.value);
         } else if (msg.msg === 'removed') {
           if (!doc)
             throw new Error("Expected to find a document already present for removed");
-          self._collection.remove(mongoId);
+          self._collection._remove(key);
         } else if (msg.msg === 'changed') {
           if (!doc)
             throw new Error("Expected to find a document to change");
           if (!_.isEmpty(msg.fields)) {
-            var modifier = {};
-            _.each(msg.fields, function (value, key) {
-              if (value === undefined) {
-                if (!modifier.$unset)
-                  modifier.$unset = {};
-                modifier.$unset[key] = 1;
-              } else {
-                if (!modifier.$set)
-                  modifier.$set = {};
-                modifier.$set[key] = value;
-              }
-            });
-            self._collection.update(mongoId, modifier);
+            self._collection._set(key, msg.fields.value);
           }
         } else {
           throw new Error("I don't know how to deal with this message");
@@ -156,7 +130,8 @@ Meteor.RedisCollection = function (name, options) {
 
       // Called at the end of a batch of updates.
       endUpdate: function () {
-        self._collection.resumeObservers();
+        // XXX enable this once Miniredis supports pausable observes
+        //self._collection.resumeObservers();
       },
 
       // Called around method stub invocations to capture the original versions

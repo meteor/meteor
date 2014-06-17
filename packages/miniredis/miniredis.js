@@ -245,6 +245,13 @@ _.extend(Miniredis.RedisStore.prototype, {
     });
   },
 
+  _drop: function () {
+    var self = this;
+    self._kv.forEach(function (value, key) {
+      self._remove(key);
+    });
+  },
+
   // -----
   // main interface built on top of Redis
   // -----
