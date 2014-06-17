@@ -57,7 +57,7 @@ _.each(serverJson.load, function (fileInfo) {
       parsedSourceMap.sourceRoot = path.join(
         fileInfo.sourceMapRoot, parsedSourceMap.sourceRoot || '');
     }
-    parsedSourceMaps[fileInfo.path] = parsedSourceMap;
+    parsedSourceMaps[path.resolve(__dirname, fileInfo.path)] = parsedSourceMap;
   }
 });
 
@@ -154,7 +154,9 @@ Fiber(function () {
     // It is safer to use the absolute path as different tooling, such as
     // node-inspector, can get confused on relative urls.
     var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
-    var func = require('vm').runInThisContext(wrapped, absoluteFilePath, true);
+    var scriptPath =
+      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+    var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
 
