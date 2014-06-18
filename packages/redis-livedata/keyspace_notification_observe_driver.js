@@ -258,8 +258,8 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   _changePublished: function (id, oldDoc, newDoc) {
     var self = this;
     self._published.set(id, newDoc); //self._sharedProjectionFn(newDoc));
-    var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-    changed = self._projectionFn(changed);
+    var changed =
+      EJSON.equals(oldDoc.value, newDoc.value) ? {} : { value: newDoc.value };
     if (!_.isEmpty(changed))
       self._multiplexer.changed(id, changed);
   },
@@ -888,6 +888,8 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
 // conservative and allowing only simple queries with simple options.
 // (This is a "static method".)
 KeyspaceNotificationObserveDriver.cursorSupported = function (cursorDescription, matcher) {
+  // XXX everything is supported?
+  return true;
   // First, check the options.
   var options = cursorDescription.options;
 
