@@ -216,7 +216,7 @@ _.extend(Meteor.RedisCollection.prototype, {
 });
 
 Meteor.RedisCollection._publishCursor = function (cursor, sub, collection) {
-  var observeHandle = cursor.observe({
+  var observeHandle = cursor.observeChanges({
     added: function (id, fields) {
       sub.added(collection, id, fields);
     },
@@ -507,7 +507,7 @@ _.each(['get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall'],
 //    var ret;
 //
 //    var future;
-//    
+//
 //    if (args.length && args[args.length - 1] instanceof Function) {
 //      callback = args.pop();
 //    } else {
@@ -622,45 +622,6 @@ _.each(["set"], function (name) {
     return ret;
   };
 });
-
-Keyspace = function (collection, pattern) {
-  var self = this;
-  self._collection = collection;
-  self._pattern = pattern;
-};
-
-//When you call Meteor.publish() with a function that returns a Cursor, we need
-//to transmute it into the equivalent subscription.  This is the function that
-//does that.
-
-Keyspace.prototype._publishCursor = function (sub) {
-  var self = this;
-  var collection = self._collection;
-
-  var observeHandle = collection.observe({
-//    added: function (id, fields) {
-//      sub.added(collection, id, fields);
-//    },
-    updated: function (key, v) {
-      Meteor._debug("updated: " + JSON.stringify(arguments));
-      sub.added(collection, key, v);
-    },
-//    changed: function (id, fields) {
-//      sub.changed(collection, id, fields);
-//    },
-    removed: function (key, v) {
-      sub.removed(collection, key, v);
-    }
-  });
-
-  // We don't call sub.ready() here: it gets called in livedata_server, after
-  // possibly calling _publishCursor on multiple returned cursors.
-
-  // register stop callback (expects lambda w/ no args).
-  sub.onStop(function () {observeHandle.stop();});
-};
-
-
 
 Meteor.RedisCollection.prototype.upsert = function (selector, modifier,
                                                options, callback) {

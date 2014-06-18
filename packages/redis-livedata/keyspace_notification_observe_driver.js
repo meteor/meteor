@@ -456,7 +456,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
             collectionName, id, cacheKey,
             finishIfNeedToPollQuery(function (err, doc) {
               Meteor._debug("Got doc: " + JSON.stringify(doc));
-              
+
               try {
                 if (err) {
                   Meteor._debug("Got exception while fetching documents: " +
@@ -582,7 +582,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
           self._fetchModifiedDocuments();
       }
     } else {
-      throw Error("XXX SURPRISING OPERATION: " + op);
+      throw Error("XXX SURPRISING OPERATION: " + JSON.stringify(op));
     }
   },
   _runInitialQuery: function () {
@@ -622,7 +622,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   // changes. Will put off implementing this until driver 1.4 is out.
   _pollQuery: function () {
     var self = this;
-    
+
     Meteor._debug("XXXXXX _pollQuery");
 
     if (self._stopped)
@@ -731,7 +731,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
       Meteor._debug("Phase unexpectedly " + self._phase);
       throw Error("Phase unexpectedly " + self._phase);
     }
-    
+
     if (self._requeryWhenDoneThisQuery) {
       Meteor._debug("_requeryWhenDoneThisQuery");
       self._requeryWhenDoneThisQuery = false;
