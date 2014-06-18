@@ -116,7 +116,7 @@ var SourceArch = function (pkg, options) {
   self.archName = options.name;
 
   // The architecture (fully or partially qualified) that can use this
-  // build.
+  // unibuild.
   self.arch = options.arch;
 
   // Packages used. The ordering is significant only for determining
@@ -138,12 +138,12 @@ var SourceArch = function (pkg, options) {
   // such a dependency would have no effect.
   //
   // In most places, instead of using 'uses' directly, you want to use
-  // something like compiler.eachUsedBuild so you also take into
+  // something like compiler.eachUsedUnibuild so you also take into
   // account implied packages.
   self.uses = options.uses || [];
 
-  // Packages which are "implied" by using this package. If a build X
-  // uses this build Y, and Y implies Z, then X will effectively use Z
+  // Packages which are "implied" by using this package. If a unibuild X
+  // uses this unibuild Y, and Y implies Z, then X will effectively use Z
   // as well (and get its imports and plugins).  An array of objects
   // of the same type as the elements of self.uses (although for now
   // unordered and weak are not allowed).
@@ -362,8 +362,8 @@ _.extend(PackageSource.prototype, {
 
     self.architectures.push(sourceArch);
 
-    if (! self._checkCrossBuildVersionConstraints())
-      throw new Error("only one build, so how can consistency check fail?");
+    if (! self._checkCrossUnibuildVersionConstraints())
+      throw new Error("only one unibuild, so how can consistency check fail?");
 
     self.dependencyVersions = options.dependencyVersions ||
         {dependencies: {}, pluginDependencies: {}};
@@ -561,8 +561,8 @@ _.extend(PackageSource.prototype, {
     // == 'Npm' object visible in package.js ==
     var Npm = {
       depends: function (_npmDependencies) {
-        // XXX make npmDependencies be per build, so that production
-        // doesn't have to ship all of the npm modules used by test
+        // XXX make npmDependencies be separate between use and test, so that
+        // production doesn't have to ship all of the npm modules used by test
         // code
         if (npmDependencies) {
           buildmessage.error("Npm.depends may only be called once per package",
@@ -667,8 +667,8 @@ _.extend(PackageSource.prototype, {
     // symbols exported
     var exports = {client: [], server: []};
 
-    // packages used and implied (keys are 'package', 'build', 'unordered', and
-    // 'weak').  an "implied" package is a package that will be used by a build
+    // packages used and implied (keys are 'package', 'unordered', and
+    // 'weak').  an "implied" package is a package that will be used by a unibuild
     // which uses us.
     var uses =  {client: [], server: []};
     var implies = {client: [], server: []};
@@ -906,8 +906,8 @@ _.extend(PackageSource.prototype, {
 
 
     // Make sure that if a dependency was specified in multiple
-    // builds, the constraint is exactly the same.
-    if (! self._checkCrossBuildVersionConstraints()) {
+    // unibuilds, the constraint is exactly the same.
+    if (! self._checkCrossUnibuildVersionConstraints()) {
       // A build error was written. Recover by ignoring the
       // fact that we have differing constraints.
     }
@@ -956,15 +956,15 @@ _.extend(PackageSource.prototype, {
         // in the "meteor" package).
         var alreadyDependsOnMeteor =
               !! _.find(uses[where], function (u) {
-                return u.package === "meteor" && !u.build;
+                return u.package === "meteor";
               });
         if (! alreadyDependsOnMeteor)
           uses[where].unshift({ package: "meteor" });
       }
 
-      // Each build has its own separate WatchSet. This is so that, eg, a test
-      // build's dependencies doesn't end up getting merged into the
-      // pluginWatchSet of a package that uses it: only the use build's
+      // Each unibuild has its own separate WatchSet. This is so that, eg, a test
+      // unibuild's dependencies doesn't end up getting merged into the
+      // pluginWatchSet of a package that uses it: only the use unibuild's
       // dependencies need to go there!
       var watchSet = new watch.WatchSet();
       watchSet.addFile(packageJsPath, packageJsHash);
@@ -1026,7 +1026,7 @@ _.extend(PackageSource.prototype, {
       var names = project.getConstraints();
       var arch = archName === "server" ? "os" : "browser";
 
-      // Create build
+      // Create unibuild
       var sourceArch = new SourceArch(self, {
         name: archName,
         arch: arch,
@@ -1072,7 +1072,7 @@ _.extend(PackageSource.prototype, {
           exclude: sourceExclude
         });
 
-        var otherBuildRegExp =
+        var otherUnibuildRegExp =
               (archName === "server" ? /^client\/$/ : /^server\/$/);
 
         // The paths that we've called checkForInfiniteRecursion on.
@@ -1103,7 +1103,7 @@ _.extend(PackageSource.prototype, {
           include: [/\/$/],
           exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
                     /^public\/$/, /^private\/$/,
-                    otherBuildRegExp].concat(sourceExclude)
+                    otherUnibuildRegExp].concat(sourceExclude)
         });
         checkForInfiniteRecursion('');
 
@@ -1126,7 +1126,7 @@ _.extend(PackageSource.prototype, {
           // directory names that are only special at the top level.
           Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherBuildRegExp].concat(sourceExclude)
+            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(sourceExclude)
           }));
         }
 
@@ -1152,7 +1152,7 @@ _.extend(PackageSource.prototype, {
           return sourceObj;
         });
 
-        // Now look for assets for this build.
+        // Now look for assets for this unibuild.
         var assetDir = archName === "client" ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
@@ -1198,10 +1198,10 @@ _.extend(PackageSource.prototype, {
       };
     });
 
-    if (! self._checkCrossBuildVersionConstraints()) {
-      // should never happen since we created the builds from
+    if (! self._checkCrossUnibuildVersionConstraints()) {
+      // should never happen since we created the unibuilds from
       // .meteor/packages, which doesn't have a way to express
-      // different constraints for different builds
+      // different constraints for different unibuilds
       throw new Error("conflicting constraints in a package?");
     }
   },
@@ -1212,7 +1212,7 @@ _.extend(PackageSource.prototype, {
     return ! _.isEmpty(self.pluginInfo);
   },
 
-  // Return dependency metadata for all builds, in the format needed
+  // Return dependency metadata for all unibuilds, in the format needed
   // by the package catalog.
   //
   // Options:
@@ -1227,7 +1227,7 @@ _.extend(PackageSource.prototype, {
       if (options.logError)
         return null;
       else
-        throw new Error("inconsistent dependency constraint across builds?");
+        throw new Error("inconsistent dependency constraint across unibuilds?");
     }
     return ret;
   },
@@ -1328,18 +1328,18 @@ _.extend(PackageSource.prototype, {
     return self.name + "-versions.json";
   },
 
-  // If dependencies aren't consistent across builds, return false and
+  // If dependencies aren't consistent across unibuilds, return false and
   // also log a buildmessage error if inside a buildmessage job. Else
   // return true.
   // XXX: Check that this is used when refactoring is done.
-  _checkCrossBuildVersionConstraints: function () {
+  _checkCrossUnibuildVersionConstraints: function () {
     var self = this;
     return !! self._computeDependencyMetadata({ logError: true });
   },
 
   // Compute the return value for getDependencyMetadata, or return
   // null if there is a dependency that doesn't have the same
-  // constraint across all builds (and, if logError is true, log a
+  // constraint across all unibuilds (and, if logError is true, log a
   // buildmessage error).
   //
   // For options, see getDependencyMetadata.
@@ -1381,7 +1381,7 @@ _.extend(PackageSource.prototype, {
         }
 
         var reference = {
-          arch: archinfo.withoutSpecificOs(arch.arch),
+          arch: archinfo.withoutSpecificOs(arch.arch)
         };
         if (use.weak) {
           reference.weak = true;

@@ -512,7 +512,7 @@ _.extend(Sandbox.prototype, {
       _id: toolVersionId
     });
     stubCatalog.collections.builds.push({
-      architecture: toolPackage.architecturesString(),
+      architecture: toolPackage.buildArchitectures(),
       versionId: toolVersionId,
       _id: utils.randomToken()
     });
@@ -546,73 +546,6 @@ _.extend(Sandbox.prototype, {
                    path.join(self.warehouse, 'meteor'));
   }
 });
-
-
-// Build a tools release into a temporary directory (based on the
-// current checkout), and gives it a version name of
-// 'version'. Returns the directory.
-//
-// This is memoized for speed (multiple calls with the same version
-// name may return the same directory), and furthermore I'm not going
-// to promise that it doesn't contain symlinks to your dev_bundle and
-// so forth. So don't modify anything in the returned directory.
-//
-// This function is not reentrant.
-var toolBuildRoot = null;
-var toolBuildCache = {};
-var buildTools = function (version) {
-  if (_.has(toolBuildCache, version))
-    return toolBuildCache[version];
-
-  if (! toolBuildRoot)
-    toolBuildRoot = files.mkdtemp();
-  var outputDir = path.join(toolBuildRoot, version);
-
-  var child_process = require("child_process");
-  var fut = new Future;
-
-  if (! files.inCheckout())
-    throw new Error("not in checkout?");
-
-  var execPath = path.join(files.getCurrentToolsDir(),
-                           'scripts', 'admin', 'build-tools-tree.sh');
-  var env = _.clone(process.env);
-  env['TARGET_DIR'] = outputDir;
-
-  // XXX in the future, for speed, might want to duplicate the logic
-  // rather than shelling out to build-tools-tree.sh, so that we can
-  // symlink the dev_bundle (as best we're able) and avoid copying the
-  // node and mongo each time we do this. or, better yet, move all of
-  // the release building scripts into javascript (make them tool
-  // commands?).
-  var proc = child_process.spawn(execPath, [], {
-    env: env,
-    stdio: 'ignore'
-  });
-
-  proc.on('exit', function (code, signal) {
-    if (fut) {
-      fut['return'](code === 0);
-    }
-  });
-
-  proc.on('error', function (err) {
-    if (fut) {
-      fut['return'](false);
-    }
-  });
-
-  var success = fut.wait();
-  fut = null;
-  if (! success)
-    throw new Error("failed to run scripts/admin/build-tools.sh?");
-
-  fs.writeFileSync(path.join(outputDir, ".tools_version.txt"),
-                   version, 'utf8');
-
-  toolBuildCache[version] = outputDir;
-  return outputDir;
-};
 
 
 ///////////////////////////////////////////////////////////////////////////////

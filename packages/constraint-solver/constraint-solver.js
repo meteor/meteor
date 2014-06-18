@@ -17,7 +17,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // The main resolver
   self.resolver = new ConstraintSolver.Resolver();
 
-  // XXX for now we convert builds to unit versions as "deps#os"
+  // XXX for now we convert unibuilds to unit versions as "deps#os"
 
   var allPackageNames = catalog.getAllPackageNames();
   var sortedVersionsForPackage = {};
@@ -35,22 +35,22 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // Create a unit version for every package
   // Set constraints and dependencies between units
   forEveryVersion(function (packageName, version, versionDef) {
-    var builds = {};
+    var unibuilds = {};
     // XXX in theory there might be different archs but in practice they are
     // always "os" and "browser". Fix this once we actually have different
     // archs used.
     _.each(["os", "browser"], function (arch) {
       var unitName = packageName + "#" + arch;
-      builds[unitName] = new ConstraintSolver.UnitVersion(
+      unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
-      unitVersion = builds[unitName];
+      unitVersion = unibuilds[unitName];
       self.resolver.addUnitVersion(unitVersion);
     });
 
     _.each(versionDef.dependencies, function (dep, depName) {
       _.each(dep.references, function (ref) {
         var unitName = packageName + "#" + ref.arch;
-        var unitVersion = builds[unitName];
+        var unitVersion = unibuilds[unitName];
 
         if (! unitVersion)
           throw new Error("A non-standard arch " + ref.arch + " for package " + packageName);
@@ -70,18 +70,18 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       });
     });
 
-    // Every build implies that if it is picked, other builds are constrained to
-    // the same version.
-    _.each(builds, function (build, buildName) {
-      _.each(builds, function (other, otherBuildName) {
-        if (build === other)
+    // Every unibuild implies that if it is picked, other unibuilds are
+    // constrained to the same version.
+    _.each(unibuilds, function (unibuild, unibuildName) {
+      _.each(unibuilds, function (other, otherUnibuildName) {
+        if (unibuild === other)
           return;
 
-        // Constraint is the exact same version of a build
+        // Constraint is the exact same version of a unibuild
         var constraintStr = "=" + version;
         var constraint =
-          self.resolver.getConstraint(otherBuildName, constraintStr);
-        build.addConstraint(constraint);
+          self.resolver.getConstraint(otherUnibuildName, constraintStr);
+        unibuild.addConstraint(constraint);
       });
     });
   });
@@ -121,7 +121,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   // have been undefineds?
   if (options.previousSolution) {
     options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
-      return _.map(self._buildsForPackage(packageName), function (unitName) {
+      return _.map(self._unibuildsForPackage(packageName), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     })), _.identity);
@@ -162,9 +162,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   var resultChoices = {};
   _.each(res, function (uv) {
     // Since we don't yet define the interface for a an app to depend only on
-    // certain builds of the packages (like only browser builds) and we know
-    // that each build weakly depends on other sibling builds of the same
-    // version, we can safely output the whole package for each build in the
+    // certain unibuilds of the packages (like only browser unibuilds) and we know
+    // that each unibuild weakly depends on other sibling unibuilds of the same
+    // version, we can safely output the whole package for each unibuild in the
     // result.
     resultChoices[uv.name.split('#')[0]] = uv.version;
   });
@@ -196,7 +196,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 
 // takes dependencies and constraints and rewrites the names from "foo" to
 // "foo#os" and "foo#browser"
-// XXX right now creates a dependency for every build it can find
+// XXX right now creates a dependency for every unibuild it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
   var self = this;
@@ -204,8 +204,8 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   var constraints = [];
 
   _.each(inputDeps, function (packageName) {
-    _.each(self._buildsForPackage(packageName), function (buildName) {
-      dependencies.push(buildName);
+    _.each(self._unibuildsForPackage(packageName), function (unibuildName) {
+      dependencies.push(unibuildName);
     });
   });
 
@@ -217,29 +217,29 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
       operator = ">=";
     var constraintStr = operator + constraint.version;
 
-    _.each(self._buildsForPackage(constraint.packageName), function (buildName) {
-      constraints.push(self.resolver.getConstraint(buildName, constraintStr));
+    _.each(self._unibuildsForPackage(constraint.packageName), function (unibuildName) {
+      constraints.push(self.resolver.getConstraint(unibuildName, constraintStr));
     });
   });
 
   return { dependencies: dependencies, constraints: constraints };
 };
 
-ConstraintSolver.PackagesResolver.prototype._buildsForPackage =
+ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
   function (packageName) {
   var self = this;
-  var buildPrefix = packageName + "#";
-  var builds = [];
+  var unibuildPrefix = packageName + "#";
+  var unibuilds = [];
   // XXX hardcode os and browser
   _.each(["os", "browser"], function (arch) {
-    if (self.resolver.unitsVersions[buildPrefix + arch])
-      builds.push(buildPrefix + arch);
+    if (self.resolver.unitsVersions[unibuildPrefix + arch])
+      unibuilds.push(unibuildPrefix + arch);
   });
 
-  if (_.isEmpty(builds))
+  if (_.isEmpty(unibuilds))
     throw new Error("Cannot find anything about package -- " + packageName);
 
-  return builds;
+  return unibuilds;
 };
 
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =

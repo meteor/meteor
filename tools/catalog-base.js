@@ -274,7 +274,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       var build = allBuilds[i];
       // XXX why isn't this a list in the DB?  I guess because of the unique
       // index?
-      var buildArches = build.architecture.split('+');
+      var buildArches = build.buildArchitectures.split('+');
       var usingThisBuild = false;
       _.each(neededArches, function (ignored, neededArch) {
         if (archinfo.mostSpecificMatch(neededArch, buildArches)) {
@@ -299,16 +299,17 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   },
 
   // Unlike the previous, this looks for a build which *precisely* matches the
-  // given architectures string (joined with +). Also, it takes a versionRecord
-  // rather than name/version.
-  getBuildWithArchesString: function (versionRecord, archesString) {
+  // given buildArchitectures string. Also, it takes a versionRecord rather than
+  // name/version.
+  getBuildWithPreciseBuildArchitectures: function (versionRecord,
+                                                   buildArchitectures) {
     var self = this;
     self._requireInitialized();
 
     return self._recordOrRefresh(function () {
       return _.findWhere(self.builds,
                          { versionId: versionRecord._id,
-                           architecture: archesString });
+                           buildArchitectures: buildArchitectures });
     });
   },
 

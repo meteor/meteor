@@ -115,8 +115,8 @@
 // /app/*: source code of the (server part of the) app
 // /packages/foo.js: the (linked) source code for package foo
 // /package-tests/foo.js: the (linked) source code for foo's tests
-// /npm/foo/bar: node_modules for build bar of package foo. may be
-// symlinked if developing locally.
+// /npm/foo/node_modules: node_modules for package foo. may be symlinked
+//     if developing locally.
 //
 // /node_modules: node_modules needed for server.js. omitted if
 // deploying (see .bundle_version.txt above), copied if bundling,
@@ -398,9 +398,9 @@ var Target = function (options) {
   // Something like "browser.w3c" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
 
-  // All of the Builds that are to go into this target, in the order
+  // All of the Unibuilds that are to go into this target, in the order
   // that they are to be loaded.
-  self.builds = [];
+  self.unibuilds = [];
 
   // JavaScript files. List of File. They will be loaded at startup in
   // the order given.
@@ -431,8 +431,8 @@ _.extend(Target.prototype, {
   // target-type-dependent function such as write() or toJsImage().
   //
   // options
-  // - packages: packages to include (Unipackage or 'foo' or 'foo.build'),
-  //   per _determineLoadOrder
+  // - packages: packages to include (Unipackage or 'foo'), per
+  //   _determineLoadOrder
   // - minify: true to minify
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
@@ -440,7 +440,7 @@ _.extend(Target.prototype, {
   make: function (options) {
     var self = this;
 
-    // Populate the list of builds to load
+    // Populate the list of unibuilds to load
     self._determineLoadOrder({
       packages: options.packages || []
     });
@@ -474,55 +474,53 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Determine the packages to load, create Builds for
-  // them, put them in load order, save in builds.
+  // Determine the packages to load, create Unibuilds for
+  // them, put them in load order, save in unibuilds.
   //
   // (Note: this is also called directly by
   // bundler.iterateOverAllUsedUnipackages, kinda hackily.)
   //
   // options include:
-  // - packages: an array of packages (or, properly speaking, builds)
+  // - packages: an array of packages (or, properly speaking, unibuilds)
   //   to include. Each element should either be a Unipackage object or a
-  //   package name as a string (to include that package's default
-  //   builds for this arch, or a string of the form 'package.build'
-  //   to include a particular named build from a particular package.
+  //   package name as a string
   _determineLoadOrder: function (options) {
     var self = this;
     var packageLoader = self.packageLoader;
 
     // Find the roots
-    var rootBuilds =
+    var rootUnibuilds =
         _.map(options.packages || [], function (p) {
           if (typeof p === "string") {
-            return packageLoader.getBuild(p, self.arch);
+            return packageLoader.getUnibuild(p, self.arch);
           } else {
-            return p.getBuildAtArch(self.arch);
+            return p.getUnibuildAtArch(self.arch);
           }
         });
 
-    // PHASE 1: Which builds will be used?
+    // PHASE 1: Which unibuilds will be used?
     //
-    // Figure out which builds are going to be used in the target, regardless of
+    // Figure out which unibuilds are going to be used in the target, regardless of
     // order. We ignore weak dependencies here, because they don't actually
     // create a "must-use" constraint, just an ordering constraint.
 
-    // What builds will be used in the target? Built in Phase 1, read in
+    // What unibuilds will be used in the target? Built in Phase 1, read in
     // Phase 2.
-    var usedBuilds = {};  // Map from build.id to Build.
+    var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
     var usedPackages = {};  // Map from package name to true;
-    var addToGetsUsed = function (build) {
-      if (_.has(usedBuilds, build.id))
+    var addToGetsUsed = function (unibuild) {
+      if (_.has(usedUnibuilds, unibuild.id))
         return;
-      usedBuilds[build.id] = build;
-      usedPackages[build.pkg.name] = true;
-      compiler.eachUsedBuild(
-        build.uses, self.arch, packageLoader, addToGetsUsed);
+      usedUnibuilds[unibuild.id] = unibuild;
+      usedPackages[unibuild.pkg.name] = true;
+      compiler.eachUsedUnibuild(
+        unibuild.uses, self.arch, packageLoader, addToGetsUsed);
     };
-    _.each(rootBuilds, addToGetsUsed);
+    _.each(rootUnibuilds, addToGetsUsed);
 
-    // PHASE 2: In what order should we load the builds?
+    // PHASE 2: In what order should we load the unibuilds?
     //
-    // Set self.builds to be all of the roots, plus all of their non-weak
+    // Set self.unibuilds to be all of the roots, plus all of their non-weak
     // dependencies, in the correct load order. "Load order" means that if X
     // depends on (uses) Y, and that relationship is not marked as unordered, Y
     // appears before X in the ordering. Raises an exception iff there is no
@@ -530,48 +528,48 @@ _.extend(Target.prototype, {
     //
     // XXX The topological sort code here is duplicated in catalog.js.
 
-    // What builds have not yet been added to self.builds?
-    var needed = _.clone(usedBuilds);  // Map from build.id to Build.
-    // Builds that we are in the process of adding; used to detect circular
+    // What unibuilds have not yet been added to self.unibuilds?
+    var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
+    // Unibuilds that we are in the process of adding; used to detect circular
     // ordered dependencies.
-    var onStack = {};  // Map from build.id to true.
+    var onStack = {};  // Map from unibuild.id to true.
 
-    // This helper recursively adds build's ordered dependencies to self.builds,
-    // then adds build itself.
-    var add = function (build) {
+    // This helper recursively adds unibuild's ordered dependencies to self.unibuilds,
+    // then adds unibuild itself.
+    var add = function (unibuild) {
       // If this has already been added, there's nothing to do.
-      if (!_.has(needed, build.id))
+      if (!_.has(needed, unibuild.id))
         return;
 
       // Process each ordered dependency. (If we have an unordered dependency
       // `u`, then there's no reason to add it *now*, and for all we know, `u`
-      // will depend on `build` and need to be added after it. So we ignore
+      // will depend on `unibuild` and need to be added after it. So we ignore
       // those edge. Because we did follow those edges in Phase 1, any unordered
-      // builds were at some point in `needed` and will not be left out).
+      // unibuilds were at some point in `needed` and will not be left out).
       //
-      // eachUsedBuild does follow weak edges (ie, they affect the ordering),
+      // eachUsedUnibuild does follow weak edges (ie, they affect the ordering),
       // but only if they point to a package in usedPackages (ie, a package that
       // SOMETHING uses strongly).
-      compiler.eachUsedBuild(
-        build.uses, self.arch, packageLoader,
+      compiler.eachUsedUnibuild(
+        unibuild.uses, self.arch, packageLoader,
         { skipUnordered: true, acceptableWeakPackages: usedPackages},
-        function (usedBuild) {
-          if (onStack[usedBuild.id]) {
+        function (usedUnibuild) {
+          if (onStack[usedUnibuild.id]) {
             buildmessage.error("circular dependency between packages " +
-                               build.pkg.name + " and " + usedBuild.pkg.name);
+                               unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
           }
-          onStack[usedBuild.id] = true;
-          add(usedBuild);
-          delete onStack[usedBuild.id];
+          onStack[usedUnibuild.id] = true;
+          add(usedUnibuild);
+          delete onStack[usedUnibuild.id];
         });
-      self.builds.push(build);
-      delete needed[build.id];
+      self.unibuilds.push(unibuild);
+      delete needed[unibuild.id];
     };
 
     while (true) {
-      // Get an arbitrary build from those that remain, or break if none remain.
+      // Get an arbitrary unibuild from those that remain, or break if none remain.
       var first = null;
       for (first in needed) break;
       if (! first)
@@ -581,7 +579,7 @@ _.extend(Target.prototype, {
     }
   },
 
-  // Process all of the sorted builds (which includes running the JavaScript
+  // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
   _emitResources: function () {
     var self = this;
@@ -590,15 +588,15 @@ _.extend(Target.prototype, {
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
-    _.each(self.builds, function (build) {
-      var isApp = ! build.pkg.name;
+    _.each(self.unibuilds, function (unibuild) {
+      var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
-      var resources = build.getResources(self.arch, self.packageLoader);
+      var resources = unibuild.getResources(self.arch, self.packageLoader);
 
       // First, find all the assets, so that we can associate them with each js
-      // resource (for os builds).
-      var buildAssets = {};
+      // resource (for os unibuilds).
+      var unibuildAssets = {};
       _.each(resources, function (resource) {
         if (resource.type !== "asset")
           return;
@@ -617,7 +615,7 @@ _.extend(Target.prototype, {
         if (isBrowser)
           f.setUrlFromRelPath(resource.servePath);
         else {
-          buildAssets[resource.path] = resource.data;
+          unibuildAssets[resource.path] = resource.data;
         }
 
         self.asset.push(f);
@@ -650,21 +648,21 @@ _.extend(Target.prototype, {
           if (resource.type === "js" && isOs) {
             // Hack, but otherwise we'll end up putting app assets on this file.
             if (resource.servePath !== "/packages/global-imports.js")
-              f.setAssets(buildAssets);
+              f.setAssets(unibuildAssets);
 
-            if (! isApp && build.nodeModulesPath) {
-              var nmd = self.nodeModulesDirectories[build.nodeModulesPath];
+            if (! isApp && unibuild.nodeModulesPath) {
+              var nmd = self.nodeModulesDirectories[unibuild.nodeModulesPath];
               if (! nmd) {
                 nmd = new NodeModulesDirectory({
-                  sourcePath: build.nodeModulesPath,
+                  sourcePath: unibuild.nodeModulesPath,
                   // It's important that this path end with
                   // node_modules. Otherwise, if two modules in this package
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: path.join(
-                    'npm', build.pkg.name, 'node_modules')
+                    'npm', unibuild.pkg.name, 'node_modules')
                 });
-                self.nodeModulesDirectories[build.nodeModulesPath] = nmd;
+                self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
               }
               f.nodeModulesDirectory = nmd;
             }
@@ -690,14 +688,14 @@ _.extend(Target.prototype, {
       });
 
       // Depend on the source files that produced these resources.
-      self.watchSet.merge(build.watchSet);
+      self.watchSet.merge(unibuild.watchSet);
 
       // Remember the versions of all of the build-time dependencies
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
-       self.watchSet.merge(build.pkg.pluginWatchSet);
+       self.watchSet.merge(unibuild.pkg.pluginWatchSet);
       _.extend(self.pluginProviderPackageDirs,
-               build.pkg.pluginProviderPackageDirs);
+               unibuild.pkg.pluginProviderPackageDirs);
     });
   },
 
@@ -746,7 +744,7 @@ _.extend(Target.prototype, {
   // would be 'os'.
   mostCompatibleArch: function () {
     var self = this;
-    return archinfo.leastSpecificDescription(_.pluck(self.builds, 'arch'));
+    return archinfo.leastSpecificDescription(_.pluck(self.unibuilds, 'arch'));
   }
 });
 
@@ -1999,7 +1997,7 @@ exports.iterateOverAllUsedUnipackages = function (packageLoader, arch,
   var target = new Target({packageLoader: packageLoader,
                            arch: arch});
   target._determineLoadOrder({packages: packageNames});
-  _.each(target.builds, function (build) {
-    callback(build.pkg);
+  _.each(target.unibuilds, function (unibuild) {
+    callback(unibuild.pkg);
   });
 };

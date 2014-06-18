@@ -42,7 +42,8 @@ insertVersion("jquery", "1.8.2", "1.8.0");
 
 var insertBuild = function (name, version, ecv) {
   Builds.insert({ packageName: name, version: version,
-                  earliestCompatibleVersion: ecv, architecture: [ "browser", "os" ] });
+                  earliestCompatibleVersion: ecv,
+                  buildArchitectures: "browser+os" });
 };
 
 insertBuild("sparky-forms", "1.1.2", "1.1.0");

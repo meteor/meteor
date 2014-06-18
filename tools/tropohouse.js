@@ -55,16 +55,16 @@ _.extend(exports.Tropohouse.prototype, {
 
   // Return a path to a location that would contain a specified build of the
   // package at the specified version, if we have this build cached on disk.
-  downloadedBuildPath: function(packageName, version, buildArches) {
+  downloadedBuildPath: function(packageName, version, buildArchitectures) {
     var self = this;
     return path.join(self.downloadedBuildsDirectory(packageName, version),
-                     buildArches);
+                     buildArchitectures);
   },
 
   // Returns a list of builds that we have downloaded for a package&version by
   // reading the contents of that package & version's build directory. Does not
   // check that the directory exists.
-  downloadedBuilds: function (packageName, version) {
+  listDownloadedBuildArchitectures: function (packageName, version) {
     var self = this;
     return files.readdirNoDots(
       self.downloadedBuildsDirectory(packageName, version));
@@ -76,11 +76,12 @@ _.extend(exports.Tropohouse.prototype, {
   // contained architectures.
   downloadedArches: function (packageName, version) {
     var self = this;
-    var downloadedBuilds = self.downloadedBuilds(packageName, version);
+    var downloadedBuildArchitectures = self.listDownloadedBuildArchitectures(
+      packageName, version);
     var downloadedArches = _.reduce(
-      downloadedBuilds,
-      function(init, build) {
-        return _.union(build.split('+'), init);
+      downloadedBuildArchitectures,
+      function(init, buildArchitectures) {
+        return _.union(buildArchitectures.split('+'), init);
       },
       []);
     return downloadedArches;
@@ -105,11 +106,11 @@ _.extend(exports.Tropohouse.prototype, {
   // buildRecord into the warehouse downloadedBuildPath for that build.
   //
   // XXX: Error handling.
-  downloadSpecifiedBuild: function (buildRecord) {
+  downloadSpecifiedBuild: function (versionInfo, buildRecord) {
     var self = this;
-    // XXX nb: "version" field is calculated by getBuildsForArches
     var path = self.downloadedBuildPath(
-      buildRecord.packageName, buildRecord.version, buildRecord.architecture);
+      versionInfo.packageName, versionInfo.version,
+      buildRecord.buildArchitectures);
     var packageTarball = httpHelpers.getUrl({
       url: buildRecord.build.url,
       encoding: null
@@ -173,7 +174,7 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
-        self.downloadSpecifiedBuild(build);
+        self.downloadSpecifiedBuild(versionInfo, build);
       });
 
       if (verbose) {
@@ -181,13 +182,14 @@ _.extend(exports.Tropohouse.prototype, {
       }
     }
 
-    // We need to turn our builds into a unipackage.
+    // We need to turn our builds into a single unipackage.
     var unipackage = new Unipackage;
-    var builds = self.downloadedBuilds(packageName, version);
-    _.each(builds, function (build, i) {
-      unipackage._loadBuildsFromPath(
+    var downloadedBuildArchitectures =
+          self.listDownloadedBuildArchitectures(packageName, version);
+    _.each(downloadedBuildArchitectures, function (buildArchitectures, i) {
+      unipackage._loadUnibuildsFromPath(
         packageName,
-        self.downloadedBuildPath(packageName, version, build),
+        self.downloadedBuildPath(packageName, version, buildArchitectures),
         {firstUnipackage: i === 0});
     });
     // XXX save new buildinfo stuff so it auto-rebuilds

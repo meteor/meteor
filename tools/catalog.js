@@ -6,7 +6,7 @@ var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
-var Unipackage = require('./unipackage.js').Unipackage;
+var unipackage = require('./unipackage.js');
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
@@ -533,10 +533,17 @@ _.extend(CompleteCatalog.prototype, {
     var sourcePath = self.effectiveLocalPackages[name];
     var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
-      var unipackage = new Unipackage;
-      unipackage.initFromPath(name, buildDir, { buildOfPath: sourcePath });
-      if (compiler.checkUpToDate(self.packageSources[name], unipackage)) {
-        return unipackage;
+      var unip = new unipackage.Unipackage;
+      try {
+        unip.initFromPath(name, buildDir, { buildOfPath: sourcePath });
+      } catch (e) {
+        if (!(e instanceof unipackage.OldUnipackageFormatError))
+          throw e;
+        // Ignore unipackage-pre1 builds
+        return null;
+      }
+      if (compiler.checkUpToDate(self.packageSources[name], unip)) {
+        return unip;
       }
     }
     return null;
@@ -562,7 +569,7 @@ _.extend(CompleteCatalog.prototype, {
   _build : function (name, onStack) {
     var self = this;
 
-    var unipackage = null;
+    var unip = null;
 
     if (! _.has(self.unbuilt, name)) {
       return;
@@ -601,8 +608,8 @@ _.extend(CompleteCatalog.prototype, {
       if (_.has(onStack, dep.name)) {
         // Allow a circular dependency if the other thing is already
         // built and doesn't need to be rebuilt.
-        unipackage = self._maybeGetUpToDateBuild(dep.name);
-        if (unipackage) {
+        unip = self._maybeGetUpToDateBuild(dep.name);
+        if (unip) {
           return;
         } else {
           buildmessage.error("circular dependency between packages " +
@@ -620,21 +627,21 @@ _.extend(CompleteCatalog.prototype, {
 
     // Now build this package if it needs building
     var sourcePath = self.effectiveLocalPackages[name];
-    unipackage = self._maybeGetUpToDateBuild(name);
+    unip = self._maybeGetUpToDateBuild(name);
 
-    if (! unipackage) {
+    if (! unip) {
       // Didn't have a build or it wasn't up to date. Build it.
       buildmessage.enterJob({
         title: "building package `" + name + "`",
         rootPath: sourcePath
       }, function () {
-        unipackage = compiler.compile(self.packageSources[name]).unipackage;
+        unip = compiler.compile(self.packageSources[name]).unipackage;
         if (! buildmessage.jobHasMessages()) {
           // Save the build, for a fast load next time
           try {
             var buildDir = path.join(sourcePath, '.build.'+ name);
             files.addToGitignore(sourcePath, '.build*');
-            unipackage.saveToPath(buildDir, { buildOfPath: sourcePath });
+            unip.saveToPath(buildDir, { buildOfPath: sourcePath });
           } catch (e) {
             // If we can't write to this directory, we don't get to cache our
             // output, but otherwise life is good.
@@ -648,10 +655,10 @@ _.extend(CompleteCatalog.prototype, {
     var versionId = self.getLatestVersion(name);
 
     packageCache.packageCache.cachePackageAtPath(
-      name, sourcePath, unipackage);
+      name, sourcePath, unip);
 
     self.builds.push({
-      architecture: unipackage.architectures().join('+'),
+      buildArchitectures: unip.buildArchitectures(),
       builtBy: null,
       build: null, // this would be the URL and hash
       versionId: versionId,

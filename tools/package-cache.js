@@ -6,7 +6,7 @@ var compiler = require("./compiler.js");
 var buildmessage = require("./buildmessage.js");
 var PackageSource = require("./package-source.js");
 var _ = require('underscore');
-var Unipackage = require("./unipackage.js");
+var unipackage = require("./unipackage.js");
 
 var packageCache = exports;
 
@@ -49,13 +49,13 @@ _.extend(PackageCache.prototype, {
   // - name: package name
   // - loadPath: path of the source to the package
   // - unipackage (prebuilt package)
-  cachePackageAtPath : function (name, loadPath, unipackage) {
+  cachePackageAtPath : function (name, loadPath, unip) {
     var self = this;
     var key = name + "@" + loadPath;
     var buildDir = path.join(loadPath, '.build.'+  name);
 
     self.loadedPackages[key] = {
-        pkg: unipackage,
+        pkg: unip,
         sourceDir: loadPath,
         buildDir: buildDir
       };
@@ -93,7 +93,7 @@ _.extend(PackageCache.prototype, {
       delete self.softReloadCache[key];
 
       var isUpToDate;
-      var unipackage;
+      var unip;
       if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
         // We don't even have the source to this package, so it must
         // be up to date.
@@ -103,8 +103,8 @@ _.extend(PackageCache.prototype, {
         // For now, if it turns into a unipackage, it should have a version.
         packageSource.initFromPackageDir(name, loadPath, {
           requireVersion: true });
-        unipackage = new Unipackage.Unipackage;
-        unipackage.initFromPath(name, entry.buildDir);
+        unip = new unipackage.Unipackage;
+        unip.initFromPath(name, entry.buildDir);
         isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
       }
 
@@ -120,15 +120,15 @@ _.extend(PackageCache.prototype, {
     // Does loadPath point directly at a unipackage (rather than a
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      unipackage = new Unipackage.Unipackage;
+      unip = new unipackage.Unipackage;
 
-      unipackage.initFromPath(name, loadPath);
+      unip.initFromPath(name, loadPath);
       self.loadedPackages[key] = {
-        pkg: unipackage,
+        pkg: unip,
         sourceDir: null,
         buildDir: loadPath
       };
-      return unipackage;
+      return unip;
     };
 
     // It's a source tree. Load it. It is going to turn into a unipackage, so it
@@ -140,14 +140,21 @@ _.extend(PackageCache.prototype, {
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {
-      unipackage = new Unipackage.Unipackage;
-      unipackage.initFromPath(name, buildDir);
-      if (compiler.checkUpToDate(packageSource, unipackage)) {
-        self.loadedPackages[key] = { pkg: unipackage,
-                                          sourceDir: loadPath,
-                                          buildDir: buildDir
-                                        };
-        return unipackage;
+      unip = new unipackage.Unipackage;
+      var maybeUpToDate = true;
+      try {
+        unip.initFromPath(name, buildDir);
+      } catch (e) {
+        if (!(e instanceof unipackage.OldUnipackageFormatError))
+          throw e;
+        maybeUpToDate = false;
+      }
+      if (maybeUpToDate && compiler.checkUpToDate(packageSource, unip)) {
+        self.loadedPackages[key] = { pkg: unip,
+                                     sourceDir: loadPath,
+                                     buildDir: buildDir
+                                   };
+        return unip;
       }
     }
 
@@ -166,9 +173,9 @@ _.extend(PackageCache.prototype, {
       // We don't do that anymore and at the moment, we rely on catalog to
       // initalize ahead of us and swoop in and build all of the local packages
       // informed by a topological sort
-      var unipackage = compiler.compile(packageSource).unipackage;
+      var unip = compiler.compile(packageSource).unipackage;
       self.loadedPackages[key] = {
-        pkg: unipackage,
+        pkg: unip,
         sourceDir: null,
         buildDir: buildDir
       };
@@ -177,7 +184,7 @@ _.extend(PackageCache.prototype, {
         // Save it, for a fast load next time
         try {
           files.addToGitignore(loadPath, '.build*');
-          unipackage.saveToPath(buildDir, { buildOfPath: loadPath });
+          unip.saveToPath(buildDir, { buildOfPath: loadPath });
         } catch (e) {
           // If we can't write to this directory, we don't get to cache our
           // output, but otherwise life is good.
@@ -185,7 +192,7 @@ _.extend(PackageCache.prototype, {
             throw e;
         }
       }
-      return unipackage;
+      return unip;
     });
   },
 

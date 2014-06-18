@@ -1092,7 +1092,7 @@ main.registerCommand({
   // XXX check to make sure this is the three arches that we want? it's easier
   // during 0.9.0 development to allow it to just decide "ok, i just want to
   // build the OSX tarball" though.
-  var buildArches = _.pluck(toolPkgBuilds, 'architecture');
+  var buildArches = _.pluck(toolPkgBuilds, 'buildArchitectures');
   var osArches = _.map(buildArches, function (buildArch) {
     var subArches = buildArch.split('+');
     var osArches = _.filter(subArches, function (subArch) {

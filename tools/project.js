@@ -225,8 +225,8 @@ _.extend(Project.prototype, {
       var programSubdir = path.join(self.getProgramsDirectory(), item);
       var programSource = new PackageSource(programSubdir);
       programSource.initFromPackageDir(programName, programSubdir);
-      _.each(programSource.architectures, function (sourceBuild) {
-        _.each(sourceBuild.uses, function (use) {
+      _.each(programSource.architectures, function (sourceUnibuild) {
+        _.each(sourceUnibuild.uses, function (use) {
            var constraint = use.constraint || null;
            allDeps.push(_.extend({packageName: use.package},
                               utils.parseVersionConstraint(constraint)));
@@ -492,11 +492,11 @@ _.extend(Project.prototype, {
   },
 
   // Go through a list of packages and makes sure we have enough builds of the
-  // package downloaded such that we can load a browser build and a build that
-  // will run on this system. (Later we may also need to download more builds to
-  // be able to deploy to another architecture.) Return the object with mapping
-  // packageName to version for the packages that we have successfully
-  // downloaded.
+  // package downloaded such that we can load a browser unibuild and a unibuild
+  // that will run on this system. (Later we may also need to download more
+  // builds to be able to deploy to another architecture.) Return the object
+  // with mapping packageName to version for the packages that we have
+  // successfully downloaded.
   //
   // This primarily exists as a safety check to be used when doing operations
   // that could lead to changes in the versions file.
