@@ -346,13 +346,14 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 
   Meteor._debug("After expectObserve");
   
-//  expectObserve('u(4)', function () {
-//    var id2 = '4';
-//    coll.set(keyPrefix + id2, '4');
+  expectObserve('a(4)', function () {
+    var id2 = '4';
+    coll.set(keyPrefix + id2, '4');
+    // XXX Put back
 //    test.equal(coll.matching(keyPrefix + '*').count(), 2);
 //    test.equal(coll.matching(keyPrefix + id2).count(), 1);
-//    test.equal(coll.get(keyPrefix + id2), '4');
-//  });
+    test.equal(coll.get(keyPrefix + id2), '4');
+  });
 //
 //  // (We don't support sorting)
 ////  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 0}).x, 1);

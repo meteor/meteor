@@ -531,59 +531,67 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
       return;
     }
 
-    if (op.op === 'd') {
-      if (self._published.has(id) || (self._limit && self._unpublishedBuffer.has(id)))
-        self._removeMatching(id);
-    } else if (op.op === 'i') {
-      if (self._published.has(id))
-        throw new Error("insert found for already-existing ID in published");
-      if (self._unpublishedBuffer && self._unpublishedBuffer.has(id))
-        throw new Error("insert found for already-existing ID in buffer");
-
-      // XXX what if selector yields?  for now it can't but later it could have
-      // $where
-      if (self._matcher.documentMatches(op.o).result)
-        self._addMatching(op.o);
-    } else if (op.op === 'u') {
-      // Is this a modifier ($set/$unset, which may require us to poll the
-      // database to figure out if the whole document matches the selector) or a
-      // replacement (in which case we can just directly re-evaluate the
-      // selector)?
-      var isReplace = !_.has(op.o, '$set') && !_.has(op.o, '$unset');
-      // If this modifier modifies something inside an EJSON custom type (ie,
-      // anything with EJSON$), then we can't try to use
-      // LocalCollection._modify, since that just mutates the EJSON encoding,
-      // not the actual object.
-      var canDirectlyModifyDoc =
-            !isReplace && modifierCanBeDirectlyApplied(op.o);
-
-      var publishedBefore = self._published.has(id);
-      var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
-
-      if (isReplace) {
-        self._handleDoc(id, _.extend({_id: id}, op.o));
-      } else if ((publishedBefore || bufferedBefore) && canDirectlyModifyDoc) {
-        // Oh great, we actually know what the document is, so we can apply
-        // this directly.
-        var newDoc = self._published.has(id) ?
-          self._published.get(id) :
-          self._unpublishedBuffer.get(id);
-        newDoc = EJSON.clone(newDoc);
-
-        newDoc._id = id;
-        LocalCollection._modify(newDoc, op.o);
-        self._handleDoc(id, newDoc); //self._sharedProjectionFn(newDoc));
-      } else if (!canDirectlyModifyDoc ||
-                 self._matcher.canBecomeTrueByModifier(op.o) ||
-                 (self._sorter && self._sorter.affectedByModifier(op.o))) {
-     // XXX cacheKey
-        self._needToFetch.set(id, Random.id()); //op.ts.toString());
-        if (self._phase === PHASE.STEADY)
-          self._fetchModifiedDocuments();
-      }
+    var opType = op.message;
+    if (opType == 'set') {
+      self._needToFetch.set(id, Random.id()); //op.ts.toString());
+      if (self._phase === PHASE.STEADY)
+        self._fetchModifiedDocuments();
     } else {
-      throw Error("XXX SURPRISING OPERATION: " + JSON.stringify(op));
+      throw Error("XXX UNHANDLED NOTIFICATION TYPE: " + opType);
     }
+//    if (op.op === 'd') {
+//      if (self._published.has(id) || (self._limit && self._unpublishedBuffer.has(id)))
+//        self._removeMatching(id);
+//    } else if (op.op === 'i') {
+//      if (self._published.has(id))
+//        throw new Error("insert found for already-existing ID in published");
+//      if (self._unpublishedBuffer && self._unpublishedBuffer.has(id))
+//        throw new Error("insert found for already-existing ID in buffer");
+//
+//      // XXX what if selector yields?  for now it can't but later it could have
+//      // $where
+//      if (self._matcher.documentMatches(op.o).result)
+//        self._addMatching(op.o);
+//    } else if (op.op === 'u') {
+//      // Is this a modifier ($set/$unset, which may require us to poll the
+//      // database to figure out if the whole document matches the selector) or a
+//      // replacement (in which case we can just directly re-evaluate the
+//      // selector)?
+//      var isReplace = !_.has(op.o, '$set') && !_.has(op.o, '$unset');
+//      // If this modifier modifies something inside an EJSON custom type (ie,
+//      // anything with EJSON$), then we can't try to use
+//      // LocalCollection._modify, since that just mutates the EJSON encoding,
+//      // not the actual object.
+//      var canDirectlyModifyDoc =
+//            !isReplace && modifierCanBeDirectlyApplied(op.o);
+//
+//      var publishedBefore = self._published.has(id);
+//      var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
+//
+//      if (isReplace) {
+//        self._handleDoc(id, _.extend({_id: id}, op.o));
+//      } else if ((publishedBefore || bufferedBefore) && canDirectlyModifyDoc) {
+//        // Oh great, we actually know what the document is, so we can apply
+//        // this directly.
+//        var newDoc = self._published.has(id) ?
+//          self._published.get(id) :
+//          self._unpublishedBuffer.get(id);
+//        newDoc = EJSON.clone(newDoc);
+//
+//        newDoc._id = id;
+//        LocalCollection._modify(newDoc, op.o);
+//        self._handleDoc(id, newDoc); //self._sharedProjectionFn(newDoc));
+//      } else if (!canDirectlyModifyDoc ||
+//                 self._matcher.canBecomeTrueByModifier(op.o) ||
+//                 (self._sorter && self._sorter.affectedByModifier(op.o))) {
+//     // XXX cacheKey
+//        self._needToFetch.set(id, Random.id()); //op.ts.toString());
+//        if (self._phase === PHASE.STEADY)
+//          self._fetchModifiedDocuments();
+//      }
+//    } else {
+//      throw Error("XXX SURPRISING OPERATION: " + op);
+//    }
   },
   _runInitialQuery: function () {
     var self = this;
