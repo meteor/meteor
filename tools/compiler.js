@@ -53,6 +53,14 @@ compiler.BUILT_BY = 'meteor/11';
 //
 // packageLoader is the PackageLoader that should be used to resolve
 // the dependencies.
+//
+// Note that you generally want 'arch' to be a 'global' architecture describing
+// the whole build (eg, bundle) that you're doing, not the specific architecture
+// of the precise place you're calling this function from.  eg, if you're doing
+// a bundle targeting os.osx.x86_64, you really want to always pass
+// "os.osx.x86_64" even if the eachUsedUnibuild is inside (eg) the compilation
+// of an "os" arch.  Otherwise you won't be able to find any unibuilds for
+// packages that only have OS-specific os arches!
 compiler.eachUsedUnibuild = function (
     dependencies, arch, packageLoader, options, callback) {
   if (typeof options === "function") {
@@ -275,9 +283,12 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   //
   // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
   // templating from standard-app-packages).
+  //
+  // We pass archinfo.host here, not self.arch, because it may be more specific,
+  // and because plugins always have to run on the host architecture.
   if (!inputSourceArch.noSources) {
     compiler.eachUsedUnibuild(
-      inputSourceArch.uses, inputSourceArch.arch,
+      inputSourceArch.uses, archinfo.host(),
       packageLoader, {skipUnordered: true}, function (unibuild) {
         if (unibuild.pkg.name === unipackage.name)
           return;
