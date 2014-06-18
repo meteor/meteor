@@ -1160,14 +1160,6 @@ main.registerCommand({
         true);
     });
 
-    // Delete the downloaded-builds directory which basically just has a second
-    // copy of everything.  I think it's OK if the first time we try to deploy
-    // to Linux from Mac, it has to download a bunch of stuff.  (Alternatively,
-    // we could actually always include Linux64 in the bootstrap tarball, but
-    // meh.)
-    // XXX it's not like cross-linking even works yet anyway
-    files.rm_recursive(path.join(tmpTropo.root, 'downloaded-builds'));
-
     // XXX should we include some sort of preliminary package-metadata as well?
     // maybe with release info about the release we are using?
 

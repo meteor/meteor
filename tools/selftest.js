@@ -494,8 +494,14 @@ _.extend(Sandbox.prototype, {
     var loader = new (require('./package-loader.js').PackageLoader)({
       versions: null});
     var toolPackage = loader.getPackage(toolPackageName);
+    var toolPackageDirectory =
+          '.' + toolPackage.version + '.XXX++'
+          + toolPackage.buildArchitectures();
     toolPackage.saveToPath(path.join(self.warehouse, 'packages',
-                                     toolPackageName, toolPackage.version));
+                                     toolPackageName, toolPackageDirectory));
+    fs.symlinkSync(toolPackageDirectory,
+                   path.join(self.warehouse, 'packages', toolPackageName,
+                             toolPackage.version));
     stubCatalog.collections.packages.push({
       name: toolPackageName,
       _id: utils.randomToken()

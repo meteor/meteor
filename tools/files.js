@@ -601,7 +601,10 @@ files.writeFileAtomically = function (filename, contents) {
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 files.symlinkOverSync = function (linkText, file) {
-  var tmpSymlink = file + ".tmp" + utils.randomToken();
+  file = path.resolve(file);
+  var tmpSymlink = path.join(
+    path.dirname(file),
+    "." + path.basename(file) + ".tmp" + utils.randomToken());
   fs.symlinkSync(linkText, tmpSymlink);
   fs.renameSync(tmpSymlink, file);
 };
