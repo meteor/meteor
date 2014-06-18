@@ -779,6 +779,20 @@ Hi there!
   </div>
 </template>
 
+<template name="spacebars_test_ui_hooks_nested">
+  {{#if foo}}
+    {{> spacebars_test_ui_hooks_nested_sub}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_ui_hooks_nested_sub">
+  <div>
+    {{#with true}}
+      <p>hello</p>
+    {{/with}}
+  </div>
+</template>
+
 <template name="spacebars_test_template_instance_helper">
   {{#with true}}{{foo}}{{/with}}
 </template>
