@@ -2170,3 +2170,42 @@ Tinytest.add(
     test.equal(helperCalled, false);
   }
 );
+
+Tinytest.add(
+  "spacebars - access parent data contexts from helper",
+  function (test) {
+    var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
+    var parentTmpl = Template.spacebars_test_template_parent_data_helper;
+    var rv = new ReactiveVar(0);
+
+    childTmpl.a = ["a"];
+    childTmpl.b = new ReactiveVar("b");
+    childTmpl.c = ["c"];
+
+    childTmpl.foo = function () {
+      var data =  UI._parentData(rv.get());
+      return data.get === undefined ? data : data.get();
+    };
+
+    var div = renderToDiv(parentTmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "d");
+
+    rv.set(1);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "b");
+
+    // Test UI._parentData() reactivity
+
+    childTmpl.b.set("bNew");
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "bNew");
+
+    rv.set(2);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "a");
+
+    rv.set(3);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "parent");
+  }
+);

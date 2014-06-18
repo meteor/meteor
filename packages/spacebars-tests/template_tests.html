@@ -790,3 +790,21 @@ Hi there!
     {{/with}}
   </div>
 </template>
+
+<template name="spacebars_test_template_parent_data_helper">
+  {{#with "parent"}}
+    {{> spacebars_test_template_parent_data_helper_child}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_template_parent_data_helper_child">
+  {{#each a}}
+    {{#with b}}
+      {{#if c}}
+        {{#with "d"}}
+          {{foo}}
+        {{/with}}
+      {{/if}}
+    {{/with}}
+  {{/each}}
+</template>

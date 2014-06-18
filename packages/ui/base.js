@@ -368,3 +368,24 @@ UI._templateInstance = function () {
   }
   return currentTemplateInstance;
 };
+
+// Returns the data context of the parent which is 'numLevels' above the
+// component. Same behavior as {{../..}} in a template, with 'numLevels'
+// occurrences of '..'.
+UI._parentData = function (numLevels) {
+  var component = currentComponent.get();
+  while (component && numLevels >= 0) {
+    // Decrement numLevels every time we find a new data context. Break
+    // once we have reached numLevels < 0.
+    if (component.data !== undefined && --numLevels < 0) {
+      break;
+    }
+    component = component.parent;
+  }
+
+  if (! component) {
+    return null;
+  }
+
+  return getComponentData(component);
+};

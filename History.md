@@ -1,3 +1,9 @@
+## v.REALLY NEXT
+
+* Upgraded dependencies:
+  - less: 1.7.1 (from 1.6.1)
+
+
 ## v.NEXT
 
 * Migrate from SRP to bcrypt in `accounts-password`. Users will be
@@ -68,6 +74,9 @@
 
 * Add `UI._templateInstance()` for accessing the current template
   instance from within a block helper.
+
+* Add `UI._parentData(n)` for accessing parent data contexts from
+  within a block helper.
 
 * Stop not updating form controls if they're focused. If a field is
   edited by one user while another user is focused on it, it will just
