@@ -7,12 +7,12 @@
 var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
- if (n.nodeType === 1 &&
-     n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
-   n.parentNode._uihooks.removeElement(n);
- } else {
+  if (n.nodeType === 1 &&
+      n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+    n.parentNode._uihooks.removeElement(n);
+  } else {
     n.parentNode.removeChild(n);
- }
+  }
 };
 
 var insertNode = function (n, parent, next) {
