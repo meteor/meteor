@@ -444,6 +444,12 @@ _.extend(Unipackage.prototype, {
     var self = this;
     options = options || {};
 
+    // In the tropohouse, unipackage paths are symlinks (which can be updated if
+    // more unibuilds are merged in). For any given call to
+    // _loadUnibuildsFromPath, let's ensure we see a consistent unipackage by
+    // realpath'ing dir.
+    dir = fs.realpathSync(dir);
+
     var mainJson =
       JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
 

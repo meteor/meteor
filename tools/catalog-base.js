@@ -285,8 +285,6 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
           if (! usingThisBuild) {
             usingThisBuild = true;
             buildsToUse.push(build);
-            // XXX this should probably be denormalized in the DB
-            build.version = version;
           }
         }
       });

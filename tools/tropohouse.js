@@ -42,51 +42,6 @@ exports.default = new exports.Tropohouse(
   defaultWarehouseDir(), catalog.complete);
 
 _.extend(exports.Tropohouse.prototype, {
-  // Return the directory within the warehouse that would contain downloaded
-  // builds for a given package and version, if we have such builds cached on
-  // disk. Takes in a package name and a version, and returns the [warehouse
-  // path]/downloaded-builds/[packageName]/[version].
-  //
-  // This does NOT check that the directory exists or contains content.
-  downloadedBuildsDirectory: function(packageName, version) {
-    var self = this;
-    return path.join(self.root, "downloaded-builds", packageName, version);
-  },
-
-  // Return a path to a location that would contain a specified build of the
-  // package at the specified version, if we have this build cached on disk.
-  downloadedBuildPath: function(packageName, version, buildArchitectures) {
-    var self = this;
-    return path.join(self.downloadedBuildsDirectory(packageName, version),
-                     buildArchitectures);
-  },
-
-  // Returns a list of builds that we have downloaded for a package&version by
-  // reading the contents of that package & version's build directory. Does not
-  // check that the directory exists.
-  listDownloadedBuildArchitectures: function (packageName, version) {
-    var self = this;
-    return files.readdirNoDots(
-      self.downloadedBuildsDirectory(packageName, version));
-  },
-
-  // Returns a list of architectures that we have downloaded for a given package
-  // at a version: gets a list of builds from downloadedBuilds and then splits
-  // up each build into its component architectures, and returns a union of all
-  // contained architectures.
-  downloadedArches: function (packageName, version) {
-    var self = this;
-    var downloadedBuildArchitectures = self.listDownloadedBuildArchitectures(
-      packageName, version);
-    var downloadedArches = _.reduce(
-      downloadedBuildArchitectures,
-      function(init, buildArchitectures) {
-        return _.union(buildArchitectures.split('+'), init);
-      },
-      []);
-    return downloadedArches;
-  },
-
   // Returns the load path where one can expect to find the package, at a given
   // version, if we have already downloaded from the package server. Does not
   // check for contents.
@@ -103,19 +58,18 @@ _.extend(exports.Tropohouse.prototype, {
   },
 
   // Contacts the package server, downloads and extracts a tarball for a given
-  // buildRecord into the warehouse downloadedBuildPath for that build.
+  // buildRecord into a temporary directory, whose path is returned.
   //
   // XXX: Error handling.
-  downloadSpecifiedBuild: function (versionInfo, buildRecord) {
+  downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
-    var path = self.downloadedBuildPath(
-      versionInfo.packageName, versionInfo.version,
-      buildRecord.buildArchitectures);
+    var targetDirectory = files.mkdtemp();
     var packageTarball = httpHelpers.getUrl({
       url: buildRecord.build.url,
       encoding: null
     });
-    files.extractTarGz(packageTarball, path);
+    files.extractTarGz(packageTarball, targetDirectory);
+    return targetDirectory;
   },
 
   // Given versionInfo for a package version and required architectures, checks
@@ -140,60 +94,93 @@ _.extend(exports.Tropohouse.prototype, {
     if (self.catalog.isLocalPackage(packageName))
       return true;
 
-    var packageDir = self.packagePath(packageName, version);
-    if (fs.existsSync(packageDir)) {
-      // Package exists for this build, so we are good.
-
-      // XXX this doesn't actually work! the point of this whole thing is that
-      // you can fat-ify a package (eg, at deploy time) but this here assumes
-      // that once you write a package you'll never write it again.
-      return true;
+    // Figure out what arches (if any) we have loaded for this package version
+    // already.
+    var packageLinkFile = self.packagePath(packageName, version);
+    var downloadedArches = [];
+    var packageLinkTarget = null;
+    try {
+      packageLinkTarget = fs.readlinkSync(packageLinkFile);
+    } catch (e) {
+      // Complain about anything other than "we don't have it at all". This
+      // includes "not a symlink": The main reason this would not be a symlink
+      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
+      // warehouse package not a tropohouse package). But the versions should
+      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
+      // versions should be semver.
+      if (e.code !== 'ENOENT')
+        throw e;
+    }
+    if (packageLinkTarget) {
+      // The symlink will be of the form '.VERSION.RANDOMTOKEN++browser+os',
+      // so this strips off the part before the '++'.
+      // XXX maybe we should just read the unipackage.json instead of
+      //     depending on the symlink?
+      var archPart = packageLinkTarget.split('++')[1];
+      if (!archPart)
+        throw Error("unexpected symlink target for " + packageName + "@" +
+                    version + ": " + packageLinkTarget);
+      downloadedArches = archPart.split('+');
     }
 
-    // Figure out what arches (if any) we have downloaded for this package
-    // version already.
-    var downloadedArches = self.downloadedArches(packageName, version);
     var archesToDownload = _.filter(requiredArches, function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
     });
 
-    if (archesToDownload.length) {
-      var buildsToDownload = self.catalog.getBuildsForArches(
-        packageName, version, archesToDownload);
-      if (! buildsToDownload) {
-        // XXX throw a special error instead?
-        return false;
-      }
-
-      // XXX replace with a real progress bar in _ensurePackagesExistOnDisk
-      if (verbose) {
-        process.stderr.write(
-          "  downloading " + packageName + " at version " + version + " ... ");
-      }
-
-      // XXX how does concurrency work here?  we could just get errors if we try
-      // to rename over the other thing?  but that's the same as in warehouse?
-      _.each(buildsToDownload, function (build) {
-        self.downloadSpecifiedBuild(versionInfo, build);
-      });
-
-      if (verbose) {
-        process.stderr.write(" done\n");
-      }
+    // Have everything we need? Great.
+    if (!archesToDownload.length) {
+      return true;
     }
+
+    var buildsToDownload = self.catalog.getBuildsForArches(
+      packageName, version, archesToDownload);
+    if (! buildsToDownload) {
+      // XXX throw a special error instead?  yes please.
+      return false;
+    }
+
+    // XXX replace with a real progress bar in _ensurePackagesExistOnDisk
+    if (verbose) {
+      process.stderr.write(
+        "  downloading " + packageName + " at version " + version + " ... ");
+    }
+
+    var buildTempDirs = [];
+    // If there's already a package in the tropohouse, start with it.
+    if (packageLinkTarget) {
+      buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
+                                      packageLinkTarget));
+    }
+    // XXX how does concurrency work here?  we could just get errors if we try
+    // to rename over the other thing?  but that's the same as in warehouse?
+    _.each(buildsToDownload, function (build) {
+      buildTempDirs.push(self.downloadBuildToTempDir(versionInfo, build));
+    });
 
     // We need to turn our builds into a single unipackage.
     var unipackage = new Unipackage;
-    var downloadedBuildArchitectures =
-          self.listDownloadedBuildArchitectures(packageName, version);
-    _.each(downloadedBuildArchitectures, function (buildArchitectures, i) {
+    _.each(buildTempDirs, function (buildTempDir, i) {
       unipackage._loadUnibuildsFromPath(
         packageName,
-        self.downloadedBuildPath(packageName, version, buildArchitectures),
+        buildTempDir,
         {firstUnipackage: i === 0});
     });
+    // XXX include the version in it too?
+    var newPackageLinkTarget = '.' + version + '.'
+          + utils.randomToken() + '++' + unipackage.buildArchitectures();
+    var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
     // XXX save new buildinfo stuff so it auto-rebuilds
-    unipackage.saveToPath(packageDir);
+    unipackage.saveToPath(combinedDirectory);
+    files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+    // Clean up old version.
+    if (packageLinkTarget) {
+      files.rm_recursive(packageLinkTarget);
+    }
+
+    if (verbose) {
+      process.stderr.write(" done\n");
+    }
 
     return true;
   },
