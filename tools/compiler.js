@@ -660,14 +660,14 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     arch = archinfo.host();
   }
   if (! archinfo.matches(arch, "os")) {
-    // npm models only work on server architectures
+    // npm modules only work on server architectures
     nodeModulesPath = undefined;
   }
 
   // *** Output unibuild object
   unipackage.addUnibuild({
     name: inputSourceArch.archName,
-    arch: inputSourceArch.arch,
+    arch: arch,
     uses: inputSourceArch.uses,
     implies: inputSourceArch.implies,
     watchSet: watchSet,
