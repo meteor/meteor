@@ -106,11 +106,10 @@ _.extend(exports.Tropohouse.prototype, {
   // buildRecord into the warehouse downloadedBuildPath for that build.
   //
   // XXX: Error handling.
-  downloadSpecifiedBuild: function (buildRecord) {
+  downloadSpecifiedBuild: function (versionInfo, buildRecord) {
     var self = this;
-    // XXX nb: "version" field is calculated by getBuildsForArches
     var path = self.downloadedBuildPath(
-      buildRecord.packageName, buildRecord.version,
+      versionInfo.packageName, versionInfo.version,
       buildRecord.buildArchitectures);
     var packageTarball = httpHelpers.getUrl({
       url: buildRecord.build.url,
@@ -175,7 +174,7 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
-        self.downloadSpecifiedBuild(build);
+        self.downloadSpecifiedBuild(versionInfo, build);
       });
 
       if (verbose) {
