@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.0",
+  version: "2.0.0",
   test: "constraint-solver-test",
   internal: true
 });
