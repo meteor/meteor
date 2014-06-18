@@ -1,3 +1,9 @@
+## v.REALLY NEXT
+
+* Upgraded dependencies:
+  - less: 1.7.1 (from 1.6.1)
+
+
 ## v.NEXT
 
 * Migrate from SRP to bcrypt in `accounts-password`. Users will be
