@@ -43,7 +43,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
-      unitVersion = unibuilds[unitName];
+      var unitVersion = unibuilds[unitName];
       self.resolver.addUnitVersion(unitVersion);
     });
 
