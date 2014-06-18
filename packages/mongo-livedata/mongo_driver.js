@@ -319,6 +319,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
 
   if (!(LocalCollection._isPlainObject(document) &&
         !EJSON._isCustomType(document))) {
+    Meteor._debug("Not a plain object: " + EJSON.stringify(document));
     sendError(new Error(
       "Only documents (plain objects) may be inserted into MongoDB"));
     return;

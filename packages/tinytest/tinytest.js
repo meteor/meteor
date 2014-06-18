@@ -376,6 +376,7 @@ _.extend(TestCase.prototype, {
       } catch (e) {
         if (markComplete())
           onException(e);
+        Meteor._debug("Caught exception from test: ", e, e.stack);
       }
     });
   }

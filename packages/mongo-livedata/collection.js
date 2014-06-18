@@ -238,7 +238,6 @@ _.extend(Meteor.Collection.prototype, {
     return self._collection.findOne(self._getFindSelector(argArray),
                                     self._getFindOptions(argArray));
   }
-
 });
 
 Meteor.Collection._publishCursor = function (cursor, sub, collection) {

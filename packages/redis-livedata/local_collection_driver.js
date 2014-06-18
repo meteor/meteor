@@ -4,10 +4,10 @@ LocalCollectionDriver = function () {
   self.noConnStore = null;
 };
 
-var ensureCollection = function (store, pattern, collections) {
-  if (!(pattern in collections))
-    collections[pattern] = store.matching(pattern);
-  return collections[pattern];
+var ensureCollection = function (store, name, collections) {
+  if (!(name in collections))
+    collections[name] = new Miniredis.RedisStore();
+  return collections[name];
 };
 
 _.extend(LocalCollectionDriver.prototype, {
@@ -28,17 +28,17 @@ _.extend(LocalCollectionDriver.prototype, {
     }
     // XXX Redis doesn't have the concept of collections so for now the only
     // possible collection name is "redis"
-    if (name !== "redis") {
+    if (name !== "redis" && name !== null) {
       throw new Error("The only valid RedisCollection name is 'redis'");
     }
     if (! conn) {
-      return ensureCollection(store, pattern, self.noConnCollections);
+      return ensureCollection(store, name, self.noConnCollections);
     }
     if (! conn._redis_livedata_collections)
       conn._redis_livedata_collections = {};
     // XXX is there a way to keep track of a connection's collections without
     // dangling it off the connection object?
-    return ensureCollection(store, pattern, conn._redis_livedata_collections);
+    return ensureCollection(store, name, conn._redis_livedata_collections);
   }
 });
 

@@ -36,8 +36,15 @@ _.extend(DocFetcher.prototype, {
 
     Fiber(function () {
       try {
-        var doc = self._mongoConnection.findOne(
-          collectionName, {_id: id}) || null;
+        Meteor._debug("Doing findOne on " + id);
+//        var doc = self._mongoConnection.findOne(
+//          collectionName, {_id: id}) || null;
+        // XXX Rename get to _sync_get
+        var value = self._mongoConnection.get(id) || null;
+        var doc;
+        if (value) {
+          doc = { _id: id, value: value};
+        }
         // Return doc to all relevant callbacks. Note that this array can
         // continue to grow during callback excecution.
         while (!_.isEmpty(callbacks)) {
@@ -49,6 +56,7 @@ _.extend(DocFetcher.prototype, {
           callbacks.pop()(null, clonedDoc);
         }
       } catch (e) {
+        Meteor._debug("Error in doc_fetcher::fetch", e.stack);
         while (!_.isEmpty(callbacks)) {
           callbacks.pop()(e);
         }

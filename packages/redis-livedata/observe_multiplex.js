@@ -1,20 +1,98 @@
 var Future = Npm.require('fibers/future');
 
+ObserveHelpers = {};
+
+//_CachingChangeObserver is an object which receives observeChanges callbacks
+//and keeps a cache of the current cursor state up to date in self.docs. Users
+//of this class should read the docs field but not modify it. You should pass
+//the "applyChange" field as the callbacks to the underlying observeChanges
+//call. Optionally, you can specify your own observeChanges callbacks which are
+//invoked immediately before the docs field is updated; this object is made
+//available as `this` to those callbacks.
+ObserveHelpers._CachingChangeObserver = function (options) {
+var self = this;
+options = options || {};
+
+var orderedFromCallbacks = false;
+//options.callbacks &&
+//     LocalCollection._observeChangesCallbacksAreOrdered(options.callbacks);
+if (_.has(options, 'ordered')) {
+ self.ordered = options.ordered;
+ if (options.callbacks && options.ordered !== orderedFromCallbacks)
+   throw Error("ordered option doesn't match callbacks");
+} else if (options.callbacks) {
+ self.ordered = orderedFromCallbacks;
+} else {
+ throw Error("must provide ordered or callbacks");
+}
+var callbacks = options.callbacks || {};
+
+if (self.ordered) {
+ self.docs = new OrderedDict(LocalCollection._idStringify);
+ self.applyChange = {
+   addedBefore: function (id, fields, before) {
+     var doc = EJSON.clone(fields);
+     doc._id = id;
+     callbacks.addedBefore && callbacks.addedBefore.call(
+       self, id, fields, before);
+     // This line triggers if we provide added with movedBefore.
+     callbacks.added && callbacks.added.call(self, id, fields);
+     // XXX could `before` be a falsy ID?  Technically
+     // idStringify seems to allow for them -- though
+     // OrderedDict won't call stringify on a falsy arg.
+     self.docs.putBefore(id, doc, before || null);
+   },
+   movedBefore: function (id, before) {
+     var doc = self.docs.get(id);
+     callbacks.movedBefore && callbacks.movedBefore.call(self, id, before);
+     self.docs.moveBefore(id, before || null);
+   }
+ };
+} else {
+ //self.docs = new LocalCollection._IdMap;
+ self.docs = new IdMap(EJSON.stringify, EJSON.parse);
+ self.applyChange = {
+   added: function (id, fields) {
+     var doc = EJSON.clone(fields);
+     callbacks.added && callbacks.added.call(self, id, fields);
+     doc._id = id;
+     self.docs.set(id,  doc);
+   }
+ };
+}
+
+// The methods in _IdMap and OrderedDict used by these callbacks are
+// identical.
+self.applyChange.changed = function (id, fields) {
+ var doc = self.docs.get(id);
+ if (!doc)
+   throw new Error("Unknown id for changed: " + id);
+ callbacks.changed && callbacks.changed.call(
+   self, id, EJSON.clone(fields));
+ LocalCollection._applyChanges(doc, fields);
+};
+self.applyChange.removed = function (id) {
+ callbacks.removed && callbacks.removed.call(self, id);
+ self.docs.remove(id);
+};
+};
+
+
 ObserveMultiplexer = function (options) {
   var self = this;
 
-  if (!options || !_.has(options, 'ordered'))
-    throw Error("must specified ordered");
+//  if (!options || !_.has(options, 'ordered'))
+//    throw Error("must specified ordered");
 
   Package.facts && Package.facts.Facts.incrementServerFact(
     "redis-livedata", "observe-multiplexers", 1);
 
-  self._ordered = options.ordered;
+  self._ordered = !!options.ordered;
   self._onStop = options.onStop || function () {};
   self._queue = new Meteor._SynchronousQueue();
   self._handles = {};
   self._readyFuture = new Future;
-  self._cache = new LocalCollection._CachingChangeObserver({
+  self._cache = new ObserveHelpers._CachingChangeObserver({
     ordered: options.ordered});
   // Number of addHandleAndSendInitialAdds tasks scheduled but not yet
   // running. removeHandle uses this to know if it's time to call the onStop

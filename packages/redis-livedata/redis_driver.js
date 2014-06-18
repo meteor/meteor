@@ -116,9 +116,9 @@ RedisObserver = function (watcher, observer) {
   self._watcher = watcher;
   var listener = function (key, message) {
     var methodName;
-    if (message == 'hset') {
+    if (message == 'hset' || message == 'set') {
       methodName = 'updated';
-    } else if (message == 'hincrby') {
+    } else if (message == 'hincrby' || message == 'incrby') {
       methodName = 'updated';
     } else if (message == 'del') {
       methodName = 'removed';
@@ -128,8 +128,8 @@ RedisObserver = function (watcher, observer) {
       Meteor._debug("RedisConnection::observe: Unknown message: " + message);
     } else {
       if (_.isFunction(observer[methodName])) {
-        var o = { _id: key };
-        observer[methodName](o);
+        var value = { _id: key };
+        observer[methodName](key, value);
       }
     }
 //      addedAt: function (doc, before_index, before) {
@@ -249,6 +249,8 @@ RedisConnection = function (url, options) {
 //    });
 //    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
 //  }
+  
+  self._oplogHandle = new OplogHandle(self._watcher);
 };
 
 RedisConnection.prototype.close = function() {
@@ -662,6 +664,52 @@ _.each(["insert", "update", "remove", "dropCollection"], function (method) {
   };
 });
 
+_.each(["set"], function (method) {
+  RedisConnection.prototype[method] = function (/* arguments */) {
+    var self = this;
+    return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
+  };
+
+  RedisConnection.prototype["_" + method] = function (key /*, arguments */) {
+    var self = this;
+
+    var args = _.toArray(arguments);
+    
+    var callback;
+    if (args.length && args[args.length - 1] instanceof Function)
+      callback = args.pop();
+    
+    var sendError = function (e) {
+      if (callback)
+        return callback(e);
+      throw e;
+    };
+
+    var collection_name = '::redis';
+    
+    var write = self._maybeBeginWrite();
+    var refresh = function () {
+      Meteor.refresh({ collection: collection_name, id: key });
+    };
+    callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
+    try {
+      args.push(callback);
+      //var collection = self._getCollection(collection_name);
+      var self = this;
+
+      var future = new Future;
+      self._withDb(function (db) {
+        future.return(db);
+      });
+      var db = future.wait();
+      db.set.apply(db, args);
+    } catch (e) {
+      write.committed();
+      throw e;
+    }
+  };
+});
+
 // XXX RedisConnection.upsert() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
@@ -701,14 +749,26 @@ RedisConnection.prototype.findOne = function (collection_name, selector,
   return self.find(collection_name, selector, options).fetch()[0];
 };
 
-RedisConnection.prototype.keys = function (matcher) {
+RedisConnection.prototype.matching = function (pattern) {
   var self = this;
-  return Future.wrap(_.bind(self._client.keys, self._client))(matcher).wait();
+
+  return new Cursor(
+    self, new CursorDescription(pattern));
+};
+
+RedisConnection.prototype.keys = function (pattern, callback) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.keys, self._client))(pattern).wait();
 };
 
 RedisConnection.prototype.hgetall = function (key) {
   var self = this;
   return Future.wrap(_.bind(self._client.hgetall, self._client))(key).wait();
+};
+
+RedisConnection.prototype._keys_hgetall = function (keyPrefix) {
+  var self = this;
+  return Future.wrap(_.bind(self._client._keys_hgetall, self._client))(keyPrefix).wait();
 };
 
 RedisConnection.prototype.hmset = function (key, object) {
@@ -721,12 +781,26 @@ RedisConnection.prototype.hincrby = function (key, field, delta) {
   return Future.wrap(_.bind(self._client.hincrby, self._client))(key, field, delta).wait();
 };
 
+RedisConnection.prototype.incrby = function (key, delta) {
+  var self = this;
+  return Future.wrap(_.bind(self._client.incrby, self._client))(key, delta).wait();
+};
+
 RedisConnection.prototype.del = function (keys) {
   var self = this;
   return Future.wrap(_.bind(self._client.del, self._client))(keys).wait();
 };
 
-RedisConnection.prototype.observe = function (observer) {
+RedisConnection.prototype.get = function (key) {
+  var self = this;
+  var v = Future.wrap(_.bind(self._client.get, self._client))(key).wait();
+  if (v === null) {
+    v = undefined;
+  }
+  return v;
+};
+
+RedisConnection.prototype._observe = function (observer) {
   var self = this;
   return new RedisObserver(self._watcher, observer);
 };
@@ -790,11 +864,10 @@ RedisConnection.prototype._dropIndex = function (collectionName, index) {
 // they start sending observeChanges callbacks (and a ready() invocation) to
 // their ObserveMultiplexer, and you stop them by calling their stop() method.
 
-CursorDescription = function (collectionName, selector, options) {
+CursorDescription = function (pattern) {
   var self = this;
-  self.collectionName = collectionName;
-  self.selector = Meteor.RedisCollection._rewriteSelector(selector);
-  self.options = options || {};
+  self.pattern = pattern;
+  self.options = {};
 };
 
 Cursor = function (connection, cursorDescription) {
@@ -848,92 +921,124 @@ Cursor.prototype._publishCursor = function (sub) {
 Cursor.prototype._getCollectionName = function () {
   var self = this;
   return self._cursorDescription.collectionName;
-}
+};
+
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
-  return LocalCollection._observeFromObserveChanges(self, callbacks);
+  //return self._connection._observe(callbacks);
+  var pattern = self._cursorDescription.pattern;
+  return self._connection._observe(self._cursorDescription, callbacks);
+//  return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
-  return self._connection._observeChanges(
-    self._cursorDescription, ordered, callbacks);
+  //var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
+//  return self._connection._observeChanges(
+//    self._cursorDescription, ordered, callbacks);
+  try {
+    return self._connection._observeChanges(self._cursorDescription, callbacks);
+  } catch (e) {
+    Meteor._debug("Error in _observeChanges", e.stack);
+    throw e;
+  }
 };
 
 RedisConnection.prototype._createSynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+  
+  var pattern = cursorDescription.pattern;
+//  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
-  var collection = self._getCollection(cursorDescription.collectionName);
-  var cursorOptions = cursorDescription.options;
-  var mongoOptions = {
-    sort: cursorOptions.sort,
-    limit: cursorOptions.limit,
-    skip: cursorOptions.skip
-  };
+//  var collection = self._getCollection(cursorDescription.collectionName);
+//  var cursorOptions = cursorDescription.options;
+//  var mongoOptions = {
+//    sort: cursorOptions.sort,
+//    limit: cursorOptions.limit,
+//    skip: cursorOptions.skip
+//  };
 
-  // Do we want a tailable cursor (which only works on capped collections)?
-  if (cursorOptions.tailable) {
-    // We want a tailable cursor...
-    mongoOptions.tailable = true;
-    // ... and for the server to wait a bit if any getMore has no data (rather
-    // than making us put the relevant sleeps in the client)...
-    mongoOptions.awaitdata = true;
-    // ... and to keep querying the server indefinitely rather than just 5 times
-    // if there's no more data.
-    mongoOptions.numberOfRetries = -1;
-    // And if this is on the oplog collection and the cursor specifies a 'ts',
-    // then set the undocumented oplog replay flag, which does a special scan to
-    // find the first document (instead of creating an index on ts). This is a
-    // very hard-coded Mongo flag which only works on the oplog collection and
-    // only works with the ts field.
-    if (cursorDescription.collectionName === OPLOG_COLLECTION &&
-        cursorDescription.selector.ts) {
-      mongoOptions.oplogReplay = true;
-    }
-  }
+//  // Do we want a tailable cursor (which only works on capped collections)?
+//  if (cursorOptions.tailable) {
+//    // We want a tailable cursor...
+//    mongoOptions.tailable = true;
+//    // ... and for the server to wait a bit if any getMore has no data (rather
+//    // than making us put the relevant sleeps in the client)...
+//    mongoOptions.awaitdata = true;
+//    // ... and to keep querying the server indefinitely rather than just 5 times
+//    // if there's no more data.
+//    mongoOptions.numberOfRetries = -1;
+//    // And if this is on the oplog collection and the cursor specifies a 'ts',
+//    // then set the undocumented oplog replay flag, which does a special scan to
+//    // find the first document (instead of creating an index on ts). This is a
+//    // very hard-coded Mongo flag which only works on the oplog collection and
+//    // only works with the ts field.
+//    if (cursorDescription.collectionName === OPLOG_COLLECTION &&
+//        cursorDescription.selector.ts) {
+//      mongoOptions.oplogReplay = true;
+//    }
+//  }
 
-  var dbCursor = collection.find(
-    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithRedis),
-    cursorOptions.fields, mongoOptions);
+  
+//  var dbCursor = collection.find(
+//    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithRedis),
+//    cursorOptions.fields, mongoOptions);
+//
+//  return new SynchronousCursor(dbCursor, cursorDescription, options);
 
-  return new SynchronousCursor(dbCursor, cursorDescription, options);
+
+  var future = new Future;
+  self._withDb(function (db) {
+    db.matching(pattern, future.resolver());
+  });
+  var entries = future.wait();
+
+  return new SynchronousCursor(entries, cursorDescription, options);
+
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options) {
+var SynchronousCursor = function (entries, cursorDescription, options) {
   var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+//  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
-  self._dbCursor = dbCursor;
+  self._entries = entries;
+  self._pos = -1;
   self._cursorDescription = cursorDescription;
   // The "self" argument passed to forEach/map callbacks. If we're wrapped
   // inside a user-visible Cursor, we want to provide the outer cursor!
-  self._selfForIteration = options.selfForIteration || self;
-  if (options.useTransform && cursorDescription.options.transform) {
-    self._transform = LocalCollection.wrapTransform(
-      cursorDescription.options.transform);
-  } else {
-    self._transform = null;
-  }
+//  self._selfForIteration = options.selfForIteration || self;
+//  if (options.useTransform && cursorDescription.options.transform) {
+//    self._transform = LocalCollection.wrapTransform(
+//      cursorDescription.options.transform);
+//  } else {
+//    self._transform = null;
+//  }
 
   // Need to specify that the callback is the first argument to nextObject,
   // since otherwise when we try to call it with no args the driver will
   // interpret "undefined" first arg as an options hash and crash.
-  self._synchronousNextObject = Future.wrap(
-    dbCursor.nextObject.bind(dbCursor), 0);
-  self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
-  self._visitedIds = new LocalCollection._IdMap;
+//  self._synchronousNextObject = Future.wrap(
+//    dbCursor.nextObject.bind(dbCursor), 0);
+//  self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
+  self._visitedIds = new IdMap; // LocalCollection._IdMap;
 };
 
 _.extend(SynchronousCursor.prototype, {
+//  _synchronousNextObject: function () {
+//    
+//  },
   _nextObject: function () {
     var self = this;
 
     while (true) {
-      var doc = self._synchronousNextObject().wait();
+      //var doc = self._synchronousNextObject().wait();
+      var doc;
+      if ((self._pos + 1) < self._entries.length) {
+        self._pos++;
+        doc = self._entries[self._pos];
+      }
 
       if (!doc) return null;
       doc = replaceTypes(doc, replaceRedisAtomWithMeteor);
@@ -1003,7 +1108,8 @@ _.extend(SynchronousCursor.prototype, {
 
   count: function () {
     var self = this;
-    return self._synchronousCount().wait();
+    return self._entries.length;
+//    return self._synchronousCount().wait();
   },
 
   // This method is NOT wrapped in Cursor.
@@ -1081,25 +1187,26 @@ RedisConnection.prototype.tail = function (cursorDescription, docCallback) {
   };
 };
 
-RedisConnection.prototype._observeChanges = function (
-    cursorDescription, ordered, callbacks) {
+RedisConnection.prototype._observeChanges = function (cursorDescription, callbacks) {
   var self = this;
 
-  if (cursorDescription.options.tailable) {
-    return self._observeChangesTailable(cursorDescription, ordered, callbacks);
-  }
+//  if (cursorDescription.options.tailable) {
+//    return self._observeChangesTailable(cursorDescription, ordered, callbacks);
+//  }
 
-  // You may not filter out _id when observing changes, because the id is a core
-  // part of the observeChanges API.
-  if (cursorDescription.options.fields &&
-      (cursorDescription.options.fields._id === 0 ||
-       cursorDescription.options.fields._id === false)) {
-    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
-  }
+//  // You may not filter out _id when observing changes, because the id is a core
+//  // part of the observeChanges API.
+//  if (cursorDescription.options.fields &&
+//      (cursorDescription.options.fields._id === 0 ||
+//       cursorDescription.options.fields._id === false)) {
+//    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+//  }
 
   var observeKey = JSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
+    _.extend({ /*ordered: ordered */}, cursorDescription));
 
+  Meteor._debug("observeKey: " + JSON.stringify(observeKey));
+  
   var multiplexer, observeDriver;
   var firstHandle = false;
 
@@ -1113,7 +1220,7 @@ RedisConnection.prototype._observeChanges = function (
       firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
-        ordered: ordered,
+        //ordered: ordered,
         onStop: function () {
           observeDriver.stop();
           delete self._observeMultiplexers[observeKey];
@@ -1126,52 +1233,54 @@ RedisConnection.prototype._observeChanges = function (
   var observeHandle = new ObserveHandle(multiplexer, callbacks);
 
   if (firstHandle) {
-    var matcher, sorter;
-    var canUseOplog = _.all([
-      function () {
-        // At a bare minimum, using the oplog requires us to have an oplog, to
-        // want unordered callbacks, and to not want a callback on the polls
-        // that won't happen.
-        return self._oplogHandle && !ordered &&
-          !callbacks._testOnlyPollCallback;
-      }, function () {
-        // We need to be able to compile the selector. Fall back to polling for
-        // some newfangled $selector that minimongo doesn't support yet.
-        try {
-          matcher = new Minimongo.Matcher(cursorDescription.selector);
-          return true;
-        } catch (e) {
-          // XXX make all compilation errors MinimongoError or something
-          //     so that this doesn't ignore unrelated exceptions
-          return false;
-        }
-      }, function () {
-        // ... and the selector itself needs to support oplog.
-        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-      }, function () {
-        // And we need to be able to compile the sort, if any.  eg, can't be
-        // {$natural: 1}.
-        if (!cursorDescription.options.sort)
-          return true;
-        try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
-                                        { matcher: matcher });
-          return true;
-        } catch (e) {
-          // XXX make all compilation errors MinimongoError or something
-          //     so that this doesn't ignore unrelated exceptions
-          return false;
-        }
-      }], function (f) { return f(); });  // invoke each function
-
-    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+//    var matcher, sorter;
+//    var canUseOplog = _.all([
+//      function () {
+//        // At a bare minimum, using the oplog requires us to have an oplog, to
+//        // want unordered callbacks, and to not want a callback on the polls
+//        // that won't happen.
+//        return self._oplogHandle && !ordered &&
+//          !callbacks._testOnlyPollCallback;
+//      }, function () {
+//        // We need to be able to compile the selector. Fall back to polling for
+//        // some newfangled $selector that minimongo doesn't support yet.
+//        try {
+//          matcher = new Minimongo.Matcher(cursorDescription.selector);
+//          return true;
+//        } catch (e) {
+//          // XXX make all compilation errors MinimongoError or something
+//          //     so that this doesn't ignore unrelated exceptions
+//          return false;
+//        }
+//      }, function () {
+//        // ... and the selector itself needs to support oplog.
+//        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+//      }, function () {
+//        // And we need to be able to compile the sort, if any.  eg, can't be
+//        // {$natural: 1}.
+//        if (!cursorDescription.options.sort)
+//          return true;
+//        try {
+//          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
+//                                        { matcher: matcher });
+//          return true;
+//        } catch (e) {
+//          // XXX make all compilation errors MinimongoError or something
+//          //     so that this doesn't ignore unrelated exceptions
+//          return false;
+//        }
+//      }], function (f) { return f(); });  // invoke each function
+//
+//    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+ 
+    var driverClass = KeyspaceNotificationObserveDriver;
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,
       multiplexer: multiplexer,
-      ordered: ordered,
-      matcher: matcher,  // ignored by polling
-      sorter: sorter,  // ignored by polling
+      //ordered: ordered,
+      //matcher: matcher,  // ignored by polling
+      //sorter: sorter,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 
@@ -1208,17 +1317,18 @@ listenAll = function (cursorDescription, listenCallback) {
 };
 
 forEachTrigger = function (cursorDescription, triggerCallback) {
-  var key = {collection: cursorDescription.collectionName};
-  var specificIds = LocalCollection._idsMatchedBySelector(
-    cursorDescription.selector);
-  if (specificIds) {
-    _.each(specificIds, function (id) {
-      triggerCallback(_.extend({id: id}, key));
-    });
-    triggerCallback(_.extend({dropCollection: true, id: null}, key));
-  } else {
+//  var key = {collection: cursorDescription.collectionName};
+  var key = { collection: 'redis' };
+//  var specificIds = LocalCollection._idsMatchedBySelector(
+//    cursorDescription.selector);
+//  if (specificIds) {
+//    _.each(specificIds, function (id) {
+//      triggerCallback(_.extend({id: id}, key));
+//    });
+//    triggerCallback(_.extend({dropCollection: true, id: null}, key));
+//  } else {
     triggerCallback(key);
-  }
+//  }
 };
 
 // observeChanges for tailable cursors on capped collections.

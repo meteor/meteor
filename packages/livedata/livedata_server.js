@@ -1086,6 +1086,15 @@ _.extend(Subscription.prototype, {
     self._session.changed(self._subscriptionHandle, collectionName, id, fields);
   },
 
+  updated: function (collectionName, id, fields) {
+    var self = this;
+    if (self._isDeactivated())
+      return;
+    id = self._idFilter.idStringify(id);
+    Meteor._ensure(self._documents, collectionName)[id] = true;
+    self._session.updated(self._subscriptionHandle, collectionName, id, fields);
+  },
+
   removed: function (collectionName, id) {
     var self = this;
     if (self._isDeactivated())

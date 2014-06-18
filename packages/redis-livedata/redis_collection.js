@@ -1,6 +1,6 @@
+
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
-
 Meteor.RedisCollection = function (name, options) {
   var self = this;
   if (! (self instanceof Meteor.RedisCollection))
@@ -216,7 +216,7 @@ _.extend(Meteor.RedisCollection.prototype, {
 });
 
 Meteor.RedisCollection._publishCursor = function (cursor, sub, collection) {
-  var observeHandle = cursor.observeChanges({
+  var observeHandle = cursor.observe({
     added: function (id, fields) {
       sub.added(collection, id, fields);
     },
@@ -463,7 +463,13 @@ _.each(["insert", "update", "remove"], function (name) {
   };
 });
 
-_.each(['keys', 'hgetall', 'hmset', 'hincrby', 'del'], function (name) {
+// Returns a Cursor
+Meteor.RedisCollection.prototype.matching = function (pattern) {
+  var self = this;
+  return self._collection.matching(pattern);
+};
+
+_.each(['get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall'], function (name) {
   Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
@@ -486,6 +492,175 @@ _.each(['keys', 'hgetall', 'hmset', 'hincrby', 'del'], function (name) {
     }
   };
 });
+
+//var path = Npm.require('path');
+//var Fiber = Npm.require('fibers');
+//var Future = Npm.require(path.join('fibers', 'future'));
+//
+//
+//// Make synchronous
+//_.each(['keys'], function (name) {
+//  Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
+//    var self = this;
+//    var args = _.toArray(arguments);
+//    var callback;
+//    var ret;
+//
+//    var future;
+//    
+//    if (args.length && args[args.length - 1] instanceof Function) {
+//      callback = args.pop();
+//    } else {
+//      future = new Future;
+//      callback = future.resolver();
+//    }
+//
+//    try {
+//      args.push(callback);
+//      var ret = self._collection[name].apply(self._collection, args);
+//      if (future) {
+//        ret = future.wait();
+//      }
+//      return ret;
+//    } catch (e) {
+////      if (callback) {
+////        callback(e);
+////        return null;
+////      }
+//      throw e;
+//    }
+//  };
+//});
+
+_.each(["set"], function (name) {
+  Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+    var callback;
+    var insertId;
+    var ret;
+
+    if (args.length && args[args.length - 1] instanceof Function)
+      callback = args.pop();
+
+    // On inserts, always return the id that we generated; on all other
+    // operations, just return the result from the collection.
+    var chooseReturnValueFromCollectionResult = function (result) {
+//      if (name === "insert") {
+//        if (!insertId && result) {
+//          insertId = result;
+//        }
+//        return insertId;
+//      } else {
+//        return result;
+//      }
+      return result;
+    };
+
+    var wrappedCallback;
+    if (callback) {
+      wrappedCallback = function (error, result) {
+        callback(error, ! error && chooseReturnValueFromCollectionResult(result));
+      };
+    }
+
+    if (self._connection && self._connection !== Meteor.server) {
+      // just remote to another endpoint, propagate return value or
+      // exception.
+
+      var enclosing = DDP._CurrentInvocation.get();
+      var alreadyInSimulation = enclosing && enclosing.isSimulation;
+
+      if (Meteor.isClient && !wrappedCallback && ! alreadyInSimulation) {
+        // Client can't block, so it can't report errors by exception,
+        // only by callback. If they forget the callback, give them a
+        // default one that logs the error, so they aren't totally
+        // baffled if their writes don't work because their database is
+        // down.
+        // Don't give a default callback in simulation, because inside stubs we
+        // want to return the results from the local collection immediately and
+        // not force a callback.
+        wrappedCallback = function (err) {
+          if (err)
+            Meteor._debug(name + " failed: " + (err.reason || err.stack));
+        };
+      }
+
+//      if (!alreadyInSimulation && name !== "insert") {
+//        // If we're about to actually send an RPC, we should throw an error if
+//        // this is a non-ID selector, because the mutation methods only allow
+//        // single-ID selectors. (If we don't throw here, we'll see flicker.)
+//        throwIfSelectorIsNotId(args[0], name);
+//      }
+
+      ret = chooseReturnValueFromCollectionResult(
+        self._connection.apply(self._prefix + name, args, {returnStubValue: true}, wrappedCallback)
+      );
+
+    } else {
+      // it's my collection.  descend into the collection object
+      // and propagate any exception.
+      args.push(wrappedCallback);
+      try {
+        // If the user provided a callback and the collection implements this
+        // operation asynchronously, then queryRet will be undefined, and the
+        // result will be returned through the callback instead.
+        var queryRet = self._collection[name].apply(self._collection, args);
+        ret = chooseReturnValueFromCollectionResult(queryRet);
+      } catch (e) {
+        if (callback) {
+          callback(e);
+          return null;
+        }
+        throw e;
+      }
+    }
+
+    // both sync and async, unless we threw an exception, return ret
+    // (new document ID for insert, num affected for update/remove, object with
+    // numberAffected and maybe insertedId for upsert).
+    return ret;
+  };
+});
+
+Keyspace = function (collection, pattern) {
+  var self = this;
+  self._collection = collection;
+  self._pattern = pattern;
+};
+
+//When you call Meteor.publish() with a function that returns a Cursor, we need
+//to transmute it into the equivalent subscription.  This is the function that
+//does that.
+
+Keyspace.prototype._publishCursor = function (sub) {
+  var self = this;
+  var collection = self._collection;
+
+  var observeHandle = collection.observe({
+//    added: function (id, fields) {
+//      sub.added(collection, id, fields);
+//    },
+    updated: function (key, v) {
+      Meteor._debug("updated: " + JSON.stringify(arguments));
+      sub.added(collection, key, v);
+    },
+//    changed: function (id, fields) {
+//      sub.changed(collection, id, fields);
+//    },
+    removed: function (key, v) {
+      sub.removed(collection, key, v);
+    }
+  });
+
+  // We don't call sub.ready() here: it gets called in livedata_server, after
+  // possibly calling _publishCursor on multiple returned cursors.
+
+  // register stop callback (expects lambda w/ no args).
+  sub.onStop(function () {observeHandle.stop();});
+};
+
+
 
 Meteor.RedisCollection.prototype.upsert = function (selector, modifier,
                                                options, callback) {

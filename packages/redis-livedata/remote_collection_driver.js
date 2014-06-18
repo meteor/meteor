@@ -16,7 +16,7 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
         ret[m] = _.bind(self.connection[m], self.connection, name);
       });
     _.each(
-        ['keys', 'hgetall', 'hmset', 'hincrby', 'observe', 'del'],
+        ['get', 'set', 'incrby', 'keys', 'hgetall', 'hmset', 'hincrby', '_observe', 'del', '_keys_hgetall', 'matching'],
         function (m) {
           ret[m] = _.bind(self.connection[m], self.connection);
         });

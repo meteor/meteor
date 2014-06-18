@@ -8,8 +8,8 @@ var COLLECTIONS = {};
 
 if (Meteor.isServer) {
   Meteor.methods({
-    createInsecureCollection: function (name, options) {
-      check(name, String);
+    createInsecureRedisCollection: function (keyPrefix, options) {
+      check(keyPrefix, String);
       check(options, Match.Optional({
         transformName: Match.Optional(String),
         idGeneration: Match.Optional(String)
@@ -18,15 +18,16 @@ if (Meteor.isServer) {
       if (options && options.transformName) {
         options.transform = TRANSFORMS[options.transformName];
       }
-      var c = new Meteor.RedisCollection(name, options);
-      COLLECTIONS[name] = c;
+      var c = new Meteor.RedisCollection(keyPrefix, options);
+      COLLECTIONS[keyPrefix] = c;
       c._insecure = true;
-      Meteor.publish('c-' + name, function () {
-        return c.find();
+      Meteor.publish('c-' + keyPrefix, function () {
+        var cursor = c.matching(keyPrefix);
+        return cursor;
       });
     },
-    dropInsecureCollection: function(name) {
-      var c = COLLECTIONS[name];
+    dropInsecureCollection: function(keyPrefix) {
+      var c = COLLECTIONS[keyPrefix];
       c._dropCollection();
     }
   });
@@ -243,17 +244,30 @@ var collectionOptions = { };
 Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
   
+  // XXX We can't cope with two RedisCollections, as they have the same name and both try to register /redis/isnert
   var coll, coll2;
+  var keyPrefix = Random.id() + ':';
   if (Meteor.isClient) {
     coll = new Meteor.RedisCollection(null, collectionOptions) ; // local, unmanaged
-    coll2 = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
+    //coll2 = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
+    
+    // XXX Remoting
+//    coll = new Meteor.RedisCollection("redis", collectionOptions);
+//    coll2 = new Meteor.RedisCollection("client_livedata_test_collection_2_"+run + ':', collectionOptions);
   } else {
-    coll = new Meteor.RedisCollection("livedata_test_collection_"+run + ':', collectionOptions);
-    coll2 = new Meteor.RedisCollection("livedata_test_collection_2_"+run + ':', collectionOptions);
+    coll = new Meteor.RedisCollection("redis", collectionOptions);
+    //coll2 = new Meteor.RedisCollection("redis", collectionOptions);
   }
 
+  var _withoutPrefix = function (key) {
+    if (key.indexOf(keyPrefix) != 0) {
+      throw new Error("Expected key to start with prefix, was: " + key);
+    }
+    return key.substr(keyPrefix.length);
+  };
+  
   var log = '';
-  var obs = coll./*find('*', {sort: ["x"]}).*/observe({
+  var obs = coll.matching('*').observeChanges({
 //    addedAt: function (doc, before_index, before) {
 //      log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
 //    },
@@ -266,22 +280,18 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //    removedAt: function (doc, at_index) {
 //      log += 'r(' + doc.x + ',' + at_index + ')';
 //    },
-    _withoutPrefix: function (key) {
-      if (key.indexOf(coll._keyPrefix) != 0) {
-        throw new Error("Expected key to start with prefix, was: " + key);
-      }
-      return key.substr(coll._keyPrefix.length);
+    added: function (key, value) {
+      Meteor._debug("added " + JSON.stringify(arguments));
+      var withoutPrefix = _withoutPrefix(key);
+      log += 'a(' + withoutPrefix + ')';
     },
-    updated: function (change) {
-      var self = this;
-      var key = change._id;
-      var withoutPrefix = self._withoutPrefix(key);
+    updated: function (key, value) {
+      Meteor._debug("updated " + JSON.stringify(arguments));
+      var withoutPrefix = _withoutPrefix(key);
       log += 'u(' + withoutPrefix + ')';
     },
-    removed: function (change) {
-      var self = this;
-      var key = change._id;
-      var withoutPrefix = self._withoutPrefix(key);
+    removed: function (key, value) {
+      var withoutPrefix = _withoutPrefix(key);
       log += 'r(' + withoutPrefix + ')';
     }
   });
@@ -292,7 +302,11 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     } else {
       var fence = new DDPServer._WriteFence;
       DDPServer._CurrentWriteFence.withValue(fence, f);
+      Meteor._debug("pre-armAndWait");
       fence.armAndWait();
+      // XXX Make this work!
+      Meteor._sleepForMs(5000);
+      Meteor._debug("post-armAndWait");
     }
 
     var ret = log;
@@ -307,127 +321,160 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.include(expected, captureObserve(f));
   };
 
-  test.equal(coll.keys(coll._keyPrefix + '*').length, 0);
-  test.equal(coll.hgetall(coll._keyPrefix + "abc"), undefined);
-  //test.equal(coll.findOne({run: run}), undefined);
-
-  expectObserve('u(1)', function () {
+  // XXX Put back
+//  Meteor._debug("before keys");
+////  test.equal(coll.keys(keyPrefix + '*').length, 0);
+////  Meteor._debug("keys returned");
+//  test.equal(coll.matching(keyPrefix + '*').count(), 0);
+//  Meteor._debug("matching returned");
+//  test.equal(coll.get(keyPrefix + "abc"), undefined);
+//  //test.equal(coll.findOne({run: run}), undefined);
+//  Meteor._debug("get returned");
+  
+  expectObserve('a(1)', function () {
     var id = '1';
-    coll.hmset(coll._keyPrefix + id, {run: run, x: 1});
-    test.equal(coll.keys(coll._keyPrefix + '*').length, 1);
-    test.equal(coll.hgetall(coll._keyPrefix + id).x, '1');
+    Meteor._debug("pre-set");
+    coll.set(keyPrefix + id, '1');
+    // XXX Put back
+//    Meteor._debug("pre-keys");
+//    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+    Meteor._debug("pre-get");
+    test.equal(coll.get(keyPrefix + id), '1');
+    Meteor._debug("post-get");
     //test.equal(coll.findOne({run: run}).x, 1);
   });
 
-  expectObserve('u(4)', function () {
-    var id2 = '4';
-    coll.hmset(coll._keyPrefix + id2, {run: run, x: 4});
-    test.equal(coll.keys(coll._keyPrefix + '*').length, 2);
-    test.equal(coll.keys(coll._keyPrefix + id2).length, 1);
-    test.equal(coll.hgetall(coll._keyPrefix + id2).x, '4');
-  });
-
-  // (We don't support sorting)
-//  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 0}).x, 1);
-//  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 1}).x, 4);
-//  test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 0}).x, 4);
-//  test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
-//
-//
-//  var cur = coll.find({run: run}, {sort: ["x"]});
-//  var total = 0;
-//  var index = 0;
-//  var context = {};
-//  cur.forEach(function (doc, i, cursor) {
-//    test.equal(i, index++);
-//    test.isTrue(cursor === cur);
-//    test.isTrue(context === this);
-//    total *= 10;
-//    if (Meteor.isServer) {
-//      // Verify that the callbacks from forEach run sequentially and that
-//      // forEach waits for them to complete (issue# 321). If they do not run
-//      // sequentially, then the second callback could execute during the first
-//      // callback's sleep sleep and the *= 10 will occur before the += 1, then
-//      // total (at test.equal time) will be 5. If forEach does not wait for the
-//      // callbacks to complete, then total (at test.equal time) will be 0.
-//      Meteor._sleepForMs(5);
-//    }
-//    total += doc.x;
-//    // verify the meteor environment is set up here
-//    coll2.insert({total:total});
-//  }, context);
-//  test.equal(total, 14);
-//
-//  cur.rewind();
-//  index = 0;
-//  test.equal(cur.map(function (doc, i, cursor) {
-//    // XXX we could theoretically make map run its iterations in parallel or
-//    // something which would make this fail
-//    test.equal(i, index++);
-//    test.isTrue(cursor === cur);
-//    test.isTrue(context === this);
-//    return doc.x * 2;
-//  }, context), [2, 8]);
-//
-//  test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
-//             [4, 1]);
-
-//  expectObserve('', function () {
-//    var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
-//    test.equal(count, 0);
+  Meteor._debug("After expectObserve");
+  
+//  expectObserve('u(4)', function () {
+//    var id2 = '4';
+//    coll.set(keyPrefix + id2, '4');
+//    test.equal(coll.matching(keyPrefix + '*').count(), 2);
+//    test.equal(coll.matching(keyPrefix + id2).count(), 1);
+//    test.equal(coll.get(keyPrefix + id2), '4');
 //  });
-
-  expectObserve('u(1)', function () {
-//    var count = coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
-//    test.equal(count, 2);
-    var newValue = coll.hincrby(coll._keyPrefix + '1', 'x', 2);
-    test.equal(newValue, 3);
-
-//    test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
-//               [6, 3]);
-    test.equal(coll.hgetall(coll._keyPrefix + '1').x, '3');
-  });
-
-//  expectObserve(['c(13,0,3)m(13,0,1)', 'm(6,1,0)c(13,1,3)',
-//                 'c(13,0,3)m(6,1,0)', 'm(3,0,1)c(13,1,3)'], function () {
-//    coll.update({run: run, x: 3}, {$inc: {x: 10}}, {multi: true});
-//    test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
-//               [13, 6]);
+//
+//  // (We don't support sorting)
+////  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 0}).x, 1);
+////  test.equal(coll.findOne({run: run}, {sort: ["x"], skip: 1}).x, 4);
+////  test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 0}).x, 4);
+////  test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
+////
+////
+////  var cur = coll.find({run: run}, {sort: ["x"]});
+////  var total = 0;
+////  var index = 0;
+////  var context = {};
+////  cur.forEach(function (doc, i, cursor) {
+////    test.equal(i, index++);
+////    test.isTrue(cursor === cur);
+////    test.isTrue(context === this);
+////    total *= 10;
+////    if (Meteor.isServer) {
+////      // Verify that the callbacks from forEach run sequentially and that
+////      // forEach waits for them to complete (issue# 321). If they do not run
+////      // sequentially, then the second callback could execute during the first
+////      // callback's sleep sleep and the *= 10 will occur before the += 1, then
+////      // total (at test.equal time) will be 5. If forEach does not wait for the
+////      // callbacks to complete, then total (at test.equal time) will be 0.
+////      Meteor._sleepForMs(5);
+////    }
+////    total += doc.x;
+////    // verify the meteor environment is set up here
+////    coll2.insert({total:total});
+////  }, context);
+////  test.equal(total, 14);
+////
+////  cur.rewind();
+////  index = 0;
+////  test.equal(cur.map(function (doc, i, cursor) {
+////    // XXX we could theoretically make map run its iterations in parallel or
+////    // something which would make this fail
+////    test.equal(i, index++);
+////    test.isTrue(cursor === cur);
+////    test.isTrue(context === this);
+////    return doc.x * 2;
+////  }, context), [2, 8]);
+////
+////  test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
+////             [4, 1]);
+//
+////  expectObserve('', function () {
+////    var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
+////    test.equal(count, 0);
+////  });
+//
+//  expectObserve('u(1)', function () {
+////    var count = coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
+////    test.equal(count, 2);
+//    var newValue = coll.incrby(keyPrefix + '1', 2);
+//    test.equal(newValue, 3);
+//
+////    test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
+////               [6, 3]);
+//    test.equal(coll.get(keyPrefix + '1'), '3');
 //  });
-
-  expectObserve('r(1)', function () {
-//    var count = coll.remove({run: run, x: {$gt: 10}});
+//
+////  expectObserve(['c(13,0,3)m(13,0,1)', 'm(6,1,0)c(13,1,3)',
+////                 'c(13,0,3)m(6,1,0)', 'm(3,0,1)c(13,1,3)'], function () {
+////    coll.update({run: run, x: 3}, {$inc: {x: 10}}, {multi: true});
+////    test.equal(_.pluck(coll.find({run: run}, {sort: {x: -1}}).fetch(), "x"),
+////               [13, 6]);
+////  });
+//
+//  expectObserve('r(1)', function () {
+////    var count = coll.remove({run: run, x: {$gt: 10}});
+////    test.equal(count, 1);
+////    test.equal(coll.find({run: run}).count(), 1);
+//
+//    var count = coll.del(keyPrefix + '1');
 //    test.equal(count, 1);
-//    test.equal(coll.find({run: run}).count(), 1);
-
-    var count = coll.del(coll._keyPrefix + '1');
-    test.equal(count, 1);
-    test.equal(coll.keys(coll._keyPrefix + '*').length, 1);
-    test.equal(coll.hgetall(coll._keyPrefix + '1'), undefined);
-  });
-
-  expectObserve('r(4)', function () {
-//    coll.remove({run: run});
-//    test.equal(coll.find({run: run}).count(), 0);
-    
-    coll.del(coll._keyPrefix + '4');
-    test.equal(coll.keys(coll._keyPrefix + '*').length, 0);
-  });
-
-  expectObserve('', function () {
-//    var count = coll.remove({run: run});
+//    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+//    test.equal(coll.get(keyPrefix + '1'), undefined);
+//  });
+//  
+//  expectObserve('r(4)', function () {
+////    coll.remove({run: run});
+////    test.equal(coll.find({run: run}).count(), 0);
+//    
+//    coll.del(keyPrefix + '4');
+//    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+//  });
+//
+//  expectObserve('', function () {
+////    var count = coll.remove({run: run});
+////    test.equal(count, 0);
+////    test.equal(coll.find({run: run}).count(), 0);
+//
+//    var count = coll.del(keyPrefix + '4');
 //    test.equal(count, 0);
-//    test.equal(coll.find({run: run}).count(), 0);
-
-    var count = coll.del(coll._keyPrefix + '4');
-    test.equal(count, 0);
-    test.equal(coll.keys(coll._keyPrefix + '*').length, 0);
-  });
+//    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+//  });
 
   obs.stop();
   onComplete();
 });
 
+/*
+testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
+  function (test, expect) {
+    this.collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureRedisCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
+    }
+  }, function (test, expect) {
+    var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
+
+    var id = '1';
+    test.equal(coll.keys(keyPrefix + '*').length, 0);
+    test.equal(coll.get(keyPrefix + id), undefined);
+    coll.set(keyPrefix + id, '1');
+    test.equal(coll.keys(keyPrefix + '*').length, 1);
+    test.equal(coll.get(keyPrefix + id), '1');
+  }
+]);
+*/
 
 //Tinytest.addAsync("redis-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 //
@@ -1308,7 +1355,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 //    }));
 //  }
 //]);
-//
+
 //// See https://github.com/meteor/meteor/issues/594.
 //testAsyncMulti('redis-livedata - document with length, ' + idGeneration, [
 //  function (test, expect) {

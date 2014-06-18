@@ -59,10 +59,10 @@ RedisClient.prototype.findCandidateKeys = function (collectionName, matcher, cal
   }
 };
 
-RedisClient.prototype.keys = function (matcher, callback) {
+RedisClient.prototype.keys = function (pattern, callback) {
   var self = this;
 
-  self._connection.keys(matcher, Meteor.bindEnvironment(callback));
+  self._connection.keys(pattern, Meteor.bindEnvironment(callback));
 };
 
 RedisClient.prototype.hgetall = function (key, callback) {
@@ -76,6 +76,94 @@ RedisClient.prototype.hgetall = function (key, callback) {
     callback(err, result);
   }));
 };
+
+RedisClient.prototype._multi_hgetall = function (keys, callback) {
+  // We need to implement this ourselves, because redis doesn't have a multi-key hgetall
+  var self = this;
+  
+  Meteor._debug("_multi_hgetall " + JSON.stringify(arguments));
+  
+  var connection = self._connection;
+
+  var errors = [];
+  var lastError = null;
+  var values = [];
+  var replyCount = 0;
+  
+  var n = keys.length;
+  
+  if (n == 0) {
+    callback(lastError, values);
+    return;
+  }
+
+  _.each(_.range(n), function(i) {
+    var key = keys[i];
+    connection.hgetall(key, Meteor.bindEnvironment(function(err, value) {
+      if (err) {
+        Meteor._debug("Error getting key from redis: " + err);
+        lastError = err;
+      }
+      errors[i] = err;
+      values[i] = value;
+      
+      replyCount++;
+      if (replyCount == n) {
+        Meteor._debug("Got n values");
+        callback(lastError, values);
+      }
+    }));
+  });
+};
+
+RedisClient.prototype._keys_hgetall = function (matcher, callback) {
+  var self = this;
+
+  self._connection.keys(matcher, Meteor.bindEnvironment(function (err, result) {
+    if (err) {
+      Meteor._debug("Error listing keys: " + err);
+      callback(err, null);
+    } else {
+      Meteor._debug("matcher = " + matcher);
+      Meteor._debug("keys = " + result.length);
+
+      self._multi_hgetall(result, callback);
+    }
+  }));
+};
+
+RedisClient.prototype.mget = function (keys, callback) {
+  var self = this;
+
+  Meteor._debug("RedisClient::mget " + JSON.stringify(keys));
+  
+  if (!keys.length) {
+    // mget is fussy about empty keys array
+    callback(null, []);
+    return;
+  }
+  
+  // XXX Strip any null values from results?
+  self._connection.mget(keys, Meteor.bindEnvironment(callback));
+};
+
+RedisClient.prototype.matching = function (pattern, callback) {
+  var self = this;
+
+  self._connection.keys(pattern, Meteor.bindEnvironment(function (err, result) {
+    if (err) {
+      Meteor._debug("Error listing keys: " + err);
+      callback(err, null);
+    } else {
+      Meteor._debug("pattern = " + pattern);
+      Meteor._debug("keys = " + result.length);
+
+      self.mget(result, callback);
+    }
+  }));
+};
+
+
 
 RedisClient.prototype.hmset = function (key, object, callback) {
   var self = this;
@@ -95,11 +183,29 @@ RedisClient.prototype.del = function (keys, callback) {
   self._connection.del(keys, Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.get = function (key, callback) {
+  var self = this;
+
+  Meteor._debug("RedisClient.prototype.get " + JSON.stringify(arguments));
+  self._connection.get(key, Meteor.bindEnvironment(callback));
+};
+
+RedisClient.prototype.set = function (key, value, callback) {
+  var self = this;
+
+  self._connection.set(key, value, Meteor.bindEnvironment(callback));
+};
 
 RedisClient.prototype.incr = function (key, callback) {
   var self = this;
 
-  self._connection.incr(key, callback);
+  self._connection.incr(key, Meteor.bindEnvironment(callback));
+};
+
+RedisClient.prototype.incrby = function (key, delta, callback) {
+  var self = this;
+
+  self._connection.incrby(key, delta, Meteor.bindEnvironment(callback));
 };
 
 RedisClient.prototype.getAll = function (keys, callback) {
@@ -201,3 +307,5 @@ RedisClient.prototype.removeAll = function (keys, callback) {
     }));
   });
 };
+
+

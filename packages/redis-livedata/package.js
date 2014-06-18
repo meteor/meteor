@@ -18,7 +18,9 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'miniredis', 'logging',
-           'livedata', 'deps', 'application-configuration'],
+           'livedata', 'deps', 'application-configuration',
+           'id-map',
+          ],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
@@ -53,7 +55,8 @@ Package.on_use(function (api) {
 
   api.add_files(['redis_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
-                 'polling_observe_driver.js','oplog_observe_driver.js',
+                 //'polling_observe_driver.js','oplog_observe_driver.js',
+                 'keyspace_notification_observe_driver.js',
                  'redis_client.js',
                  'redis_watcher.js'],
                 'server');

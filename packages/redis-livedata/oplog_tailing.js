@@ -1,7 +1,7 @@
 var Future = Npm.require('fibers/future');
 
-OPLOG_COLLECTION = 'oplog.rs';
-var REPLSET_COLLECTION = 'system.replset';
+//OPLOG_COLLECTION = 'oplog.rs';
+//var REPLSET_COLLECTION = 'system.replset';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -28,10 +28,11 @@ idForOp = function (op) {
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
 
-OplogHandle = function (oplogUrl, dbName) {
+OplogHandle = function (watcher /*oplogUrl, dbName*/) {
   var self = this;
-  self._oplogUrl = oplogUrl;
-  self._dbName = dbName;
+//  self._oplogUrl = oplogUrl;
+//  self._dbName = dbName;
+  self._watcher = watcher;
 
   self._oplogLastEntryConnection = null;
   self._oplogTailConnection = null;
@@ -101,6 +102,11 @@ _.extend(OplogHandle.prototype, {
     // be ready.
     self._readyFuture.wait();
 
+    // XXX Implement waiting
+    Meteor._sleepForMs(1000);
+    Meteor._debug("waitUntilCaughtUp is stubbed out (just sleeps for 1s)");
+    return;
+    
     while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we might
@@ -113,7 +119,7 @@ _.extend(OplogHandle.prototype, {
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._debug("Got exception while reading last entry: ", e.stack);
         Meteor._sleepForMs(100);
       }
     }
@@ -150,86 +156,107 @@ _.extend(OplogHandle.prototype, {
   },
   _startTailing: function () {
     var self = this;
-    // We make two separate connections to Mongo. The Node Mongo driver
-    // implements a naive round-robin connection pool: each "connection" is a
-    // pool of several (5 by default) TCP connections, and each request is
-    // rotated through the pools. Tailable cursor queries block on the server
-    // until there is some data to return (or until a few seconds have
-    // passed). So if the connection pool used for tailing cursors is the same
-    // pool used for other queries, the other queries will be delayed by seconds
-    // 1/5 of the time.
-    //
-    // The tail connection will only ever be running a single tail command, so
-    // it only needs to make one underlying TCP connection.
-    self._oplogTailConnection = new RedisConnection(
-      self._oplogUrl, {poolSize: 1});
-    // XXX better docs, but: it's to get monotonic results
-    // XXX is it safe to say "if there's an in flight query, just use its
-    //     results"? I don't think so but should consider that
-    self._oplogLastEntryConnection = new RedisConnection(
-      self._oplogUrl, {poolSize: 1});
+//    // We make two separate connections to Mongo. The Node Mongo driver
+//    // implements a naive round-robin connection pool: each "connection" is a
+//    // pool of several (5 by default) TCP connections, and each request is
+//    // rotated through the pools. Tailable cursor queries block on the server
+//    // until there is some data to return (or until a few seconds have
+//    // passed). So if the connection pool used for tailing cursors is the same
+//    // pool used for other queries, the other queries will be delayed by seconds
+//    // 1/5 of the time.
+//    //
+//    // The tail connection will only ever be running a single tail command, so
+//    // it only needs to make one underlying TCP connection.
+//    self._oplogTailConnection = new RedisConnection(
+//      self._oplogUrl, {poolSize: 1});
+//    // XXX better docs, but: it's to get monotonic results
+//    // XXX is it safe to say "if there's an in flight query, just use its
+//    //     results"? I don't think so but should consider that
+//    self._oplogLastEntryConnection = new RedisConnection(
+//      self._oplogUrl, {poolSize: 1});
+//
+//    // First, make sure that there actually is a repl set here. If not, oplog
+//    // tailing won't ever find anything! (Blocks until the connection is ready.)
+//    var replSetInfo = self._oplogLastEntryConnection.findOne(
+//      REPLSET_COLLECTION, {});
+//    if (!replSetInfo)
+//      throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
+//                  "a Mongo replica set");
+//
+//    // Find the last oplog entry.
+//    var lastOplogEntry = self._oplogLastEntryConnection.findOne(
+//      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+//
+//    var oplogSelector = _.clone(self._baseOplogSelector);
+//    if (lastOplogEntry) {
+//      // Start after the last entry that currently exists.
+//      oplogSelector.ts = {$gt: lastOplogEntry.ts};
+//      // If there are any calls to callWhenProcessedLatest before any other
+//      // oplog entries show up, allow callWhenProcessedLatest to call its
+//      // callback immediately.
+//      self._lastProcessedTS = lastOplogEntry.ts;
+//    }
+//
+//    var cursorDescription = new CursorDescription(
+//      OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
-    // First, make sure that there actually is a repl set here. If not, oplog
-    // tailing won't ever find anything! (Blocks until the connection is ready.)
-    var replSetInfo = self._oplogLastEntryConnection.findOne(
-      REPLSET_COLLECTION, {});
-    if (!replSetInfo)
-      throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
-                  "a Mongo replica set");
+    self._tailHandle = self._watcher.addListener(function (key, message) {
+      Meteor._debug("Redis keyspace event: " + key + ": " + message);
+      // XXX collection name
+      var trigger = {collection: "redis",
+                     id: key,
+                     message: message };
+      
 
-    // Find the last oplog entry.
-    var lastOplogEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+      self._crossbar.fire(trigger);
 
-    var oplogSelector = _.clone(self._baseOplogSelector);
-    if (lastOplogEntry) {
-      // Start after the last entry that currently exists.
-      oplogSelector.ts = {$gt: lastOplogEntry.ts};
-      // If there are any calls to callWhenProcessedLatest before any other
-      // oplog entries show up, allow callWhenProcessedLatest to call its
-      // callback immediately.
-      self._lastProcessedTS = lastOplogEntry.ts;
-    }
-
-    var cursorDescription = new CursorDescription(
-      OPLOG_COLLECTION, oplogSelector, {tailable: true});
-
-    self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription, function (doc) {
-        if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
-              doc.ns.substr(0, self._dbName.length + 1) ===
-              (self._dbName + '.'))) {
-          throw new Error("Unexpected ns");
-        }
-
-        var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
-                       dropCollection: false,
-                       op: doc};
-
-        // Is it a special command and the collection name is hidden somewhere
-        // in operator?
-        if (trigger.collection === "$cmd") {
-          trigger.collection = doc.o.drop;
-          trigger.dropCollection = true;
-          trigger.id = null;
-        } else {
-          // All other ops have an id.
-          trigger.id = idForOp(doc);
-        }
-
-        self._crossbar.fire(trigger);
-
-        // Now that we've processed this operation, process pending sequencers.
-        if (!doc.ts)
-          throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-        self._lastProcessedTS = doc.ts;
-        while (!_.isEmpty(self._catchingUpFutures)
-               && self._catchingUpFutures[0].ts.lessThanOrEqual(
-                 self._lastProcessedTS)) {
-          var sequencer = self._catchingUpFutures.shift();
-          sequencer.future.return();
-        }
-      });
+//      // Now that we've processed this operation, process pending sequencers.
+//      if (!doc.ts)
+//        throw Error("oplog entry without ts: " + EJSON.stringify(doc));
+//      self._lastProcessedTS = doc.ts;
+//      while (!_.isEmpty(self._catchingUpFutures)
+//             && self._catchingUpFutures[0].ts.lessThanOrEqual(
+//               self._lastProcessedTS)) {
+//        var sequencer = self._catchingUpFutures.shift();
+//        sequencer.future.return();
+//      }
+    });
+//    self._tailHandle = self._oplogTailConnection.tail(
+//      cursorDescription, function (doc) {
+//        if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
+//              doc.ns.substr(0, self._dbName.length + 1) ===
+//              (self._dbName + '.'))) {
+//          throw new Error("Unexpected ns");
+//        }
+//
+//        var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
+//                       dropCollection: false,
+//                       op: doc};
+//
+//        // Is it a special command and the collection name is hidden somewhere
+//        // in operator?
+//        if (trigger.collection === "$cmd") {
+//          trigger.collection = doc.o.drop;
+//          trigger.dropCollection = true;
+//          trigger.id = null;
+//        } else {
+//          // All other ops have an id.
+//          trigger.id = idForOp(doc);
+//        }
+//
+//        self._crossbar.fire(trigger);
+//
+//        // Now that we've processed this operation, process pending sequencers.
+//        if (!doc.ts)
+//          throw Error("oplog entry without ts: " + EJSON.stringify(doc));
+//        self._lastProcessedTS = doc.ts;
+//        while (!_.isEmpty(self._catchingUpFutures)
+//               && self._catchingUpFutures[0].ts.lessThanOrEqual(
+//                 self._lastProcessedTS)) {
+//          var sequencer = self._catchingUpFutures.shift();
+//          sequencer.future.return();
+//        }
+//      });
     self._readyFuture.return();
   }
 });
