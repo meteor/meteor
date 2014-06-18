@@ -37,8 +37,8 @@ canonicalizeHtml = function(html) {
     // c="d"', assume they are separated by a single space and values
     // are double- or single-quoted, but allow for spaces inside the
     // quotes.  Split on space following quote.
-    var attrList = attrs.replace(/(\w)='([^']+)' /g, "$1='$2'\u0000");
-    attrList = attrList.replace(/(\w)="([^"]+)" /g, '$1="$2"\u0000');
+    var attrList = attrs.replace(/(\w)='([^']*)' /g, "$1='$2'\u0000");
+    attrList = attrList.replace(/(\w)="([^"]*)" /g, '$1="$2"\u0000');
     attrList = attrList.split("\u0000");
     // put attributes in alphabetical order
     attrList.sort();
