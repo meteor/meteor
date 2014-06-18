@@ -6,6 +6,15 @@ var semver = Npm.require('semver');
 ////////////////////////////////////////////////////////////////////////////////
 // A persistent data-structure that keeps references to Constraint objects
 // arranged by the "name" field of Constraint, exact field and version.
+//
+// Internal structure has the "length" field for the number of elements stored
+// and the "byName" map that has the following structure:
+// byName:
+//   - nameOfPackage:
+//     - exact:
+//       - versionString <=> exactConstraintInstance
+//     - inexact:
+//       - versionString <=> inexactConstraintInstance
 ConstraintSolver.ConstraintsList = function (prev) {
   var self = this;
 
@@ -83,8 +92,8 @@ ConstraintSolver.ConstraintsList.prototype.forPackage = function (name, iter) {
 // doesn't break on the false return value
 ConstraintSolver.ConstraintsList.prototype.each = function (iter) {
   var self = this;
-  mori.each(self.byName, function (coll) {
-    mori.each(mori.last(coll), function (exactInexactColl) {
+  mori.each(self.byName, function (nameAndColl) {
+    mori.each(mori.last(nameAndColl), function (exactInexactColl) {
       mori.each(mori.last(exactInexactColl), function (c) {
         iter(mori.last(c));
       });
@@ -204,7 +213,7 @@ ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor =
   // there is some exact constraint, the choice is obvious
   if (exact) {
     var uv = exact.getSatisfyingUnitVersion(resolver);
-    if (_.isEmpty(self.violatedConstraints(uv)))
+    if (uv && _.isEmpty(self.violatedConstraints(uv)))
       return { earliest: uv, latest: uv };
     else
       return { earliest: null, latest: null };

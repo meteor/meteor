@@ -19,9 +19,13 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 
   // XXX for now we convert builds to unit versions as "deps#os"
 
+  var allPackageNames = catalog.getAllPackageNames();
+  var sortedVersionsForPackage = {};
   var forEveryVersion = function (iter) {
-    _.each(catalog.getAllPackageNames(), function (packageName) {
-      _.each(catalog.getSortedVersions(packageName), function (version) {
+    _.each(allPackageNames, function (packageName) {
+      if (! sortedVersionsForPackage[packageName])
+        sortedVersionsForPackage[packageName] = catalog.getSortedVersions(packageName);
+      _.each(sortedVersionsForPackage[packageName], function (version) {
         var versionDef = catalog.getVersion(packageName, version);
         iter(packageName, version, versionDef);
       });
@@ -32,18 +36,24 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // Set constraints and dependencies between units
   forEveryVersion(function (packageName, version, versionDef) {
     var builds = {};
+    // XXX in theory there might be different archs but in practice they are
+    // always "os" and "browser". Fix this once we actually have different
+    // archs used.
+    _.each(["os", "browser"], function (arch) {
+      var unitName = packageName + "#" + arch;
+      builds[unitName] = new ConstraintSolver.UnitVersion(
+        unitName, version, versionDef.earliestCompatibleVersion);
+      unitVersion = builds[unitName];
+      self.resolver.addUnitVersion(unitVersion);
+    });
+
     _.each(versionDef.dependencies, function (dep, depName) {
       _.each(dep.references, function (ref) {
         var unitName = packageName + "#" + ref.arch;
         var unitVersion = builds[unitName];
-        if (! unitVersion) {
-          // if it is first time we met the build of this version, register it
-          // in resolver.
-          builds[unitName] = new ConstraintSolver.UnitVersion(
-            unitName, version, versionDef.earliestCompatibleVersion);
-          unitVersion = builds[unitName];
-          self.resolver.addUnitVersion(unitVersion);
-        }
+
+        if (! unitVersion)
+          throw new Error("A non-standard arch " + ref.arch + " for package " + packageName);
 
         var targetUnitName = depName + "#" + ref.arch;
 
@@ -59,31 +69,6 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
         }
       });
     });
-
-    if (_.isEmpty(builds)) {
-      // XXX this is a hack to temporary solve the problem with packages w/o
-      // dependencies. Right now in order to understand what are builds of
-      // package, we look into its dependencies build-wise. W/o dependencies we
-      // would need to do something else, like see what builds other builds
-      // depend on. Also if depending builds of other packages don't specify the
-      // version, there is no way we can resolve what builds different versions
-      // have as different versions of the same package can in theory have
-      // diverging sets of builds.
-      //
-      // But in practive we always have main + os builds. So we
-      // will just hardcode two most improtant builds at the moment. Fix it
-      // later.
-      _.each(["os", "browser"], function (arch) {
-        var unitName = packageName + "#" + arch;
-        var unitVersion = builds[unitName];
-        if (! unitVersion) {
-          builds[unitName] = new ConstraintSolver.UnitVersion(
-            unitName, version, versionDef.earliestCompatibleVersion);
-          unitVersion = builds[unitName];
-          self.resolver.addUnitVersion(unitVersion);
-        }
-      });
-    }
 
     // Every build implies that if it is picked, other builds are constrained to
     // the same version.
@@ -172,8 +157,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints, [],
-                                  resolverOptions);
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints, resolverOptions);
 
   var resultChoices = {};
   _.each(res, function (uv) {
@@ -199,7 +183,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 
   // XXX resolver.resolve can throw an error, should have error handling with
   // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints, null,
+  var res = self.resolver.resolve(dc.dependencies, dc.constraints,
                                   { stopAfterFirstPropagation: true });
 
   var resultChoices = {};
@@ -263,12 +247,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var self = this;
 
   var semverToNum = function (version) {
-    version = version.split("+")[0];
-    var v = _.map(version.split('.'), function (x) {
-      return parseInt(x);
-    });
-
-    return v[0] * 10000 + v[1] * 100 + v[2];
+    var v = semver.parse(version);
+    return v.major * 10000 + v.minor * 100 + v.patch;
   };
 
   var resolverOptions = {};

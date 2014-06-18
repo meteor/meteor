@@ -28,11 +28,19 @@ _.extend(PriorityQueue.prototype, {
   },
   top: function () {
     var self = this;
+
+    if (self.empty())
+      throw new Error("The queue is empty");
+
     var id = self._heap.minElementId();
     return self._items[id];
   },
   pop: function () {
     var self = this;
+
+    if (self.empty())
+      throw new Error("The queue is empty");
+
     var id = self._heap.minElementId();
     var item = self._items[id];
 
