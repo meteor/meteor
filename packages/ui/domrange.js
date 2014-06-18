@@ -11,7 +11,7 @@ var removeNode = function (n) {
       n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
     n.parentNode._uihooks.removeElement(n);
   } else {
-    n.parentNode.removeChild(n);
+    DomBackend.removeElement(n);
   }
 };
 
@@ -154,7 +154,7 @@ var nodeRemoved = function (node, elementsAlreadyRemoved) {
   if (node.nodeType === 1) { // ELEMENT
     var comps = DomRange.getComponents(node);
     for (var i = 0, N = comps.length; i < N; i++)
-      rangeRemoved(comps[i]);
+      rangeRemoved(comps[i], elementsAlreadyRemoved);
 
     if (! elementsAlreadyRemoved)
       DomBackend.removeElement(node);
