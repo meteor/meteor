@@ -658,7 +658,7 @@ _.extend(CompleteCatalog.prototype, {
       name, sourcePath, unip);
 
     self.builds.push({
-      buildArchitectures: unip.architecturesString(),
+      buildArchitectures: unip.buildArchitectures(),
       builtBy: null,
       build: null, // this would be the URL and hash
       versionId: versionId,

@@ -512,7 +512,7 @@ _.extend(Sandbox.prototype, {
       _id: toolVersionId
     });
     stubCatalog.collections.builds.push({
-      architecture: toolPackage.architecturesString(),
+      architecture: toolPackage.buildArchitectures(),
       versionId: toolVersionId,
       _id: utils.randomToken()
     });

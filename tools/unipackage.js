@@ -299,6 +299,7 @@ _.extend(Unipackage.prototype, {
     self.unibuilds.push(new Unibuild(self, options));
   },
 
+  // An sorted array of all the architectures included in this package.
   architectures: function () {
     var self = this;
     return _.uniq(
@@ -306,14 +307,16 @@ _.extend(Unipackage.prototype, {
     ).sort();
   },
 
-  architecturesString: function () {
+  // A sorted plus-separated string of all the architectures included in this
+  // package.
+  buildArchitectures: function () {
     var self = this;
     return self.architectures().join('+');
   },
 
   tarballName: function () {
     var self = this;
-    return self.name + '-' + self.version + '-' + self.architecturesString();
+    return self.name + '-' + self.version + '-' + self.buildArchitectures();
   },
 
   _toolArchitectures: function () {

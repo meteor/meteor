@@ -602,7 +602,7 @@ main.registerCommand({
                   var existingBuild =
                         catalog.official.getBuildWithPreciseBuildArchitectures(
                           oldVersion,
-                          compileResult.unipackage.architecturesString());
+                          compileResult.unipackage.buildArchitectures());
 
                   // If the version number mentioned in package.js exists, but
                   // there's no build of this architecture, then either the old

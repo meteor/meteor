@@ -64,7 +64,7 @@ _.extend(exports.Tropohouse.prototype, {
   // Returns a list of builds that we have downloaded for a package&version by
   // reading the contents of that package & version's build directory. Does not
   // check that the directory exists.
-  downloadedBuilds: function (packageName, version) {
+  listDownloadedBuildArchitectures: function (packageName, version) {
     var self = this;
     return files.readdirNoDots(
       self.downloadedBuildsDirectory(packageName, version));
@@ -76,11 +76,12 @@ _.extend(exports.Tropohouse.prototype, {
   // contained architectures.
   downloadedArches: function (packageName, version) {
     var self = this;
-    var downloadedBuilds = self.downloadedBuilds(packageName, version);
+    var downloadedBuildArchitectures = self.listDownloadedBuildArchitectures(
+      packageName, version);
     var downloadedArches = _.reduce(
-      downloadedBuilds,
-      function(init, build) {
-        return _.union(build.split('+'), init);
+      downloadedBuildArchitectures,
+      function(init, buildArchitectures) {
+        return _.union(buildArchitectures.split('+'), init);
       },
       []);
     return downloadedArches;
@@ -184,11 +185,12 @@ _.extend(exports.Tropohouse.prototype, {
 
     // We need to turn our builds into a single unipackage.
     var unipackage = new Unipackage;
-    var builds = self.downloadedBuilds(packageName, version);
-    _.each(builds, function (build, i) {
+    var downloadedBuildArchitectures =
+          self.listDownloadedBuildArchitectures(packageName, version);
+    _.each(downloadedBuildArchitectures, function (buildArchitectures, i) {
       unipackage._loadUnibuildsFromPath(
         packageName,
-        self.downloadedBuildPath(packageName, version, build),
+        self.downloadedBuildPath(packageName, version, buildArchitectures),
         {firstUnipackage: i === 0});
     });
     // XXX save new buildinfo stuff so it auto-rebuilds
