@@ -417,6 +417,10 @@ _.extend(Miniredis.RedisStore.prototype, {
     var val = self._has(key) ? self._get(key) : null;
     if (val !== null && ! _.isString(val))
       throwIncorrectKindOfValueError();
+    // Mirror mongo behaviour: missing get returns undefined
+    if (val === null) {
+      val = undefined;
+    }
     // XXX shouldn't clone, strings are immutable
     return EJSON.clone(val);
   },

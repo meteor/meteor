@@ -324,9 +324,9 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   Meteor._debug("before matching");
   test.equal(coll.matching(keyPrefix + '*').count(), 0);
   Meteor._debug("matching returned");
-//  test.equal(coll.get(keyPrefix + "abc"), undefined);
-//  //test.equal(coll.findOne({run: run}), undefined);
-//  Meteor._debug("get returned");
+  test.equal(coll.get(keyPrefix + "abc"), undefined);
+  //test.equal(coll.findOne({run: run}), undefined);
+  Meteor._debug("get returned");
   
   expectObserve('a(1)', function () {
     var id = '1';
