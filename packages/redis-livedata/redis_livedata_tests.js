@@ -332,9 +332,8 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     var id = '1';
     Meteor._debug("pre-set");
     coll.set(keyPrefix + id, '1');
-    // XXX Put back
-//    Meteor._debug("pre-keys");
-//    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+    Meteor._debug("pre-matching");
+    test.equal(coll.matching(keyPrefix + '*').count(), 1);
     Meteor._debug("pre-get");
     test.equal(coll.get(keyPrefix + id), '1');
     Meteor._debug("post-get");
@@ -346,9 +345,9 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   expectObserve('a(4)', function () {
     var id2 = '4';
     coll.set(keyPrefix + id2, '4');
-    // XXX Put back
-//    test.equal(coll.matching(keyPrefix + '*').count(), 2);
-//    test.equal(coll.matching(keyPrefix + id2).count(), 1);
+//     XXX Put back
+    test.equal(coll.matching(keyPrefix + '*').count(), 2);
+    test.equal(coll.matching(keyPrefix + id2).count(), 1);
     test.equal(coll.get(keyPrefix + id2), '4');
   });
 //
@@ -401,7 +400,8 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 ////    var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
 ////    test.equal(count, 0);
 ////  });
-//
+
+  // XXX: incrby
 //  expectObserve('u(1)', function () {
 ////    var count = coll.update({run: run}, {$inc: {x: 2}}, {multi: true});
 ////    test.equal(count, 2);
@@ -412,7 +412,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 ////               [6, 3]);
 //    test.equal(coll.get(keyPrefix + '1'), '3');
 //  });
-//
+
 ////  expectObserve(['c(13,0,3)m(13,0,1)', 'm(6,1,0)c(13,1,3)',
 ////                 'c(13,0,3)m(6,1,0)', 'm(3,0,1)c(13,1,3)'], function () {
 ////    coll.update({run: run, x: 3}, {$inc: {x: 10}}, {multi: true});
@@ -420,34 +420,34 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 ////               [13, 6]);
 ////  });
 //
-//  expectObserve('r(1)', function () {
-////    var count = coll.remove({run: run, x: {$gt: 10}});
-////    test.equal(count, 1);
-////    test.equal(coll.find({run: run}).count(), 1);
-//
-//    var count = coll.del(keyPrefix + '1');
+  expectObserve('r(1)', function () {
+//    var count = coll.remove({run: run, x: {$gt: 10}});
 //    test.equal(count, 1);
-//    test.equal(coll.matching(keyPrefix + '*').count(), 1);
-//    test.equal(coll.get(keyPrefix + '1'), undefined);
-//  });
-//  
-//  expectObserve('r(4)', function () {
-////    coll.remove({run: run});
-////    test.equal(coll.find({run: run}).count(), 0);
-//    
-//    coll.del(keyPrefix + '4');
-//    test.equal(coll.matching(keyPrefix + '*').count(), 0);
-//  });
-//
-//  expectObserve('', function () {
-////    var count = coll.remove({run: run});
-////    test.equal(count, 0);
-////    test.equal(coll.find({run: run}).count(), 0);
-//
-//    var count = coll.del(keyPrefix + '4');
+//    test.equal(coll.find({run: run}).count(), 1);
+
+    var count = coll.del(keyPrefix + '1');
+    test.equal(count, 1);
+    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+    test.equal(coll.get(keyPrefix + '1'), undefined);
+  });
+
+  expectObserve('r(4)', function () {
+//    coll.remove({run: run});
+//    test.equal(coll.find({run: run}).count(), 0);
+
+    coll.del(keyPrefix + '4');
+    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+  });
+
+  expectObserve('', function () {
+//    var count = coll.remove({run: run});
 //    test.equal(count, 0);
-//    test.equal(coll.matching(keyPrefix + '*').count(), 0);
-//  });
+//    test.equal(coll.find({run: run}).count(), 0);
+
+    var count = coll.del(keyPrefix + '4');
+    test.equal(count, 0);
+    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+  });
 
   obs.stop();
   onComplete();
