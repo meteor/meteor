@@ -301,7 +301,9 @@ _.extend(Unipackage.prototype, {
 
   architectures: function () {
     var self = this;
-    return _.uniq(_.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())).sort();
+    return _.uniq(
+      _.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())
+    ).sort();
   },
 
   architecturesString: function () {
@@ -321,9 +323,9 @@ _.extend(Unipackage.prototype, {
     return _.uniq(toolArches).sort();
   },
 
-  // Return the unibuild of the package to use for a given target architecture (eg,
-  // 'os.linux.x86_64' or 'browser'), or throw an exception if that packages
-  // can't be loaded under these circumstances.
+  // Return the unibuild of the package to use for a given target architecture
+  // (eg, 'os.linux.x86_64' or 'browser'), or throw an exception if that
+  // packages can't be loaded under these circumstances.
   getUnibuildAtArch: function (arch) {
     var self = this;
 

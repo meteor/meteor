@@ -806,7 +806,7 @@ compiler.compile = function (packageSource, options) {
 
   _.each(packageSource.architectures, function (unibuild) {
     var unibuildSources = compileUnibuild(unipackage, unibuild, packageLoader,
-                                    nodeModulesPath, isPortable);
+                                          nodeModulesPath, isPortable);
     sources.push.apply(sources, unibuildSources);
   });
 

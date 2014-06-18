@@ -599,9 +599,10 @@ main.registerCommand({
                   process.stdout.write("new package\n");
                   return;
                 } else {
-                  var existingBuild = catalog.official.getBuildWithArchesString(
-                    oldVersion,
-                    compileResult.unipackage.architecturesString());
+                  var existingBuild =
+                        catalog.official.getBuildWithPreciseBuildArchitectures(
+                          oldVersion,
+                          compileResult.unipackage.architecturesString());
 
                   // If the version number mentioned in package.js exists, but
                   // there's no build of this architecture, then either the old

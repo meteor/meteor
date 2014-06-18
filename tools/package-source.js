@@ -1381,7 +1381,7 @@ _.extend(PackageSource.prototype, {
         }
 
         var reference = {
-          arch: archinfo.withoutSpecificOs(arch.arch),
+          arch: archinfo.withoutSpecificOs(arch.arch)
         };
         if (use.weak) {
           reference.weak = true;

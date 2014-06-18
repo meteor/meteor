@@ -313,7 +313,7 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
     version: unipackage.version,
-    architecture: unipackage.architectures().join('+')
+    buildArchitectures: unipackage.architecturesString()
   });
 
   var bundleResult = bundleBuild(unipackage);

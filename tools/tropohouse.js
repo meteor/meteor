@@ -55,10 +55,10 @@ _.extend(exports.Tropohouse.prototype, {
 
   // Return a path to a location that would contain a specified build of the
   // package at the specified version, if we have this build cached on disk.
-  downloadedBuildPath: function(packageName, version, buildArches) {
+  downloadedBuildPath: function(packageName, version, buildArchitectures) {
     var self = this;
     return path.join(self.downloadedBuildsDirectory(packageName, version),
-                     buildArches);
+                     buildArchitectures);
   },
 
   // Returns a list of builds that we have downloaded for a package&version by
@@ -109,7 +109,8 @@ _.extend(exports.Tropohouse.prototype, {
     var self = this;
     // XXX nb: "version" field is calculated by getBuildsForArches
     var path = self.downloadedBuildPath(
-      buildRecord.packageName, buildRecord.version, buildRecord.architecture);
+      buildRecord.packageName, buildRecord.version,
+      buildRecord.buildArchitectures);
     var packageTarball = httpHelpers.getUrl({
       url: buildRecord.build.url,
       encoding: null

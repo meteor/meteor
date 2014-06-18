@@ -109,8 +109,8 @@ _.extend(exports.PackageLoader.prototype, {
     return catalogs.complete.getLoadPathForPackage(name, version);
   },
 
-  // Given a package name like "ddp" and an architecture, get the unibuild of that
-  // package at the right architecture.
+  // Given a package name like "ddp" and an architecture, get the unibuild of
+  // that package at the right architecture.
   getUnibuild: function (packageName, arch) {
     var self = this;
 
