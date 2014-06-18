@@ -110,6 +110,11 @@ _.extend(Miniredis.Cursor.prototype, {
     var self = this;
     return self.redisStore.patternFetch(self.pattern);
   },
+  count: function () {
+    var self = this;
+    // XXX Inefficient
+    return self.fetch().length;
+  },
   observe: function (callbacks) {
     var self = this;
 
