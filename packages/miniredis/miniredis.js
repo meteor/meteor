@@ -52,11 +52,11 @@ var translateToOrderedCallbacks = function (orderedCallbacks) {
       orderedCallbacks.addedAt && orderedCallbacks.addedAt(doc, pos, before);
     },
     changed: function (oldDoc, newDoc) {
-      var pos = insPos(queryResult, newDoc._id);
+      var pos = insPos(queryResult, newDoc._id) - 1;
       orderedCallbacks.changedAt && orderedCallbacks.changedAt(oldDoc, newDoc, pos);
     },
     removed: function (doc) {
-      var pos = insPos(queryResult, doc._id);
+      var pos = insPos(queryResult, doc._id) - 1;
       queryResult.splice(pos, 1);
       orderedCallbacks.removedAt && orderedCallbacks.removedAt(doc, pos);
     }
