@@ -26,7 +26,7 @@
            plaintext password.
 
 * Show the display name of the currently logged-in user after following
-  a verification link or password reset link in `accounts-ui`.
+  an email verification link or password reset link in `accounts-ui`.
 
 * Add a `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
 
@@ -45,8 +45,36 @@
 
 #### Blaze
 
-* Allow externally applied CSS style attributes to interoperate with Blaze
-  dynamic style attributes.
+* Blaze now tracks individual CSS rules in `style` attributes and won't
+  overwrite changes to them made by other JavaScript libraries.
+
+* Add {{> UI.dynamic}} to make it easier to dynamically render a
+  template with a data context. XXX Update "Using Blaze" wiki page.
+
+* Add `UI._templateInstance()` for accessing the current template
+  instance from within a block helper.
+
+* Add `UI._parentData(n)` for accessing parent data contexts from
+  within a block helper.
+
+* Add preliminary API for registering hooks to run when Blaze intends to
+  insert, move, or remove DOM elements. For example, you can use these
+  hooks to animate nodes as they are inserted, moved, or removed. To use
+  them, you can set the `_uihooks` property on a container DOM
+  element. `_uihooks` is an object that can have any subset of the
+  following three properties:
+
+    - `insertElement: function (node, next)`: called when Blaze intends
+      to insert the DOM element `node` before the element `next`
+    - `moveElement: function (node, next)`: called when Blaze intends to
+      move the DOM element `node` before the element `next`
+    - `removeElement: function (node)`: called when Blaze intends to
+      remove the DOM element `node`
+
+    Note that when you set one of these functions on a container
+    element, Blaze will not do the actual operation; it's your
+    responsibility to actually insert, move, or remove the node (by
+    calling `$(node).remove()`, for example).
 
 * The `findAll` method on template instances now returns a vanilla
   array, not a jQuery object. The `$` method continues to
@@ -55,25 +83,13 @@
 * Fix a Blaze memory leak by cleaning up event handlers when a template
   instance is destroyed. #1997
 
-* Add {{> UI.dynamic}} to make it easier to dynamically render a
-  template with a data context. XXX Update "Using Blaze" wiki page.
-
 * Fix a bug where helpers used by {{#with}} were still re-running when
-  their reactive data sources change after they have been removed from
+  their reactive data sources changed after they had been removed from
   the DOM.
-
-* Add `UI._templateInstance()` for accessing the current template
-  instance from within a block helper.
-
-* Add `UI._parentData(n)` for accessing parent data contexts from
-  within a block helper.
 
 * Stop not updating form controls if they're focused. If a field is
   edited by one user while another user is focused on it, it will just
   lose its value but maintain its focus. #1965
-
-* Add tentative API for registering hooks to run when Blaze intends to
-  insert, move, or remove DOM elements. XXX more detail
 
 * Add `_nestInCurrentComputation` option to `UI.render`, fixing a bug in
   {{#each}} when an item is added inside a computation that subsequently
@@ -156,11 +172,7 @@
 
 * Ban inserting EJSON custom types as documents. #2095
 
-* XXX 1e4838ccd38c2df142591a67d675ac38eb8a5630 #2106
-
-* XXX df2820ffd92
-
-* XXX 00157d8aed23fc290fb985fef73b1c293fa24e63
+* Fix incorrect URL rewrites in stylesheets. #2106
 
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)
