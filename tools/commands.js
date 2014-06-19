@@ -853,31 +853,52 @@ main.registerCommand({
   } else {
     var messages = buildmessage.capture(function () {
       testPackages = _.map(options.args, function (p) {
-        // If it's a package name, just pass it through.
-        if (p.indexOf('/') === -1) {
-          if (p.indexOf('@') !== -1) {
-            buildmessage.error(
-              "You may not specify versions for local packages: " + p );
-            // Recover by returning p anyway.
-          }
-          return p;
-        }
+        return buildmessage.enterJob({
+          title: "trying to test package `" + p + "`"
+        },  function () {
 
-        // Otherwise it's a directory; load it into a Package now. Use
-        // path.resolve to strip trailing slashes, so that packageName doesn't
-        // have a trailing slash.
-        //
-        // Why use addLocalPackage instead of just loading the packages
-        // and passing Unipackage objects to the bundler? Because we
-        // actually need the Catalog to know about the package, so that
-        // we are able to resolve the test package's dependency on the
-        // main package. This is not ideal (I hate how this mutates global
-        // state) but it'll do for now.
-        var packageDir = path.resolve(p);
-        var packageName = path.basename(packageDir);
-        catalog.complete.addLocalPackage(packageName, packageDir);
-        localPackageNames.push(packageName);
-        return packageName;
+          // If it's a package name, just pass it through.
+          if (p.indexOf('/') === -1) {
+            if (p.indexOf('@') !== -1) {
+              buildmessage.error(
+                "You may not specify versions for local packages: " + p );
+              // Recover by returning p anyway.
+            }
+            // Check to see if this is a real package, and if it is a real
+            // package, if it has tests.
+            var versionRec = catalog.complete.getLatestVersion(p);
+            if (!versionRec) {
+              buildmessage.error(
+                "Unknown package: " + p );
+            }
+            if (!catalog.complete.isLocalPackage(p)) {
+              buildmessage.error(
+                "Not a local package, cannot test: " + p );
+              return p;
+            }
+            if (versionRec && !versionRec.testName) {
+              buildmessage.error(
+                "There are no tests for package: " + p );
+            }
+            return p;
+          }
+          // Otherwise it's a directory; load it into a Package now. Use
+          // path.resolve to strip trailing slashes, so that packageName doesn't
+          // have a trailing slash.
+          //
+          // Why use addLocalPackage instead of just loading the packages
+          // and passing Unipackage objects to the bundler? Because we
+          // actually need the Catalog to know about the package, so that
+          // we are able to resolve the test package's dependency on the
+          // main package. This is not ideal (I hate how this mutates global
+          // state) but it'll do for now.
+          var packageDir = path.resolve(p);
+          var packageName = path.basename(packageDir);
+          catalog.complete.addLocalPackage(packageName, packageDir);
+          localPackageNames.push(packageName);
+          return packageName;
+        });
+
       });
     });
 
