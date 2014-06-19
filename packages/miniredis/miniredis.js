@@ -51,9 +51,9 @@ var translateToOrderedCallbacks = function (orderedCallbacks) {
       queryResult.splice(pos, 0, doc._id);
       orderedCallbacks.addedAt && orderedCallbacks.addedAt(doc, pos, before);
     },
-    changed: function (oldDoc, newDoc) {
+    changed: function (newDoc, oldDoc) {
       var pos = insPos(queryResult, newDoc._id) - 1;
-      orderedCallbacks.changedAt && orderedCallbacks.changedAt(oldDoc, newDoc, pos);
+      orderedCallbacks.changedAt && orderedCallbacks.changedAt(newDoc, oldDoc, pos);
     },
     removed: function (doc) {
       var pos = insPos(queryResult, doc._id) - 1;
@@ -82,7 +82,7 @@ var translateToChangesCallbacks = function (changesCallbacks) {
       changesCallbacks.addedBefore(id, doc, before);
     };
 
-  var changedCallback = function (oldDoc, newDoc) {
+  var changedCallback = function (newDoc, oldDoc) {
     var id = newDoc._id;
     delete newDoc._id;
     // effectively the diff document is just {value} doc, as there is always
@@ -210,7 +210,7 @@ _.extend(Miniredis.RedisStore.prototype, {
 
         self._notifyObserves(key, 'added', value);
       } else {
-        self._notifyObserves(key, 'changed', oldValue, value);
+        self._notifyObserves(key, 'changed', value, oldValue);
       }
       // XXX: Redis keyspace notifications don't really differentiate between added vs changed...
       self._notifyObserves(key, 'updated', value);
