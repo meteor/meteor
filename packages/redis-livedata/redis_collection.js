@@ -1,3 +1,5 @@
+RedisSingletons = {};
+RedisSingletons._collections = {};
 
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
@@ -18,6 +20,11 @@ Meteor.RedisCollection = function (name, options) {
       "First argument to new Meteor.RedisCollection must be a string or null");
   }
 
+  if (name !== null) {
+    if (_.has(RedisSingletons._collections, name)) {
+      return RedisSingletons._collections[name];
+    }
+  }
   options = _.extend({
     connection: undefined,
 //    idGeneration: 'STRING',
@@ -156,6 +163,10 @@ Meteor.RedisCollection = function (name, options) {
     self._connection.publish(null, function () {
       return self.find();
     }, {is_auto: true});
+  }
+
+  if (name) {
+    RedisSingletons._collections[name] = self;
   }
 };
 

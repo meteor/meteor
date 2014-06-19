@@ -8,26 +8,28 @@ var COLLECTIONS = {};
 
 if (Meteor.isServer) {
   Meteor.methods({
-    createInsecureRedisCollection: function (keyPrefix, options) {
-      check(keyPrefix, String);
+    createInsecureRedisCollection: function (name, options) {
+      check(name, String);
       check(options, Match.Optional({
         transformName: Match.Optional(String),
         idGeneration: Match.Optional(String)
       }));
 
+      var keyPrefix = '*';
+
       if (options && options.transformName) {
         options.transform = TRANSFORMS[options.transformName];
       }
-      var c = new Meteor.RedisCollection(keyPrefix, options);
-      COLLECTIONS[keyPrefix] = c;
+      var c = new Meteor.RedisCollection(name, options);
+      COLLECTIONS[name] = c;
       c._insecure = true;
-      Meteor.publish('c-' + keyPrefix, function () {
+      Meteor.publish('c-' + name, function () {
         var cursor = c.matching(keyPrefix);
         return cursor;
       });
     },
-    dropInsecureCollection: function(keyPrefix) {
-      var c = COLLECTIONS[keyPrefix];
+    dropInsecureCollection: function(name) {
+      var c = COLLECTIONS[name];
       c._dropCollection();
     }
   });
@@ -504,7 +506,8 @@ testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
 
 testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
   function (test, expect) {
-    this.collectionName = Random.id();
+    this.keyPrefix = Random.id();
+    this.collectionName = "redis";
     if (Meteor.isClient) {
       Meteor.call('createInsecureRedisCollection', this.collectionName);
       Meteor.subscribe('c-' + this.collectionName, expect());
@@ -512,15 +515,20 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
   }, function (test, expect) {
     var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
 
+    var keyPrefix = this.keyPrefix;
     var id = '1';
-    test.equal(coll.keys(keyPrefix + '*').length, 0);
+    test.equal(coll.matching(keyPrefix + '*').count(), 0);
     test.equal(coll.get(keyPrefix + id), undefined);
-    coll.set(keyPrefix + id, '1');
-    test.equal(coll.keys(keyPrefix + '*').length, 1);
+    coll.set(keyPrefix + id, '1', expect(null, 'OK'));
+  }, function (test, expect) {
+    var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
+    var keyPrefix = this.keyPrefix;
+    var id = '1';
+
+    test.equal(coll.matching(keyPrefix + '*').count(), 1);
     test.equal(coll.get(keyPrefix + id), '1');
   }
 ]);
-*/
 
 //Tinytest.addAsync("redis-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 //
