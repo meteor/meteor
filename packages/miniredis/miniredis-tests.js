@@ -3,7 +3,7 @@ Tinytest.add("miniredis - pattern matching", function (test) {
   function T (str) { test.isTrue(str.match(regexp)); }
   function F (str) { test.isFalse(str.match(regexp)); }
 
-  regexp = MiniredisTest.patternToRegexp("H*llo");
+  regexp = Miniredis.patternToRegexp("H*llo");
   T("Hello");
   T("Hllo");
   T("Hallo");
@@ -13,19 +13,19 @@ Tinytest.add("miniredis - pattern matching", function (test) {
   F("Hllo ");
   F(" Hllo ");
 
-  regexp = MiniredisTest.patternToRegexp("Pattern");
+  regexp = Miniredis.patternToRegexp("Pattern");
   T("Pattern");
   F("pattern");
   F("Pattern ");
 
-  regexp = MiniredisTest.patternToRegexp("Str?ngs");
+  regexp = Miniredis.patternToRegexp("Str?ngs");
   T("Strings");
   T("Strangs");
   T("Str5ngs");
   F("Strngs");
   F("Stringss");
 
-  regexp = MiniredisTest.patternToRegexp("Varia**tio[^nNmM]");
+  regexp = Miniredis.patternToRegexp("Varia**tio[^nNmM]");
   T("Variation");
   T("VariatioN");
   T("Variatiom");
@@ -33,7 +33,7 @@ Tinytest.add("miniredis - pattern matching", function (test) {
   F("Variatio:");
   F("Variatio?");
 
-  regexp = MiniredisTest.patternToRegexp("x?:()x");
+  regexp = Miniredis.patternToRegexp("x?:()x");
   T("xA:()x");
   T("x.:()x");
   F("x.:)(x");
