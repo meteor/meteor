@@ -911,7 +911,7 @@ Cursor.prototype.getTransform = function () {
 
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
-  var collection = self._cursorDescription.collectionName;
+  var collection = "redis"; // XXX don't hard-code this
   return Meteor.RedisCollection._publishCursor(self, sub, collection);
 };
 
