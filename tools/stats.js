@@ -1,5 +1,6 @@
 var Fiber = require("fibers");
 var _ = require("underscore");
+var os = require("os");
 
 var config = require("./config.js");
 var files = require("./files.js");
@@ -7,6 +8,7 @@ var uniload = require("./uniload.js");
 var project = require("./project.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
+var release = require("./release.js");
 
 // The name of the package that you add to your app to opt out of
 // sending stats.
@@ -43,6 +45,22 @@ var recordPackages = function () {
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
   Fiber(function () {
+
+    var userAgentInfo = {
+      hostname: os.hostname(),
+      osPlatform: os.platform(),
+      osType: os.type(),
+      osRelease: os.release(),
+      osArch: os.arch()
+    };
+
+    if (! release.current.isCheckout()) {
+      userAgentInfo.meteorReleaseTrack = release.getReleaseTrack();
+      userAgentInfo.meteorReleaseVersion = release.getReleaseVersion();
+      userAgentInfo.meteorToolsPackageWithVersion =
+        release.getToolsPackageAtVersion();
+    }
+
     try {
       var conn = connectToPackagesStatsServer();
 
@@ -63,7 +81,8 @@ var recordPackages = function () {
 
       conn.call("recordAppPackages",
                 project.project.getAppIdentifier(),
-                packages);
+                packages,
+                userAgentInfo);
     } catch (err) {
       logErrorIfRunningMeteorRelease(err);
       // Do nothing. A failure to record package stats shouldn't be

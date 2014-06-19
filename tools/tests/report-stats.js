@@ -1,5 +1,7 @@
 var _ = require('underscore');
+var os = require("os");
 
+var release = require("../release.js");
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
@@ -52,6 +54,22 @@ selftest.define("report-stats", ["slow"], function () {
   bundleWithFreshIdentifier(s);
   appPackages = stats.getPackagesForAppIdInTest();
   selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
+
+  var expectedUserAgentInfo = {
+    hostname: os.hostname(),
+    osPlatform: os.platform(),
+    osType: os.type(),
+    osRelease: os.release(),
+    osArch: os.arch()
+  };
+  if (! release.current.isCheckout()) {
+    expectedUserAgentInfo.meteorReleaseTrack = release.getReleaseTrack();
+    expectedUserAgentInfo.meteorReleaseVersion = release.getReleaseVersion();
+    expectedUserAgentInfo.meteorToolsPackageWithVersion =
+      release.getToolsPackageAtVersion();
+  }
+
+  selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
 
   // Add the opt-out package, verify that no stats are recorded for the
   // app.
