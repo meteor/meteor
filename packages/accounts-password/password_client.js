@@ -147,6 +147,8 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
             if (err) {
               callback(err);
             } else {
+              // Now that we've successfully migrated from srp to
+              // bcrypt, try changing the password again.
               Accounts.changePassword(oldPassword, newPassword, callback);
             }
           });
