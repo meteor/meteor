@@ -1,32 +1,7 @@
-// XXX this file no longer makes sense in isolation.  take it apart as
-// part file reorg on the 'ui' package
-UI._globalHelpers = {};
-
-UI.registerHelper = function (name, func) {
-  UI._globalHelpers[name] = func;
-};
-
 Handlebars = {};
 Handlebars.registerHelper = UI.registerHelper;
 
-// Utility to HTML-escape a string.
-UI._escape = Handlebars._escape = (function() {
-  var escape_map = {
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
-    "&": "&amp;"
-  };
-  var escape_one = function(c) {
-    return escape_map[c];
-  };
-
-  return function (x) {
-    return x.replace(/[&<>"'`]/g, escape_one);
-  };
-})();
+Handlebars._escape = UI._escape;
 
 // Return these from {{...}} helpers to achieve the same as returning
 // strings from {{{...}}} helpers

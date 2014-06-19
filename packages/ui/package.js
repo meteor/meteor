@@ -20,21 +20,8 @@ Package.on_use(function (api) {
   api.use('blaze');
   api.imply('blaze');
 
-  api.add_files(['exceptions.js', 'base.js']);
-
-  api.add_files(['dombackend.js',
-                 'events.js',
-                 'domrange.js'], 'client');
-
-  api.add_files(['attrs.js',
-                 'render.js',
-                 'builtins.js',
-                 'each.js',
-                 'fields.js'
-                ]);
-
+  api.add_files(['ui.js']);
   api.add_files(['handlebars_backcompat.js']);
-
   api.add_files(['template.js']);
 });
 
@@ -48,9 +35,6 @@ Package.on_test(function (api) {
   api.use('html-tools');
 
   api.add_files([
-    'base_tests.js',
-    'domrange_tests.js',
-    'render_tests.js',
-    'dombackend_tests.js'
+    'render_tests.js'
   ], 'client');
 });

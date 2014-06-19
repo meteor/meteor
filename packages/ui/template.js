@@ -53,6 +53,14 @@ updateTemplateInstance = function (comp) {
   return tmpl;
 };
 
+UI._templateInstance = function () {
+  var currentTemplate = Blaze.getCurrentControllerOfType(UI.TemplateComponent);
+  if (! currentTemplate)
+    throw new Error("No current template");
+
+  return updateTemplateInstance(currentTemplate);
+};
+
 if (Meteor.isClient) {
   UI.TemplateRenderedAugmenter = Blaze.DOMAugmenter.extend({
     constructor: function () {
