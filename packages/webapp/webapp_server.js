@@ -19,18 +19,6 @@ WebAppInternals = {};
 
 var bundledJsCssPrefix;
 
-// The reload safetybelt is some js that will be loaded after everything else in
-// the HTML.  In some multi-server deployments, when you update, you have a
-// chance of hitting an old server for the HTML and the new server for the JS or
-// CSS.  This prevents you from displaying the page in that case, and instead
-// reloads it, presumably all on the new version now.
-var RELOAD_SAFETYBELT = "\n" +
-      "if (typeof Package === 'undefined' ||\n" +
-      "    ! Package.webapp ||\n" +
-      "    ! Package.webapp.WebApp ||\n" +
-      "    ! Package.webapp.WebApp._isCssLoaded())\n" +
-      "  document.location.reload(); \n";
-
 // Keepalives so that when the outer server dies unceremoniously and
 // doesn't kill us, we quit ourselves. A little gross, but better than
 // pidfiles.
@@ -345,8 +333,10 @@ var runWebAppServer = function () {
                     JSON.stringify(__meteor_runtime_config__) + ";");
       return;
     } else if (pathname === "/meteor_reload_safetybelt.js" &&
+               Package["galaxy-reload-safetybelt"] &&
+               Package["galaxy-reload-safetybelt"].ReloadSafetyBelt &&
                ! WebAppInternals.inlineScriptsAllowed()) {
-      serveStaticJs(RELOAD_SAFETYBELT);
+      serveStaticJs(Package["galaxy-reload-safetybelt"].ReloadSafetyBelt);
       return;
     }
 
@@ -609,7 +599,8 @@ var runWebAppServer = function () {
       body: '',
       inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
       meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
-      reloadSafetyBelt: RELOAD_SAFETYBELT,
+      reloadSafetyBelt: Package["galaxy-reload-safetybelt"] &&
+        Package["galaxy-reload-safetybelt"].ReloadSafetyBelt,
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssPrefix: bundledJsCssPrefix ||
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''

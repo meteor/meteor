@@ -9,10 +9,14 @@
 {{/if}}
 {{#each js}}  <script type="text/javascript" src="{{../bundledJsCssPrefix}}{{url}}"></script>
 {{/each}}
-{{#if inlineScriptsAllowed}}
-<script type='text/javascript'>{{{reloadSafetyBelt}}}</script>
-{{else}}
-<script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_reload_safetybelt.js'></script>
+{{#if reloadSafetyBelt}}
+  {{#if inlineScriptsAllowed}}
+    <script type='text/javascript'>
+      {{{reloadSafetyBelt}}}
+    </script>
+  {{else}}
+    <script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_reload_safetybelt.js'></script>
+  {{/if}}
 {{/if}}
 {{{head}}}
 </head>
