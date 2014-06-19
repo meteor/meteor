@@ -201,7 +201,7 @@ var idGeneration = 'STRING';
 //_.each( ['STRING', 'MONGO'], function(idGeneration) {
 
 //var collectionOptions = { idGeneration: idGeneration};
-var collectionOptions = { }; 
+var collectionOptions = { };
 
 //testAsyncMulti("redis-livedata - database error reporting. " + idGeneration, [
 //  function (test, expect) {
@@ -245,14 +245,14 @@ var collectionOptions = { };
 
 Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
-  
+
   // XXX We can't cope with two RedisCollections, as they have the same name and both try to register /redis/isnert
   var coll, coll2;
   var keyPrefix = Random.id() + ':';
   if (Meteor.isClient) {
     coll = new Meteor.RedisCollection(null, collectionOptions) ; // local, unmanaged
     //coll2 = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
-    
+
     // XXX Remoting
 //    coll = new Meteor.RedisCollection("redis", collectionOptions);
 //    coll2 = new Meteor.RedisCollection("client_livedata_test_collection_2_"+run + ':', collectionOptions);
@@ -329,7 +329,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.get(keyPrefix + "abc"), undefined);
   //test.equal(coll.findOne({run: run}), undefined);
   Meteor._debug("get returned");
-  
+
   expectObserve('a(1)', function () {
     var id = '1';
     Meteor._debug("pre-set");
@@ -343,7 +343,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   });
 
   Meteor._debug("After expectObserve");
-  
+
   expectObserve('a(4)', function () {
     var id2 = '4';
     coll.set(keyPrefix + id2, '4');
