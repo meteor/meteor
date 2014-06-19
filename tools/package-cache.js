@@ -99,15 +99,18 @@ _.extend(PackageCache.prototype, {
         // be up to date.
         isUpToDate = true;
       } else {
-        var packageSource = new PackageSource;
-        // For now, if it turns into a unipackage, it should have a version.
-        packageSource.initFromPackageDir(name, loadPath, {
-          requireVersion: true });
-        unip = new unipackage.Unipackage;
-        unip.initFromPath(name, entry.buildDir);
-        isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
-      }
 
+        buildmessage.enterJob({
+          title: "initializing package `" + name + "`",
+          rootPath: loadPath
+        }, function () {
+          var packageSource = new PackageSource;
+          packageSource.initFromPackageDir(name, loadPath);
+          unip = new unipackage.Unipackage;
+          unip.initFromPath(name, entry.buildDir);
+          isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
+        });
+      }
       if (isUpToDate) {
         // Cache it
         self.loadedPackages[key] = entry;
@@ -131,12 +134,14 @@ _.extend(PackageCache.prototype, {
       return unip;
     };
 
-    // It's a source tree. Load it. It is going to turn into a unipackage, so it
-    // requires a version.
-    packageSource = new PackageSource;
-    packageSource.initFromPackageDir(name, loadPath,  {
-        requireVersion: true });
-
+    // It's a source tree. Load it.
+    var packageSource = new PackageSource;
+    buildmessage.enterJob({
+      title: "initializing package `" + name + "`",
+      rootPath: loadPath
+    }, function () {
+      packageSource.initFromPackageDir(name, loadPath);
+    });
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {

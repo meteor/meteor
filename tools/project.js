@@ -8,6 +8,7 @@ var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var watch = require('./watch.js');
 var catalog = require('./catalog.js');
+var buildmessage = require('./buildmessage.js');
 
 var project = exports;
 
@@ -223,15 +224,23 @@ _.extend(Project.prototype, {
       var programName = item.substr(0, item.length - 1);
 
       var programSubdir = path.join(self.getProgramsDirectory(), item);
-      var programSource = new PackageSource(programSubdir);
-      programSource.initFromPackageDir(programName, programSubdir);
-      _.each(programSource.architectures, function (sourceUnibuild) {
-        _.each(sourceUnibuild.uses, function (use) {
-           var constraint = use.constraint || null;
-           allDeps.push(_.extend({packageName: use.package},
-                              utils.parseVersionConstraint(constraint)));
+      buildmessage.enterJob({
+        title: "initializing program `" + programName + "`",
+        rootPath: self.rootDir
+      }, function () {
+        var packageSource;
+        // For now, if it turns into a unipackage, it should have a version.
+        var programSource = new PackageSource(programSubdir);
+        programSource.initFromPackageDir(programName, programSubdir);
+        _.each(programSource.architectures, function (sourceUnibuild) {
+          _.each(sourceUnibuild.uses, function (use) {
+            var constraint = use.constraint || null;
+            allDeps.push(_.extend({packageName: use.package},
+                                  utils.parseVersionConstraint(constraint)));
+          });
         });
       });
+
     });
 
     // Finally, each release package is a weak exact constraint. So, let's add

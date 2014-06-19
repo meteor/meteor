@@ -1178,6 +1178,7 @@ main.registerCommand({
 // admin set-banners
 ///////////////////////////////////////////////////////////////////////////////
 
+// We will document how to set banners on things in a later release.
 main.registerCommand({
   name: 'admin set-banners',
   minArgs: 1,

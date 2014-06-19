@@ -485,11 +485,15 @@ Change the url of the source code repository of a previously published
 package.
 
 
->>> admin set-earliest-compatible-version
+>>> admin set-breaking
 Mark a given version as containing breaking changes.
 Usage: stuff
 
 Mark a given package version as containing breaking changes.
 
+>>> admin set-banners <banner file config>
+Set banners on published releases.
+Usage: meteor admin set-banners <path to banner configuration>
 
-XXX: WRITE (after glasser is done)
+Set the banners on previously published releases. Banners notify the user
+when there is a new release available or a patch release has been published.

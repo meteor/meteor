@@ -642,18 +642,9 @@ _.extend(Unipackage.prototype, {
     var outputPath = outputDir;
     options = options || {};
 
-    if (! self.version) {
-      // XXX is this going to work? may need to relax it for apps?
-      // that seems reasonable/useful. I guess the basic rules then
-      // becomes that you can't depend on something if it doesn't have
-      // a name and a version
-      throw new Error("Packages without versions cannot be saved");
-    }
-
     var builder = new Builder({ outputPath: outputPath });
 
     try {
-
       var mainJson = {
         format: "unipackage-pre2",
         name: self.name,
