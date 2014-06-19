@@ -350,8 +350,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   },
   _handleDoc: function (id, newDoc) {
     var self = this;
-    // XXX Match the pattern
-    var matchesNow = newDoc && true; //self._matcher.documentMatches(newDoc).result;
+    var matchesNow = newDoc && Miniredis.patternToRegexp(self._cursorDescription.pattern).test(id); //self._matcher.documentMatches(newDoc).result;
 
     var publishedBefore = self._published.has(id);
     var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
