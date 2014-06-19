@@ -307,7 +307,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
       Meteor._debug("pre-armAndWait");
       fence.armAndWait();
       // XXX Make this work!
-      Meteor._sleepForMs(5000);
+      Meteor._sleepForMs(2000);
       Meteor._debug("post-armAndWait");
     }
 
