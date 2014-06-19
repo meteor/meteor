@@ -206,6 +206,9 @@ findComponentWithProp = function (id, comp) {
   return null;
 };
 
+// Look up the component's chain of parents until we find one with
+// `__helperHost` set (a component that can have helpers defined on it,
+// i.e. a template).
 var findHelperHostComponent = function (comp) {
   while (comp) {
     if (comp.__helperHost) {
