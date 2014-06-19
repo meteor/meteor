@@ -685,7 +685,7 @@ _.each(["set"], function (method) {
       throw e;
     };
 
-    var collection_name = '::redis';
+    var collection_name = 'redis';
 
     var write = self._maybeBeginWrite();
     var refresh = function () {
