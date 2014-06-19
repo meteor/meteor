@@ -34,16 +34,11 @@ Meteor.loginWithPassword = function (selector, password, callback) {
         // the password without requiring a full SRP flow, as well as
         // SHA256(password), which the server bcrypts and stores in
         // place of the old SRP information for this user.
-        var details;
-        try {
-          details = EJSON.parse(error.details);
-        } catch (e) {}
-        if (!(details && details.format === 'srp'))
-          callback(new Meteor.Error(400,
-                                    "Password is old. Please reset your " +
-                                    "password."));
-        else
-          srpUpgradePath(selector, password, details.identity, callback);
+        srpUpgradePath({
+          upgradeError: error,
+          userSelector: selector,
+          plaintextPassword: password
+        }, callback);
       }
       else if (error) {
         callback(error);
@@ -61,18 +56,32 @@ var hashPassword = function (password) {
   };
 };
 
+// XXX COMPAT WITH 0.8.1.3
 // The server requested an upgrade from the old SRP password format,
-// so supply the needed SRP identity to login.
-var srpUpgradePath = function (selector, plaintextPassword,
-                               identity, callback) {
-  Accounts.callLoginMethod({
-    methodArguments: [{
-      user: selector,
-      srp: SHA256(identity + ":" + plaintextPassword),
-      password: hashPassword(plaintextPassword)
-    }],
-    userCallback: callback
-  });
+// so supply the needed SRP identity to login. Options:
+//   - upgradeError: the error object that the server returned to tell
+//     us to upgrade from SRP to bcrypt.
+//   - userSelector: selector to retrieve the user object
+//   - plaintextPassword: the password as a string
+var srpUpgradePath = function (options, callback) {
+  var details;
+  try {
+    details = EJSON.parse(options.upgradeError.details);
+  } catch (e) {}
+  if (!(details && details.format === 'srp')) {
+    callback(new Meteor.Error(400,
+                              "Password is old. Please reset your " +
+                              "password."));
+  } else {
+    Accounts.callLoginMethod({
+      methodArguments: [{
+        user: options.userSelector,
+        srp: SHA256(details.identity + ":" + options.plaintextPassword),
+        password: hashPassword(options.plaintextPassword)
+      }],
+      userCallback: callback
+    });
+  }
 };
 
 
@@ -113,8 +122,39 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
     [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
     function (error, result) {
       if (error || !result) {
-        callback && callback(
-          error || new Error("No result from changePassword."));
+        if (error && error.error === 400 &&
+            error.reason === 'old password format') {
+          // XXX COMPAT WITH 0.8.1.3
+          // The server is telling us to upgrade from SRP to bcrypt, as
+          // in Meteor.loginWithPassword.
+          var userSelector = {};
+          if (Meteor.user().username) {
+            userSelector = { username: Meteor.user().username };
+          } else if (Meteor.user().emails && Meteor.user().emails.length) {
+            userSelector = { email: Meteor.user().emails[0].address };
+          } else {
+            callback(new Error(
+              "Cannot upgrade password format without " +
+                "username or email address"));
+            return;
+          }
+
+          srpUpgradePath({
+            upgradeError: error,
+            userSelector: userSelector,
+            plaintextPassword: oldPassword
+          }, function (err) {
+            if (err) {
+              callback(err);
+            } else {
+              Accounts.changePassword(oldPassword, newPassword, callback);
+            }
+          });
+        } else {
+          // A normal error, not an error telling us to upgrade to bcrypt
+          callback && callback(
+            error || new Error("No result from changePassword."));
+        }
       } else {
         callback && callback();
       }
