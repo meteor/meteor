@@ -123,7 +123,7 @@ RedisObserver = function (watcher, observer) {
     } else if (message == 'del') {
       methodName = 'removed';
     }
-    
+
     if (!methodName) {
       Meteor._debug("RedisConnection::observe: Unknown message: " + message);
     } else {
@@ -230,7 +230,7 @@ RedisConnection = function (url, options) {
 //      c(_client);
 //    });
 //  }));
-  
+
   // XXX: Authenticated connections?
 
   // XXX: Wait until 'ready' event?
@@ -249,7 +249,7 @@ RedisConnection = function (url, options) {
 //    });
 //    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
 //  }
-  
+
   self._oplogHandle = new OplogHandle(self._watcher);
 };
 
@@ -674,11 +674,11 @@ _.each(["set"], function (method) {
     var self = this;
 
     var args = _.toArray(arguments);
-    
+
     var callback;
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
-    
+
     var sendError = function (e) {
       if (callback)
         return callback(e);
@@ -686,7 +686,7 @@ _.each(["set"], function (method) {
     };
 
     var collection_name = '::redis';
-    
+
     var write = self._maybeBeginWrite();
     var refresh = function () {
       Meteor.refresh({ collection: collection_name, id: key });
@@ -948,7 +948,7 @@ Cursor.prototype.observeChanges = function (callbacks) {
 RedisConnection.prototype._createSynchronousCursor = function(
     cursorDescription, options) {
   var self = this;
-  
+
   var pattern = cursorDescription.pattern;
 //  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
@@ -981,7 +981,7 @@ RedisConnection.prototype._createSynchronousCursor = function(
 //    }
 //  }
 
-  
+
 //  var dbCursor = collection.find(
 //    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithRedis),
 //    cursorOptions.fields, mongoOptions);
@@ -1027,7 +1027,7 @@ var SynchronousCursor = function (entries, cursorDescription, options) {
 
 _.extend(SynchronousCursor.prototype, {
 //  _synchronousNextObject: function () {
-//    
+//
 //  },
   _nextObject: function () {
     var self = this;
@@ -1206,7 +1206,7 @@ RedisConnection.prototype._observeChanges = function (cursorDescription, callbac
     _.extend({ /*ordered: ordered */}, cursorDescription));
 
   Meteor._debug("observeKey: " + JSON.stringify(observeKey));
-  
+
   var multiplexer, observeDriver;
   var firstHandle = false;
 
@@ -1272,7 +1272,7 @@ RedisConnection.prototype._observeChanges = function (cursorDescription, callbac
 //      }], function (f) { return f(); });  // invoke each function
 //
 //    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
- 
+
     var driverClass = KeyspaceNotificationObserveDriver;
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
