@@ -50,8 +50,7 @@ var openPackageServerConnection = function () {
 // from the beginning of time.
 exports.loadCachedServerData = function () {
   var noDataToken =  {
-    // XXX have a better sync token for "all"
-    syncToken: {time: 'Sun, 01 Jan 2012 00:00:00 GMT'},
+    syncToken: {time: new Date(0)},
     collections: null
   };;
 
