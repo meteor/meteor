@@ -672,14 +672,37 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
       // XXX needs more thought on non-zero skip
       // XXX 2 is a "magic number" meaning there is an extra chunk of docs for
       // buffer if such is needed.
-      var cursor = self._cursorForQuery({ limit: self._limit * 2 });
+
+      var pattern = self._cursorDescription.pattern;
+
+      Meteor._debug("Running initial query for " + pattern);
+
+      var client = self._mongoHandle._client;
+
       try {
-        cursor.forEach(function (doc, i) {
-          if (!self._limit || i < self._limit)
-            newResults.set(doc._id, doc);
-          else
-            newBuffer.set(doc._id, doc);
-        });
+        var keysFuture = new Future();
+        client.keys(pattern, keysFuture.resolver());
+        var keys = keysFuture.wait();
+        Meteor._debug("Got initial keys " + keys);
+
+        var valuesFuture = new Future();
+        client.mget(keys, valuesFuture.resolver());
+        var values = valuesFuture.wait();
+        Meteor._debug("Got initial values " + values);
+
+        for (var i = 0; i < keys.length; i++) {
+          newResults.set(keys[i], values[i]);
+        }
+//      var cursor = self._cursorForQuery({ limit: self._limit * 2 });
+//      Meteor._debug("Got initial query");
+//      try {
+//        cursor.forEach(function (doc, i) {
+//          Meteor._debug("Initial result: " + JSON.stringify(doc) + " @" + i);
+//          if (!self._limit || i < self._limit)
+//            newResults.set(doc._id, doc);
+//          else
+//            newBuffer.set(doc._id, doc);
+//        });
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
@@ -756,6 +779,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
   },
 
   _cursorForQuery: function (optionsOverwrite) {
+    // XXX Remove this ... we don't change the query
     var self = this;
 
 //    // The query we run is almost the same as the cursor we are observing, with
@@ -763,7 +787,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
 //    // selector, not just the fields we are going to publish (that's the
 //    // "shared" projection). And we don't want to apply any transform in the
 //    // cursor, because observeChanges shouldn't use the transform.
-    var options = _.clone(self._cursorDescription.options);
+//    var options = _.clone(self._cursorDescription.options);
 //
 //    // Allow the caller to modify the options. Useful to specify different skip
 //    // and limit values.
@@ -772,10 +796,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
 //    options.fields = self._sharedProjection;
 //    delete options.transform;
     // We are NOT deep cloning fields or selector here, which should be OK.
-    var description = new CursorDescription(
-      self._cursorDescription.collectionName,
-      self._cursorDescription.selector,
-      options);
+    var description = new CursorDescription(self._cursorDescription.pattern);
     return new Cursor(self._mongoHandle, description);
   },
 
@@ -810,8 +831,9 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     // Now do adds and changes.
     // If self has a buffer and limit, the new fetched result will be
     // limited correctly as the query has sort specifier.
-    newResults.forEach(function (doc, id) {
-      self._handleDoc(id, doc);
+    newResults.forEach(function (value, key) {
+      var doc = { _id: key, value: value };
+      self._handleDoc(key, doc);
     });
 
     // Sanity-check that everything we tried to put into _published ended up

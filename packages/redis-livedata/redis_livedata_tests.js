@@ -265,9 +265,9 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     }
     return key.substr(keyPrefix.length);
   };
-  
+
   var log = '';
-  var obs = coll.matching('*').observeChanges({
+  var obs = coll.matching(keyPrefix + '*').observeChanges({
 //    addedAt: function (doc, before_index, before) {
 //      log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
 //    },
@@ -453,7 +453,55 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   onComplete();
 });
 
-/*
+
+testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
+  function (test, expect) {
+    this.keyPrefix = Random.id();
+    this.collectionName = "redis";
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureRedisCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
+    }
+    this.coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
+
+    var coll = this.coll;
+    var keyPrefix = this.keyPrefix;
+    coll.set(keyPrefix + '1', '1', expect(null, 'OK'));
+  }, function (test, expect) {
+    var coll = this.coll;
+    var keyPrefix = this.keyPrefix;
+
+    var output = [];
+
+    var handle = coll.matching(keyPrefix + '*').observeChanges({
+      added: function (key, value) {
+        output.push({added: key});
+      },
+      updated: function (key, value) {
+        output.push('updated');
+      },
+      removed: function (key, value) {
+        output.push('removed');
+      }
+    });
+
+    var finishObserve = function (f) {
+      if (Meteor.isClient) {
+        f();
+      } else {
+        var fence = new DDPServer._WriteFence;
+        DDPServer._CurrentWriteFence.withValue(fence, f);
+        fence.armAndWait();
+      }
+    };
+
+    finishObserve(function () {
+      test.equal(output, [{added: keyPrefix + '1'}]);
+    });
+  }
+]);
+
+
 testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
   function (test, expect) {
     this.collectionName = Random.id();
