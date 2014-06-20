@@ -302,6 +302,24 @@ UI.InTemplateScope.prototype.toText = function (textMode, parentComponent) {
   return HTML.toText(this.content, textMode, this.parentPtr);
 };
 
+var isSVGAnchor = function (node) {
+  // We generally aren't able to detect SVG <a> elements because
+  // if "A" were in our list of known svg element names, then all
+  // <a> nodes would be created using
+  // `document.createElementNS`. But in the special case of <a
+  // xlink:href="...">, we can at least detect that attribute and
+  // create an SVG <a> tag in that case.
+  //
+  // However, we still have a general problem of knowing when to
+  // use document.createElementNS and when to use
+  // document.createElement; for example, font tags will always
+  // be created as SVG elements which can cause other
+  // problems. #1977
+  return (node.tagName === "a" &&
+          node.attrs &&
+          node.attrs["xlink:href"] !== undefined);
+};
+
 // Convert the pseudoDOM `node` into reactive DOM nodes and insert them
 // into the element or DomRange `parent`, before the node or id `before`.
 var materialize = function (node, parent, before, parentComponent) {
@@ -355,7 +373,9 @@ var materialize = function (node, parent, before, parentComponent) {
   } else if (node instanceof HTML.Tag) {
     var tagName = node.tagName;
     var elem;
-    if (HTML.isKnownSVGElement(tagName) && document.createElementNS) {
+    if ((HTML.isKnownSVGElement(tagName) ||
+         isSVGAnchor(node)) &&
+        document.createElementNS) {
       elem = document.createElementNS('http://www.w3.org/2000/svg', tagName);
     } else {
       elem = document.createElement(node.tagName);
