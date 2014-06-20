@@ -246,20 +246,8 @@ var collectionOptions = { };
 Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, onComplete) {
   var run = test.runId();
 
-  // XXX We can't cope with two RedisCollections, as they have the same name and both try to register /redis/isnert
-  var coll, coll2;
   var keyPrefix = Random.id() + ':';
-  if (Meteor.isClient) {
-    coll = new Meteor.RedisCollection(null, collectionOptions) ; // local, unmanaged
-    //coll2 = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
-
-    // XXX Remoting
-//    coll = new Meteor.RedisCollection("redis", collectionOptions);
-//    coll2 = new Meteor.RedisCollection("client_livedata_test_collection_2_"+run + ':', collectionOptions);
-  } else {
-    coll = new Meteor.RedisCollection("redis", collectionOptions);
-    //coll2 = new Meteor.RedisCollection("redis", collectionOptions);
-  }
+  var coll = new Meteor.RedisCollection("redis", collectionOptions);
 
   var _withoutPrefix = function (key) {
     if (key.indexOf(keyPrefix) != 0) {
@@ -270,25 +258,11 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 
   var log = '';
   var obs = coll.matching(keyPrefix + '*').observeChanges({
-//    addedAt: function (doc, before_index, before) {
-//      log += 'a(' + doc.x + ',' + before_index + ',' + before + ')';
-//    },
-//    changedAt: function (new_doc, old_doc, at_index) {
-//      log += 'c(' + new_doc.x + ',' + at_index + ',' + old_doc.x + ')';
-//    },
-//    movedTo: function (doc, old_index, new_index) {
-//      log += 'm(' + doc.x + ',' + old_index + ',' + new_index + ')';
-//    },
-//    removedAt: function (doc, at_index) {
-//      log += 'r(' + doc.x + ',' + at_index + ')';
-//    },
     added: function (key, value) {
-      Meteor._debug("added " + JSON.stringify(arguments));
       var withoutPrefix = _withoutPrefix(key);
       log += 'a(' + withoutPrefix + ')';
     },
     updated: function (key, value) {
-      Meteor._debug("updated " + JSON.stringify(arguments));
       var withoutPrefix = _withoutPrefix(key);
       log += 'u(' + withoutPrefix + ')';
     },
@@ -304,9 +278,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     } else {
       var fence = new DDPServer._WriteFence;
       DDPServer._CurrentWriteFence.withValue(fence, f);
-      Meteor._debug("pre-armAndWait");
       fence.armAndWait();
-      Meteor._debug("post-armAndWait");
     }
 
     var ret = log;
@@ -321,26 +293,15 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.include(expected, captureObserve(f));
   };
 
-  Meteor._debug("before matching");
   test.equal(coll.matching(keyPrefix + '*').count(), 0);
-  Meteor._debug("matching returned");
   test.equal(coll.get(keyPrefix + "abc"), undefined);
-  //test.equal(coll.findOne({run: run}), undefined);
-  Meteor._debug("get returned");
 
   expectObserve('a(1)', function () {
     var id = '1';
-    Meteor._debug("pre-set");
     coll.set(keyPrefix + id, '1');
-    Meteor._debug("pre-matching");
     test.equal(coll.matching(keyPrefix + '*').count(), 1);
-    Meteor._debug("pre-get");
     test.equal(coll.get(keyPrefix + id), '1');
-    Meteor._debug("post-get");
-    //test.equal(coll.findOne({run: run}).x, 1);
   });
-
-  Meteor._debug("After expectObserve");
 
   expectObserve('a(4)', function () {
     var id2 = '4';
