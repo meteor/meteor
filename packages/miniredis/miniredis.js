@@ -159,12 +159,13 @@ Miniredis.RedisStore = function () {
   self._keyDependencies = {};
   // fine-grained reactivity per non-trivial pattern
   self._patternDependencies = {};
+  // originals saved in-between calls to saveOriginals and
+  // retrieveOriginals
+  self._savedOriginals = null;
   // list of observes on cursors
   self.observes = [];
 };
 
-// A hacky thing to declare an absence of value
-var NON_EXISTENT = "___non_existent___" + Math.random();
 _.extend(Miniredis.RedisStore.prototype, {
   // -----
   // convinience wrappers
@@ -196,12 +197,13 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   _set: function (key, value) {
     var self = this;
-    var oldValue = self._kv.has(key) ? self._kv.get(key) : NON_EXISTENT;
+    var oldValue = self._kv.has(key) ? self._kv.get(key) : undefined;
     self._kv.set(key, value);
 
+    self._saveOriginal(key, oldValue);
     if (oldValue !== value) {
       self._keyDep(key).changed();
-      if (oldValue === NON_EXISTENT) {
+      if (oldValue === undefined) {
         _.each(self._patternDependencies, function (dep, pattern) {
           if (key.match(patternToRegexp(pattern))) {
             dep.changed();
@@ -222,6 +224,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     if (! self._kv.has(key))
       return;
     var oldValue = self._kv.get(key);
+    self._saveOriginal(key, oldValue);
     self._kv.remove(key);
     self._keyDependencies[key].changed();
     self._tryCleanUpKeyDep(key);
@@ -279,8 +282,10 @@ _.extend(Miniredis.RedisStore.prototype, {
 
       if (_.isString(value))
         res.push({ key: key, value: value });
-      else
+      else if (_.isObject(value))
         res.push({ key: key, value: value.toArray() });
+      else
+        throw new Error("Unknown type");
     });
 
     if (! self._patternDependencies[pattern])
@@ -302,6 +307,33 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     var c = new Miniredis.Cursor(self, pattern);
     return c;
+  },
+
+  // -----
+  // implementing the contract of a data store
+  // -----
+  saveOriginals: function () {
+    var self = this;
+    if (self._savedOriginals)
+      throw new Error("Called saveOriginals twice without retrieveOriginals");
+    self._savedOriginals = new IdMap(EJSON.stringify, EJSON.parse);
+  },
+
+  retrieveOriginals: function () {
+    var self = this;
+    if (!self._savedOriginals)
+      throw new Error("Called retrieveOriginals without saveOriginals");
+
+    var originals = self._savedOriginals;
+    self._savedOriginals = null;
+    return originals;
+  },
+
+  _saveOriginal: function (key, value) {
+    var self = this;
+    if (! self._savedOriginals || self._savedOriginals.has(key))
+      return;
+    self._savedOriginals.set(key, value); // XXX need to deep clone value?
   },
 
   // -----
