@@ -775,115 +775,68 @@ Meteor.RedisCollection.prototype._defineMutationMethods = function() {
   self._insecure = undefined;
 
   self._validators = {
-    insert: {allow: [], deny: []},
-    update: {allow: [], deny: []},
-    remove: {allow: [], deny: []},
-    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
-    fetch: [],
-    fetchAllFields: false
+    exec: {allow: [], deny: []}
   };
 
   if (!self._name)
     return; // anonymous collection
 
-  // XXX Think about method namespacing. Maybe methods should be
-  // "Meteor:Mongo:insert/NAME"?
   self._prefix = '/' + self._name + '/';
 
   // mutation methods
   if (self._connection) {
     var m = {};
 
-    _.each(['insert', 'update', 'remove'], function (method) {
-      m[self._prefix + method] = function (/* ... */) {
-        // All the methods do their own validation, instead of using check().
-        check(arguments, [Match.Any]);
-        var args = _.toArray(arguments);
-        try {
-          // For an insert, if the client didn't specify an _id, generate one
-          // now; because this uses DDP.randomStream, it will be consistent with
-          // what the client generated. We generate it now rather than later so
-          // that if (eg) an allow/deny rule does an insert to the same
-          // collection (not that it really should), the generated _id will
-          // still be the first use of the stream and will be consistent.
-          //
-          // However, we don't actually stick the _id onto the document yet,
-          // because we want allow/deny rules to be able to differentiate
-          // between arbitrary client-specified _id fields and merely
-          // client-controlled-via-randomSeed fields.
-          var generatedId = null;
-          if (method === "insert" && !_.has(args[0], '_id')) {
-            generatedId = self._makeNewID();
-          }
+    m[self._prefix + 'exec'] = function (/* ... */) {
+      // All the methods do their own validation, instead of using check().
+      var args = _.toArray(arguments);
+      var method = args[0];
+      args = _.rest(args);
+      check(method, String); // name of the redis method to execute
+      check(args, [String]); // args to the redis method
 
-          if (this.isSimulation) {
-            // In a client simulation, you can do any mutation (even with a
-            // complex selector).
-            if (generatedId !== null)
-              args[0]._id = generatedId;
-            return self._collection[method].apply(
-              self._collection, args);
-          }
-
-          // This is the server receiving a method call from the client.
-
-          // We don't allow arbitrary selectors in mutations from the client: only
-          // single-ID selectors.
-          if (method !== 'insert')
-            throwIfSelectorIsNotId(args[0], method);
-
-          if (self._restricted) {
-            // short circuit if there is no way it will pass.
-            if (self._validators[method].allow.length === 0) {
-              throw new Meteor.Error(
-                403, "Access denied. No allow validators set on restricted " +
-                  "collection for method '" + method + "'.");
-            }
-
-            var validatedMethodName =
-                  '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
-            args.unshift(this.userId);
-            method === 'insert' && args.push(generatedId);
-            return self[validatedMethodName].apply(self, args);
-          } else if (self._isInsecure()) {
-            if (generatedId !== null)
-              args[0]._id = generatedId;
-            // In insecure mode, allow any mutation (with a simple selector).
-            return self._collection[method].apply(self._collection, args);
-          } else {
-            // In secure mode, if we haven't called allow or deny, then nothing
-            // is permitted.
-            throw new Meteor.Error(403, "Access denied");
-          }
-        } catch (e) {
-          if (e.name === 'MongoError' || e.name === 'MinimongoError') {
-            throw new Meteor.Error(409, e.toString());
-          } else {
-            throw e;
-          }
+      try {
+        if (this.isSimulation) {
+          // In a client simulation, you can do any mutation.
+          if (! self._collection)
+            console.log('XCXC xcxc no _collection');
+          return self._collection[method].apply(
+            self._collection, args);
         }
-      };
-    });
-    // Minimongo on the server gets no stubs; instead, by default
-    // it wait()s until its result is ready, yielding.
-    // This matches the behavior of macromongo on the server better.
+
+        // This is the server receiving a method call from the client.
+
+        if (self._restricted) {
+          // short circuit if there is no way it will pass.
+          if (self._validators[method].allow.length === 0) {
+            throw new Meteor.Error(
+              403, "Access denied. No allow validators set on restricted " +
+                "Redis store.");
+          }
+
+          var validatedMethodName = '_validatedExec';
+          return self[validatedMethodName].call(self, userId, method, args);
+        } else if (self._isInsecure()) {
+          // In insecure mode, allow any mutation.
+          if (! self._collection)
+            console.log('XCXC xcxc no _collection');
+          return self._collection[method].apply(self._collection, args);
+        } else {
+          // In secure mode, if we haven't called allow or deny, then nothing
+          // is permitted.
+          throw new Meteor.Error(403, "Access denied");
+        }
+      } catch (e) {
+        if (e.name === 'RedisError' || e.name === 'MiniredisError') {
+          throw new Meteor.Error(409, e.toString());
+        } else {
+          throw e;
+        }
+      }
+    };
+
     if (Meteor.isClient || self._connection === Meteor.server)
       self._connection.methods(m);
-  }
-};
-
-
-Meteor.RedisCollection.prototype._updateFetch = function (fields) {
-  var self = this;
-
-  if (!self._validators.fetchAllFields) {
-    if (fields) {
-      self._validators.fetch = _.union(self._validators.fetch, fields);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
   }
 };
 
@@ -894,190 +847,29 @@ Meteor.RedisCollection.prototype._isInsecure = function () {
   return self._insecure;
 };
 
-var docToValidate = function (validator, doc, generatedId) {
-  var ret = doc;
-  if (validator.transform) {
-    ret = EJSON.clone(doc);
-    // If you set a server-side transform on your collection, then you don't get
-    // to tell the difference between "client specified the ID" and "server
-    // generated the ID", because transforms expect to get _id.  If you want to
-    // do that check, you can do it with a specific
-    // `C.allow({insert: f, transform: null})` validator.
-    if (generatedId !== null) {
-      ret._id = generatedId;
-    }
-    ret = validator.transform(ret);
-  }
-  return ret;
-};
-
-Meteor.RedisCollection.prototype._validatedInsert = function (userId, doc,
-                                                         generatedId) {
+Meteor.RedisCollection.prototype._validatedExec =
+  function (userId, method, args) {
   var self = this;
-
-  // call user validators.
-  // Any deny returns true means denied.
-  if (_.any(self._validators.insert.deny, function(validator) {
-    return validator(userId, docToValidate(validator, doc, generatedId));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-  // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.insert.allow, function(validator) {
-    return !validator(userId, docToValidate(validator, doc, generatedId));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-
-  // If we generated an ID above, insert it now: after the validation, but
-  // before actually inserting.
-  if (generatedId !== null)
-    doc._id = generatedId;
-
-  self._collection.insert.call(self._collection, doc);
-};
-
-var transformDoc = function (validator, doc) {
-  if (validator.transform)
-    return validator.transform(doc);
-  return doc;
-};
-
-// Simulate a mongo `update` operation while validating that the access
-// control rules set by calls to `allow/deny` are satisfied. If all
-// pass, rewrite the mongo operation to use $in to set the list of
-// document ids to change ##ValidatedChange
-Meteor.RedisCollection.prototype._validatedUpdate = function(
-    userId, selector, mutator, options) {
-  var self = this;
-
-  options = options || {};
-
-  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
-    throw new Error("validated update should be of a single ID");
-
-  // We don't support upserts because they don't fit nicely into allow/deny
-  // rules.
-  if (options.upsert)
-    throw new Meteor.Error(403, "Access denied. Upserts not " +
-                           "allowed in a restricted collection.");
-
-  // compute modified fields
-  var fields = [];
-  _.each(mutator, function (params, op) {
-    if (op.charAt(0) !== '$') {
-      throw new Meteor.Error(
-        403, "Access denied. In a restricted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
-    } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
-      throw new Meteor.Error(
-        403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
-    } else {
-      _.each(_.keys(params), function (field) {
-        // treat dotted fields as if they are replacing their
-        // top-level part
-        if (field.indexOf('.') !== -1)
-          field = field.substring(0, field.indexOf('.'));
-
-        // record the field we are trying to change
-        if (!_.contains(fields, field))
-          fields.push(field);
-      });
-    }
-  });
-
-  var findOptions = {transform: null};
-  if (!self._validators.fetchAllFields) {
-    findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
-      findOptions.fields[fieldName] = 1;
-    });
-  }
-
-  var doc = self._collection.findOne(selector, findOptions);
-  if (!doc)  // none satisfied!
-    return 0;
-
-  var factoriedDoc;
 
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
-    return validator(userId,
-                     factoriedDoc,
-                     fields,
-                     mutator);
+    return validator(userId, method, args);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
-    return !validator(userId,
-                      factoriedDoc,
-                      fields,
-                      mutator);
+    return !validator(userId, method, args);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
 
-  // Back when we supported arbitrary client-provided selectors, we actually
-  // rewrote the selector to include an _id clause before passing to Mongo to
-  // avoid races, but since selector is guaranteed to already just be an ID, we
-  // don't have to any more.
+  var Future = Npm.require('fibers/future');
 
-  return self._collection.update.call(
-    self._collection, selector, mutator, options);
+  var f = new Future;
+  args.push(f.resolver());
+  self._collection[method].apply(self._collection, args);
+  return f.wait();
 };
 
-// Only allow these operations in validated updates. Specifically
-// whitelist operations, rather than blacklist, so new complex
-// operations that are added aren't automatically allowed. A complex
-// operation is one that does more than just modify its target
-// field. For now this contains all update operations except '$rename'.
-// http://docs.mongodb.org/manual/reference/operators/#update
-var ALLOWED_UPDATE_OPERATIONS = {
-  $inc:1, $set:1, $unset:1, $addToSet:1, $pop:1, $pullAll:1, $pull:1,
-  $pushAll:1, $push:1, $bit:1
-};
-
-// Simulate a mongo `remove` operation while validating access control
-// rules. See #ValidatedChange
-Meteor.RedisCollection.prototype._validatedRemove = function(userId, selector) {
-  var self = this;
-
-  var findOptions = {transform: null};
-  if (!self._validators.fetchAllFields) {
-    findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
-      findOptions.fields[fieldName] = 1;
-    });
-  }
-
-  var doc = self._collection.findOne(selector, findOptions);
-  if (!doc)
-    return 0;
-
-  // call user validators.
-  // Any deny returns true means denied.
-  if (_.any(self._validators.remove.deny, function(validator) {
-    return validator(userId, transformDoc(validator, doc));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-  // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.remove.allow, function(validator) {
-    return !validator(userId, transformDoc(validator, doc));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-
-  // Back when we supported arbitrary client-provided selectors, we actually
-  // rewrote the selector to {_id: {$in: [ids that we found]}} before passing to
-  // Mongo to avoid races, but since selector is guaranteed to already just be
-  // an ID, we don't have to any more.
-
-  return self._collection.remove.call(self._collection, selector);
-};
