@@ -480,101 +480,14 @@ Meteor.RedisCollection.prototype.matching = function (pattern) {
   return self._collection.matching(pattern);
 };
 
-_.each(['get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall'], function (name) {
-  Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
-    var self = this;
-    var args = _.toArray(arguments);
-//    var callback;
-    var ret;
-
-//    if (args.length && args[args.length - 1] instanceof Function)
-//      callback = args.pop();
-
-    try {
-//      args.push(callback);
-      var ret = self._collection[name].apply(self._collection, args);
-      return ret;
-    } catch (e) {
-//      if (callback) {
-//        callback(e);
-//        return null;
-//      }
-      throw e;
-    }
-  };
-});
-
-//var path = Npm.require('path');
-//var Fiber = Npm.require('fibers');
-//var Future = Npm.require(path.join('fibers', 'future'));
-//
-//
-//// Make synchronous
-//_.each(['keys'], function (name) {
-//  Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
-//    var self = this;
-//    var args = _.toArray(arguments);
-//    var callback;
-//    var ret;
-//
-//    var future;
-//
-//    if (args.length && args[args.length - 1] instanceof Function) {
-//      callback = args.pop();
-//    } else {
-//      future = new Future;
-//      callback = future.resolver();
-//    }
-//
-//    try {
-//      args.push(callback);
-//      var ret = self._collection[name].apply(self._collection, args);
-//      if (future) {
-//        ret = future.wait();
-//      }
-//      return ret;
-//    } catch (e) {
-////      if (callback) {
-////        callback(e);
-////        return null;
-////      }
-//      throw e;
-//    }
-//  };
-//});
-
-_.each(["set"], function (name) {
+_.each(['set', 'get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall'], function (name) {
   Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
-    var insertId;
-    var ret;
 
     if (args.length && args[args.length - 1] instanceof Function)
       callback = args.pop();
-
-    // On inserts, always return the id that we generated; on all other
-    // operations, just return the result from the collection.
-    var chooseReturnValueFromCollectionResult = function (result) {
-//      if (name === "insert") {
-//        if (!insertId && result) {
-//          insertId = result;
-//        }
-//        return insertId;
-//      } else {
-//        return result;
-//      }
-      return result;
-    };
-
-    var wrappedCallback;
-    if (callback) {
-      wrappedCallback = function (error, result) {
-        callback(error, ! error && chooseReturnValueFromCollectionResult(result));
-      };
-    }
-
     if (self._connection && self._connection !== Meteor.server) {
       // just remote to another endpoint, propagate return value or
       // exception.
@@ -582,7 +495,7 @@ _.each(["set"], function (name) {
       var enclosing = DDP._CurrentInvocation.get();
       var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
-      if (Meteor.isClient && !wrappedCallback && ! alreadyInSimulation) {
+      if (Meteor.isClient && !callback && ! alreadyInSimulation) {
         // Client can't block, so it can't report errors by exception,
         // only by callback. If they forget the callback, give them a
         // default one that logs the error, so they aren't totally
@@ -591,33 +504,25 @@ _.each(["set"], function (name) {
         // Don't give a default callback in simulation, because inside stubs we
         // want to return the results from the local collection immediately and
         // not force a callback.
-        wrappedCallback = function (err) {
+        callback = function (err) {
           if (err)
             Meteor._debug(name + " failed: " + (err.reason || err.stack));
         };
       }
 
-//      if (!alreadyInSimulation && name !== "insert") {
-//        // If we're about to actually send an RPC, we should throw an error if
-//        // this is a non-ID selector, because the mutation methods only allow
-//        // single-ID selectors. (If we don't throw here, we'll see flicker.)
-//        throwIfSelectorIsNotId(args[0], name);
-//      }
-
-      ret = chooseReturnValueFromCollectionResult(
-        self._connection.apply(self._prefix + name, args, {returnStubValue: true}, wrappedCallback)
-      );
+      ret = self._connection.apply(self._prefix + 'exec',
+                                   [name].concat(args),
+                                   {returnStubValue: true}, callback);
 
     } else {
       // it's my collection.  descend into the collection object
       // and propagate any exception.
-      args.push(wrappedCallback);
+      args.push(callback);
       try {
         // If the user provided a callback and the collection implements this
         // operation asynchronously, then queryRet will be undefined, and the
         // result will be returned through the callback instead.
-        var queryRet = self._collection[name].apply(self._collection, args);
-        ret = chooseReturnValueFromCollectionResult(queryRet);
+        ret = self._collection[name].apply(self._collection, args);
       } catch (e) {
         if (callback) {
           callback(e);
