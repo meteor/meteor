@@ -173,8 +173,10 @@ UI.insert = function (renderedTemplate, parentElement, nextNode) {
   // parentElement must be a DOM node. in particular, can't be the
   // result of a call to `$`. Can't check if `parentElement instanceof
   // Node` since 'Node' is undefined in IE8.
-  if (typeof parentElement.nodeType !== 'number')
+  if (! parentElement || typeof parentElement.nodeType !== 'number')
     throw new Error("'parentElement' must be a DOM node");
+  if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
+    throw new Error("'nextNode' must be a DOM node");
 
   if (! renderedTemplate.dom)
     throw new Error("Expected template rendered with UI.render");

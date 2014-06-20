@@ -626,7 +626,10 @@ Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
   });
   test.throws(function () {
     UI.insert(UI.render(tmpl), $('body'));
-  }, /must be a DOM node/);
+  }, /'parentElement' must be a DOM node/);
+  test.throws(function () {
+    UI.insert(UI.render(tmpl), document.body, $('body'));
+  }, /'nextNode' must be a DOM node/);
 });
 
 Tinytest.add("ui - UI.getDataContext", function (test) {
