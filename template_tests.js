@@ -2123,6 +2123,7 @@ Tinytest.add(
     test.isTrue(uiHookCalled);
     var htmlAfterRemove = canonicalizeHtml(div.innerHTML);
     test.equal(htmlBeforeRemove, htmlAfterRemove);
+    document.body.removeChild(div);
   }
 );
 
