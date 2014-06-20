@@ -175,7 +175,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Clean up old version.
     if (packageLinkTarget) {
-      files.rm_recursive(packageLinkTarget);
+      files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
     }
 
     if (verbose) {
