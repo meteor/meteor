@@ -254,7 +254,20 @@ Accounts.registerLoginHandler("password", function (options) {
 ///
 
 // Let the user change their own password if they know the old
-// password.
+// password. `oldPassword` and `newPassword` should be objects with keys
+// `digest` and `algorithm` (representing the SHA256 of the password).
+//
+// XXX COMPAT WITH 0.8.1.3
+// Like the login method, if the user hasn't been upgraded from SRP to
+// bcrypt yet, then this method will throw an 'old password format'
+// error. The client should call the SRP upgrade login handler and then
+// retry this method again.
+//
+// UNLIKE the login method, there is no way to avoid getting SRP upgrade
+// errors thrown. The reasoning for this is that clients using this
+// method directly will need to be updated anyway because we no longer
+// support the SRP flow that they would have been doing to use this
+// method previously.
 Meteor.methods({changePassword: function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
@@ -266,8 +279,16 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  if (!user.services || !user.services.password || !user.services.password.bcrypt)
+  if (!user.services || !user.services.password ||
+      (!user.services.password.bcrypt && !user.services.password.srp))
     throw new Meteor.Error(403, "User has no password set");
+
+  if (! user.services.password.bcrypt) {
+    throw new Meteor.Error(400, "old password format", EJSON.stringify({
+      format: 'srp',
+      identity: user.services.password.srp.identity
+    }));
+  }
 
   var result = checkPassword(user, oldPassword);
   if (result.error)
