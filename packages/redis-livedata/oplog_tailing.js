@@ -239,7 +239,8 @@ _.extend(OplogHandle.prototype, {
     self._sequenceSent = 0;
     self._sequenceAcked = 0;
     self._sequenceSeen = 0;
-    self._sequenceKey = "__meteor_sequence__";
+    // We need a unique key so we can have multiple Meteor servers
+    self._sequenceKey = "__meteor_sequence_" + Random.id() + "__";
 
     self._tailHandle = self._watcher.addListener(function (key, message) {
       Meteor._debug("Redis keyspace event: " + key + ": " + message);
