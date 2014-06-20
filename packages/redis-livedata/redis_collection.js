@@ -484,6 +484,12 @@ _.each(['set', 'get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hge
   Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
+
+    // if this is a read-only command, run it synchronously against the local
+    // cache miniredis.
+    if (_.contains(['get', 'hgetall', '_keys_hgetall'], name))
+      return self._collection[name].apply(self._collection, args);
+
     var callback;
 
     if (args.length && args[args.length - 1] instanceof Function)
