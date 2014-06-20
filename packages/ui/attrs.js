@@ -113,10 +113,22 @@ var SVGClassHandler = ClassHandler.extend({
 
 var StyleHandler = DiffingAttributeHandler.extend({
   getCurrentValue: function (element) {
-    return element.getAttribute("style") || '';
+    var style = element.getAttribute('style');
+    if (! style)
+      return '';
+    // IE sometimes removes the last semicolon on the style attribute, so we
+    // add it back if it does not already exist.
+    if (style.slice(-1) !== ';') {
+      style += ';';
+    }
+    return style;
   },
   setValue: function (element, style) {
-    element.setAttribute("style", style);
+    if (style === '') {
+      element.removeAttribute('style');
+    } else {
+      element.setAttribute('style', style);
+    }
   },
 
   // Parse a string to produce a map from property to attribute string.
