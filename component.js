@@ -205,3 +205,8 @@ Blaze.getElementDataVar = function (elem) {
   var theWith = Blaze.getElementControllerOfType(elem, Blaze.With);
   return theWith ? theWith.dataVar : null;
 };
+
+Blaze.getComponentDataVar = function (comp) {
+  var theWith = Blaze.getParentControllerOfType(comp, Blaze.With);
+  return theWith ? theWith.dataVar : null;
+};
