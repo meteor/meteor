@@ -129,7 +129,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
           // in Meteor.loginWithPassword.
           srpUpgradePath({
             upgradeError: error,
-            userSelector: { id: Meteor.user()._id },
+            userSelector: { id: Meteor.userId() },
             plaintextPassword: oldPassword
           }, function (err) {
             if (err) {
