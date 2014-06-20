@@ -34,6 +34,15 @@ RedisClient.prototype.subscribeKeyspaceEvents = function (callback, listener) {
   self._connection.psubscribe("__keyspace@*", callback);
 };
 
+
+RedisClient.prototype.publish = function (channel, message, callback) {
+  var self = this;
+
+  Meteor._debug("Redis command: PUBLISH " + channel + " " + message);
+
+  self._connection.publish(channel, message, Meteor.bindEnvironment(callback));
+};
+
 RedisClient.prototype.findCandidateKeys = function (collectionName, matcher, callback) {
   var self = this;
 

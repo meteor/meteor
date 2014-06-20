@@ -28,8 +28,9 @@ idForOp = function (op) {
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
 
-OplogHandle = function (watcher /*oplogUrl, dbName*/) {
+OplogHandle = function (client, watcher /*oplogUrl, dbName*/) {
   var self = this;
+  self._client = client;
 //  self._oplogUrl = oplogUrl;
 //  self._dbName = dbName;
   self._watcher = watcher;
@@ -98,48 +99,44 @@ _.extend(OplogHandle.prototype, {
     if (self._stopped)
       throw new Error("Called waitUntilCaughtUp on stopped handle!");
 
-    // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
+    // Calling waitUntilCaughtUp requires us to wait for the oplog connection to
     // be ready.
     self._readyFuture.wait();
 
-    // XXX Implement waiting
-    Meteor._sleepForMs(1000);
-    Meteor._debug("waitUntilCaughtUp is stubbed out (just sleeps for 1s)");
-    return;
-    
-    while (!self._stopped) {
-      // We need to make the selector at least as restrictive as the actual
-      // tailing selector (ie, we need to specify the DB name) or else we might
-      // find a TS that won't show up in the actual tail stream.
-      try {
-        var lastEntry = self._oplogLastEntryConnection.findOne(
-          OPLOG_COLLECTION, self._baseOplogSelector,
-          {fields: {ts: 1}, sort: {$natural: -1}});
-        break;
-      } catch (e) {
-        // During failover (eg) if we get an exception we should log and retry
-        // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: ", e.stack);
-        Meteor._sleepForMs(100);
-      }
-    }
+//    while (!self._stopped) {
+//      // We need to make the selector at least as restrictive as the actual
+//      // tailing selector (ie, we need to specify the DB name) or else we might
+//      // find a TS that won't show up in the actual tail stream.
+//      try {
+//        var lastEntry = self._oplogLastEntryConnection.findOne(
+//          OPLOG_COLLECTION, self._baseOplogSelector,
+//          {fields: {ts: 1}, sort: {$natural: -1}});
+//        break;
+//      } catch (e) {
+//        // During failover (eg) if we get an exception we should log and retry
+//        // instead of crashing.
+//        Meteor._debug("Got exception while reading last entry: ", e.stack);
+//        Meteor._sleepForMs(100);
+//      }
+//    }
 
     if (self._stopped)
       return;
 
-    if (!lastEntry) {
-      // Really, nothing in the oplog? Well, we've processed everything.
-      return;
-    }
+//    if (!lastEntry) {
+//      // Really, nothing in the oplog? Well, we've processed everything.
+//      return;
+//    }
 
-    var ts = lastEntry.ts;
-    if (!ts)
-      throw Error("oplog entry without ts: " + EJSON.stringify(lastEntry));
-
-    if (self._lastProcessedTS && ts.lessThanOrEqual(self._lastProcessedTS)) {
-      // We've already caught up to here.
-      return;
-    }
+    var ts = self._publishSequenceKey();
+//    var ts = lastEntry.ts;
+//    if (!ts)
+//      throw Error("oplog entry without ts: " + EJSON.stringify(lastEntry));
+//
+//    if (self._lastProcessedTS && ts.lessThanOrEqual(self._lastProcessedTS)) {
+//      // We've already caught up to here.
+//      return;
+//    }
 
 
     // Insert the future into our list. Almost always, this will be at the end,
@@ -147,12 +144,51 @@ _.extend(OplogHandle.prototype, {
     // the oplog entries we see will go backwards.
     var insertAfter = self._catchingUpFutures.length;
     while (insertAfter - 1 > 0
-           && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+           && (self._catchingUpFutures[insertAfter - 1].ts > ts)) {
       insertAfter--;
     }
     var f = new Future;
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
+  },
+  _publishSequenceKey: function () {
+    var self = this;
+
+    var seq = self._sequenceSent + 1;
+    self._client.publish("__keyspace@0__:" + self._sequenceKey, "sequence_" + seq,
+      function (err, results) {
+        if (err != null) {
+          // TODO: Panic?
+          Meteor._debug("Error while publishing sequence key: " + err);
+        } else {
+          self._sequenceAcked++;
+        }
+      }
+    );
+    self._sequenceSent++;
+    Meteor._debug("Sent sequence key: " + seq);
+    return seq;
+  },
+  _gotSequenceKey: function(message) {
+    var self = this;
+
+    if (message != ("sequence_" + (self._sequenceSeen + 1))) {
+      Meteor._debug("Got out-of-sequence message: " + message + " vs " + (self._sequenceSeen + 1));
+      throw new Error("Sequence received out of sequence");
+    }
+
+    self._sequenceSeen++;
+
+    Meteor._debug("Got sequence key: " + self._sequenceSeen);
+
+    var ts = self._sequenceSeen;
+    // Now that we've processed this operation, process pending sequencers.
+    while (!_.isEmpty(self._catchingUpFutures)
+      && (self._catchingUpFutures[0].ts <= ts)) {
+      Meteor._debug("Firing caught up...");
+      var sequencer = self._catchingUpFutures.shift();
+      sequencer.future.return();
+    }
   },
   _startTailing: function () {
     var self = this;
@@ -200,13 +236,22 @@ _.extend(OplogHandle.prototype, {
 //    var cursorDescription = new CursorDescription(
 //      OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
+    self._sequenceSent = 0;
+    self._sequenceAcked = 0;
+    self._sequenceSeen = 0;
+    self._sequenceKey = "__meteor_sequence__";
+
     self._tailHandle = self._watcher.addListener(function (key, message) {
       Meteor._debug("Redis keyspace event: " + key + ": " + message);
+      if (key == self._sequenceKey) {
+        self._gotSequenceKey(message);
+        return;
+      }
       // XXX collection name
       var trigger = {collection: "redis",
                      id: key,
                      message: message };
-      
+
 
       self._crossbar.fire(trigger);
 

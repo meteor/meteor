@@ -250,7 +250,7 @@ RedisConnection = function (url, options) {
 //    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
 //  }
 
-  self._oplogHandle = new OplogHandle(self._watcher);
+  self._oplogHandle = new OplogHandle(self._client, self._watcher);
 };
 
 RedisConnection.prototype.close = function() {
