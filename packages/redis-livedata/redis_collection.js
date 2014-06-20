@@ -88,8 +88,7 @@ Meteor.RedisCollection = function (name, options) {
       // of update calls to expect.
       beginUpdate: function (batchSize, reset) {
         if (batchSize > 1 || reset) {
-          // XXX enable this once Miniredis supports pausable observes
-          //self._collection.pauseObservers();
+          self._collection.pauseObservers();
         }
 
         if (reset)
@@ -137,8 +136,7 @@ Meteor.RedisCollection = function (name, options) {
 
       // Called at the end of a batch of updates.
       endUpdate: function () {
-        // XXX enable this once Miniredis supports pausable observes
-        //self._collection.resumeObservers();
+        self._collection.resumeObservers();
       },
 
       // Called around method stub invocations to capture the original versions

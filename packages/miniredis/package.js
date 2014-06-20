@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.export('Miniredis');
   api.use(['id-map', 'deps', 'underscore', 'random']);
-  api.add_files(['miniredis.js']);
+  api.add_files(['cow.js', 'miniredis.js']);
 });
 
 Package.on_test(function (api) {

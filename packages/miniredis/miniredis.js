@@ -164,7 +164,51 @@ Miniredis.RedisStore = function () {
   self._savedOriginals = null;
   // list of observes on cursors
   self.observes = [];
+
+  // True when observers are paused and we should not send callbacks.
+  self.paused = false;
 };
+
+//Pause the observers. No callbacks from observers will fire until
+//'resumeObservers' is called.
+Miniredis.RedisStore.prototype.pauseObservers = function () {
+  //XXX pauseObservers fails silenty if nested?
+  // No-op if already paused.
+  if (this.paused)
+   return;
+
+  // Set the 'paused' flag such that new observer messages don't fire.
+  this.paused = true;
+
+  // Take a snapshot of the query results
+  self._kv = new CowIdMap(self._kv);
+};
+
+//Resume the observers. Observers immediately receive change
+//notifications to bring them to the current state of the
+//database. Note that this is not just replaying all the changes that
+//happened during the pause, it is a smarter 'coalesced' diff.
+Miniredis.RedisStore.prototype.resumeObservers = function () {
+  var self = this;
+  // No-op if not paused.
+  if (!this.paused)
+   return;
+
+  // Unset the 'paused' flag. Make sure to do this first, otherwise
+  // observer methods won't actually fire when we trigger them.
+  this.paused = false;
+
+  // Diff the current results against the snapshot and send to observers.
+  self._kv._diffQueryChanges(function (key, event, value, oldValue) {
+     self._notifyObserves(key, event, value, oldValue);
+  });
+
+  // XXX Should we just always use a CowIdMap?
+  self._kv = self._kv.flatten();
+
+  self._observeQueue.drain();
+};
+
 
 _.extend(Miniredis.RedisStore.prototype, {
   // -----
@@ -237,6 +281,7 @@ _.extend(Miniredis.RedisStore.prototype, {
       delete self._keyDependencies[key];
   },
 
+  // XXX Should name of 4th argument be oldValue?
   _notifyObserves: function (key, event, value, newValue) {
     var self = this;
     _.each(self.observes, function (obs) {
