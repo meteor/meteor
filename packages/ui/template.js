@@ -36,10 +36,12 @@ updateTemplateInstance = function (comp) {
     };
   }
   // assume `comp` is a UI.TemplateComponent, for now
-  if (comp.__dataFunc)
+  if (comp.__dataFunc) {
     tmpl.data = comp.__dataFunc();
-  else
-    tmpl.data = null;
+  } else {
+    var dataVar = Blaze.getComponentDataVar(comp);
+    tmpl.data = dataVar ? dataVar.get() : null;
+  }
 
   if (comp.domrange && !comp.isFinalized) {
     tmpl.firstNode = comp.domrange.firstNode();
@@ -122,24 +124,25 @@ UI.TemplateComponent = Blaze.Component.extend({
   },
   renderTemplate: function () { return null; }, // override this
   renderToDOM: function() {
-    var range = UI.TemplateComponent.__super__.renderToDOM.call(this);
-    if (! this._eventMaps &&
-        typeof this.events === "object") {
+    var self = this;
+    var range = UI.TemplateComponent.__super__.renderToDOM.call(self);
+    if (! self._eventMaps &&
+        typeof self.events === "object") {
       // Provide limited back-compat support for `.events = {...}`
-      // syntax.  Pass `this.events` to the original `.events(...)`
+      // syntax.  Pass `self.events` to the original `.events(...)`
       // function.  This code must run only once per component, in
       // order to not bind the handlers more than once, which is
-      // ensured by the fact that we only do this when `this._eventMaps`
+      // ensured by the fact that we only do this when `self._eventMaps`
       // is falsy, and we cause it to be set now.
-      UI.TemplateComponent.prototype.events.call(this, this.events);
+      UI.TemplateComponent.prototype.events.call(self, self.events);
     }
 
-    if (this._eventMaps) {
-      _.each(this._eventMaps, function (m) {
-        range.addDOMAugmenter(new Blaze.EventAugmenter(m));
+    if (self._eventMaps) {
+      _.each(self._eventMaps, function (m) {
+        range.addDOMAugmenter(new Blaze.EventAugmenter(m, self));
       });
     }
-    if (this.rendered) {
+    if (self.rendered) {
       range.addDOMAugmenter(new UI.TemplateRenderedAugmenter);
     }
     return range;
@@ -152,12 +155,13 @@ UI.TemplateComponent = Blaze.Component.extend({
     for (var k in eventMap) {
       eventMap2[k] = (function (k, v) {
         return function (event/*, ...*/) {
+          var component = this; // passed by EventAugmenter
           var dataVar = Blaze.getElementDataVar(event.currentTarget);
           var data = dataVar && dataVar.get();
           if (data == null)
             data = {};
           var args = Array.prototype.slice.call(arguments);
-          var tmplInstance = updateTemplateInstance(self);
+          var tmplInstance = updateTemplateInstance(component);
           args.splice(1, 0, tmplInstance);
           return v.apply(data, args);
         };

@@ -350,9 +350,10 @@ Blaze.DOMAugmenter = JSClass.create({
 });
 
 Blaze.EventAugmenter = Blaze.DOMAugmenter.extend({
-  constructor: function (eventMap) {
+  constructor: function (eventMap, thisInHandler) {
     this.eventMap = eventMap;
     this.handles = [];
+    this.thisInHandler = thisInHandler; // optional
   },
   attach: function (range, element) {
     var self = this;
@@ -373,8 +374,8 @@ Blaze.EventAugmenter = Blaze.DOMAugmenter.extend({
           element, newEvents, selector,
           function (evt) {
             if (! range.containsElement(evt.currentTarget))
-              return;
-            return handler.apply(this, arguments);
+              return null;
+            return handler.apply(self.thisInHandler || this, arguments);
           },
           range, function (r) {
             return r.parentRange;
