@@ -28,7 +28,7 @@ if (Meteor.isClient) {
 
   // Causes `elem` (a DOM element) to be detached from its parent, if any.
   // Whether or not `elem` was detached, causes any callbacks registered
-  // with `onRemoveElement` on `elem` and its descendants to fire.
+  // with `onElementTeardown` on `elem` and its descendants to fire.
   // Not for use on non-element nodes.
   //
   // This method is modeled after the behavior of jQuery's `$(elem).remove()`,
@@ -37,11 +37,17 @@ if (Meteor.isClient) {
     $jq(elem).remove();
   };
 
+  DomBackend.tearDownElement = function (elem) {
+    var elems = Array.prototype.slice.call(elem.getElementsByTagName('*'));
+    elems.push(elem);
+    $jq.cleanData(elems);
+  };
+
   // Registers a callback function to be called when the given element or
   // one of its ancestors is removed from the DOM via the backend library.
   // The callback function is called at most once, and it receives the element
   // in question as an argument.
-  DomBackend.onRemoveElement = function (elem, func) {
+  DomBackend.onElementTeardown = function (elem, func) {
     if (! elem[REMOVAL_CALLBACKS_PROPERTY_NAME]) {
       elem[REMOVAL_CALLBACKS_PROPERTY_NAME] = [];
 
