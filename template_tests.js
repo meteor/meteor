@@ -2256,3 +2256,19 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );
+
+Tinytest.add(
+  "spacebars - SVG <a> elements",
+  function (test) {
+    if (! document.createElementNS) {
+      // IE 8
+      return;
+    }
+
+    var tmpl = Template.spacebars_test_svg_anchor;
+    var div = renderToDiv(tmpl);
+
+    var anchNamespace = $(div).find("a").get(0).namespaceURI;
+    test.equal(anchNamespace, "http://www.w3.org/2000/svg");
+  }
+);
