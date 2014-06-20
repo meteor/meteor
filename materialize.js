@@ -231,6 +231,6 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
 // For example, if `content` is a string, it will be converted
 // into a text node. If it is an HTMLJS node, then it will
 // be converted into a DOM element.
-Blaze.toDOM = function (content) {
+Blaze._toDOM = function (content) {
   return (new Blaze.ToDOMVisitor).visit(content, []);
 };
