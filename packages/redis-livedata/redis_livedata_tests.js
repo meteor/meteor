@@ -466,7 +466,7 @@ testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
 
     var coll = this.coll;
     var keyPrefix = this.keyPrefix;
-    coll.set(keyPrefix + '1', '1', expect(null, 'OK'));
+    coll.set(keyPrefix + '1', '1', expect(undefined, 'OK'));
   }, function (test, expect) {
     var coll = this.coll;
     var keyPrefix = this.keyPrefix;
@@ -517,7 +517,7 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
     var id = '1';
     test.equal(coll.matching(keyPrefix + '*').count(), 0);
     test.equal(coll.get(keyPrefix + id), undefined);
-    coll.set(keyPrefix + id, '1', expect(null, 'OK'));
+    coll.set(keyPrefix + id, '1', expect(undefined, 'OK'));
   }, function (test, expect) {
     var coll = new Meteor.RedisCollection(this.collectionName, collectionOptions);
     var keyPrefix = this.keyPrefix;
