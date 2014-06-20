@@ -13,12 +13,27 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
        'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection',
        'dropCollection'],
       function (m) {
-        ret[m] = _.bind(self.connection[m], self.connection, name);
+        ret[m] = function () {
+          throw new Error(m + ' is not available on REDIS! XXX');
+        };
       });
-    _.each(
-        ['get', 'set', 'incrby', 'keys', 'hgetall', 'hmset', 'hincrby', '_observe', 'del', '_keys_hgetall', 'matching'],
+      _.each(['get', 'set', 'incrby', 'keys', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall', '_observe', 'matching'],
         function (m) {
-          ret[m] = _.bind(self.connection[m], self.connection);
+          ret[m] = function (/* args */) {
+            var args = _.toArray(arguments);
+            var cb = args.pop();
+
+            if (_.isFunction(cb)) {
+              args.push(function (err, res) {
+                if (err === null) err = undefined;
+                cb(err, res);
+              });
+            } else {
+              args.push(cb);
+            }
+
+            return self.connection[m].apply(self.connection, args);
+          };
         });
     return ret;
   }
