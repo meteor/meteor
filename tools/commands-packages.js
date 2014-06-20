@@ -313,7 +313,7 @@ main.registerCommand({
     packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
-  packageClient.createAndPublishBuiltPackage(conn, unipackage);
+  packageClient.createAndPublishBuiltPackage(conn, unipkg);
 
 
   catalog.official.refresh();
