@@ -768,54 +768,50 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  _.each([true, false], function (email) {
-    testAsyncMulti("passwords - srp to bcrypt upgrade via password change, " +
-                   "user with " + (email ? "email" : "username"), [
-      logoutStep,
-      // Create user with old SRP credentials in the database.
-      function (test, expect) {
-        var self = this;
-        Meteor.call("testCreateSRPUser", email, expect(function (error, result) {
-          test.isFalse(error);
-          self[email ? "email" : "username"] = result;
-        }));
-      },
-      // Log in with the plaintext password handler, which should NOT upgrade us to bcrypt.
-      function (test, expect) {
-        var selector = email ? { email: this.email } : { username: this.username };
-        Accounts.callLoginMethod({
-          methodName: "login",
-          methodArguments: [ { user: selector, password: "abcdef" } ],
-          userCallback: expect(function (err) {
-            test.isFalse(err);
-          })
-        });
-      },
-      function (test, expect) {
-        Meteor.call("testNoSRPUpgrade", email ? this.email : this.username, expect(function (error) {
-          test.isFalse(error);
-        }));
-      },
-      // Changing our password should upgrade us to bcrypt.
-      function (test, expect) {
-        Accounts.changePassword("abcdef", "abcdefg", expect(function (error) {
-          test.isFalse(error);
-        }));
-      },
-      function (test, expect) {
-        Meteor.call("testSRPUpgrade", email ? this.email : this.username, expect(function (error) {
-          test.isFalse(error);
-        }));
-      },
-      // And after the upgrade we should be able to change our password again.
-      function (test, expect) {
-        Accounts.changePassword("abcdefg", "abcdef", expect(function (error) {
-          test.isFalse(error);
-        }));
-      },
-      logoutStep
-    ]);
-  });
+  testAsyncMulti("passwords - srp to bcrypt upgrade via password change", [
+    logoutStep,
+    // Create user with old SRP credentials in the database.
+    function (test, expect) {
+      var self = this;
+      Meteor.call("testCreateSRPUser", expect(function (error, result) {
+        test.isFalse(error);
+        self.username = result;
+      }));
+    },
+    // Log in with the plaintext password handler, which should NOT upgrade us to bcrypt.
+    function (test, expect) {
+      Accounts.callLoginMethod({
+        methodName: "login",
+        methodArguments: [ { user: { username: this.username }, password: "abcdef" } ],
+        userCallback: expect(function (err) {
+          test.isFalse(err);
+        })
+      });
+    },
+    function (test, expect) {
+      Meteor.call("testNoSRPUpgrade", this.username, expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    // Changing our password should upgrade us to bcrypt.
+    function (test, expect) {
+      Accounts.changePassword("abcdef", "abcdefg", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.call("testSRPUpgrade", this.username, expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    // And after the upgrade we should be able to change our password again.
+    function (test, expect) {
+      Accounts.changePassword("abcdefg", "abcdef", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    logoutStep
+  ]);
 }) ();
 
 
