@@ -25,6 +25,8 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
 
             if (_.isFunction(cb)) {
               args.push(function (err, res) {
+                // In Meteor the first argument (error) passed to the
+                // callback is undefined if no error occurred.
                 if (err === null) err = undefined;
                 cb(err, res);
               });
