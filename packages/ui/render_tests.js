@@ -618,6 +618,17 @@ Tinytest.add("ui - UI.render", function (test) {
   document.body.removeChild(div);
 });
 
+Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
+  var tmpl = UI.Component.extend({
+    render: function () {
+      return SPAN();
+    }
+  });
+  test.throws(function () {
+    UI.insert(UI.render(tmpl), $('body'));
+  }, /must be a DOM node/);
+});
+
 Tinytest.add("ui - UI.getDataContext", function (test) {
   var div = document.createElement("DIV");
 

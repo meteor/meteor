@@ -171,9 +171,10 @@ UI.namedEmboxValue = function (name, funcOrValue, equals) {
 
 UI.insert = function (renderedTemplate, parentElement, nextNode) {
   // parentElement must be a DOM node. in particular, can't be the
-  // result of a call to `$`. Can't do `check(parentElement, Node`
-  // since 'Node' is undefined in IE8.
-  check(parentElement.nodeType, Number);
+  // result of a call to `$`. Can't check if `parentElement instanceof
+  // Node` since 'Node' is undefined in IE8.
+  if (typeof parentElement.nodeType !== 'number')
+    throw new Error("'parentElement' must be a DOM node");
 
   if (! renderedTemplate.dom)
     throw new Error("Expected template rendered with UI.render");
