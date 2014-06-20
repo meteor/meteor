@@ -292,7 +292,11 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(R.numListeners(), 1);
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
-    span.setAttribute("style", span.getAttribute("style") + 'jquery-style: hidden;');
+
+    if (isIE())
+      span.style.cssText = 'jquery-style: hidden;';
+    else
+      span.setAttribute('style', span.getAttribute('style') + 'jquery-style: hidden;');
 
     R.set({'style': 'foo: "a;zz;aa";', id: 'bar'});
     Deps.flush();

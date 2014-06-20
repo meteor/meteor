@@ -65,7 +65,11 @@ canonicalizeHtml = function(html) {
 
       // make sure the attribute is doubled-quoted
       if (value.charAt(0) === '"') {
-        // Do nothing
+        // Encode quotes and double quotes in the attribute.
+        var attr = value.slice(1, -1);
+        attr = attr.replace(/\"/g, "&quot;");
+        attr = attr.replace(/\'/g, "&quot;");
+        value = '"' + attr + '"';
       } else {
         if (value.charAt(0) !== "'") {
           // attribute is unquoted. should be unreachable because of
@@ -77,6 +81,12 @@ canonicalizeHtml = function(html) {
         }
         value = value.replace(/["'`]/g, '"');
       }
+
+      // Ensure that styles end with ';'
+      if (key === 'style' && value.slice(-2) !== ';"' && value !== '""') {
+        value = value.slice(0, -1) + ';"';
+      }
+
       tagContents.push(key+'='+value);
     }
     return '<'+tagContents.join(' ')+'>';
