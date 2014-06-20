@@ -568,8 +568,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     self._set(key, newObj);
 
     return newVal;
-  },
-
+  }
 });
 
 Miniredis.unsupportedMethods = ["ttl", "restore", "dump", "expire", "expireat",
