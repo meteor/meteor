@@ -126,6 +126,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
             error.reason === 'old password format') {
           // XXX COMPAT WITH 0.8.1.3
           // The server is telling us to upgrade from SRP to bcrypt, as
+          // in Meteor.loginWithPassword.
           srpUpgradePath({
             upgradeError: error,
             userSelector: { id: Meteor.user()._id },
