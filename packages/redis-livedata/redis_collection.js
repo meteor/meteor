@@ -703,8 +703,6 @@ Meteor.RedisCollection.prototype._defineMutationMethods = function() {
       try {
         if (this.isSimulation) {
           // In a client simulation, you can do any mutation.
-          if (! self._collection)
-            console.log('XCXC xcxc no _collection');
           return self._collection[method].apply(
             self._collection, args);
         }
@@ -723,8 +721,6 @@ Meteor.RedisCollection.prototype._defineMutationMethods = function() {
           return self[validatedMethodName].call(self, userId, method, args);
         } else if (self._isInsecure()) {
           // In insecure mode, allow any mutation.
-          if (! self._collection)
-            console.log('XCXC xcxc no _collection');
           return self._collection[method].apply(self._collection, args);
         } else {
           // In secure mode, if we haven't called allow or deny, then nothing
