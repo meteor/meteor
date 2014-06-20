@@ -84,9 +84,9 @@ canonicalizeHtml = function(html) {
       attr = attr.replace(/\'/g, "&quot;");
       value = '"' + attr + '"';
 
-      // Ensure that styles end with ';'
-      if (key === 'style' && value.slice(-2) !== ';"' && value !== '""') {
-        value = value.slice(0, -1) + ';"';
+      // Ensure that styles do not end with a semicolon.
+      if (key === 'style') {
+        value = value.replace(/;\"$/, '"');
       }
 
       tagContents.push(key+'='+value);
