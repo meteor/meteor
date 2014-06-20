@@ -60,7 +60,7 @@ RedisClient.prototype.findCandidateKeys = function (collectionName, matcher, cal
       }
     }
   }
-  
+
   if (simpleKeys === null) {
     self._connection.keys(collectionName + "//*", Meteor.bindEnvironment(callback));
   } else {
@@ -89,18 +89,18 @@ RedisClient.prototype.hgetall = function (key, callback) {
 RedisClient.prototype._multi_hgetall = function (keys, callback) {
   // We need to implement this ourselves, because redis doesn't have a multi-key hgetall
   var self = this;
-  
+
   Meteor._debug("_multi_hgetall " + JSON.stringify(arguments));
-  
+
   var connection = self._connection;
 
   var errors = [];
   var lastError = null;
   var values = [];
   var replyCount = 0;
-  
+
   var n = keys.length;
-  
+
   if (n == 0) {
     callback(lastError, values);
     return;
@@ -115,7 +115,7 @@ RedisClient.prototype._multi_hgetall = function (keys, callback) {
       }
       errors[i] = err;
       values[i] = value;
-      
+
       replyCount++;
       if (replyCount == n) {
         Meteor._debug("Got n values");
@@ -145,13 +145,13 @@ RedisClient.prototype.mget = function (keys, callback) {
   var self = this;
 
   Meteor._debug("RedisClient::mget " + JSON.stringify(keys));
-  
+
   if (!keys.length) {
     // mget is fussy about empty keys array
     callback(null, []);
     return;
   }
-  
+
   // XXX Strip any null values from results?
   self._connection.mget(keys, Meteor.bindEnvironment(callback));
 };
@@ -219,15 +219,15 @@ RedisClient.prototype.incrby = function (key, delta, callback) {
 
 RedisClient.prototype.getAll = function (keys, callback) {
   var self = this;
-  
+
   var connection = self._connection;
 
   var errors = [];
   var values = [];
   var replyCount = 0;
-  
+
   var n = keys.length;
-  
+
   if (n == 0) {
     callback(errors, values);
     return;
@@ -241,7 +241,7 @@ RedisClient.prototype.getAll = function (keys, callback) {
       }
       errors[i] = err;
       values[i] = value;
-      
+
       replyCount++;
       if (replyCount == n) {
         callback(errors, values);
@@ -252,12 +252,12 @@ RedisClient.prototype.getAll = function (keys, callback) {
 
 RedisClient.prototype.setAll = function (keys, values, callback) {
   var self = this;
-  
+
   var connection = self._connection;
 
   var errors = [];
   var results = [];
-  
+
   var n = keys.length;
   if (n == 0) {
     callback(errors, results);
@@ -268,14 +268,14 @@ RedisClient.prototype.setAll = function (keys, values, callback) {
   _.each(_.range(n), function(i) {
     var key = keys[i];
     var value = values[i];
-    
+
     connection.set(key, value, Meteor.bindEnvironment(function(err, result) {
       if (err) {
         Meteor._debug("Error setting value in redis: " + err);
       }
       errors[i] = err;
       results[i] = result;
-      
+
       replyCount++;
       if (replyCount == n) {
         callback(errors, results);
@@ -287,12 +287,12 @@ RedisClient.prototype.setAll = function (keys, values, callback) {
 
 RedisClient.prototype.removeAll = function (keys, callback) {
   var self = this;
-  
+
   var connection = self._connection;
 
   var errors = [];
   var results = [];
-  
+
   var n = keys.length;
   if (n == 0) {
     callback(errors, results);
@@ -308,7 +308,7 @@ RedisClient.prototype.removeAll = function (keys, callback) {
       }
       errors[i] = err;
       results[i] = result;
-      
+
       replyCount++;
       if (replyCount == n) {
         callback(errors, results);
