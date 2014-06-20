@@ -50,7 +50,7 @@ var openPackageServerConnection = function () {
 // from the beginning of time.
 exports.loadCachedServerData = function () {
   var noDataToken =  {
-    syncToken: {time: new Date(0)},
+    syncToken: {},
     collections: null
   };;
 
@@ -159,6 +159,7 @@ exports.updateServerPackageData = function (cachedServerData) {
   try {
     remoteData = loadRemotePackageData(syncToken);
   } catch (err) {
+console.log("failed to update server data", err);
     if (err instanceof ServiceConnection.ConnectionTimeoutError) {
       return null;
     } else {
@@ -387,7 +388,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   }
 
   // Check that the version description is under the character limit.
-  if (packageSource.metadata.summary.length > 100) {
+  if (packageSource.metadata.summary &&
+      packageSource.metadata.summary.length > 100) {
     process.stderr.write("Description must be under 100 chars. \n");
     process.stderr.write("Publish failed. \n");
     return 1;
