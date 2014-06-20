@@ -334,7 +334,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c;"></span>');
 
-    // XXX test malformed styles - different expectations in IE from Chrome
+    // test malformed styles - different expectations in IE from Chrome
     R.set({'style': 'foo: a; bar::d;:e; baz: c;'});
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML),
@@ -345,11 +345,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c; constructor: a; __proto__: b;"></span>');
 
-    // XXX test clearing styles - different expectations in IE from Chrome
     R.set({});
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML),
-      isIE() ? '<span></span>' : '<span style=""></span>');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span></span>');
+
+    R.set({'style': 'foo: bar;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: bar;"></span>');
   })();
 
   // Test `null`, `undefined`, and `[]` attributes

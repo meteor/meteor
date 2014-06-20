@@ -111,27 +111,24 @@ var SVGClassHandler = ClassHandler.extend({
   }
 });
 
-var isIE = function () {
-  var myNav = navigator.userAgent.toLowerCase();
-  return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
-};
-
 var StyleHandler = DiffingAttributeHandler.extend({
   getCurrentValue: function (element) {
-    var style = isIE() ? element.style.cssText : element.getAttribute('style');
+    var style = element.getAttribute('style');
     if (! style)
       return '';
     // IE sometimes removes the last semicolon on the style attribute, so we
     // add it back if it does not already exist.
-    if (style.slice(-1) !== ';')
+    if (style.slice(-1) !== ';') {
       style += ';';
+    }
     return style;
   },
   setValue: function (element, style) {
-    if (isIE())
-      element.style.cssText = style;
-    else
+    if (style === '') {
+      element.removeAttribute('style');
+    } else {
       element.setAttribute('style', style);
+    }
   },
 
   // Parse a string to produce a map from property to attribute string.
