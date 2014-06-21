@@ -226,7 +226,7 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   }
 
   includeSources.push('package.js');
-  if (fs.existsSync(path.join(packageDir, '.npm/package/npm-shrinkwrap.json')) {
+  if (fs.existsSync(path.join(packageDir, '.npm/package/npm-shrinkwrap.json'))) {
     includeSources.push('.npm/package/npm-shrinkwrap.json');
   }
   _.each(unipackage.plugins, function (plugin, pluginName) {
