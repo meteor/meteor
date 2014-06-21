@@ -167,8 +167,7 @@ main.registerCommand({
     // This is similar to publish-for-arch, but uses the source code you have
     // locally (and other local packages you may have) instead of downloading
     // the source bundle. It does verify that the source is the same, though.
-    // Good for bootstrapping meteor-tool.
-    // XXX does not yet bootstrap meteor-tool.
+    // Good for bootstrapping things in the core release.
     'existing-version': { type: Boolean }
   },
   requiresPackage: true
@@ -233,13 +232,6 @@ main.registerCommand({
     process.stdout.write(messages.formatMessages());
     return 1;
   }
-
-  // We don't allow the tool to be published outside of the release process.
-  // XXX: I think this behavior doesn't make sense.
-/*  if (packageSource.includeTool) {
-    process.stderr.write("The tools package may not be published directly. \n");
-    return 1;
-  }*/
 
   // We have initialized everything, so perform the publish oepration.
   var ec = packageClient.publishPackage(
