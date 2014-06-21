@@ -85,6 +85,19 @@ Blaze._bindIfIsFunction = function (x, target) {
   };
 };
 
+Blaze._bindToCurrentDataIfIsFunction = function (x) {
+  if (typeof x === 'function') {
+    return function () {
+      var dataVar = Blaze.getCurrentDataVar();
+      var data = dataVar && dataVar.get();
+      if (data == null)
+        data = {};
+      return x.apply(data, arguments);
+    };
+  }
+  return x;
+};
+
 // Implements {{foo}} where `name` is "foo"
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
@@ -110,24 +123,13 @@ Blaze.lookup = function (name, component, options) {
 
   } else if (component && (name in component)) {
     // Implement "old this"
-    var result = component[name];
-    if (typeof result === 'function') {
-      result = function () {
-        var dataVar = Blaze.getCurrentDataVar();
-        var data = dataVar && dataVar.get();
-        if (data == null)
-          data = {};
-        return component[name].apply(data, arguments);
-      };
-    }
-    return result;
-
+    return Blaze._bindToCurrentDataIfIsFunction(component[name]);
     // "New this"
     //return Blaze._bindIfIsFunction(component[name], component);
   } else if (isTemplate && _.has(Template, name)) {
     return Template[name];
   } else if (UI._globalHelpers[name]) {
-    return UI._globalHelpers[name];
+    return Blaze._bindToCurrentDataIfIsFunction(UI._globalHelpers[name]);
   } else {
     var dataVar = Blaze.getCurrentDataVar();
     if (dataVar) {
