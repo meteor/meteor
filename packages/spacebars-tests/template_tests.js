@@ -1947,7 +1947,7 @@ Tinytest.add(
 
 // https://github.com/meteor/meteor/issues/2156
 Tinytest.add(
-  "spacebars - template - each with inserts inside autorun",
+  "spacebars-tests - template_tests - each with inserts inside autorun",
   function (test) {
     var tmpl = Template.spacebars_test_each_with_autorun_insert;
     var coll = new Meteor.Collection(null);
@@ -1981,7 +1981,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars - ui hooks",
+  "spacebars-tests - template_tests - ui hooks",
   function (test) {
     var tmpl = Template.spacebars_test_ui_hooks;
     var rv = new ReactiveVar([]);
@@ -2048,7 +2048,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars - access template instance from helper",
+  "spacebars-tests - template_tests - access template instance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
     // there from a helper.
@@ -2070,7 +2070,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars - access template instance from helper, " +
+  "spacebars-tests - template_tests - access template instance from helper, " +
     "template instance is kept up-to-date",
   function (test) {
     var tmpl = Template.spacebars_test_template_instance_helper;
@@ -2101,7 +2101,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars - {{#with}} autorun is cleaned up",
+  "spacebars-tests - template_tests - {{#with}} autorun is cleaned up",
   function (test) {
     var tmpl = Template.spacebars_test_with_cleanup;
     var rv = new ReactiveVar("");
