@@ -490,13 +490,12 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 ]);
 
 //Tinytest.addAsync("redis-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
-//
-//  var run = Random.id();
+//  var keyPrefix = Random.id();
 //  var coll;
 //  if (Meteor.isClient) {
 //    coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
 //  } else {
-//    coll = new Meteor.RedisCollection("livedata_test_collection_"+run, collectionOptions);
+//    coll = new Meteor.RedisCollection('redis', collectionOptions);
 //  }
 //
 //  // fuzz test of observe(), especially the server-side diffing
@@ -504,25 +503,25 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 //  var correct = [];
 //  var counters = {add: 0, change: 0, move: 0, remove: 0};
 //
-//  var obs = coll.find({run: run}, {sort: ["x"]}).observe({
+//  var obs = coll.matching(keyPrefix + "*").observe({
 //    addedAt: function (doc, before_index) {
 //      counters.add++;
-//      actual.splice(before_index, 0, doc.x);
+//      actual.splice(before_index, 0, doc.value);
 //    },
 //    changedAt: function (new_doc, old_doc, at_index) {
 //      counters.change++;
-//      test.equal(actual[at_index], old_doc.x);
-//      actual[at_index] = new_doc.x;
+//      test.equal(actual[at_index], old_doc.value);
+//      actual[at_index] = new_doc.value;
 //    },
 //    movedTo: function (doc, old_index, new_index) {
 //      counters.move++;
-//      test.equal(actual[old_index], doc.x);
+//      test.equal(actual[old_index], doc.value);
 //      actual.splice(old_index, 1);
-//      actual.splice(new_index, 0, doc.x);
+//      actual.splice(new_index, 0, doc.value);
 //    },
 //    removedAt: function (doc, at_index) {
 //      counters.remove++;
-//      test.equal(actual[at_index], doc.x);
+//      test.equal(actual[at_index], doc.value);
 //      actual.splice(at_index, 1);
 //    }
 //  });
@@ -649,61 +648,60 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 //  onComplete();
 //});
 //
-//Tinytest.addAsync("redis-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
-//  var run = Random.id();
-//  var coll;
-//  if (Meteor.isClient) {
-//    coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
-//  } else {
-//    coll = new Meteor.RedisCollection("stopHandleInCallback-"+run, collectionOptions);
-//  }
-//
-//  var output = [];
-//
-//  var handle = coll.find().observe({
-//    added: function (doc) {
-//      output.push({added: doc._id});
-//    },
-//    changed: function (newDoc) {
-//      output.push('changed');
-//      handle.stop();
-//    }
-//  });
-//
-//  test.equal(output, []);
-//
-//  // Insert a document. Observe that the added callback is called.
-//  var docId;
-//  runInFence(function () {
-//    docId = coll.insert({foo: 42});
-//  });
-//  test.length(output, 1);
-//  test.equal(output.shift(), {added: docId});
-//
-//  // Update it. Observe that the changed callback is called. This should also
-//  // stop the observation.
-//  runInFence(function() {
-//    coll.update(docId, {$set: {bar: 10}});
-//  });
-//  test.length(output, 1);
-//  test.equal(output.shift(), 'changed');
-//
-//  // Update again. This shouldn't call the callback because we stopped the
-//  // observation.
-//  runInFence(function() {
-//    coll.update(docId, {$set: {baz: 40}});
-//  });
-//  test.length(output, 0);
-//
-//  test.equal(coll.find().count(), 1);
-//  test.equal(coll.findOne(docId),
-//             {_id: docId, foo: 42, bar: 10, baz: 40});
-//
-//  onComplete();
-//});
-//
+Tinytest.addAsync("redis-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
+  var keyPrefix = Random.id();
+  var coll;
+  if (Meteor.isClient) {
+    coll = new Meteor.RedisCollection(null, collectionOptions); // local, unmanaged
+  } else {
+    coll = new Meteor.RedisCollection("redis-", collectionOptions);
+  }
+
+  var output = [];
+
+  var handle = coll.matching(keyPrefix + "*").observeChanges({
+    added: function (id, doc) {
+      output.push({added: id});
+    },
+    changed: function (id, newDoc) {
+      output.push('changed');
+      handle.stop();
+    }
+  });
+
+  test.equal(output, []);
+
+  // Insert a document. Observe that the added callback is called.
+  var docId = keyPrefix + "foo";
+  runInFence(function () {
+    coll.set(docId, "42");
+  });
+  test.length(output, 1);
+  test.equal(output.shift(), {added: docId});
+
+  // Update it. Observe that the changed callback is called. This should also
+  // stop the observation.
+  runInFence(function() {
+    coll.set(docId, "10");
+  });
+  test.length(output, 1);
+  test.equal(output.shift(), 'changed');
+
+  // Update again. This shouldn't call the callback because we stopped the
+  // observation.
+  runInFence(function() {
+    coll.set(docId, "33");
+  });
+  test.length(output, 0);
+
+  test.equal(coll.matching(keyPrefix + "*").count(), 1);
+  test.equal(coll.get(docId), "33");
+
+  onComplete();
+});
+
 //// This behavior isn't great, but it beats deadlock.
-//if (Meteor.isServer) {
+if (Meteor.isServer) {
 //  Tinytest.addAsync("redis-livedata - recursive observe throws, " + idGeneration, function (test, onComplete) {
 //    var run = test.runId();
 //    var coll = new Meteor.RedisCollection("observeInCallback-"+run, collectionOptions);
@@ -835,53 +833,52 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 //    onComplete();
 //  });
 //
-//  Tinytest.addAsync("redis-livedata - async server-side insert, " + idGeneration, function (test, onComplete) {
-//    // Tests that insert returns before the callback runs. Relies on the fact
-//    // that mongo does not run the callback before spinning off the event loop.
-//    var cname = Random.id();
-//    var coll = new Meteor.RedisCollection(cname);
-//    var doc = { foo: "bar" };
-//    var x = 0;
-//    coll.insert(doc, function (err, result) {
-//      test.equal(err, null);
-//      test.equal(x, 1);
-//      onComplete();
-//    });
-//    x++;
-//  });
-//
-//  Tinytest.addAsync("redis-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
-//    // Tests that update returns before the callback runs.
-//    var cname = Random.id();
-//    var coll = new Meteor.RedisCollection(cname);
-//    var doc = { foo: "bar" };
-//    var x = 0;
-//    var id = coll.insert(doc);
-//    coll.update(id, { $set: { foo: "baz" } }, function (err, result) {
-//      test.equal(err, null);
-//      test.equal(result, 1);
-//      test.equal(x, 1);
-//      onComplete();
-//    });
-//    x++;
-//  });
-//
+  Tinytest.addAsync("redis-livedata - async server-side insert, " + idGeneration, function (test, onComplete) {
+    // Tests that set returns before the callback runs. Relies on the fact
+    // that redis does not run the callback before spinning off the event loop.
+    var key = Random.id();
+    var coll = new Meteor.RedisCollection("redis");
+    var docId = key;
+    var x = 0;
+    coll.set(key, "42", function (err, result) {
+      test.equal(err, undefined);
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
+
+  Tinytest.addAsync("redis-livedata - async server-side update, " + idGeneration, function (test, onComplete) {
+    // Tests that update returns before the callback runs.
+    var key = Random.id();
+    var coll = new Meteor.RedisCollection("redis");
+    var x = 0;
+    coll.set(key, "33");
+    coll.set(key, "22", function (err, result) {
+      test.equal(err, undefined);
+      test.equal(result, "OK");
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
+
+// XXX this test is ported to Redis but is hanging. Debug later.
 //  Tinytest.addAsync("redis-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
 //    // Tests that remove returns before the callback runs.
-//    var cname = Random.id();
-//    var coll = new Meteor.RedisCollection(cname);
-//    var doc = { foo: "bar" };
+//    var key = Random.id();
+//    var coll = new Meteor.RedisCollection("redis");
 //    var x = 0;
-//    var id = coll.insert(doc);
-//    coll.remove(id, function (err, result) {
-//      test.equal(err, null);
-//      test.isFalse(coll.findOne(id));
+//    coll.set(key, "123");
+//    coll.del(key, function (err, result) {
+//      test.equal(err, undefined);
+//      test.equal(coll.get(key), undefined);
 //      test.equal(x, 1);
 //      onComplete();
 //    });
 //    x++;
 //  });
-//
+
 //  // compares arrays a and b w/o looking at order
 //  var setsEqual = function (a, b) {
 //    a = _.map(a, EJSON.stringify);
@@ -1347,7 +1344,7 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
 //
 //    onComplete();
 //  });
-//}
+}
 //
 //
 //testAsyncMulti('redis-livedata - empty documents, ' + idGeneration, [
