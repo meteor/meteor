@@ -255,10 +255,12 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   files.createTarball(dirToTar, sourceTarball);
 
   var tarballHash = files.fileHash(sourceTarball);
+  var treeHash = files.treeHash(dirToTar);
 
   return {
     sourceTarball: sourceTarball,
-    tarballHash: tarballHash
+    tarballHash: tarballHash,
+    treeHash: treeHash
   };
 };
 
@@ -481,9 +483,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   if (fs.existsSync(path.join(packageSource.sourceRoot, versionsFileName))) {
     sources.push(versionsFileName);
   }
-  var bundleResult = bundleSource(compileResult.unipackage,
-                                                sources,
-                                                packageSource.sourceRoot);
+  var sourceBundleResult = bundleSource(
+    compileResult.unipackage, sources, packageSource.sourceRoot);
 
   // Create the package. Check that the metadata exists.
   if (options.new) {
@@ -510,12 +511,13 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // publish a new build.
 
   process.stdout.write('Uploading source...\n');
-  uploadTarball(uploadInfo.uploadUrl,
-                              bundleResult.sourceTarball);
+  uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
 
   process.stdout.write('Publishing package version...\n');
   conn.call('publishPackageVersion',
-            uploadInfo.uploadToken, bundleResult.tarballHash);
+            uploadInfo.uploadToken,
+            { tarballHash: sourceBundleResult.tarballHash,
+              treeHash: sourceBundleResult.treeHash });
 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
 

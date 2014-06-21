@@ -279,6 +279,7 @@ main.registerCommand({
   });
   var sourcePath = files.mkdtemp(options.name + '-' +
                                  options.versionString + '-source-');
+  // XXX check tarballHash!
   files.extractTarGz(sourceTarball, sourcePath);
 
   // XXX Factor out with packageClient.bundleSource so that we don't
