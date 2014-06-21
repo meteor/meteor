@@ -2078,19 +2078,16 @@ Tinytest.add(
     var instanceFromHelper;
 
     tmpl.foo = function () {
-      instanceFromHelper = UI._templateInstance();
-      return rv.get();
+      return UI._templateInstance().data;
     };
 
-    var div = renderToDiv(tmpl);
+    var div = renderToDiv(tmpl, function () { return rv.get(); });
     rv.set("first");
-    Deps.flush();
-    // `nextSibling` because the first node is an empty text node.
-    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "first");
+    divRendersTo(test, div, "first");
 
     rv.set("second");
     Deps.flush();
-    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "second");
+    divRendersTo(test, div, "second");
 
     // UI._templateInstance() should throw when called from not within a
     // helper.
