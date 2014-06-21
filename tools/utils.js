@@ -287,3 +287,50 @@ exports.displayRelease = function (track, version) {
     return "Meteor " + version;
   return track + '@' + version;
 };
+
+// Calls cb with each subset of the array "total", with non-decreasing size,
+// until all subsets have been used or cb returns true. The array passed
+// to cb may be safely mutated or retained by cb.
+exports.generateSubsetsOfIncreasingSize = function (total, cb) {
+  // We'll throw this if cb ever returns true, which is a simple way to pop us
+  // out of our recursion.
+  var Done = function () {};
+
+  // Generates all subsets of size subsetSize which contain the indices already
+  // in chosenIndices (and no indices that are "less than" any of them).
+  var generateSubsetsOfFixedSize = function (goalSize, chosenIndices) {
+    // If we've found a subset of the size we're looking for, output it.
+    if (chosenIndices.length === goalSize) {
+      // Change from indices into the actual elements. Note that 'elements' is
+      // a newly allocated array which cb may mutate or retain.
+      var elements = [];
+      _.each(chosenIndices, function (index) {
+        elements.push(total[index]);
+      });
+      if (cb(elements)) {
+        throw new Done();  // unwind all the recursion
+      }
+      return;
+    }
+
+    // Otherwise try adding another index and call this recursively.  We're
+    // trying to produce a sorted list of indices, so if there are already
+    // indices, we start with the one after the biggest one we already have.
+    var firstIndexToConsider = chosenIndices.length ?
+          chosenIndices[chosenIndices.length - 1] + 1 : 0;
+    for (var i = firstIndexToConsider; i < total.length; ++i) {
+      var withThisChoice = _.clone(chosenIndices);
+      withThisChoice.push(i);
+      generateSubsetsOfFixedSize(goalSize, withThisChoice);
+    }
+  };
+
+  try {
+    for (var goalSize = 0; goalSize <= total.length; ++goalSize) {
+      generateSubsetsOfFixedSize(goalSize, []);
+    }
+  } catch (e) {
+    if (!(e instanceof Done))
+      throw e;
+  }
+};

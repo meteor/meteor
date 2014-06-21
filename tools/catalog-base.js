@@ -12,6 +12,7 @@ var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
+var utils = require('./utils.js');
 
 var baseCatalog = exports;
 
@@ -254,46 +255,28 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     if (! versionInfo)
       return null;
 
-    // XXX this uses a greedy algorithm that might decide, when we're looking
-    // for ["browser", "os.mac"] that we should download browser+os.linux to
-    // satisfy browser and browser+os.mac to satisfy os.mac.  This is not
-    // optimal, but on the other hand you might want the linux one later anyway
-    // for deployment.
     // XXX if we have a choice between os and os.mac, this returns a random one.
     //     so in practice we don't really support "maybe-platform-specific"
     //     packages
 
-    var neededArches = {};
-    _.each(arches, function (arch) {
-      neededArches[arch] = true;
-    });
-
-    var buildsToUse = [];
     var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
-    for (var i = 0; i < allBuilds.length && !_.isEmpty(neededArches); ++i) {
-      var build = allBuilds[i];
-      // XXX why isn't this a list in the DB?  I guess because of the unique
-      // index?
-      var buildArches = build.buildArchitectures.split('+');
-      var usingThisBuild = false;
-      _.each(neededArches, function (ignored, neededArch) {
-        if (archinfo.mostSpecificMatch(neededArch, buildArches)) {
-          // This build gives us something we need! We don't need it any
-          // more. (It is safe to delete keys of something you are each'ing over
-          // because _.each internally is doing an iteration over _.keys.)
-          delete neededArches[neededArch];
-          if (! usingThisBuild) {
-            usingThisBuild = true;
-            buildsToUse.push(build);
-          }
-        }
+    var solution = null;
+    utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
+      // This build subset works if for all the arches we need, at least one
+      // build in the subset satisfies it. It is guaranteed to be minimal,
+      // because we look at subsets in increasing order of size.
+      var satisfied = _.all(arches, function (neededArch) {
+        return _.any(buildSubset, function (build) {
+          var buildArches = build.buildArchitectures.split('+');
+          return !!archinfo.mostSpecificMatch(neededArch, buildArches);
+        });
       });
-    }
-
-    if (_.isEmpty(neededArches))
-      return buildsToUse;
-    // We couldn't satisfy it!
-    return null;
+      if (satisfied) {
+        solution = buildSubset;
+        return true;  // stop the iteration
+      }
+    });
+    return solution;  // might be null!
   },
 
   // Unlike the previous, this looks for a build which *precisely* matches the
