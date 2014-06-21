@@ -163,10 +163,22 @@ main.registerCommand({
   maxArgs: 0,
   options: {
     create: { type: Boolean },
-    name: { type: String }
+    name: { type: String },
+    // This is similar to publish-for-arch, but uses the source code you have
+    // locally (and other local packages you may have) instead of downloading
+    // the source bundle. It does verify that the source is the same, though.
+    // Good for bootstrapping meteor-tool.
+    // XXX does not yet bootstrap meteor-tool.
+    'existing-version': { type: Boolean }
   },
   requiresPackage: true
 }, function (options) {
+  if (options.create && options['existing-version']) {
+    // Make up your mind!
+    process.stderr.write("The --create and --existing-version options cannot " +
+                         "both be specified.\n");
+    return 1;
+  }
 
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
@@ -231,7 +243,10 @@ main.registerCommand({
 
   // We have initialized everything, so perform the publish oepration.
   var ec = packageClient.publishPackage(
-    packageSource, compileResult, conn, { new: options.create });
+    packageSource, compileResult, conn, {
+      new: options.create,
+      existingVersion: options['existing-version']
+    });
 
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.

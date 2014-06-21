@@ -226,13 +226,13 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   }
 
   includeSources.push('package.js');
-  if (fs.existsSync('.npm/package/npm-shrinkwrap.json')) {
+  if (fs.existsSync(path.join(packageDir, '.npm/package/npm-shrinkwrap.json')) {
     includeSources.push('.npm/package/npm-shrinkwrap.json');
   }
   _.each(unipackage.plugins, function (plugin, pluginName) {
     var pluginShrinkwrap = path.join('.npm/plugin/', pluginName,
                                      'npm-shrinkwrap.json');
-    if (fs.existsSync(pluginShrinkwrap)) {
+    if (fs.existsSync(path.join(packageDir, pluginShrinkwrap))) {
       includeSources.push(pluginShrinkwrap);
     }
   });
@@ -364,10 +364,15 @@ exports.handlePackageServerConnectionError = function (error) {
 // options:
 //      new: this package is new, we should call createPackage to create a new
 //           package record.
+//      existingVersion: we expect the version to exist already, and for us
+//           to merely be providing a new build of the same source
 //
 // Return true on success and an error code otherwise.
 exports.publishPackage = function (packageSource, compileResult, conn, options) {
   options = options || {};
+
+  if (options.new && options.existingVersion)
+    throw Error("is it new or does it exist?!?");
 
   var name = packageSource.name;
   var version = packageSource.version;
@@ -397,9 +402,10 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     return 1;
   }
 
+  var catalog = require('./catalog.js');
+
   // Check that we are an authorized maintainer of this package.
   if (!options['new']) {
-    var catalog = require('./catalog.js');
     var packRecord = catalog.official.getPackage(name);
     if (!packRecord) {
       process.stderr.write('There is no package named ' + name +
@@ -494,30 +500,45 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     });
   }
 
-  process.stdout.write('Creating package version...\n');
-  var uploadRec = {
-    packageName: packageSource.name,
-    version: version,
-    description: packageSource.metadata.summary,
-    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
-    compilerVersion: compiler.BUILT_BY,
-    containsPlugins: packageSource.containsPlugins(),
-    dependencies: packageDeps
-  };
-  var uploadInfo = conn.call('createPackageVersion', uploadRec);
+  if (options.existingVersion) {
+    var existingRecord = catalog.official.getVersion(name, version);
+    if (!existingRecord) {
+      process.stderr.write("Version does not exist.\n");
+      return 1;
+    }
+    if (existingRecord.source.treeHash !== sourceBundleResult.treeHash) {
+      process.stderr.write(
+        "Package source differs from the existing version.\n");
+      return 1;
+    }
 
-  // XXX If package version already exists, print a nice error message
-  // telling them to try 'meteor publish-for-arch' if they want to
-  // publish a new build.
+    // XXX check that we're actually providing something new?
+  } else {
+    process.stdout.write('Creating package version...\n');
+    var uploadRec = {
+      packageName: packageSource.name,
+      version: version,
+      description: packageSource.metadata.summary,
+      earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
+      compilerVersion: compiler.BUILT_BY,
+      containsPlugins: packageSource.containsPlugins(),
+      dependencies: packageDeps
+    };
+    var uploadInfo = conn.call('createPackageVersion', uploadRec);
 
-  process.stdout.write('Uploading source...\n');
-  uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+    // XXX If package version already exists, print a nice error message
+    // telling them to try 'meteor publish-for-arch' if they want to
+    // publish a new build.
 
-  process.stdout.write('Publishing package version...\n');
-  conn.call('publishPackageVersion',
-            uploadInfo.uploadToken,
-            { tarballHash: sourceBundleResult.tarballHash,
-              treeHash: sourceBundleResult.treeHash });
+    process.stdout.write('Uploading source...\n');
+    uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+
+    process.stdout.write('Publishing package version...\n');
+    conn.call('publishPackageVersion',
+              uploadInfo.uploadToken,
+              { tarballHash: sourceBundleResult.tarballHash,
+                treeHash: sourceBundleResult.treeHash });
+  }
 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
 
