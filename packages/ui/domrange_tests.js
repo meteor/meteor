@@ -25,7 +25,8 @@ var inDocument = function (range, func) {
   try {
     func(range);
   } finally {
-    document.body.removeChild(onscreen);
+    if (onscreen.parentNode === document.body)
+      document.body.removeChild(onscreen);
   }
 };
 
@@ -862,7 +863,7 @@ Tinytest.add("ui - DomRange - structural removal", function (test) {
     test.isTrue(e.isRemoved);
 
 
-    for (var scenario = 0; scenario < 2; scenario++) {
+    for (var scenario = 0; scenario < 3; scenario++) {
       var f = new DomRange;
       var g = document.createElement("DIV");
       var h = new DomRange;
@@ -882,6 +883,8 @@ Tinytest.add("ui - DomRange - structural removal", function (test) {
         r.removeAll();
       else if (scenario === 1)
         r.remove('f');
+      else if (scenario === 2)
+        $(r.parentNode()).remove();
       test.isTrue(f.isRemoved);
       test.isTrue(h.isRemoved);
       test.isTrue(k.isRemoved);
