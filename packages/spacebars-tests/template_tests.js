@@ -1532,7 +1532,7 @@ Tinytest.add('spacebars-tests - template_tests - custom block helper functions c
   tmpl.foo = function () {
     d.depend();
     count++;
-    return UI.block(function () { return []; });
+    return Template.spacebars_template_test_aaa;
   };
 
   foo = false;
@@ -1914,14 +1914,14 @@ Tinytest.add("spacebars-tests - template_tests - event handlers get cleaned up w
 
     var div = renderToDiv(tmpl);
 
-    test.equal(div.$_uievents["click"].handlers.length, 1);
-    test.equal(div.$_uievents["mouseover"].handlers.length, 1);
+    test.equal(div.$blaze_events["click"].handlers.length, 1);
+    test.equal(div.$blaze_events["mouseover"].handlers.length, 1);
 
     rv.set(false);
     Deps.flush();
 
-    test.equal(div.$_uievents["click"].handlers.length, 0);
-    test.equal(div.$_uievents["mouseover"].handlers.length, 0);
+    test.equal(div.$blaze_events["click"].handlers.length, 0);
+    test.equal(div.$blaze_events["mouseover"].handlers.length, 0);
   }
 );
 
