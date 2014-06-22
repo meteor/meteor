@@ -1,7 +1,7 @@
-UI.body2 = new Blaze.Component();
+UI.body = new Blaze.Component();
 
-_.extend(UI.body2, {
-  // content parts are render methods (which expect `UI.body2` in `this`)
+_.extend(UI.body, {
+  // content parts are render methods (which expect `UI.body` in `this`)
   contentParts: [],
   render: function () {
     var self = this;
