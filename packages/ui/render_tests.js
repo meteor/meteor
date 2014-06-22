@@ -566,29 +566,6 @@ Tinytest.add("ui - UI.render", function (test) {
   document.body.removeChild(div);
 });
 
-Tinytest.add("ui - UI.getDataContext", function (test) {
-  var div = document.createElement("DIV");
-
-  var tmpl = UI.Component.extend({
-    render: function () {
-      return SPAN();
-    }
-  });
-
-  UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
-  var span = $(div).children('SPAN')[0];
-  test.isTrue(span);
-  test.equal(UI.getElementData(span), {foo: "bar"});
-});
-
-Tinytest.add("ui - attributes", function (test) {
-  var SPAN = HTML.SPAN;
-  var amp = HTML.CharRef({html: '&amp;', str: '&'});
-
-  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
-             '<span title="M&amp;Ms">M&amp;M candies</span>');
-});
-
 Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
   _.each([true, false], function (nest) {
 
@@ -631,4 +608,27 @@ Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
       test.equal(firstComputation.stopped, false);
     }
   });
+});
+
+Tinytest.add("ui - UI.getElementData", function (test) {
+  var div = document.createElement("DIV");
+
+  var tmpl = UI.Component.extend({
+    render: function () {
+      return SPAN();
+    }
+  });
+
+  UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
+  var span = $(div).children('SPAN')[0];
+  test.isTrue(span);
+  test.equal(UI.getElementData(span), {foo: "bar"});
+});
+
+Tinytest.add("ui - attributes", function (test) {
+  var SPAN = HTML.SPAN;
+  var amp = HTML.CharRef({html: '&amp;', str: '&'});
+
+  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
+             '<span title="M&amp;Ms">M&amp;M candies</span>');
 });
