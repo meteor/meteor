@@ -38,7 +38,7 @@ if (Meteor.isClient) {
   };
 
   DomBackend.tearDownElement = function (elem) {
-    var elems = Array.prototype.slice.call(elem.getElementsByTagName('*'));
+    var elems = _.toArray(elem.getElementsByTagName('*'));
     elems.push(elem);
     $jq.cleanData(elems);
   };
