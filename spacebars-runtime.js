@@ -1,7 +1,7 @@
 
 var tripleEquals = function (a, b) { return a === b; };
 
-Spacebars.include2 = function (templateOrFunction, contentFunc, elseFunc) {
+Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
   var templateVar = Blaze.Var(templateOrFunction, tripleEquals);
   return Blaze.Isolate(function () {
     var template = templateVar.get();
@@ -15,47 +15,6 @@ Spacebars.include2 = function (templateOrFunction, contentFunc, elseFunc) {
     // around the whole inclusion, not pass it here (the `null` arg)
     return new template.constructor(null, contentFunc, elseFunc);
   });
-};
-
-// * `templateOrFunction` - template (component) or function returning a template
-// or null
-Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock) {
-  if (contentBlock && ! UI.isComponent(contentBlock))
-    throw new Error('Second argument to Spacebars.include must be a template or UI.block if present');
-  if (elseContentBlock && ! UI.isComponent(elseContentBlock))
-    throw new Error('Third argument to Spacebars.include must be a template or UI.block if present');
-
-  var props = null;
-  if (contentBlock) {
-    props = (props || {});
-    props.__content = contentBlock;
-  }
-  if (elseContentBlock) {
-    props = (props || {});
-    props.__elseContent = elseContentBlock;
-  }
-
-  if (UI.isComponent(templateOrFunction))
-    return templateOrFunction.extend(props);
-
-  var func = templateOrFunction;
-
-  var f = function () {
-    var emboxedFunc = UI.namedEmboxValue('Spacebars.include', func);
-    f.stop = function () {
-      emboxedFunc.stop();
-    };
-    var tmpl = emboxedFunc();
-
-    if (tmpl === null)
-      return null;
-    if (! UI.isComponent(tmpl))
-      throw new Error("Expected null or template in return value from inclusion function, found: " + tmpl);
-
-    return tmpl.extend(props);
-  };
-
-  return f;
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
