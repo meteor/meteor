@@ -228,43 +228,13 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
   };
 };
 
-// Implement Spacebars's #with, which renders its else case (or nothing)
-// if the argument is falsy.
-Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
-  return UI.Component.extend({
-    init: function () {
-      this.v = UI.emboxValue(argFunc, UI.safeEquals);
-    },
-    render: function () {
-      return UI.If(this.v, UI.With(this.v, contentBlock), elseContentBlock);
-    },
-    materialized: (function () {
-      var f = function (range) {
-        var self = this;
-        if (Deps.active) {
-          Deps.onInvalidate(function () {
-            self.v.stop();
-          });
-        }
-        if (range) {
-          range.removed = function () {
-            self.v.stop();
-          };
-        }
-      };
-      f.isWith = true;
-      return f;
-    })()
-  });
-};
-
 Spacebars.TemplateWith = function (argFunc, contentBlock) {
   var w = Blaze.With(argFunc, contentBlock);
   w.__isTemplateWith = true;
   return w;
 };
 
-Spacebars.With2 = function (argFunc, contentFunc, elseContentFunc) {
+Spacebars.With = function (argFunc, contentFunc, elseContentFunc) {
   var data = Blaze.Var(argFunc);
   return Blaze.If(function () { return data.get(); },
                   function () {
