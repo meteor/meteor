@@ -117,7 +117,7 @@ _.extend(CodeGen.prototype, {
           }
 
           var includeCode =
-                'Spacebars.include2(' + includeArgs.join(', ') + ')';
+                'Spacebars.include(' + includeArgs.join(', ') + ')';
 
           // calling convention compat -- set the data context around the
           // entire inclusion, so that if the name of the inclusion is
