@@ -1,3 +1,7 @@
+// XXX This is dead code but we should probably still do something like this.
+// Change "Meteor UI" to "Blaze".  Actually, "Exception in Blaze" is cryptic
+// and misleading; better to make it clear the fault is in user code, as in
+// "Exception in 'created' callback" etc.
 
 var debugFunc;
 
