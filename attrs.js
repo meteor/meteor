@@ -263,7 +263,7 @@ ElementAttributesUpdater.prototype.update = function(newAttrs) {
   var handlers = this.handlers;
 
   for (var k in handlers) {
-    if (! newAttrs.hasOwnProperty(k)) {
+    if (! _.has(newAttrs, k)) {
       // remove attributes (and handlers) for attribute names
       // that don't exist as keys of `newAttrs` and so won't
       // be visited when traversing it.  (Attributes that
@@ -281,7 +281,7 @@ ElementAttributesUpdater.prototype.update = function(newAttrs) {
     var handler = null;
     var oldValue;
     var value = newAttrs[k];
-    if (! handlers.hasOwnProperty(k)) {
+    if (! _.has(handlers, k)) {
       if (value !== null) {
         // make new handler
         handler = makeAttributeHandler(elem, k, value);

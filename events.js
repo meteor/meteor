@@ -57,8 +57,8 @@ var HandlerRec = function (elem, type, selector, handler, recipient) {
   // IE 8 doesn't support these events anyway.
 
   var tryCapturing = elem.addEventListener &&
-        (! eventsToDelegate.hasOwnProperty(
-          DOMBackend.Events.parseEventType(type)));
+        (! _.has(eventsToDelegate,
+                 DOMBackend.Events.parseEventType(type)));
 
   if (tryCapturing) {
     this.capturingHandler = (function (h) {
