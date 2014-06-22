@@ -15,11 +15,6 @@ var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
 
-var isIE = function () {
-  var myNav = navigator.userAgent.toLowerCase();
-  return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
-};
-
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
     var div = document.createElement("DIV");
@@ -209,6 +204,15 @@ Tinytest.add("ui - render - closures", function (test) {
 
 });
 
+// IE strips malformed styles like "bar::d" from the `style`
+// attribute. We detect this to adjust expectations for the StyleHandler
+// test below.
+var malformedStylesAllowed = function () {
+  var div = document.createElement("div");
+  div.setAttribute("style", "bar::d;");
+  return (div.getAttribute("style") === "bar::d;");
+};
+
 Tinytest.add("ui - render - closure GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
@@ -331,11 +335,14 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c"></span>');
 
-    // test malformed styles - different expectations in IE from Chrome
+    // test malformed styles - different expectations in IE (which
+    // strips malformed styles) from other browsers
     R.set({'style': 'foo: a; bar::d;:e; baz: c;'});
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML),
-      isIE() ? '<span style="foo: a; baz: c"></span>' : '<span style="foo: a; bar::d; baz: c"></span>');
+      malformedStylesAllowed() ?
+               '<span style="foo: a; bar::d; baz: c"></span>' :
+               '<span style="foo: a; baz: c"></span>');
 
     // Test strange styles
     R.set({'style': ' foo: c; constructor: a; __proto__: b;'});
