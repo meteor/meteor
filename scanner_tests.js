@@ -26,7 +26,7 @@ Tinytest.add("templating - html scanner", function (test) {
   // where content is something simple like the string "Hello"
   // (passed in as a source string including the quotes).
   var simpleBody = function (content) {
-    return "\nUI.body2.contentParts.push((function() {\n  var self = this;\n  return " + content + ";\n}));\nMeteor.startup(function () { if (! UI.body2.domrange) { Blaze.render(function () { return UI.body2; }).attach(document.body); } });\n";
+    return "\nUI.body.contentParts.push((function() {\n  var self = this;\n  return " + content + ";\n}));\nMeteor.startup(function () { if (! UI.body.domrange) { Blaze.render(function () { return UI.body; }).attach(document.body); } });\n";
   };
 
   // arguments are quoted strings like '"hello"'
