@@ -9,7 +9,7 @@ var CodeGen = SpacebarsCompiler.CodeGen = function () {};
 var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
   'unless': 'Blaze.Unless',
-  'with': 'Spacebars.With2',
+  'with': 'Spacebars.With',
   'each': 'Spacebars.Each'
 };
 
