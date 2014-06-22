@@ -189,3 +189,24 @@ UI.TemplateComponent = Blaze.Component.extend({
     }
   }
 });
+
+UI.InTemplateScope = Blaze.Controller.extend({
+  constructor: function (template, contentFunc) {
+    if (! (this instanceof UI.InTemplateScope))
+      // called without new
+      return new UI.InTemplateScope(template, contentFunc);
+
+    UI.InTemplateScope.__super__.constructor.call(this);
+
+    var scope = template.parentController;
+    if (scope.__isTemplateWith)
+      scope = scope.parentController;
+    this.parentController = scope;
+
+    this.contentFunc = contentFunc;
+  },
+  render: function () {
+    var func = this.contentFunc;
+    return func();
+  }
+});
