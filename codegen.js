@@ -132,10 +132,11 @@ _.extend(CodeGen.prototype, {
               includeCode + '; })';
           }
 
-          /*if (path[0] === 'UI' &&
+          if (path[0] === 'UI' &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
-            includeCode = 'UI.InTemplateScope(template, ' + includeCode + ')';
-          }*/
+            includeCode = 'UI.InTemplateScope(self, function () { return '
+              + includeCode + '; })';
+          }
 
           return BlazeTools.EmitCode(includeCode);
         }
