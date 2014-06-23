@@ -2058,8 +2058,8 @@ Tinytest.add(
         hooks.push("insert");
 
         // check that the element hasn't actually been added yet
-        test.isTrue(n.parentNode.nodeType === 11 /*DOCUMENT_FRAGMENT_NODE*/);
-        test.isFalse(n.parentNode.parentNode);
+        test.isTrue((! n.parentNode) ||
+                    n.parentNode.nodeType === 11 /*DOCUMENT_FRAGMENT_NODE*/);
       },
       removeElement: function (n) {
         hooks.push("remove");
