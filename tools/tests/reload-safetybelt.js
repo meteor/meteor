@@ -49,7 +49,7 @@ var checkResponse = function (body, reloadSafetyBelt, options) {
   }
 };
 
-selftest.define("galaxy reload safety belt", function () {
+selftest.define("reload safety belt", function () {
   var s = new Sandbox();
   var run;
 
@@ -61,11 +61,11 @@ selftest.define("galaxy reload safety belt", function () {
 
   var Package = unipackage.load({
     library: release.current.library,
-    packages: [ 'meteor', 'galaxy-reload-safetybelt' ],
+    packages: [ 'meteor', 'reload-safetybelt' ],
     release: release.current.name
   });
 
-  var reloadSafetyBelt = Package["galaxy-reload-safetybelt"].ReloadSafetyBelt;
+  var reloadSafetyBelt = Package["reload-safetybelt"].ReloadSafetyBelt;
 
   // Reload safety belt should not be present in response when the
   // package hasn't been added to the app.
@@ -76,7 +76,7 @@ selftest.define("galaxy reload safety belt", function () {
 
   run.stop();
 
-  run = s.run("add", "galaxy-reload-safetybelt");
+  run = s.run("add", "reload-safetybelt");
   run.waitSecs(5);
   run.expectExit(0);
 
@@ -123,7 +123,7 @@ selftest.define("galaxy reload safety belt", function () {
   run.stop();
 
   // Remove the package; reload safety belt should go away.
-  run = s.run("remove", "galaxy-reload-safetybelt");
+  run = s.run("remove", "reload-safetybelt");
   run.waitSecs(5);
   run.expectExit(0);
 

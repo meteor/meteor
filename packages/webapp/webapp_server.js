@@ -333,10 +333,10 @@ var runWebAppServer = function () {
                     JSON.stringify(__meteor_runtime_config__) + ";");
       return;
     } else if (pathname === "/meteor_reload_safetybelt.js" &&
-               Package["galaxy-reload-safetybelt"] &&
-               Package["galaxy-reload-safetybelt"].ReloadSafetyBelt &&
+               Package["reload-safetybelt"] &&
+               Package["reload-safetybelt"].ReloadSafetyBelt &&
                ! WebAppInternals.inlineScriptsAllowed()) {
-      serveStaticJs(Package["galaxy-reload-safetybelt"].ReloadSafetyBelt);
+      serveStaticJs(Package["reload-safetybelt"].ReloadSafetyBelt);
       return;
     }
 
@@ -599,8 +599,8 @@ var runWebAppServer = function () {
       body: '',
       inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
       meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
-      reloadSafetyBelt: Package["galaxy-reload-safetybelt"] &&
-        Package["galaxy-reload-safetybelt"].ReloadSafetyBelt,
+      reloadSafetyBelt: Package["reload-safetybelt"] &&
+        Package["reload-safetybelt"].ReloadSafetyBelt,
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssPrefix: bundledJsCssPrefix ||
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''

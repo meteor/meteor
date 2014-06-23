@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Reload safety belt for galaxy apps",
+  summary: "Reload safety belt for multi-server deployments",
   internal: true
 });
 
