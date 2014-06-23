@@ -180,7 +180,7 @@ selftest.define("run --once", function () {
   s.cd("onceapp");
   s.set("RUN_ONCE_OUTCOME", "mongo");
   run = s.run("--once");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(86);
 });
 
@@ -199,7 +199,7 @@ selftest.define("run errors", function () {
 
   var run = s.run("-p", proxyPort);
   _.times(3, function () {
-    run.waitSecs(3);
+    run.waitSecs(30);
     run.match("Unexpected mongo exit code 48. Restarting.");
   });
   run.waitSecs(3);

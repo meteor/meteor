@@ -2094,6 +2094,40 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "spacebars - ui hooks - nested domranges",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_hooks_nested;
+    var rv = new ReactiveVar(true);
+
+    tmpl.foo = function () {
+      return rv.get();
+    };
+
+    var subtmpl = Template.spacebars_test_ui_hooks_nested_sub;
+    var uiHookCalled = false;
+    subtmpl.rendered = function () {
+      this.firstNode.parentNode._uihooks = {
+        removeElement: function (node) {
+          uiHookCalled = true;
+        }
+      };
+    };
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    Deps.flush();
+
+    var htmlBeforeRemove = canonicalizeHtml(div.innerHTML);
+    rv.set(false);
+    Deps.flush();
+    test.isTrue(uiHookCalled);
+    var htmlAfterRemove = canonicalizeHtml(div.innerHTML);
+    test.equal(htmlBeforeRemove, htmlAfterRemove);
+    document.body.removeChild(div);
+  }
+);
+
+Tinytest.add(
   "spacebars - access template instance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
@@ -2115,6 +2149,17 @@ Tinytest.add(
   }
 );
 
+// XXX This is for traversing empty text nodes and should be removed
+// on blaze-refactor.
+var getSiblingText = function (node, siblingNum) {
+  var sibling = node;
+  for (var i = 0; i < siblingNum; i++) {
+    if (sibling)
+      sibling = sibling.nextSibling;
+  }
+  return $(sibling).text();
+};
+
 Tinytest.add(
   "spacebars - access template instance from helper, " +
     "template instance is kept up-to-date",
@@ -2132,11 +2177,13 @@ Tinytest.add(
     rv.set("first");
     Deps.flush();
     // `nextSibling` because the first node is an empty text node.
-    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "first");
+    test.equal(getSiblingText(instanceFromHelper.firstNode, 4),
+               "first");
 
     rv.set("second");
     Deps.flush();
-    test.equal($(instanceFromHelper.firstNode.nextSibling).text(), "second");
+    test.equal(getSiblingText(instanceFromHelper.firstNode, 4),
+               "second");
 
     // UI._templateInstance() should throw when called from not within a
     // helper.

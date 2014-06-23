@@ -22,7 +22,7 @@ var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 // "sha-256" and then passes the digest to bcrypt.
 
 
-var BCRYPT_ROUNDS = 10;
+Accounts._bcryptRounds = 10;
 
 // Given a 'password' from the client, extract the string that we should
 // bcrypt. 'password' can be one of:
@@ -49,7 +49,7 @@ var getPasswordString = function (password) {
 //
 var hashPassword = function (password) {
   password = getPasswordString(password);
-  return bcryptHash(password, BCRYPT_ROUNDS);
+  return bcryptHash(password, Accounts._bcryptRounds);
 };
 
 // Check whether the provided password matches the bcrypt'ed password in
@@ -58,7 +58,7 @@ var hashPassword = function (password) {
 // properties `digest` and `algorithm` (in which case we bcrypt
 // `password.digest`).
 //
-var checkPassword = function (user, password) {
+Accounts._checkPassword = function (user, password) {
   var result = {
     userId: user._id
   };
@@ -71,7 +71,7 @@ var checkPassword = function (user, password) {
 
   return result;
 };
-
+var checkPassword = Accounts._checkPassword;
 
 ///
 /// LOGIN
@@ -154,11 +154,30 @@ Accounts.registerLoginHandler("password", function (options) {
     throw new Meteor.Error(403, "User has no password set");
 
   if (!user.services.password.bcrypt) {
-    // Tell the client to use the SRP upgrade process.
-    throw new Meteor.Error(400, "old password format", EJSON.stringify({
-      format: 'srp',
-      identity: user.services.password.srp.identity
-    }));
+    if (typeof options.password === "string") {
+      // The client has presented a plaintext password, and the user is
+      // not upgraded to bcrypt yet. We don't attempt to tell the client
+      // to upgrade to bcrypt, because it might be a standalone DDP
+      // client doesn't know how to do such a thing.
+      var verifier = user.services.password.srp;
+      var newVerifier = SRP.generateVerifier(options.password, {
+        identity: verifier.identity, salt: verifier.salt});
+
+      if (verifier.verifier !== newVerifier.verifier) {
+        return {
+          userId: user._id,
+          error: new Meteor.Error(403, "Incorrect password")
+        };
+      }
+
+      return {userId: user._id};
+    } else {
+      // Tell the client to use the SRP upgrade process.
+      throw new Meteor.Error(400, "old password format", EJSON.stringify({
+        format: 'srp',
+        identity: user.services.password.srp.identity
+      }));
+    }
   }
 
   return checkPassword(
@@ -235,7 +254,20 @@ Accounts.registerLoginHandler("password", function (options) {
 ///
 
 // Let the user change their own password if they know the old
-// password.
+// password. `oldPassword` and `newPassword` should be objects with keys
+// `digest` and `algorithm` (representing the SHA256 of the password).
+//
+// XXX COMPAT WITH 0.8.1.3
+// Like the login method, if the user hasn't been upgraded from SRP to
+// bcrypt yet, then this method will throw an 'old password format'
+// error. The client should call the SRP upgrade login handler and then
+// retry this method again.
+//
+// UNLIKE the login method, there is no way to avoid getting SRP upgrade
+// errors thrown. The reasoning for this is that clients using this
+// method directly will need to be updated anyway because we no longer
+// support the SRP flow that they would have been doing to use this
+// method previously.
 Meteor.methods({changePassword: function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
@@ -247,8 +279,16 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  if (!user.services || !user.services.password || !user.services.password.bcrypt)
+  if (!user.services || !user.services.password ||
+      (!user.services.password.bcrypt && !user.services.password.srp))
     throw new Meteor.Error(403, "User has no password set");
+
+  if (! user.services.password.bcrypt) {
+    throw new Meteor.Error(400, "old password format", EJSON.stringify({
+      format: 'srp',
+      identity: user.services.password.srp.identity
+    }));
+  }
 
   var result = checkPassword(user, oldPassword);
   if (result.error)
@@ -381,6 +421,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   Meteor.users.update(userId, {$set: {
     "services.password.reset": tokenRecord
   }});
+
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
@@ -506,6 +547,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
   Meteor.users.update(
     {_id: userId},
     {$push: {'services.email.verificationTokens': tokenRecord}});
+
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'email');
   if (!user.services.email.verificationTokens) {

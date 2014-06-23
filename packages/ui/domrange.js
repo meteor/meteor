@@ -7,12 +7,12 @@
 var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
- if (n.nodeType === 1 &&
-     n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
-   n.parentNode._uihooks.removeElement(n);
- } else {
+  if (n.nodeType === 1 &&
+      n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+    n.parentNode._uihooks.removeElement(n);
+  } else {
     n.parentNode.removeChild(n);
- }
+  }
 };
 
 var insertNode = function (n, parent, next) {
@@ -110,8 +110,8 @@ var rangeParented = function (range) {
       range._rangeDict = rangeDict;
 
       // get jQuery to tell us when this node is removed
-      DomBackend.onRemoveElement(parentNode, function () {
-        rangeRemoved(range, true /* elementsAlreadyRemoved */);
+      DomBackend.onElementTeardown(parentNode, function () {
+        rangeRemoved(range, true /* alreadyTornDown */);
       });
     }
 
@@ -128,7 +128,7 @@ var rangeParented = function (range) {
   }
 };
 
-var rangeRemoved = function (range, elementsAlreadyRemoved) {
+var rangeRemoved = function (range, alreadyTornDown) {
   if (! range.isRemoved) {
     range.isRemoved = true;
 
@@ -146,29 +146,39 @@ var rangeRemoved = function (range, elementsAlreadyRemoved) {
     if (range.removed)
       range.removed();
 
-    membersRemoved(range, elementsAlreadyRemoved);
+    membersRemoved(range, alreadyTornDown);
   }
 };
 
-var nodeRemoved = function (node, elementsAlreadyRemoved) {
+var nodeRemoved = function (node, alreadyTornDown) {
   if (node.nodeType === 1) { // ELEMENT
     var comps = DomRange.getComponents(node);
     for (var i = 0, N = comps.length; i < N; i++)
-      rangeRemoved(comps[i]);
+      rangeRemoved(comps[i], true /* alreadyTornDown */);
 
-    if (! elementsAlreadyRemoved)
-      DomBackend.removeElement(node);
+    // `alreadyTornDown` is an optimization so that we don't
+    // tear down the same elements multiple times when tearing
+    // down a tree of DomRanges and elements, leading to asymptotic
+    // inefficiency.
+    //
+    // When jQuery removes an element or DomBackend.tearDownElement
+    // is called, the DOM is "cleaned" recursively, calling all
+    // onElementTearDown handlers on the entire DOM subtree.
+    // Since the entire subtree is already walked, we don't want to
+    // also walk the subtrees of each DomRange for teardown purposes.
+    if (! alreadyTornDown)
+      DomBackend.tearDownElement(node);
   }
 };
 
-var membersRemoved = function (range, elementsAlreadyRemoved) {
+var membersRemoved = function (range, alreadyTornDown) {
   var members = range.members;
   for (var k in members) {
     var mem = members[k];
     if (mem instanceof DomRange)
-      rangeRemoved(mem, elementsAlreadyRemoved);
+      rangeRemoved(mem, alreadyTornDown);
     else
-      nodeRemoved(mem, elementsAlreadyRemoved);
+      nodeRemoved(mem, alreadyTornDown);
   }
 };
 
@@ -230,7 +240,7 @@ _extend(DomRange.prototype, {
     for (var i = 0, N = nodes.length; i < N; i++)
       removeNode(nodes[i]);
 
-    membersRemoved(this, true /* elementsAlreadyRemoved */);
+    membersRemoved(this);
 
     this.members = {};
   },
@@ -341,7 +351,7 @@ _extend(DomRange.prototype, {
       removeNode(this.start);
       removeNode(this.end);
       this.owner = null;
-      rangeRemoved(this, true /* elementsAlreadyRemoved */);
+      rangeRemoved(this);
       return;
     }
 

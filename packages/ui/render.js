@@ -390,7 +390,7 @@ var materialize = function (node, parent, before, parentComponent) {
           reportUIException(e);
         }
       });
-      UI.DomBackend.onRemoveElement(elem, function () {
+      UI.DomBackend.onElementTeardown(elem, function () {
         attrComp.stop();
       });
     }
