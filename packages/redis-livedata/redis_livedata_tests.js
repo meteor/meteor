@@ -864,20 +864,20 @@ if (Meteor.isServer) {
   });
 
 // XXX this test is ported to Redis but is hanging. Debug later.
-//  Tinytest.addAsync("redis-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
-//    // Tests that remove returns before the callback runs.
-//    var key = Random.id();
-//    var coll = new Meteor.RedisCollection("redis");
-//    var x = 0;
-//    coll.set(key, "123");
-//    coll.del(key, function (err, result) {
-//      test.equal(err, undefined);
-//      test.equal(coll.get(key), undefined);
-//      test.equal(x, 1);
-//      onComplete();
-//    });
-//    x++;
-//  });
+  Tinytest.addAsync("redis-livedata - async server-side remove, " + idGeneration, function (test, onComplete) {
+    // Tests that remove returns before the callback runs.
+    var key = Random.id();
+    var coll = new Meteor.RedisCollection("redis");
+    var x = 0;
+    coll.set(key, "123");
+    coll.del(key, function (err, result) {
+      test.equal(err, undefined);
+      test.equal(coll.get(key), undefined);
+      test.equal(x, 1);
+      onComplete();
+    });
+    x++;
+  });
 
 //  // compares arrays a and b w/o looking at order
 //  var setsEqual = function (a, b) {
