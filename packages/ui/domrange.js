@@ -7,29 +7,34 @@
 var DomBackend = UI.DomBackend;
 
 var removeNode = function (n) {
-//  if (n.nodeType === 1 &&
-//      n.parentNode.$uihooks && n.parentNode.$uihooks.removeElement)
-//    n.parentNode.$uihooks.removeElement(n);
-//  else
+  if (n.nodeType === 1 &&
+      n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+    n.parentNode._uihooks.removeElement(n);
+  } else {
     n.parentNode.removeChild(n);
+  }
 };
 
 var insertNode = function (n, parent, next) {
-//  if (n.nodeType === 1 &&
-//      parent.$uihooks && parent.$uihooks.insertElement)
-//    parent.$uihooks.insertElement(n, parent, next);
-//  else
-    // `|| null` because IE throws an error if 'next' is undefined
-  parent.insertBefore(n, next || null);
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.insertElement) {
+    parent._uihooks.insertElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
 };
 
 var moveNode = function (n, parent, next) {
-//  if (n.nodeType === 1 &&
-//      parent.$uihooks && parent.$uihooks.moveElement)
-//    parent.$uihooks.moveElement(n, parent, next);
-//  else
-    // `|| null` because IE throws an error if 'next' is undefined
-    parent.insertBefore(n, next || null);
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.moveElement) {
+    parent._uihooks.moveElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
 };
 
 // A very basic operation like Underscore's `_.extend` that
@@ -105,8 +110,8 @@ var rangeParented = function (range) {
       range._rangeDict = rangeDict;
 
       // get jQuery to tell us when this node is removed
-      DomBackend.onRemoveElement(parentNode, function () {
-        rangeRemoved(range);
+      DomBackend.onElementTeardown(parentNode, function () {
+        rangeRemoved(range, true /* alreadyTornDown */);
       });
     }
 
@@ -123,42 +128,57 @@ var rangeParented = function (range) {
   }
 };
 
-var rangeRemoved = function (range) {
+var rangeRemoved = function (range, alreadyTornDown) {
   if (! range.isRemoved) {
     range.isRemoved = true;
 
     if (range._rangeDict)
       delete range._rangeDict[range._rangeId];
 
-    // XXX clean up events in $_uievents
+    // clean up events
+    if (range.stopHandles) {
+      for (var i = 0; i < range.stopHandles.length; i++)
+        range.stopHandles[i].stop();
+      range.stopHandles = null;
+    }
 
     // notify component of removal
     if (range.removed)
       range.removed();
 
-    membersRemoved(range);
+    membersRemoved(range, alreadyTornDown);
   }
 };
 
-var nodeRemoved = function (node, viaBackend) {
+var nodeRemoved = function (node, alreadyTornDown) {
   if (node.nodeType === 1) { // ELEMENT
     var comps = DomRange.getComponents(node);
     for (var i = 0, N = comps.length; i < N; i++)
-      rangeRemoved(comps[i]);
+      rangeRemoved(comps[i], true /* alreadyTornDown */);
 
-    if (! viaBackend)
-      DomBackend.removeElement(node);
+    // `alreadyTornDown` is an optimization so that we don't
+    // tear down the same elements multiple times when tearing
+    // down a tree of DomRanges and elements, leading to asymptotic
+    // inefficiency.
+    //
+    // When jQuery removes an element or DomBackend.tearDownElement
+    // is called, the DOM is "cleaned" recursively, calling all
+    // onElementTearDown handlers on the entire DOM subtree.
+    // Since the entire subtree is already walked, we don't want to
+    // also walk the subtrees of each DomRange for teardown purposes.
+    if (! alreadyTornDown)
+      DomBackend.tearDownElement(node);
   }
 };
 
-var membersRemoved = function (range) {
+var membersRemoved = function (range, alreadyTornDown) {
   var members = range.members;
   for (var k in members) {
     var mem = members[k];
     if (mem instanceof DomRange)
-      rangeRemoved(mem);
+      rangeRemoved(mem, alreadyTornDown);
     else
-      nodeRemoved(mem);
+      nodeRemoved(mem, alreadyTornDown);
   }
 };
 
@@ -183,6 +203,8 @@ var DomRange = function () {
 
   this.isParented = false;
   this.isRemoved = false;
+
+  this.stopHandles = null;
 };
 
 _extend(DomRange.prototype, {
@@ -374,6 +396,7 @@ _extend(DomRange.prototype, {
     var member =
           (members.hasOwnProperty(id) &&
            members[id]);
+
     // Don't mind if member doesn't exist.
     if (! member)
       return;
@@ -971,6 +994,7 @@ DomRange.prototype.on = function (events, selector, handler) {
     selector = null;
   }
 
+  var newHandlerRecs = [];
   for (var i = 0, N = eventTypes.length; i < N; i++) {
     var type = eventTypes[i];
 
@@ -986,6 +1010,7 @@ DomRange.prototype.on = function (events, selector, handler) {
     var handlerList = info.handlers;
     var handlerRec = new HandlerRec(
       parentNode, type, selector, handler, this);
+    newHandlerRecs.push(handlerRec);
     handlerRec.bind();
     handlerList.push(handlerRec);
     // move handlers of enclosing ranges to end
@@ -1005,6 +1030,31 @@ DomRange.prototype.on = function (events, selector, handler) {
       }
     }
   }
+
+  this.stopHandles = (this.stopHandles || []);
+  this.stopHandles.push({
+    // closes over just `parentNode` and `newHandlerRecs`
+    stop: function () {
+      var eventDict = parentNode.$_uievents;
+      if (! eventDict)
+        return;
+
+      for (var i = 0; i < newHandlerRecs.length; i++) {
+        var handlerToRemove = newHandlerRecs[i];
+        var info = eventDict[handlerToRemove.type];
+        if (! info)
+          continue;
+        var handlerList = info.handlers;
+        for (var j = handlerList.length - 1; j >= 0; j--) {
+          if (handlerList[j] === handlerToRemove) {
+            handlerToRemove.unbind();
+            handlerList.splice(j, 1); // remove handlerList[j]
+          }
+        }
+      }
+      newHandlerRecs.length = 0;
+    }
+  });
 };
 
   // Returns true if element a contains node b and is not node b.

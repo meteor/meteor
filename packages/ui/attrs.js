@@ -48,46 +48,61 @@ AttributeHandler.extend = function (options) {
   return subType;
 };
 
-// Extended below to support both regular and SVG elements
-var BaseClassHandler = AttributeHandler.extend({
+/// Apply the diff between the attributes of "oldValue" and "value" to "element."
+//
+// Each subclass must implement a parseValue method which takes a string
+// as an input and returns a dict of attributes. The keys of the dict
+// are unique identifiers (ie. css properties in the case of styles), and the
+// values are the entire attribute which will be injected into the element.
+//
+// Extended below to support classes, SVG elements and styles.
+
+var DiffingAttributeHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    if (!this.getCurrentValue || !this.setValue)
-      throw new Error("Missing methods in subclass of 'BaseClassHandler'");
+    if (!this.getCurrentValue || !this.setValue || !this.parseValue)
+      throw new Error("Missing methods in subclass of 'DiffingAttributeHandler'");
 
-    var oldClasses = oldValue ? _.compact(oldValue.split(' ')) : [];
-    var newClasses = value ? _.compact(value.split(' ')) : [];
+    var oldAttrsMap = oldValue ? this.parseValue(oldValue) : {};
+    var newAttrsMap = value ? this.parseValue(value) : {};
 
-    // the current classes on the element, which we will mutate.
-    var classes = _.compact(this.getCurrentValue(element).split(' '));
+    // the current attributes on the element, which we will mutate.
 
-    // optimize this later (to be asymptotically faster) if necessary
-    for (var i = 0; i < oldClasses.length; i++) {
-      var c = oldClasses[i];
-      if (! _.contains(newClasses, c))
-        classes = _.without(classes, c);
-    }
-    for (var i = 0; i < newClasses.length; i++) {
-      var c = newClasses[i];
-      if ((! _.contains(oldClasses, c)) &&
-          (! _.contains(classes, c)))
-        classes.push(c);
-    }
+    var attrString = this.getCurrentValue(element);
+    var attrsMap = attrString ? this.parseValue(attrString) : {};
 
-    this.setValue(element, classes.join(' '));
+    _.each(_.keys(oldAttrsMap), function (t) {
+      if (! (t in newAttrsMap))
+        delete attrsMap[t];
+    });
+
+    _.each(_.keys(newAttrsMap), function (t) {
+      attrsMap[t] = newAttrsMap[t];
+    });
+
+    this.setValue(element, _.values(attrsMap).join(' '));
   }
 });
 
-var ClassHandler = BaseClassHandler.extend({
+var ClassHandler = DiffingAttributeHandler.extend({
   // @param rawValue {String}
   getCurrentValue: function (element) {
     return element.className;
   },
   setValue: function (element, className) {
     element.className = className;
+  },
+  parseValue: function (attrString) {
+    var tokens = {};
+
+    _.each(attrString.split(' '), function(token) {
+      if (token)
+        tokens[token] = token;
+    });
+    return tokens;
   }
 });
 
-var SVGClassHandler = BaseClassHandler.extend({
+var SVGClassHandler = ClassHandler.extend({
   getCurrentValue: function (element) {
     return element.className.baseVal;
   },
@@ -96,48 +111,61 @@ var SVGClassHandler = BaseClassHandler.extend({
   }
 });
 
-var BooleanHandler = AttributeHandler.extend({
-  update: function (element, oldValue, value) {
-    var focused = this.focused(element);
-
-    if (!focused) {
-      var name = this.name;
-      if (value == null) {
-        if (oldValue != null)
-          element[name] = false;
-      } else {
-        element[name] = true;
-      }
+var StyleHandler = DiffingAttributeHandler.extend({
+  getCurrentValue: function (element) {
+    return element.getAttribute('style');
+  },
+  setValue: function (element, style) {
+    if (style === '') {
+      element.removeAttribute('style');
+    } else {
+      element.setAttribute('style', style);
     }
   },
-  // is the element part of a control which is focused?
-  focused: function (element) {
-    if (element.tagName === 'INPUT') {
-      return element === document.activeElement;
 
-    } else if (element.tagName === 'OPTION') {
-      // find the containing SELECT element, on which focus
-      // is actually set
-      var selectEl = element;
-      while (selectEl && selectEl.tagName !== 'SELECT')
-        selectEl = selectEl.parentNode;
+  // Parse a string to produce a map from property to attribute string.
+  //
+  // Example:
+  // "color:red; foo:12px" produces a token {color: "color:red", foo:"foo:12px"}
+  parseValue: function (attrString) {
+    var tokens = {};
 
-      if (selectEl)
-        return selectEl === document.activeElement;
-      else
-        return false;
+    // Regex for parsing a css attribute declaration, taken from css-parse:
+    // https://github.com/reworkcss/css-parse/blob/7cef3658d0bba872cde05a85339034b187cb3397/index.js#L219
+    var regex = /(\*?[-#\/\*\\\w]+(?:\[[0-9a-z_-]+\])?)\s*:\s*(?:\'(?:\\\'|.)*?\'|"(?:\\"|.)*?"|\([^\)]*?\)|[^};])+[;\s]*/g;
+    var match = regex.exec(attrString);
+    while (match) {
+      // match[0] = entire matching string
+      // match[1] = css property
+      // Prefix the token to prevent conflicts with existing properties.
+
+      // XXX No `String.trim` on Safari 4. Swap out $.trim if we want to
+      // remove strong dep on jquery.
+      tokens[' ' + match[1]] = match[0].trim ?
+        match[0].trim() : $.trim(match[0]);
+
+      match = regex.exec(attrString);
+    }
+
+    return tokens;
+  }
+});
+
+var BooleanHandler = AttributeHandler.extend({
+  update: function (element, oldValue, value) {
+    var name = this.name;
+    if (value == null) {
+      if (oldValue != null)
+        element[name] = false;
     } else {
-      throw new Error("Expected INPUT or OPTION element");
+      element[name] = true;
     }
   }
 });
 
 var ValueHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    var focused = (element === document.activeElement);
-
-    if (!focused)
-      element.value = value;
+    element.value = value;
   }
 });
 
@@ -205,24 +233,20 @@ if (Meteor.isClient) {
   var anchorForNormalization = document.createElement('A');
 }
 
-var normalizeUrl = function (url) {
+var getUrlProtocol = function (url) {
   if (Meteor.isClient) {
     anchorForNormalization.href = url;
-    return anchorForNormalization.href;
+    return (anchorForNormalization.protocol || "").toLowerCase();
   } else {
-    throw new Error('normalizeUrl not implemented on the server');
+    throw new Error('getUrlProtocol not implemented on the server');
   }
 };
 
 // UrlHandler is an attribute handler for all HTML attributes that take
 // URL values. It disallows javascript: URLs, unless
 // UI._allowJavascriptUrls() has been called. To detect javascript:
-// urls, we set the attribute and then reads the attribute out of the
-// DOM, in order to avoid writing our own URL normalization code. (We
-// don't want to be fooled by ' javascript:alert(1)' or
-// 'jAvAsCrIpT:alert(1)'.) In future, when the URL interface is more
-// widely supported, we can use that, which will be
-// cleaner.  https://developer.mozilla.org/en-US/docs/Web/API/URL
+// urls, we set the attribute on a dummy anchor element and then read
+// out the 'protocol' property of the attribute.
 var origUpdate = AttributeHandler.prototype.update;
 var UrlHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
@@ -232,8 +256,7 @@ var UrlHandler = AttributeHandler.extend({
     if (UI._javascriptUrlsAllowed()) {
       origUpdate.apply(self, args);
     } else {
-      var isJavascriptProtocol =
-            (normalizeUrl(value).indexOf('javascript:') === 0);
+      var isJavascriptProtocol = (getUrlProtocol(value) === "javascript:");
       if (isJavascriptProtocol) {
         Meteor._debug("URLs that use the 'javascript:' protocol are not " +
                       "allowed in URL attribute values. " +
@@ -257,6 +280,8 @@ makeAttributeHandler = function (elem, name, value) {
     } else {
       return new ClassHandler(name, value);
     }
+  } else if (name === 'style') {
+    return new StyleHandler(name, value);
   } else if ((elem.tagName === 'OPTION' && name === 'selected') ||
              (elem.tagName === 'INPUT' && name === 'checked')) {
     return new BooleanHandler(name, value);

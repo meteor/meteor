@@ -403,13 +403,16 @@ _.extend(Session.prototype, {
     });
   },
 
-  // Destroy this session. Stop all processing and tear everything
-  // down. If a socket was attached, close it.
-  destroy: function () {
+  // Destroy this session and unregister it at the server.
+  close: function () {
     var self = this;
 
+    // Destroy this session, even if it's not registered at the
+    // server. Stop all processing and tear everything down. If a socket
+    // was attached, close it.
+
     // Already destroyed.
-    if (!self.inQueue)
+    if (! self.inQueue)
       return;
 
     if (self.heartbeat) {
@@ -430,7 +433,7 @@ _.extend(Session.prototype, {
       "livedata", "sessions", -1);
 
     Meteor.defer(function () {
-      // stop callbacks can yield, so we defer this on destroy.
+      // stop callbacks can yield, so we defer this on close.
       // sub._isDeactivated() detects that we set inQueue to null and
       // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
@@ -441,19 +444,9 @@ _.extend(Session.prototype, {
         callback();
       });
     });
-  },
 
-  // Destroy this session and unregister it at the server.
-  close: function () {
-    var self = this;
-
-    // Unconditionally destroy this session, even if it's not
-    // registered at the server.
-    self.destroy();
-
-    // Unregister the session.  This will also call `destroy`, but
-    // that's OK because `destroy` is idempotent.
-    self.server._closeSession(self);
+    // Unregister the session.
+    self.server._removeSession(self);
   },
 
   // Send a message (doing nothing if no socket is connected right now.)
@@ -920,6 +913,9 @@ _.extend(Subscription.prototype, {
     try {
       var res = maybeAuditArgumentChecks(
         self._handler, self, EJSON.clone(self._params),
+        // It's OK that this would look weird for universal subscriptions,
+        // because they have no arguments so there can never be an
+        // audit-argument-checks failure.
         "publisher '" + self._name + "'");
     } catch (e) {
       self.error(e);
@@ -1035,7 +1031,8 @@ _.extend(Subscription.prototype, {
   _recreate: function () {
     var self = this;
     return new Subscription(
-      self._session, self._handler, self._subscriptionId, self._params);
+      self._session, self._handler, self._subscriptionId, self._params,
+      self._name);
   },
 
   error: function (error) {
@@ -1217,37 +1214,40 @@ _.extend(Server.prototype, {
 
   _handleConnect: function (socket, msg) {
     var self = this;
+
+    // The connect message must specify a version and an array of supported
+    // versions, and it must claim to support what it is proposing.
+    if (!(typeof (msg.version) === 'string' &&
+          _.isArray(msg.support) &&
+          _.all(msg.support, _.isString) &&
+          _.contains(msg.support, msg.version))) {
+      socket.send(stringifyDDP({msg: 'failed',
+                                version: SUPPORTED_DDP_VERSIONS[0]}));
+      socket.close();
+      return;
+    }
+
     // In the future, handle session resumption: something like:
     //  socket._meteorSession = self.sessions[msg.session]
     var version = calculateVersion(msg.support, SUPPORTED_DDP_VERSIONS);
 
-    if (msg.version === version) {
-      // Creating a new session
-      socket._meteorSession = new Session(self, version, socket, self.options);
-      self.sessions[socket._meteorSession.id] = socket._meteorSession;
-      self.onConnectionHook.each(function (callback) {
-        if (socket._meteorSession)
-          callback(socket._meteorSession.connectionHandle);
-        return true;
-      });
-    } else if (!msg.version) {
-      // connect message without a version. This means an old (pre-pre1)
-      // client is trying to connect. If we just disconnect the
-      // connection, they'll retry right away. Instead, just pause for a
-      // bit (randomly distributed so as to avoid synchronized swarms)
-      // and hold the connection open.
-      var timeout = 1000 * (30 + Random.fraction() * 60);
-      // drop all future data coming over this connection on the
-      // floor. We don't want to confuse things.
-      socket.removeAllListeners('data');
-      Meteor.setTimeout(function () {
-        socket.send(stringifyDDP({msg: 'failed', version: version}));
-        socket.close();
-      }, timeout);
-    } else {
+    if (msg.version !== version) {
+      // The best version to use (according to the client's stated preferences)
+      // is not the one the client is trying to use. Inform them about the best
+      // version to use.
       socket.send(stringifyDDP({msg: 'failed', version: version}));
       socket.close();
+      return;
     }
+
+    // Yay, version matches! Create a new session.
+    socket._meteorSession = new Session(self, version, socket, self.options);
+    self.sessions[socket._meteorSession.id] = socket._meteorSession;
+    self.onConnectionHook.each(function (callback) {
+      if (socket._meteorSession)
+        callback(socket._meteorSession.connectionHandle);
+      return true;
+    });
   },
   /**
    * Register a publish handler function.
@@ -1323,11 +1323,10 @@ _.extend(Server.prototype, {
     }
   },
 
-  _closeSession: function (session) {
+  _removeSession: function (session) {
     var self = this;
     if (self.sessions[session.id]) {
       delete self.sessions[session.id];
-      session.destroy();
     }
   },
 

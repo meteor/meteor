@@ -15,12 +15,11 @@ var Future = Npm.require(path.join('fibers', 'future'));
 MongoInternals = {};
 MongoTest = {};
 
+// This is used to add or remove EJSON from the beginning of everything nested
+// inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object") {
-    // XXX This condition should match our `looksLikeArray` condition in
-    // underscore. (A Buffer might not be the only thing that should be
-    // treated as an array.)
-    if (_.isArray(thing) || thing instanceof Buffer) {
+    if (_.isArray(thing)) {
       return _.map(thing, _.bind(replaceNames, null, filter));
     }
     var ret = {};
@@ -51,7 +50,8 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Meteor.Collection.ObjectID(document.toHexString());
   }
-  if (document["EJSON$type"] && document["EJSON$value"]) {
+  if (document["EJSON$type"] && document["EJSON$value"]
+      && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   if (document instanceof MongoDB.Timestamp) {
@@ -303,13 +303,25 @@ var bindEnvironmentForWrite = function (callback) {
 MongoConnection.prototype._insert = function (collection_name, document,
                                               callback) {
   var self = this;
+
+  var sendError = function (e) {
+    if (callback)
+      return callback(e);
+    throw e;
+  };
+
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    if (callback)
-      return callback(e);
-    else
-      throw e;
+    sendError(e);
+    return;
+  }
+
+  if (!(LocalCollection._isPlainObject(document) &&
+        !EJSON._isCustomType(document))) {
+    sendError(new Error(
+      "Only documents (plain objects) may be inserted into MongoDB"));
+    return;
   }
 
   var write = self._maybeBeginWrite();
@@ -708,7 +720,7 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
+_.each(['forEach', 'map', 'fetch', 'count'], function (method) {
   Cursor.prototype[method] = function () {
     var self = this;
 
@@ -730,6 +742,13 @@ _.each(['forEach', 'map', 'rewind', 'fetch', 'count'], function (method) {
       self._synchronousCursor, arguments);
   };
 });
+
+// Since we don't actually have a "nextObject" interface, there's really no
+// reason to have a "rewind" interface.  All it did was make multiple calls
+// to fetch/map/forEach return nothing the second time.
+// XXX COMPAT WITH 0.8.1
+Cursor.prototype.rewind = function () {
+};
 
 Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;
@@ -862,6 +881,9 @@ _.extend(SynchronousCursor.prototype, {
   forEach: function (callback, thisArg) {
     var self = this;
 
+    // Get back to the beginning.
+    self._rewind();
+
     // We implement the loop ourself instead of using self._dbCursor.each,
     // because "each" will call its callback outside of a fiber which makes it
     // much more complex to make this function synchronous.
@@ -883,7 +905,7 @@ _.extend(SynchronousCursor.prototype, {
     return res;
   },
 
-  rewind: function () {
+  _rewind: function () {
     var self = this;
 
     // known to be synchronous

@@ -30,3 +30,8 @@ Package.on_use(function (api) {
   api.add_files('boilerplate.html', 'server', {isAsset: true});
   api.add_files('webapp_client.js', 'client');
 });
+
+Package.on_test(function (api) {
+  api.use(['tinytest', 'webapp', 'http']);
+  api.add_files('webapp_tests.js', 'server');
+});

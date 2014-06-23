@@ -1,9 +1,3 @@
-var renderToDiv = function (comp) {
-  var div = document.createElement("DIV");
-  UI.materialize(comp, div);
-  return div;
-};
-
 var divRendersTo = function (test, div, html) {
   Deps.flush({_throwFirstError: true});
   var actual = canonicalizeHtml(div.innerHTML);
@@ -767,30 +761,40 @@ Tinytest.add('spacebars - templates - textarea each', function (test) {
 
 // Ensure that one can call `Meteor.defer` within a rendered callback
 // triggered by a document insertion that happend in a method stub.
+//
+// Why do we have this test? Because you generally can't call
+// `Meteor.defer` inside a method stub (see
+// packages/meteor/timers.js).  This test verifies that rendered
+// callbacks don't fire synchronously as part of a method stub.
 testAsyncMulti('spacebars - template - defer in rendered callbacks', [function (test, expect) {
   var tmpl = Template.spacebars_template_test_defer_in_rendered;
-  var coll = new Meteor.Collection("test-defer-in-rendered--client-only");
+  var coll = new Meteor.Collection(null);
+
+  Meteor.methods({
+    spacebarsTestInsertEmptyObject: function () {
+      // cause a new instance of `subtmpl` to be placed in the
+      // DOM. verify that it's not fired directly within a method
+      // stub, in which `Meteor.defer` is not allowed.
+      coll.insert({});
+    }
+  });
+
   tmpl.items = function () {
     return coll.find();
   };
 
   var subtmpl = Template.spacebars_template_test_defer_in_rendered_subtemplate;
+
   subtmpl.rendered = expect(function () {
     // will throw if called in a method stub
-    Meteor.defer(function () {
-    });
+    Meteor.defer(function () {});
   });
 
   var div = renderToDiv(tmpl);
 
-  // `coll` is not defined on the server so we'll get an error.  We
-  // can't make this a client-only collection since then we won't be
-  // running in a stub and the error won't fire.
-  Meteor._suppress_log(1);
-  // cause a new instance of `subtmpl` to be placed in the DOM. verify
-  // that it's not fired directly within a method stub, in which
-  // `Meteor.defer` is not allowed.
-  coll.insert({});
+  // not defined on the server, but it's fine since the stub does
+  // the relevant work
+  Meteor.call("spacebarsTestInsertEmptyObject");
 }]);
 
 testAsyncMulti('spacebars - template - rendered template is DOM in rendered callbacks', [
@@ -955,176 +959,76 @@ Tinytest.add('spacebars - templates - constant #each argument', function (test) 
              'foo bar 2');
 });
 
-// extract a multi-line string from a comment within a function.
-// @param f {Function} eg function () { /* [[[...content...]]] */ }
-// @returns {String} eg "content"
-var textFromFunction = function(f) {
-  var str = f.toString().match(/\[\[\[([\S\s]*)\]\]\]/m)[1];
-  // remove line number comments added by linker
-  str = str.replace(/[ ]*\/\/ \d+$/gm, '');
-  return str;
-};
-
-Tinytest.add('spacebars - templates - #markdown - basic', function (test) {
+Tinytest.addAsync('spacebars - templates - #markdown - basic', function (test, onComplete) {
   var tmpl = Template.spacebars_template_test_markdown_basic;
   tmpl.obj = {snippet: "<i>hi</i>"};
   tmpl.hi = function () {
     return this.snippet;
   };
   var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p><i>hi</i>
-/each}}</p>
 
-<p><b><i>hi</i></b>
-<b>/each}}</b></p>
-
-<ul>
-<li><i>hi</i></li>
-<li><p>/each}}</p></li>
-<li><p><b><i>hi</i></b></p></li>
-<li><b>/each}}</b></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>&lt;i&gt;hi&lt;/i&gt;
-/each}}
-
-&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;
-&lt;b&gt;/each}}&lt;/b&gt;
-</code></pre>
-
-<p>&amp;gt</p>
-
-<ul>
-<li>&amp;gt</li>
-</ul>
-
-<p><code>&amp;gt</code></p>
-
-<pre><code>&amp;gt
-</code></pre>
-
-<p>&gt;</p>
-
-<ul>
-<li>&gt;</li>
-</ul>
-
-<p><code>&amp;gt;</code></p>
-
-<pre><code>&amp;gt;
-</code></pre>
-
-<p><code>&lt;i&gt;hi&lt;/i&gt;</code>
-<code>/each}}</code></p>
-
-<p><code>&lt;b&gt;&lt;i&gt;hi&lt;/i&gt;&lt;/b&gt;</code>
-<code>&lt;b&gt;/each}}</code></p>]]] */
-  })));
+  Meteor.call("getAsset", "markdown_basic.html", function (err, html) {
+    test.isFalse(err);
+    test.equal(canonicalizeHtml(div.innerHTML),
+               canonicalizeHtml(html));
+    onComplete();
+  });
 });
 
-Tinytest.add('spacebars - templates - #markdown - if', function (test) {
-  var tmpl = Template.spacebars_template_test_markdown_if;
-  var R = new ReactiveVar(false);
-  tmpl.cond = function () { return R.get(); };
+testAsyncMulti('spacebars - templates - #markdown - if', [
+  function (test, expect) {
+    var self = this;
+    Meteor.call("getAsset", "markdown_if1.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html1 = html;
+    }));
+    Meteor.call("getAsset", "markdown_if2.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html2 = html;
+    }));
+  },
 
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>false</p>
+  function (test, expect) {
+    var self = this;
+    var tmpl = Template.spacebars_template_test_markdown_if;
+    var R = new ReactiveVar(false);
+    tmpl.cond = function () { return R.get(); };
 
-<p><b>false</b></p>
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
+    R.set(true);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
+  }
+]);
 
-<ul>
-<li><p>false</p></li>
-<li><p><b>false</b></p></li>
-</ul>
+testAsyncMulti('spacebars - templates - #markdown - each', [
+  function (test, expect) {
+    var self = this;
+    Meteor.call("getAsset", "markdown_each1.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html1 = html;
+    }));
+    Meteor.call("getAsset", "markdown_each2.html", expect(function (err, html) {
+      test.isFalse(err);
+      self.html2 = html;
+    }));
+  },
 
-<p>some paragraph to fix showdown's four space parsing below.</p>
+  function (test, expect) {
+    var self = this;
+    var tmpl = Template.spacebars_template_test_markdown_each;
+    var R = new ReactiveVar([]);
+    tmpl.seq = function () { return R.get(); };
 
-<pre><code>false
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
 
-&lt;b&gt;false&lt;/b&gt;
-</code></pre>
-
-<p><code>false</code></p>
-
-<p><code>&lt;b&gt;false&lt;/b&gt;</code></p>]]] */
-  })));
-  R.set(true);
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>true</p>
-
-<p><b>true</b></p>
-
-<ul>
-<li><p>true</p></li>
-<li><p><b>true</b></p></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>true
-
-&lt;b&gt;true&lt;/b&gt;
-</code></pre>
-
-<p><code>true</code></p>
-
-<p><code>&lt;b&gt;true&lt;/b&gt;</code></p>]]] */
-  })));
-});
-
-Tinytest.add('spacebars - templates - #markdown - each', function (test) {
-  var tmpl = Template.spacebars_template_test_markdown_each;
-  var R = new ReactiveVar([]);
-  tmpl.seq = function () { return R.get(); };
-
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p><b></b></p>
-
-<ul>
-<li></li>
-<li><b></b></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>&lt;b&gt;&lt;/b&gt;
-</code></pre>
-
-<p>``</p>
-
-<p><code>&lt;b&gt;&lt;/b&gt;</code></p>]]] */
-    })));
-
-  R.set(["item"]);
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(textFromFunction(function () { /*
-[[[<p>item</p>
-
-<p><b>item</b></p>
-
-<ul>
-<li><p>item</p></li>
-<li><p><b>item</b></p></li>
-</ul>
-
-<p>some paragraph to fix showdown's four space parsing below.</p>
-
-<pre><code>item
-
-&lt;b&gt;item&lt;/b&gt;
-</code></pre>
-
-<p><code>item</code></p>
-
-<p><code>&lt;b&gt;item&lt;/b&gt;</code></p>]]] */
-    })));
-});
+    R.set(["item"]);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
+  }
+]);
 
 Tinytest.add('spacebars - templates - #markdown - inclusion', function (test) {
   var tmpl = Template.spacebars_template_test_markdown_inclusion;
@@ -1440,22 +1344,15 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
     test.equal(DomUtils.getElementValue(input), "This is a fridge");
 
     if (canFocus) {
-      // ...unless focused
+      // ...if focused, it still updates but focus isn't lost.
       focusElement(input);
+      DomUtils.setElementValue(input, "something else");
       R.set({x:"frog"});
 
       Deps.flush();
-      test.equal(DomUtils.getElementValue(input), "This is a fridge");
-
-      // blurring and re-setting works
-      blurElement(input);
-      Deps.flush();
-      test.equal(DomUtils.getElementValue(input), "This is a fridge");
+      test.equal(DomUtils.getElementValue(input), "This is a frog");
+      test.equal(document.activeElement, input);
     }
-    R.set({x:"new frog"});
-    Deps.flush();
-
-    test.equal(DomUtils.getElementValue(input), "This is a new frog");
 
     // Setting a value (similar to user typing) should prevent value from being
     // reverted if the div is re-rendered but the rendered value (ie, R) does
@@ -1833,6 +1730,60 @@ Tinytest.add(
   }
 );
 
+// Make sure that if you bind an event on "div p", for example,
+// both the div and the p need to be in the template.  jQuery's
+// `$(elem).find(...)` works this way, but the browser's
+// querySelector doesn't.
+Tinytest.add(
+  "spacebars - template - event map selector scope",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_selectors1;
+    var tmpl2 = Template.spacebars_test_event_selectors2;
+    var buf = [];
+    tmpl2.events({
+      'click div p': function (evt) { buf.push(evt.currentTarget.className); }
+    });
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    test.equal(buf.join(), '');
+    clickIt(div.querySelector('.p1'));
+    test.equal(buf.join(), '');
+    clickIt(div.querySelector('.p2'));
+    test.equal(buf.join(), 'p2');
+    document.body.removeChild(div);
+  }
+);
+
+if (document.addEventListener) {
+  // see note about non-bubbling events in the "capuring events"
+  // templating test for why we use the VIDEO tag.  (It would be
+  // nice to get rid of the network dependency, though.)
+  // We skip this test in IE 8.
+  Tinytest.add(
+    "spacebars - template - event map selector scope (capturing)",
+    function (test) {
+      var tmpl = Template.spacebars_test_event_selectors_capturing1;
+      var tmpl2 = Template.spacebars_test_event_selectors_capturing2;
+      var buf = [];
+      tmpl2.events({
+        'play div video': function (evt) { buf.push(evt.currentTarget.className); }
+      });
+
+      var div = renderToDiv(tmpl);
+      document.body.appendChild(div);
+      test.equal(buf.join(), '');
+      simulateEvent(div.querySelector(".video1"),
+                    "play", {}, {bubbles: false});
+      test.equal(buf.join(), '');
+      simulateEvent(div.querySelector(".video2"),
+                    "play", {}, {bubbles: false});
+      test.equal(buf.join(), 'video2');
+      document.body.removeChild(div);
+    }
+  );
+}
+
 Tinytest.add("spacebars - template - tables", function (test) {
   var tmpl1 = Template.spacebars_test_tables1;
 
@@ -2009,5 +1960,299 @@ Tinytest.add(
     checkAttrs("javascript:alert(1)", false);
     checkAttrs("jAvAsCrIpT:alert(1)", false);
     checkAttrs("    javascript:alert(1)", false);
+  }
+);
+
+Tinytest.add(
+  "spacebars - template - event handlers get cleaned up with template is removed",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_handler_cleanup;
+    var subtmpl = Template.spacebars_test_event_handler_cleanup_sub;
+
+    var rv = new ReactiveVar(true);
+    tmpl.foo = function () {
+      return rv.get();
+    };
+
+    subtmpl.events({
+      "click/mouseover": function () { }
+    });
+
+    var div = renderToDiv(tmpl);
+
+    test.equal(div.$_uievents["click"].handlers.length, 1);
+    test.equal(div.$_uievents["mouseover"].handlers.length, 1);
+
+    rv.set(false);
+    Deps.flush();
+
+    test.equal(div.$_uievents["click"].handlers.length, 0);
+    test.equal(div.$_uievents["mouseover"].handlers.length, 0);
+  }
+);
+
+// https://github.com/meteor/meteor/issues/2156
+Tinytest.add(
+  "spacebars - template - each with inserts inside autorun",
+  function (test) {
+    var tmpl = Template.spacebars_test_each_with_autorun_insert;
+    var coll = new Meteor.Collection(null);
+    var rv = new ReactiveVar;
+
+    tmpl.items = function () {
+      return coll.find();
+    };
+
+    var div = renderToDiv(tmpl);
+
+    Deps.autorun(function () {
+      if (rv.get()) {
+        coll.insert({ name: rv.get() });
+      }
+    });
+
+    rv.set("foo1");
+    Deps.flush();
+    var firstId = coll.findOne()._id;
+
+    rv.set("foo2");
+    Deps.flush();
+
+    test.equal(canonicalizeHtml(div.innerHTML), "foo1 foo2");
+
+    coll.update(firstId, { $set: { name: "foo3" } });
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "foo3 foo2");
+  }
+);
+
+Tinytest.add(
+  "spacebars - ui hooks",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_hooks;
+    var rv = new ReactiveVar([]);
+    tmpl.items = function () {
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+
+    var hooks = [];
+    var container = div.querySelector(".test-ui-hooks");
+
+    // Before we attach the ui hooks, put two items in the DOM.
+    var origVal = [{ _id: 'foo1' }, { _id: 'foo2' }];
+    rv.set(origVal);
+    Deps.flush();
+
+    container._uihooks = {
+      insertElement: function (n, next) {
+        hooks.push("insert");
+
+        // check that the element hasn't actually been added yet
+        test.isTrue(n.parentNode.nodeType === 11 /*DOCUMENT_FRAGMENT_NODE*/);
+        test.isFalse(n.parentNode.parentNode);
+      },
+      removeElement: function (n) {
+        hooks.push("remove");
+        // check that the element hasn't actually been removed yet
+        test.isTrue(n.parentNode === container);
+      },
+      moveElement: function (n, next) {
+        hooks.push("move");
+        // check that the element hasn't actually been moved yet
+        test.isFalse(n.nextNode === next);
+      }
+    };
+
+    var testDomUnchanged = function () {
+      var items = div.querySelectorAll(".item");
+      test.equal(items.length, 2);
+      test.equal(canonicalizeHtml(items[0].innerHTML), "foo1");
+      test.equal(canonicalizeHtml(items[1].innerHTML), "foo2");
+    };
+
+    var newVal = _.clone(origVal);
+    newVal.push({ _id: 'foo3' });
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert']);
+    testDomUnchanged();
+
+    newVal.reverse();
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'move']);
+    testDomUnchanged();
+
+    newVal = [origVal[0]];
+    rv.set(newVal);
+    Deps.flush();
+    test.equal(hooks, ['insert', 'move', 'remove']);
+    testDomUnchanged();
+  }
+);
+
+Tinytest.add(
+  "spacebars - ui hooks - nested domranges",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_hooks_nested;
+    var rv = new ReactiveVar(true);
+
+    tmpl.foo = function () {
+      return rv.get();
+    };
+
+    var subtmpl = Template.spacebars_test_ui_hooks_nested_sub;
+    var uiHookCalled = false;
+    subtmpl.rendered = function () {
+      this.firstNode.parentNode._uihooks = {
+        removeElement: function (node) {
+          uiHookCalled = true;
+        }
+      };
+    };
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    Deps.flush();
+
+    var htmlBeforeRemove = canonicalizeHtml(div.innerHTML);
+    rv.set(false);
+    Deps.flush();
+    test.isTrue(uiHookCalled);
+    var htmlAfterRemove = canonicalizeHtml(div.innerHTML);
+    test.equal(htmlBeforeRemove, htmlAfterRemove);
+    document.body.removeChild(div);
+  }
+);
+
+Tinytest.add(
+  "spacebars - access template instance from helper",
+  function (test) {
+    // Set a property on the template instance; check that it's still
+    // there from a helper.
+
+    var tmpl = Template.spacebars_test_template_instance_helper;
+    var value = Random.id();
+    var instanceFromHelper;
+
+    tmpl.created = function () {
+      this.value = value;
+    };
+    tmpl.foo = function () {
+      instanceFromHelper = UI._templateInstance();
+    };
+
+    var div = renderToDiv(tmpl);
+    test.equal(instanceFromHelper.value, value);
+  }
+);
+
+// XXX This is for traversing empty text nodes and should be removed
+// on blaze-refactor.
+var getSiblingText = function (node, siblingNum) {
+  var sibling = node;
+  for (var i = 0; i < siblingNum; i++) {
+    if (sibling)
+      sibling = sibling.nextSibling;
+  }
+  return $(sibling).text();
+};
+
+Tinytest.add(
+  "spacebars - access template instance from helper, " +
+    "template instance is kept up-to-date",
+  function (test) {
+    var tmpl = Template.spacebars_test_template_instance_helper;
+    var rv = new ReactiveVar("");
+    var instanceFromHelper;
+
+    tmpl.foo = function () {
+      instanceFromHelper = UI._templateInstance();
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+    rv.set("first");
+    Deps.flush();
+    // `nextSibling` because the first node is an empty text node.
+    test.equal(getSiblingText(instanceFromHelper.firstNode, 4),
+               "first");
+
+    rv.set("second");
+    Deps.flush();
+    test.equal(getSiblingText(instanceFromHelper.firstNode, 4),
+               "second");
+
+    // UI._templateInstance() should throw when called from not within a
+    // helper.
+    test.throws(function () {
+      UI._templateInstance();
+    });
+  }
+);
+
+Tinytest.add(
+  "spacebars - {{#with}} autorun is cleaned up",
+  function (test) {
+    var tmpl = Template.spacebars_test_with_cleanup;
+    var rv = new ReactiveVar("");
+    var helperCalled = false;
+    tmpl.foo = function () {
+      helperCalled = true;
+      return rv.get();
+    };
+
+    var div = renderToDiv(tmpl);
+    rv.set("first");
+    Deps.flush();
+    test.equal(helperCalled, true);
+
+    helperCalled = false;
+    $(div).find(".test-with-cleanup").remove();
+
+    rv.set("second");
+    Deps.flush();
+    test.equal(helperCalled, false);
+  }
+);
+
+Tinytest.add(
+  "spacebars - access parent data contexts from helper",
+  function (test) {
+    var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
+    var parentTmpl = Template.spacebars_test_template_parent_data_helper;
+    var rv = new ReactiveVar(0);
+
+    childTmpl.a = ["a"];
+    childTmpl.b = new ReactiveVar("b");
+    childTmpl.c = ["c"];
+
+    childTmpl.foo = function () {
+      var data =  UI._parentData(rv.get());
+      return data.get === undefined ? data : data.get();
+    };
+
+    var div = renderToDiv(parentTmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "d");
+
+    rv.set(1);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "b");
+
+    // Test UI._parentData() reactivity
+
+    childTmpl.b.set("bNew");
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "bNew");
+
+    rv.set(2);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "a");
+
+    rv.set(3);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );

@@ -208,24 +208,24 @@ var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 getHTMLToken = HTMLTools.Parse.getHTMLToken = function (scanner, dataMode) {
   var result = null;
   if (scanner.getSpecialTag) {
-    var lastPos = -1;
     // Try to parse a "special tag" by calling out to the provided
     // `getSpecialTag` function.  If the function returns `null` but
-    // consumes characters, it must have parsed a comment or something,
-    // so we loop and try it again.  If it ever returns `null` without
+    // consumes characters, it must have parsed a comment, so we return null
+    // and allow the lexer to continue.  If it ever returns `null` without
     // consuming anything, that means it didn't see anything interesting
     // so we look for a normal token.  If it returns a truthy value,
     // the value must be an object.  We wrap it in a Special token.
-    while ((! result) && scanner.pos > lastPos) {
-      lastPos = scanner.pos;
-      result = scanner.getSpecialTag(
-        scanner,
-        (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
-         (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
-          TEMPLATE_TAG_POSITION.ELEMENT)));
-    }
+    var lastPos = scanner.pos;
+    result = scanner.getSpecialTag(
+      scanner,
+      (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
+       (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
+        TEMPLATE_TAG_POSITION.ELEMENT)));
+
     if (result)
       return { t: 'Special', v: result };
+    else if (scanner.pos > lastPos)
+      return null;
   }
 
   var chars = getChars(scanner);

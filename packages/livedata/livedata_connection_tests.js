@@ -122,13 +122,14 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.isTrue(callback_fired);
   Deps.flush();
   test.isTrue(reactivelyReady);
-  autorunHandle.stop();
 
   // Unsubscribe.
   sub.stop();
   test.length(stream.sent, 1);
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: id});
+  Deps.flush();
+  test.isFalse(reactivelyReady);
 
   // Resubscribe.
   conn.subscribe('my_data');
@@ -161,12 +162,17 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   };
 
   // Subscribe to some subs.
-  var stopperHandle;
+  var stopperHandle, completerHandle;
   var autorunHandle = Deps.autorun(function () {
     conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
     conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
-    conn.subscribe("completer", onReady("completer"));
+    completerHandle = conn.subscribe("completer", onReady("completer"));
     stopperHandle = conn.subscribe("stopper", onReady("stopper"));
+  });
+  
+  var completerReady;
+  var readyAutorunHandle = Deps.autorun(function() {
+    completerReady = completerHandle.ready();
   });
 
   // Check sub messages. (Assume they are sent in the order executed.)
@@ -193,11 +199,15 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Haven't hit onReady yet.
   test.equal(onReadyCount, {});
+  Deps.flush();
+  test.isFalse(completerReady);
 
   // "completer" gets ready now. its callback should fire.
   stream.receive({msg: 'ready', 'subs': [idCompleter]});
   test.equal(onReadyCount, {completer: 1});
   test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(completerReady);
 
   // Stop 'stopper'.
   stopperHandle.stop();
@@ -206,12 +216,15 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(message, {msg: 'unsub', id: idStopper});
 
   test.equal(onReadyCount, {completer: 1});
+  Deps.flush();
+  test.isTrue(completerReady);
 
   // Change the foo subscription and flush. We should sub to the new foo
   // subscription, re-sub to the stopper subscription, and then unsub from the old
   // foo subscription.  The bar subscription should be unaffected. The completer
   // subscription should *NOT* call its new onReady callback, because we only
   // call at most one onReady for a given reactively-saved subscription.
+  // The completerHandle should have been reestablished to the ready handle.
   rFoo.set("foo2");
   Deps.flush();
   test.length(stream.sent, 3);
@@ -230,6 +243,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(message, {msg: 'unsub', id: idFoo1});
 
   test.equal(onReadyCount, {completer: 1});
+  test.isTrue(completerReady);
 
   // Ready the stopper and bar subs. Completing stopper should call only the
   // onReady from the new subscription because they were separate subscriptions
@@ -244,6 +258,8 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // time.
   autorunHandle.stop();
   Deps.flush();
+  test.isFalse(completerReady);
+  readyAutorunHandle.stop();
 
   test.length(stream.sent, 4);
   // The order of unsubs here is not important.
@@ -257,6 +273,86 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(actualIds, expectedIds);
 });
 
+Tinytest.add("livedata stub - reactive subscribe handle correct", function (test) {
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  var rFoo = new ReactiveVar('foo1');
+
+  // Subscribe to some subs.
+  var fooHandle, fooReady;
+  var autorunHandle = Deps.autorun(function () {
+    fooHandle = conn.subscribe("foo", rFoo.get());
+    Deps.autorun(function() {
+      fooReady = fooHandle.ready();
+    });
+  });
+
+  var message = JSON.parse(stream.sent.shift());
+  var idFoo1 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo1']});
+
+  // Not ready yet
+  Deps.flush();
+  test.isFalse(fooHandle.ready());
+  test.isFalse(fooReady);
+
+  // change the argument to foo. This will make a new handle, which isn't ready
+  // the ready autorun should invalidate, reading the new false value, and
+  // setting up a new dep which goes true soon
+  rFoo.set("foo2");
+  Deps.flush();
+  test.length(stream.sent, 2);
+
+  message = JSON.parse(stream.sent.shift());
+  var idFoo2 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo2']});
+
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: idFoo1});
+
+  Deps.flush();
+  test.isFalse(fooHandle.ready());
+  test.isFalse(fooReady);
+
+  // "foo" gets ready now. The handle should be ready and the autorun rerun
+  stream.receive({msg: 'ready', 'subs': [idFoo2]});
+  test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(fooHandle.ready());
+  test.isTrue(fooReady);
+
+  // change the argument to foo. This will make a new handle, which isn't ready
+  // the ready autorun should invalidate, making fooReady false too
+  rFoo.set("foo3");
+  Deps.flush();
+  test.length(stream.sent, 2);
+
+  message = JSON.parse(stream.sent.shift());
+  var idFoo3 = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo', params: ['foo3']});
+
+  message = JSON.parse(stream.sent.shift());
+  test.equal(message, {msg: 'unsub', id: idFoo2});
+
+  Deps.flush();
+  test.isFalse(fooHandle.ready());
+  test.isFalse(fooReady);
+
+  // "foo" gets ready again
+  stream.receive({msg: 'ready', 'subs': [idFoo3]});
+  test.length(stream.sent, 0);
+  Deps.flush();
+  test.isTrue(fooHandle.ready());
+  test.isTrue(fooReady);
+  
+  autorunHandle.stop();
+});
 
 Tinytest.add("livedata stub - this", function (test) {
   var stream = new StubStream();

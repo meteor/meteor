@@ -84,7 +84,7 @@ var _assertCorrectPackageNpmDir = function (deps) {
   var expected = JSON.stringify({
     dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n';
 
-  assert.equal(actual, expected);
+  assert.equal(actual, expected, actual + " == " + expected);
 
   assert.equal(
     fs.readFileSync(path.join(testPackageDir, ".npm", "package", ".gitignore"), 'utf8'),
@@ -203,7 +203,7 @@ var runTest = function () {
     // just remove all of the .npm directory)
     var bareExecFileSync = meteorNpm._execFileSync;
     meteorNpm._execFileSync = function (file, args, opts) {
-      if (args.length > 2 && args[0] === 'install' && args[1] === '--force')
+      if (args.length > 1 && args[0] === 'install')
         assert.fail("shouldn't be installing specific npm packages: " + args[1]);
       return bareExecFileSync(file, args, opts);
     };

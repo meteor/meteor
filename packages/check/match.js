@@ -7,7 +7,14 @@ var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
 check = function (value, pattern) {
   // Record that check got called, if somebody cared.
-  var argChecker = currentArgumentChecker.get();
+  //
+  // We use getOrNullIfOutsideFiber so that it's OK to call check()
+  // from non-Fiber server contexts; the downside is that if you forget to
+  // bindEnvironment on some random callback in your method/publisher,
+  // it might not find the argumentChecker and you'll get an error about
+  // not checking an argument that it looks like you're checking (instead
+  // of just getting a "Node code must run in a Fiber" error).
+  var argChecker = currentArgumentChecker.getOrNullIfOutsideFiber();
   if (argChecker)
     argChecker.checking(value);
   try {

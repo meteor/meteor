@@ -159,7 +159,6 @@ var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
-var builder = require(path.join(__dirname, 'builder.js'));
 var unipackage = require(path.join(__dirname, 'unipackage.js'));
 var watch = require('./watch.js');
 var release = require('./release.js');
@@ -1537,7 +1536,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency:\n" +
-"Node.js 0.10.26 or newer, plus the 'fibers' module. To run the application:\n" +
+"Node.js 0.10.28 or newer, plus the 'fibers' module. To run the application:\n" +
 "\n" +
 "  $ rm -r programs/server/node_modules/fibers\n" +
 "  $ npm install fibers@1.0.1\n" +
