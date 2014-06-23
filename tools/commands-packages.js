@@ -743,34 +743,59 @@ main.registerCommand({
   catalog.official.refresh();
 
   if (options.details) {
-    var packageName = options.args[0];
-    var packageRecord = catalog.official.getPackage(packageName);
-    if (!packageRecord) {
-      console.log("Unknown package or release: ", packageName);
+    var full = options.args[0].split('@');
+    var name = full[0];
+    var allRecord =getReleaseOrPackageRecord(name);
+    var record = allRecord.record;
+    if (!record) {
+      console.log("Unknown package or release: ", name);
       return 1;
     }
-    var versions = catalog.official.getSortedVersions(packageName);
-    var lastVersion =  catalog.official.getVersion(
-      packageName, versions[versions.length - 1]);
-    if (!lastVersion) {
-      console.log("No versions of package " + packageName + " exist.");
-      console.log("It is maintained by " +
-                  _.pluck(packageRecord.maintainers, 'username')
-                  + " at " + packageRecord.repositoryUrl);
-      return 1;
-    } else if (!lastVersion) {
-      console.log("No versions are available.");
+    var versionRecords;
+    var label;
+    if (!allRecord.release) {
+      label = "package";
+      if (full.length > 1) {
+        versionRecords = [catalog.official.getVersion(name, full[1])];
+      } else {
+        versionRecords =
+          _.map(catalog.official.getSortedVersions(name), function (v) {
+            return catalog.official.getVersion(name, v);
+          });
+      }
     } else {
-      _.each(versions, function (v) {
-        var versionRecord = catalog.official.getVersion(packageName, v);
-        // XXX: should we print out something other than decription here?
-        console.log("Version " + v + " : " + versionRecord.description);
+      label = "release";
+      if (full.length > 1) {
+        versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
+      } else {
+        versionRecords =
+          _.map(catalog.official.getSortedRecommendedReleaseVersions(name, ""),
+                function (v) {
+                  return catalog.official.getReleaseVersion(name, v);
+                });
+      }
+    }
+    if (_.isEqual(versionRecords, [])) {
+      if (allRecord.release) {
+        console.log("No recommended versions of release " + name + " exist.");
+      } else {
+        console.log("No versions of package" + name + " exist.");
+      }
+    } else {
+      var lastVersion = versionRecords[versionRecords.length - 1];
+      var unknown = "< unknown >";
+      _.each(versionRecords, function (v) {
+        console.log("Version " + v.version + " : " + v.description || unknown);
       });
       console.log("\n");
+      console.log("The " + label + " " + name + " : "
+                  + lastVersion.description || unknown);
     }
-    console.log("The package " + packageName + " : " + lastVersion.description);
-    console.log("Maintained by " + _.pluck(packageRecord.maintainers, 'username')
-                + " at " + packageRecord.repositoryUrl);
+    var maintain = "Maintained by " + _.pluck(record.maintainers, 'username');
+    if (record.repositoryUrl) {
+      maintain = maintain + " at " + record.repositoryUrl;
+    }
+    console.log(maintain);
   } else {
     var search = options.args[0];
 
