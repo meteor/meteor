@@ -71,7 +71,7 @@ Tinytest.add("miniredis - reactivity - simple strings, single", function (test) 
     magic = S.get("magic");
   });
 
-  test.equal(magic, null);
+  test.equal(magic, undefined);
 
   S.set("magic", "abcd");
   Deps.flush();
@@ -83,7 +83,7 @@ Tinytest.add("miniredis - reactivity - simple strings, single", function (test) 
 
   S.del("magic");
   Deps.flush();
-  test.equal(magic, null);
+  test.equal(magic, undefined);
 
   S.set("magic", "123");
   Deps.flush();

@@ -42,7 +42,7 @@ Tinytest.add("miniredis - pattern matching", function (test) {
 Tinytest.add("miniredis - strings operations", function (test) {
   var S = new Miniredis.RedisStore();
 
-  test.equal(S.get("key"), null);
+  test.equal(S.get("key"), undefined);
   S.set("key", 123);
   test.equal(S.get("key"), "123");
   test.equal(S.append("key", "45"), 5);
@@ -59,11 +59,11 @@ Tinytest.add("miniredis - strings operations", function (test) {
 
 Tinytest.add("miniredis - lists operations", function (test) {
   var S = new Miniredis.RedisStore();
-  test.equal(S.get("k"), null);
+  test.equal(S.get("k"), undefined);
   S.lpushx("k", "0");
-  test.equal(S.get("k"), null);
+  test.equal(S.get("k"), undefined);
   S.rpushx("k", "0");
-  test.equal(S.get("k"), null);
+  test.equal(S.get("k"), undefined);
   S.rpush("k", "1");
   test.throws(function () { S.get("k"); }, /wrong kind/);
   test.equal(S.lindex("k", 0), "1");
