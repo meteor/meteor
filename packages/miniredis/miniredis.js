@@ -245,15 +245,8 @@ _.extend(Miniredis.RedisStore.prototype, {
     self._kv.set(key, value);
 
     self._saveOriginal(key, oldValue);
-    if (oldValue !== value) {
-      self._keyDep(key).changed();
+    if (!self.paused && oldValue !== value) {
       if (oldValue === undefined) {
-        _.each(self._patternDependencies, function (dep, pattern) {
-          if (key.match(patternToRegexp(pattern))) {
-            dep.changed();
-          }
-        });
-
         self._notifyObserves(key, 'added', value);
       } else {
         self._notifyObserves(key, 'changed', value, oldValue);
@@ -270,9 +263,8 @@ _.extend(Miniredis.RedisStore.prototype, {
     var oldValue = self._kv.get(key);
     self._saveOriginal(key, oldValue);
     self._kv.remove(key);
-    self._keyDependencies[key].changed();
-    self._tryCleanUpKeyDep(key);
-    self._notifyObserves(key, 'removed', oldValue);
+    if (!self.paused)
+      self._notifyObserves(key, 'removed', oldValue);
   },
 
   _tryCleanUpKeyDep: function (key) {
@@ -284,6 +276,20 @@ _.extend(Miniredis.RedisStore.prototype, {
   // XXX Should name of 4th argument be oldValue?
   _notifyObserves: function (key, event, value, newValue) {
     var self = this;
+
+    self._keyDep(key).changed();
+    if (event === "removed") {
+      self._tryCleanUpKeyDep(key);
+    }
+
+    if (event !== "changed") {
+      _.each(self._patternDependencies, function (dep, pattern) {
+        if (key.match(patternToRegexp(pattern))) {
+          dep.changed();
+        }
+      });
+    }
+
     _.each(self.observes, function (obs) {
       if (! key.match(patternToRegexp(obs.pattern)))
         return;
