@@ -755,14 +755,29 @@ main.registerCommand({
     var label;
     if (!allRecord.release) {
       label = "package";
+      var getRelevantRecord = function (version) {
+        var versionRecord =
+              catalog.official.getVersion(name, version);
+        var myBuilds = _.pluck(
+          catalog.official.getAllBuilds(name, version),
+          'buildArchitectures');
+        // This package does not have different builds, so we don't care.
+        if (_.isEqual(myBuilds, ["browser+os"])) {
+          return versionRecord;
+        }
+        // This package is only available for some architectures.
+        var myStringBuilds = "";
+        _.each(myBuilds, function (build) {
+          myStringBuilds = myStringBuilds + build.split('+')[1] + " ";
+        });
+        return _.extend({ buildArchitectures: myStringBuilds },
+                        versionRecord);
+      };
+      var versions = catalog.official.getSortedVersions(name);
       if (full.length > 1) {
-        versionRecords = [catalog.official.getVersion(name, full[1])];
-      } else {
-        versionRecords =
-          _.map(catalog.official.getSortedVersions(name), function (v) {
-            return catalog.official.getVersion(name, v);
-          });
+        versions = [full[1]];
       }
+      versionRecords = _.map(versions, getRelevantRecord);
     } else {
       label = "release";
       if (full.length > 1) {
@@ -785,7 +800,13 @@ main.registerCommand({
       var lastVersion = versionRecords[versionRecords.length - 1];
       var unknown = "< unknown >";
       _.each(versionRecords, function (v) {
-        console.log("Version " + v.version + " : " + v.description || unknown);
+        var versionDesc = "Version " + v.version;
+        if (v.description)
+          versionDesc = versionDesc + " : " + v.description;
+        if (v.buildArchitectures && full.length > 1)
+          versionDesc = versionDesc + " \n      Architectures: "
+                           + v.buildArchitectures;
+        console.log(versionDesc);
       });
       console.log("\n");
       console.log("The " + label + " " + name + " : "
