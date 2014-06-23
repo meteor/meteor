@@ -9,9 +9,9 @@ var _emptyArray = Object.freeze ? Object.freeze([]) : [];
 // has been attached to the DOM at some location, then updating
 // the array will cause the DOM to be updated at that location.
 Blaze.DOMRange = function (nodeAndRangeArray) {
-  if (! (this instanceof Blaze.DOMRange))
+  if (! (this instanceof DOMRange))
     // called without `new`
-    return new Blaze.DOMRange(nodeAndRangeArray);
+    return new DOMRange(nodeAndRangeArray);
 
   var members = (nodeAndRangeArray || _emptyArray);
   if (! (members && (typeof members.length) === 'number'))
@@ -28,32 +28,36 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
   this.stopCallbacks = _emptyArray;
   this.augmenters = _emptyArray;
 };
+var DOMRange = Blaze.DOMRange;
 
 // static methods
-_.extend(Blaze.DOMRange, {
+_.extend(DOMRange, {
   attach: function (rangeOrNode, parentElement, nextNode, _isMove) {
     var m = rangeOrNode;
-    if (m instanceof Blaze.DOMRange) {
+    if (m instanceof DOMRange) {
       m.attach(parentElement, nextNode, _isMove);
     } else {
-      parentElement.insertBefore(m, nextNode || null);
+      if (_isMove)
+        DOMRange.moveNodeWithHooks(m, parentElement, nextNode);
+      else
+        DOMRange.insertNodeWithHooks(m, parentElement, nextNode);
     }
   },
   detach: function (rangeOrNode) {
     var m = rangeOrNode;
-    if (m instanceof Blaze.DOMRange) {
+    if (m instanceof DOMRange) {
       m.detach();
     } else {
-      m.parentNode.removeChild(m);
+      DOMRange.removeNodeWithHooks(m);
     }
   },
   firstNode: function (rangeOrNode) {
     var m = rangeOrNode;
-    return (m instanceof Blaze.DOMRange) ? m.firstNode() : m;
+    return (m instanceof DOMRange) ? m.firstNode() : m;
   },
   lastNode: function (rangeOrNode) {
     var m = rangeOrNode;
-    return (m instanceof Blaze.DOMRange) ? m.lastNode() : m;
+    return (m instanceof DOMRange) ? m.lastNode() : m;
   },
   forElement: function (elem) {
     if (elem.nodeType !== 1)
@@ -65,11 +69,40 @@ _.extend(Blaze.DOMRange, {
         elem = elem.parentNode;
     }
     return range;
+  },
+  removeNodeWithHooks: function (n) {
+    if (! n.parentNode)
+      return;
+    if (n.nodeType === 1 &&
+        n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+      n.parentNode._uihooks.removeElement(n);
+    } else {
+      n.parentNode.removeChild(n);
+    }
+  },
+  insertNodeWithHooks: function (n, parent, next) {
+    // `|| null` because IE throws an error if 'next' is undefined
+    next = next || null;
+    if (n.nodeType === 1 &&
+        parent._uihooks && parent._uihooks.insertElement) {
+      parent._uihooks.insertElement(n, next);
+    } else {
+      parent.insertBefore(n, next);
+    }
+  },
+  moveNodeWithHooks: function (n, parent, next) {
+    // `|| null` because IE throws an error if 'next' is undefined
+    next = next || null;
+    if (n.nodeType === 1 &&
+        parent._uihooks && parent._uihooks.moveElement) {
+      parent._uihooks.moveElement(n, next);
+    } else {
+      parent.insertBefore(n, next);
+    }
   }
 });
 
-
-_.extend(Blaze.DOMRange.prototype, {
+_.extend(DOMRange.prototype, {
   attach: function (parentElement, nextNode, _isMove) {
     // This method is called to insert the DOMRange into the DOM for
     // the first time, but it's also used internally when
@@ -87,7 +120,7 @@ _.extend(Blaze.DOMRange.prototype, {
     if (members.length) {
       this.emptyRangePlaceholder = null;
       for (var i = 0; i < members.length; i++) {
-        Blaze.DOMRange.attach(members[i], parentElement, nextNode, _isMove);
+        DOMRange.attach(members[i], parentElement, nextNode, _isMove);
       }
     } else {
       var placeholder = document.createTextNode("");
@@ -137,7 +170,7 @@ _.extend(Blaze.DOMRange.prototype, {
       return this.emptyRangePlaceholder;
 
     var m = this.members[0];
-    return (m instanceof Blaze.DOMRange) ? m.firstNode() : m;
+    return (m instanceof DOMRange) ? m.firstNode() : m;
   },
   lastNode: function () {
     if (! this.attached)
@@ -147,7 +180,7 @@ _.extend(Blaze.DOMRange.prototype, {
       return this.emptyRangePlaceholder;
 
     var m = this.members[this.members.length - 1];
-    return (m instanceof Blaze.DOMRange) ? m.lastNode() : m;
+    return (m instanceof DOMRange) ? m.lastNode() : m;
   },
   detach: function () {
     if (! this.attached)
@@ -157,7 +190,7 @@ _.extend(Blaze.DOMRange.prototype, {
     var members = this.members;
     if (members.length) {
       for (var i = 0; i < members.length; i++) {
-        Blaze.DOMRange.detach(members[i]);
+        DOMRange.detach(members[i]);
       }
     } else {
       var placeholder = this.emptyRangePlaceholder;
@@ -190,10 +223,10 @@ _.extend(Blaze.DOMRange.prototype, {
         // insert at end
         nextNode = this.lastNode().nextSibling;
       } else {
-        nextNode = Blaze.DOMRange.firstNode(members[atIndex]);
+        nextNode = DOMRange.firstNode(members[atIndex]);
       }
       members.splice(atIndex, 0, newMember);
-      Blaze.DOMRange.attach(newMember, this.parentElement, nextNode, _isMove);
+      DOMRange.attach(newMember, this.parentElement, nextNode, _isMove);
     }
   },
   removeMember: function (atIndex, _isMove) {
@@ -213,7 +246,7 @@ _.extend(Blaze.DOMRange.prototype, {
       } else {
         members.splice(atIndex, 1);
         if (this.attached)
-          Blaze.DOMRange.detach(oldMember);
+          DOMRange.detach(oldMember);
       }
     }
   },
@@ -240,7 +273,7 @@ _.extend(Blaze.DOMRange.prototype, {
     this.stopCallbacks.push(cb);
   },
   _memberIn: function (m) {
-    if (m instanceof Blaze.DOMRange)
+    if (m instanceof DOMRange)
       m.parentRange = this;
     else if (m.nodeType === 1) // DOM Element
       m.$blaze_range = this;
@@ -249,7 +282,7 @@ _.extend(Blaze.DOMRange.prototype, {
     // old members are almost always GCed immediately.
     // to avoid the potentialy performance hit of deleting
     // a property, we simple null it out.
-    if (m instanceof Blaze.DOMRange)
+    if (m instanceof DOMRange)
       m.parentRange = null;
     else if (m.nodeType === 1) // DOM Element
       m.$blaze_range = null;
