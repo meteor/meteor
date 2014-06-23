@@ -659,12 +659,18 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 
 _.each(["insert", "update", "remove", "dropCollection"], function (method) {
   RedisConnection.prototype[method] = function (/* arguments */) {
-    var self = this;
-    return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
+    throw new Error("not part of redis api");
   };
 });
 
-_.each(["set"], function (method) {
+_.each(["get", "keys", "hgetall", "_keys_hgetall"], function (method) {
+  RedisConnection.prototype[method] = function (/* arguments */) {
+    var self = this;
+    return Meteor._wrapAsync(self._client[method]).apply(self._client, arguments);
+  };
+});
+
+_.each(["set", "incrby", "del", "hmset", "hincrby"], function (method) {
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
@@ -675,9 +681,7 @@ _.each(["set"], function (method) {
 
     var args = _.toArray(arguments);
 
-    var callback;
-    if (args.length && args[args.length - 1] instanceof Function)
-      callback = args.pop();
+    var callback = args.pop();
 
     var sendError = function (e) {
       if (callback)
@@ -702,7 +706,7 @@ _.each(["set"], function (method) {
         future.return(db);
       });
       var db = future.wait();
-      db.set.apply(db, args);
+      db[method].apply(db, args);
     } catch (e) {
       write.committed();
       throw e;
@@ -715,38 +719,16 @@ _.each(["set"], function (method) {
 // doc).
 RedisConnection.prototype.upsert = function (collectionName, selector, mod,
                                              options, callback) {
-  var self = this;
-  if (typeof options === "function" && ! callback) {
-    callback = options;
-    options = {};
-  }
-
-  return self.update(collectionName, selector, mod,
-                     _.extend({}, options, {
-                       upsert: true,
-                       _returnObject: true
-                     }), callback);
+  throw new Error("not part of redis api");
 };
 
 RedisConnection.prototype.find = function (collectionName, selector, options) {
-  var self = this;
-
-  if (arguments.length === 1)
-    selector = {};
-
-  return new Cursor(
-    self, new CursorDescription(collectionName, selector, options));
+  throw new Error("not part of redis api");
 };
 
 RedisConnection.prototype.findOne = function (collection_name, selector,
                                               options) {
-  var self = this;
-  if (arguments.length === 1)
-    selector = {};
-
-  options = options || {};
-  options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+  throw new Error("not part of redis api");
 };
 
 RedisConnection.prototype.matching = function (pattern) {
@@ -754,50 +736,6 @@ RedisConnection.prototype.matching = function (pattern) {
 
   return new Cursor(
     self, new CursorDescription(pattern));
-};
-
-RedisConnection.prototype.keys = function (pattern, callback) {
-  var self = this;
-  return Future.wrap(_.bind(self._client.keys, self._client))(pattern).wait();
-};
-
-RedisConnection.prototype.hgetall = function (key) {
-  var self = this;
-  return Future.wrap(_.bind(self._client.hgetall, self._client))(key).wait();
-};
-
-RedisConnection.prototype._keys_hgetall = function (keyPrefix) {
-  var self = this;
-  return Future.wrap(_.bind(self._client._keys_hgetall, self._client))(keyPrefix).wait();
-};
-
-RedisConnection.prototype.hmset = function (key, object) {
-  var self = this;
-  return Future.wrap(_.bind(self._client.hmset, self._client))(key, object).wait();
-};
-
-RedisConnection.prototype.hincrby = function (key, field, delta) {
-  var self = this;
-  return Future.wrap(_.bind(self._client.hincrby, self._client))(key, field, delta).wait();
-};
-
-RedisConnection.prototype.incrby = function (key, delta) {
-  var self = this;
-  return Future.wrap(_.bind(self._client.incrby, self._client))(key, delta).wait();
-};
-
-RedisConnection.prototype.del = function (keys) {
-  var self = this;
-  return Future.wrap(_.bind(self._client.del, self._client))(keys).wait();
-};
-
-RedisConnection.prototype.get = function (key) {
-  var self = this;
-  var v = Future.wrap(_.bind(self._client.get, self._client))(key).wait();
-  if (v === null) {
-    v = undefined;
-  }
-  return v;
 };
 
 RedisConnection.prototype._observe = function (observer) {

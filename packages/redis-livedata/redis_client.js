@@ -195,8 +195,12 @@ RedisClient.prototype.del = function (keys, callback) {
 RedisClient.prototype.get = function (key, callback) {
   var self = this;
 
-  Meteor._debug("RedisClient.prototype.get " + JSON.stringify(arguments));
-  self._connection.get(key, Meteor.bindEnvironment(callback));
+  self._connection.get(key, Meteor.bindEnvironment(function (err, res) {
+    // Mongo returns undefined here, our Redis binding returns null
+    if (res === null)
+      res = undefined;
+    callback(err, res);
+  }));
 };
 
 RedisClient.prototype.set = function (key, value, callback) {
