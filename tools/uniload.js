@@ -61,7 +61,7 @@ var load = function (options) {
   // will get refactored before too long. Note that
   // __meteor_bootstrap__.require is no longer provided.
   var env = {
-    __meteor_bootstrap__: { startup_hooks: [] },
+    __meteor_bootstrap__: { startupHooks: [] },
     __meteor_runtime_config__: { meteorRelease: "UNILOAD" }
   };
 
@@ -92,7 +92,12 @@ var load = function (options) {
     ret = image.load(env);
 
     // Run any user startup hooks.
-    _.each(env.__meteor_bootstrap__.startup_hooks, function (x) { x(); });
+    while (env.__meteor_bootstrap__.startupHooks.length) {
+      var hook = env.__meteor_bootstrap__.startupHooks.shift();
+      hook();
+    }
+    // Setting this to null tells Meteor.startup to call hooks immediately.
+    env.__meteor_bootstrap__.startupHooks = null;
   });
 
   if (messages.hasMessages()) {

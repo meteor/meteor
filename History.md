@@ -1,89 +1,99 @@
 ## v.NEXT
 
-* Migrate from SRP to bcrypt in `accounts-password`. Users will be
-  transparently upgraded when they log in.
+* Upgraded dependencies:
+  - less: 1.7.1 (from 1.6.1)
 
-* The `findAll` method on template instances now returns a vanilla
-  array, not a jQuery object. The `$` method continues to
-  return a jQuery object. #2039
 
-* Speed up updates of NPM modules by upgrading Node to include our fix for
-  https://github.com/npm/npm/issues/3265 instead of passing `--force` to
-  `npm install`.
+## v0.8.2
 
-* Always rebuild on changes to npm-shrinkwrap.json files.  #1648
+#### Meteor Accounts
 
-* Run server tests from multiple clients serially instead of in
-  parallel. This allows testing features that modify global server
-  state.  #2088
-
-* Add Content-Type headers on JavaScript and CSS resources.
-
-* Add `X-Content-Type-Options: nosniff` header to
-  `browser-policy-content`'s default policy. If you are using
-  `browser-policy-content` and you don't want your app to send this
-  header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
-
-* Fix a Blaze memory leak by cleaning up event handlers when a template
-  instance is destroyed. #1997
-
-* Allow `check` to work on the server outside of a Fiber. #2136
-
-* EJSON custom type conversion functions should not be permitted to yield. #2136
-
-* The legacy polling observe driver handles errors communicating with MongoDB
-  better and no longer gets "stuck" in some circumstances.
-
-* Add {{> UI.dynamic}} to make it easier to dynamically render a
-  template with a data context. XXX Update "Using Blaze" wiki page.
+* Switch `accounts-password` to use bcrypt to store passwords on the
+  server. (Previous versions of Meteor used a protocol called SRP.)
+  Users will be transparently transitioned when they log in. This
+  transition is one-way, so you cannot downgrade a production app once
+  you upgrade to 0.8.2. If you are maintaining an authenticating DDP
+  client:
+     - Clients that use the plaintext password login handler (i.e. call
+       the `login` method with argument `{ password: <plaintext
+       password> }`) will continue to work, but users will not be
+       transitioned from SRP to bcrypt when logging in with this login
+       handler.
+     - Clients that use SRP will no longer work. These clients should
+       instead directly call the `login` method, as in
+       `Meteor.loginWithPassword`. The argument to the `login` method
+       can be either:
+         - `{ password: <plaintext password> }`, or
+         - `{ password: { digest: <password hash>, algorithm: "sha-256" } }`,
+           where the password hash is the hex-encoded SHA256 hash of the
+           plaintext password.
 
 * Show the display name of the currently logged-in user after following
-  a verification link or password reset link in `accounts-ui`.
+  an email verification link or a password reset link in `accounts-ui`.
 
-* Use `Meteor.absoluteUrl()` to compute the redirect URI in `force-ssl`
-  instead of the host header.
+* Add a `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`
+  to pre-fill the user's email address in the OAuth popup.
 
-* Automatically rewind cursors before calls to `fetch`, `forEach`, or `map`. On
-  the client, don't cache the return value of `cursor.count()` (consistently
-  with the server behavior). `cursor.rewind()` is now a no-op. #2114
-
-* Allow externally applied CSS style attributes to interop with Blaze
-  dynamic style attributes.
-
-* Add `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
-
-* Fix uninformative error message when deploying to long hostnames. #1208
-
-* Ensure that the user object has updated token information on it before
+* Ensure that the user object has updated token information before
   it is passed to email template functions. #2210
-
-* Remove an obsolete hack in reporting line numbers for LESS errors. #2216
-
-* Fix a bug where helpers used by {{#with}} were still re-running when
-  their reactive data sources change after they have been removed from
-  the DOM.
-
-* Avoid exceptions when accessing localStorage in certain Internet
-  Explorer configurations. #1291, #1688.
-
-* Add `UI._templateInstance()` for accessing the current template
-  instance from within a block helper.
-
-* Stop not updating form controls if they're focused. If a field is
-  edited by one user while another user is focused on it, it will just
-  lose its value but maintain its focus. #1965
-
-* Add tentative API for registering hooks to run when Blaze intends to
-  insert, move, or remove DOM elements. XXX more detail
 
 * Export the function that serves the HTTP response at the end of an
   OAuth flow as `OAuth._endOfLoginResponse`. This function can be
   overridden to make the OAuth popup flow work in certain mobile
   environments where `window.opener` is not supported.
 
-* Remove support for OAuth redirect URLs where a `redirect` query
+* Remove support for OAuth redirect URLs with a `redirect` query
   parameter. This OAuth flow was never documented and never fully
   worked.
+
+
+#### Blaze
+
+* Blaze now tracks individual CSS rules in `style` attributes and won't
+  overwrite changes to them made by other JavaScript libraries.
+
+* Add {{> UI.dynamic}} to make it easier to dynamically render a
+  template with a data context.
+
+* Add `UI._templateInstance()` for accessing the current template
+  instance from within a block helper.
+
+* Add `UI._parentData(n)` for accessing parent data contexts from
+  within a block helper.
+
+* Add preliminary API for registering hooks to run when Blaze intends to
+  insert, move, or remove DOM elements. For example, you can use these
+  hooks to animate nodes as they are inserted, moved, or removed. To use
+  them, you can set the `_uihooks` property on a container DOM
+  element. `_uihooks` is an object that can have any subset of the
+  following three properties:
+
+    - `insertElement: function (node, next)`: called when Blaze intends
+      to insert the DOM element `node` before the element `next`
+    - `moveElement: function (node, next)`: called when Blaze intends to
+      move the DOM element `node` before the element `next`
+    - `removeElement: function (node)`: called when Blaze intends to
+      remove the DOM element `node`
+
+    Note that when you set one of these functions on a container
+    element, Blaze will not do the actual operation; it's your
+    responsibility to actually insert, move, or remove the node (by
+    calling `$(node).remove()`, for example).
+
+* The `findAll` method on template instances now returns a vanilla
+  array, not a jQuery object. The `$` method continues to
+  return a jQuery object. #2039
+
+* Fix a Blaze memory leak by cleaning up event handlers when a template
+  instance is destroyed. #1997
+
+* Fix a bug where helpers used by {{#with}} were still re-running when
+  their reactive data sources changed after they had been removed from
+  the DOM.
+
+* Stop not updating form controls if they're focused. If a field is
+  edited by one user while another user is focused on it, it will just
+  lose its value but maintain its focus. #1965
 
 * Add `_nestInCurrentComputation` option to `UI.render`, fixing a bug in
   {{#each}} when an item is added inside a computation that subsequently
@@ -94,17 +104,70 @@
 * Fix bug when a template tag immediately follows a Spacebars block
   comment. #2175
 
-* Make `handle.ready()` reactively stop, where `handle` is a
-  subscription handle.
+
+#### Command-line tool
+
+* Add --directory flag to `meteor bundle`. Setting this flag outputs a
+  directory rather than a tarball.
+
+* Speed up updates of NPM modules by upgrading Node to include our fix for
+  https://github.com/npm/npm/issues/3265 instead of passing `--force` to
+  `npm install`.
+
+* Always rebuild on changes to npm-shrinkwrap.json files.  #1648
+
+* Fix uninformative error message when deploying to long hostnames. #1208
 
 * Increase a buffer size to avoid failing when running MongoDB due to a
   large number of processes running on the machine, and fix the error
   message when the failure does occur. #2158
 
-* Fix an error message from `audit-argument-checks` after login.
+* Clarify a `meteor mongo` error message when using the MONGO_URL
+  environment variable. #1256
 
-* Add --directory flag to `meteor bundle`. Setting this flag outputs a
-  directory rather than a tarball.
+
+#### Testing
+
+* Run server tests from multiple clients serially instead of in
+  parallel. This allows testing features that modify global server
+  state.  #2088
+
+
+#### Security
+
+* Add Content-Type headers on JavaScript and CSS resources.
+
+* Add `X-Content-Type-Options: nosniff` header to
+  `browser-policy-content`'s default policy. If you are using
+  `browser-policy-content` and you don't want your app to send this
+  header, then call `BrowserPolicy.content.allowContentTypeSniffing()`.
+
+* Use `Meteor.absoluteUrl()` to compute the redirect URL in the `force-ssl`
+  package (instead of the host header).
+
+
+#### Miscellaneous
+
+* Allow `check` to work on the server outside of a Fiber. #2136
+
+* EJSON custom type conversion functions should not be permitted to yield. #2136
+
+* The legacy polling observe driver handles errors communicating with MongoDB
+  better and no longer gets "stuck" in some circumstances.
+
+* Automatically rewind cursors before calls to `fetch`, `forEach`, or `map`. On
+  the client, don't cache the return value of `cursor.count()` (consistently
+  with the server behavior). `cursor.rewind()` is now a no-op. #2114
+
+* Remove an obsolete hack in reporting line numbers for LESS errors. #2216
+
+* Avoid exceptions when accessing localStorage in certain Internet
+  Explorer configurations. #1291, #1688.
+
+* Make `handle.ready()` reactively stop, where `handle` is a
+  subscription handle.
+
+* Fix an error message from `audit-argument-checks` after login.
 
 * Make the DDP server send an error if the client sends a connect
   message with a missing or malformed `support` field. #2125
@@ -113,14 +176,7 @@
 
 * Ban inserting EJSON custom types as documents. #2095
 
-* Clarify a `meteor mongo` error message when using the MONGO_URL
-  environment variable. #1256
-
-* XXX 1e4838ccd38c2df142591a67d675ac38eb8a5630 #2106
-
-* XXX df2820ffd92
-
-* XXX 00157d8aed23fc290fb985fef73b1c293fa24e63
+* Fix incorrect URL rewrites in stylesheets. #2106
 
 * Upgraded dependencies:
   - node: 0.10.28 (from 0.10.26)

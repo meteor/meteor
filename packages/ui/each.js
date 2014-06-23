@@ -104,7 +104,7 @@ UI.EachImpl = Component.extend({
           LocalCollection._idStringify(id),
           beforeId && LocalCollection._idStringify(beforeId));
       },
-      changedAt: function (id, newItem, atIndex) {
+      changedAt: function (id, newItem, oldItem, atIndex) {
         range.get(LocalCollection._idStringify(id)).component.data.$set(newItem);
       }
     });
