@@ -75,6 +75,8 @@ DOMRange._insertNodeWithHooks = function (n, parent, next) {
 };
 
 DOMRange._moveNodeWithHooks = function (n, parent, next) {
+  if (! n.parentNode)
+    return;
   // `|| null` because IE throws an error if 'next' is undefined
   next = next || null;
   if (n.nodeType === 1 &&
