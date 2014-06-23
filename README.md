@@ -157,6 +157,7 @@ instances of a class -- so-called "constructed objects" (see
 from the vanilla JS objects that represent attributes dictionaries
 when constructing Tags.
 
+Functions are also considered foreign objects.
 
 ## HTML.getTag(tagName)
 

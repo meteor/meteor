@@ -227,6 +227,8 @@ var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
  * `HTML.isConstructedObject`) -- so that they can be distinguished
  * from the vanilla JS objects that represent attributes dictionaries
  * when constructing Tags.
+ *
+ * Functions are also considered foreign objects.
  */
 
 /**
