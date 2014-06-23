@@ -7,6 +7,7 @@ Package.on_use(function(api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('srp', ['client', 'server']);
+  api.use('sha', ['client', 'server']);
   api.use('email', ['server']);
   api.use('random', ['server']);
   api.use('check', ['server']);

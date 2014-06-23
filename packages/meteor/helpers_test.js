@@ -75,3 +75,12 @@ Tinytest.add("environment - helpers", function (test) {
   Meteor._delete(x, "a");
   test.equal(x, {});
 });
+
+Tinytest.add("environment - startup", function (test) {
+  // After startup, Meteor.startup should call the callback immediately.
+  var called = false;
+  Meteor.startup(function () {
+    called = true;
+  });
+  test.isTrue(called);
+});

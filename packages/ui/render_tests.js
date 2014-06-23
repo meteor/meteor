@@ -214,6 +214,15 @@ Tinytest.add("ui - render - isolates", function (test) {
 
 });
 
+// IE strips malformed styles like "bar::d" from the `style`
+// attribute. We detect this to adjust expectations for the StyleHandler
+// test below.
+var malformedStylesAllowed = function () {
+  var div = document.createElement("div");
+  div.setAttribute("style", "bar::d;");
+  return (div.getAttribute("style") === "bar::d;");
+};
+
 Tinytest.add("ui - render - isolate GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
@@ -280,6 +289,87 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     $(div).remove();
 
     test.equal(R.numListeners(), 0);
+  })();
+
+  // Test styles.
+  (function () {
+    // Test the case where there is a semicolon in the css attribute.
+    var R = ReactiveVar({'style': 'foo: "a;aa"; bar: b;',
+      id: 'foo'});
+
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+
+    test.equal(toHTML(spanCode), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
+
+    test.equal(R.numListeners(), 0);
+
+    var div = document.createElement("DIV");
+    materialize(spanCode, div);
+    test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b"></span>');
+
+    test.equal(R.numListeners(), 1);
+    var span = div.firstChild;
+    test.equal(span.nodeName, 'SPAN');
+
+    span.setAttribute('style', span.getAttribute('style') + '; jquery-style: hidden');
+
+    R.set({'style': 'foo: "a;zz;aa";', id: 'bar'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML, true), '<span id="bar" style="foo: &quot;a;zz;aa&quot;; jquery-style: hidden"></span>');
+    test.equal(R.numListeners(), 1);
+
+    R.set({});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style: hidden"></span>');
+    test.equal(R.numListeners(), 1);
+
+    $(div).remove();
+
+    test.equal(R.numListeners(), 0);
+  })();
+
+  // Test that identical styles are successfully overwritten.
+  (function () {
+
+    var R = ReactiveVar({'style': 'foo: a;'});
+
+    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+
+    var div = document.createElement("DIV");
+    document.body.appendChild(div);
+    materialize(spanCode, div);
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a"></span>');
+
+    var span = div.firstChild;
+    test.equal(span.nodeName, 'SPAN');
+    span.setAttribute("style", 'foo: b;');
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: b"></span>');
+
+    R.set({'style': 'foo: c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c"></span>');
+
+    // test malformed styles - different expectations in IE (which
+    // strips malformed styles) from other browsers
+    R.set({'style': 'foo: a; bar::d;:e; baz: c;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML),
+      malformedStylesAllowed() ?
+               '<span style="foo: a; bar::d; baz: c"></span>' :
+               '<span style="foo: a; baz: c"></span>');
+
+    // Test strange styles
+    R.set({'style': ' foo: c; constructor: a; __proto__: b;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c; constructor: a; __proto__: b"></span>');
+
+    R.set({});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span></span>');
+
+    R.set({'style': 'foo: bar;'});
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: bar"></span>');
   })();
 
   // Test `null`, `undefined`, and `[]` attributes
@@ -564,6 +654,35 @@ Tinytest.add("ui - UI.render", function (test) {
              "<span>Hello bbb</span><span>Bye bbb</span>");
 
   document.body.removeChild(div);
+});
+
+Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
+  var tmpl = UI.Component.extend({
+    render: function () {
+      return SPAN();
+    }
+  });
+  test.throws(function () {
+    UI.insert(UI.render(tmpl), $('body'));
+  }, /'parentElement' must be a DOM node/);
+  test.throws(function () {
+    UI.insert(UI.render(tmpl), document.body, $('body'));
+  }, /'nextNode' must be a DOM node/);
+});
+
+Tinytest.add("ui - UI.getDataContext", function (test) {
+  var div = document.createElement("DIV");
+
+  var tmpl = UI.Component.extend({
+    render: function () {
+      return SPAN();
+    }
+  });
+
+  UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
+  var span = $(div).children('SPAN')[0];
+  test.isTrue(span);
+  test.equal(UI.getElementData(span), {foo: "bar"});
 });
 
 Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {

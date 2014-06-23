@@ -1,3 +1,8 @@
 Meteor.startup = function (callback) {
-  __meteor_bootstrap__.startup_hooks.push(callback);
+  if (__meteor_bootstrap__.startupHooks) {
+    __meteor_bootstrap__.startupHooks.push(callback);
+  } else {
+    // We already started up. Just call it now.
+    callback();
+  }
 };

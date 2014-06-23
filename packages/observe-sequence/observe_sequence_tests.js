@@ -483,7 +483,7 @@ Tinytest.add('observe-sequence - number arrays', function (test) {
     {removedAt: [{NOT: 1}, 1, 1]},
     {addedAt: [3, 3, 1, 2]},
     {addedAt: [{NOT: 3}, 3, 3, null]}
-  ], /*numExpectedWarnings = */2);
+  ]);
 });
 
 Tinytest.add('observe-sequence - cursor to other cursor, same collection', function (test) {

@@ -139,6 +139,17 @@
     "release": "0.8.1.3"
   },
   {
+    "release": "0.8.2",
+    "packageNotices": {
+      "accounts-password": [
+          "Transition to bcrypt for password storage on the server.",
+          "You do not need to make any changes to your app, but you will",
+          "not be able to downgrade production apps after you update them",
+          "to 0.8.2."
+      ]
+    }
+  },
+  {
     "release": "NEXT"
   }
 ]

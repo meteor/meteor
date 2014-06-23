@@ -1721,6 +1721,60 @@ Tinytest.add("spacebars-tests - template_tests - event handler returns false",
   }
 );
 
+// Make sure that if you bind an event on "div p", for example,
+// both the div and the p need to be in the template.  jQuery's
+// `$(elem).find(...)` works this way, but the browser's
+// querySelector doesn't.
+Tinytest.add(
+  "spacebars-tests - template_tests - event map selector scope",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_selectors1;
+    var tmpl2 = Template.spacebars_test_event_selectors2;
+    var buf = [];
+    tmpl2.events({
+      'click div p': function (evt) { buf.push(evt.currentTarget.className); }
+    });
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    test.equal(buf.join(), '');
+    clickIt(div.querySelector('.p1'));
+    test.equal(buf.join(), '');
+    clickIt(div.querySelector('.p2'));
+    test.equal(buf.join(), 'p2');
+    document.body.removeChild(div);
+  }
+);
+
+if (document.addEventListener) {
+  // see note about non-bubbling events in the "capuring events"
+  // templating test for why we use the VIDEO tag.  (It would be
+  // nice to get rid of the network dependency, though.)
+  // We skip this test in IE 8.
+  Tinytest.add(
+    "spacebars-tests - template_tests - event map selector scope (capturing)",
+    function (test) {
+      var tmpl = Template.spacebars_test_event_selectors_capturing1;
+      var tmpl2 = Template.spacebars_test_event_selectors_capturing2;
+      var buf = [];
+      tmpl2.events({
+        'play div video': function (evt) { buf.push(evt.currentTarget.className); }
+      });
+
+      var div = renderToDiv(tmpl);
+      document.body.appendChild(div);
+      test.equal(buf.join(), '');
+      simulateEvent(div.querySelector(".video1"),
+                    "play", {}, {bubbles: false});
+      test.equal(buf.join(), '');
+      simulateEvent(div.querySelector(".video2"),
+                    "play", {}, {bubbles: false});
+      test.equal(buf.join(), 'video2');
+      document.body.removeChild(div);
+    }
+  );
+}
+
 Tinytest.add("spacebars-tests - template_tests - tables", function (test) {
   var tmpl1 = Template.spacebars_test_tables1;
 
@@ -2048,6 +2102,40 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "spacebars-tests - template_tests - ui hooks - nested domranges",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_hooks_nested;
+    var rv = new ReactiveVar(true);
+
+    tmpl.foo = function () {
+      return rv.get();
+    };
+
+    var subtmpl = Template.spacebars_test_ui_hooks_nested_sub;
+    var uiHookCalled = false;
+    subtmpl.rendered = function () {
+      this.firstNode.parentNode._uihooks = {
+        removeElement: function (node) {
+          uiHookCalled = true;
+        }
+      };
+    };
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+    Deps.flush();
+
+    var htmlBeforeRemove = canonicalizeHtml(div.innerHTML);
+    rv.set(false);
+    Deps.flush();
+    test.isTrue(uiHookCalled);
+    var htmlAfterRemove = canonicalizeHtml(div.innerHTML);
+    test.equal(htmlBeforeRemove, htmlAfterRemove);
+    document.body.removeChild(div);
+  }
+);
+
+Tinytest.add(
   "spacebars-tests - template_tests - access template instance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
@@ -2119,5 +2207,44 @@ Tinytest.add(
     rv.set("second");
     Deps.flush();
     test.equal(helperCalled, false);
+  }
+);
+
+Tinytest.add(
+  "spacebars-tests - template_tests - access parent data contexts from helper",
+  function (test) {
+    var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
+    var parentTmpl = Template.spacebars_test_template_parent_data_helper;
+    var rv = new ReactiveVar(0);
+
+    childTmpl.a = ["a"];
+    childTmpl.b = new ReactiveVar("b");
+    childTmpl.c = ["c"];
+
+    childTmpl.foo = function () {
+      var data =  UI._parentData(rv.get());
+      return data.get === undefined ? data : data.get();
+    };
+
+    var div = renderToDiv(parentTmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "d");
+
+    rv.set(1);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "b");
+
+    // Test UI._parentData() reactivity
+
+    childTmpl.b.set("bNew");
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "bNew");
+
+    rv.set(2);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "a");
+
+    rv.set(3);
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );
