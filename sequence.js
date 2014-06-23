@@ -36,7 +36,7 @@ _.extend(Blaze.Sequence.prototype, {
       throw new Error("Bad index in Blaze.Sequence#addItem: " + k);
 
     items.splice(k, 0, item);
-    this.dep.changed();
+    self.dep.changed();
 
     var observers = self.observers;
     for (var i = 0; i < observers.length; i++)
@@ -49,11 +49,37 @@ _.extend(Blaze.Sequence.prototype, {
       throw new Error("Bad index in Blaze.Sequence#removeItem: " + k);
 
     items.splice(k, 1);
-    this.dep.changed();
+    self.dep.changed();
 
     var observers = self.observers;
     for (var i = 0; i < observers.length; i++)
       observers[i].removeItem(k);
+  },
+  moveItem: function (oldIndex, newIndex) {
+    var self = this;
+    var items = self.items;
+    if (! (oldIndex >= 0 && oldIndex < items.length))
+      throw new Error("Bad index in Blaze.Sequence#moveItem: " + oldIndex);
+    if (! (newIndex >= 0 && newIndex < items.length))
+      throw new Error("Bad index in Blaze.Sequence#moveItem: " + newIndex);
+    if (oldIndex === newIndex)
+      return;
+
+    var item = items[oldIndex];
+    items.splice(oldIndex, 1);
+    items.splice(newIndex, 0, item);
+    self.dep.changed();
+
+    var observers = self.observers;
+    for (var i = 0; i < observers.length; i++) {
+      var obs = observers[i];
+      if (obs.moveItem) {
+        obs.moveItem(oldIndex, newIndex);
+      } else {
+        obs.removeItem(oldIndex);
+        obs.addItem(item, newIndex);
+      }
+    }
   },
   observeMutations: function (callbacks) {
     var self = this;
