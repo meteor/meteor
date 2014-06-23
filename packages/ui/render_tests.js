@@ -297,14 +297,16 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'style': 'foo: "a;aa"; bar: b;',
       id: 'foo'});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(Blaze.Var(function () { return R.get(); })));
+    };
 
-    test.equal(toHTML(spanCode), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
+    test.equal(Blaze.toHTML(spanFunc), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b"></span>');
 
     test.equal(R.numListeners(), 1);
@@ -333,11 +335,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var R = ReactiveVar({'style': 'foo: a;'});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(Blaze.Var(function () { return R.get(); })));
+    };
 
     var div = document.createElement("DIV");
     document.body.appendChild(div);
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a"></span>');
 
     var span = div.firstChild;
