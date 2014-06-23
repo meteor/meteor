@@ -26,9 +26,10 @@
            plaintext password.
 
 * Show the display name of the currently logged-in user after following
-  an email verification link or password reset link in `accounts-ui`.
+  an email verification link or a password reset link in `accounts-ui`.
 
-* Add a `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`.
+* Add a `userEmail` option to `Meteor.loginWithMeteorDeveloperAccount`
+  to pre-fill the user's email address in the OAuth popup.
 
 * Ensure that the user object has updated token information before
   it is passed to email template functions. #2210
@@ -49,7 +50,7 @@
   overwrite changes to them made by other JavaScript libraries.
 
 * Add {{> UI.dynamic}} to make it easier to dynamically render a
-  template with a data context. XXX Update "Using Blaze" wiki page.
+  template with a data context.
 
 * Add `UI._templateInstance()` for accessing the current template
   instance from within a block helper.
