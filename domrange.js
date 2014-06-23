@@ -31,76 +31,71 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
 var DOMRange = Blaze.DOMRange;
 
 // static methods
-_.extend(DOMRange, {
-  attach: function (rangeOrNode, parentElement, nextNode, _isMove) {
-    var m = rangeOrNode;
-    if (m instanceof DOMRange) {
-      m.attach(parentElement, nextNode, _isMove);
-    } else {
-      if (_isMove)
-        DOMRange.moveNodeWithHooks(m, parentElement, nextNode);
-      else
-        DOMRange.insertNodeWithHooks(m, parentElement, nextNode);
-    }
-  },
-  detach: function (rangeOrNode) {
-    var m = rangeOrNode;
-    if (m instanceof DOMRange) {
-      m.detach();
-    } else {
-      DOMRange.removeNodeWithHooks(m);
-    }
-  },
-  firstNode: function (rangeOrNode) {
-    var m = rangeOrNode;
-    return (m instanceof DOMRange) ? m.firstNode() : m;
-  },
-  lastNode: function (rangeOrNode) {
-    var m = rangeOrNode;
-    return (m instanceof DOMRange) ? m.lastNode() : m;
-  },
-  forElement: function (elem) {
-    if (elem.nodeType !== 1)
-      throw new Error("Expected element, found: " + elem);
-    var range = null;
-    while (elem && ! range) {
-      range = (elem.$blaze_range || null);
-      if (! range)
-        elem = elem.parentNode;
-    }
-    return range;
-  },
-  removeNodeWithHooks: function (n) {
-    if (! n.parentNode)
-      return;
-    if (n.nodeType === 1 &&
-        n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
-      n.parentNode._uihooks.removeElement(n);
-    } else {
-      n.parentNode.removeChild(n);
-    }
-  },
-  insertNodeWithHooks: function (n, parent, next) {
-    // `|| null` because IE throws an error if 'next' is undefined
-    next = next || null;
-    if (n.nodeType === 1 &&
-        parent._uihooks && parent._uihooks.insertElement) {
-      parent._uihooks.insertElement(n, next);
-    } else {
-      parent.insertBefore(n, next);
-    }
-  },
-  moveNodeWithHooks: function (n, parent, next) {
-    // `|| null` because IE throws an error if 'next' is undefined
-    next = next || null;
-    if (n.nodeType === 1 &&
-        parent._uihooks && parent._uihooks.moveElement) {
-      parent._uihooks.moveElement(n, next);
-    } else {
-      parent.insertBefore(n, next);
-    }
+DOMRange._insert = function (rangeOrNode, parentElement, nextNode, _isMove) {
+  var m = rangeOrNode;
+  if (m instanceof DOMRange) {
+    m.attach(parentElement, nextNode, _isMove);
+  } else {
+    if (_isMove)
+      DOMRange._moveNodeWithHooks(m, parentElement, nextNode);
+    else
+      DOMRange._insertNodeWithHooks(m, parentElement, nextNode);
   }
-});
+};
+
+DOMRange._remove = function (rangeOrNode) {
+  var m = rangeOrNode;
+  if (m instanceof DOMRange) {
+    m.detach();
+  } else {
+    DOMRange._removeNodeWithHooks(m);
+  }
+};
+
+DOMRange._removeNodeWithHooks = function (n) {
+  if (! n.parentNode)
+    return;
+  if (n.nodeType === 1 &&
+      n.parentNode._uihooks && n.parentNode._uihooks.removeElement) {
+    n.parentNode._uihooks.removeElement(n);
+  } else {
+    n.parentNode.removeChild(n);
+  }
+};
+
+DOMRange._insertNodeWithHooks = function (n, parent, next) {
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.insertElement) {
+    parent._uihooks.insertElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
+};
+
+DOMRange._moveNodeWithHooks = function (n, parent, next) {
+  // `|| null` because IE throws an error if 'next' is undefined
+  next = next || null;
+  if (n.nodeType === 1 &&
+      parent._uihooks && parent._uihooks.moveElement) {
+    parent._uihooks.moveElement(n, next);
+  } else {
+    parent.insertBefore(n, next);
+  }
+};
+
+DOMRange.forElement = function (elem) {
+  if (elem.nodeType !== 1)
+    throw new Error("Expected element, found: " + elem);
+  var range = null;
+  while (elem && ! range) {
+    range = (elem.$blaze_range || null);
+    if (! range)
+      elem = elem.parentNode;
+  }
+  return range;
+};
 
 _.extend(DOMRange.prototype, {
   attach: function (parentElement, nextNode, _isMove) {
@@ -120,7 +115,7 @@ _.extend(DOMRange.prototype, {
     if (members.length) {
       this.emptyRangePlaceholder = null;
       for (var i = 0; i < members.length; i++) {
-        DOMRange.attach(members[i], parentElement, nextNode, _isMove);
+        DOMRange._insert(members[i], parentElement, nextNode, _isMove);
       }
     } else {
       var placeholder = document.createTextNode("");
@@ -190,7 +185,7 @@ _.extend(DOMRange.prototype, {
     var members = this.members;
     if (members.length) {
       for (var i = 0; i < members.length; i++) {
-        DOMRange.detach(members[i]);
+        DOMRange._remove(members[i]);
       }
     } else {
       var placeholder = this.emptyRangePlaceholder;
@@ -223,10 +218,11 @@ _.extend(DOMRange.prototype, {
         // insert at end
         nextNode = this.lastNode().nextSibling;
       } else {
-        nextNode = DOMRange.firstNode(members[atIndex]);
+        var m = members[atIndex];
+        nextNode = (m instanceof DOMRange) ? m.firstNode() : m;
       }
       members.splice(atIndex, 0, newMember);
-      DOMRange.attach(newMember, this.parentElement, nextNode, _isMove);
+      DOMRange._insert(newMember, this.parentElement, nextNode, _isMove);
     }
   },
   removeMember: function (atIndex, _isMove) {
@@ -246,7 +242,7 @@ _.extend(DOMRange.prototype, {
       } else {
         members.splice(atIndex, 1);
         if (this.attached)
-          DOMRange.detach(oldMember);
+          DOMRange._remove(oldMember);
       }
     }
   },
