@@ -130,6 +130,11 @@ Blaze.renderList = function (funcSequence) {
         range.getMember(k).stop();
         range.removeMember(k);
       });
+    },
+    moveItem: function (oldIndex, newIndex) {
+      Deps.nonreactive(function () {
+        range.moveMember(oldIndex, newIndex);
+      });
     }
   });
 

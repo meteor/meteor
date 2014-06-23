@@ -234,9 +234,7 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
       seq.get(index).dataVar.set(newItem);
     },
     movedTo: function (id, item, fromIndex, toIndex) {
-      var f = seq.get(fromIndex);
-      seq.removeItem(fromIndex);
-      seq.addItem(f, toIndex);
+      seq.moveItem(fromIndex, toIndex);
     }
   });
 

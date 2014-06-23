@@ -31,10 +31,10 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
 
 // static methods
 _.extend(Blaze.DOMRange, {
-  attach: function (rangeOrNode, parentElement, nextNode) {
+  attach: function (rangeOrNode, parentElement, nextNode, _isMove) {
     var m = rangeOrNode;
     if (m instanceof Blaze.DOMRange) {
-      m.attach(parentElement, nextNode);
+      m.attach(parentElement, nextNode, _isMove);
     } else {
       parentElement.insertBefore(m, nextNode || null);
     }
@@ -70,15 +70,24 @@ _.extend(Blaze.DOMRange, {
 
 
 _.extend(Blaze.DOMRange.prototype, {
-  attach: function (parentElement, nextNode) {
+  attach: function (parentElement, nextNode, _isMove) {
     // This method is called to insert the DOMRange into the DOM for
     // the first time, but it's also used internally when
     // updating the DOM.
+    //
+    // If _isMove is true, move this attached range to a different
+    // location under the same parentElement.
+    if (_isMove) {
+      if (! (this.parentElement === parentElement &&
+             this.attached))
+        throw new Error("Can only move an attached DOMRange, and only under the same parent element");
+    }
+
     var members = this.members;
     if (members.length) {
       this.emptyRangePlaceholder = null;
       for (var i = 0; i < members.length; i++) {
-        Blaze.DOMRange.attach(members[i], parentElement, nextNode);
+        Blaze.DOMRange.attach(members[i], parentElement, nextNode, _isMove);
       }
     } else {
       var placeholder = document.createTextNode("");
@@ -88,8 +97,10 @@ _.extend(Blaze.DOMRange.prototype, {
     this.attached = true;
     this.parentElement = parentElement;
 
-    for(var i = 0; i < this.augmenters.length; i++)
-      this.augmenters[i].attach(this, parentElement);
+    if (! _isMove) {
+      for(var i = 0; i < this.augmenters.length; i++)
+        this.augmenters[i].attach(this, parentElement);
+    }
   },
   setMembers: function (newNodeAndRangeArray) {
     var newMembers = newNodeAndRangeArray;
@@ -159,12 +170,13 @@ _.extend(Blaze.DOMRange.prototype, {
     for(var i = 0; i < this.augmenters.length; i++)
       this.augmenters[i].detach(this, oldParentElement);
   },
-  addMember: function (newMember, atIndex) {
+  addMember: function (newMember, atIndex, _isMove) {
     var members = this.members;
     if (! (atIndex >= 0 && atIndex <= members.length))
       throw new Error("Bad index in range.addMember: " + atIndex);
 
-    this._memberIn(newMember);
+    if (! _isMove)
+      this._memberIn(newMember);
 
     if (! this.attached) {
       // currently detached; just updated members
@@ -181,25 +193,34 @@ _.extend(Blaze.DOMRange.prototype, {
         nextNode = Blaze.DOMRange.firstNode(members[atIndex]);
       }
       members.splice(atIndex, 0, newMember);
-      Blaze.DOMRange.attach(newMember, this.parentElement, nextNode);
+      Blaze.DOMRange.attach(newMember, this.parentElement, nextNode, _isMove);
     }
   },
-  removeMember: function (atIndex) {
+  removeMember: function (atIndex, _isMove) {
     var members = this.members;
     if (! (atIndex >= 0 && atIndex < members.length))
       throw new Error("Bad index in range.removeMember: " + atIndex);
 
-    var oldMember = members[atIndex];
-    this._memberOut(oldMember);
-
-    if (members.length === 1) {
-      // becoming empty; use the logic in setMembers
-      this.setMembers(_emptyArray);
-    } else {
+    if (_isMove) {
       members.splice(atIndex, 1);
-      if (this.attached)
-        Blaze.DOMRange.detach(oldMember);
+    } else {
+      var oldMember = members[atIndex];
+      this._memberOut(oldMember);
+
+      if (members.length === 1) {
+        // becoming empty; use the logic in setMembers
+        this.setMembers(_emptyArray);
+      } else {
+        members.splice(atIndex, 1);
+        if (this.attached)
+          Blaze.DOMRange.detach(oldMember);
+      }
     }
+  },
+  moveMember: function (oldIndex, newIndex) {
+    var member = this.members[oldIndex];
+    this.removeMember(oldIndex, true /*_isMove*/);
+    this.addMember(member, newIndex, true /*_isMove*/);
   },
   getMember: function (atIndex) {
     var members = this.members;
