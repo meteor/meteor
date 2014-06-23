@@ -16,7 +16,7 @@ var TOMBSTONE = {};
 CowIdMap.prototype.remove = function (key) {
   var self = this;
 
-  self._changes.put(key, TOMBSTONE);
+  self._changes.set(key, TOMBSTONE);
 };
 
 CowIdMap.prototype.has = function (key) {
@@ -84,22 +84,29 @@ CowIdMap.prototype._diffQueryChanges = function (callback) {
     var oldValue = self._original.get(id);
 
     if (value === TOMBSTONE) {
+      // Deleted
+      if (oldValue !== undefined) {
 //      obs['removed'] && obs['removed']({ _id: id, value: oldValue });
-      callback(id, 'removed', value);
+        callback(id, 'removed', value);
+      }
     } else if (oldValue === undefined) {
-//      obs['added'] && obs['added']({ _id: id, value: value });
+      // Added
+      // obs['added'] && obs['added']({ _id: id, value: value });
       callback(id, 'added', value);
     } else {
+      // Changed
+      if (!EJSON.equals(oldValue, value)) {
 //      obs['changed'] && obs['changed']({ _id: key, value: value },
 //                                       { _id: key, value: oldValue });
-      callback(id, 'changed', value, oldValue);
+        callback(id, 'changed', value, oldValue);
+      }
     }
 
     return true;
   });
 };
 
-CowIdMap.prototype._flatten = function () {
+CowIdMap.prototype.flatten = function () {
   var self = this;
   var original = self._original;
 

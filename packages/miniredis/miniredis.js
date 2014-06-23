@@ -172,13 +172,14 @@ Miniredis.RedisStore = function () {
 //Pause the observers. No callbacks from observers will fire until
 //'resumeObservers' is called.
 Miniredis.RedisStore.prototype.pauseObservers = function () {
+  var self = this;
   //XXX pauseObservers fails silenty if nested?
   // No-op if already paused.
-  if (this.paused)
+  if (self.paused)
    return;
 
   // Set the 'paused' flag such that new observer messages don't fire.
-  this.paused = true;
+  self.paused = true;
 
   // Take a snapshot of the query results
   self._kv = new CowIdMap(self._kv);
@@ -191,12 +192,12 @@ Miniredis.RedisStore.prototype.pauseObservers = function () {
 Miniredis.RedisStore.prototype.resumeObservers = function () {
   var self = this;
   // No-op if not paused.
-  if (!this.paused)
+  if (!self.paused)
    return;
 
   // Unset the 'paused' flag. Make sure to do this first, otherwise
   // observer methods won't actually fire when we trigger them.
-  this.paused = false;
+  self.paused = false;
 
   // Diff the current results against the snapshot and send to observers.
   self._kv._diffQueryChanges(function (key, event, value, oldValue) {
@@ -206,7 +207,8 @@ Miniredis.RedisStore.prototype.resumeObservers = function () {
   // XXX Should we just always use a CowIdMap?
   self._kv = self._kv.flatten();
 
-  self._observeQueue.drain();
+  // XXX Do we need observeQueue (should we put it into a common class)
+  //self._observeQueue.drain();
 };
 
 
@@ -273,8 +275,7 @@ _.extend(Miniredis.RedisStore.prototype, {
       delete self._keyDependencies[key];
   },
 
-  // XXX Should name of 4th argument be oldValue?
-  _notifyObserves: function (key, event, value, newValue) {
+  _notifyObserves: function (key, event, value, oldValue) {
     var self = this;
 
     self._keyDep(key).changed();
@@ -295,7 +296,7 @@ _.extend(Miniredis.RedisStore.prototype, {
         return;
       if (event === "changed") {
         obs[event] && obs[event]({ _id: key, value: value },
-                                 { _id: key, value: newValue });
+                                 { _id: key, value: oldValue });
       } else if (event === "updated") {
         obs[event] && obs[event]({ _id: key, value: value});
       } else {
