@@ -25,7 +25,7 @@ Tinytest.add("miniredis - observe - simple strings", function (test) {
     added: function (doc) {
       events.push({ event: "added", key: doc._id, value: doc.value });
     },
-    changed: function (oldDoc, newDoc) {
+    changed: function (newDoc, oldDoc) {
       events.push({ event: "changed", key: newDoc._id,
                     value: newDoc.value, oldValue: oldDoc.value });
     },
