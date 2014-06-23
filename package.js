@@ -5,9 +5,6 @@ Package.describe({
 Package.on_use(function (api) {
   api.export('SpacebarsCompiler');
 
-  api.use('spacebars-common');
-  api.imply('spacebars-common');
-
   api.use('htmljs');
   api.use('html-tools');
   api.use('blaze-tools');
