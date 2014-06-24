@@ -18,9 +18,9 @@ var contentEquals = function (a, b) {
   }
 };
 
-Blaze.RemovalWatcher = Blaze.DOMAugmenter.extend({
+Blaze.TeardownWatcher = Blaze.DOMAugmenter.extend({
   attach: function (range, element) {
-    Blaze.DOMBackend.RemovalWatch.onRemoveElement(element, function () {
+    Blaze.DOMBackend.Teardown.onElementTeardown(element, function () {
       range.stop();
     });
   }
@@ -49,7 +49,7 @@ Blaze.render = function (func) {
 
   range.onstop(_onstopForRender);
 
-  range.addDOMAugmenter(new Blaze.RemovalWatcher);
+  range.addDOMAugmenter(new Blaze.TeardownWatcher);
 
   return range;
 };
