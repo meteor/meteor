@@ -1087,7 +1087,7 @@ Template.api.loginWithPassword = {
     {
       name: "password",
       type: "String",
-      descr: "The user's password. This is __not__ sent in plain text over the wire &mdash; it is secured with [SRP](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)."
+      descr: "The user's password."
     },
     {
       name: "callback",
