@@ -26,7 +26,7 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
   });
 };
 
-Blaze.With = function (data, func) {
+Blaze.With = Blaze.Controller.extend(function With(data, func) {
   if (! (this instanceof Blaze.With))
     // called without new
     return new Blaze.With(data, func);
@@ -35,8 +35,7 @@ Blaze.With = function (data, func) {
 
   this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
   this.func = func;
-};
-JSClass.inherits(Blaze.With, Blaze.Controller);
+});
 
 Blaze.With.prototype.render = function () {
   var func = this.func;

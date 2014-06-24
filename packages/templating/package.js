@@ -19,8 +19,6 @@ Package._transitional_registerBuildPlugin({
 
 // This on_use describes the *runtime* implications of using this package.
 Package.on_use(function (api) {
-  api.use('jsclass');
-
   // XXX would like to do the following only when the first html file
   // is encountered
 

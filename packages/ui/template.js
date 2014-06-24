@@ -64,10 +64,11 @@ UI._templateInstance = function () {
 };
 
 if (Meteor.isClient) {
-  UI.TemplateRenderedAugmenter = function () {
-    this.fired = false;
-  };
-  JSClass.inherits(UI.TemplateRenderedAugmenter, Blaze.DOMAugmenter);
+  UI.TemplateRenderedAugmenter = Blaze.DOMAugmenter.extend(
+    function TemplateRenderedAugmenter() {
+      this.fired = false;
+    });
+
   UI.TemplateRenderedAugmenter.prototype.attach = function (range, element) {
     if (! this.fired) {
       this.fired = true; // only fire once
@@ -84,36 +85,29 @@ if (Meteor.isClient) {
   };
 }
 
-UI.TemplateComponent = function (dataFunc, contentFunc, elseFunc) {
+UI.TemplateComponent = Blaze.Component.extend(function TemplateComponent(
+  dataFunc, contentFunc, elseFunc) {
+
   UI.TemplateComponent.__super__.constructor.call(this);
 
   if (dataFunc) {
     this.__dataFunc = dataFunc;
   }
   if (contentFunc) {
-    var ContentBlock = function () {
-      Blaze.Component.call(this);
-    };
-    JSClass.inherits(ContentBlock, Blaze.Component);
+    var ContentBlock = Blaze.Component.extend();
     ContentBlock.prototype.render = function () {
       return contentFunc();
     };
-
     this.__contentBlock = ContentBlock.prototype;
   }
   if (elseFunc) {
-    var ElseBlock = function () {
-      Blaze.Component.call(this);
-    };
-    JSClass.inherits(ElseBlock, Blaze.Component);
+    var ElseBlock = Blaze.Component.extend();
     ElseBlock.prototype.render = function () {
       return elseFunc();
     };
-
     this.__elseBlock = ElseBlock.prototype;
   }
-};
-JSClass.inherits(UI.TemplateComponent, Blaze.Component);
+});
 
 UI.TemplateComponent.prototype.render = function () {
   var self = this;
@@ -206,7 +200,7 @@ UI.TemplateComponent.prototype.finalize = function () {
   }
 };
 
-UI.InTemplateScope = function (template, contentFunc) {
+UI.InTemplateScope = Blaze.Controller.extend(function (template, contentFunc) {
   if (! (this instanceof UI.InTemplateScope))
     // called without new
     return new UI.InTemplateScope(template, contentFunc);
@@ -219,8 +213,7 @@ UI.InTemplateScope = function (template, contentFunc) {
   this.parentController = scope;
 
   this.contentFunc = contentFunc;
-};
-JSClass.inherits(UI.InTemplateScope, Blaze.Controller);
+});
 
 UI.InTemplateScope.prototype.render = function () {
   var func = this.contentFunc;

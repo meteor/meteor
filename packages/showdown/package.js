@@ -10,7 +10,6 @@ Package.on_use(function (api) {
   api.add_files("showdown.js");
   api.export('Showdown');
 
-  api.use('jsclass');
   api.use("ui", "client", {weak: true});
   api.add_files('template-integration.js', 'client');
 });

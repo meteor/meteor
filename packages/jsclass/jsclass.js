@@ -12,13 +12,7 @@ var _assign = function (tgt, src) {
   return tgt;
 };
 
-/**
- * JSClass.inherits(constructor, superConstructor)
- *
- * Causes the class given by `constructor` to have a superclass
- * given by `superConstructor`.
- */
-JSClass.inherits = function (ctor, superCtor) {
+JSClass._inherits = function (ctor, superCtor) {
   var oldProto = ctor.prototype;
   for (var k in oldProto) {
     if (Object.prototype.hasOwnProperty.call(oldProto, k))
@@ -50,9 +44,12 @@ var def = function (props) {
     _assign(this.prototype, props);
 };
 
-var extend = function (ctor) {
-  ctor = ctor || function () {};
-  JSClass.inherits(ctor, this);
+var extend = function (optionalCtor) {
+  var superCtor = this;
+  var ctor = optionalCtor || function () {
+    superCtor.apply(this, arguments);
+  };
+  JSClass._inherits(ctor, this);
   bless(ctor);
   return ctor;
 };

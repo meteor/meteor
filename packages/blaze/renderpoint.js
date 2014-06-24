@@ -113,6 +113,7 @@
 /// Controllers, and Components must be created with `new`.
 
 Blaze.RenderPoint = function () {};
+JSClass.bless(Blaze.RenderPoint);
 
 Blaze.RenderPoint.prototype.render = function () {
   return null;
@@ -133,16 +134,15 @@ Blaze.RenderPoint.prototype.createDOMRange = function () {
 };
 
 
-Blaze.Isolate = function (func) {
+Blaze.Isolate = Blaze.RenderPoint.extend(function Isolate(func) {
   if (! (this instanceof Blaze.Isolate))
     // called without new
     return new Blaze.Isolate(func);
 
-    Blaze.Isolate.__super__.constructor.call(this);
+  Blaze.Isolate.__super__.constructor.call(this);
 
-    this.func = func;
-};
-JSClass.inherits(Blaze.Isolate, Blaze.RenderPoint);
+  this.func = func;
+});
 
 Blaze.Isolate.prototype.render = function () {
   var func = this.func;
@@ -156,7 +156,7 @@ Blaze.Isolate.prototype.createDOMRange = function () {
 };
 
 
-Blaze.List = function (funcSequence) {
+Blaze.List = Blaze.RenderPoint.extend(function List(funcSequence) {
   var self = this;
 
   if (! (self instanceof Blaze.List))
@@ -169,8 +169,7 @@ Blaze.List = function (funcSequence) {
   Blaze.List.__super__.constructor.call(this);
 
   self.funcSeq = funcSequence;
-};
-JSClass.inherits(Blaze.List, Blaze.RenderPoint);
+});
 
 Blaze.List.prototype.render = function () {
   // Get and call all the functions in funcSeq, taking a dependency

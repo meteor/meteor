@@ -26,10 +26,7 @@ Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
   }
 });
 
-Blaze.ToTextController = function () {
-  Blaze.Controller.call(this);
-};
-JSClass.inherits(Blaze.ToTextController, Blaze.Controller);
+Blaze.ToTextController = Blaze.Controller.extend();
 
 Blaze._toText = function (content, textMode) {
   if (! Deps.active) {
@@ -76,10 +73,7 @@ Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
   }
 });
 
-Blaze.ToHTMLController = function () {
-  Blaze.Controller.call(this);
-};
-JSClass.inherits(Blaze.ToHTMLController, Blaze.Controller);
+Blaze.ToHTMLController = Blaze.Controller.extend();
 
 // This function is mainly for server-side rendering and is not in the normal
 // code path for client-side rendering.

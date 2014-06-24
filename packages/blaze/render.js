@@ -4,10 +4,7 @@ var _onstopForRender = function () {
   this.computation.stop();
 };
 
-Blaze.RenderController = function () {
-  Blaze.Controller.call(this);
-};
-JSClass.inherits(Blaze.RenderController, Blaze.Controller);
+Blaze.RenderController = Blaze.Controller.extend();
 
 var contentEquals = function (a, b) {
   if (a instanceof HTML.Raw) {
@@ -21,8 +18,7 @@ var contentEquals = function (a, b) {
   }
 };
 
-Blaze.RemovalWatcher = function () {};
-JSClass.inherits(Blaze.RemovalWatcher, Blaze.DOMAugmenter);
+Blaze.RemovalWatcher = Blaze.DOMAugmenter.extend();
 
 Blaze.RemovalWatcher.prototype.attach = function (range, element) {
   Blaze.DOMBackend.RemovalWatch.onRemoveElement(element, function () {
