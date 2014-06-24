@@ -161,6 +161,13 @@ var CompleteCatalog = function () {
   // Constraint solver using this catalog.
   self.resolver = null;
 
+  // Fetching patterns in base catalog rely on the catalog limiting the refresh
+  // rate, or at least, never enter a loop on refreshing. The 'official' catalog
+  // does this through futures, but for now, we can probably just get away with
+  // a boolean.
+  // XXX: use a future in the future maybe
+  self.refreshing = false;
+
   // We inherit from the protolog class, since we are a catalog.
   baseCatalog.call(self);
 };
@@ -298,6 +305,12 @@ _.extend(CompleteCatalog.prototype, {
   refresh: function () {
     var self = this;
 
+    // We need to limit the rate of refresh, or, at least, prevent any sort of loops.
+    if (self.refreshing) {
+      return;
+    }
+    self.refreshing = true;
+
     self.reset();
     var localData = packageClient.loadCachedServerData();
     self._insertServerPackages(localData);
@@ -308,6 +321,7 @@ _.extend(CompleteCatalog.prototype, {
 
     // Rebuild the resolver, since packages may have changed.
     self._initializeResolver();
+    self.refreshing = false;
   },
 
   _initializeResolver: function () {
