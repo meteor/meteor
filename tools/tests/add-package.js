@@ -168,6 +168,7 @@ selftest.define("add packages", function () {
 
   run = s.run("add", "say-something@1.0.0");
   run.match("Successfully added");
+  run.match("say-something: print to console");
 
   checkPackages(s,
                 ["standard-app-packages", "accounts-base",  "say-something@1.0.0"]);
