@@ -817,7 +817,8 @@ main.registerCommand({
       maintain = maintain + " at " + lastVersion.githubUrl;
     }
     if (record.homepage) {
-      maintain = maintain + "\n. You can find more information at " + record.homepage;
+      maintain = maintain + "\nYou can find more information at "
+          + record.homepage;
     }
     console.log(maintain);
   } else {
