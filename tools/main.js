@@ -636,6 +636,7 @@ Fiber(function () {
     });
   });
   if (messages.hasMessages()) {
+    process.stderr.write("=> Errors while scanning packages:\n\n");
     process.stderr.write(messages.formatMessages());
     process.exit(1);
   }
