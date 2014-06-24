@@ -5,7 +5,7 @@ Package.describe({
   test:"meteor-test",
   summary: "Core Meteor environment",
   internal: true,
-  version: '1.0.0'
+  version: '1.0.6'
 });
 
 Package._transitional_registerBuildPlugin({

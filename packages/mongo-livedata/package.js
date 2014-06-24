@@ -11,7 +11,7 @@ Package.describe({
   name: "mongo-livedata",
   test: "mongo-livedata-test",
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.0.0',
+  version: '1.0.1',
   internal: true
 });
 

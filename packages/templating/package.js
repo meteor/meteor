@@ -2,7 +2,7 @@ Package.describe({
   name: "templating",
   test: "templating-test",
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.0',
+  version: '1.0.6',
   internal: true
 });
 

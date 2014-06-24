@@ -2,7 +2,7 @@ Package.describe({
   name: "livedata",
   test: "livedata-test",
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.0.0',
+  version: '1.0.1',
   internal: true
 });
 

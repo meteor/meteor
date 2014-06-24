@@ -2,7 +2,7 @@ Package.describe({
   name: "coffeescript",
   test: "coffeescript-test",
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.0"
+  version: "1.0.6"
 });
 
 Package._transitional_registerBuildPlugin({

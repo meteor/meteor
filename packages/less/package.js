@@ -2,7 +2,7 @@ Package.describe({
   name:"less",
   test:"less-test",
   summary: "The dynamic stylesheet language",
-  version: "1.0.0"
+  version: "1.0.6"
 });
 
 Package._transitional_registerBuildPlugin({

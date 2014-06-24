@@ -2,7 +2,7 @@ Package.describe({
   name: "stylus",
   test: "stylus-test",
   summary: 'Expressive, dynamic, robust CSS',
-  version: "1.0.0"
+  version: "1.0.6"
 });
 
 Package._transitional_registerBuildPlugin({

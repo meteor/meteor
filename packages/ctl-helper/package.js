@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Helpers for control programs",
-  version: "1.0.0",
+  version: "1.0.1",
   internal: true
 });
 
