@@ -1352,7 +1352,6 @@ main.registerCommand({
       process.stdout.write("Added " + constraint.package + " at version " + version +
                            " to avoid conflicting dependencies. \n");
     }
-
     process.stdout.write(constraint.package +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :

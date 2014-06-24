@@ -397,6 +397,12 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // Check that the version description is under the character limit. (We check
   // all string limits on the server, but this is the one that is mostly likely
   // to be wrong)
+  if (!packageSource.metadata.summary) {
+    process.stderr.write("Please describe what your package does. \n");
+    process.stderr.write("Set a summary in Package.describe in package.js. \n");
+    return 1;
+  }
+
   if (packageSource.metadata.summary &&
       packageSource.metadata.summary.length > 100) {
     process.stderr.write("Description must be under 100 chars. \n");
