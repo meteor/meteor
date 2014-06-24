@@ -16,6 +16,10 @@ HTML.Visitor = function (props) {
   _assign(this, props);
 };
 
+HTML.Visitor.def = function (options) {
+  _assign(this.prototype, options);
+};
+
 HTML.Visitor.extend = function (options) {
   var curType = this;
   var subType = function HTMLVisitorSubtype(/*arguments*/) {
@@ -23,12 +27,13 @@ HTML.Visitor.extend = function (options) {
   };
   subType.prototype = new curType;
   subType.extend = curType.extend;
+  subType.def = curType.def;
   if (options)
     _assign(subType.prototype, options);
   return subType;
 };
 
-_assign(HTML.Visitor.prototype, {
+HTML.Visitor.def({
   visit: function (content/*, ...*/) {
     if (content == null)
       // null or undefined.
@@ -82,7 +87,8 @@ _assign(HTML.Visitor.prototype, {
   }
 });
 
-HTML.TransformingVisitor = HTML.Visitor.extend({
+HTML.TransformingVisitor = HTML.Visitor.extend();
+HTML.TransformingVisitor.def({
   visitNull: IDENTITY,
   visitPrimitive: IDENTITY,
   visitArray: function (array/*, ...*/) {
@@ -184,7 +190,8 @@ HTML.TransformingVisitor = HTML.Visitor.extend({
 });
 
 
-HTML.ToTextVisitor = HTML.Visitor.extend({
+HTML.ToTextVisitor = HTML.Visitor.extend();
+HTML.ToTextVisitor.def({
   visitNull: function (nullOrUndefined) {
     return '';
   },
@@ -239,7 +246,8 @@ HTML.ToTextVisitor = HTML.Visitor.extend({
 
 
 
-HTML.ToHTMLVisitor = HTML.Visitor.extend({
+HTML.ToHTMLVisitor = HTML.Visitor.extend();
+HTML.ToHTMLVisitor.def({
   visitNull: function (nullOrUndefined) {
     return '';
   },
