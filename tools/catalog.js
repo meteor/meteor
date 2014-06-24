@@ -275,28 +275,19 @@ _.extend(CompleteCatalog.prototype, {
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
 
-    // Override the previousSolutions with the project's dependencies
-    // value. (They probably come from the package's own lock file, but we
-    // ignore that when running in a project) Then, call the constraint solver,
-    // to get the valid transitive subset of those versions to record for our
-    // solution. (We don't just return the original version lock because we want
-    // to record the correct transitive dependencies)
-    var versions = project.getVersions();
-    resolverOpts.previousSolution = versions;
-    var solution = self.resolver.resolve(deps, constr, resolverOpts);
+    // Anything in the project's dependencies was calculated based on a previous
+    // constraint solver run, and needs to be taken as absolute truth for now:
+    // we can't use any packages that are of different versions from what we've
+    // already decided from the project!
+    _.each(project.getVersions, function (version, name) {
+      constr.push({packageName: name, version: version, type: 'exactly'});
+    });
 
-    // In case this ever comes up, just to be sure, here is some code to check
-    // that everything in the solution is in the original versions. This should
-    // never be false if we did everything right at project loading and it is
-    // computationally annoying, so unless we are actively debugging, we
-    // shouldn't use it.
-    // _.each(solution, function (version, package) {
-    //  if (versions[package] !== version) {
-    //    throw new Error ("differing versions for " + package + ":" +
-    //                     resolverOpts.previousSolution[package] + " vs "
-    //                     +  version + " ?");
-    //  }
-    // });
+    // Then, call the constraint solver, to get the valid transitive subset of
+    // those versions to record for our solution. (We don't just return the
+    // original version lock because we want to record the correct transitive
+    // dependencies)
+    var solution = self.resolver.resolve(deps, constr, resolverOpts);
 
     return solution;
   },
