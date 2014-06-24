@@ -38,6 +38,10 @@ Package.on_use(function (api) {
     'materialize.js',
     'builtins.js'
   ]);
+
+  api.add_files([
+    'view.js'
+  ]);
 });
 
 Package.on_test(function (api) {
