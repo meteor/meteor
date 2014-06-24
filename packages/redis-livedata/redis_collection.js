@@ -510,7 +510,8 @@ _.each(['set', 'get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hge
         // not force a callback.
         callback = function (err) {
           if (err)
-            Meteor._debug(name + " failed: " + (err.reason || err.stack));
+            Meteor._debug("Exec of command " + name + " failed: " +
+                          (err.reason || err.stack));
         };
       }
 
