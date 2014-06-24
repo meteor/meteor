@@ -1271,7 +1271,7 @@ JsImage.readFromDisk = function (controlFilePath) {
 
     var loadItem = {
       targetPath: item.path,
-      source: fs.readFileSync(path.join(dir, item.path)),
+      source: fs.readFileSync(path.join(dir, item.path), 'utf8'),
       nodeModulesDirectory: nmd
     };
 
