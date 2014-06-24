@@ -1,15 +1,46 @@
-////// parentView ????????
-
 Blaze.View = function (render) {
   this.render = render;
+
+  this._createdCallbacks = [];
+  this._destroyedCallbacks = [];
 };
 
-Blaze.View.prototype.created = function () {};
 Blaze.View.prototype.render = function () { return null; };
 
-Blaze._materializeView = function (view) {
+Blaze.View.prototype.isCreated = false;
+Blaze.View.prototype.onCreated = function (cb) {
+  this._createdCallbacks.push(cb);
+};
+Blaze.View.prototype.isDestroyed = false;
+Blaze.View.prototype.onDestroyed = function (cb) {
+  this._destroyedCallbacks.push(cb);
+};
+
+Blaze._destroyView = function (view) {
+  if (view.isDestroyed)
+    return;
+  view.isDestroyed = true;
+
+  var cbs = view._destroyedCallbacks;
+  for (var i = 0; i < cbs.length; i++)
+    cbs[i].call(view);
+};
+
+Blaze.View.prototype.autorun = function (f) {
+
+};
+
+Blaze._materializeView = function (view, parentView) {
+  view.parentView = (parentView || null);
+
+  if (view.isCreated)
+    throw new Error("Can't materialize the same View twice");
+  view.isCreated = true;
+
   Deps.nonreactive(function () {
-    view.created();
+    var cbs = view._createdCallbacks;
+    for (var i = 0; i < cbs.length; i++)
+      cbs[i].call(view);
   });
 
   var domrange = new Blaze.DOMRange;
@@ -17,16 +48,19 @@ Blaze._materializeView = function (view) {
   domrange.view = view;
 
   var lastHtmljs;
-  Deps.autorun(function (c) {
+  var comp = Deps.autorun(function (c) {
     var htmljs = view.render();
 
     Deps.nonreactive(function () {
-      var rangesAndNodes = (new Blaze.Materializer).visit(htmljs, []);
+      var materializer = new Blaze.Materializer({parentView: view});
+      var rangesAndNodes = materializer.visit(htmljs, []);
       if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs))
         domrange.setMembers(rangesAndNodes);
     });
     lastHtmljs = htmljs;
   });
+
+  view._destroyedCallbacks.push(function () { comp.stop(); });
 
   return domrange;
 };
@@ -46,8 +80,11 @@ Blaze._isContentEqual = function (a, b) {
   }
 };
 
-// Obeys the HTML.Visitor interface. Provides methods for
-// converting a tree of HTMLJS objects into a tree of DOM elements.
+// new Blaze.Materializer(options)
+//
+// An HTML.Visitor that turns HTMLjs into DOM nodes and DOMRanges.
+//
+// Options: `parentView`
 Blaze.Materializer = HTML.Visitor.extend();
 Blaze.Materializer.def({
   visitNull: function (x, intoArray) {
@@ -131,7 +168,7 @@ Blaze.Materializer.def({
   },
   visitObject: function (x, intoArray) {
     if (x instanceof Blaze.View) {
-      intoArray.push(Blaze._materializeView(x));
+      intoArray.push(Blaze._materializeView(x, this.parentView));
       return intoArray;
     }
 
