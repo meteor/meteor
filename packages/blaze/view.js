@@ -1,45 +1,44 @@
 Blaze.View = function (render) {
   this.render = render;
 
-  this._createdCallbacks = [];
-  this._destroyedCallbacks = [];
+  this._callbacks = { created: null, rendered: null, destroyed: null };
 };
 
 Blaze.View.prototype.render = function () { return null; };
 
 Blaze.View.prototype.isCreated = false;
 Blaze.View.prototype.onCreated = function (cb) {
-  this._createdCallbacks.push(cb);
+  this._callbacks.created = this._callbacks.created || [];
+  this._callbacks.created.push(cb);
+};
+Blaze.View.prototype.onRendered = function (cb) {
+  this._callbacks.rendered = this._callbacks.rendered || [];
+  this._callbacks.rendered.push(cb);
 };
 Blaze.View.prototype.isDestroyed = false;
 Blaze.View.prototype.onDestroyed = function (cb) {
-  this._destroyedCallbacks.push(cb);
-};
-
-Blaze._destroyView = function (view) {
-  if (view.isDestroyed)
-    return;
-  view.isDestroyed = true;
-
-  var cbs = view._destroyedCallbacks;
-  for (var i = 0; i < cbs.length; i++)
-    cbs[i].call(view);
+  this._callbacks.destroyed = this._callbacks.destroyed || [];
+  this._callbacks.destroyed.push(cb);
 };
 
 Blaze.View.prototype.autorun = function (f) {
+  var comp = Deps.nonreactive(function viewAutorunWrapper() {
+    return Deps.autorun(f);
+  });
 
+  this.onDestroyed(function () { comp.stop(); });
 };
 
-Blaze._materializeView = function (view, parentView) {
+Blaze.materializeView = function (view, parentView) {
   view.parentView = (parentView || null);
 
   if (view.isCreated)
     throw new Error("Can't materialize the same View twice");
   view.isCreated = true;
 
-  Deps.nonreactive(function () {
-    var cbs = view._createdCallbacks;
-    for (var i = 0; i < cbs.length; i++)
+  Deps.nonreactive(function callCreated() {
+    var cbs = view._callbacks.created;
+    for (var i = 0, N = (cbs && cbs.length); i < N; i++)
       cbs[i].call(view);
   });
 
@@ -47,22 +46,61 @@ Blaze._materializeView = function (view, parentView) {
   view.domrange = domrange;
   domrange.view = view;
 
+  var needsRenderedCallback = false;
+  var scheduleRenderedCallback = function () {
+    if (needsRenderedCallback && ! view.isDestroyed &&
+        view._callbacks.rendered && view._callbacks.rendered.length) {
+      Deps.afterFlush(function callRendered() {
+        if (needsRenderedCallback && ! view.isDestroyed) {
+          needsRenderedCallback = false;
+          var cbs = view._callbacks.rendered;
+          for (var i = 0, N = (cbs && cbs.length); i < N; i++)
+            cbs[i].call(view);
+        }
+      });
+    }
+  };
+
   var lastHtmljs;
-  var comp = Deps.autorun(function (c) {
+  view.autorun(function doRender(c) {
     var htmljs = view.render();
 
-    Deps.nonreactive(function () {
+    Deps.nonreactive(function doMaterialize() {
       var materializer = new Blaze.Materializer({parentView: view});
       var rangesAndNodes = materializer.visit(htmljs, []);
       if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs))
         domrange.setMembers(rangesAndNodes);
+      needsRenderedCallback = true;
+      if (! c.firstRun)
+        scheduleRenderedCallback();
     });
     lastHtmljs = htmljs;
   });
 
-  view._destroyedCallbacks.push(function () { comp.stop(); });
+  domrange.onAttached(function attached(range, element) {
+    Blaze.DOMBackend.Teardown.onElementTeardown(element, function teardown() {
+      Blaze.destroyView(view);
+    });
+
+    scheduleRenderedCallback();
+  });
 
   return domrange;
+};
+
+Blaze.destroyView = function (view) {
+  if (view.isDestroyed)
+    return;
+  view.isDestroyed = true;
+
+  var cbs = view._callbacks.destroyed;
+  for (var i = 0, N = (cbs && cbs.length); i < N; i++)
+    cbs[i].call(view);
+};
+
+Blaze.destroyNode = function (node) {
+  if (node.nodeType === 1)
+    Blaze.DOMBackend.Teardown.tearDownElement(node);
 };
 
 // Are the HTMLjs entities `a` and `b` the same?  We could be
@@ -168,7 +206,7 @@ Blaze.Materializer.def({
   },
   visitObject: function (x, intoArray) {
     if (x instanceof Blaze.View) {
-      intoArray.push(Blaze._materializeView(x, this.parentView));
+      intoArray.push(Blaze.materializeView(x, this.parentView));
       return intoArray;
     }
 

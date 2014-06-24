@@ -289,10 +289,12 @@ DOMRange.prototype._memberIn = function (m) {
 DOMRange.prototype._memberOut = function (m) {
   if (m instanceof DOMRange) {
     m.stop();
+    if (m.view)
+      Blaze.destroyView(m.view);
     m.parentRange = null;
   } else if (m.nodeType === 1) {
     // DOM Element
-    Blaze.DOMBackend.RemovalWatch.tearDownElement(m);
+    Blaze.destroyNode(m);
     m.$blaze_range = null;
   }
 };
@@ -350,6 +352,11 @@ DOMRange.prototype.addDOMAugmenter = function (augmenter) {
   if (this.augmenters === _emptyArray)
     this.augmenters = [];
   this.augmenters.push(augmenter);
+};
+
+DOMRange.prototype.onAttached = function (attached) {
+  this.addDOMAugmenter({ attach: attached,
+                         detach: function () {} });
 };
 
 DOMRange.prototype.$ = function (selector) {
