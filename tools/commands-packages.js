@@ -641,7 +641,7 @@ main.registerCommand({
                     // rather err on the side of catching this issue and forcing
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
-                                       + ". Please upgrade version number. \n");
+                                       + ". Please upgrade version number.");
                     process.stderr.write("NOT OK\n");
                   } else {
                     process.stdout.write("ok\n");
