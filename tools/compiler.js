@@ -82,7 +82,13 @@ compiler.eachUsedUnibuild = function (
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var unibuild = packageLoader.getUnibuild(use["package"], arch);
+    var unibuild = packageLoader.getUnibuild(use.package, arch);
+    if (!unibuild) {
+      // The package exists but there's no unibuild for us. A buildmessage has
+      // already been issued. Recover by skipping.
+      continue;
+    }
+
 
     if (_.has(processedBuildId, unibuild.id))
       continue;
