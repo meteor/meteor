@@ -1,5 +1,6 @@
 // A copy-on-write IdMap
-// Avoids
+// Avoids deep-copying all the objects in a collection; we instead keep
+// a separate map just of the objects we've changed.
 CowIdMap = function (original) {
   var self = this;
 
@@ -86,18 +87,14 @@ CowIdMap.prototype._diffQueryChanges = function (callback) {
     if (value === TOMBSTONE) {
       // Deleted
       if (oldValue !== undefined) {
-//      obs['removed'] && obs['removed']({ _id: id, value: oldValue });
         callback(id, 'removed', value);
       }
     } else if (oldValue === undefined) {
       // Added
-      // obs['added'] && obs['added']({ _id: id, value: value });
       callback(id, 'added', value);
     } else {
       // Changed
       if (!EJSON.equals(oldValue, value)) {
-//      obs['changed'] && obs['changed']({ _id: key, value: value },
-//                                       { _id: key, value: oldValue });
         callback(id, 'changed', value, oldValue);
       }
     }
