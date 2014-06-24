@@ -171,7 +171,6 @@ Blaze.ToDOMVisitor.def({
     return intoArray;
   },
   visitTag: function (tag, intoArray) {
-    debugger;
     var tagName = tag.tagName;
     var elem;
     if (HTML.isKnownSVGElement(tagName) && document.createElementNS) {
