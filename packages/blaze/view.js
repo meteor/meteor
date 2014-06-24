@@ -66,7 +66,7 @@ Blaze.materializeView = function (view, parentView) {
     var htmljs = view.render();
 
     Deps.nonreactive(function doMaterialize() {
-      var materializer = new Blaze.Materializer({parentView: view});
+      var materializer = new Blaze.DOMMaterializer({parentView: view});
       var rangesAndNodes = materializer.visit(htmljs, []);
       if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs))
         domrange.setMembers(rangesAndNodes);
@@ -79,7 +79,7 @@ Blaze.materializeView = function (view, parentView) {
 
   domrange.onAttached(function attached(range, element) {
     Blaze.DOMBackend.Teardown.onElementTeardown(element, function teardown() {
-      Blaze.destroyView(view);
+      Blaze.destroyView(view, true /* _viaTeardown */);
     });
 
     scheduleRenderedCallback();
@@ -88,10 +88,26 @@ Blaze.materializeView = function (view, parentView) {
   return domrange;
 };
 
-Blaze.destroyView = function (view) {
+Blaze.destroyView = function (view, _viaTeardown) {
   if (view.isDestroyed)
     return;
   view.isDestroyed = true;
+
+  // Destroy views and elements recursively.  If _viaTeardown,
+  // only recurse up to views, not elements, because we assume
+  // the backend (jQuery) is recursing over the elements already.
+  if (view.domrange) {
+    var members = view.domrange.members;
+    for (var i = 0; i < members.length; i++) {
+      var m = members[i];
+      if (m instanceof Blaze.DOMRange) {
+        if (m.view)
+          Blaze.destroyView(m.view, _viaTeardown);
+      } else if (! _viaTeardown && m.nodeType === 1) {
+        Blaze.destroyNode(m);
+      }
+    }
+  }
 
   var cbs = view._callbacks.destroyed;
   for (var i = 0, N = (cbs && cbs.length); i < N; i++)
@@ -118,13 +134,13 @@ Blaze._isContentEqual = function (a, b) {
   }
 };
 
-// new Blaze.Materializer(options)
+// new Blaze.DOMMaterializer(options)
 //
 // An HTML.Visitor that turns HTMLjs into DOM nodes and DOMRanges.
 //
 // Options: `parentView`
-Blaze.Materializer = HTML.Visitor.extend();
-Blaze.Materializer.def({
+Blaze.DOMMaterializer = HTML.Visitor.extend();
+Blaze.DOMMaterializer.def({
   visitNull: function (x, intoArray) {
     return intoArray;
   },
