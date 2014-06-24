@@ -242,72 +242,92 @@ var collectionOptions = { };
 //  }
 //]);
 
+ObserveTester = function (collection, keyPrefix) {
+  var self = this;
 
-Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, onComplete) {
-  var run = test.runId();
-
-  var keyPrefix = Random.id() + ':';
-  var coll = new Meteor.RedisCollection("redis", collectionOptions);
+  self._keyPrefix = keyPrefix;
+  self._log = '';
 
   if (Meteor.isClient) {
     Meteor.call("createInsecureRedisCollection", "redis");
   }
 
-  var _withoutPrefix = function (key) {
-    if (key.indexOf(keyPrefix) != 0) {
-      throw new Error("Expected key to start with prefix, was: " + key);
-    }
-    return key.substr(keyPrefix.length);
-  };
+  self._collection = collection;
 
-  var log = '';
-  var obs = coll.matching(keyPrefix + '*').observeChanges({
+  var obs = collection.matching(keyPrefix + '*').observeChanges({
     added: function (key, value) {
-      var withoutPrefix = _withoutPrefix(key);
-      log += 'a(' + withoutPrefix + ')';
+      var withoutPrefix = self._withoutPrefix(key);
+      self._log += 'a(' + withoutPrefix + ')';
     },
     updated: function (key, value) {
-      var withoutPrefix = _withoutPrefix(key);
-      log += 'u(' + withoutPrefix + ')';
+      var withoutPrefix = self._withoutPrefix(key);
+      self._log += 'u(' + withoutPrefix + ')';
     },
     removed: function (key, value) {
-      var withoutPrefix = _withoutPrefix(key);
-      log += 'r(' + withoutPrefix + ')';
+      var withoutPrefix = self._withoutPrefix(key);
+      self._log += 'r(' + withoutPrefix + ')';
     }
   });
 
-  var captureObserve = function (f) {
-    if (Meteor.isClient) {
-      f();
-    } else {
-      var fence = new DDPServer._WriteFence;
-      DDPServer._CurrentWriteFence.withValue(fence, f);
-      fence.armAndWait();
-    }
+  self._obs = obs;
+};
 
-    var ret = log;
-    log = '';
-    return ret;
-  };
+ObserveTester.prototype.stop = function () {
+  var self = this;
+  self._obs.stop();
+};
 
-  var expectObserve = function (expected, f) {
-    if (!(expected instanceof Array))
-      expected = [expected];
+ObserveTester.prototype._withoutPrefix = function (key) {
+  var self = this;
 
-    test.include(expected, captureObserve(f));
-  };
+  if (key.indexOf(self._keyPrefix) != 0) {
+    throw new Error("Expected key to start with prefix, was: " + key);
+  }
+  return key.substr(self._keyPrefix.length);
+};
+
+ObserveTester.prototype.captureObserve = function (f) {
+  var self = this;
+
+  if (Meteor.isClient) {
+    f();
+  } else {
+    var fence = new DDPServer._WriteFence;
+    DDPServer._CurrentWriteFence.withValue(fence, f);
+    fence.armAndWait();
+  }
+
+  var ret = self._log;
+  self._log = '';
+  return ret;
+};
+
+ObserveTester.prototype.expectObserve = function (test, expected, f) {
+  var self = this;
+
+  if (!(expected instanceof Array))
+    expected = [expected];
+
+  test.include(expected, self.captureObserve(f));
+};
+
+Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, onComplete) {
+  var keyPrefix = Random.id() + ':';
+  var coll = new Meteor.RedisCollection("redis", collectionOptions);
+
+  var obs = new ObserveTester(coll, keyPrefix);
 
   test.equal(coll.matching(keyPrefix + '*').count(), 0);
   test.equal(coll.get(keyPrefix + "abc"), undefined);
 
-  expectObserve('a(1)', function () {
+  obs.expectObserve(test, 'a(1)', function () {
     var id = '1';
     coll.set(keyPrefix + id, '1');
     test.equal(coll.matching(keyPrefix + '*').count(), 1);
     test.equal(coll.get(keyPrefix + id), '1');
   });
 
-  expectObserve('a(4)', function () {
+  obs.expectObserve(test, 'a(4)', function () {
     var id2 = '4';
     coll.set(keyPrefix + id2, '4');
 //     XXX Put back
@@ -385,7 +405,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
 ////               [13, 6]);
 ////  });
 //
-  expectObserve('r(1)', function () {
+  obs.expectObserve(test, 'r(1)', function () {
 //    var count = coll.remove({run: run, x: {$gt: 10}});
 //    test.equal(count, 1);
 //    test.equal(coll.find({run: run}).count(), 1);
@@ -396,7 +416,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.equal(coll.get(keyPrefix + '1'), undefined);
   });
 
-  expectObserve('r(4)', function () {
+  obs.expectObserve(test, 'r(4)', function () {
 //    coll.remove({run: run});
 //    test.equal(coll.find({run: run}).count(), 0);
 
@@ -404,7 +424,7 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
     test.equal(coll.matching(keyPrefix + '*').count(), 0);
   });
 
-  expectObserve('', function () {
+  obs.expectObserve(test, '', function () {
 //    var count = coll.remove({run: run});
 //    test.equal(count, 0);
 //    test.equal(coll.find({run: run}).count(), 0);
