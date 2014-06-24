@@ -287,13 +287,14 @@ DOMRange.prototype._memberIn = function (m) {
 };
 
 DOMRange.prototype._memberOut = function (m) {
-  // old members are almost always GCed immediately.
-  // to avoid the potentialy performance hit of deleting
-  // a property, we simple null it out.
-  if (m instanceof DOMRange)
+  if (m instanceof DOMRange) {
+    m.stop();
     m.parentRange = null;
-  else if (m.nodeType === 1) // DOM Element
+  } else if (m.nodeType === 1) {
+    // DOM Element
+    Blaze.DOMBackend.RemovalWatch.tearDownElement(m);
     m.$blaze_range = null;
+  }
 };
 
 DOMRange.prototype.containsElement = function (elem) {

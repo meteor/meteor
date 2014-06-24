@@ -99,6 +99,13 @@ DOMBackend.RemovalWatch = {
     }
 
     elem[propName].push(func);
+  },
+  // Recursively call all teardown hooks, in the backend and registered
+  // through DOMBackend.
+  tearDownElement: function (elem) {
+    var elems = Array.prototype.slice.call(elem.getElementsByTagName('*'));
+    elems.push(elem);
+    $jq.cleanData(elems);
   }
 };
 
