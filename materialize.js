@@ -14,7 +14,8 @@ Blaze._inDummyComputation = function (f) {
 
 ////////////////////////////// Blaze._toText
 
-Blaze.ToTextVisitor = HTML.ToTextVisitor.extend({
+Blaze.ToTextVisitor = HTML.ToTextVisitor.extend();
+Blaze.ToTextVisitor.def({
   visitObject: function (x) {
     if (x instanceof Blaze.RenderPoint)
       return x.toText(HTML.TEXTMODE.STRING);
@@ -61,7 +62,8 @@ Blaze.toText = function (func, textMode) {
 
 ////////////////////////////// Blaze._toHTML
 
-Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend({
+Blaze.ToHTMLVisitor = HTML.ToHTMLVisitor.extend();
+Blaze.ToHTMLVisitor.def({
   visitObject: function (x) {
     if (x instanceof Blaze.RenderPoint)
       return x.toHTML();
@@ -100,7 +102,8 @@ Blaze.toHTML = function (func) {
 
 ////////////////////////////// Blaze._evaluate
 
-Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend({
+Blaze.EvaluatingVisitor = HTML.TransformingVisitor.extend();
+Blaze.EvaluatingVisitor.def({
   visitObject: function (x) {
     if (x instanceof Blaze.RenderPoint)
       return x.evaluate();
@@ -136,7 +139,8 @@ Blaze._evaluateAttributes = function (attrs) {
 
 // Obeys the HTML.Visitor interface. Provides methods for
 // converting a tree of HTMLJS objects into a tree of DOM elements.
-Blaze.ToDOMVisitor = HTML.Visitor.extend({
+Blaze.ToDOMVisitor = HTML.Visitor.extend();
+Blaze.ToDOMVisitor.def({
   visitNull: function (x, intoArray) {
     return intoArray;
   },
@@ -167,6 +171,7 @@ Blaze.ToDOMVisitor = HTML.Visitor.extend({
     return intoArray;
   },
   visitTag: function (tag, intoArray) {
+    debugger;
     var tagName = tag.tagName;
     var elem;
     if (HTML.isKnownSVGElement(tagName) && document.createElementNS) {
