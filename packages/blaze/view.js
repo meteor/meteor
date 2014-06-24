@@ -1,21 +1,39 @@
+// TODO
+//
+// - DOMRange
+//   - kill DOMAugmenter
+//   - consider moving to _callbacks (including memberOut)
+// - attributes
+// - materializers.js
+// - write EACH
+
 Blaze.View = function (render) {
   this.render = render;
 
-  this._callbacks = { created: null, rendered: null, destroyed: null };
+  this._callbacks = {
+    created: null,
+    materialized: null,
+    rendered: null,
+    destroyed: null };
 };
 
 Blaze.View.prototype.render = function () { return null; };
 
 Blaze.View.prototype.isCreated = false;
+Blaze.View.prototype.isDestroyed = false;
+
 Blaze.View.prototype.onCreated = function (cb) {
   this._callbacks.created = this._callbacks.created || [];
   this._callbacks.created.push(cb);
+};
+Blaze.View.prototype.onMaterialized = function (cb) {
+  this._callbacks.materialized = this._callbacks.materialized || [];
+  this._callbacks.materialized.push(cb);
 };
 Blaze.View.prototype.onRendered = function (cb) {
   this._callbacks.rendered = this._callbacks.rendered || [];
   this._callbacks.rendered.push(cb);
 };
-Blaze.View.prototype.isDestroyed = false;
 Blaze.View.prototype.onDestroyed = function (cb) {
   this._callbacks.destroyed = this._callbacks.destroyed || [];
   this._callbacks.destroyed.push(cb);
@@ -29,6 +47,14 @@ Blaze.View.prototype.autorun = function (f) {
   this.onDestroyed(function () { comp.stop(); });
 };
 
+Blaze._fireCallbacks = function (view, which) {
+  Deps.nonreactive(function fireCallbacks() {
+    var cbs = view._callbacks[which];
+    for (var i = 0, N = (cbs && cbs.length); i < N; i++)
+      cbs[i].call(view);
+  });
+};
+
 Blaze.materializeView = function (view, parentView) {
   view.parentView = (parentView || null);
 
@@ -36,11 +62,7 @@ Blaze.materializeView = function (view, parentView) {
     throw new Error("Can't materialize the same View twice");
   view.isCreated = true;
 
-  Deps.nonreactive(function callCreated() {
-    var cbs = view._callbacks.created;
-    for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-      cbs[i].call(view);
-  });
+  Blaze._fireCallbacks(view, 'created');
 
   var domrange = new Blaze.DOMRange;
   view.domrange = domrange;
@@ -53,9 +75,7 @@ Blaze.materializeView = function (view, parentView) {
       Deps.afterFlush(function callRendered() {
         if (needsRenderedCallback && ! view.isDestroyed) {
           needsRenderedCallback = false;
-          var cbs = view._callbacks.rendered;
-          for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-            cbs[i].call(view);
+          Blaze._fireCallbacks(view, 'rendered');
         }
       });
     }
@@ -68,11 +88,13 @@ Blaze.materializeView = function (view, parentView) {
     Deps.nonreactive(function doMaterialize() {
       var materializer = new Blaze.DOMMaterializer({parentView: view});
       var rangesAndNodes = materializer.visit(htmljs, []);
-      if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs))
+      if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
         domrange.setMembers(rangesAndNodes);
-      needsRenderedCallback = true;
-      if (! c.firstRun)
-        scheduleRenderedCallback();
+        Blaze._fireCallbacks(view, 'materialized');
+        needsRenderedCallback = true;
+        if (! c.firstRun)
+          scheduleRenderedCallback();
+      }
     });
     lastHtmljs = htmljs;
   });
@@ -109,9 +131,7 @@ Blaze.destroyView = function (view, _viaTeardown) {
     }
   }
 
-  var cbs = view._callbacks.destroyed;
-  for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-    cbs[i].call(view);
+  Blaze._fireCallbacks(view, 'destroyed');
 };
 
 Blaze.destroyNode = function (node) {
@@ -230,3 +250,7 @@ Blaze.DOMMaterializer.def({
     return HTML.Visitor.prototype.visitObject.call(this, x);
   }
 });
+
+Blaze._eachView = function (argFunc, contentFunc, elseContentFunc) {
+  // XXX
+};
