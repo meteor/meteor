@@ -2052,39 +2052,35 @@ if (Meteor.isServer) {
 //  });
 //});
 //
-//if (Meteor.isClient) {
-//  Tinytest.addAsync("redis-livedata - async update/remove return values over network " + idGeneration, function (test, onComplete) {
-//    var coll;
-//    var run = test.runId();
-//    var collName = "livedata_upsert_collection_"+run;
-//    Meteor.call("createInsecureCollection", collName, collectionOptions);
-//    coll = new Meteor.RedisCollection(collName, collectionOptions);
-//    Meteor.subscribe("c-" + collName, function () {
-//      coll.insert({ _id: "foo" });
-//      coll.insert({ _id: "bar" });
-//      coll.update({ _id: "foo" }, { $set: { foo: 1 } }, { multi: true }, function (err, result) {
-//        test.isFalse(err);
-//        test.equal(result, 1);
-//        coll.update({ _id: "foo" }, { _id: "foo", foo: 2 }, function (err, result) {
-//          test.isFalse(err);
-//          test.equal(result, 1);
-//          coll.update({ _id: "baz" }, { $set: { foo: 1 } }, function (err, result) {
-//            test.isFalse(err);
-//            test.equal(result, 0);
-//            coll.remove({ _id: "foo" }, function (err, result) {
-//              test.equal(result, 1);
-//              coll.remove({ _id: "baz" }, function (err, result) {
-//                test.equal(result, 0);
-//                onComplete();
-//              });
-//            });
-//          });
-//        });
-//      });
-//    });
-//  });
-//}
-//
+if (Meteor.isClient) {
+  Tinytest.addAsync("redis-livedata - async set/del return values over network " + idGeneration, function (test, onComplete) {
+    var coll;
+    var run = test.runId();
+    var collName = "redis";
+    var subName = "c" + run;
+    coll = new Meteor.RedisCollection(collName, collectionOptions);
+    Meteor.subscribe("c-" + collName, function () {
+      coll.set("foo", "f");
+      coll.set("bar", "b");
+      coll.set("foo", "foo", function (err, result) {
+        test.isFalse(err);
+        test.equal(result, "OK");
+        coll.set("foo", "Foo", function (err, result) {
+          test.isFalse(err);
+          test.equal(result, "OK");
+          coll.del("foo", function (err, result) {
+            test.equal(result, 1); // deleted one key
+            coll.del("baz", function (err, result) {
+              test.equal(result, 0);
+              onComplete();
+            });
+          });
+        });
+      });
+    });
+  });
+}
+
 //// Runs a method and its stub which do some upserts. The method throws an error
 //// if we don't get the right return values.
 //if (Meteor.isClient) {
