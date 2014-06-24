@@ -82,26 +82,26 @@ DOMBackend.Events = {
 
 var NOOP = function () {};
 
-DOMBackend.RemovalWatch = {
-  _JQUERY_EVENT_NAME: 'blaze_removal_watcher',
-  _CB_PROP: '$blaze_removal_callbacks',
+DOMBackend.Teardown = {
+  _JQUERY_EVENT_NAME: 'blaze_teardown_watcher',
+  _CB_PROP: '$blaze_teardown_callbacks',
   // Registers a callback function to be called when the given element or
   // one of its ancestors is removed from the DOM via the backend library.
   // The callback function is called at most once, and it receives the element
   // in question as an argument.
-  onRemoveElement: function (elem, func) {
-    var propName = DOMBackend.RemovalWatch._CB_PROP;
+  onElementTeardown: function (elem, func) {
+    var propName = DOMBackend.Teardown._CB_PROP;
     if (! elem[propName]) {
       elem[propName] = [];
 
       // Set up the event, only the first time.
-      $jq(elem).on(DOMBackend.RemovalWatch._JQUERY_EVENT_NAME, NOOP);
+      $jq(elem).on(DOMBackend.Teardown._JQUERY_EVENT_NAME, NOOP);
     }
 
     elem[propName].push(func);
   },
   // Recursively call all teardown hooks, in the backend and registered
-  // through DOMBackend.
+  // through DOMBackend.onElementTeardown.
   tearDownElement: function (elem) {
     var elems = Array.prototype.slice.call(elem.getElementsByTagName('*'));
     elems.push(elem);
@@ -109,14 +109,14 @@ DOMBackend.RemovalWatch = {
   }
 };
 
-$jq.event.special[DOMBackend.RemovalWatch._JQUERY_EVENT_NAME] = {
+$jq.event.special[DOMBackend.Teardown._JQUERY_EVENT_NAME] = {
   teardown: function() {
     var elem = this;
-    var callbacks = elem[DOMBackend.RemovalWatch._CB_PROP];
+    var callbacks = elem[DOMBackend.Teardown._CB_PROP];
     if (callbacks) {
       for (var i = 0; i < callbacks.length; i++)
         callbacks[i](elem);
-      elem[DOMBackend.RemovalWatch._CB_PROP] = null;
+      elem[DOMBackend.Teardown._CB_PROP] = null;
     }
   }
 };

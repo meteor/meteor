@@ -20,7 +20,7 @@ var StoppingIsolate = Blaze.Isolate.extend({
   createDOMRange: function () {
     var v = this._varToStop;
     var range = Blaze.Isolate.prototype.createDOMRange.call(this);
-    range.addDOMAugmenter(new Blaze.RemovalWatcher);
+    range.addDOMAugmenter(new Blaze.TeardownWatcher);
     range.onstop(function () {
       v.stop();
     });
@@ -70,7 +70,7 @@ Blaze.With = Blaze.Controller.extend({
     var self = this;
     var range = Blaze.With.__super__.createDOMRange.call(self);
     if (this._madeDataVar) {
-      range.addDOMAugmenter(new Blaze.RemovalWatcher);
+      range.addDOMAugmenter(new Blaze.TeardownWatcher);
       range.onstop(function () {
         self.dataVar.stop();
       });
