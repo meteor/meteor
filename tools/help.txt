@@ -477,12 +477,11 @@ Options:
   --unrecommend         unrecommend a previously recommended release
 
 
->>> admin change-package-url
+>>> admin change-homepage
 Change the repository url of a package.
-Usage: meteor admin change-package-url <package name> <new url>
+Usage: meteor admin change-homepage <package name> <new url>
 
-Change the url of the source code repository of a previously published
-package.
+Change the homepage containing package information.
 
 
 >>> admin set-breaking

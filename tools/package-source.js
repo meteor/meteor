@@ -205,8 +205,8 @@ var PackageSource = function () {
   // it's still nice to get it right).
   self.serveRoot = null;
 
-  // Package metadata. Keys are 'summary' and 'internal'. Currently
-  // both of these are optional.
+  // Package metadata. Keys are 'summary' and 'internal' and
+  // 'githubUrl'. Currently all of these are optional.
   self.metadata = {};
 
   // Package version as a semver string. Optional; not all packages
@@ -437,7 +437,8 @@ _.extend(PackageSource.prototype, {
       // ever used it.
       describe: function (options) {
         _.each(options, function (value, key) {
-          if (key === "summary" || key === "internal") {
+          if (key === "summary" || key === "internal" ||
+              key === "githubUrl") {
             self.metadata[key] = value;
           } else if (key === "version") {
             // XXX validate that version parses -- and that it doesn't

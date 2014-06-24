@@ -745,7 +745,7 @@ main.registerCommand({
   if (options.details) {
     var full = options.args[0].split('@');
     var name = full[0];
-    var allRecord =getReleaseOrPackageRecord(name);
+    var allRecord = getReleaseOrPackageRecord(name);
     var record = allRecord.record;
     if (!record) {
       console.log("Unknown package or release: ", name);
@@ -813,8 +813,11 @@ main.registerCommand({
                   + lastVersion.description || unknown);
     }
     var maintain = "Maintained by " + _.pluck(record.maintainers, 'username');
-    if (record.repositoryUrl) {
-      maintain = maintain + " at " + record.repositoryUrl;
+    if (lastVersion.githubUrl) {
+      maintain = maintain + " at " + lastVersion.githubUrl;
+    }
+    if (record.homepage) {
+      maintain = maintain + "\n. You can find more information at " + record.homepage;
     }
     console.log(maintain);
   } else {
@@ -1602,7 +1605,7 @@ main.registerCommand({
 
 
 main.registerCommand({
-  name: 'admin change-package-url',
+  name: 'admin change-homepage',
   minArgs: 2,
   maxArgs: 2
 }, function (options) {
@@ -1630,9 +1633,9 @@ main.registerCommand({
 
   try {
       process.stdout.write(
-        "Changing package repository URL on  "
+        "Changing homepage on  "
           + name + " to " + url + "...");
-      conn.call('_changePackageUrl', name, url);
+      conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done! \n");
   } catch (err) {
     process.stdout.write("\n" + err + "\n");

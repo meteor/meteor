@@ -394,7 +394,9 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     return 1;
   }
 
-  // Check that the version description is under the character limit.
+  // Check that the version description is under the character limit. (We check
+  // all string limits on the server, but this is the one that is mostly likely
+  // to be wrong)
   if (packageSource.metadata.summary &&
       packageSource.metadata.summary.length > 100) {
     process.stderr.write("Description must be under 100 chars. \n");
@@ -519,6 +521,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       packageName: packageSource.name,
       version: version,
       description: packageSource.metadata.summary,
+      githubUrl: packageSource.metadata.githubUrl,
       earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
       compilerVersion: compiler.BUILT_BY,
       containsPlugins: packageSource.containsPlugins(),
