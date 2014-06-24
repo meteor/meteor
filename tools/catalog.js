@@ -262,7 +262,7 @@ _.extend(CompleteCatalog.prototype, {
       }
       delete constraint.weak;
       if (constraint.version) {
-        _.extend(constr, constraint);
+        constr.push(constraint);
       }
     });
 
