@@ -622,7 +622,7 @@ Meteor.RedisCollection.prototype._createCappedCollection = function (byteSize) {
 (function () {
   var addValidator = function(allowOrDeny, options) {
     // validate keys
-    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
+    var VALID_KEYS = ['exec'];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key))
         throw new Error(allowOrDeny + ": Invalid key: " + key);
@@ -631,35 +631,14 @@ Meteor.RedisCollection.prototype._createCappedCollection = function (byteSize) {
     var self = this;
     self._restricted = true;
 
-    _.each(['insert', 'update', 'remove'], function (name) {
+    _.each(['exec'], function (name) {
       if (options[name]) {
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }
-
-        // If the transform is specified at all (including as 'null') in this
-        // call, then take that; otherwise, take the transform from the
-        // collection.
-        if (options.transform === undefined) {
-          options[name].transform = self._transform;  // already wrapped
-        } else {
-          options[name].transform = LocalCollection.wrapTransform(
-            options.transform);
-        }
-
         self._validators[name][allowOrDeny].push(options[name]);
       }
     });
-
-    // Only update the fetch fields if we're passed things that affect
-    // fetching. This way allow({}) and allow({insert: f}) don't result in
-    // setting fetchAllFields
-    if (options.update || options.remove || options.fetch) {
-      if (options.fetch && !(options.fetch instanceof Array)) {
-        throw new Error(allowOrDeny + ": Value for `fetch` must be an array");
-      }
-      self._updateFetch(options.fetch);
-    }
   };
 
   Meteor.RedisCollection.prototype.allow = function(options) {
@@ -759,13 +738,13 @@ Meteor.RedisCollection.prototype._validatedExec =
 
   // call user validators.
   // Any deny returns true means denied.
-  if (_.any(self._validators.update.deny, function(validator) {
+  if (_.any(self._validators.exec.deny, function(validator) {
     return validator(userId, method, args);
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.update.allow, function(validator) {
+  if (_.all(self._validators.exec.allow, function(validator) {
     return !validator(userId, method, args);
   })) {
     throw new Meteor.Error(403, "Access denied");
