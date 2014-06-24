@@ -250,32 +250,38 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'publish-for-arch',
-  minArgs: 0,
-  maxArgs: 0,
-  options: {
-    versionString: { type: String, required: true },
-    name: { type: String, required: true }
-  }
+  minArgs: 1,
+  maxArgs: 1
 }, function (options) {
+
+  // argument processing
+  var all = options.args[0].split('@');
+  if (all.length !== 2) {
+    process.stderr.write(
+      'Incorrect argument. Please use the form of <packageName>@<version> \n');
+    return 1;
+  }
+  var name = all[0];
+  var versionString = all[1];
 
   // Refresh the catalog, cacheing the remote package data on the server.
   catalog.official.refresh(true);
 
-  if (! catalog.complete.getPackage(options.name)) {
-    process.stderr.write('No package named ' + options.name);
+  if (! catalog.complete.getPackage(name)) {
+    process.stderr.write('No package named ' + name);
     return 1;
   }
-  var pkgVersion = catalog.official.getVersion(options.name, options.versionString);
+  var pkgVersion = catalog.official.getVersion(name, versionString);
   if (! pkgVersion) {
     process.stderr.write('There is no version ' +
-                         options.versionString + ' for package ' +
-                         options.name);
+                         versionString + ' for package ' +
+                         name);
     return 1;
   }
 
   if (! pkgVersion.source || ! pkgVersion.source.url) {
     process.stderr.write('There is no source uploaded for ' +
-                         options.name + ' ' + options.versionString);
+                         name + ' ' + versionString);
     return 1;
   }
 
@@ -283,14 +289,14 @@ main.registerCommand({
     url: pkgVersion.source.url,
     encoding: null
   });
-  var sourcePath = files.mkdtemp(options.name + '-' +
-                                 options.versionString + '-source-');
+  var sourcePath = files.mkdtemp(name + '-' +
+                                 versionString + '-source-');
   // XXX check tarballHash!
   files.extractTarGz(sourceTarball, sourcePath);
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
-  var packageDir = path.join(sourcePath, options.name);
+  var packageDir = path.join(sourcePath, name);
 
   if (! fs.existsSync(packageDir)) {
     process.stderr.write('Malformed source tarball');
@@ -303,7 +309,7 @@ main.registerCommand({
   // immutable. It should be built exactly as is. If we need to modify anything,
   // such as the version lock file, something has gone terribly wrong and we
   // should throw.
-  packageSource.initFromPackageDir(options.name, packageDir,  {
+  packageSource.initFromPackageDir(name, packageDir,  {
         requireVersion: true,
         immutable: true
   });
