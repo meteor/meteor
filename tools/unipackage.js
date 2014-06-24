@@ -301,9 +301,19 @@ _.extend(Unipackage.prototype, {
   // An sorted array of all the architectures included in this package.
   architectures: function () {
     var self = this;
-    return _.uniq(
+    var arches = _.uniq(
       _.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())
     ).sort();
+    // Ensure that our buildArchitectures string does not look like
+    //    browser+os+os.osx.x86_64
+    // This would happen if there is an 'os' unibuild but a platform-specific
+    // tool (eg, in meteor-tool).  This would confuse catalog.getBuildsForArches
+    // into thinking that it would work for Linux, since the 'os' means
+    // 'works on any Node server'.
+    if (_.any(arches, function (a) { return a.match(/^os\./); })) {
+      arches = _.without(arches, 'os');
+    }
+    return arches;
   },
 
   // A sorted plus-separated string of all the architectures included in this
