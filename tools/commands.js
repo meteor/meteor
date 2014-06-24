@@ -26,6 +26,10 @@ var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
 
+// The architecture used by Galaxy servers; it's the architecture used
+// by 'meteor deploy'.
+var DEPLOY_ARCH = 'os.linux.x86_64';
+
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
 //
@@ -66,8 +70,6 @@ var getLocalPackages = function () {
 
   return ret;
 };
-
-var XXX_DEPLOY_ARCH = 'os.linux.x86_64';
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -446,6 +448,7 @@ main.registerCommand({
   options: {
     debug: { type: Boolean },
     directory: { type: Boolean },
+    architecture: { type: String },
     // Undocumented
     'for-deploy': { type: Boolean }
   }
@@ -474,7 +477,12 @@ main.registerCommand({
     nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     buildOptions: {
       minify: ! options.debug,
-      arch: XXX_DEPLOY_ARCH  // XXX should do this in deploy instead but it's easier to test with bundle
+      // XXX is this a good idea, or should linux be the default since
+      //     that's where most people are deploying
+      //     default?  i guess the problem with using DEPLOY_ARCH as default
+      //     is then 'meteor bundle' with no args fails if you have any local
+      //     packages with binary npm dependencies
+      arch: options.architecture || archinfo.host()
     }
   });
   if (bundleResult.errors) {
@@ -680,7 +688,8 @@ main.registerCommand({
   }
 
   var buildOptions = {
-    minify: ! options.debug
+    minify: ! options.debug,
+    arch: DEPLOY_ARCH
   };
 
   var deployResult;
@@ -966,6 +975,7 @@ main.registerCommand({
 
   var ret;
   if (options.deploy) {
+    buildOptions.arch = DEPLOY_ARCH;
     ret = deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
