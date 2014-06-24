@@ -169,11 +169,11 @@ Miniredis.RedisStore = function () {
   self.paused = false;
 };
 
-//Pause the observers. No callbacks from observers will fire until
-//'resumeObservers' is called.
+// Pause the observers. No callbacks from observers will fire until
+// 'resumeObservers' is called.
 Miniredis.RedisStore.prototype.pauseObservers = function () {
   var self = this;
-  //XXX pauseObservers fails silenty if nested?
+  // XXX pauseObservers fails silenty if nested?
   // No-op if already paused.
   if (self.paused)
    return;
@@ -185,14 +185,14 @@ Miniredis.RedisStore.prototype.pauseObservers = function () {
   self._kv = new CowIdMap(self._kv);
 };
 
-//Resume the observers. Observers immediately receive change
-//notifications to bring them to the current state of the
-//database. Note that this is not just replaying all the changes that
-//happened during the pause, it is a smarter 'coalesced' diff.
+// Resume the observers. Observers immediately receive change
+// notifications to bring them to the current state of the
+// database. Note that this is not just replaying all the changes that
+// happened during the pause, it is a smarter 'coalesced' diff.
 Miniredis.RedisStore.prototype.resumeObservers = function () {
   var self = this;
   // No-op if not paused.
-  if (!self.paused)
+  if (! self.paused)
    return;
 
   // Unset the 'paused' flag. Make sure to do this first, otherwise
@@ -200,9 +200,7 @@ Miniredis.RedisStore.prototype.resumeObservers = function () {
   self.paused = false;
 
   // Diff the current results against the snapshot and send to observers.
-  self._kv._diffQueryChanges(function (key, event, value, oldValue) {
-     self._notifyObserves(key, event, value, oldValue);
-  });
+  self._kv._diffQueryChanges(_.bind(self._notifyObserves, self));
 
   // XXX Should we just always use a CowIdMap?
   self._kv = self._kv.flatten();
