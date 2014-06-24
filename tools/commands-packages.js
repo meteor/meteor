@@ -603,7 +603,7 @@ main.registerCommand({
                   }
                   toPublish[item] = {source: packageSource,
                                      compileResult: compileResult};
-                  process.stdout.write("new package\n");
+                  process.stdout.write("new package or version\n");
                   return;
                 } else {
                   var existingBuild =
