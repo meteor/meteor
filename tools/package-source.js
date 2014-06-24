@@ -800,7 +800,7 @@ _.extend(PackageSource.prototype, {
         // Top-level call to add a source file to a package. It will
         // be processed according to its extension (eg, *.coffee
         // files will be compiled to JavaScript).
-        add_files: function (paths, where, fileOptions) {
+        addFiles: function (paths, where, fileOptions) {
           paths = toArray(paths);
           where = toWhereArray(where);
 
@@ -817,7 +817,7 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
-        versions_from: function (release) {
+        versionsFrom: function (release) {
           var relInf = release.split('@');
           // XXX: Error handling
           if (relInf.length !== 2)
@@ -861,6 +861,9 @@ _.extend(PackageSource.prototype, {
           });
         }
       };
+
+      // XXX COMPAT WITH 0.8.x
+      api.add_files = api.addFiles;
 
       try {
         fileAndDepLoader(api);
