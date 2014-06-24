@@ -5,7 +5,7 @@ var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var Unipackage = require('./unipackage.js').Unipackage;
-var packageLoaderModule = require('./package-loader.js');
+var packageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');
@@ -733,13 +733,13 @@ compiler.compile = function (packageSource, options) {
       rootPath: packageSource.sourceRoot
     }, function () {
 
-      var packageLoader = new packageLoaderModule.PackageLoader({
+      var loader = new packageLoader.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name]
       });
 
       var buildResult = bundler.buildJsImage({
         name: info.name,
-        packageLoader: packageLoader,
+        packageLoader: loader,
         use: info.use,
         sourceRoot: packageSource.sourceRoot,
         sources: info.sources,
@@ -811,12 +811,12 @@ compiler.compile = function (packageSource, options) {
   });
 
   // Compile unibuilds. Might use our plugins, so needs to happen second.
-  var packageLoader = new packageLoaderModule.PackageLoader({
+  var loader = new packageLoader.PackageLoader({
     versions: buildTimeDeps.packageDependencies
   });
 
   _.each(packageSource.architectures, function (unibuild) {
-    var unibuildSources = compileUnibuild(unipackage, unibuild, packageLoader,
+    var unibuildSources = compileUnibuild(unipackage, unibuild, loader,
                                           nodeModulesPath, isPortable);
     sources.push.apply(sources, unibuildSources);
   });
@@ -945,7 +945,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
     return false;
   }
 
-  var directDepsPackageLoader = new packageLoaderModule.PackageLoader({
+  var directDepsPackageLoader = new packageLoader.PackageLoader({
     versions: buildTimeDeps.directDependencies
   });
   var directDepsMatch = _.all(
@@ -978,7 +978,7 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
 
       // For each plugin, check that the resolved build-time deps for
       // that plugin match the unipackage's build time deps for it.
-      var packageLoaderForPlugin = new packageLoaderModule.PackageLoader({
+      var packageLoaderForPlugin = new packageLoader.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[pluginName]
       });
       var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];

@@ -19,7 +19,6 @@ var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var packageCache = require('./package-cache.js');
-var PackageLoader = require('./package-loader.js').PackageLoader;
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');

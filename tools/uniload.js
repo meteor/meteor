@@ -2,7 +2,7 @@ var _ = require('underscore');
 var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
-var PackageLoader = require("./package-loader.js").PackageLoader;
+var packageLoader = require("./package-loader.js");
 var packageCache = require("./package-cache.js");
 var files = require('./files.js');
 
@@ -72,7 +72,7 @@ var load = function (options) {
     // Load the code. The uniloader does not call the constraint solver. But
     // keep in mind, that it does use the catalog to build these packages when
     // it gets around to it.
-    var loader = new PackageLoader({
+    var loader = new packageLoader.PackageLoader({
       versions: null,
       uniloadDir: files.getUniloadDir()
     });

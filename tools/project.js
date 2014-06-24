@@ -9,6 +9,7 @@ var release = require('./release.js');
 var watch = require('./watch.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
+var packageLoader = require('./package-loader.js');
 
 var project = exports;
 
@@ -181,8 +182,7 @@ _.extend(Project.prototype, {
       };
 
       // Finally, initialize the package loader.
-      var PackageLoader = require('./package-loader.js').PackageLoader;
-      self.packageLoader = new PackageLoader({
+      self.packageLoader = new packageLoader.PackageLoader({
         versions: newVersions
       });
 

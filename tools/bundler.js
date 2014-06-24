@@ -1997,9 +1997,9 @@ exports.readJsImage = function (controlFilePath) {
 // Given an array of unipackage names, invokes the callback with each
 // corresponding Unipackage object, plus all of their transitive dependencies,
 // with a topological sort.
-exports.iterateOverAllUsedUnipackages = function (packageLoader, arch,
+exports.iterateOverAllUsedUnipackages = function (loader, arch,
                                                   packageNames, callback) {
-  var target = new Target({packageLoader: packageLoader,
+  var target = new Target({packageLoader: loader,
                            arch: arch});
   target._determineLoadOrder({packages: packageNames});
   _.each(target.unibuilds, function (unibuild) {

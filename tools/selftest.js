@@ -7,6 +7,7 @@ var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
+var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
 
 // Exception representing a test failure
@@ -491,8 +492,7 @@ _.extend(Sandbox.prototype, {
     if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
       throw Error("didn't rebuild meteor-tool?");
     }
-    var loader = new (require('./package-loader.js').PackageLoader)({
-      versions: null});
+    var loader = new packageLoader.PackageLoader({versions: null});
     var toolPackage = loader.getPackage(toolPackageName);
     var toolPackageDirectory =
           '.' + toolPackage.version + '.XXX++'

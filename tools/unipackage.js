@@ -8,7 +8,7 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
-var PackageLoader = require('./package-loader.js').PackageLoader;
+var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
 var Future = require('fibers/future');
@@ -117,9 +117,9 @@ _.extend(Unibuild.prototype, {
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
   //
-  // packageLoader is the PackageLoader that should be used to resolve
+  // loader is the PackageLoader that should be used to resolve
   // the package's bundle-time dependencies.
-  getResources: function (bundleArch, packageLoader) {
+  getResources: function (bundleArch, loader) {
     var self = this;
 
     if (! archinfo.matches(bundleArch, self.arch))
@@ -137,7 +137,7 @@ _.extend(Unibuild.prototype, {
     var imports = {}; // map from symbol to supplying package name
     compiler.eachUsedUnibuild(
       self.uses,
-      bundleArch, packageLoader,
+      bundleArch, loader,
       {skipUnordered: true}, function (depUnibuild) {
         _.each(depUnibuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
@@ -187,12 +187,11 @@ _.extend(Unibuild.prototype, {
 // packages for which `filter(packageName, version)` returns truthy.
 var getLoadedPackageVersions = function (versions, filter) {
   var result = {};
-      var PLoader = require("./package-loader.js").PackageLoader;
 
-  var packageLoader = new PLoader({ versions: versions });
+  var loader = new packageLoader.PackageLoader({ versions: versions });
   _.each(versions, function (version, packageName) {
     if (! filter || filter(packageName, version)) {
-      var unipackage = packageLoader.getPackage(packageName);
+      var unipackage = loader.getPackage(packageName);
       result[packageName] = unipackage.version;
     }
   });
@@ -938,7 +937,7 @@ _.extend(Unipackage.prototype, {
     });
 
     // We only want to load local packages.
-    var localPackageLoader = new PackageLoader({versions: null});
+    var localPackageLoader = new packageLoader.PackageLoader({versions: null});
     bundler.iterateOverAllUsedUnipackages(
       localPackageLoader, archinfo.host(), self.includeTool,
       function (unipkg) {
