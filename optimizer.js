@@ -22,7 +22,8 @@ var OPTIMIZABLE = {
 // However, if we are given a big tree that contains SVG somewhere, we
 // return PARTS so that the optimizer can descend into the tree and optimize
 // other parts of it.
-var CanOptimizeVisitor = HTML.Visitor.extend({
+var CanOptimizeVisitor = HTML.Visitor.extend();
+CanOptimizeVisitor.def({
   visitNull: constant(OPTIMIZABLE.FULL),
   visitPrimitive: constant(OPTIMIZABLE.FULL),
   visitComment: constant(OPTIMIZABLE.FULL),
@@ -88,7 +89,8 @@ var toRaw = function (x) {
   return HTML.Raw(HTML.toHTML(x));
 };
 
-var TreeTransformer = HTML.TransformingVisitor.extend({
+var TreeTransformer = HTML.TransformingVisitor.extend();
+TreeTransformer.def({
   visitAttributes: function (attrs/*, ...*/) {
     // pass template tags through by default
     if (attrs instanceof HTMLTools.TemplateTag)
@@ -101,7 +103,8 @@ var TreeTransformer = HTML.TransformingVisitor.extend({
 
 // Replace parts of the HTMLjs tree that have no template tags (or
 // tricky HTML tags) with HTML.Raw objects containing raw HTML.
-var OptimizingVisitor = TreeTransformer.extend({
+var OptimizingVisitor = TreeTransformer.extend();
+OptimizingVisitor.def({
   visitNull: toRaw,
   visitPrimitive: toRaw,
   visitComment: toRaw,
@@ -136,7 +139,8 @@ var OptimizingVisitor = TreeTransformer.extend({
 });
 
 // Combine consecutive HTML.Raws.  Remove empty ones.
-var RawCompactingVisitor = TreeTransformer.extend({
+var RawCompactingVisitor = TreeTransformer.extend();
+RawCompactingVisitor.def({
   visitArray: function (array) {
     var result = [];
     for (var i = 0; i < array.length; i++) {
@@ -162,7 +166,8 @@ var RawCompactingVisitor = TreeTransformer.extend({
 
 // Replace pointless Raws like `HTMl.Raw('foo')` that contain no special
 // characters with simple strings.
-var RawReplacingVisitor = TreeTransformer.extend({
+var RawReplacingVisitor = TreeTransformer.extend();
+RawReplacingVisitor.def({
   visitRaw: function (raw) {
     var html = raw.value;
     if (html.indexOf('&') < 0 && html.indexOf('<') < 0) {
