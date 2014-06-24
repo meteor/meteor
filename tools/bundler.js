@@ -1968,7 +1968,7 @@ exports.buildJsImage = function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir,
     dependencyVersions: options.dependencyVersions,
-    noVersionFile: true,
+    noVersionFile: true
   });
 
   var unipackage = compiler.compile(packageSource).unipackage;
