@@ -12,16 +12,32 @@ Blaze._conditionVar = function (conditionFunc, not) {
   });
 };
 
+var StoppingIsolate = Blaze.Isolate.extend({
+  constructor: function (v, func)  {
+    Blaze.Isolate.call(this, func);
+    this._varToStop = v;
+  },
+  createDOMRange: function () {
+    var v = this._varToStop;
+    var range = Blaze.Isolate.prototype.createDOMRange.call(this);
+    range.addDOMAugmenter(new Blaze.RemovalWatcher);
+    range.onstop(function () {
+      v.stop();
+    });
+    return range;
+  }
+});
+
 Blaze.If = function (conditionFunc, contentFunc, elseFunc) {
   var v = Blaze._conditionVar(conditionFunc);
-  return Blaze.Isolate(function () {
+  return new StoppingIsolate(v, function () {
     return v.get() ? contentFunc() : (elseFunc ? elseFunc() : null);
   });
 };
 
 Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
   var v = Blaze._conditionVar(conditionFunc, 'not');
-  return Blaze.Isolate(function () {
+  return new StoppingIsolate(v, function () {
     return v.get() ? contentFunc() : (elseFunc ? elseFunc() : null);
   });
 };
@@ -34,6 +50,12 @@ Blaze.With = Blaze.Controller.extend({
 
     Blaze.With.__super__.constructor.call(this);
 
+    if (data instanceof Blaze.Var) {
+      this.dataVar = data;
+    } else {
+      this.dataVar = Blaze.Var(data);
+      this._madeDataVar = true;
+    }
     this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
     this.func = func;
   },
@@ -47,10 +69,12 @@ Blaze.With = Blaze.Controller.extend({
   createDOMRange: function () {
     var self = this;
     var range = Blaze.With.__super__.createDOMRange.call(self);
-    range.addDOMAugmenter(new Blaze.RemovalWatcher);
-    range.onstop(function () {
-      self.dataVar.stop();
-    });
+    if (this._madeDataVar) {
+      range.addDOMAugmenter(new Blaze.RemovalWatcher);
+      range.onstop(function () {
+        self.dataVar.stop();
+      });
+    }
     return range;
   }
 });
