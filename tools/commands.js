@@ -129,45 +129,63 @@ main.registerCommand({
 });
 
 // Internal use only. Makes sure that your Meteor install is totally good to go
-// (is "airplane safe"). Specifically, make sure that you have built and/or
-// downloaded any packages that you need to run your app (ie: ran the constraint
-// solver on the .meteor/packages file and then downloaded/built everything in
-// the resulting .meteor/versions).
+// (is "airplane safe"). Specifically, it:
+//    - Builds all local packages (including their npm dependencies)
+//    - Ensures that all packages in your current release are downloaded
+//    - Ensures that all packages used by your app (if any) are downloaded
+// (It also ensures you have the dev bundle downloaded, just like every command
+// in a checkout.)
 //
-// In a checkout, this makes sure that the checkout is "complete" (dev bundle
-// downloaded and all NPM modules installed). The use case is, for example,
-// cloning an app from github, running this command, then getting on an
-// airplane.
+// The use case is, for example, cloning an app from github, running this
+// command, then getting on an airplane.
 //
-// This does NOT guarantee a rebuild of all local packages (though it will
+// This does NOT guarantee a *re*build of all local packages (though it will
 // download any new dependencies). If you want to rebuild all local packages,
-// call meteor rebuild. (You don't need to be online to rebuild packages)
+// call meteor rebuild. That said, rebuild should only be necessary if there's a
+// bug in the build tool... otherwise, packages should be rebuilt whenever
+// necessary!
 main.registerCommand({
-  name: '--get-ready',
-  requiresApp: true
+  name: '--get-ready'
 }, function (options) {
-
   // It is not strictly needed, but it is thematically a good idea to refresh
   // the official catalog when we call get-ready, since it is an
   // internet-requiring action.
   catalog.official.refresh();
 
-  // Then get the list of packages that we need to get and build. Calling
-  // getVersions on the project will ensureDepsUpToDate which will ensure that
-  // all builds of everything we need from versions have been downloaded.
-  var allPackages = project.getVersions();
-
-  // We need the package loader to compile our packages, so let's make sure to
-  // get one.
-  var loader = project.getPackageLoader();
-
-  var messages = buildmessage.capture(function () {
-    _.forEach(allPackages, function (versions, name) {
+  var loadPackages = function (packagesToLoad, loader) {
+    _.each(packagesToLoad, function (name) {
       // Calling getPackage on the loader will return a unipackage object, which
       // means that the package will be compiled/downloaded. That we throw the
       // package variable away afterwards is immaterial.
       loader.getPackage(name);
     });
+  };
+
+
+  var messages = buildmessage.capture(function () {
+    // First, build all accessible *local* packages, whether or not this app
+    // uses them.  Use the "all packages are local" loader.
+    loadPackages(catalog.complete.getLocalPackageNames(),
+                 new packageLoader.PackageLoader({versions: null}));
+
+    // In an app? Get the list of packages used by this app. Calling getVersions
+    // on the project will ensureDepsUpToDate which will ensure that all builds
+    // of everything we need from versions have been downloaded. (Calling
+    // buildPackages may be redundant, but can't hurt.)
+    if (options.appDir) {
+      loadPackages(_.keys(project.getVersions), project.getPackageLoader());
+    }
+
+    // Using a release? Get all the packages in the release.
+    if (release.current.isProperRelease()) {
+      var releasePackages = release.current.getPackages();
+      // HACK: relies on fact that the function below doesn't actually
+      //       have any relation to the project directory
+      project._ensurePackagesExistOnDisk(releasePackages);
+      loadPackages(
+        _.keys(releasePackages),
+        new packageLoader.PackageLoader({versions: releasePackages}));
+    }
   });
 
   if (messages.hasMessages()) {
@@ -176,7 +194,6 @@ main.registerCommand({
   };
 
   console.log("You are ready!");
-
   return 0;
 });
 
@@ -842,6 +859,7 @@ main.registerCommand({
   var localPackageNames = [];
   if (options.args.length === 0) {
     // Only test local packages if no package is specified.
+    // XXX should this use the new getLocalPackageNames?
     var packageList = getLocalPackages();
     if (! packageList) {
       // Couldn't load the package list, probably because some package

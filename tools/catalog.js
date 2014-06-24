@@ -796,6 +796,12 @@ _.extend(CompleteCatalog.prototype, {
     return count;
   },
 
+  getLocalPackageNames: function () {
+    var self = this;
+    self._requireInitialized();
+    return _.keys(self.effectiveLocalPackages);
+  },
+
   // Given a name and a version of a package, return a path on disk
   // from which we can load it. If we don't have it on disk (we
   // haven't downloaded it, or it just plain doesn't exist in the
