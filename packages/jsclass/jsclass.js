@@ -50,16 +50,18 @@ var def = function (props) {
     _assign(this.prototype, props);
 };
 
-var extendTo = function (ctor) {
+var extend = function (ctor) {
+  ctor = ctor || function () {};
   JSClass.inherits(ctor, this);
   bless(ctor);
+  return ctor;
 };
 
 var bless = function (ctor) {
   ctor.def = def;
-  ctor.extendTo = extendTo;
+  ctor.extend = extend;
 };
 
-JSClass.blessBaseClass = function (ctor) {
+JSClass.bless = function (ctor) {
   bless(ctor);
 };
