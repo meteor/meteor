@@ -332,11 +332,9 @@ var runWebAppServer = function () {
       serveStaticJs("__meteor_runtime_config__ = " +
                     JSON.stringify(__meteor_runtime_config__) + ";");
       return;
-    } else if (pathname === "/meteor_reload_safetybelt.js" &&
-               Package["reload-safetybelt"] &&
-               Package["reload-safetybelt"].ReloadSafetyBelt &&
+    } else if (_.has(additionalStaticJs, pathname) &&
                ! WebAppInternals.inlineScriptsAllowed()) {
-      serveStaticJs(Package["reload-safetybelt"].ReloadSafetyBelt);
+      serveStaticJs(additionalStaticJs[pathname]);
       return;
     }
 
@@ -440,7 +438,7 @@ var runWebAppServer = function () {
   // Will be updated by main before we listen.
   var boilerplateTemplate = null;
   var boilerplateBaseData = null;
-  var boilerplateByAttributes = {};
+  var memoizedBoilerplate = {};
   app.use(function (req, res, next) {
     if (! appUrl(req.url))
       return next();
@@ -472,19 +470,26 @@ var runWebAppServer = function () {
 
     var htmlAttributes = getHtmlAttributes(request);
 
-    // The only thing that changes from request to request (for now) are the
-    // HTML attributes (used by, eg, appcache), so we can memoize based on that.
-    var attributeKey = JSON.stringify(htmlAttributes);
-    if (!_.has(boilerplateByAttributes, attributeKey)) {
+    // The only thing that changes from request to request (for now) are
+    // the HTML attributes (used by, eg, appcache) and whether inline
+    // scripts are allowed, so we can memoize based on that.
+    var boilerplateKey = JSON.stringify({
+      inlineScriptsAllowed: inlineScriptsAllowed,
+      htmlAttributes: htmlAttributes
+    });
+
+    if (! _.has(memoizedBoilerplate, boilerplateKey)) {
       try {
-        var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
-                                       boilerplateBaseData);
+        var boilerplateData = _.extend({
+          htmlAttributes: htmlAttributes,
+          inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
+        }, boilerplateBaseData);
         var boilerplateInstance = boilerplateTemplate.extend({
           data: boilerplateData
         });
         var boilerplateHtmlJs = boilerplateInstance.render();
-        boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
-              HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+        memoizedBoilerplate[boilerplateKey] = "<!DOCTYPE html>\n" +
+          HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
       } catch (e) {
         Log.error("Error running template: " + e);
         res.writeHead(500, headers);
@@ -494,7 +499,7 @@ var runWebAppServer = function () {
     }
 
     res.writeHead(200, headers);
-    res.write(boilerplateByAttributes[attributeKey]);
+    res.write(memoizedBoilerplate[boilerplateKey]);
     res.end();
     return undefined;
   });
@@ -593,14 +598,23 @@ var runWebAppServer = function () {
     var expectKeepalives = _.contains(argv, '--keepalive');
 
     boilerplateBaseData = {
+      // 'htmlAttributes' and 'inlineScriptsAllowed' are set at render
+      // time, because they are allowed to change from request to
+      // request.
       css: [],
       js: [],
       head: '',
       body: '',
-      inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
+      additionalStaticJs: _.map(
+        additionalStaticJs,
+        function (contents, pathname) {
+          return {
+            pathname: pathname,
+            contents: contents
+          };
+        }
+      ),
       meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
-      reloadSafetyBelt: Package["reload-safetybelt"] &&
-        Package["reload-safetybelt"].ReloadSafetyBelt,
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssPrefix: bundledJsCssPrefix ||
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
@@ -1001,4 +1015,13 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
 
 WebAppInternals.setBundledJsCssPrefix = function (prefix) {
   bundledJsCssPrefix = prefix;
+};
+
+// Packages can call `WebAppInternals.addStaticJs` to specify static
+// JavaScript to be included in the app. This static JS will be inlined,
+// unless inline scripts have been disabled, in which case it will be
+// served under `/<sha1 of contents>`.
+var additionalStaticJs = {};
+WebAppInternals.addStaticJs = function (contents) {
+  additionalStaticJs["/" + sha1(contents) + ".js"] = contents;
 };

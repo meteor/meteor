@@ -4,6 +4,13 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use("webapp", "server");
   api.add_files("reload-safety-belt.js", "server");
-  api.export("ReloadSafetyBelt", "server");
+  api.add_files("safetybelt.js", "server", { isAsset: true });
+});
+
+Package.on_test(function (api) {
+  api.add_files("safetybelt.js", "server", { isAsset: true });
+  api.use(["reload-safetybelt", "tinytest", "http", "webapp"]);
+  api.add_files("reload-safety-belt-tests.js", "server");
 });
