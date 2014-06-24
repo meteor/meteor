@@ -408,53 +408,53 @@ DOMRange.prototype.$ = function (selector) {
   return results;
 };
 
-Blaze.DOMAugmenter = JSClass.create({
-  attach: function (range, element) {},
+Blaze.DOMAugmenter = function () {};
+Blaze.DOMAugmenter.prototype.attach = function (range, element) {};
   // arguments are same as were passed to `attach`
-  detach: function (range, element) {}
-});
+Blaze.DOMAugmenter.prototype.detach = function (range, element) {};
 
-Blaze.EventAugmenter = Blaze.DOMAugmenter.extend({
-  constructor: function (eventMap, thisInHandler) {
-    this.eventMap = eventMap;
-    this.handles = [];
-    this.thisInHandler = thisInHandler; // optional
-  },
-  attach: function (range, element) {
-    var self = this;
-    var eventMap = self.eventMap;
-    var handles = self.handles;
+Blaze.EventAugmenter = function (eventMap, thisInHandler) {
+  this.eventMap = eventMap;
+  this.handles = [];
+  this.thisInHandler = thisInHandler; // optional
+};
+JSClass.inherits(Blaze.EventAugmenter, Blaze.DOMAugmenter);
 
-    _.each(eventMap, function (handler, spec) {
-      var clauses = spec.split(/,\s+/);
-      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
+Blaze.EventAugmenter.prototype.attach = function (range, element) {
+  var self = this;
+  var eventMap = self.eventMap;
+  var handles = self.handles;
 
-        var newEvents = parts.shift();
-        var selector = parts.join(' ');
-        handles.push(Blaze.EventSupport.listen(
-          element, newEvents, selector,
-          function (evt) {
-            if (! range.containsElement(evt.currentTarget))
-              return null;
-            return handler.apply(self.thisInHandler || this, arguments);
-          },
-          range, function (r) {
-            return r.parentRange;
-          }));
-      });
+  _.each(eventMap, function (handler, spec) {
+    var clauses = spec.split(/,\s+/);
+    // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+    _.each(clauses, function (clause) {
+      var parts = clause.split(/\s+/);
+      if (parts.length === 0)
+        return;
+
+      var newEvents = parts.shift();
+      var selector = parts.join(' ');
+      handles.push(Blaze.EventSupport.listen(
+        element, newEvents, selector,
+        function (evt) {
+          if (! range.containsElement(evt.currentTarget))
+            return null;
+          return handler.apply(self.thisInHandler || this, arguments);
+        },
+        range, function (r) {
+          return r.parentRange;
+        }));
     });
-  },
-  detach: function () {
-    _.each(this.handles, function (h) {
-      h.stop();
-    });
-    this.handles.length = 0;
-  }
-});
+  });
+};
+
+Blaze.EventAugmenter.prototype.detach = function () {
+  _.each(this.handles, function (h) {
+    h.stop();
+  });
+  this.handles.length = 0;
+};
 
 
 // Returns true if element a contains node b and is not node b.

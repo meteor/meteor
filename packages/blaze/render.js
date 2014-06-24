@@ -4,7 +4,10 @@ var _onstopForRender = function () {
   this.computation.stop();
 };
 
-Blaze.RenderController = Blaze.Controller.extend();
+Blaze.RenderController = function () {
+  Blaze.Controller.call(this);
+};
+JSClass.inherits(Blaze.RenderController, Blaze.Controller);
 
 var contentEquals = function (a, b) {
   if (a instanceof HTML.Raw) {
@@ -18,13 +21,14 @@ var contentEquals = function (a, b) {
   }
 };
 
-Blaze.RemovalWatcher = Blaze.DOMAugmenter.extend({
-  attach: function (range, element) {
-    Blaze.DOMBackend.RemovalWatch.onRemoveElement(element, function () {
-      range.stop();
-    });
-  }
-});
+Blaze.RemovalWatcher = function () {};
+JSClass.inherits(Blaze.RemovalWatcher, Blaze.DOMAugmenter);
+
+Blaze.RemovalWatcher.prototype.attach = function (range, element) {
+  Blaze.DOMBackend.RemovalWatch.onRemoveElement(element, function () {
+    range.stop();
+  });
+};
 
 // Takes a function that returns HTMLjs and returns a DOMRange.
 // The function will be reactively re-run.  The resulting DOMRange

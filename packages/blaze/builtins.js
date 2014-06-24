@@ -26,31 +26,32 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
   });
 };
 
-Blaze.With = Blaze.Controller.extend({
-  constructor: function (data, func) {
-    if (! (this instanceof Blaze.With))
-      // called without new
-      return new Blaze.With(data, func);
+Blaze.With = function (data, func) {
+  if (! (this instanceof Blaze.With))
+    // called without new
+    return new Blaze.With(data, func);
 
-    Blaze.With.__super__.constructor.call(this);
+  Blaze.With.__super__.constructor.call(this);
 
-    this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
-    this.func = func;
-  },
-  render: function () {
-    var func = this.func;
-    return func();
-  },
-  // XXX think about whether all Controllers (or
-  // RenderPoints or something) should have a Computation
-  // that is stopped in response to DOM removal.
-  createDOMRange: function () {
-    var self = this;
-    var range = Blaze.With.__super__.createDOMRange.call(self);
-    range.addDOMAugmenter(new Blaze.RemovalWatcher);
-    range.onstop(function () {
-      self.dataVar.stop();
-    });
-    return range;
-  }
-});
+  this.dataVar = (data instanceof Blaze.Var) ? data : Blaze.Var(data);
+  this.func = func;
+};
+JSClass.inherits(Blaze.With, Blaze.Controller);
+
+Blaze.With.prototype.render = function () {
+  var func = this.func;
+  return func();
+};
+
+// XXX think about whether all Controllers (or
+// RenderPoints or something) should have a Computation
+// that is stopped in response to DOM removal.
+Blaze.With.prototype.createDOMRange = function () {
+  var self = this;
+  var range = Blaze.With.__super__.createDOMRange.call(self);
+  range.addDOMAugmenter(new Blaze.RemovalWatcher);
+  range.onstop(function () {
+    self.dataVar.stop();
+  });
+  return range;
+};

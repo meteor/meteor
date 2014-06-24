@@ -15,33 +15,35 @@
 // while Controllers straddle the gap between Components and the
 // timeless RenderPoints which keep no instance state.
 
-Blaze.Controller = Blaze.RenderPoint.extend({
-  constructor: function () {
-    Blaze.Controller.__super__.constructor.call(this);
-    this.parentController = Blaze.currentController;
-  },
-  evaluate: function () {
-    var self = this;
-    return Blaze.withCurrentController(self, function () {
-      return Blaze._evaluate(self.render());
-    });
-  },
-  createDOMRange: function () {
-    var self = this;
-    var range = Blaze.withCurrentController(self, function () {
-      return self.renderToDOM();
-    });
-    range.controller = self;
-    self.domrange = range;
-    return range;
-  },
-  // Don't call renderToDOM from the outside; just override it
-  // if you need to.  Call createDOMRange instead, which sets
-  // up the pointers between the range and the controller.
-  renderToDOM: function () {
-    return new Blaze.DOMRange(Blaze._toDOM(this.render()));
-  }
-});
+Blaze.Controller = function () {
+  Blaze.Controller.__super__.constructor.call(this);
+  this.parentController = Blaze.currentController;
+};
+JSClass.inherits(Blaze.Controller, Blaze.RenderPoint);
+
+Blaze.Controller.prototype.evaluate = function () {
+  var self = this;
+  return Blaze.withCurrentController(self, function () {
+    return Blaze._evaluate(self.render());
+  });
+};
+
+Blaze.Controller.prototype.createDOMRange = function () {
+  var self = this;
+  var range = Blaze.withCurrentController(self, function () {
+    return self.renderToDOM();
+  });
+  range.controller = self;
+  self.domrange = range;
+  return range;
+};
+
+// Don't call renderToDOM from the outside; just override it
+// if you need to.  Call createDOMRange instead, which sets
+// up the pointers between the range and the controller.
+Blaze.Controller.prototype.renderToDOM = function () {
+  return new Blaze.DOMRange(Blaze._toDOM(this.render()));
+};
 
 Blaze.currentController = null;
 
@@ -55,27 +57,31 @@ Blaze.withCurrentController = function (controller, func) {
   }
 };
 
-Blaze.Component = Blaze.Controller.extend({
-  renderToDOM: function () {
-    var self = this;
-    if (self.domrange)
-      throw new Error("Can't render a Component twice!");
+Blaze.Component = function () {
+  Blaze.Component.__super__.constructor.call(this);
+};
+JSClass.inherits(Blaze.Component, Blaze.Controller);
 
-    // Note that this will reactively re-render the result
-    // of the render() method.
-    var range = Blaze.render(function () {
-      return self.render();
-    });
-    range.onstop(function () {
-      if (! self.isFinalized) {
-        self.isFinalized = true;
-        self.finalize();
-      }
-    });
-    return range;
-  },
-  finalize: function () {}
-});
+Blaze.Component.prototype.renderToDOM = function () {
+  var self = this;
+  if (self.domrange)
+    throw new Error("Can't render a Component twice!");
+
+  // Note that this will reactively re-render the result
+  // of the render() method.
+  var range = Blaze.render(function () {
+    return self.render();
+  });
+  range.onstop(function () {
+    if (! self.isFinalized) {
+      self.isFinalized = true;
+      self.finalize();
+    }
+  });
+  return range;
+};
+
+Blaze.Component.prototype.finalize = function () {};
 
 Blaze._bindIfIsFunction = function (x, target) {
   if (typeof x !== 'function')

@@ -205,12 +205,12 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
 
 // maybe use created callback on the template instead of this?
 var extendTemplateWithInit = function (template, initFunc) {
-  return template.constructor.extend({
-    constructor: function () {
-      template.constructor.apply(this, arguments);
-      initFunc.call(this);
-    }
-  }).prototype;
+  var sub = function () {
+    template.constructor.apply(this, arguments);
+    initFunc.call(this);
+  };
+  JSClass.inherits(sub, template.constructor);
+  return sub.prototype;
 };
 
 Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", function (test) {
@@ -1125,9 +1125,9 @@ Tinytest.add('spacebars-tests - template_tests - attribute object helpers are is
 Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated', function (test) {
   var tmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated;
   var dep = new Deps.Dependency;
-  var subtmpl = Template.
-        spacebars_template_test_inclusion_helpers_are_isolated_subtemplate
-        .constructor.extend().prototype; // fresh subclass
+  var subtmpl = extendTemplateWithInit(
+    Template. spacebars_template_test_inclusion_helpers_are_isolated_subtemplate,
+    function () {}); // fresh subclass
   var R = new ReactiveVar(subtmpl);
   tmpl.foo = function () {
     dep.depend();

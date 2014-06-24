@@ -112,80 +112,83 @@
 /// (notably Isolate, List, and With), but by default, RenderPoints,
 /// Controllers, and Components must be created with `new`.
 
-Blaze.RenderPoint = JSClass.create({
-  render: function () {
-    return null;
-  },
-  // Subclasses can override evaluate, toText, toHTML, and createDOMRange
-  // as they see fit.
-  evaluate: function () {
-    return Blaze._evaluate(this.render());
-  },
-  toText: function (textMode) {
-    return Blaze._toText(this.evaluate(), textMode);
-  },
-  toHTML: function () {
-    return Blaze._toHTML(this.evaluate());
-  },
-  createDOMRange: function () {
-    return new Blaze.DOMRange(Blaze._toDOM(this.render()));
-  }
-});
+Blaze.RenderPoint = function () {};
 
-Blaze.Isolate = Blaze.RenderPoint.extend({
-  constructor: function (func) {
-    if (! (this instanceof Blaze.Isolate))
-      // called without new
-      return new Blaze.Isolate(func);
+Blaze.RenderPoint.prototype.render = function () {
+  return null;
+};
+// Subclasses can override evaluate, toText, toHTML, and createDOMRange
+// as they see fit.
+Blaze.RenderPoint.prototype.evaluate = function () {
+  return Blaze._evaluate(this.render());
+};
+Blaze.RenderPoint.prototype.toText = function (textMode) {
+  return Blaze._toText(this.evaluate(), textMode);
+};
+Blaze.RenderPoint.prototype.toHTML = function () {
+  return Blaze._toHTML(this.evaluate());
+};
+Blaze.RenderPoint.prototype.createDOMRange = function () {
+  return new Blaze.DOMRange(Blaze._toDOM(this.render()));
+};
+
+
+Blaze.Isolate = function (func) {
+  if (! (this instanceof Blaze.Isolate))
+    // called without new
+    return new Blaze.Isolate(func);
 
     Blaze.Isolate.__super__.constructor.call(this);
 
     this.func = func;
-  },
-  render: function () {
-    var func = this.func;
-    return func();
-  },
-  createDOMRange: function () {
-    // Blaze.render does the actual work of setting up a computation
-    // and reactively updating the DOMRange.
-    return Blaze.render(this.func);
+};
+JSClass.inherits(Blaze.Isolate, Blaze.RenderPoint);
+
+Blaze.Isolate.prototype.render = function () {
+  var func = this.func;
+  return func();
+};
+
+Blaze.Isolate.prototype.createDOMRange = function () {
+  // Blaze.render does the actual work of setting up a computation
+  // and reactively updating the DOMRange.
+  return Blaze.render(this.func);
+};
+
+
+Blaze.List = function (funcSequence) {
+  var self = this;
+
+  if (! (self instanceof Blaze.List))
+    // called without `new`
+    return new Blaze.List(funcSequence);
+
+  if (! (funcSequence instanceof Blaze.Sequence))
+    throw new Error("Expected a Blaze.Sequence of functions in Blaze.List");
+
+  Blaze.List.__super__.constructor.call(this);
+
+  self.funcSeq = funcSequence;
+};
+JSClass.inherits(Blaze.List, Blaze.RenderPoint);
+
+Blaze.List.prototype.render = function () {
+  // Get and call all the functions in funcSeq, taking a dependency
+  // on funcSeq.  This is the path taken for toText, toHTML, and
+  // evaluate (but not createDOMRange, which is handled specially).
+  var funcSeq = this.funcSeq;
+  this.funcSeq.depend();
+
+  var size = funcSeq.size();
+  var result = new Array(size);
+  for (var i = 0; i < size; i++) {
+    var f = funcSeq.get(i);
+    result[i] = f();
   }
-});
+  return result;
+};
 
-
-Blaze.List = Blaze.RenderPoint.extend({
-  constructor: function (funcSequence) {
-    var self = this;
-
-    if (! (self instanceof Blaze.List))
-      // called without `new`
-      return new Blaze.List(funcSequence);
-
-    if (! (funcSequence instanceof Blaze.Sequence))
-      throw new Error("Expected a Blaze.Sequence of functions in Blaze.List");
-
-    Blaze.List.__super__.constructor.call(this);
-
-    self.funcSeq = funcSequence;
-  },
-  render: function () {
-    // Get and call all the functions in funcSeq, taking a dependency
-    // on funcSeq.  This is the path taken for toText, toHTML, and
-    // evaluate (but not createDOMRange, which is handled specially).
-    var funcSeq = this.funcSeq;
-    this.funcSeq.depend();
-
-    var size = funcSeq.size();
-    var result = new Array(size);
-    for (var i = 0; i < size; i++) {
-      var f = funcSeq.get(i);
-      result[i] = f();
-    }
-    return result;
-  },
-  createDOMRange: function () {
-    // Blaze.renderList does the actual work.
-    return Blaze.renderList(this.funcSeq);
-  }
-});
+Blaze.List.prototype.createDOMRange = function () {
+  // Blaze.renderList does the actual work.
+  return Blaze.renderList(this.funcSeq);
+};
