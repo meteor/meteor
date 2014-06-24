@@ -817,7 +817,7 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
-        source: function (release) {
+        versions_from: function (release) {
           var relInf = release.split('@');
           // XXX: Error handling
           if (relInf.length !== 2)
@@ -901,10 +901,6 @@ _.extend(PackageSource.prototype, {
           implies[label] = _.map(implies[label], setFromRel);
       });
      };
-
-    // XXX: We should not publish packages with unspecified dependencies. Make
-    // sure there is a rule to prevent it, probably somewhere here.
-
 
     // Make sure that if a dependency was specified in multiple
     // unibuilds, the constraint is exactly the same.
