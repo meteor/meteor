@@ -13,7 +13,8 @@ SpacebarsCompiler.compile = function (input, options) {
   return SpacebarsCompiler.codeGen(tree, options);
 };
 
-SpacebarsCompiler._TemplateTagReplacer = HTML.TransformingVisitor.extend({
+SpacebarsCompiler._TemplateTagReplacer = HTML.TransformingVisitor.extend();
+SpacebarsCompiler._TemplateTagReplacer.def({
   visitObject: function (x) {
     if (x instanceof HTMLTools.TemplateTag)
       return this.codegen.codeGenTemplateTag(x);

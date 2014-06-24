@@ -44,7 +44,8 @@ var hasToJS = function (x) {
   return x.toJS && (typeof (x.toJS) === 'function');
 };
 
-ToJSVisitor = HTML.Visitor.extend({
+ToJSVisitor = HTML.Visitor.extend();
+ToJSVisitor.def({
   visitNull: function (nullOrUndefined) {
     return 'null';
   },
