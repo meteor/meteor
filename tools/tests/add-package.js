@@ -215,4 +215,12 @@ selftest.define("add packages", function () {
                 ["accounts-base",  "depends-on-plugin",
                  "standard-app-packages",
                  "contains-plugin"]);
+
+  // Add a description-less package. Check that no weird things get
+  // printed (like "added no-description: undefined").
+  run = s.run("add", "no-description");
+  run.match("Successfully added the following packages.\n");
+  run.read("no-description\n");
+  run.expectEnd();
+  run.expectExit(0);
 });

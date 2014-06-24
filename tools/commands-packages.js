@@ -1343,7 +1343,7 @@ main.registerCommand({
     ondiskPackages: downloaded});
 
   // Show the user the messageLog of the packages that they installed.
-  process.stdout.write("Successfully added the following packages. \n");
+  process.stdout.write("Successfully added the following packages.\n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.package];
     var versionRecord = catalog.complete.getVersion(constraint.package, version);
@@ -1352,7 +1352,11 @@ main.registerCommand({
       process.stdout.write("Added " + constraint.package + " at version " + version +
                            " to avoid conflicting dependencies. \n");
     }
-    process.stdout.write(constraint.package + " : " + versionRecord.description + "\n");
+
+    process.stdout.write(constraint.package +
+                         (versionRecord.description ?
+                          (": " + versionRecord.description) :
+                          "") + "\n");
   });
 
   return 0;
