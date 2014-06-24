@@ -823,3 +823,13 @@ Hi there!
     {{/with}}
   {{/each}}
 </template>
+
+<template name="spacebars_test_template_created_rendered_destroyed_each">
+  {{#each items}}
+    <div>{{> spacebars_test_template_created_rendered_destroyed_each_sub _id}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_test_template_created_rendered_destroyed_each_sub">
+  {{.}}
+</template>

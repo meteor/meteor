@@ -2248,3 +2248,39 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );
+
+Tinytest.add(
+  "spacebars-tests - template_tests - created/rendered/destroyed by each",
+  function (test) {
+    var outerTmpl =
+          Template.spacebars_test_template_created_rendered_destroyed_each;
+    var innerTmpl =
+          Template.spacebars_test_template_created_rendered_destroyed_each_sub;
+
+    var buf = '';
+
+    innerTmpl.created = function () { buf += 'C' + String(this.data).toLowerCase(); };
+    innerTmpl.rendered = function () { buf += 'R' + String(this.data).toLowerCase(); };
+    innerTmpl.destroyed = function () { buf += 'D' + String(this.data).toLowerCase(); };
+
+    var R = ReactiveVar([{_id: 'A'}]);
+
+    outerTmpl.items = function () {
+      return R.get();
+    };
+
+    var div = renderToDiv(outerTmpl);
+    divRendersTo(test, div, '<div>A</div>');
+    test.equal(buf, 'CaRa');
+
+    R.set([{_id: 'B'}]);
+    divRendersTo(test, div, '<div>B</div>');
+    test.equal(buf, 'CaRaDaCbRb');
+
+    R.set([{_id: 'C'}]);
+    divRendersTo(test, div, '<div>C</div>');
+    test.equal(buf, 'CaRaDaCbRbDbCcRc');
+
+    $(div).remove();
+    test.equal(buf, 'CaRaDaCbRbDbCcRcDc');
+  });
