@@ -1284,10 +1284,16 @@ main.registerCommand({
                            constraint.constraint + " has already been added.\n");
       failed = true;
       } else {
-        process.stdout.write("Currently using "+  constraint.package +
-                             " with version constraint " + packages[constraint.package]);
+        if (packages[constraint.package]) {
+          process.stdout.write("Currently using "+  constraint.package +
+                               " with version constraint " + packages[constraint.package]
+                              +"\n");
+        } else {
+          process.stdout.write("Currently using "+  constraint.package +
+                               " without any version constraint \n");
+        }
         process.stdout.write("Constraint will be changed to " +
-                              constraint.constraint + "/n");
+                              constraint.constraint + "\n");
       }
     }
 
