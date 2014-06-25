@@ -681,7 +681,9 @@ Meteor.RedisCollection.prototype._defineMutationMethods = function() {
       var method = args[0];
       args = _.rest(args);
       check(method, String); // name of the redis method to execute
-      check(args, [String]); // args to the redis method
+
+      // XXX How do we validate args?
+      //check(args, [String]); // args to the redis method
 
       try {
         if (this.isSimulation) {
