@@ -18,11 +18,32 @@ var optOutPackageName = "package-stats-opt-out";
 // indirectly. Formatted as a list of objects with 'name', 'version'
 // and 'direct', which is how the `recordAppPackages` method on the
 // stats server expects to get this list.
-var packageList = function () {
-  var directDeps = project.project.getConstraints();
+//
+// In tests, we want to use the same logic to calculate the list of
+// packages for an app created in a sandbox, but we don't want to run
+// the constraint solver, try to load local packages from the catalog,
+// etc. In particular, we don't want to have to repoint project.project
+// at whatever random app we just created in a sandbox and re-initialize
+// the catalog with its local packages (and then have to undo all that
+// after the test is over). So tests can pass a project.Project as an
+// argument, and we'll calculate the list of packages just by looking at
+// .meteor/packages and .meteor/versions, not by doing anything fancy
+// like running the constraint solver.
+// NOTE: This means that if you pass `_currentProjectForTest`, we assume
+// that it is pointing to a root directory with an existing
+// .meteor/versions file.
+var packageList = function (_currentProjectForTest) {
+  var directDeps = (_currentProjectForTest || project.project).getConstraints();
+
+  var versions;
+  if (_currentProjectForTest) {
+    versions = _currentProjectForTest.dependencies;
+  } else {
+    versions = project.project.getVersions();
+  }
 
   return _.map(
-    project.project.getVersions(),
+    versions,
     function (version, name) {
       return {
         name: name,
@@ -55,10 +76,10 @@ var recordPackages = function () {
     };
 
     if (! release.current.isCheckout()) {
-      userAgentInfo.meteorReleaseTrack = release.getReleaseTrack();
-      userAgentInfo.meteorReleaseVersion = release.getReleaseVersion();
+      userAgentInfo.meteorReleaseTrack = release.current.getReleaseTrack();
+      userAgentInfo.meteorReleaseVersion = release.current.getReleaseVersion();
       userAgentInfo.meteorToolsPackageWithVersion =
-        release.getToolsPackageAtVersion();
+        release.current.getToolsPackageAtVersion();
     }
 
     try {
@@ -102,10 +123,10 @@ var logErrorIfRunningMeteorRelease = function (err) {
 
 // Used in a test (and can only be used against the testing packages
 // server) to fetch one package stats entry for a given application.
-var getPackagesForAppIdInTest = function () {
+var getPackagesForAppIdInTest = function (currentProject) {
   return connectToPackagesStatsServer().call(
     "getPackagesForAppId",
-    project.project.getAppIdentifier());
+    currentProject.getAppIdentifier());
 };
 
 var connectToPackagesStatsServer = function () {

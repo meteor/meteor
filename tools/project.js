@@ -330,7 +330,9 @@ _.extend(Project.prototype, {
     return path.join(self.rootDir, '.meteor', 'packages');
   },
 
-  // Give the contents of the project's .meteor/versions file to the caller.
+  // Give the contents of the project's .meteor/versions file to the
+  // caller, possibly after recalculating dependencies and rewriting the
+  // versions file.
   //
   // Returns an object mapping package name to its string version.
   getVersions : function () {
@@ -676,3 +678,4 @@ _.extend(Project.prototype, {
 // cumbersome, that is our general design pattern for singletons (ex:
 // packageCache.packageCache, etc)
 project.project = new Project();
+project.Project = Project;

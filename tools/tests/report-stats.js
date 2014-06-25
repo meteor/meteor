@@ -15,93 +15,147 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
 selftest.define("report-stats", ["slow"], function () {
-  var s = new Sandbox;
+  _.each(
+    // If we are currently running from a checkout, then we run this
+    // test twice (once in which the sandbox uses the current checkout,
+    // and another in which the sandbox uses a simulated release). If we
+    // are currently running from a release, then we can only have the
+    // sandbox use a simulated release that is the same as our current
+    // release (we can't simulate a checkout).
+    release.current.isCheckout() ? [true, false] : [false],
+    function (useFakeRelease) {
+      var sandboxOpts;
+      if (useFakeRelease) {
+        sandboxOpts = {
+          warehouse: {
+            v1: { recommended: true }
+          }
+        };
+      }
+      var s = new Sandbox(sandboxOpts);
+      var run;
 
-  var run = s.run("create", "foo");
-  run.expectExit(0);
-  s.cd("foo");
+      if (useFakeRelease) {
+        // This makes packages not depend on meteor (specifically, makes
+        // our empty control program not depend on meteor). We don't
+        // want to depend on meteor when running from a fake release,
+        // because fake releases don't have any packages.
+        s.set("NO_METEOR_PACKAGE", "t");
+      }
 
-  project.project.setRootDir(s.cwd);
+      s.createApp("foo", "package-stats-tests");
+      s.cd("foo");
+      if (useFakeRelease) {
+        s.write('.meteor/release', 'METEOR-CORE@v1');
+      }
 
-  // verify that identifier file exists for new apps
-  var identifier = s.read(".meteor/identifier");
-  selftest.expectEqual(!! identifier, true);
-  selftest.expectEqual(identifier.length > 0, true);
+      var sandboxProject = new project.Project();
+      sandboxProject.setRootDir(s.cwd);
 
-  // verify that identifier file when running 'meteor bundle' on apps
-  // with no identifier file (eg pre-0.9.0 apps)
-  bundleWithFreshIdentifier(s);
-  identifier = s.read(".meteor/identifier");
-  selftest.expectEqual(!! identifier, true);
-  selftest.expectEqual(identifier.length > 0, true);
+      // XXX test that local-package is a direct dep
 
-  // we just ran 'meteor bundle' so let's test that we actually sent
-  // package usage stats
-  var usage = fetchPackageUsageForApp(identifier);
-  selftest.expectEqual(_.sortBy(usage.packages, "name"),
-                       _.sortBy(stats.packageList(), "name"));
+      // verify that identifier file exists for new apps
+      var identifier = s.read(".meteor/identifier");
+      selftest.expectEqual(!! identifier, true);
+      selftest.expectEqual(identifier.length > 0, true);
 
-  // verify that the stats server recorded that with no userId
-  var appPackages = stats.getPackagesForAppIdInTest();
-  selftest.expectEqual(appPackages.appId, identifier);
-  selftest.expectEqual(appPackages.userId, null);
-  selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                       _.sortBy(stats.packageList(), "name"));
+      // verify that identifier file when running 'meteor bundle' on apps
+      // with no identifier file (eg pre-0.9.0 apps)
+      bundleWithFreshIdentifier(s, sandboxProject);
 
-  // now bundle again while logged in. verify that the stats server
-  // recorded that with the right userId
-  testUtils.login(s, "test", "testtest");
-  bundleWithFreshIdentifier(s);
-  appPackages = stats.getPackagesForAppIdInTest();
-  selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
+      identifier = s.read(".meteor/identifier");
+      selftest.expectEqual(!! identifier, true);
+      selftest.expectEqual(identifier.length > 0, true);
 
-  var expectedUserAgentInfo = {
-    hostname: os.hostname(),
-    osPlatform: os.platform(),
-    osType: os.type(),
-    osRelease: os.release(),
-    osArch: os.arch()
-  };
-  if (! release.current.isCheckout()) {
-    expectedUserAgentInfo.meteorReleaseTrack = release.getReleaseTrack();
-    expectedUserAgentInfo.meteorReleaseVersion = release.getReleaseVersion();
-    expectedUserAgentInfo.meteorToolsPackageWithVersion =
-      release.getToolsPackageAtVersion();
-  }
+      // we just ran 'meteor bundle' so let's test that we actually sent
+      // package usage stats
+      var usage = fetchPackageUsageForApp(identifier);
+      selftest.expectEqual(_.sortBy(usage.packages, "name"),
+                           _.sortBy(stats.packageList(sandboxProject), "name"));
 
-  selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
+      // verify that the stats server recorded that with no userId
+      var appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      selftest.expectEqual(appPackages.appId, identifier);
+      selftest.expectEqual(appPackages.userId, null);
+      selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
+                           _.sortBy(stats.packageList(sandboxProject), "name"));
 
-  // Add the opt-out package, verify that no stats are recorded for the
-  // app.
-  run = s.run("add", "package-stats-opt-out");
-  run.waitSecs(15);
-  run.expectExit(0);
-  bundleWithFreshIdentifier(s);
-  appPackages = stats.getPackagesForAppIdInTest();
-  selftest.expectEqual(appPackages, undefined);
+      // now bundle again while logged in. verify that the stats server
+      // recorded that with the right userId
+      testUtils.login(s, "test", "testtest");
+      bundleWithFreshIdentifier(s, sandboxProject);
+      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
 
-  // Remove the opt-out package, verify that stats get sent again.
-  run = s.run("remove", "package-stats-opt-out");
-  run.waitSecs(15);
-  run.expectExit(0);
-  bundle(s);
-  appPackages = stats.getPackagesForAppIdInTest();
-  selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
-  selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                       _.sortBy(stats.packageList(), "name"));
+      var expectedUserAgentInfo = {
+        hostname: os.hostname(),
+        osPlatform: os.platform(),
+        osType: os.type(),
+        osRelease: os.release(),
+        osArch: os.arch()
+      };
+      if (useFakeRelease) {
+        expectedUserAgentInfo.meteorReleaseTrack =
+          "METEOR-CORE";
+        expectedUserAgentInfo.meteorReleaseVersion =
+          "v1";
+
+        // Check the tools package version against a regexp and then
+        // delete it from `appPackages.meta` so that we can check the
+        // rest of `appPackages.meta` with `expectEqual`.
+        var toolsPackageWithVersion =
+              appPackages.meta.meteorToolsPackageWithVersion;
+        if (! toolsPackageWithVersion.match(
+              /meteor-tool@\d.\d.\d(\+[a-z0-9]+)?/)) {
+          selftest.fail();
+        }
+        delete appPackages.meta.meteorToolsPackageWithVersion;
+      }
+
+      selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
+
+      // Add the opt-out package, verify that no stats are recorded for the
+      // app.
+      //
+      // XXX The app has a local package-stats-opt-out package in it, so
+      // that we can add the opt-out package without needing to be using
+      // a release that knows about the opt-out package. (Our sandbox
+      // release only has the tool package and no others.) In the near
+      // future we should just have a way to simulate a release in a
+      // sandbox that knows about all the packages in the meteor release
+      // or checkout that is running 'meteor self-test'. That will
+      // simplify this test a lot.
+      run = s.run("add", "package-stats-opt-out");
+      run.waitSecs(15);
+      run.expectExit(0);
+      bundleWithFreshIdentifier(s, sandboxProject);
+      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      selftest.expectEqual(appPackages, undefined);
+
+      // Remove the opt-out package, verify that stats get sent again.
+      run = s.run("remove", "package-stats-opt-out");
+      run.waitSecs(15);
+      run.expectExit(0);
+      bundle(s, sandboxProject);
+      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
+      selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
+                           _.sortBy(stats.packageList(sandboxProject), "name"));
+    }
+  );
 });
 
 // Bundle the app in the current working directory after deleting its
 // identifier file (meaning a new one will be created).
 // @param s {Sandbox}
-var bundleWithFreshIdentifier = function (s) {
+var bundleWithFreshIdentifier = function (s, sandboxProject) {
   s.unlink(".meteor/identifier");
-  bundle(s);
+  bundle(s, sandboxProject);
 };
 
 // Bundle the app in the current working directory.
 // @param s {Sandbox}
-var bundle = function (s) {
+var bundle = function (s, sandboxProject) {
   var run = s.run("bundle", "foo.tar.gz");
   run.waitSecs(30);
   run.expectExit(0);
@@ -109,7 +163,7 @@ var bundle = function (s) {
   // XXX not sure why this is necessary (i.e. why project can't detect
   // that .meteor/identifier or .meteor/packages has changed and figure
   // out that it needs to reload itself)
-  project.project.reload();
+  sandboxProject.reload();
 };
 
 // Contact the package stats server and look for a given app
