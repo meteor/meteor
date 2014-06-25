@@ -2248,3 +2248,57 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );
+
+Tinytest.add(
+  "spacebars-tests - template_tests - UI.render/UI.insert",
+  function (test) {
+    var div = document.createElement("DIV");
+    document.body.appendChild(div);
+
+    var created = false, rendered = false, destroyed = false;
+    var R = ReactiveVar('aaa');
+
+    var tmpl = Template.spacebars_test_ui_render;
+    tmpl.greeting = function () { return this.greeting || 'Hello'; };
+    tmpl.r = function () { return R.get(); };
+    tmpl.created = function () { created = true; };
+    tmpl.rendered = function () { rendered = true; };
+    tmpl.destroyed = function () { destroyed = true; };
+
+    test.equal([created, rendered, destroyed], [false, false, false]);
+
+    var renderedTmpl = UI.render(tmpl);
+    test.equal([created, rendered, destroyed], [true, false, false]);
+
+    UI.insert(renderedTmpl, div);
+    // Flush now. We fire the rendered callback in an afterFlush block,
+    // to ensure that the DOM is completely updated.
+    Deps.flush();
+    test.equal([created, rendered, destroyed], [true, true, false]);
+
+    UI.render(tmpl); // can run a second time without throwing
+
+    UI.insert(UI.renderWithData(tmpl, {greeting: 'Bye'}), div);
+    test.equal(canonicalizeHtml(div.innerHTML),
+               "<span>Hello aaa</span><span>Bye aaa</span>");
+    R.set('bbb');
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML),
+               "<span>Hello bbb</span><span>Bye bbb</span>");
+
+    test.equal([created, rendered, destroyed], [true, true, false]);
+    $(div).remove();
+    test.equal([created, rendered, destroyed], [true, true, true]);
+  });
+
+Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
+  var tmpl = Template.spacebars_test_ui_render;
+  test.throws(function () {
+    UI.insert(UI.render(tmpl), $('body'));
+  }, /'parentElement' must be a DOM node/);
+  test.throws(function () {
+    UI.insert(UI.render(tmpl), document.body, $('body'));
+  }, /'nextNode' must be a DOM node/);
+});
+
+

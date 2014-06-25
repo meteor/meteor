@@ -634,46 +634,6 @@ Tinytest.add("ui - render - SVG", function (test) {
   test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
 });
 
-Tinytest.add("ui - UI.render", function (test) {
-  var div = document.createElement("DIV");
-  document.body.appendChild(div);
-
-  var R = ReactiveVar('aaa');
-  var tmpl = UI.Component.extend({
-    render: function () {
-      var self = this;
-      return SPAN(function () {
-        return (self.get('greeting') || 'Hello') + ' ' + R.get();
-      });
-    }
-  });
-
-  UI.insert(UI.render(tmpl), div);
-  UI.insert(UI.renderWithData(tmpl, {greeting: 'Bye'}), div);
-  test.equal(canonicalizeHtml(div.innerHTML),
-             "<span>Hello aaa</span><span>Bye aaa</span>");
-  R.set('bbb');
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML),
-             "<span>Hello bbb</span><span>Bye bbb</span>");
-
-  document.body.removeChild(div);
-});
-
-Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
-  var tmpl = UI.Component.extend({
-    render: function () {
-      return SPAN();
-    }
-  });
-  test.throws(function () {
-    UI.insert(UI.render(tmpl), $('body'));
-  }, /'parentElement' must be a DOM node/);
-  test.throws(function () {
-    UI.insert(UI.render(tmpl), document.body, $('body'));
-  }, /'nextNode' must be a DOM node/);
-});
-
 Tinytest.add("ui - UI.getDataContext", function (test) {
   var div = document.createElement("DIV");
 
