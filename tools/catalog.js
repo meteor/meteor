@@ -378,12 +378,8 @@ _.extend(CompleteCatalog.prototype, {
   // Add all packages in self.effectiveLocalPackages to the catalog,
   // first removing any existing packages that have the same name.
   //
-  // If _setInitialized is provided and true, then as soon as the
-  // metadata for the local packages has been loaded into the catalog,
-  // mark the catalog as initialized. This is a bit of a hack.
-  //
   // XXX emits buildmessages. are callers expecting that?
-  _addLocalPackageOverrides: function (_setInitialized) {
+  _addLocalPackageOverrides: function () {
     var self = this;
 
     // Remove all packages from the catalog that have the same name as
@@ -515,11 +511,6 @@ _.extend(CompleteCatalog.prototype, {
     // runs on the original members of the collection, so it is safe to modify
     // effectiveLocalPackages in initPackageSource (to add test packages).
     _.each(self.effectiveLocalPackages, initVersionRecordFromSource);
-
-    // We have entered records for everything, and we are going to build lazily,
-    // so we are done.
-    if (_setInitialized)
-      self.initialized = true;
 
     // Save the package sources and the list of all unbuilt packages. We will
     // build them lazily when someone asks for them.
