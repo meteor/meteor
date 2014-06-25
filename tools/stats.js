@@ -48,7 +48,7 @@ var packageList = function (_currentProjectForTest) {
       return {
         name: name,
         version: version,
-        direct: _.contains(directDeps, name)
+        direct: _.has(directDeps, name)
       };
     }
   );

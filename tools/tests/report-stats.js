@@ -73,6 +73,14 @@ selftest.define("report-stats", ["slow"], function () {
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
                            _.sortBy(stats.packageList(sandboxProject), "name"));
 
+      // Check that the direct dependency was recorded as such.
+      _.each(usage.packages, function (package) {
+        if (package.name === "local-package" &&
+            ! package.direct) {
+          selftest.fail("local-package is not marked as a direct dependency");
+        }
+      });
+
       // verify that the stats server recorded that with no userId
       var appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.appId, identifier);
