@@ -105,12 +105,12 @@ Meteor.RedisCollection = function (name, options) {
         // of method writes to an object? (Note that 'undefined' is a valid
         // value meaning "remove it".)
         if (msg.msg === 'replace') {
-          var replace = msg.replace;
+          var replace = msg.replace.value;
           if (!replace) {
             if (doc)
               self._collection._remove(key);
           } else {
-            self._collection._set(key, replace.value);
+            self._collection._set(key, replace);
           }
         } else if (msg.msg === 'added') {
           if (doc) {

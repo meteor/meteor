@@ -543,7 +543,7 @@ _.extend(Connection.prototype, {
       stop: function () {
         if (!_.has(self._subscriptions, id))
           return;
-        
+
         self._subscriptions[id].stop();
       },
       ready: function () {
