@@ -1,6 +1,8 @@
 var _ = require('underscore');
 var os = require("os");
 
+var auth = require("../auth.js");
+var config = require("../config.js");
 var release = require("../release.js");
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
@@ -10,6 +12,38 @@ var project = require('../project.js');
 
 var testStatsServer = "https://test-package-stats.meteor.com";
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
+
+var checkMeta = function (appPackages, sessionId, useFakeRelease) {
+  var expectedUserAgentInfo = {
+    hostname: os.hostname(),
+    osPlatform: os.platform(),
+    osType: os.type(),
+    osRelease: os.release(),
+    osArch: os.arch(),
+    sessionId: sessionId
+  };
+  if (useFakeRelease) {
+    expectedUserAgentInfo.meteorReleaseTrack =
+      "METEOR-CORE";
+    expectedUserAgentInfo.meteorReleaseVersion =
+      "v1";
+
+    // Check the tools package version against a regexp and then
+    // delete it from `appPackages.meta` so that we can check the
+    // rest of `appPackages.meta` with `expectEqual`.
+    var toolsPackageWithVersion =
+          appPackages.meta.meteorToolsPackageWithVersion;
+    if (! toolsPackageWithVersion.match(
+        /meteor-tool@\d.\d.\d(\+[a-z0-9]+)?/)) {
+      selftest.fail("Tools package with version is " +
+                    "not correct: " + toolsPackageWithVersion);
+    }
+    delete appPackages.meta.meteorToolsPackageWithVersion;
+  }
+
+  selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
+
+};
 
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
@@ -52,6 +86,8 @@ selftest.define("report-stats", ["slow"], function () {
       var sandboxProject = new project.Project();
       sandboxProject.setRootDir(s.cwd);
 
+      var sessionId;
+
       // XXX test that local-package is a direct dep
 
       // verify that identifier file exists for new apps
@@ -87,41 +123,27 @@ selftest.define("report-stats", ["slow"], function () {
       selftest.expectEqual(appPackages.userId, null);
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
                            _.sortBy(stats.packageList(sandboxProject), "name"));
+      checkMeta(appPackages, sessionId, useFakeRelease);
 
       // now bundle again while logged in. verify that the stats server
-      // recorded that with the right userId
+      // recorded that with the right userId and meta information
       testUtils.login(s, "test", "testtest");
+      sessionId = auth.getSessionId(config.getAccountsDomain(),
+                                    JSON.parse(s.readSessionFile()));
+
       bundleWithFreshIdentifier(s, sandboxProject);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
+      checkMeta(appPackages, sessionId, useFakeRelease);
 
-      var expectedUserAgentInfo = {
-        hostname: os.hostname(),
-        osPlatform: os.platform(),
-        osType: os.type(),
-        osRelease: os.release(),
-        osArch: os.arch()
-      };
-      if (useFakeRelease) {
-        expectedUserAgentInfo.meteorReleaseTrack =
-          "METEOR-CORE";
-        expectedUserAgentInfo.meteorReleaseVersion =
-          "v1";
+      // Log out, and then test that our session id still gets recorded.
+      testUtils.logout(s);
+      bundleWithFreshIdentifier(s, sandboxProject);
+      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      selftest.expectEqual(appPackages.userId, null);
+      checkMeta(appPackages, sessionId, useFakeRelease);
 
-        // Check the tools package version against a regexp and then
-        // delete it from `appPackages.meta` so that we can check the
-        // rest of `appPackages.meta` with `expectEqual`.
-        var toolsPackageWithVersion =
-              appPackages.meta.meteorToolsPackageWithVersion;
-        if (! toolsPackageWithVersion.match(
-              /meteor-tool@\d.\d.\d(\+[a-z0-9]+)?/)) {
-          selftest.fail("Tools package with version is " +
-                        "not correct: " + toolsPackageWithVersion);
-        }
-        delete appPackages.meta.meteorToolsPackageWithVersion;
-      }
-
-      selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
+      testUtils.login(s, "test", "testtest");
 
       // Add the opt-out package, verify that no stats are recorded for the
       // app.

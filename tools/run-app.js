@@ -275,7 +275,7 @@ _.extend(AppProcess.prototype, {
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
-//   proxy, dontRecordPackageUsage
+//   proxy, recordPackageUsage
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But

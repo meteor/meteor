@@ -72,7 +72,8 @@ var recordPackages = function () {
       osPlatform: os.platform(),
       osType: os.type(),
       osRelease: os.release(),
-      osArch: os.arch()
+      osArch: os.arch(),
+      sessionId: auth.getSessionId(config.getAccountsDomain())
     };
 
     if (! release.current.isCheckout()) {

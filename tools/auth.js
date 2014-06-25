@@ -1009,8 +1009,9 @@ session.registrationUrl + "\n\n");
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;
 
-exports.getSessionId = function (domain) {
-  return getSession(readSessionData(), domain).session;
+exports.getSessionId = function (domain, sessionData) {
+  sessionData = sessionData || readSessionData();
+  return getSession(sessionData, domain).session;
 };
 
 exports.setSessionId = function (domain, sessionId) {
