@@ -481,7 +481,7 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   decrby: function (key, decrement) {
     var self = this;
-    var val = self._has(key) ? self._get(key) : 0;
+    var val = self._has(key) ? self._get(key) : "0";
 
     if (! _.isString(val))
       throwIncorrectKindOfValueError();
@@ -544,12 +544,12 @@ _.extend(Miniredis.RedisStore.prototype, {
   },
   incrbyfloat: function (key, increment) {
     var self = this;
-    var val = self._has(key) ? self._get(key) : 0;
+    var val = self._has(key) ? self._get(key) : "0";
 
     if (! _.isString(val))
       throwIncorrectKindOfValueError();
 
-    // cast to integer
+    // cast to float
     var newVal = parseFloat(val);
 
     if (isNaN(newVal))
