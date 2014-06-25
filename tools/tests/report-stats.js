@@ -107,7 +107,8 @@ selftest.define("report-stats", ["slow"], function () {
               appPackages.meta.meteorToolsPackageWithVersion;
         if (! toolsPackageWithVersion.match(
               /meteor-tool@\d.\d.\d(\+[a-z0-9]+)?/)) {
-          selftest.fail();
+          selftest.fail("Tools package with version is " +
+                        "not correct: " + toolsPackageWithVersion);
         }
         delete appPackages.meta.meteorToolsPackageWithVersion;
       }
