@@ -803,6 +803,7 @@ _.extend(Run.prototype, {
   stop: markStack(function () {
     var self = this;
     if (self.exitStatus === undefined) {
+      self._ensureStarted();
       self.proc.kill();
       self.expectExit();
     }
