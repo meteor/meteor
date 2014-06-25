@@ -259,7 +259,7 @@ ObserveTester = function (collection, keyPrefix) {
       var withoutPrefix = self._withoutPrefix(key);
       self._log += 'a(' + withoutPrefix + ')';
     },
-    updated: function (key, value) {
+    changed: function (key, value) {
       var withoutPrefix = self._withoutPrefix(key);
       self._log += 'u(' + withoutPrefix + ')';
     },
@@ -461,7 +461,7 @@ testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
       added: function (key, value) {
         output.push({added: key});
       },
-      updated: function (key, value) {
+      changed: function (key, value) {
         output.push('updated');
       },
       removed: function (key, value) {
