@@ -489,11 +489,9 @@ _.extend(Project.prototype, {
     // Skip the disk IO if the versions haven't changed.
     if (!_.isEqual(newVersions, self.dependencies)) {
       self.dependencies = newVersions;
-      self._recordVersions();
+      self._recordVersions(options);
     }
 
-    self.dependencies = newVersions;
-    self._recordVersions(options);
     return downloaded;
   },
 
@@ -506,7 +504,7 @@ _.extend(Project.prototype, {
 
     // If the user forced us to an explicit release, then maybe we shouldn't
     // record versions, unless we are updating, in which case, we should.
-    if (release.forced && release.explicit && !options.alwaysRecord) {
+    if (release.explicit && !options.alwaysRecord) {
       return;
     }
 
