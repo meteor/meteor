@@ -26,9 +26,13 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
     osType: os.type(),
     osRelease: os.release(),
     osArch: os.arch(),
-    sessionId: sessionId,
     clientAddress: clientAddress
   };
+
+  if (sessionId) {
+    expectedUserAgentInfo.sessionId = sessionId;
+  }
+
   if (useFakeRelease) {
     expectedUserAgentInfo.meteorReleaseTrack =
       "METEOR-CORE";
