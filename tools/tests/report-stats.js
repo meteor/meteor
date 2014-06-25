@@ -88,8 +88,6 @@ selftest.define("report-stats", ["slow"], function () {
 
       var sessionId;
 
-      // XXX test that local-package is a direct dep
-
       // verify that identifier file exists for new apps
       var identifier = s.read(".meteor/identifier");
       selftest.expectEqual(!! identifier, true);
