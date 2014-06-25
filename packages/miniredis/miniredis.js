@@ -383,7 +383,7 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     if (! self._savedOriginals || self._savedOriginals.has(key))
       return;
-    self._savedOriginals.set(key, { _id: key, value: value }); // XXX need to deep clone value?
+    self._savedOriginals.set(key, value && { _id: key, value: value }); // XXX need to deep clone value?
   },
 
   // -----
