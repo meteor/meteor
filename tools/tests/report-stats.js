@@ -136,10 +136,13 @@ selftest.define("report-stats", ["slow"], function () {
 
       // Log out, and then test that our session id still gets recorded.
       testUtils.logout(s);
-      bundleWithFreshIdentifier(s, sandboxProject);
+      run = s.run("run");
+      run.waitSecs(5);
+      run.match("BLAH");
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, null);
       checkMeta(appPackages, sessionId, useFakeRelease);
+      run.stop();
 
       testUtils.login(s, "test", "testtest");
 
