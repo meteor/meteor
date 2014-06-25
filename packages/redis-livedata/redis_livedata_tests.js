@@ -2835,16 +2835,16 @@ if (Meteor.isClient) {
 //    onComplete();
 //  });
 //});
-//
-//Tinytest.addAsync("redis-livedata - local collection with null connection, w/o callback", function (test, onComplete) {
-//  var cname = Random.id();
-//  var coll1 = new Meteor.RedisCollection(cname, { connection: null });
-//  var doc = { foo: "bar" };
-//  var docId = coll1.insert(doc);
-//  test.equal(coll1.findOne(doc)._id, docId);
-//  onComplete();
-//});
-//
+
+Tinytest.addAsync("redis-livedata - local collection with null connection, w/o callback", function (test, onComplete) {
+  var cname = Random.id();
+  var coll1 = new Meteor.RedisCollection(cname, { connection: null });
+  var id = Random.id();
+  coll1.set(id, "foobarbaz");
+  test.equal(coll1.get(id), "foobarbaz");
+  onComplete();
+});
+
 //testAsyncMulti("redis-livedata - update handles $push with $each correctly", [
 //  function (test, expect) {
 //    var self = this;

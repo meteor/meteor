@@ -26,13 +26,13 @@ _.extend(LocalCollectionDriver.prototype, {
         store = self.noConnStore = new Miniredis.RedisStore();
       }
     }
+    if (! conn) {
+      return ensureCollection(store, name, self.noConnCollections);
+    }
     // XXX Redis doesn't have the concept of collections so for now the only
     // possible collection name is "redis"
     if (name !== "redis" && name !== null) {
       throw new Error("The only valid RedisCollection name is 'redis'");
-    }
-    if (! conn) {
-      return ensureCollection(store, name, self.noConnCollections);
     }
     if (! conn._redis_livedata_collections)
       conn._redis_livedata_collections = {};
