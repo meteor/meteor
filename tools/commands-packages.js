@@ -936,7 +936,7 @@ main.registerCommand({
   // update' is how you fix apps that don't have a release.
   requiresRelease: false,
   minArgs: 0,
-  maxArgs: Infinity,
+  maxArgs: Infinity
 }, function (options) {
   // XXX clean this up if we don't end up using it, but we probably should be
   // using it on the refresh call
@@ -1207,7 +1207,8 @@ main.registerCommand({
     }
 
     // Set our versions and download the new packages.
-    var downloaded = project.setVersions(newVersions);
+    var downloaded = project.setVersions(newVersions, {
+      alwaysRecord : true });
 
     // Display changes: what we have added/removed/upgraded.
     showPackageChanges(versions, newVersions, {

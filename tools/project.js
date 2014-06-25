@@ -479,20 +479,36 @@ _.extend(Project.prototype, {
 
   // Given a set of versions, makes sure that they exist on disk, and then
   // writes out the new versions file.
-  setVersions: function (newVersions) {
+  //
+  // options:
+  //   alwaysRecord: record the versions file, even when we aren't supposed to.
+  setVersions: function (newVersions, options) {
     var self = this;
     var downloaded = self._ensurePackagesExistOnDisk(newVersions);
+
     // Skip the disk IO if the versions haven't changed.
     if (!_.isEqual(newVersions, self.dependencies)) {
       self.dependencies = newVersions;
       self._recordVersions();
     }
+
+    self.dependencies = newVersions;
+    self._recordVersions(options);
     return downloaded;
   },
 
   // Recalculates the project dependencies if needed and records them to disk.
-  _recordVersions : function () {
+  //
+  // options:
+  //   alwaysRecord: record the versions file, even when we aren't supposed to.
+  _recordVersions : function (options) {
     var self = this;
+
+    // If the user forced us to an explicit release, then maybe we shouldn't
+    // record versions, unless we are updating, in which case, we should.
+    if (release.forced && release.explicit && !options.alwaysRecord) {
+      return;
+    }
 
     var lines = [];
     _.each(self.dependencies, function (version, name) {
