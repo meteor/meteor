@@ -564,6 +564,66 @@ testAsyncMulti('redis-livedata - setex, ' + idGeneration, [
   }
 ]);
 
+testAsyncMulti('redis-livedata - repeated set, ' + idGeneration, [
+  function (test, expect) {
+    var keyPrefix = test._keyPrefix = Random.id() + ':';
+    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+
+    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+
+    obs.expectObserve(test, 'a(counter)', function () {
+      coll.set(keyPrefix + 'counter', 1);
+    });
+
+    obs.expectObserve(test, 'u(counter)', function () {
+      coll.set(keyPrefix + 'counter', '2');
+    });
+
+    test.equal(coll.get(keyPrefix + "counter"), "2");
+
+    obs.expectObserve(test, 'u(counter)', function () {
+      coll.set(keyPrefix + 'counter', '3');
+    });
+
+    test.equal(coll.get(keyPrefix + "counter"), "3");
+  }
+]);
+
+testAsyncMulti('redis-livedata - incr / decr, ' + idGeneration, [
+  function (test, expect) {
+    var keyPrefix = test._keyPrefix = Random.id() + ':';
+    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+
+    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+
+    obs.expectObserve(test, 'a(counter)', function () {
+      coll.incrby(keyPrefix + 'counter', 2);
+    });
+
+    obs.expectObserve(test, 'u(counter)', function () {
+      coll.incr(keyPrefix + 'counter');
+    });
+
+    test.equal(coll.get(keyPrefix + "counter"), "3");
+
+    obs.expectObserve(test, 'a(counter2)', function () {
+      coll.decr(keyPrefix + 'counter2');
+    });
+
+    obs.expectObserve(test, 'u(counter2)', function () {
+      coll.incrby(keyPrefix + 'counter2', 3);
+    });
+
+    test.equal(coll.get(keyPrefix + "counter2"), "2");
+
+    obs.expectObserve(test, 'u(counter2)', function () {
+      coll.incrbyfloat(keyPrefix + 'counter2', 1.142);
+    });
+
+    test.equal(coll.get(keyPrefix + "counter2"), "3.142");
+  }
+]);
+
 //Tinytest.addAsync("redis-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 //  var keyPrefix = Random.id();
 //  var coll;

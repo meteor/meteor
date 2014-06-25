@@ -17,7 +17,7 @@ _.extend(RedisInternals.RemoteCollectionDriver.prototype, {
           throw new Error(m + ' is not available on REDIS! XXX');
         };
       });
-      _.each(['get', 'set', 'incrby', 'keys', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall', '_observe', 'matching', 'flushall', 'setex'],
+      _.each(['get', 'set', 'incr', 'incrby', 'incrbyfloat', 'decr', 'decrby', 'keys', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall', '_observe', 'matching', 'flushall', 'setex'],
         function (m) {
           ret[m] = function (/* args */) {
             var args = _.toArray(arguments);

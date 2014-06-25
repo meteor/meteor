@@ -531,7 +531,9 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
     }
 
     var opType = op.message;
-    if (opType == 'set') {
+    if (opType == 'set'
+        || opType == 'incr' || opType == 'incrby' || opType == 'incrbyfloat'
+        || opType == 'decr' || opType == 'decrby') {
       self._needToFetch.set(id, Random.id()); //op.ts.toString());
       if (self._phase === PHASE.STEADY)
         self._fetchModifiedDocuments();

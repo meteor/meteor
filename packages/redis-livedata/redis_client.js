@@ -238,6 +238,24 @@ RedisClient.prototype.incrby = function (key, delta, callback) {
   self._connection.incrby(key, delta, Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.incrbyfloat = function (key, delta, callback) {
+  var self = this;
+
+  self._connection.incrbyfloat(key, delta, Meteor.bindEnvironment(callback));
+};
+
+RedisClient.prototype.decr = function (key, callback) {
+  var self = this;
+
+  self._connection.decr(key, Meteor.bindEnvironment(callback));
+};
+
+RedisClient.prototype.decrby = function (key, delta, callback) {
+  var self = this;
+
+  self._connection.decrby(key, delta, Meteor.bindEnvironment(callback));
+};
+
 RedisClient.prototype.getAll = function (keys, callback) {
   var self = this;
 

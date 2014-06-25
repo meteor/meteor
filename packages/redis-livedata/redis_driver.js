@@ -118,7 +118,12 @@ RedisObserver = function (watcher, observer) {
     var methodName;
     if (message == 'hset' || message == 'set') {
       methodName = 'updated';
-    } else if (message == 'hincrby' || message == 'incrby') {
+    } else if (message == 'hincrby'
+               || message == 'incr'
+               || message == 'incrby'
+               || message == 'incrbyfloat'
+               || message == 'decr'
+               || message == 'decrby') {
       methodName = 'updated';
     } else if (message == 'del') {
       methodName = 'removed';
@@ -670,7 +675,7 @@ _.each(["get", "keys", "hgetall", "_keys_hgetall"], function (method) {
   };
 });
 
-_.each(["set", "incrby", "del", "hmset", "hincrby", "flushall", "setex"], function (method) {
+_.each(["set", "incr", "incrby", "incrbyfloat", "decr", "decrby", "del", "hmset", "hincrby", "flushall", "setex"], function (method) {
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
