@@ -256,6 +256,12 @@ RedisClient.prototype.decrby = function (key, delta, callback) {
   self._connection.decrby(key, delta, Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.append = function (key, suffix, callback) {
+  var self = this;
+
+  self._connection.append(key, suffix, Meteor.bindEnvironment(callback));
+};
+
 RedisClient.prototype.getAll = function (keys, callback) {
   var self = this;
 

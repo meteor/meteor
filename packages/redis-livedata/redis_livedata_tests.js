@@ -625,6 +625,44 @@ testAsyncMulti('redis-livedata - incr / decr, ' + idGeneration, [
   }
 ]);
 
+
+testAsyncMulti('redis-livedata - append, ' + idGeneration, [
+  function (test, expect) {
+    var keyPrefix = test._keyPrefix = Random.id() + ':';
+    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+
+    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+
+    obs.expectObserve(test, 'a(easyas)', function () {
+      coll.append(keyPrefix + 'easyas', '1');
+    });
+
+    obs.expectObserve(test, 'u(easyas)', function () {
+      coll.append(keyPrefix + 'easyas', '2');
+    });
+
+    obs.expectObserve(test, 'u(easyas)', function () {
+      coll.append(keyPrefix + 'easyas', '3');
+    });
+
+    test.equal(coll.get(keyPrefix + "easyas"), "123");
+
+    obs.expectObserve(test, 'a(simpleas)', function () {
+      coll.set(keyPrefix + 'simpleas', 'do');
+    });
+
+    obs.expectObserve(test, 'u(simpleas)', function () {
+      coll.append(keyPrefix + 'simpleas', 're');
+    });
+
+    obs.expectObserve(test, 'u(simpleas)', function () {
+      coll.append(keyPrefix + 'simpleas', 'mi');
+    });
+
+    test.equal(coll.get(keyPrefix + "simpleas"), "doremi");
+  }
+]);
+
 //Tinytest.addAsync("redis-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 //  var keyPrefix = Random.id();
 //  var coll;
