@@ -11,13 +11,7 @@ cd "$ORIG_DIR"
 TOOLS_DIR="$SCRIPT_DIR/../../.."
 
 # Find our binary dependencies (node).
-if [ -d "$TOOLS_DIR/.git" ] || [ -f "$TOOLS_DIR/.git" ]; then
-    # In a checkout.
-    DEV_BUNDLE="$TOOLS_DIR/dev_bundle"
-else
-    # In an install.
-    DEV_BUNDLE="$TOOLS_DIR"
-fi
+DEV_BUNDLE="$TOOLS_DIR/dev_bundle"
 
 # Have at it!
 export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
