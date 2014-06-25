@@ -6,6 +6,7 @@ Accounts.ui._options = {
   forceApprovalPrompt: {}
 };
 
+// XXX refactor duplicated code in this function
 Accounts.ui.config = function(options) {
   // validate options keys
   var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken', 'forceApprovalPrompt'];
