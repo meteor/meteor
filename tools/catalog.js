@@ -306,23 +306,27 @@ _.extend(CompleteCatalog.prototype, {
   refresh: function () {
     var self = this;
 
-    // We need to limit the rate of refresh, or, at least, prevent any sort of loops.
-    if (self.refreshing) {
+    // We need to limit the rate of refresh, or, at least, prevent any sort of
+    // loops.
+    if (self.refreshing || catalog.official._refreshFutures) {
       return;
     }
     self.refreshing = true;
 
-    self.reset();
-    var localData = packageClient.loadCachedServerData();
-    self._insertServerPackages(localData);
-    self._recomputeEffectiveLocalPackages();
-    self._addLocalPackageOverrides();
+    try {
+      self.reset();
+      var localData = packageClient.loadCachedServerData();
+      self._insertServerPackages(localData);
+      self._recomputeEffectiveLocalPackages();
+      self._addLocalPackageOverrides();
 
-    self.initialized = true;
+      self.initialized = true;
 
-    // Rebuild the resolver, since packages may have changed.
-    self._initializeResolver();
-    self.refreshing = false;
+      // Rebuild the resolver, since packages may have changed.
+      self._initializeResolver();
+    } finally {
+      self.refreshing = false;
+    }
   },
 
   _initializeResolver: function () {
