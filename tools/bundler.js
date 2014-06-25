@@ -177,14 +177,6 @@ exports.ignoreFiles = [
     /^\.git\/$/ /* often has too many files to watch */
 ];
 
-// http://davidshariff.com/blog/javascript-inheritance-patterns/
-var inherits = function (child, parent) {
-  var tmp = function () {};
-  tmp.prototype = parent.prototype;
-  child.prototype = new tmp;
-  child.prototype.constructor = child;
-};
-
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
     throw new Error("bad path: " + p);
@@ -769,7 +761,7 @@ var ClientTarget = function (options) {
     throw new Error("ClientTarget targeting something that isn't a browser?");
 };
 
-inherits(ClientTarget, Target);
+util.inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
   // Lints CSS files and merges them into one file, fixing up source maps and
@@ -1306,7 +1298,7 @@ var JsImageTarget = function (options) {
     throw new Error("JsImageTarget targeting something unusual?");
 };
 
-inherits(JsImageTarget, Target);
+util.inherits(JsImageTarget, Target);
 
 _.extend(JsImageTarget.prototype, {
   toJsImage: function () {
@@ -1349,7 +1341,7 @@ var ServerTarget = function (options) {
     throw new Error("ServerTarget targeting something that isn't a server?");
 };
 
-inherits(ServerTarget, JsImageTarget);
+util.inherits(ServerTarget, JsImageTarget);
 
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk

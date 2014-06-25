@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var semver = require('semver');
 var _ = require('underscore');
+var util = require('util');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
@@ -13,7 +14,7 @@ var tropohouse = require('./tropohouse.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
-var baseCatalog = require('./catalog-base.js').BaseCatalog;
+var BaseCatalog = require('./catalog-base.js').BaseCatalog;
 var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
 
@@ -36,10 +37,10 @@ var ServerCatalog = function () {
   self.offline = null;
 
   // We inherit from the protolog class, since we are a catalog.
-  baseCatalog.call(self);
+  BaseCatalog.call(self);
 };
 
-ServerCatalog.prototype = Object.create(baseCatalog.prototype);
+util.inherits(ServerCatalog, BaseCatalog);
 
 _.extend(ServerCatalog.prototype, {
   initialize : function (options) {
@@ -169,10 +170,10 @@ var CompleteCatalog = function () {
   self.refreshing = false;
 
   // We inherit from the protolog class, since we are a catalog.
-  baseCatalog.call(self);
+  BaseCatalog.call(self);
 };
 
-CompleteCatalog.prototype = Object.create(baseCatalog.prototype);
+util.inherits(CompleteCatalog, BaseCatalog);
 
 _.extend(CompleteCatalog.prototype, {
   // Initialize the Catalog. This must be called before any other
