@@ -99,22 +99,22 @@ which npm
 cd "$DIR/lib/node_modules"
 npm install semver@2.2.1
 npm install request@2.33.0
-npm install keypress@0.2.1
 npm install underscore@1.5.2
 npm install fstream@0.1.25
 npm install tar@0.1.19
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install source-map-support@0.2.5
-npm install bcrypt@0.7.7
-npm install node-aes-gcm@0.1.3
-npm install heapdump@0.2.5
+
+# Includes osenv@0.1.0, which stops creating ~/tmp.
+npm install npm@1.4.15
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
 npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
 
-# Using the unreleased 1.1 branch. We can probably switch to a built NPM version
-# when it gets released.
+# Using the formerly-unreleased 1.1 branch. We can probably switch to a built
+# NPM version now. (For that matter, we ought to be able to get this from
+# the copy in js-analyze rather than in the dev bundle.)
 npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
 
 # 2.4.0 (more or less, the package.json change isn't committed) plus our PR
@@ -130,6 +130,8 @@ npm install fibers@1.0.1
 # thinking that the packages need to depend on both 32- and 64-bit versions of
 # libstd++. Remove all the ones other than our architecture. (Expression based
 # on build.js in fibers source.)
+# XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
+#     will it let you skip the "npm install fibers" step for running bundles?
 FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
 cd fibers/bin
 mv $FIBERS_ARCH ..
