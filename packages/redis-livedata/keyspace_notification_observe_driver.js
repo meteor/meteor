@@ -535,7 +535,7 @@ _.extend(KeyspaceNotificationObserveDriver.prototype, {
       self._needToFetch.set(id, Random.id()); //op.ts.toString());
       if (self._phase === PHASE.STEADY)
         self._fetchModifiedDocuments();
-    } else if (opType == 'del') {
+    } else if (opType == 'del' || opType == 'expired') {
       if (self._published.has(id)) // || (self._limit && self._unpublishedBuffer.has(id)))
         self._removeMatching(id);
     } else {

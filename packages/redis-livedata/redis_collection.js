@@ -477,7 +477,7 @@ Meteor.RedisCollection.prototype.matching = function (pattern) {
   return self._collection.matching(pattern);
 };
 
-_.each(['set', 'get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall'], function (name) {
+_.each(['set', 'get', 'incrby', 'hgetall', 'hmset', 'hincrby', 'del', '_keys_hgetall', 'flushall', 'setex'], function (name) {
   Meteor.RedisCollection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);

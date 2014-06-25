@@ -511,6 +511,59 @@ testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
   }
 ]);
 
+
+// XXX: flushall doesn't post keyspace notifications
+//Tinytest.addAsync('redis-livedata - flushall, ' + idGeneration, function (test, onComplete) {
+//  var keyPrefix = Random.id() + ':';
+//  var coll = new Meteor.RedisCollection("redis", collectionOptions);
+//
+//  var obs = new ObserveTester(coll, keyPrefix);
+//
+//  test.equal(coll.matching(keyPrefix + '*').count(), 0);
+//  test.equal(coll.get(keyPrefix + "1"), undefined);
+//
+//  obs.expectObserve(test, 'a(1)', function () {
+//    coll.set(keyPrefix + '1', '1');
+//    test.equal(coll.matching(keyPrefix + '*').count(), 1);
+//    test.equal(coll.get(keyPrefix + '1'), '1');
+//  });
+//
+//  obs.expectObserve(test, 'r(1)', function () {
+//    coll.flushall();
+//  });
+//
+//  test.equal(coll.matching(keyPrefix + '*').count(), 0);
+//  test.equal(coll.get(keyPrefix + '1'), undefined);
+//
+//  obs.stop();
+//  onComplete();
+//});
+
+testAsyncMulti('redis-livedata - setex, ' + idGeneration, [
+  function (test, expect) {
+    var keyPrefix = test._keyPrefix = Random.id() + ':';
+    var coll = test._coll = new Meteor.RedisCollection("redis", collectionOptions);
+
+    var obs = test._obs = new ObserveTester(coll, keyPrefix);
+
+    test.equal(coll.matching(keyPrefix + '*').count(), 0);
+    test.equal(coll.get(keyPrefix + "1"), undefined);
+
+    obs.expectObserve(test, 'a(1)', function () {
+      coll.setex(keyPrefix + '1', 1, '1');
+    });
+
+    Meteor.setTimeout(expect(), 2000);
+  }, function (test, expect) {
+    var keyPrefix = test._keyPrefix;
+    var obs = test._obs;
+    var coll = test._coll;
+    obs.expectObserve(test, 'r(1)', function () {
+      test.equal(coll.get(keyPrefix + '1'), undefined);
+    });
+  }
+]);
+
 //Tinytest.addAsync("redis-livedata - fuzz test, " + idGeneration, function(test, onComplete) {
 //  var keyPrefix = Random.id();
 //  var coll;

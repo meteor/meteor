@@ -670,7 +670,7 @@ _.each(["get", "keys", "hgetall", "_keys_hgetall"], function (method) {
   };
 });
 
-_.each(["set", "incrby", "del", "hmset", "hincrby"], function (method) {
+_.each(["set", "incrby", "del", "hmset", "hincrby", "flushall", "setex"], function (method) {
   RedisConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);

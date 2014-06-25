@@ -586,6 +586,11 @@ _.extend(Miniredis.RedisStore.prototype, {
     var self = this;
     self._set(key, value.toString());
   },
+  setex: function (key, expiration, value) {
+    // We rely on the server to do our expirations
+    var self = this;
+    self.set(key,value);
+  },
   setnx: function (key, value) {
     var self = this;
     if (self._has(key))
@@ -655,7 +660,7 @@ _.extend(Miniredis.RedisStore.prototype, {
 
 Miniredis.unsupportedMethods = ["ttl", "restore", "dump", "expire", "expireat",
   "migrate", "move", "object", "persist", "pexpire", "pexpireat", "pttl",
-  "bitcount", "bitop", "bitops", "getbit", "setbit", "setex", "psetex",
+  "bitcount", "bitop", "bitops", "getbit", "setbit", "psetex",
   "blpop", "brpop", "brpoplpush", "rpoplpush"];
 
 _.each(Miniredis.unsupportedMethods, function (method) {

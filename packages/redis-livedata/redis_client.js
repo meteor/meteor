@@ -74,6 +74,23 @@ RedisClient.prototype.keys = function (pattern, callback) {
   self._connection.keys(pattern, Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.flushall = function (callback) {
+  var self = this;
+
+  Meteor._debug("Redis command: FLUSHALL");
+
+  self._connection.flushall(Meteor.bindEnvironment(callback));
+};
+
+RedisClient.prototype.setex = function (key, expiration, value, callback) {
+  var self = this;
+
+  Meteor._debug("Redis command: SETEX " + key + " " + expiration + " " + value);
+
+
+  self._connection.setex(key, expiration, value, Meteor.bindEnvironment(callback));
+};
+
 RedisClient.prototype.hgetall = function (key, callback) {
   var self = this;
 
