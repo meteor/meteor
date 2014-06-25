@@ -1653,8 +1653,12 @@ exports.bundle = function (options) {
   if (! release.usingRightReleaseForApp(appDir))
     throw new Error("running wrong release for app?");
 
+  var arch = buildOptions.arch || archinfo.host();
+
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();
+  project.project._ensurePackagesExistOnDisk(
+    project.project.dependencies, arch);
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1701,7 +1705,7 @@ exports.bundle = function (options) {
     var makeServerTarget = function (app, clientTarget) {
       var targetOptions = {
         packageLoader: packageLoader,
-        arch: buildOptions.arch || archinfo.host(),
+        arch: arch,
         releaseName: releaseName
       };
       if (clientTarget)

@@ -175,11 +175,9 @@ _.extend(Project.prototype, {
         { previousSolution: self.dependencies }
       );
 
-      // If the result is now what it used to be, rewrite the files on
-      // disk. Otherwise, don't bother with I/O operations.
-      if (!_.isEqual(newVersions, self.dependencies)) {
-        self.setVersions(newVersions);
-      };
+      // Download packages to disk, and rewrite .meteor/versions if it has
+      // changed.
+      self.setVersions(newVersions);
 
       // Finally, initialize the package loader.
       self.packageLoader = new packageLoader.PackageLoader({
@@ -482,8 +480,11 @@ _.extend(Project.prototype, {
   setVersions: function (newVersions) {
     var self = this;
     var downloaded = self._ensurePackagesExistOnDisk(newVersions);
-    self.dependencies = newVersions;
-    self._recordVersions();
+    // Skip the disk IO if the versions haven't changed.
+    if (!_.isEqual(newVersions, self.dependencies)) {
+      self.dependencies = newVersions;
+      self._recordVersions();
+    }
     return downloaded;
   },
 
@@ -502,21 +503,21 @@ _.extend(Project.prototype, {
 
   // Go through a list of packages and makes sure we have enough builds of the
   // package downloaded such that we can load a browser unibuild and a unibuild
-  // that will run on this system. (Later we may also need to download more
-  // builds to be able to deploy to another architecture.) Return the object
-  // with mapping packageName to version for the packages that we have
+  // that will run on this system (or the requested architecture). Return the
+  // object with mapping packageName to version for the packages that we have
   // successfully downloaded.
   //
   // This primarily exists as a safety check to be used when doing operations
   // that could lead to changes in the versions file.
-  _ensurePackagesExistOnDisk : function (versions) {
+  _ensurePackagesExistOnDisk : function (versions, arch) {
+    arch = arch || archinfo.host();
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
       var packageVersionInfo = { packageName: name, version: version };
       // XXX error handling
       var available = tropohouse.default.maybeDownloadPackageForArchitectures(
         packageVersionInfo,
-        ['browser', archinfo.host()],
+        ['browser', arch],
         true /* print downloading message */
       );
       if (available) {
