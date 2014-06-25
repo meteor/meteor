@@ -206,6 +206,12 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
+    var lookupVersion = function () {
+      return _.has(self.versions, name) &&
+        _.has(self.versions[name], version) &&
+        self.versions[name][version];
+    };
+
     // The catalog doesn't understand buildID versions and doesn't know about
     // them. Depending on when we build them, we can refer to local packages as
     // 1.0.0+local or 1.0.0+[buildId]. Luckily, we know which packages are
@@ -216,13 +222,12 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     //     which has the official package when running make-bootstrap-tarballs
     if (self.isLocalPackage(name)) {
       version = self._getLocalVersion(version);
+      // No need to refresh here: if we can't find the local version, refreshing
+      // isn't going to help!
+      return lookupVersion() || null;
     }
 
-    return self._recordOrRefresh(function () {
-      return _.has(self.versions, name) &&
-        _.has(self.versions[name], version) &&
-        self.versions[name][version];
-    });
+    return self._recordOrRefresh(lookupVersion);
   },
 
   // Overridden by CompleteCatalog.
