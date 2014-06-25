@@ -107,6 +107,19 @@ Tinytest.add("miniredis - observe - pause", function (test) {
   var S = new Miniredis.RedisStore();
   var h = S.matching("*").observe(cbs);
 
+
+  // sanity test for simple add.
+  S.set("Add", "1");
+  test.equal(operations.shift(), ['added', 'Add', '1']);
+
+  S.pauseObservers();
+
+  S.set("Add2", "2");
+  test.length(operations, 0);
+
+  S.resumeObservers();
+  test.equal(operations.shift(), ['added', 'Add2', '2']);
+
   // remove then add cancel out.
   S.set("RemoveThenAdd", "1");
   test.equal(operations.shift(), ['added', 'RemoveThenAdd', '1']);
