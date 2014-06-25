@@ -249,6 +249,10 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   var keyPrefix = Random.id() + ':';
   var coll = new Meteor.RedisCollection("redis", collectionOptions);
 
+  if (Meteor.isClient) {
+    Meteor.call("createInsecureRedisCollection", "redis");
+  }
+
   var _withoutPrefix = function (key) {
     if (key.indexOf(keyPrefix) != 0) {
       throw new Error("Expected key to start with prefix, was: " + key);
@@ -414,7 +418,6 @@ Tinytest.addAsync("redis-livedata - basics, " + idGeneration, function (test, on
   onComplete();
 });
 
-
 testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
   function (test, expect) {
     this.keyPrefix = Random.id();
@@ -461,7 +464,6 @@ testAsyncMulti('redis-livedata - observe initial results, ' + idGeneration, [
     });
   }
 ]);
-
 
 testAsyncMulti('redis-livedata - simple insertion, ' + idGeneration, [
   function (test, expect) {
@@ -2059,18 +2061,19 @@ if (Meteor.isClient) {
     var collName = "redis";
     var subName = "c" + run;
     coll = new Meteor.RedisCollection(collName, collectionOptions);
+    Meteor.call("createInsecureRedisCollection", "redis");
     Meteor.subscribe("c-" + collName, function () {
-      coll.set("foo", "f");
-      coll.set("bar", "b");
-      coll.set("foo", "foo", function (err, result) {
+      coll.set(run + "foo", "f");
+      coll.set(run + "bar", "b");
+      coll.set(run + "foo", "foo", function (err, result) {
         test.isFalse(err);
         test.equal(result, "OK");
-        coll.set("foo", "Foo", function (err, result) {
+        coll.set(run + "foo", "Foo", function (err, result) {
           test.isFalse(err);
           test.equal(result, "OK");
-          coll.del("foo", function (err, result) {
+          coll.del(run + "foo", function (err, result) {
             test.equal(result, 1); // deleted one key
-            coll.del("baz", function (err, result) {
+            coll.del(run + "baz", function (err, result) {
               test.equal(result, 0);
               onComplete();
             });

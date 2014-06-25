@@ -112,7 +112,6 @@ Meteor.RedisCollection = function (name, options) {
           } else {
             self._collection._set(key, replace.value);
           }
-          return;
         } else if (msg.msg === 'added') {
           if (doc) {
             throw new Error("Expected not to find a document already present for an add");
