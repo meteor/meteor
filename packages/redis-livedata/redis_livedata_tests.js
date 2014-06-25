@@ -28,7 +28,7 @@ if (Meteor.isServer) {
         return cursor;
       });
     },
-    dropInsecureCollection: function(name) {
+    dropInsecureRedisCollection: function(name) {
       var c = COLLECTIONS[name];
       c._dropCollection();
     }
@@ -40,7 +40,7 @@ if (Meteor.isServer) {
 var INSERTED_IDS = {};
 
 Meteor.methods({
-  insertObjects: function (collectionName, doc, count) {
+  insertRedisObjects: function (collectionName, doc, count) {
     var c = COLLECTIONS[collectionName];
     var ids = [];
     for (var i = 0; i < count; i++) {
@@ -50,15 +50,15 @@ Meteor.methods({
     }
     return ids;
   },
-  upsertObject: function (collectionName, selector, modifier) {
+  upsertRedisObject: function (collectionName, selector, modifier) {
     var c = COLLECTIONS[collectionName];
     return c.upsert(selector, modifier);
-  },
-  doMeteorCall: function (name /*, arguments */) {
-    var args = Array.prototype.slice.call(arguments);
-
-    return Meteor.call.apply(null, args);
   }
+//  doMeteorCall: function (name /*, arguments */) {
+//    var args = Array.prototype.slice.call(arguments);
+//
+//    return Meteor.call.apply(null, args);
+//  }
 });
 
 var runInFence = function (f) {
@@ -110,7 +110,7 @@ var upsert = function (coll, useUpdate, query, mod, options, callback) {
   }
 };
 
-var upsertTestMethod = "livedata_upsert_test_method";
+var upsertTestMethod = "livedata_redis_upsert_test_method";
 var upsertTestMethodColl;
 
 // This is the implementation of the upsert test method on both the client and
@@ -175,25 +175,25 @@ if (Meteor.isServer) {
 //Meteor._FailureTestCollection =
 //  new Meteor.RedisCollection("___meteor_failure_test_collection");
 
-// For test "document with a custom type"
-var Dog = function (name, color, actions) {
-  var self = this;
-  self.color = color;
-  self.name = name;
-  self.actions = actions || [{name: "wag"}, {name: "swim"}];
-};
-_.extend(Dog.prototype, {
-  getName: function () { return this.name;},
-  getColor: function () { return this.name;},
-  equals: function (other) { return other.name === this.name &&
-                             other.color === this.color &&
-                             EJSON.equals(other.actions, this.actions);},
-  toJSONValue: function () { return {color: this.color, name: this.name, actions: this.actions};},
-  typeName: function () { return "dog"; },
-  clone: function () { return new Dog(this.name, this.color); },
-  speak: function () { return "woof"; }
-});
-EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);});
+//// For test "document with a custom type"
+//var Dog = function (name, color, actions) {
+//  var self = this;
+//  self.color = color;
+//  self.name = name;
+//  self.actions = actions || [{name: "wag"}, {name: "swim"}];
+//};
+//_.extend(Dog.prototype, {
+//  getName: function () { return this.name;},
+//  getColor: function () { return this.name;},
+//  equals: function (other) { return other.name === this.name &&
+//                             other.color === this.color &&
+//                             EJSON.equals(other.actions, this.actions);},
+//  toJSONValue: function () { return {color: this.color, name: this.name, actions: this.actions};},
+//  typeName: function () { return "dog"; },
+//  clone: function () { return new Dog(this.name, this.color); },
+//  speak: function () { return "woof"; }
+//});
+//EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);});
 
 
 // Parameterize tests.
@@ -1487,7 +1487,7 @@ if (Meteor.isServer) {
 //  function (test, expect) {
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -1507,7 +1507,7 @@ if (Meteor.isServer) {
 //  function (test, expect) {
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName, collectionOptions);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -1537,7 +1537,7 @@ if (Meteor.isServer) {
 //  function (test, expect) {
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName, collectionOptions);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -1570,7 +1570,7 @@ if (Meteor.isServer) {
 //    };
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName, collectionOptions);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -1631,7 +1631,7 @@ if (Meteor.isServer) {
 //    };
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName, collectionOptions);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -1659,7 +1659,7 @@ if (Meteor.isServer) {
 //    // XXX probably shouldn't use EJSON's private test symbols
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName, collectionOptions);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -1682,7 +1682,7 @@ if (Meteor.isServer) {
 //  function (test, expect) {
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName, collectionOptions);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -2028,7 +2028,7 @@ if (Meteor.isServer) {
 //        };
 //
 //        if (useNetwork) {
-//          Meteor.call("createInsecureCollection", collName, collectionOptions);
+//          Meteor.call("createInsecureRedisCollection", collName, collectionOptions);
 //          coll = new Meteor.RedisCollection(collName, collectionOptions);
 //          Meteor.subscribe("c-" + collName, next0);
 //        } else {
@@ -2396,7 +2396,7 @@ if (Meteor.isClient) {
 //  function (test, expect) {
 //    this.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', this.collectionName);
+//      Meteor.call('createInsecureRedisCollection', this.collectionName);
 //      Meteor.subscribe('c-' + this.collectionName, expect());
 //    }
 //  }, function (test, expect) {
@@ -2461,7 +2461,7 @@ if (Meteor.isClient) {
 //};
 //
 //function functionCallsInsert (test, expect, coll, index) {
-//  Meteor.call("insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+//  Meteor.call("insertRedisObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
 //    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
 //    var stubId = INSERTED_IDS[coll._name][index];
 //
@@ -2476,7 +2476,7 @@ if (Meteor.isClient) {
 //
 //function functionCallsUpsert (test, expect, coll, index) {
 //  var upsertId = '123456' + index;
-//  Meteor.call("upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
+//  Meteor.call("upsertRedisObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
 //    test.equal(result.insertedId, upsertId);
 //    test.equal(result.numberAffected, 1);
 //
@@ -2493,7 +2493,7 @@ if (Meteor.isClient) {
 //  test.notEqual(null, o);
 //  test.equal(o.name, 'foo');
 //
-//  Meteor.call("upsertObject", coll._name, id, {$set:{name: "bar"}}, expect(function (err1, result) {
+//  Meteor.call("upsertRedisObject", coll._name, id, {$set:{name: "bar"}}, expect(function (err1, result) {
 //    test.equal(result.numberAffected, 1);
 //    test.equal(result.insertedId, undefined);
 //
@@ -2504,7 +2504,7 @@ if (Meteor.isClient) {
 //};
 //
 //function functionCalls3Inserts (test, expect, coll, index) {
-//  Meteor.call("insertObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
+//  Meteor.call("insertRedisObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
 //    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
 //    test.equal(ids.length, 3);
 //
@@ -2520,7 +2520,7 @@ if (Meteor.isClient) {
 //};
 //
 //function functionChainInsert (test, expect, coll, index) {
-//  Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+//  Meteor.call("doMeteorCall", "insertRedisObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
 //    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
 //    var stubId = INSERTED_IDS[coll._name][index];
 //
@@ -2534,7 +2534,7 @@ if (Meteor.isClient) {
 //};
 //
 //function functionChain2Insert (test, expect, coll, index) {
-//  Meteor.call("doMeteorCall", "doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
+//  Meteor.call("doMeteorCall", "doMeteorCall", "insertRedisObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
 //    test.notEqual((INSERTED_IDS[coll._name] || []).length, 0);
 //    var stubId = INSERTED_IDS[coll._name][index];
 //
@@ -2549,7 +2549,7 @@ if (Meteor.isClient) {
 //
 //function functionChain2Upsert (test, expect, coll, index) {
 //  var upsertId = '123456' + index;
-//  Meteor.call("doMeteorCall", "doMeteorCall", "upsertObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
+//  Meteor.call("doMeteorCall", "doMeteorCall", "upsertRedisObject", coll._name, upsertId, {$set:{name: "foo"}}, expect(function (err1, result) {
 //    test.equal(result.insertedId, upsertId);
 //    test.equal(result.numberAffected, 1);
 //
@@ -2579,9 +2579,9 @@ if (Meteor.isClient) {
 //    this.collections = _.times(collectionCount, function () {
 //      var collectionName = "consistentid_" + Random.id();
 //      if (Meteor.isClient) {
-//        Meteor.call('createInsecureCollection', collectionName, collectionOptions);
+//        Meteor.call('createInsecureRedisCollection', collectionName, collectionOptions);
 //        Meteor.subscribe('c-' + collectionName, expect());
-//        cleanups.push(function (expect) { Meteor.call('dropInsecureCollection', collectionName, expect(function () {})); });
+//        cleanups.push(function (expect) { Meteor.call('dropInsecureRedisCollection', collectionName, expect(function () {})); });
 //      }
 //
 //      var collection = new Meteor.RedisCollection(collectionName, collectionOptions);
@@ -2617,7 +2617,7 @@ if (Meteor.isClient) {
 //    var self = this;
 //    self.collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', self.collectionName);
+//      Meteor.call('createInsecureRedisCollection', self.collectionName);
 //      Meteor.subscribe('c-' + self.collectionName, expect());
 //    }
 //    self.coll = new Meteor.RedisCollection(self.collectionName);
@@ -2812,7 +2812,7 @@ if (Meteor.isClient) {
 //    var self = this;
 //    var collectionName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', collectionName);
+//      Meteor.call('createInsecureRedisCollection', collectionName);
 //      Meteor.subscribe('c-' + collectionName, expect());
 //    }
 //
@@ -3065,7 +3065,7 @@ if (Meteor.isClient) {
 //    var self = this;
 //    var collectionName = "ejson" + Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call('createInsecureCollection', collectionName);
+//      Meteor.call('createInsecureRedisCollection', collectionName);
 //      Meteor.subscribe('c-' + collectionName, expect());
 //    }
 //
@@ -3187,7 +3187,7 @@ if (Meteor.isClient) {
 //    var self = this;
 //    self.collName = Random.id();
 //    if (Meteor.isClient) {
-//      Meteor.call("createInsecureCollection", self.collName);
+//      Meteor.call("createInsecureRedisCollection", self.collName);
 //      Meteor.subscribe("c-" + self.collName, expect());
 //    }
 //  },
