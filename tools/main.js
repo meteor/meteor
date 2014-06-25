@@ -603,11 +603,14 @@ Fiber(function () {
   if (appDir)
     localPackageDirs.push(path.join(appDir, 'packages'));
 
-  if (process.env.PACKAGE_DIRS)
+  if (process.env.PACKAGE_DIRS) {
     // User can provide additional package directories to search in
     // PACKAGE_DIRS (colon-separated).
     localPackageDirs = localPackageDirs.concat(
-      process.env.PACKAGE_DIRS.split(':'));
+      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
+        return path.resolve(p);
+      }));
+  }
 
   if (!files.usesWarehouse()) {
     // Running from a checkout, so use the Meteor core packages from
