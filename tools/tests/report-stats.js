@@ -13,14 +13,21 @@ var project = require('../project.js');
 var testStatsServer = "https://test-package-stats.meteor.com";
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
+var clientAddress;
+
 var checkMeta = function (appPackages, sessionId, useFakeRelease) {
+  if (! clientAddress) {
+    clientAddress = getClientAddress();
+  }
+
   var expectedUserAgentInfo = {
     hostname: os.hostname(),
     osPlatform: os.platform(),
     osType: os.type(),
     osRelease: os.release(),
     osArch: os.arch(),
-    sessionId: sessionId
+    sessionId: sessionId,
+    clientAddress: clientAddress
   };
   if (useFakeRelease) {
     expectedUserAgentInfo.meteorReleaseTrack =
@@ -228,4 +235,9 @@ var fetchPackageUsageForApp = function (identifier) {
                   "returned from package stats server");
 
   return found;
+};
+
+var getClientAddress = function () {
+  var stats = testUtils.ddpConnect(testStatsServer);
+  return stats.call("getClientAddress");
 };
