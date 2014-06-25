@@ -9,6 +9,9 @@ var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
 var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
+var uniload = require('./uniload.js');
+
+var Package = uniload.load({ packages: ["ejson"] });
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -34,8 +37,7 @@ var fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 var expectEqual = markStack(function (actual, expected) {
-  // XXX Super janky. Should use EJSON.equals for a deep equality test.
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+  if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,
       actual: actual
@@ -803,6 +805,7 @@ _.extend(Run.prototype, {
   stop: markStack(function () {
     var self = this;
     if (self.exitStatus === undefined) {
+      self._ensureStarted();
       self.proc.kill();
       self.expectExit();
     }
