@@ -287,7 +287,7 @@ _.extend(CompleteCatalog.prototype, {
     // constraint solver run, and needs to be taken as absolute truth for now:
     // we can't use any packages that are of different versions from what we've
     // already decided from the project!
-    _.each(project.getVersions, function (version, name) {
+    _.each(project.getVersions(), function (version, name) {
       constr.push({packageName: name, version: version, type: 'exactly'});
     });
 
