@@ -868,6 +868,15 @@
     })
 
   Tinytest.add(
+    "roles - can use multiple periods in group name",
+    function (test) {
+      reset() 
+
+      Roles.addUsersToRoles(users.joe, ['admin'], 'example.k12.va.us')
+      testUser(test, 'joe', ['admin'], 'example.k12.va.us')
+    })
+
+  Tinytest.add(
     'roles - invalid group name throws descriptive error', 
     function (test) {
       var expectedErrorMsg = "Roles error: groups can not start with '$'"

@@ -201,7 +201,7 @@ _.extend(Roles, {
         throw new Error ("Roles error: groups can not start with '$'")
 
       // convert any periods to underscores
-      group = group.replace('.', '_')
+      group = group.replace(/\./g, '_')
     }
 
     // ensure arrays
@@ -301,7 +301,7 @@ _.extend(Roles, {
       if ('$' === group[0]) return false
 
       // convert any periods to underscores
-      group = group.replace('.', '_')
+      group = group.replace(/\./g, '_')
     }
     
     if ('object' === typeof user) {
@@ -382,7 +382,7 @@ _.extend(Roles, {
       if ('$' === group[0]) return []
 
       // convert any periods to underscores
-      group = group.replace('.', '_')
+      group = group.replace(/\./g, '_')
     }
 
     if ('string' === typeof user) {
@@ -449,7 +449,7 @@ _.extend(Roles, {
         throw new Error ("Roles error: groups can not start with '$'")
 
       // convert any periods to underscores
-      group = group.replace('.', '_')
+      group = group.replace(/\./g, '_')
     }
 
     query = {$or: []}
@@ -568,7 +568,7 @@ _.extend(Roles, {
         throw new Error ("Roles error: groups can not start with '$'")
 
       // convert any periods to underscores
-      group = group.replace('.', '_')
+      group = group.replace(/\./g, '_')
     }
 
     var existingRoles,

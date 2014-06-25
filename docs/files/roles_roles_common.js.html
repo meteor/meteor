@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.6</em>
+            <em>API Docs for: v1.2.10</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -295,7 +295,7 @@ _.extend(Roles, {
         throw new Error (&quot;Roles error: groups can not start with &#x27;$&#x27;&quot;)
 
       // convert any periods to underscores
-      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+      group = group.replace(/\./g, &#x27;_&#x27;)
     }
 
     // ensure arrays
@@ -395,7 +395,7 @@ _.extend(Roles, {
       if (&#x27;$&#x27; === group[0]) return false
 
       // convert any periods to underscores
-      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+      group = group.replace(/\./g, &#x27;_&#x27;)
     }
     
     if (&#x27;object&#x27; === typeof user) {
@@ -476,7 +476,7 @@ _.extend(Roles, {
       if (&#x27;$&#x27; === group[0]) return []
 
       // convert any periods to underscores
-      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+      group = group.replace(/\./g, &#x27;_&#x27;)
     }
 
     if (&#x27;string&#x27; === typeof user) {
@@ -543,7 +543,7 @@ _.extend(Roles, {
         throw new Error (&quot;Roles error: groups can not start with &#x27;$&#x27;&quot;)
 
       // convert any periods to underscores
-      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+      group = group.replace(/\./g, &#x27;_&#x27;)
     }
 
     query = {$or: []}
@@ -662,7 +662,7 @@ _.extend(Roles, {
         throw new Error (&quot;Roles error: groups can not start with &#x27;$&#x27;&quot;)
 
       // convert any periods to underscores
-      group = group.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+      group = group.replace(/\./g, &#x27;_&#x27;)
     }
 
     var existingRoles,
