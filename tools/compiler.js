@@ -179,8 +179,7 @@ var determineBuildTimeDependencies = function (packageSource) {
     if (info.constraint) {
       version =  utils.parseVersionConstraint(info.constraint) ;
     }
-    constraints_array.push({packageName: packageName,
-                            version: version });
+    constraints_array.push(_.extend({ packageName: packageName }, version));
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
