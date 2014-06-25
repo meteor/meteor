@@ -159,7 +159,6 @@ exports.updateServerPackageData = function (cachedServerData) {
   try {
     remoteData = loadRemotePackageData(syncToken);
   } catch (err) {
-console.log("failed to update server data", err);
     if (err instanceof ServiceConnection.ConnectionTimeoutError) {
       return null;
     } else {
@@ -175,6 +174,12 @@ console.log("failed to update server data", err);
     collections: allCollections
   };
   writePackageDataToDisk(remoteData.syncToken, data);
+
+  // If we are not done, keep trying!
+  if (remoteData.syncToken.upToDate) {
+    this.updateServerPackageData(data);
+  }
+
   return data;
 };
 

@@ -635,7 +635,12 @@ main.registerCommand({
     // Shouldn't be documented until the Galaxy release. Marks the
     // application as an admin app, so that it will be available in
     // Galaxy admin interface.
-    admin: { type: Boolean }
+    admin: { type: Boolean },
+    // Override architecture to deploy whatever stuff we have locally, even if
+    // it contains binary packages that should be incompatible. A hack to allow
+    // people to deploy from checkout or do other weird shit. We are not
+    // responsible for the consequences.
+    'override-architecture-with-local' : { type: Boolean }
   },
   requiresApp: function (options) {
     return options.delete || options.star ? false : true;
@@ -687,9 +692,19 @@ main.registerCommand({
       return 1;
   }
 
+  // Override architecture iff applicable.
+  var buildArch = DEPLOY_ARCH;
+  if (options['override-architecture-with-local']) {
+    process.stdout.write(
+      "\n => WARNING: OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE \n");
+    process.stdout.write(
+      " => If your app contains binary code, it may break terribly and you will be sad. \n\n");
+    buildArch = archinfo.host();
+  }
+
   var buildOptions = {
     minify: ! options.debug,
-    arch: DEPLOY_ARCH
+    arch: buildArch
   };
 
   var deployResult;
