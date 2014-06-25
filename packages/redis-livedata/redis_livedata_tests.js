@@ -553,6 +553,7 @@ testAsyncMulti('redis-livedata - setex, ' + idGeneration, [
       coll.setex(keyPrefix + '1', 1, '1');
     });
 
+    // Wait for the key to timeout.
     Meteor.setTimeout(expect(), 2000);
   }, function (test, expect) {
     var keyPrefix = test._keyPrefix;
