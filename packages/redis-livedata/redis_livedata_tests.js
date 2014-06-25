@@ -2068,9 +2068,11 @@ if (Meteor.isClient) {
       coll.set(run + "foo", "foo", function (err, result) {
         test.isFalse(err);
         test.equal(result, "OK");
+        test.equal(coll.get(run + "foo"), "foo");
         coll.set(run + "foo", "Foo", function (err, result) {
           test.isFalse(err);
           test.equal(result, "OK");
+          test.equal(coll.get(run + "foo"), "Foo");
           coll.del(run + "foo", function (err, result) {
             test.equal(result, 1); // deleted one key
             coll.del(run + "baz", function (err, result) {
