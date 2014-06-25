@@ -344,7 +344,7 @@ main.registerCommand({
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
   process.stdout.write("Resyncing with package server...\n");
-  catalog.official.refresh(true);
+  catalog.official.refresh();
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
