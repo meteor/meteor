@@ -177,7 +177,7 @@ exports.updateServerPackageData = function (cachedServerData) {
   writePackageDataToDisk(remoteData.syncToken, data);
 
   // If we are not done, keep trying!
-  if (remoteData.upToDate) {
+  if (!remoteData.upToDate) {
     this.updateServerPackageData(data);
   }
 
