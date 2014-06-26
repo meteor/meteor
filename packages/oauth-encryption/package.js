@@ -1,6 +1,3 @@
-// Uses the node-aes-gcm NPM module from the dev bundle (because
-// binary modules aren't working yet).
-
 Package.describe({
   name: "oauth-encryption",
   test: "oauth-encryption-test",
@@ -9,6 +6,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('npm-node-aes-gcm@=0.1.3');
   api.export("OAuthEncryption", ["server"]);
   api.use("underscore");
   api.add_files("encrypt.js", ["server"]);

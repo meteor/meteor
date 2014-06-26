@@ -1,6 +1,6 @@
 /// BCRYPT
 
-var bcrypt = Npm.require('bcrypt');
+var bcrypt = NpmModuleBcrypt;
 var bcryptHash = Meteor._wrapAsync(bcrypt.hash);
 var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
 
