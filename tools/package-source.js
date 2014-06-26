@@ -399,8 +399,7 @@ _.extend(PackageSource.prototype, {
     // we are, let's remember this for things like not recording version files.
     if (files.inCheckout()) {
       var packDir = path.join(files.getCurrentToolsDir(), 'packages');
-      var myDir = self.sourceRoot.slice(0, packDir.length);
-      if (myDir === packDir) {
+      if (path.dirname(self.sourceRoot) === packDir) {
         self.isCore = true;
       }
     }
