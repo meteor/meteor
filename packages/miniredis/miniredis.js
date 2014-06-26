@@ -1,13 +1,17 @@
 // exported symbol
 Miniredis = {};
 
-var throwNotImplementedError = function () {
-  throw new Error("The called method is not available in miniredis implementation");
+var throwNotImplementedError = function (cb) {
+  var err =
+    new Error("The called method is not available in miniredis implementation");
+  callInCallbackOrThrow(err, cb);
 };
 
-var throwIncorrectKindOfValueError = function () {
+var throwIncorrectKindOfValueError = function (cb) {
   // XXX should be a special type of error "WRONGTYPE"
-  throw new Error("Operation against a key holding the wrong kind of value");
+  var err =
+    new Error("Operation against a key holding the wrong kind of value");
+  callInCallbackOrThrow(err, cb);
 };
 
 // An abstract represtation of a set of keys matching PATTERN
@@ -209,6 +213,19 @@ Miniredis.RedisStore.prototype.resumeObservers = function () {
   //self._observeQueue.drain();
 };
 
+var callInCallbackAndReturn = function (res, cb) {
+  cb && Meteor.defer(function () { cb(null, res); });
+  return res;
+};
+
+var callInCallbackOrThrow = function (err, cb) {
+  if (cb) cb(err);
+  else throw err;
+};
+
+var maybePopCallback = function (args) {
+  return _.isFunction(_.last(args)) ? args.pop() : undefined;
+};
 
 _.extend(Miniredis.RedisStore.prototype, {
   // -----
@@ -321,12 +338,13 @@ _.extend(Miniredis.RedisStore.prototype, {
     return self[method.toLowerCase()].apply(self, args);
   },
 
-  patternFetch: function (pattern) {
+  patternFetch: function (pattern, cb) {
     var self = this;
     var res = [];
+    var thrown = false;
 
     self._kv.forEach(function (value, key) {
-      if (! key.match(patternToRegexp(pattern)))
+      if (thrown || ! key.match(patternToRegexp(pattern)))
         return;
       self._keyDep(key).depend();
 
@@ -334,9 +352,13 @@ _.extend(Miniredis.RedisStore.prototype, {
         res.push({ key: key, value: value });
       else if (_.isObject(value))
         res.push({ key: key, value: value.toArray() });
-      else
-        throw new Error("Unknown type");
+      else {
+        callInCallbackOrThrow(new Error("Unknown type"));
+        thrown = true;
+      }
     });
+
+    if (thrown) return;
 
     if (! self._patternDependencies[pattern])
       self._patternDependencies[pattern] = new Deps.Dependency();
@@ -349,7 +371,7 @@ _.extend(Miniredis.RedisStore.prototype, {
       });
     }
 
-    return res;
+    return callInCallbackAndReturn(res, cb);
   },
 
   // Returns a Cursor
@@ -393,120 +415,148 @@ _.extend(Miniredis.RedisStore.prototype, {
   del: function (/* args */) {
     var self = this;
     var removedCount = 0;
-    _.each(arguments, function (key) {
+    var args = _.toArray(arguments);
+    var cb = maybePopCallback(args);
+    _.each(args, function (key) {
       if (self._has(key)) {
         removedCount++;
         self._remove(key);
       }
     });
 
-    return removedCount;
+    return callInCallbackAndReturn(removedCount, cb);
   },
-  exists: function (key) {
+  exists: function (key, cb) {
     var self = this;
-    if (self._has(key))
-      return 1;
-    return 0;
+    var res = self._has(key) ? 1 : 0;
+    return callInCallbackAndReturn(res, cb);
   },
-  keys: function (pattern) {
+  keys: function (pattern, cb) {
     if (! pattern)
       throw new Error("Wrong number of arguments for 'keys' command");
     var self = this;
-    return _.pluck(self.matching(pattern).fetch(), 'key');
+    var res = _.pluck(self.matching(pattern).fetch(), 'key');
+    return callInCallbackAndReturn(res, cb);
   },
-  randomkey: function () {
+  randomkey: function (cb) {
     var self = this;
-    return Random.choice(_.keys(self._kv));
+    var res = Random.choice(_.keys(self._kv));
+    return callInCallbackAndReturn(res, cb);
   },
-  rename: function (key, newkey) {
-    if (key === newkey)
-      throw new Error("Source and destination objects are the same");
+  rename: function (key, newkey, cb) {
+    if (key === newkey) {
+      callInCallbackOrThrow(
+        new Error("Source and destination objects are the same"));
+      return;
+    }
 
     var self = this;
 
-    if (! self._has(key))
-      throw new Error("No such key");
+    if (! self._has(key)) {
+      callInCallbackOrThrow(new Error("No such key"));
+      return;
+    }
 
     var val = self._get(key);
     self._remove(key);
     self._set(newkey, val);
+
+    return callInCallbackAndReturn(undefined, cb);
   },
-  renamenx: function (key, newkey) {
+  renamenx: function (key, newkey, cb) {
     var self = this;
+    var res;
 
-    if (self._has(newkey))
-      return 0;
+    if (self._has(newkey)) {
+      res = 0;
+    } else {
+      self.rename(key, newkey);
+      res = 1;
+    }
 
-    self.rename(key, newkey);
-    return 1;
+    return callInCallbackAndReturn(res, cb);
   },
-  sort: function () {
+  sort: function (cb) {
     // This is a non-trivial operator that requires more thought on the design
     // and implementation. We probably want to implement this as it is the only
     // querying mechanism.
-    throwNotImplementedError();
+    throwNotImplementedError(cb);
   },
-  type: function (key) {
+  type: function (key, cb) {
     var self = this;
+    var type;
 
     // for unset keys the return value is "none"
-    if (! self._has(key))
-      return "none";
+    if (! self._has(key)) {
+      type = "none";
+    } else {
+      var val = self._get(key);
+      type = _.isString(val) ? "string" : val.type();
+    }
 
-    var val = self._get(key);
-    if (_.isString(val))
-      return "string";
-    return val.type();
+    return callInCallbackAndReturn(type, cb);
   },
 
   // -----
   // operators on strings
   // -----
 
-  append: function (key, value) {
+  append: function (key, value, cb) {
     var self = this;
     var val = self._has(key) ? self._get(key) : "";
 
-    if (! _.isString(val))
-      throwIncorrectKindOfValueError();
+    if (! _.isString(val)) {
+      throwIncorrectKindOfValueError(cb);
+      return;
+    }
 
     val += value;
     self._set(key, val);
 
-    return val.length;
+    return callInCallbackAndReturn(val.length, cb);
   },
-  decr: function (key) {
+  decr: function (key, cb) {
     var self = this;
     self.decrby(key, 1);
+    callInCallbackAndReturn(undefined, cb);
   },
-  decrby: function (key, decrement) {
+  decrby: function (key, decrement, cb) {
     var self = this;
     var val = self._has(key) ? self._get(key) : "0";
 
-    if (! _.isString(val))
-      throwIncorrectKindOfValueError();
+    if (! _.isString(val)) {
+      throwIncorrectKindOfValueError(cb);
+      return;
+    }
 
     // cast to integer
     var newVal = val |0;
 
-    if (val !== newVal.toString())
-      throw new Error("Value is not an integer or out of range");
+    if (val !== newVal.toString()) {
+      callInCallbackOrThrow(
+        new Error("Value is not an integer or out of range"));
+      return;
+    }
 
     self._set(key, (newVal - decrement).toString());
+
+    return callInCallbackAndReturn(undefined, cb);
   },
-  get: function (key) {
+  get: function (key, cb) {
     var self = this;
     var val = self._has(key) ? self._get(key) : null;
-    if (val !== null && ! _.isString(val))
-      throwIncorrectKindOfValueError();
+    if (val !== null && ! _.isString(val)) {
+      throwIncorrectKindOfValueError(cb);
+      return;
+    }
     // Mirror mongo behaviour: missing get returns undefined
     if (val === null) {
       val = undefined;
     }
-    // XXX shouldn't clone, strings are immutable
-    return EJSON.clone(val);
+
+    return callInCallbackAndReturn(val, cb);
   },
-  getrange: function (key, start, end) {
+  getrange: function (key, start, end, cb) {
     start = start || 0;
     end = end || 0;
 
@@ -514,9 +564,9 @@ _.extend(Miniredis.RedisStore.prototype, {
     var val = self._has(key) ? self._get(key) : "";
 
     if (! _.isString(val))
-      throwIncorrectKindOfValueError();
+      throwIncorrectKindOfValueError(cb);
     if (val === "")
-      return "";
+      return callInCallbackAndReturn("", cb);
 
     var len = val.length;
     var normalizedBounds = normalizeBounds(start, end, len);
@@ -524,25 +574,25 @@ _.extend(Miniredis.RedisStore.prototype, {
     end = normalizedBounds.end;
 
     if (end < start)
-      return "";
+      return callInCallbackAndReturn("", cb);
 
-    return val.substr(start, end - start + 1);
+    return callInCallbackAndReturn(val.substr(start, end - start + 1), cb);
   },
-  getset: function (key, value) {
+  getset: function (key, value, cb) {
     var self = this;
     var val = self.get(key);
     self.set(key, value.toString());
-    return val;
+    return callInCallbackAndReturn(val);
   },
-  incr: function (key) {
+  incr: function (key, cb) {
     var self = this;
-    self.incrby(key, 1);
+    return self.incrby(key, 1, cb);
   },
-  incrby: function (key, increment) {
+  incrby: function (key, increment, cb) {
     var self = this;
-    self.decrby(key, -increment);
+    return self.decrby(key, -increment, cb);
   },
-  incrbyfloat: function (key, increment) {
+  incrbyfloat: function (key, increment, cb) {
     var self = this;
     var val = self._has(key) ? self._get(key) : "0";
 
@@ -556,64 +606,82 @@ _.extend(Miniredis.RedisStore.prototype, {
       throw new Error("Value is not a valid float");
 
     self._set(key, (newVal + increment).toString());
+    return callInCallbackAndReturn(undefined, cb);
   },
   mget: function (/* args */) {
     var self = this;
-    return _.map(arguments, function (key) {
+    var args = _.toString(arguments);
+    var cb = maybePopCallback(args);
+    var res = _.map(args, function (key) {
       return self.get(key);
     });
+
+    callInCallbackAndReturn(res, cb);
   },
   mset: function (/* args */) {
     var self = this;
-    for (var i = 0; i < arguments.length; i += 2) {
-      var key = arguments[i];
-      var value = arguments[i + 1];
+    var args = _.toString(arguments);
+    var cb = maybePopCallback(args);
+
+    for (var i = 0; i < args.length; i += 2) {
+      var key = args[i];
+      var value = args[i + 1];
       self.set(key, value);
     }
+
+    return callInCallbackAndReturn(undefined, cb);
   },
   msetnx: function (/* args */) {
     var self = this;
-    if (_.all(arguments, function (key, i) {
+    var args = _.toString(arguments);
+    var cb = maybePopCallback(args);
+    var res;
+
+    if (_.all(args, function (key, i) {
       return (i % 2 === 1) || self._has(key);
     })) {
-      self.mset.apply(self, arguments);
-      return 1;
+      self.mset.apply(self, args);
+      res = 1;
+    } else {
+      res = 0;
     }
 
-    return 0;
+    return callInCallbackAndReturn(res, cb);
   },
-  set: function (key, value) {
+  set: function (key, value, cb) {
     var self = this;
     self._set(key, value.toString());
+    return callInCallbackAndReturn("OK", cb);
   },
-  setex: function (key, expiration, value) {
+  setex: function (key, expiration, value, cb) {
     // We rely on the server to do our expirations
     var self = this;
-    self.set(key,value);
+    return self.set(key, value, cb);
   },
-  setnx: function (key, value) {
+  setnx: function (key, value, cb) {
     var self = this;
     if (self._has(key))
-      return 0;
+      return callInCallbackAndReturn(0, cb);
     self.set(key, value);
-    return 1;
+    return callInCallbackAndReturn(1, cb);
   },
-  setrange: function (key, offset, value) {
+  setrange: function (key, offset, value, cb) {
     // We probably should have an implementation for this one but it requires a
     // bit more thinking on how do we zero pad the string.
-    throwNotImplementedError();
+    throwNotImplementedError(cb);
   },
-  strlen: function (key) {
+  strlen: function (key, cb) {
     var self = this;
     var val = self.get(key);
-    return val ? val.length : 0;
+    var len = val ? val.length : 0;
+    return callInCallbackAndReturn(len, cb);
   },
 
   // -----
   // operators on hashes
   // -----
 
-  hgetall: function (key) {
+  hgetall: function (key, cb) {
     var self = this;
     if (!self._has(key)) {
       return undefined;
