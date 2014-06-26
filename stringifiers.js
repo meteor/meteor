@@ -13,6 +13,12 @@ Blaze.ToTextVisitor.def({
 
     throw new Error("Unexpected object in htmljs in Blaze.viewToText: " + x);
   },
+  visitAttributes: function (attrs) {
+    if (typeof attrs === 'function')
+      attrs = attrs.get();
+
+    return HTML.ToTextVisitor.prototype.visitAttributes.call(this, attrs);
+  },
   // see comment in HTML.ToTextVisitor.visitTag
   toHTML: function (node) {
     var visitor = new Blaze.HTMLStringifier({parentView: this.parentView});
@@ -32,6 +38,12 @@ Blaze.HTMLStringifier.def({
       return Blaze.viewToHTML(x, this.parentView);
 
     throw new Error("Unexpected object in htmljs in Blaze.viewToHTML: " + x);
+  },
+  visitAttributes: function (attrs) {
+    if (typeof attrs === 'function')
+      attrs = attrs.get();
+
+    return HTML.ToHTMLVisitor.prototype.visitAttributes.call(this, attrs);
   },
   toText: function (node, textMode) {
     var visitor = new Blaze.TextStringifier({
