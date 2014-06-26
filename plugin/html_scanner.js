@@ -175,7 +175,7 @@ html_scanner = {
           });
 
         // We may be one of many `<body>` tags.
-        results.js += "\nUI.body.contentParts.push(" + renderFuncCode + ");\nMeteor.startup(function () { if (! UI.body.domrange) { Blaze.render(function () { return UI.body; }).attach(document.body); } });\n";
+        results.js += "\nTemplate.__body__.__contentParts.push(new Blaze.View('body_content', " + renderFuncCode + "));\nMeteor.startup(Template.__body__.__instantiate);\n";
       }
     } catch (e) {
       if (e.scanner) {
