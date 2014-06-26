@@ -331,10 +331,15 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
                 bundleResult.buildTarball);
 
   process.stdout.write('Publishing package build...\n');
-  conn.call('publishPackageBuild',
-            uploadInfo.uploadToken,
-            bundleResult.tarballHash,
-            bundleResult.treeHash);
+  try {
+    conn.call('publishPackageBuild',
+      uploadInfo.uploadToken,
+      bundleResult.tarballHash,
+      bundleResult.treeHash);
+  } catch (err) {
+    console.log(err);
+    return;
+  }
 
   process.stdout.write('Published ' + unipackage.name +
                        ', version ' + unipackage.version);
@@ -509,9 +514,15 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // Create the package. Check that the metadata exists.
   if (options.new) {
     process.stdout.write('Creating package...\n');
-    var packageId = conn.call('createPackage', {
-      name: packageSource.name
-    });
+    try {
+      var packageId = conn.call('createPackage', {
+        name: packageSource.name
+      });
+    } catch (err) {
+      console.log(err.message);
+      return 1;
+    }
+
   }
 
   if (options.existingVersion) {
@@ -539,7 +550,13 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       containsPlugins: packageSource.containsPlugins(),
       dependencies: packageDeps
     };
-    var uploadInfo = conn.call('createPackageVersion', uploadRec);
+    try {
+      var uploadInfo = conn.call('createPackageVersion', uploadRec);
+    } catch (err) {
+      console.log("ERROR:", err.message);
+      console.log("Package could not be published.");
+      return 1;
+    }
 
     // XXX If package version already exists, print a nice error message
     // telling them to try 'meteor publish-for-arch' if they want to
@@ -549,10 +566,16 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
 
     process.stdout.write('Publishing package version...\n');
-    conn.call('publishPackageVersion',
-              uploadInfo.uploadToken,
-              { tarballHash: sourceBundleResult.tarballHash,
-                treeHash: sourceBundleResult.treeHash });
+    try {
+      conn.call('publishPackageVersion',
+                uploadInfo.uploadToken,
+                { tarballHash: sourceBundleResult.tarballHash,
+                  treeHash: sourceBundleResult.treeHash });
+    } catch (err) {
+      console.log(err.message);
+      return 1;
+    }
+
   }
 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
