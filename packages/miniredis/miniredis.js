@@ -353,7 +353,7 @@ _.extend(Miniredis.RedisStore.prototype, {
       else if (_.isObject(value))
         res.push({ key: key, value: value.toArray() });
       else {
-        callInCallbackOrThrow(new Error("Unknown type"));
+        callInCallbackOrThrow(new Error("Unknown type"), cb);
         thrown = true;
       }
     });
@@ -446,14 +446,14 @@ _.extend(Miniredis.RedisStore.prototype, {
   rename: function (key, newkey, cb) {
     if (key === newkey) {
       callInCallbackOrThrow(
-        new Error("Source and destination objects are the same"));
+        new Error("Source and destination objects are the same"), cb);
       return;
     }
 
     var self = this;
 
     if (! self._has(key)) {
-      callInCallbackOrThrow(new Error("No such key"));
+      callInCallbackOrThrow(new Error("No such key"), cb);
       return;
     }
 
@@ -534,7 +534,7 @@ _.extend(Miniredis.RedisStore.prototype, {
 
     if (val !== newVal.toString()) {
       callInCallbackOrThrow(
-        new Error("Value is not an integer or out of range"));
+        new Error("Value is not an integer or out of range"), cb);
       return;
     }
 
@@ -683,46 +683,54 @@ _.extend(Miniredis.RedisStore.prototype, {
 
   hgetall: function (key, cb) {
     var self = this;
-    if (!self._has(key)) {
-      return undefined;
+    if (! self._has(key)) {
+      return callInCallbackAndReturn(undefined, cb);
     }
     var val = self._get(key);
-    if (! _.isObject(val))
-      throwIncorrectKindOfValueError();
-    return EJSON.clone(val);
+    if (! _.isObject(val)) {
+      throwIncorrectKindOfValueError(cb);
+      return;
+    }
+    return callInCallbackAndReturn(EJSON.clone(val), cb);
   },
 
-  hmset: function (key, o) {
+  hmset: function (key, o, cb) {
     var self = this;
-    if (! _.isObject(o))
-      throwIncorrectKindOfValueError();
+    if (! _.isObject(o)) { 
+      throwIncorrectKindOfValueError(cb);
+    }
     var val = {};
     _.each(_.keys(o), function (key) {
       val[key.toString()] = o[key].toString();
     });
     self._set(key, val);
+    return callInCallbackAndReturn(undefined, cb);
   },
 
-  hincrby: function (key, field, delta) {
+  hincrby: function (key, field, delta, cb) {
     var self = this;
     var o = self._has(key) ? self._get(key) : {};
 
-    if (! _.isObject(o))
-      throwIncorrectKindOfValueError();
+    if (! _.isObject(o)) {
+      throwIncorrectKindOfValueError(cb);
+      return;
+    }
 
     var val = _.has(o, field) ? o[field] : 0;
     // cast to integer
     var newVal = val |0;
 
-    if (val !== newVal.toString())
-      throw new Error("Value is not an integer or out of range");
+    if (val !== newVal.toString()) {
+      callInCallbackOrThrow(
+        new Error("Value is not an integer or out of range"), cb);
+    }
 
     newVal += delta;
     var newObj = EJSON.clone(o);
     newObj[field] = newVal.toString();
     self._set(key, newObj);
 
-    return newVal;
+    return callInCallbackAndReturn(newVal, cb);
   }
 });
 
