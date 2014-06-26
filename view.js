@@ -8,6 +8,10 @@
 // - write EACH
 
 Blaze.View = function (kind, render) {
+  if (! (this instanceof Blaze.View))
+    // called without `new`
+    return new Blaze.View(kind, render);
+
   if (typeof kind === 'function') {
     // omitted "kind" argument
     render = kind;
@@ -262,11 +266,11 @@ Blaze.DOMMaterializer.def({
 });
 
 Blaze.render3 = function (contentFunc) {
-  return Blaze.materializeView(new Blaze.View('render', contentFunc));
+  return Blaze.materializeView(Blaze.View('render', contentFunc));
 };
 
 Blaze.With3 = function (dataFunc, contentFunc) {
-  var view = new Blaze.View('with', contentFunc);
+  var view = Blaze.View('with', contentFunc);
 
   view.dataVar = new Blaze.ReactiveVar;
 
