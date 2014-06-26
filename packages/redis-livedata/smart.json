@@ -3,7 +3,7 @@
   "description": "Adaptor for using Redis and Miniredis over DDP",
   "homepage": "https://github.com/meteor/meteor/packages/redis-livedata",
   "author": "Justin Santa Barbara, Slava Kim",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "git": "https://github.com/meteor/redis-livedata.git#v0.0.1",
   "packages": {
     "miniredis": "0.0.1"
