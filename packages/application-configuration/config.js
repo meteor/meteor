@@ -75,7 +75,8 @@ try {
           oplog: process.env.MONGO_OPLOG_URL
         },
         'redis-livedata': {
-          url: process.env.REDIS_URL
+          url: process.env.REDIS_URL,
+          configure_keyspace_notifications: process.env.REDIS_CONFIGURE_KEYSPACE_NOTIFICATIONS
         }
       }
     };

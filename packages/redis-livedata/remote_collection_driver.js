@@ -59,6 +59,10 @@ RedisInternals.defaultRemoteCollectionDriver = _.once(function () {
 
     if (config.oplog)
       connectionOptions.oplogUrl = config.oplog;
+
+    if (config.configure_keyspace_notifications) {
+      connectionOptions.configureKeyspaceNotifications = config.configure_keyspace_notifications;
+    }
   });
 
   // XXX bad error since it could also be set directly in METEOR_DEPLOY_CONFIG

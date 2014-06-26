@@ -200,7 +200,9 @@ RedisConnection = function (url, options) {
   var client = self._client = new RedisClient(url, redisOptions);
   self._watcher = new RedisWatcher(url);
 
-  checkConfig(client);
+  var fixConfig = options.configureKeyspaceNotifications === '1';
+  checkConfig(client, fixConfig);
+
 //  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
 //    if (err)
 //      throw err;
@@ -261,18 +263,18 @@ RedisConnection = function (url, options) {
 };
 
 // Help the user, by verifying that notify-keyspace-events is set correctly
-function checkConfig(client) {
+function checkConfig(client, fix) {
   var notifyConfig = Future.wrap(_.bind(client.getConfig, client))('notify-keyspace-events').wait();
-  var value = '';
+  var config = '';
   var missing = '';
   if (_.isArray(notifyConfig) && notifyConfig.length >= 2) {
-    value = notifyConfig[1];
+    config = notifyConfig[1];
   } else {
     throw new Error("Error from 'config get notify-keyspace-events'");
   }
 
   // K = keyspace events are being published
-  if (value.indexOf('K') == -1) {
+  if (config.indexOf('K') == -1) {
     missing += 'K';
   }
 
@@ -283,16 +285,25 @@ function checkConfig(client) {
   //  e evicted events
   //
   // "A" means "everything"
-  if (value.indexOf('A') == -1) {
+  if (config.indexOf('A') == -1) {
     _.each(['$', 'g', 'x', 'e'], function (key) {
-      if (value.indexOf(key) == -1) {
+      if (config.indexOf(key) == -1) {
         missing += key;
       }
     });
   }
 
   if (missing) {
-    throw new Error("You must configure notify-keyspace-events for Meteor.  Current config=" + value + " missing=" + missing);
+    if (fix) {
+      var newConfig = config + missing;
+      Meteor._debug("Setting redis notify-keyspace-events to '" + newConfig + "'");
+      Future.wrap(_.bind(client.setConfig, client))('notify-keyspace-events', newConfig).wait();
+
+      // Sanity check!
+      checkConfig(client, false);
+    } else {
+      throw new Error("You must configure notify-keyspace-events for Meteor.  Current config=" + config + " missing=" + missing);
+    }
   }
 };
 

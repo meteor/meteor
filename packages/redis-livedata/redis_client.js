@@ -232,6 +232,12 @@ RedisClient.prototype.getConfig = function (key, callback) {
   self._connection.config('get', key, Meteor.bindEnvironment(callback));
 };
 
+RedisClient.prototype.setConfig = function (key, value, callback) {
+  var self = this;
+
+  self._connection.config('set', key, value, Meteor.bindEnvironment(callback));
+};
+
 RedisClient.prototype.incr = function (key, callback) {
   var self = this;
 
