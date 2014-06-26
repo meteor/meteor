@@ -177,7 +177,7 @@ _.extend(Project.prototype, {
 
       // Download packages to disk, and rewrite .meteor/versions if it has
       // changed.
-      var oldVersions = self.versions;
+      var oldVersions = self.dependencies;
       var setV = self.setVersions(newVersions);
       self.showPackageChanges(oldVersions, newVersions, {
         ondiskPackages: setV.downloaded
