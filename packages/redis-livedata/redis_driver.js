@@ -200,6 +200,7 @@ RedisConnection = function (url, options) {
   var client = self._client = new RedisClient(url, redisOptions);
   self._watcher = new RedisWatcher(url);
 
+  checkConfig(client);
 //  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
 //    if (err)
 //      throw err;
@@ -257,6 +258,42 @@ RedisConnection = function (url, options) {
 //  }
 
   self._oplogHandle = new OplogHandle(self._client, self._watcher);
+};
+
+// Help the user, by verifying that notify-keyspace-events is set correctly
+function checkConfig(client) {
+  var notifyConfig = Future.wrap(_.bind(client.getConfig, client))('notify-keyspace-events').wait();
+  var value = '';
+  var missing = '';
+  if (_.isArray(notifyConfig) && notifyConfig.length >= 2) {
+    value = notifyConfig[1];
+  } else {
+    throw new Error("Error from 'config get notify-keyspace-events'");
+  }
+
+  // K = keyspace events are being published
+  if (value.indexOf('K') == -1) {
+    missing += 'K';
+  }
+
+  // We need at least:
+  //  $ string events
+  //  g generic events (del)
+  //  x expired events
+  //  e evicted events
+  //
+  // "A" means "everything"
+  if (value.indexOf('A') == -1) {
+    _.each(['$', 'g', 'x', 'e'], function (key) {
+      if (value.indexOf(key) == -1) {
+        missing += key;
+      }
+    });
+  }
+
+  if (missing) {
+    throw new Error("You must configure notify-keyspace-events for Meteor.  Current config=" + value + " missing=" + missing);
+  }
 };
 
 RedisConnection.prototype.close = function() {
