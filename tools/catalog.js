@@ -99,6 +99,9 @@ _.extend(ServerCatalog.prototype, {
       }
     }
     self._refreshFutures = null;
+
+    if (thrownError)
+      throw thrownError;
   },
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
