@@ -167,17 +167,25 @@ _.extend(Project.prototype, {
         self.calculateCombinedConstraints(releasePackages);
 
       // Call the constraint solver, using the previous dependencies as the last
-      // solution. Remember to check 'ignoreProjectDeps', otherwise it will just
-      // try to look up the solution in our own dependencies and it will be a
-      // disaster.
+      // solution. It is useful to set ignoreProjectDeps, but not nessessary,
+      // since self.viableDepSource is false.
       var newVersions = catalog.complete.resolveConstraints(
         self.combinedConstraints,
-        { previousSolution: self.dependencies }
+        { previousSolution: self.dependencies },
+        { ignoreProjectDeps: true }
       );
 
       // Download packages to disk, and rewrite .meteor/versions if it has
       // changed.
-      self.setVersions(newVersions);
+      var oldVersions = self.versions;
+      var setV = self.setVersions(newVersions);
+      self.showPackageChanges(oldVersions, newVersions, {
+        ondiskPackages: setV.downloaded
+      });
+
+      if (!setV.success) {
+        throw new Error ("Could not install all the requested packages.");
+      }
 
       // Finally, initialize the package loader.
       self.packageLoader = new packageLoader.PackageLoader({
@@ -258,6 +266,75 @@ _.extend(Project.prototype, {
     }
 
     return allDeps;
+  },
+
+  // Print out the changest hat we have made in the versions files.
+  //
+  // return 0 if everything went well, or 1 if we failed in some way.
+  showPackageChanges : function (versions, newVersions, options) {
+    // options.skipPackages
+    // options.ondiskPackages
+
+    // Don't tell the user what all the operations were until we finish -- we
+    // don't want to give a false sense of completeness until everything is
+    // written to disk.
+    var messageLog = [];
+    var failed = false;
+
+    // Remove the versions that don't exist
+    var removed = _.difference(_.keys(versions), _.keys(newVersions));
+    _.each(removed, function(packageName) {
+      messageLog.push("removed dependency on " + packageName);
+    });
+
+    _.each(newVersions, function(version, packageName) {
+      if (failed)
+        return;
+
+      if (_.has(versions, packageName) &&
+          versions[packageName] === version) {
+        // Nothing changed. Skip this.
+        return;
+      }
+
+      if (options.onDiskPackages &&
+          (! options.onDiskPackages[packageName] ||
+           options.onDiskPackages[packageName] !== version)) {
+        // XXX maybe we shouldn't be letting the constraint solver choose
+        // things that don't have the right arches?
+        process.stderr.write("Package " + packageName +
+                             " has no compatible build for version " +
+                             version + "\n");
+        failed = true;
+        return;
+      }
+
+      // Add a message to the update logs to show the user what we have done.
+      if ( _.contains(options.skipPackages, packageName)) {
+        // If we asked for this, we will log it later in more detail.
+        return;
+      }
+
+      // If the previous versions file had this, then we are upgrading, if it did
+      // not, then we must be adding this package anew.
+      if (_.has(versions, packageName)) {
+        messageLog.push("  upgraded " + packageName + " from version " +
+                        versions[packageName] +
+                        " to version " + newVersions[packageName]);
+      } else {
+        messageLog.push("  added " + packageName +
+                        " at version " + newVersions[packageName]);
+      };
+    });
+
+    if (failed)
+      return 1;
+
+    // Show the user the messageLog of packages we added.
+    _.each(messageLog, function (msg) {
+      process.stdout.write(msg + "\n");
+    });
+    return 0;
   },
 
   // Accessor methods dealing with programs.
@@ -482,9 +559,23 @@ _.extend(Project.prototype, {
   //
   // options:
   //   alwaysRecord: record the versions file, even when we aren't supposed to.
+  //
+  // returns:
+  //   success: true/false
+  //   downloaded: package:version of packages that we have downloaded
   setVersions: function (newVersions, options) {
     var self = this;
     var downloaded = self._ensurePackagesExistOnDisk(newVersions);
+    var ret = {
+      success: true,
+      downloaded: downloaded
+    };
+
+    // We have failed to download the packages successfully! That's bad.
+    if (_.keys(downloaded).length !== _.keys(newVersions).length) {
+      ret.success = false;
+      return ret;
+    }
 
     // Skip the disk IO if the versions haven't changed.
     if (!_.isEqual(newVersions, self.dependencies)) {
@@ -492,7 +583,7 @@ _.extend(Project.prototype, {
       self._recordVersions(options);
     }
 
-    return downloaded;
+    return ret;
   },
 
   // Recalculates the project dependencies if needed and records them to disk.

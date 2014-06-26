@@ -1657,8 +1657,15 @@ exports.bundle = function (options) {
 
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();
-  project.project._ensurePackagesExistOnDisk(
+  var downloaded = project.project._ensurePackagesExistOnDisk(
     project.project.dependencies, arch);
+
+  if (_.keys(downloaded).length !==
+      _.keys(project.project.dependencies).length) {
+    buildmessage.error("Unable to download package builds for this architecture.");
+    // Recover by returning.
+    return;
+  }
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;

@@ -53,7 +53,7 @@ var checkAuthorizedPackageMaintainer = function (record, action) {
   if (authorized == -1) {
       process.stderr.write('You are not an authorized maintainer of ' + record.name + ".\n");
       process.stderr.write('Only authorized maintainers may ' + action + ".\n");
-      process.exit(1);
+      return 1;;
   }
 };
 
@@ -82,73 +82,6 @@ var formatList = function (items) {
   });
 
   return out;
-};
-
-
-var showPackageChanges = function (versions, newVersions, options) {
-  // options.skipPackages
-  // options.ondiskPackages
-
-  // Don't tell the user what all the operations were until we finish -- we
-  // don't want to give a false sense of completeness until everything is
-  // written to disk.
-  var messageLog = [];
-  var failed = false;
-
-  // Remove the versions that don't exist
-  var removed = _.difference(_.keys(versions), _.keys(newVersions));
-  _.each(removed, function(packageName) {
-    messageLog.push("removed dependency on " + packageName);
-  });
-
-  _.each(newVersions, function(version, packageName) {
-    if (failed)
-      return;
-
-    if (_.has(versions, packageName) &&
-         versions[packageName] === version) {
-      // Nothing changed. Skip this.
-      return;
-    }
-
-    if (options.onDiskPackages &&
-        (! options.onDiskPackages[packageName] ||
-          options.onDiskPackages[packageName] !== version)) {
-      // XXX maybe we shouldn't be letting the constraint solver choose
-      // things that don't have the right arches?
-      process.stderr.write("Package " + packageName +
-                           " has no compatible build for version " +
-                           version + "\n");
-      failed = true;
-      return;
-    }
-
-    // Add a message to the update logs to show the user what we have done.
-    if ( _.contains(options.skipPackages, packageName)) {
-      // If we asked for this, we will log it later in more detail.
-      return;
-    }
-
-    // If the previous versions file had this, then we are upgrading, if it did
-    // not, then we must be adding this package anew.
-    if (_.has(versions, packageName)) {
-      messageLog.push("  upgraded " + packageName + " from version " +
-                      versions[packageName] +
-                      " to version " + newVersions[packageName]);
-    } else {
-      messageLog.push("  added " + packageName +
-                      " at version " + newVersions[packageName]);
-    };
-  });
-
-  if (failed)
-    return 1;
-
-  // Show the user the messageLog of packages we added.
-  _.each(messageLog, function (msg) {
-    process.stdout.write(msg + "\n");
-  });
-  return 0;
 };
 
 
@@ -685,7 +618,7 @@ main.registerCommand({
      // If we fail to publish, just exit outright, something has gone wrong.
      if (pub > 0) {
        process.stderr.write("Failed to publish: " + name + "\n");
-       process.exit(1);
+       return 1;;
      }
    });
 
@@ -805,7 +738,7 @@ main.registerCommand({
       var lastVersion = versionRecords[versionRecords.length - 1];
       if (!lastVersion && full.length > 1) {
         console.log("Unknown version of", name, ":", full[1]);
-        process.exit(1);
+        return 1;;
       }
       var unknown = "< unknown >";
       _.each(versionRecords, function (v) {
@@ -971,7 +904,7 @@ main.registerCommand({
   // Some basic checks to make sure that this command is being used correctly.
   if (options["packages-only"] && options["patch"]) {
     process.stderr.write("There is no such thing as a patch update to packages.");
-    process.exit(1);
+    return 1;;
   }
 
   if (!options["packages-only"]) {
@@ -1094,7 +1027,7 @@ main.registerCommand({
       if (appRelease == null) {
         console.log(
           "Cannot patch update unless a release is set.");
-        process.exit(1);
+        return 1;;
       }
       var r = appRelease.split('@');
       var record = catalog.official.getReleaseVersion(r[0], r[1]);
@@ -1102,7 +1035,7 @@ main.registerCommand({
       if (!updateTo) {
         console.log(
           "You are at the latest patch version.");
-        process.exit(1);
+        return 1;
       }
       releaseVersionsToTry = [updateTo];
     } else if (release.forced) {
@@ -1168,11 +1101,15 @@ main.registerCommand({
     var upgraders = require('./upgraders.js');
     var upgradersToRun = upgraders.upgradersToRun();
 
-    // XXX did we have to change some package versions? we should probably
-    //     mention that fact.
-
     // Write the new versions to .meteor/packages and .meteor/versions.
-    project.setVersions(solutionPackageVersions);
+    var setV = project.setVersions(solutionPackageVersions);
+    self.showPackageChanges(previousVersions, newVersions, {
+      ondiskPackages: setV.downloaded
+    });
+    if (!setV.success) {
+      process.stderr.write("Could not install all the requested packages.");
+      return 1;
+    }
 
     // Write the release to .meteor/release.
     project.writeMeteorReleaseVersion(solutionReleaseName);
@@ -1228,12 +1165,12 @@ main.registerCommand({
     }
 
     // Set our versions and download the new packages.
-    var downloaded = project.setVersions(newVersions, {
+    setV = project.setVersions(newVersions, {
       alwaysRecord : true });
 
     // Display changes: what we have added/removed/upgraded.
-    showPackageChanges(versions, newVersions, {
-       ondiskPackages: downloaded});
+    return project.showPackageChanges(versions, newVersions, {
+       ondiskPackages: setV.downloaded});
   }
   return 0;
 });
@@ -1366,9 +1303,10 @@ main.registerCommand({
   // reality.
   var downloaded = project.addPackages(constraints, newVersions);
 
-  showPackageChanges(versions, newVersions, {
+  var ret = project.showPackageChanges(versions, newVersions, {
     skipPackages: constraints,
     ondiskPackages: downloaded});
+  if (ret !== 0) return ret;
 
   // Show the user the messageLog of the packages that they installed.
   process.stdout.write("Successfully added the following packages.\n");
@@ -1435,8 +1373,9 @@ main.registerCommand({
   var newVersions = project.getVersions();
 
   // Show what we did. (We removed some things)
-  showPackageChanges(versions, newVersions, {
+  var ret = project.showPackageChanges(versions, newVersions, {
     skipPackages: options.args });
+  if (ret !== 0) return ret;
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
