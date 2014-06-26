@@ -909,7 +909,11 @@ main.registerCommand({
                            " at version " + version + "\n");
         return;
       }
-      items.push({ name: name, description: versionInfo.description });
+      var description = versionInfo.version +
+            (versionInfo.description ?
+             (": " + versionInfo.description) :
+             "");
+      items.push({ name: name, description: description });
 
     });
   });
@@ -1187,7 +1191,7 @@ main.registerCommand({
     // update all direct dependencies. If a specific list of packages has been
     // specified, then only upgrade those.
     if (options.args.length === 0) {
-      upgradePackages = allPackages;
+      upgradePackages = _.pluck(allPackages, 'packageName');
     } else {
       upgradePackages = options.args;
     }
@@ -1197,7 +1201,9 @@ main.registerCommand({
     var newVersions = catalog.complete.resolveConstraints(allPackages, {
       previousSolution: versions,
       breaking: !options.minor,
-      upgrade: _.pluck(upgradePackages, 'packageName')
+      upgrade: upgradePackages
+    }, {
+      ignoreProjectDeps: true
     });
 
     // Just for the sake of good messages, check to see if anything changed.
