@@ -273,7 +273,8 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
 var uploadTarball = function (putUrl, tarball) {
   var size = fs.statSync(tarball).size;
   var rs = fs.createReadStream(tarball);
-  httpHelpers.request({
+  // Use getUrl instead of request, to throw on 4xx/5xx.
+  httpHelpers.getUrl({
     method: 'PUT',
     url: putUrl,
     headers: {
