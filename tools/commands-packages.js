@@ -1124,7 +1124,9 @@ main.registerCommand({
         directDependencies, releaseRecord.packages);
       try {
         solutionPackageVersions = catalog.complete.resolveConstraints(
-          constraints, { previousSolution: previousVersions });
+          constraints,
+          { previousSolution: previousVersions },
+          { ignoreProjectDeps: true });
       } catch (e) {
         // XXX we should make the error handling explicitly detectable, and not
         // actually mention failures that are recoverable
