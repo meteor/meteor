@@ -1195,14 +1195,25 @@ main.registerCommand({
       osArches.join(', ') + '\n');
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
-  _.each(osArches, function (osArch) {
-    _.each(release.packages, function (pkgVersion, pkgName) {
-      if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
-        throw Error("missing build of " + pkgName + "@" + pkgVersion +
-                    " for " + osArch);
-      }
+  var messages = buildmessage.capture(function () {
+    _.each(osArches, function (osArch) {
+      _.each(release.packages, function (pkgVersion, pkgName) {
+        buildmessage.enterJob({
+          title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
+        }, function () {
+          if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
+            buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
+                               " for " + osArch);
+          }
+        });
+      });
     });
   });
+
+  if (messages.hasMessages()) {
+    process.stdout.write("\n" + messages.formatMessages());
+    return 1;
+  };
 
   files.mkdir_p(outputDirectory);
 
@@ -1214,16 +1225,21 @@ main.registerCommand({
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
       path.join(tmpdir, '.meteor0'), catalog.official);
-    tmpTropo.maybeDownloadPackageForArchitectures(
-      {packageName: toolPkg.package, version: toolPkg.constraint},
-      [osArch],  // XXX 'browser' too?
-      true);
-    _.each(release.packages, function (pkgVersion, pkgName) {
+    try {
       tmpTropo.maybeDownloadPackageForArchitectures(
-        {packageName: pkgName, version: pkgVersion},
+        {packageName: toolPkg.package, version: toolPkg.constraint},
         [osArch],  // XXX 'browser' too?
         true);
-    });
+      _.each(release.packages, function (pkgVersion, pkgName) {
+        tmpTropo.maybeDownloadPackageForArchitectures(
+          {packageName: pkgName, version: pkgVersion},
+          [osArch],  // XXX 'browser' too?
+          true);
+      });
+    } catch (err) {
+      console.log(err);
+      process.exit(1);
+    }
 
     // XXX should we include some sort of preliminary package-metadata as well?
     // maybe with release info about the release we are using?

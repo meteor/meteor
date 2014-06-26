@@ -146,16 +146,23 @@ var updateMeteorToolSymlink = function () {
     // The latest release from the catalog is not where the ~/.meteor0/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
-    tropohouse.default.maybeDownloadPackageForArchitectures(
-      {packageName: latestReleaseToolPackage,
-       version: latestReleaseToolVersion},
-      [archinfo.host()]);
-
-    _.each(latestRelease.packages, function (version, packageName) {
+    try {
       tropohouse.default.maybeDownloadPackageForArchitectures(
-        { packageName: packageName, version: version },
-        ['browser', archinfo.host()]);
-    });
+        {packageName: latestReleaseToolPackage,
+         version: latestReleaseToolVersion},
+        [archinfo.host()]);
+
+      _.each(latestRelease.packages, function (version, packageName) {
+        tropohouse.default.maybeDownloadPackageForArchitectures(
+          { packageName: packageName, version: version },
+          ['browser', archinfo.host()]);
+      });
+    } catch (err) {
+      console.log("Could not download latest release:",
+        latestRelease.track + "@" + latestRelease.version);
+      // Return, since we are running in the background.
+      return;
+    }
 
     var toolUnipackage = new unipackage.Unipackage;
     toolUnipackage.initFromPath(
@@ -164,7 +171,9 @@ var updateMeteorToolSymlink = function () {
                                      latestReleaseToolVersion));
     var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
                                  {arch: archinfo.host()});
+
     // XXX maybe we shouldn't throw from this background thing
+    // counter: this is super weird and should never ever happen.
     if (!toolRecord)
       throw Error("latest release has no tool?");
 

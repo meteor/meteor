@@ -312,11 +312,21 @@ var springboard = function (rel, releaseOverride) {
   var toolsVersion = rel.getToolsVersion();
 
   // XXX split better
-  tropohouse.default.maybeDownloadPackageForArchitectures(
-    {packageName: toolsPkg, version: toolsVersion},
-    [archinfo.host()],
-    true /* print downloading message */
-  );
+  try {
+    tropohouse.default.maybeDownloadPackageForArchitectures(
+      {packageName: toolsPkg, version: toolsVersion},
+      [archinfo.host()],
+      true /* print downloading message */
+    );
+  } catch (err) {
+    // We have failed to download the tool that we are supposed to springboard
+    // to! That's bad. Let's exit.
+    process.stderr.write(
+      "Could not springboard to release: " + rel.name +
+      ": could not download tool in " +
+      rel.getToolsPackageAtVersion());
+    process.exit(1);
+  }
 
   // XXX support warehouse too
 

@@ -135,8 +135,8 @@ _.extend(exports.Tropohouse.prototype, {
     var buildsToDownload = self.catalog.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
-      // XXX throw a special error instead?  yes please.
-      return false;
+      throw new Error(
+        "No compatible build found for " + packageName + "@" + version);
     }
 
     // XXX replace with a real progress bar in _ensurePackagesExistOnDisk

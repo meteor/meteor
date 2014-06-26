@@ -530,14 +530,17 @@ _.extend(Project.prototype, {
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
       var packageVersionInfo = { packageName: name, version: version };
-      // XXX error handling
-      var available = tropohouse.default.maybeDownloadPackageForArchitectures(
-        packageVersionInfo,
-        ['browser', arch],
-        true /* print downloading message */
-      );
-      if (available) {
+      try {
+        var available = tropohouse.default.maybeDownloadPackageForArchitectures(
+          packageVersionInfo,
+          ['browser', arch],
+          true /* print downloading message */
+        );
         downloadedPackages[name] = version;
+      } catch (err) {
+        // We have failed to download the right things and put them on disk!
+        // This should not happen, and we aren't sure why it happened.
+        console.log(err);
       }
     });
     return downloadedPackages;
