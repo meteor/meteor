@@ -8,8 +8,12 @@ Template.__define__ = function (templateName, templateFunc) {
 
   var tmpl = {
     __templateName: templateName,
-    __createView: function () {
-      return Blaze.View('Template.' + templateName, templateFunc);
+    __render: templateFunc,
+    __makeView: function (contentFunc, elseFunc) {
+      var view = Blaze.View('Template.' + templateName, tmpl.__render);
+      view.templateContentFunc = contentFunc;
+      view.templateElseFunc = elseFunc;
+      return view;
     }
   };
 
@@ -33,6 +37,6 @@ var instantiateBody = function () {
   if (Template.__body__.__isInstantiated)
     return;
   Template.__body__.__isInstantiated = true;
-  Blaze.materializeView(Template.__body__.__createView()).attach(document.body);
+  Blaze.materializeView(Template.__body__.__makeView()).attach(document.body);
 };
 Template.__body__.__instantiate = instantiateBody;
