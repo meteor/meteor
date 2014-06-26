@@ -95,9 +95,10 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     req.method = "GET";
     req.url = "/" + additionalScriptPathname;
     var nextCalled = false;
-    WebAppInternals.serveStaticFiles(staticFilesOpts, req, res, function () {
-      nextCalled = true;
-    });
+    WebAppInternals.staticFilesMiddleware(
+      staticFilesOpts, req, res, function () {
+        nextCalled = true;
+      });
     test.isTrue(nextCalled);
 
     // When inline scripts are disallowed, the script body should not be
@@ -116,7 +117,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
 
     // And the static file handler should serve the script at that pathname.
     res = new MockResponse();
-    WebAppInternals.serveStaticFiles(staticFilesOpts, req, res,
+    WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
                                      function () { });
     var resBody = res.getBody();
     test.isTrue(resBody.indexOf(additionalScript) !== -1);

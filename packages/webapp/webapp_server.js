@@ -264,7 +264,7 @@ var getBoilerplate = function (request) {
 //   - staticFiles: object mapping pathname of file in manifest -> {
 //     path, cacheable, sourceMapUrl, type }
 //   - clientDir: root directory for static files from client manifest
-WebAppInternals.serveStaticFiles = function (options, req, res, next) {
+WebAppInternals.staticFilesMiddleware = function (options, req, res, next) {
   if ('GET' != req.method && 'HEAD' != req.method) {
     next();
     return;
@@ -461,7 +461,7 @@ var runWebAppServer = function () {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    return WebAppInternals.serveStaticFiles({
+    return WebAppInternals.staticFilesMiddleware({
       staticFiles: staticFiles,
       clientDir: clientDir
     }, req, res, next);
