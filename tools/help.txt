@@ -433,6 +433,8 @@ Search through the meteor package&release database for names containing the
 specified substring.
 
 Use --details to get detailed information on a specific package or release.
+Use --details <name>@<version> to get more information on a specific version
+of a package or release.
 
 Options:
   --details  show detailed information on a specific package or release

@@ -808,10 +808,19 @@ main.registerCommand({
         var versionDesc = "Version " + v.version;
         if (v.description)
           versionDesc = versionDesc + " : " + v.description;
-        if (v.buildArchitectures && full.length > 1)
-          versionDesc = versionDesc + " \n      Architectures: "
-                           + v.buildArchitectures;
         console.log(versionDesc);
+        if (v.buildArchitectures && full.length > 1)
+          console.log("      Architectures: "
+                           + v.buildArchitectures);
+        if (v.packages && full.length > 1) {
+          console.log("      tool: " + v.tool);
+          console.log("      packages:");
+
+          versionDesc = versionDesc + " \n      packages: \n";
+          _.each(v.packages, function(pv, pn) {
+             console.log("          ", pn, ":", pv);
+          });
+        }
       });
       console.log("\n");
       console.log("The " + label + " " + name + " : "
