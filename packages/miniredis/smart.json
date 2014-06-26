@@ -1,0 +1,10 @@
+{
+  "name": "miniredis",
+  "description": "Partial implementation of Redis API on top of in-memory representation in JS",
+  "homepage": "https://github/meteor/meteor/packages/miniredis",
+  "author": "Justin Santa Barbara, Slava Kim",
+  "version": "0.0.1",
+  "git": "https://github.com/meteor/miniredis.git#v0.0.1",
+  "packages": {}
+}
+
