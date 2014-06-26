@@ -490,8 +490,9 @@ var runWebAppServer = function () {
         var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
                                        boilerplateBaseData);
         boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
-          Blaze.toHTML(function () {
-            return Blaze.With(boilerplateData, boilerplateFunc);
+          Blaze.toHTML3(function () {
+            return boilerplateFunc.toString();
+            return Blaze.With3(boilerplateData, boilerplateFunc);
           });
       } catch (e) {
         Log.error("Error running template: " + e.stack);
