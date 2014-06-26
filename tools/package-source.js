@@ -1271,7 +1271,10 @@ _.extend(PackageSource.prototype, {
     // If something has changed, and this is an immutable package source, then
     // we have done something terribly, terribly wrong. Throw.
     if (self.immutable) {
-      throw new Error("Version lock for " + self.name + " should never change.");
+      throw new Error(
+        "Version lock for " + self.name + " should never change. Recorded as "
+          + JSON.stringify(self.dependencyVersions) + ", calculated as "
+          + JSON.stringify(versions));
     };
 
     // In case we need to rebuild from this package Source, it will be
