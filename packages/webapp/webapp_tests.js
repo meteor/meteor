@@ -78,47 +78,50 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   // before settng it back to what it was originally.
   WebAppInternals.setInlineScriptsAllowed(true);
 
-  var boilerplate = WebAppInternals.getBoilerplate({
-    browser: "doesn't-matter",
-    url: "also-doesnt-matter"
+  Meteor._noYieldsAllowed(function () {
+    var boilerplate = WebAppInternals.getBoilerplate({
+      browser: "doesn't-matter",
+      url: "also-doesnt-matter"
+    });
+
+    // When inline scripts are allowed, the script should be inlined.
+    test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
+
+    // And the script should not be served as its own separate resource,
+    // meaning that the static file handler should pass on this request.
+    var res = new MockResponse();
+    var req = new http.IncomingMessage();
+    req.headers = {};
+    req.method = "GET";
+    req.url = "/" + additionalScriptPathname;
+    var nextCalled = false;
+    WebAppInternals.serveStaticFiles(staticFilesOpts, req, res, function () {
+      nextCalled = true;
+    });
+    test.isTrue(nextCalled);
+
+    // When inline scripts are disallowed, the script body should not be
+    // inlined, and the script should be included in a <script src="..">
+    // tag.
+    WebAppInternals.setInlineScriptsAllowed(false);
+    boilerplate = WebAppInternals.getBoilerplate({
+      browser: "doesn't-matter",
+      url: "also-doesnt-matter"
+    });
+
+    // The script contents itself should not be present; the pathname
+    // where the script is served should be.
+    test.isTrue(boilerplate.indexOf(additionalScript) === -1);
+    test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
+
+    // And the static file handler should serve the script at that pathname.
+    res = new MockResponse();
+    WebAppInternals.serveStaticFiles(staticFilesOpts, req, res,
+                                     function () { });
+    var resBody = res.getBody();
+    test.isTrue(resBody.indexOf(additionalScript) !== -1);
+    test.equal(res.statusCode, 200);
   });
-
-  // When inline scripts are allowed, the script should be inlined.
-  test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
-
-  // And the script should not be served as its own separate resource,
-  // meaning that the static file handler should pass on this request.
-  var res = new MockResponse();
-  var req = new http.IncomingMessage();
-  req.headers = {};
-  req.method = "GET";
-  req.url = "/" + additionalScriptPathname;
-  var nextCalled = false;
-  WebAppInternals.serveStaticFiles(staticFilesOpts, req, res, function () {
-    nextCalled = true;
-  });
-  test.isTrue(nextCalled);
-
-  // When inline scripts are disallowed, the script body should not be
-  // inlined, and the script should be included in a <script src="..">
-  // tag.
-  WebAppInternals.setInlineScriptsAllowed(false);
-  boilerplate = WebAppInternals.getBoilerplate({
-    browser: "doesn't-matter",
-    url: "also-doesnt-matter"
-  });
-
-  // The script contents itself should not be present; the pathname
-  // where the script is served should be.
-  test.isTrue(boilerplate.indexOf(additionalScript) === -1);
-  test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
-
-  // And the static file handler should serve the script at that pathname.
-  res = new MockResponse();
-  WebAppInternals.serveStaticFiles(staticFilesOpts, req, res, function () { });
-  var resBody = res.getBody();
-  test.isTrue(resBody.indexOf(additionalScript) !== -1);
-  test.equal(res.statusCode, 200);
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
 });
