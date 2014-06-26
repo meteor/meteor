@@ -52,10 +52,10 @@ Blaze.View.prototype.onDestroyed = function (cb) {
 Blaze.View.prototype.autorun = function (f) {
   if (! this.isCreated)
     throw new Error("View#autorun must be called from the created callback at the earliest");
-  if (Deps.active)
-    throw new Error("Can't call View#autorun from an active Deps Computation; try calling it from a callback like created or rendered.");
 
-  var comp = Deps.autorun(f);
+  var comp = Deps.nonreactive(function () {
+    return Deps.autorun(f);
+  });
   this.onDestroyed(function () { comp.stop(); });
 };
 
@@ -94,23 +94,21 @@ Blaze.materializeView = function (view, parentView) {
   };
 
   var lastHtmljs;
-  Deps.nonreactive(function () {
-    view.autorun(function doRender(c) {
-      var htmljs = view.render();
+  view.autorun(function doRender(c) {
+    var htmljs = view.render();
 
-      Deps.nonreactive(function doMaterialize() {
-        var materializer = new Blaze.DOMMaterializer({parentView: view});
-        var rangesAndNodes = materializer.visit(htmljs, []);
-        if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-          domrange.setMembers(rangesAndNodes);
-          Blaze._fireCallbacks(view, 'materialized');
-          needsRenderedCallback = true;
-          if (! c.firstRun)
-            scheduleRenderedCallback();
-        }
-      });
-      lastHtmljs = htmljs;
+    Deps.nonreactive(function doMaterialize() {
+      var materializer = new Blaze.DOMMaterializer({parentView: view});
+      var rangesAndNodes = materializer.visit(htmljs, []);
+      if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
+        domrange.setMembers(rangesAndNodes);
+        Blaze._fireCallbacks(view, 'materialized');
+        needsRenderedCallback = true;
+        if (! c.firstRun)
+          scheduleRenderedCallback();
+      }
     });
+    lastHtmljs = htmljs;
   });
 
   domrange.onAttached(function attached(range, element) {
