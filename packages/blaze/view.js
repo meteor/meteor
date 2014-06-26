@@ -236,7 +236,7 @@ Blaze.With3 = function (data, contentFunc) {
   return view;
 };
 
-/*Blaze._eachView = function (argFunc, contentFunc, elseContentFunc) {
+/*Blaze.Each3 = function (argFunc, contentFunc, elseContentFunc) {
   var view = Blaze.View(function () {
 
   });
