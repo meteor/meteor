@@ -71,7 +71,7 @@ Blaze.materializeView = function (view, parentView) {
   view.parentView = (parentView || null);
 
   if (view.isCreated)
-    throw new Error("Can't materialize the same View twice");
+    throw new Error("Can't render the same View twice");
   view.isCreated = true;
 
   Blaze._fireCallbacks(view, 'created');
@@ -120,6 +120,49 @@ Blaze.materializeView = function (view, parentView) {
   });
 
   return domrange;
+};
+
+Blaze._stringifyView = function (view, parentView, stringifier) {
+  view.parentView = (parentView || null);
+
+  if (view.isCreated)
+    throw new Error("Can't render the same View twice");
+  view.isCreated = true;
+
+  Blaze._fireCallbacks(view, 'created');
+
+  var htmljs = view.render();
+  var result = stringifier.visit(htmljs);
+
+  Blaze.destroyView(view);
+
+  return result;
+};
+
+Blaze.viewToHTML = function (view, parentView) {
+  return Blaze._stringifyView(
+    view, parentView,
+    new Blaze.HTMLStringifier({parentView: parentView}));
+};
+
+Blaze.viewToText = function (view, parentView, textMode) {
+  if ((parentView != null) && ! (parentView instanceof Blaze.View)) {
+    // omitted parentView argument
+    textMode = parentView;
+    parentView = null;
+  }
+
+  if (! textMode)
+    throw new Error("textMode required");
+  if (! (textMode === HTML.TEXTMODE.STRING ||
+         textMode === HTML.TEXTMODE.RCDATA ||
+         textMode === HTML.TEXTMODE.ATTRIBUTE))
+    throw new Error("Unknown textMode: " + textMode);
+
+  return Blaze._stringifyView(
+    view, parentView,
+    new Blaze.TextStringifier({textMode: textMode,
+                               parentView: parentView}));
 };
 
 Blaze.destroyView = function (view, _viaTeardown) {
@@ -171,16 +214,26 @@ Blaze.render3 = function (contentFunc) {
   return Blaze.materializeView(Blaze.View('render', contentFunc));
 };
 
-Blaze.With3 = function (dataFunc, contentFunc) {
+Blaze.toHTML3 = function (contentFunc) {
+  return Blaze.viewToHTML(Blaze.View('toHTML', contentFunc));
+};
+
+Blaze.With3 = function (data, contentFunc) {
   var view = Blaze.View('with', contentFunc);
 
   view.dataVar = new Blaze.ReactiveVar;
 
   view.onCreated(function () {
-    this.autorun(function () {
-      this.dataVar.set(dataFunc());
-    });
+    if (typeof data === 'function') {
+      this.autorun(function () {
+        this.dataVar.set(data());
+      });
+    } else {
+        this.dataVar.set(data);
+    }
   });
+
+  return view;
 };
 
 /*Blaze._eachView = function (argFunc, contentFunc, elseContentFunc) {
