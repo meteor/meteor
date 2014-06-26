@@ -827,17 +827,11 @@ files.readdirNoDots = function (path) {
   });
 };
 
-// Read a file in line by line. Returns an array of lines to be processed
-//  individually.
-exports.getLines = function (file) {
-  try {
-    var raw = fs.readFileSync(file, 'utf8');
-  } catch (e) {
-    if (e && e.code === 'ENOENT')
-      return [];
-    throw e;
-  }
-
+// Read a file in line by line. Returns an array of lines to be
+// processed individually. Throws if the file doesn't exist or if
+// anything else goes wrong.
+var getLines = function (file) {
+  var raw = fs.readFileSync(file, 'utf8');
   var lines = raw.split(/\r*\n\r*/);
 
   // strip blank lines at the end
@@ -849,4 +843,17 @@ exports.getLines = function (file) {
   }
 
   return lines;
+};
+
+exports.getLines = getLines;
+
+// Same as `getLines`, but returns [] if the file doesn't exist.
+exports.getLinesOrEmpty = function (file) {
+  try {
+    return getLines(file);
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return [];
+    throw e;
+  }
 };

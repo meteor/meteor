@@ -15,6 +15,8 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
 
+var toolsPackage = selftest.getToolsPackage();
+
 var checkMeta = function (appPackages, sessionId, useFakeRelease) {
   if (! clientAddress) {
     clientAddress = getClientAddress();
@@ -38,18 +40,8 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
       "METEOR-CORE";
     expectedUserAgentInfo.meteorReleaseVersion =
       "v1";
-
-    // Check the tools package version against a regexp and then
-    // delete it from `appPackages.meta` so that we can check the
-    // rest of `appPackages.meta` with `expectEqual`.
-    var toolsPackageWithVersion =
-          appPackages.meta.meteorToolsPackageWithVersion;
-    if (! toolsPackageWithVersion.match(
-        /meteor-tool@\d.\d.\d(\+[a-z0-9]+)?/)) {
-      selftest.fail("Tools package with version is " +
-                    "not correct: " + toolsPackageWithVersion);
-    }
-    delete appPackages.meta.meteorToolsPackageWithVersion;
+    expectedUserAgentInfo.meteorToolsPackageWithVersion =
+      toolsPackage.name + "@" + toolsPackage.version;
   }
 
   selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);

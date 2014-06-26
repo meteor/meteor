@@ -101,7 +101,7 @@ _.extend(Project.prototype, {
     // Read in the contents of the .meteor/packages file.
     var appConstraintFile = self._getConstraintFile();
     self.constraints = processPerConstraintLines(
-      files.getLines(appConstraintFile));
+      files.getLinesOrEmpty(appConstraintFile));
 
     // These will be fixed by _ensureDepsUpToDate.
     self.combinedConstraints = null;
@@ -110,7 +110,7 @@ _.extend(Project.prototype, {
     // Read in the contents of the .meteor/versions file, so we can give them to
     // the constraint solver as the previous solution.
     self.dependencies = processPerConstraintLines(
-      files.getLines(self._getVersionsFile()));
+      files.getLinesOrEmpty(self._getVersionsFile()));
     // Also, make sure we have an app identifier for this app.
     self.ensureAppIdentifier();
 
@@ -418,7 +418,7 @@ _.extend(Project.prototype, {
     var self = this;
 
     var appConstraintFile = self._getConstraintFile();
-    var lines = files.getLines(appConstraintFile);
+    var lines = files.getLinesOrEmpty(appConstraintFile);
     if (operation === "add") {
       _.each(names, function (name) {
         // XXX This assumes that the file hasn't been edited since we lasted
@@ -455,7 +455,7 @@ _.extend(Project.prototype, {
     // Record the packages results to disk. This is a slightly annoying
     // operation because we want to keep all the comments intact.
     var packages = self._getConstraintFile();
-    var lines = files.getLines(packages);
+    var lines = files.getLinesOrEmpty(packages);
     lines = _.reject(lines, function (line) {
       var cur = trimLine(line).split('@')[0];
       return _.indexOf(names, cur) !== -1;
@@ -585,7 +585,7 @@ _.extend(Project.prototype, {
     // derived from this one and can always be reconstructed later. We read the
     // file from disk, because we don't store the comments.
     var packages = self._getConstraintFile();
-    var lines = files.getLines(packages);
+    var lines = files.getLinesOrEmpty(packages);
     _.each(moreDeps, function (constraint) {
       if (constraint.constraint) {
         lines.push(constraint.package + '@' + constraint.constraint);
@@ -653,7 +653,7 @@ _.extend(Project.prototype, {
 
   getFinishedUpgraders: function () {
     var self = this;
-    var lines = files.getLines(self._finishedUpgradersFile());
+    var lines = files.getLinesOrEmpty(self._finishedUpgradersFile());
     return _.filter(_.map(lines, trimLine), _.identity);
   },
 

@@ -1,24 +1,31 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
+var catalog = require('../catalog.js');
+var packageLoader = require("../package-loader.js");
 
 selftest.define("springboard", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { tools: 'tools1' },
-      v2: { tools: 'tools2', latest: true } }
+      v1: { },
+      v2: { recommended: true }
+    }
   });
   var run;
 
+  var toolsPackage = selftest.getToolsPackage();
+  var toolsVersion = toolsPackage.name + '@' +
+        toolsPackage.version;
+
   // If run not in an app dir, runs the latest version ...
   run = s.run("--long-version");
-  run.read('v2\ntools2\n');
+  run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
   run.expectEnd();
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--long-version", "--release", "v1");
-  run.read('v1\ntools1\n');
+  run = s.run("--long-version", "--release", "METEOR-CORE@v1");
+  run.read('METEOR-CORE@v1\n' + toolsVersion + '\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -26,15 +33,15 @@ selftest.define("springboard", ['checkout'], function () {
   run = s.run("create", "myapp").expectExit(0);
   s.cd('myapp', function () {
     run = s.run("--long-version");
-    run.read('v2\ntools2\n');
+    run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
     run.expectExit(0);
   });
 
   // ... unless you asked for a different one.
-  run = s.run("create", "myapp2", "--release", "v1").expectExit(0);
+  run = s.run("create", "myapp2", "--release", "METEOR-CORE@v1").expectExit(0);
   s.cd('myapp2', function () {
     run = s.run("--long-version");
-    run.read('v1\ntools1\n');
+    run.read('METEOR-CORE@v1\n' + toolsVersion + '\n');
     run.expectExit(0);
   });
 
@@ -74,30 +81,32 @@ selftest.define("springboard", ['checkout'], function () {
     // install without setting a release on it.
     s.unset('METEOR_TEST_FAIL_RELEASE_DOWNLOAD');
     s.write(".meteor/release", "none");
-    run = s.run("list", "--using");
+    run = s.run("--requires-release");
     run.matchErr("must specify");
     run.matchErr("permanently set");
     run.expectExit(1);
 
     // As previous, but you pass --release to manually pick a release.
-    run = s.run("list", "--using", "--release", "v1");
+    run = s.run("--long-version", "--release", "v1");
     run.expectExit(0);
     run.forbidAll("must specify");
     run.forbidAll("permanently set");
 
     // You use modern Meteor with a super old release from the dark ages
-    // before the .meteor/release file. You get the latest version.
+    // before the .meteor/release file. You get an error.
     s.unlink('.meteor/release');
     run = s.run("--long-version");
-    run.read('v2\ntools2\n');
-    run.expectEnd();
-    run.expectExit(0);
+    run.matchErr("does not have a .meteor/release file");
+    run.matchErr("edit the .meteor/release file");
+    run.expectExit(1);
 
     // .meteor/release exists but is empty. You get an error.
     s.write(".meteor/release", "\n");
-    run = s.run("list", "--using");
+    run = s.run("--long-version");
     run.matchErr("release file which is empty");
     run.expectExit(1);
+
+    // XXX Test springboard to pre-0.9.0 release
   });
 });
 

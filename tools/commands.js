@@ -130,6 +130,14 @@ main.registerCommand({
   }
 });
 
+// Internal use only. For automated testing.
+main.registerCommand({
+  name: '--requires-release',
+  requiresRelease: true
+}, function (options) {
+  return 0;
+});
+
 // Internal use only. Makes sure that your Meteor install is totally good to go
 // (is "airplane safe"). Specifically, it:
 //    - Builds all local packages (including their npm dependencies)

@@ -13,6 +13,8 @@ var uniload = require('./uniload.js');
 
 var Package = uniload.load({ packages: ["ejson"] });
 
+var toolPackageName = "meteor-tool";
+
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
   var self = this;
@@ -54,8 +56,20 @@ var expectThrows = markStack(function (f) {
   }
 
   if (! threw)
-    throw new TestFailure("expected-exception")
+    throw new TestFailure("expected-exception");
 });
+
+var getToolsPackage = function () {
+  // Rebuild the tool package --- necessary because we don't actually
+  // rebuild the tool in the cached version every time.
+  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
+    throw Error("didn't rebuild meteor-tool?");
+  }
+  var loader = new packageLoader.PackageLoader({versions: null});
+  var toolPackage = loader.getPackage(toolPackageName);
+  return toolPackage;
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
@@ -488,14 +502,11 @@ _.extend(Sandbox.prototype, {
 
     // Build all packages and symlink them into the warehouse. Remember
     // their versions (which happen to contain build IDs).
-    var toolPackageName = 'meteor-tool';
-    // Rebuild the tool package --- necessary because we don't actually
-    // rebuild the tool in the cached version every time.
-    if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
-      throw Error("didn't rebuild meteor-tool?");
-    }
-    var loader = new packageLoader.PackageLoader({versions: null});
-    var toolPackage = loader.getPackage(toolPackageName);
+    // XXX Not sure where this comment comes from. We should presumably
+    // be building some packages besides meteor-tool (so that we can
+    // build apps that contain core packages).
+
+    var toolPackage = getToolsPackage();
     var toolPackageDirectory =
           '.' + toolPackage.version + '.XXX++'
           + toolPackage.buildArchitectures();
@@ -519,6 +530,9 @@ _.extend(Sandbox.prototype, {
       compilerVersion: require('./compiler.js').BUILT_BY,
       _id: toolVersionId
     });
+
+    self.toolPackageVersion = toolPackage.version;
+
     stubCatalog.collections.builds.push({
       architecture: toolPackage.buildArchitectures(),
       versionId: toolVersionId,
@@ -1213,5 +1227,6 @@ _.extend(exports, {
   Run: Run,
   fail: fail,
   expectEqual: expectEqual,
-  expectThrows: expectThrows
+  expectThrows: expectThrows,
+  getToolsPackage: getToolsPackage
 });
