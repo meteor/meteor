@@ -39,8 +39,10 @@ Package.on_use(function (api) {
     'builtins.js'
   ]);
 
+  // new files for blaze-views
   api.add_files([
     'reactivevar.js',
+    'materializer.js',
     'view.js'
   ]);
 });
