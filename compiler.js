@@ -46,6 +46,8 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   }
 
   var codegen = new SpacebarsCompiler.CodeGen;
+  if (options && options.OLDSTYLE)
+    codegen.OLDSTYLE = true;
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
     {codegen: codegen})).visit(tree);
 

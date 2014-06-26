@@ -52,15 +52,15 @@ _.extend(CodeGen.prototype, {
       // Special dynamic attributes: `<div {{attrs}}>...`
       // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
       return BlazeTools.EmitCode(
-        'Blaze.Var(function () { return ' +
+        (this.OLDSTYLE?'Blaze.Var(':'')+'function () { return ' +
           self.codeGenMustache(tag.path, tag.args, 'attrMustache')
-          + '; })');
+          + '; }'+(this.OLDSTYLE?')':''));
     } else {
       if (tag.type === 'DOUBLE') {
-        return BlazeTools.EmitCode('Blaze.Isolate(function () { return ' +
+        return BlazeTools.EmitCode('Blaze.'+(this.OLDSTYLE?'Isolate':'View')+'(function () { return ' +
                                    self.codeGenMustache(tag.path, tag.args) + '; })');
       } else if (tag.type === 'TRIPLE') {
-        return BlazeTools.EmitCode('Blaze.Isolate(function () { return Spacebars.makeRaw(' +
+        return BlazeTools.EmitCode('Blaze.'+(this.OLDSTYLE?'Isolate':'View')+'(function () { return Spacebars.makeRaw(' +
                                    self.codeGenMustache(tag.path, tag.args) + '); })');
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
@@ -266,7 +266,7 @@ _.extend(CodeGen.prototype, {
   },
 
   codeGenBlock: function (content) {
-    return SpacebarsCompiler.codeGen(content);
+    return SpacebarsCompiler.codeGen(content, {OLDSTYLE: this.OLDSTYLE});
   },
 
   codeGenInclusionDataFunc: function (args) {
