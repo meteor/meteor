@@ -1,10 +1,8 @@
 {
-  "meteor": {
-    "git": "https://github.com/meteor/meteor.git",
-    "branch": "master"
-  },
   "packages": {
     "roles": {},
-    "router": {}
+    "router": {
+      "version": "0.5.4"
+    }
   }
 }
