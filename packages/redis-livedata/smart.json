@@ -5,6 +5,8 @@
   "author": "Justin Santa Barbara, Slava Kim",
   "version": "0.0.1",
   "git": "https://github.com/meteor/redis-livedata.git#v0.0.1",
-  "packages": {}
+  "packages": {
+    "miniredis": "0.0.1"
+  }
 }
 
