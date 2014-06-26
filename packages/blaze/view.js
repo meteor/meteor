@@ -7,7 +7,13 @@
 // - materializers.js
 // - write EACH
 
-Blaze.View = function (render) {
+Blaze.View = function (kind, render) {
+  if (typeof kind === 'function') {
+    // omitted "kind" argument
+    render = kind;
+    kind = '';
+  }
+  this.kind = kind;
   this.render = render;
 
   this._callbacks = {
@@ -40,10 +46,12 @@ Blaze.View.prototype.onDestroyed = function (cb) {
 };
 
 Blaze.View.prototype.autorun = function (f) {
-  var comp = Deps.nonreactive(function viewAutorunWrapper() {
-    return Deps.autorun(f);
-  });
+  if (! this.isCreated)
+    throw new Error("View#autorun must be called from the created callback at the earliest");
+  if (Deps.active)
+    throw new Error("Can't call View#autorun from an active Deps Computation; try calling it from a callback like created or rendered.");
 
+  var comp = Deps.autorun(f);
   this.onDestroyed(function () { comp.stop(); });
 };
 
@@ -82,21 +90,23 @@ Blaze.materializeView = function (view, parentView) {
   };
 
   var lastHtmljs;
-  view.autorun(function doRender(c) {
-    var htmljs = view.render();
+  Deps.nonreactive(function () {
+    view.autorun(function doRender(c) {
+      var htmljs = view.render();
 
-    Deps.nonreactive(function doMaterialize() {
-      var materializer = new Blaze.DOMMaterializer({parentView: view});
-      var rangesAndNodes = materializer.visit(htmljs, []);
-      if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-        domrange.setMembers(rangesAndNodes);
-        Blaze._fireCallbacks(view, 'materialized');
-        needsRenderedCallback = true;
-        if (! c.firstRun)
-          scheduleRenderedCallback();
-      }
+      Deps.nonreactive(function doMaterialize() {
+        var materializer = new Blaze.DOMMaterializer({parentView: view});
+        var rangesAndNodes = materializer.visit(htmljs, []);
+        if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
+          domrange.setMembers(rangesAndNodes);
+          Blaze._fireCallbacks(view, 'materialized');
+          needsRenderedCallback = true;
+          if (! c.firstRun)
+            scheduleRenderedCallback();
+        }
+      });
+      lastHtmljs = htmljs;
     });
-    lastHtmljs = htmljs;
   });
 
   domrange.onAttached(function attached(range, element) {
@@ -251,6 +261,45 @@ Blaze.DOMMaterializer.def({
   }
 });
 
-Blaze._eachView = function (argFunc, contentFunc, elseContentFunc) {
-  // XXX
+Blaze.render3 = function (contentFunc) {
+  return Blaze.materializeView(new Blaze.View('render', contentFunc));
 };
+
+Blaze.With3 = function (dataFunc, contentFunc) {
+  var view = new Blaze.View('with', contentFunc);
+
+  view.dataVar = new Blaze.ReactiveVar;
+
+  view.onCreated(function () {
+    this.autorun(function () {
+      this.dataVar.set(dataFunc());
+    });
+  });
+};
+
+/*Blaze._eachView = function (argFunc, contentFunc, elseContentFunc) {
+  var view = Blaze.View(function () {
+
+  });
+  var initialSubviews = [];
+
+  var elseMode = false;
+  var handle = ObserveSequence.observe(argFunc, {
+    addedAt: function (id, item, index) {
+      if (view.domrange) {
+        if (elseMode) {
+          view.domrange.removeMember(0);
+          elseMode = false;
+        }
+
+      var dataVar = Blaze.Var(item);
+      var func = function () {
+        return Blaze.With(dataVar, contentFunc);
+      };
+      func.dataVar = dataVar;
+      seq.addItem(func, index);
+    }
+  });
+
+};
+*/
