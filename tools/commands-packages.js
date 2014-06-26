@@ -803,6 +803,10 @@ main.registerCommand({
       }
     } else {
       var lastVersion = versionRecords[versionRecords.length - 1];
+      if (!lastVersion && full.length > 1) {
+        console.log("Unknown version of", name, ":", full[1]);
+        process.exit(1);
+      }
       var unknown = "< unknown >";
       _.each(versionRecords, function (v) {
         var versionDesc = "Version " + v.version;
