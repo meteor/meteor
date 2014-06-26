@@ -255,7 +255,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getBuildsForArches: function (name, version, arches) {
     var self = this;
     self._requireInitialized();
-
+console.log(name);
     var versionInfo = self.getVersion(name, version);
     if (! versionInfo)
       return null;

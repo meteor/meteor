@@ -159,6 +159,7 @@ exports.updateServerPackageData = function (cachedServerData) {
   try {
     remoteData = loadRemotePackageData(syncToken);
   } catch (err) {
+  console.log(err);
     if (err instanceof ServiceConnection.ConnectionTimeoutError) {
       return null;
     } else {

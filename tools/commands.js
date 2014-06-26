@@ -463,6 +463,20 @@ main.registerCommand({
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
+  // Error handling for options.architecture. We must pass in only one of three
+  // architectures. See archinfo.js for more information on what the
+  // architectures are, what they mean, et cetera.
+  var VALID_ARCHITECTURES =
+  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
+  if (options.architecture &&
+      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
+    process.stderr.write("Invalid architecture: " + options.architecture + "\n");
+    process.stderr.write(
+      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
+    process.exit(1);
+  }
+  var bundleArch =  options.architecture || archinfo.host();
+
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
   var bundlePath = options['directory'] ?
@@ -482,7 +496,7 @@ main.registerCommand({
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      arch: options.architecture || archinfo.host()
+      arch: bundleArch
     }
   });
   if (bundleResult.errors) {
