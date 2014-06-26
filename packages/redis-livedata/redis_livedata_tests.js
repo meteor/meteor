@@ -2682,26 +2682,22 @@ if (Meteor.isClient) {
 //    }
 //  }
 //]);
-//
-//
-//if (Meteor.isServer) {
-//
-//  testAsyncMulti("redis-livedata - minimongo on server to server connection", [
+
+
+if (Meteor.isServer) {
+// XXX this test is ported to redis but requires more workarounds
+  // publish/subscribe namespacing (as we don't have collection namespacing)
+//  testAsyncMulti("redis-livedata - miniredis on server to server connection", [
 //    function (test, expect) {
 //      var self = this;
 //      Meteor._debug("connection setup");
 //      self.id = Random.id();
-//      var C = self.C = new Meteor.RedisCollection("ServerMinimongo_" + self.id);
-//      C.allow({
-//        insert: function () {return true;},
-//        update: function () {return true;},
-//        remove: function () {return true;}
-//      });
-//      C.insert({a: 0, b: 1});
-//      C.insert({a: 0, b: 2});
-//      C.insert({a: 1, b: 3});
+//      var C = self.C = new Meteor.RedisCollection("redis");
+//      C.set(self.id + "b1", "b1");
+//      C.set(self.id + "b2", "b2");
+//      C.set(self.id + "ab3", "ab3");
 //      Meteor.publish(self.id, function () {
-//        return C.find({a: 0});
+//        return C.matching(self.id + "b*"); // should not start with a
 //      });
 //
 //      self.conn = DDP.connect(Meteor.absoluteUrl());
@@ -2713,7 +2709,7 @@ if (Meteor.isClient) {
 //    function (test, expect) {
 //      var self = this;
 //      if (self.conn.status().connected) {
-//        self.miniC = new Meteor.RedisCollection("ServerMinimongo_" + self.id, {
+//        self.miniC = new Meteor.RedisCollection("redis", {
 //          connection: self.conn
 //        });
 //        var exp = expect(function (err) {
@@ -2729,9 +2725,9 @@ if (Meteor.isClient) {
 //    function (test, expect) {
 //      var self = this;
 //      if (self.miniC) {
-//        var contents = self.miniC.find().fetch();
+//        var contents = self.miniC.matching(self.id + "*").fetch();
 //        test.equal(contents.length, 2);
-//        test.equal(contents[0].a, 0);
+//        test.equal(contents[0][0], "b");
 //      }
 //    },
 //
@@ -2739,10 +2735,10 @@ if (Meteor.isClient) {
 //      var self = this;
 //      if (!self.miniC)
 //        return;
-//      self.miniC.insert({a:0, b:3});
-//      var contents = self.miniC.find({b:3}).fetch();
+//      self.miniC.set(self.id + "b3");
+//      var contents = self.miniC.matching(self.id + "*b3").fetch();
 //      test.equal(contents.length, 1);
-//      test.equal(contents[0].a, 0);
+//      test.equal(contents[0].value.indexOf("a"), -1);
 //    }
 //  ]);
 //
@@ -2810,20 +2806,18 @@ if (Meteor.isClient) {
 //      self.obs && self.obs.stop();
 //    }
 //  ]);
-//}
-//
-//Tinytest.addAsync("redis-livedata - local collections with different connections", function (test, onComplete) {
-//  var cname = Random.id();
-//  var cname2 = Random.id();
-//  var coll1 = new Meteor.RedisCollection(cname);
-//  var doc = { foo: "bar" };
-//  var coll2 = new Meteor.RedisCollection(cname2, { connection: null });
-//  coll2.insert(doc, function (err, id) {
-//    test.equal(coll1.find(doc).count(), 0);
-//    test.equal(coll2.find(doc).count(), 1);
-//    onComplete();
-//  });
-//});
+}
+
+Tinytest.addAsync("redis-livedata - local collections with different connections", function (test, onComplete) {
+  var coll1 = new Meteor.RedisCollection("redis");
+  var coll2 = new Meteor.RedisCollection(Random.id(), { connection: null });
+  var key = Random.id();
+  coll2.set(key, key, function (err, status) {
+    test.equal(coll1.matching(key).count(), 0);
+    test.equal(coll2.matching(key).count(), 1);
+    onComplete();
+  });
+});
 
 Tinytest.addAsync("redis-livedata - local collection with null connection, w/ callback", function (test, onComplete) {
   var cname = Random.id();

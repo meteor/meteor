@@ -696,7 +696,7 @@ _.extend(Miniredis.RedisStore.prototype, {
 
   hmset: function (key, o, cb) {
     var self = this;
-    if (! _.isObject(o)) { 
+    if (! _.isObject(o)) {
       throwIncorrectKindOfValueError(cb);
     }
     var val = {};
