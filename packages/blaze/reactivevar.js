@@ -1,8 +1,11 @@
-Blaze.ReactiveVar = function (initialValue) {
-  var self = this;
+Blaze.ReactiveVar = function (initialValue, equalsFunc) {
+  if (! (this instanceof Blaze.ReactiveVar))
+    // called without `new`
+    return new Blaze.ReactiveVar(initialValue, equalsFunc);
 
-  self.curValue = initialValue;
-  self.dep = new Deps.Dependency;
+  this.curValue = initialValue;
+  this.equalsFunc = equalsFunc;
+  this.dep = new Deps.Dependency;
 };
 
 Blaze.ReactiveVar._isEqual = function (a, b) {
@@ -25,7 +28,7 @@ Blaze.ReactiveVar.prototype.get = function () {
 Blaze.ReactiveVar.prototype.set = function (newValue) {
   var oldValue = this.curValue;
 
-  if (Blaze.ReactiveVar._isEqual(oldValue, newValue))
+  if ((this.equalsFunc || Blaze.ReactiveVar._isEqual)(oldValue, newValue))
     // value is same as last time
     return;
 

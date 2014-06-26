@@ -3,18 +3,29 @@ Spacebars = {};
 var tripleEquals = function (a, b) { return a === b; };
 
 Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
-  var templateVar = Blaze.Var(templateOrFunction, tripleEquals);
-  return Blaze.Isolate(function () {
+  if (! templateOrFunction)
+    return null;
+
+  if (typeof templateOrFunction !== 'function') {
+    var template = templateOrFunction;
+    if (! template.__makeView)
+      throw new Error("Expected template or null, found: " + template);
+    return templateOrFunction.__makeView(contentFunc, elseFunc);
+  }
+
+  var templateVar = Blaze.ReactiveVar(null, tripleEquals);
+  var view = Blaze.View(function () {
+    this.autorun(function () {
+      templateVar.set(templateOrFunction());
+    });
     var template = templateVar.get();
     if (template === null)
       return null;
 
-    if (! (template instanceof Blaze.Component))
+    if (! (template.__makeView))
       throw new Error("Expected template or null, found: " + template);
 
-    // Current calling convention (as of 0.8) means we have to wrap data
-    // around the whole inclusion, not pass it here (the `null` arg)
-    return new template.constructor(null, contentFunc, elseFunc);
+    return template.__makeView(contentFunc, elseFunc);
   });
 };
 
