@@ -9,7 +9,7 @@ Template.__define__ = function (templateName, templateFunc) {
   var tmpl = {
     __templateName: templateName,
     __createView: function () {
-      return new Blaze.View('Template.' + templateName, templateFunc);
+      return Blaze.View('Template.' + templateName, templateFunc);
     }
   };
 
