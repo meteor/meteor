@@ -117,6 +117,7 @@ selftest.define("checkout", ['checkout'], function () {
 
   // Can't specify a release when running Meteor from a checkout
   run = s.run("--release", "v1");
+  run.waitSecs(5);
   run.matchErr("Can't specify");
   run.expectExit(1);
 
