@@ -2211,39 +2211,40 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - access parent data contexts from helper",
+  "spacebars-tests - template_tests - UI._parentData from helpers",
   function (test) {
     var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
     var parentTmpl = Template.spacebars_test_template_parent_data_helper;
-    var rv = new ReactiveVar(0);
+
+    var height = new ReactiveVar(0);
+    var bar = new ReactiveVar("bar");
 
     childTmpl.a = ["a"];
-    childTmpl.b = new ReactiveVar("b");
+    childTmpl.b = function () { return bar.get(); };
     childTmpl.c = ["c"];
 
     childTmpl.foo = function () {
-      var data =  UI._parentData(rv.get());
-      return data.get === undefined ? data : data.get();
+      return UI._parentData(height.get());
     };
 
     var div = renderToDiv(parentTmpl);
     test.equal(canonicalizeHtml(div.innerHTML), "d");
 
-    rv.set(1);
+    height.set(1);
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), "b");
+    test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
     // Test UI._parentData() reactivity
 
-    childTmpl.b.set("bNew");
+    bar.set("baz");
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), "bNew");
+    test.equal(canonicalizeHtml(div.innerHTML), "baz");
 
-    rv.set(2);
+    height.set(2);
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "a");
 
-    rv.set(3);
+    height.set(3);
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }

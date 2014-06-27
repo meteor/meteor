@@ -114,13 +114,7 @@ Blaze.lookup = function (name, component, options) {
       throw new Error("id starting with dot must be a series of dots");
     }
 
-    var theWith = Blaze.getCurrentControllerOfType(Blaze.With);
-    for (var i = 1; (i < name.length) && theWith; i++) {
-      theWith = Blaze.getParentControllerOfType(theWith, Blaze.With);
-    }
-
-    return (theWith ? theWith.dataVar.get() : null);
-
+    return Blaze._parentData(name.length - 1);
   } else if (component && (name in component)) {
     // Implement "old this"
     return Blaze._bindToCurrentDataIfIsFunction(component[name]);
@@ -140,6 +134,17 @@ Blaze.lookup = function (name, component, options) {
     }
     return null;
   }
+};
+
+// Implement Spacebars' {{../..}}.
+// @param height {Number} The number of '..'s
+Blaze._parentData = function (height) {
+  var theWith = Blaze.getCurrentControllerOfType(Blaze.With);
+  for (var i = 0; (i < height) && theWith; i++) {
+    theWith = Blaze.getParentControllerOfType(theWith, Blaze.With);
+  }
+
+  return (theWith ? theWith.dataVar.get() : null);
 };
 
 Blaze.lookupTemplate = function (name, component) {

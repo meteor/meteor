@@ -36,3 +36,5 @@ UI._javascriptUrlsAllowed = function () {
 UI.getElementData = function (el) {
   return Blaze.getElementDataVar(el).get();
 };
+
+UI._parentData = Blaze._parentData;
