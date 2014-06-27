@@ -592,6 +592,7 @@ _.extend(Project.prototype, {
   //   alwaysRecord: record the versions file, even when we aren't supposed to.
   _recordVersions : function (options) {
     var self = this;
+    options = options || {};
 
     // If the user forced us to an explicit release, then maybe we shouldn't
     // record versions, unless we are updating, in which case, we should.
