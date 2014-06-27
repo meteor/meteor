@@ -60,10 +60,12 @@ Blaze.View.prototype.autorun = function (f) {
 };
 
 Blaze._fireCallbacks = function (view, which) {
-  Deps.nonreactive(function fireCallbacks() {
-    var cbs = view._callbacks[which];
-    for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-      cbs[i].call(view);
+  Blaze.withCurrentView(view, function () {
+    Deps.nonreactive(function fireCallbacks() {
+      var cbs = view._callbacks[which];
+      for (var i = 0, N = (cbs && cbs.length); i < N; i++)
+        cbs[i].call(view);
+    });
   });
 };
 
@@ -95,7 +97,9 @@ Blaze.materializeView = function (view, parentView) {
 
   var lastHtmljs;
   view.autorun(function doRender(c) {
-    var htmljs = view.render();
+    var htmljs = Blaze.withCurrentView(view, function () {
+      return view.render();
+    });
 
     Deps.nonreactive(function doMaterialize() {
       var materializer = new Blaze.DOMMaterializer({parentView: view});
@@ -131,7 +135,9 @@ Blaze._stringifyView = function (view, parentView, stringifier) {
 
   Blaze._fireCallbacks(view, 'created');
 
-  var htmljs = view.render();
+  var htmljs = Blaze.withCurrentView(view, function () {
+    return view.render();
+  });
   var result = stringifier.visit(htmljs);
 
   Blaze.destroyView(view);
@@ -209,6 +215,17 @@ Blaze._isContentEqual = function (a, b) {
   }
 };
 
+Blaze.currentView = null;
+
+Blaze.withCurrentView = function (view, func) {
+  var oldView = Blaze.currentView;
+  try {
+    Blaze.currentView = view;
+    return func();
+  } finally {
+    Blaze.currentView = oldView;
+  }
+};
 
 Blaze.render3 = function (contentFunc) {
   return Blaze.materializeView(Blaze.View('render', contentFunc));
@@ -236,6 +253,70 @@ Blaze.With3 = function (data, contentFunc) {
   return view;
 };
 
+Blaze.getCurrentData = function () {
+  var theWith = Blaze.getCurrentView('with');
+  return theWith ? theWith.dataVar.get() : null;
+};
+
+// Gets the current view or its nearest ancestor of kind
+// `kind`.
+Blaze.getCurrentView = function (kind) {
+  var view = Blaze.currentView;
+  // Better to fail in cases where it doesn't make sense
+  // to use Blaze.getCurrentView().  There will be a current
+  // view anywhere it does.  You can check Blaze.currentView
+  // if you want to know whether there is one or not.
+  if (! view)
+    throw new Error("There is no current view");
+
+  if (kind) {
+    while (view && view.kind !== kind)
+      view = view.parentView;
+    return view || null;
+  } else {
+    // Blaze.getCurrentView() with no arguments just returns
+    // Blaze.currentView.
+    return view;
+  }
+};
+
+Blaze.getParentView = function (view, kind) {
+  var v = view.parentView;
+
+  if (kind) {
+    while (v && v.kind !== kind)
+      v = v.parentView;
+  }
+
+  return v || null;
+};
+
+Blaze._calculateCondition = function (cond) {
+  if (cond instanceof Array && cond.length === 0)
+    cond = false;
+  return !! cond;
+};
+
+Blaze.If3 = function (conditionFunc, contentFunc, elseFunc, _not) {
+  var conditionVar = new Blaze.ReactiveVar;
+
+  var view = Blaze.View('if', function () {
+    this.autorun(function () {
+      var cond = Blaze._calculateCondition(conditionFunc());
+      conditionVar.set(_not ? (! cond) : cond);
+    });
+    return conditionVar.get() ? contentFunc() :
+      (elseFunc ? elseFunc() : null);
+  });
+  view.__conditionVar = conditionVar;
+
+  return view;
+};
+
+Blaze.Unless3 = function (conditionFunc, contentFunc, elseFunc) {
+  return Blaze.If3(conditionFunc, contentFunc, elseFunc, true /*_not*/);
+};
+
 /*Blaze.Each3 = function (argFunc, contentFunc, elseContentFunc) {
   var view = Blaze.View(function () {
 
@@ -251,14 +332,14 @@ Blaze.With3 = function (data, contentFunc) {
           elseMode = false;
         }
 
-      var dataVar = Blaze.Var(item);
+        var dataVar = Blaze.Var(item);
       var func = function () {
         return Blaze.With(dataVar, contentFunc);
       };
       func.dataVar = dataVar;
       seq.addItem(func, index);
     }
-  });
+    });
 
 };
 */

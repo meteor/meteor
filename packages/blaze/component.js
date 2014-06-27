@@ -88,8 +88,14 @@ Blaze._bindIfIsFunction = function (x, target) {
 Blaze._bindToCurrentDataIfIsFunction = function (x) {
   if (typeof x === 'function') {
     return function () {
-      var dataVar = Blaze.getCurrentDataVar();
-      var data = dataVar && dataVar.get();
+      var OLDSTYLE = ! Blaze.currentView;
+      var data;
+      if (OLDSTYLE) {
+        var dataVar = Blaze.getCurrentDataVar();
+        data = dataVar && dataVar.get();
+      } else {
+        data = Blaze.getCurrentData();
+      }
       if (data == null)
         data = {};
       return x.apply(data, arguments);
