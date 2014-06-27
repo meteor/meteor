@@ -12,12 +12,12 @@ Template.__define__ = function (templateName, templateFunc) {
     __makeView: function (contentFunc, elseFunc) {
       var view = Blaze.View('Template.' + templateName, tmpl.__render);
       view.template = tmpl;
-      view.templateContentBlock = { __makeView: function () {
+      view.templateContentBlock = contentFunc ? { __makeView: function () {
         return Blaze.View('(contentBlock)', contentFunc);
-      } };
-      view.templateElseBlock = { __makeView: function () {
+      } } : null;
+      view.templateElseBlock = elseFunc ? { __makeView: function () {
         return Blaze.View('(elseBlock)', elseFunc);
-      } };
+      } } : null;
       return view;
     },
     // Implements {{foo}} where `name` is "foo"
