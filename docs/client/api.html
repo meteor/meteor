@@ -92,15 +92,17 @@ different collections. We hope to lift this restriction in a future release.
       ];
     });
 
-Alternatively, a publish function can directly control its published
-record set by calling the functions [`added`](#publish_added) (to add a
-new document to the published record set), [`changed`](#publish_changed)
-(to change or clear some fields on a document already in the published
-record set), and [`removed`](#publish_removed) (to remove documents from
-the published record set).  Publish functions that use these functions
-should also call [`ready`](#publish_ready) once the initial record set
-is complete.  These methods are provided by `this` in your publish
-function.
+Alternatively, a publish function can directly control its published record set
+by calling the functions [`added`](#publish_added) (to add a new document to the
+published record set), [`changed`](#publish_changed) (to change or clear some
+fields on a document already in the published record set), and
+[`removed`](#publish_removed) (to remove documents from the published record
+set).  These methods are provided by `this` in your publish function.
+
+If a publish function does not return a cursor or array of cursors, it is
+assumed to be using the low-level `added`/`changed`/`removed` interface, and it
+**must also call [`ready`](#publish_ready) once the initial record set is
+complete**.
 
 Example:
 
@@ -155,6 +157,19 @@ Example:
     console.log("Current room has " +
                 Counts.findOne(Session.get("roomId")).count +
                 " messages.");
+
+    // server: sometimes publish a query, sometimes publish nothing
+    Meteor.publish("secretData", function () {
+      if (this.userId === 'superuser') {
+        return SecretData.find();
+      } else {
+        // Declare that no data is being published. If you leave this line
+        // out, Meteor will never consider the subscription ready because
+        // it thinks you're using the added/changed/removed interface where
+        // you have to explicitly call this.ready().
+        return [];
+      }
+    });
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
