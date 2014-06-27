@@ -2291,14 +2291,28 @@ Tinytest.add(
     test.equal([created, rendered, destroyed], [true, true, true]);
   });
 
-Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
-  var tmpl = Template.spacebars_test_ui_render;
-  test.throws(function () {
-    UI.insert(UI.render(tmpl), $('body'));
-  }, /'parentElement' must be a DOM node/);
-  test.throws(function () {
-    UI.insert(UI.render(tmpl), document.body, $('body'));
-  }, /'nextNode' must be a DOM node/);
-});
+Tinytest.add(
+  "spacebars-tests - template_tests - UI.insert fails on jQuery objects",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_render;
+    test.throws(function () {
+      UI.insert(UI.render(tmpl), $('body'));
+    }, /'parentElement' must be a DOM node/);
+    test.throws(function () {
+      UI.insert(UI.render(tmpl), document.body, $('body'));
+    }, /'nextNode' must be a DOM node/);
+  });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - UI.getElementData",
+  function (test) {
+    var div = document.createElement("DIV");
+    var tmpl = Template.spacebars_test_ui_getElementData;
+    UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
+
+    var span = div.querySelector('SPAN');
+    test.isTrue(span);
+    test.equal(UI.getElementData(span), {foo: "bar"});
+  });
 
 

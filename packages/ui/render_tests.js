@@ -634,21 +634,6 @@ Tinytest.add("ui - render - SVG", function (test) {
   test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
 });
 
-Tinytest.add("ui - UI.getDataContext", function (test) {
-  var div = document.createElement("DIV");
-
-  var tmpl = UI.Component.extend({
-    render: function () {
-      return SPAN();
-    }
-  });
-
-  UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
-  var span = $(div).children('SPAN')[0];
-  test.isTrue(span);
-  test.equal(UI.getElementData(span), {foo: "bar"});
-});
-
 Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
   _.each([true, false], function (nest) {
 

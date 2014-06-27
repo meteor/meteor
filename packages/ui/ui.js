@@ -32,3 +32,7 @@ UI._allowJavascriptUrls = function () {
 UI._javascriptUrlsAllowed = function () {
   return jsUrlsAllowed;
 };
+
+UI.getElementData = function (el) {
+  return Blaze.getElementDataVar(el).get();
+};
