@@ -110,21 +110,21 @@ Meteor.publish(null, function (){
 ### Usage
 
 1. Add one of the built-in accounts packages so the Meteor.users collection exists.  From a command prompt:
-```bash
-meteor add accounts-password
-```
+    ```bash
+    meteor add accounts-password
+    ```
 
 2. Install [Meteorite][1]
   
 3. Add this smart package to your project.  From a command prompt:
-```bash
-mrt add roles
-```
+    ```bash
+    mrt add roles
+    ```
 
 4. Run your application:
-```bash
-meteor
-```
+    ```bash
+    meteor
+    ```
 
 
 <br />
