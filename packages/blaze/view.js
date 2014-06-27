@@ -305,7 +305,7 @@ Blaze._calculateCondition = function (cond) {
 Blaze.If3 = function (conditionFunc, contentFunc, elseFunc, _not) {
   var conditionVar = new Blaze.ReactiveVar;
 
-  var view = Blaze.View('if', function () {
+  var view = Blaze.View(_not ? 'unless' : 'if', function () {
     this.autorun(function () {
       var cond = Blaze._calculateCondition(conditionFunc());
       conditionVar.set(_not ? (! cond) : cond);
