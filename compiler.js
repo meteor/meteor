@@ -53,7 +53,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
 
   var code = '(function () { ';
   if (isTemplate || isBody) {
-    code += 'var self = this; ';
+    code += 'var self = this; var template = this.template; ';
   }
   code += 'return ';
   code += BlazeTools.toJS(tree);

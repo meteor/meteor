@@ -93,7 +93,7 @@ _.extend(CodeGen.prototype, {
             callArgs.push(elseContentBlock);
 
           return BlazeTools.EmitCode(
-            builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
+            builtInBlockHelpers[path[0]] + (this.OLDSTYLE ? '' : '3') + '(' + callArgs.join(', ') + ')');
 
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
@@ -175,11 +175,15 @@ _.extend(CodeGen.prototype, {
       return builtInUIPaths[path[1]];
     }
 
-    var args = [BlazeTools.toJSLiteral(path[0]), 'self'];
+    var firstPathItem = BlazeTools.toJSLiteral(path[0]);
     var lookupMethod = 'lookup';
     if (opts && opts.lookupTemplate && path.length === 1)
       lookupMethod = 'lookupTemplate';
-    var code = 'Blaze.' + lookupMethod + '(' + args.join(', ') + ')';
+    if (this.OLDSTYLE) {
+      var code = 'Blaze.' + lookupMethod + '(' + firstPathItem + ', self)';
+    } else {
+      var code = 'template.__' + lookupMethod + '(' + firstPathItem + ')';
+    }
 
     if (path.length > 1) {
       code = 'Spacebars.dot(' + code + ', ' +
