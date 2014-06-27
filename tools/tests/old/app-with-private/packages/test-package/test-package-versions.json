@@ -2,11 +2,11 @@
   "dependencies": [
     [
       "meteor",
-      "1.0.0+local"
+      "1.0.0"
     ],
     [
       "underscore",
-      "1.0.0+local"
+      "1.0.0"
     ]
   ],
   "pluginDependencies": [

@@ -1103,7 +1103,7 @@ main.registerCommand({
 
     // Write the new versions to .meteor/packages and .meteor/versions.
     var setV = project.setVersions(solutionPackageVersions);
-    self.showPackageChanges(previousVersions, newVersions, {
+    project.showPackageChanges(previousVersions, solutionPackageVersions, {
       ondiskPackages: setV.downloaded
     });
     if (!setV.success) {

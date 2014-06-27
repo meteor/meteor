@@ -26,7 +26,7 @@ var copyFile = function(from, to, sand) {
 //    standard-app-packages (ie: name), in which case this will match any
 //    version of that package as long as it is included.
 //
-//    awesome-pack@1.0.0+local (ie: name@version) to match that name at that
+//    awesome-pack@1.0.0 (ie: name@version) to match that name at that
 //    version explicitly. This is for packages that we included at a specific
 //    version.
 var checkPackages = function(sand, packages) {
@@ -60,7 +60,7 @@ var checkPackages = function(sand, packages) {
 //    external to the app, since we don't want this test to fail when we push a
 //    new version.
 //
-//    awesome-pack@1.0.0+local (ie: name@version) to match that name at that
+//    awesome-pack@1.0.0 (ie: name@version) to match that name at that
 //    version explicitly. This is for packages that only exist for the purpose
 //    of this test (for example, packages local to this app), so we know exactly
 //    what version we expect.
@@ -100,6 +100,7 @@ selftest.define("change packages", function () {
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run();
+  run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
   run.match("MongoDB");
@@ -182,7 +183,7 @@ selftest.define("add packages", function () {
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "say-something",  "standard-app-packages",
-                 "contains-plugin@1.1.0+local"]);
+                 "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
   run.match("Removed constraint say-something");

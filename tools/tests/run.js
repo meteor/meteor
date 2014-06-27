@@ -163,7 +163,7 @@ selftest.define("run --once", function () {
   // running a different program
   run = s.run("--once", "--program", "other");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
+  run.waitSecs(8);
   run.match("other program\n");
   run.expectExit(44);
 
