@@ -50,13 +50,19 @@ Blaze.View.prototype.onDestroyed = function (cb) {
 };
 
 Blaze.View.prototype.autorun = function (f) {
-  if (! this.isCreated)
+  var self = this;
+
+  if (! self.isCreated)
     throw new Error("View#autorun must be called from the created callback at the earliest");
 
-  var comp = Deps.nonreactive(function () {
-    return Deps.autorun(f);
+  var c = Deps.nonreactive(function () {
+    return Deps.autorun(function viewAutorun(c) {
+      return Blaze.withCurrentView(self, function () {
+        return f.call(self, c);
+      });
+    });
   });
-  this.onDestroyed(function () { comp.stop(); });
+  self.onDestroyed(function () { c.stop(); });
 };
 
 Blaze._fireCallbacks = function (view, which) {
@@ -97,9 +103,8 @@ Blaze.materializeView = function (view, parentView) {
 
   var lastHtmljs;
   view.autorun(function doRender(c) {
-    var htmljs = Blaze.withCurrentView(view, function () {
-      return view.render();
-    });
+    // `view.autorun` sets the current view
+    var htmljs = view.render();
 
     Deps.nonreactive(function doMaterialize() {
       var materializer = new Blaze.DOMMaterializer({parentView: view});
@@ -242,11 +247,11 @@ Blaze.With3 = function (data, contentFunc) {
 
   view.onCreated(function () {
     if (typeof data === 'function') {
-      this.autorun(function () {
-        this.dataVar.set(data());
+      view.autorun(function () {
+        view.dataVar.set(data());
       });
     } else {
-        this.dataVar.set(data);
+        view.dataVar.set(data);
     }
   });
 

@@ -228,6 +228,8 @@ Spacebars.With3 = function (argFunc, contentFunc, elseFunc) {
                        return argVar.get(); }, contentFunc); },
                      elseFunc);
   });
+
+  return view;
 };
 
 Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
