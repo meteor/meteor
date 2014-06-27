@@ -127,7 +127,7 @@ ObserveSequence = {
           });
 
           diffArray(lastSeqArray, seqArray, callbacks);
-        } else if (isMinimongoCursor(seq)) {
+        } else if (isStoreCursor(seq)) {
           var cursor = seq;
           seqArray = [];
 
@@ -188,7 +188,7 @@ ObserveSequence = {
       return [];
     } else if (seq instanceof Array) {
       return seq;
-    } else if (isMinimongoCursor(seq)) {
+    } else if (isStoreCursor(seq)) {
       return seq.fetch();
     } else {
       throw badSequenceError();
@@ -201,9 +201,9 @@ var badSequenceError = function () {
                    "arrays, cursors or falsey values.");
 };
 
-var isMinimongoCursor = function (seq) {
-  var minimongo = Package.minimongo;
-  return !!minimongo && (seq instanceof minimongo.LocalCollection.Cursor);
+var isStoreCursor = function (cursor) {
+  return cursor && _.isObject(cursor) &&
+    _.isFunction(cursor.observe) && _.isFunction(cursor.fetch);
 };
 
 // Calculates the differences between `lastSeqArray` and
