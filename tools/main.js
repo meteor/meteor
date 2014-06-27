@@ -647,6 +647,13 @@ Fiber(function () {
     catalog.official.initialize({
       offline: !!process.env.METEOR_OFFLINE_CATALOG
     });
+
+    // So to be explicit: at this point, catalog.complete reflects whatever was
+    // in data.json when we started up (no sync with the server), and
+    // catalog.official is EMPTY.  Calling catalog.official.refresh() will sync
+    // with the server (unless offline) and then load from data.json;
+    // catalog.complete.refresh() will re-sync with data.json (eg, if we just
+    // refreshed catalog.official).
   });
   if (messages.hasMessages()) {
     process.stderr.write("=> Errors while scanning packages:\n\n");
