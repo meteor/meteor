@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Upgraded dependencies:
+  - less: 1.7.1 (from 1.6.1)
+
 
 ## v0.8.2
 
