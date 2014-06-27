@@ -322,7 +322,7 @@ Blaze.Unless3 = function (conditionFunc, contentFunc, elseFunc) {
   return Blaze.If3(conditionFunc, contentFunc, elseFunc, true /*_not*/);
 };
 
-/*Blaze.Each3 = function (argFunc, contentFunc, elseContentFunc) {
+Blaze.Each3 = function (argFunc, contentFunc, elseContentFunc) {
   var view = Blaze.View(function () {
 
   });
@@ -331,20 +331,22 @@ Blaze.Unless3 = function (conditionFunc, contentFunc, elseFunc) {
   var elseMode = false;
   var handle = ObserveSequence.observe(argFunc, {
     addedAt: function (id, item, index) {
+      var itemView = Blaze.With3(item, contentFunc);
+
       if (view.domrange) {
         if (elseMode) {
           view.domrange.removeMember(0);
           elseMode = false;
         }
 
-        var dataVar = Blaze.Var(item);
-      var func = function () {
-        return Blaze.With(dataVar, contentFunc);
-      };
-      func.dataVar = dataVar;
-      seq.addItem(func, index);
+        var range = Blaze.materializeView(itemView);
+        view.domrange.addMember(range, range, index);
+      } else {
+        initialSubviews.splice(index, 0, itemView);
+      }
     }
-    });
+    // XXX
+  });
 
+  // XXX
 };
-*/
