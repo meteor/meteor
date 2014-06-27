@@ -15,7 +15,7 @@
 
     <div class="accounts-dialog accounts-centered-dialog">
       <label id="reset-password-new-password-label" for="reset-password-new-password">
-        New password
+       {{ _  "New password"}}
       </label>
 
       <div class="reset-password-new-password-wrapper">
@@ -25,7 +25,7 @@
       {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-reset-password-button">
-        Set password
+        {{ _ "Set password" }}
       </div>
 
       <a class="accounts-close" id="login-buttons-cancel-reset-password">&times;</a>
@@ -49,7 +49,7 @@
 
     <div class="accounts-dialog accounts-centered-dialog">
       <label id="enroll-account-password-label" for="enroll-account-password">
-        Choose a password
+        {{_ "Choose a password" }}
       </label>
 
       <div class="enroll-account-password-wrapper">
@@ -59,7 +59,7 @@
       {{> _loginButtonsMessages}}
 
       <div class="login-button login-button-form-submit" id="login-buttons-enroll-account-button">
-        Create account
+        {{_ "Create account"}}
       </div>
 
       <a class="accounts-close" id="login-buttons-cancel-enroll-account">&times;</a>
@@ -83,7 +83,7 @@
       {{> configurationSteps}}
 
       <p>
-        Now, copy over some details.
+        {{_ "Now, copy over some details."}}
       </p>
       <p>
         <table>
@@ -105,7 +105,7 @@
       </p>
       <div class="new-section">
         <div class="login-button configure-login-service-dismiss-button">
-          I'll do this later
+          {{_ "I'll do this later"}}
         </div>
         <a class="accounts-close configure-login-service-dismiss-button">&times;</a>
 
@@ -122,7 +122,8 @@
   {{#if visible}}
     <div class="accounts-dialog accounts-centered-dialog" id="login-buttons-message-dialog">
       {{> _loginButtonsMessages}}
-      <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
+      <div class="login-button" id="messages-dialog-dismiss-button">{{_ "Dismiss"}}</div>
     </div>
   {{/if}}
 </template>
+

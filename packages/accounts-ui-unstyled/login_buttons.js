@@ -79,7 +79,7 @@ validateUsername = function (username) {
   if (username.length >= 3) {
     return true;
   } else {
-    loginButtonsSession.errorMessage("Username must be at least 3 characters long");
+    loginButtonsSession.errorMessage( _$("Username must be at least 3 characters long") );
     return false;
   }
 };
@@ -90,7 +90,7 @@ validateEmail = function (email) {
   if (email.indexOf('@') !== -1) {
     return true;
   } else {
-    loginButtonsSession.errorMessage("Invalid email");
+    loginButtonsSession.errorMessage( _$("Invalid email") );
     return false;
   }
 };
@@ -98,7 +98,7 @@ validatePassword = function (password) {
   if (password.length >= 6) {
     return true;
   } else {
-    loginButtonsSession.errorMessage("Password must be at least 6 characters long");
+    loginButtonsSession.errorMessage(_$("Password must be at least 6 characters long") );
     return false;
   }
 };
@@ -115,7 +115,7 @@ Template._loginButtonsLoggedOut.singleService = function () {
   var services = getLoginServices();
   if (services.length !== 1)
     throw new Error(
-      "Shouldn't be rendering this template with more than one configured service");
+      _$("Shouldn't be rendering this template with more than one configured service") );
   return services[0];
 };
 
@@ -160,4 +160,5 @@ Template._loginButtonsMessages.infoMessage = function () {
 //
 
 Template._loginButtonsLoggingInPadding.dropdown = dropdown;
+
 

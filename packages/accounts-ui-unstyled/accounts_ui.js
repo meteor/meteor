@@ -10,7 +10,7 @@ Accounts.ui.config = function(options) {
   var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken'];
   _.each(_.keys(options), function (key) {
     if (!_.contains(VALID_KEYS, key))
-      throw new Error("Accounts.ui.config: Invalid key: " + key);
+      throw new Error( _$("Accounts.ui.config: Invalid key: {0}", key) );
   });
 
   // deal with `passwordSignupFields`
@@ -22,11 +22,11 @@ Accounts.ui.config = function(options) {
       "EMAIL_ONLY"
     ], options.passwordSignupFields)) {
       if (Accounts.ui._options.passwordSignupFields)
-        throw new Error("Accounts.ui.config: Can't set `passwordSignupFields` more than once");
+        throw new Error( _$("Accounts.ui.config: Can't set `passwordSignupFields` more than once") );
       else
         Accounts.ui._options.passwordSignupFields = options.passwordSignupFields;
     } else {
-      throw new Error("Accounts.ui.config: Invalid option for `passwordSignupFields`: " + options.passwordSignupFields);
+      throw new Error( _$("Accounts.ui.config: Invalid option for `passwordSignupFields`: {0}" , options.passwordSignupFields) );
     }
   }
 
@@ -34,9 +34,9 @@ Accounts.ui.config = function(options) {
   if (options.requestPermissions) {
     _.each(options.requestPermissions, function (scope, service) {
       if (Accounts.ui._options.requestPermissions[service]) {
-        throw new Error("Accounts.ui.config: Can't set `requestPermissions` more than once for " + service);
+        throw new Error( _$("Accounts.ui.config: Can't set `requestPermissions` more than once for " , service) );
       } else if (!(scope instanceof Array)) {
-        throw new Error("Accounts.ui.config: Value for `requestPermissions` must be an array");
+        throw new Error(_$("Accounts.ui.config: Value for `requestPermissions` must be an array"));
       } else {
         Accounts.ui._options.requestPermissions[service] = scope;
       }
@@ -47,10 +47,10 @@ Accounts.ui.config = function(options) {
   if (options.requestOfflineToken) {
     _.each(options.requestOfflineToken, function (value, service) {
       if (service !== 'google')
-        throw new Error("Accounts.ui.config: `requestOfflineToken` only supported for Google login at the moment.");
+        throw new Error( _$("Accounts.ui.config: `requestOfflineToken` only supported for Google login at the moment.") );
 
       if (Accounts.ui._options.requestOfflineToken[service]) {
-        throw new Error("Accounts.ui.config: Can't set `requestOfflineToken` more than once for " + service);
+        throw new Error( _$("Accounts.ui.config: Can't set `requestOfflineToken` more than once for {0}" , service) );
       } else {
         Accounts.ui._options.requestOfflineToken[service] = value;
       }
@@ -61,4 +61,5 @@ Accounts.ui.config = function(options) {
 passwordSignupFields = function () {
   return Accounts.ui._options.passwordSignupFields || "EMAIL_ONLY";
 };
+
 

@@ -23,7 +23,7 @@ var VALID_KEYS = [
 
 var validateKey = function (key) {
   if (!_.contains(VALID_KEYS, key))
-    throw new Error("Invalid key in loginButtonsSession: " + key);
+    throw new Error( _$("Invalid key in loginButtonsSession: {0}" , key) );
 };
 
 var KEY_PREFIX = "Meteor.loginButtons.";
@@ -36,7 +36,7 @@ Accounts._loginButtonsSession = {
   set: function(key, value) {
     validateKey(key);
     if (_.contains(['errorMessage', 'infoMessage'], key))
-      throw new Error("Don't set errorMessage or infoMessage directly. Instead, use errorMessage() or infoMessage().");
+      throw new Error( _$("Don't set errorMessage or infoMessage directly. Instead, use errorMessage() or infoMessage().") );
 
     this._set(key, value);
   },
@@ -102,3 +102,4 @@ Accounts._loginButtonsSession = {
     this.set('configureLoginServiceDialogSaveDisabled', true);
   }
 };
+
