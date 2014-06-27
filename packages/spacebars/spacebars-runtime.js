@@ -219,7 +219,7 @@ Spacebars.With = function (argFunc, contentFunc, elseContentFunc) {
 
 Spacebars.With3 = function (argFunc, contentFunc, elseFunc) {
   var argVar = new Blaze.ReactiveVar;
-  var view = Blaze.View('spacebars_with', function () {
+  var view = Blaze.View('Spacebars_with', function () {
     this.autorun(function () {
       argVar.set(argFunc());
     });
