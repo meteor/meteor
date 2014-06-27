@@ -1080,10 +1080,17 @@ commandName + ": You're not in a Meteor project directory.\n" +
     options.packageDir = packageDir;
   }
 
-  if (requiresPackage && ! options.packageDir) {
-    process.stderr.write(
-commandName + ": You're not in a Meteor package directory.\n");
-    process.exit(1);
+  if (requiresPackage) {
+    if (! options.packageDir) {
+      process.stderr.write(
+        commandName + ": You're not in a Meteor package directory.\n");
+      process.exit(1);
+    }
+    // Commands that require you to be in a package directory add that package
+    // as a local package to the catalog. Other random commands don't (but if we
+    // see a reason for them to, we can change this rule).
+    catalog.complete.addLocalPackage(path.basename(options.packageDir),
+                                     options.packageDir);
   }
 
   if (command.requiresRelease && ! release.current) {
