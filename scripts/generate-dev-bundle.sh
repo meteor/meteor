@@ -105,6 +105,8 @@ npm install tar@0.1.19
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install source-map-support@0.2.5
+npm install browserstack-webdriver@2.41.1
+npm install phantomjs@1.9.7-1
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
 npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
