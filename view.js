@@ -4,8 +4,8 @@
 //   - kill DOMAugmenter
 //   - consider moving to _callbacks (including memberOut)
 // - attributes
-// - materializers.js
 // - write EACH
+// - Do you get access to the DOMRange from "destroyed"?
 
 Blaze.View = function (kind, render) {
   if (! (this instanceof Blaze.View))
@@ -131,6 +131,10 @@ Blaze.materializeView = function (view, parentView) {
   return domrange;
 };
 
+// Renders a view to text or HTML.  Calls `created` callbacks
+// and `render`, but not `materialized` or `rendered` callbacks.
+// After rendering, immediately calls `destroyed` callbacks and
+//
 Blaze._stringifyView = function (view, parentView, stringifier) {
   view.parentView = (parentView || null);
 
