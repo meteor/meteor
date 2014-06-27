@@ -14,7 +14,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
   }
 
   var templateVar = Blaze.ReactiveVar(null, tripleEquals);
-  var view = Blaze.View(function () {
+  var view = Blaze.View('Spacebars.include', function () {
     this.autorun(function () {
       templateVar.set(templateOrFunction());
     });
@@ -27,6 +27,9 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
 
     return template.__makeView(contentFunc, elseFunc);
   });
+  view.__templateVar = templateVar;
+
+  return view;
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
@@ -212,6 +215,19 @@ Spacebars.With = function (argFunc, contentFunc, elseContentFunc) {
                     return Blaze.With(data, contentFunc);
                   },
                   elseContentFunc);
+};
+
+Spacebars.With3 = function (argFunc, contentFunc, elseFunc) {
+  var argVar = new Blaze.ReactiveVar;
+  var view = Blaze.View('spacebars_with', function () {
+    this.autorun(function () {
+      argVar.set(argFunc());
+    });
+    return Blaze.If3(function () { return argVar.get(); },
+                     function () { return Blaze.With3(function () {
+                       return argVar.get(); }, contentFunc); },
+                     elseFunc);
+  });
 };
 
 Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
