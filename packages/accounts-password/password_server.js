@@ -34,8 +34,7 @@ var getPasswordString = function (password) {
     password = SHA256(password);
   } else { // 'password' is an object
     if (password.algorithm !== "sha-256") {
-      throw new Error("Invalid password hash algorithm. " +
-                      "Only 'sha-256' is allowed.");
+      throw new Error(  _$("Invalid password hash algorithm. Only 'sha-256' is allowed.") );
     }
     password = password.digest;
   }
@@ -66,7 +65,7 @@ Accounts._checkPassword = function (user, password) {
   password = getPasswordString(password);
 
   if (! bcryptCompare(password, user.services.password.bcrypt)) {
-    result.error = new Meteor.Error(403, "Incorrect password");
+    result.error = new Meteor.Error(403, _$("Incorrect password") );
   }
 
   return result;
@@ -88,7 +87,7 @@ var selectorFromUserQuery = function (user) {
     return {username: user.username};
   else if (user.email)
     return {"emails.address": user.email};
-  throw new Error("shouldn't happen (validation missed something)");
+  throw new Error( _$("shouldn't happen (validation missed something)") );
 };
 
 var findUserFromUserQuery = function (user) {
@@ -96,7 +95,7 @@ var findUserFromUserQuery = function (user) {
 
   var user = Meteor.users.findOne(selector);
   if (!user)
-    throw new Meteor.Error(403, "User not found");
+    throw new Meteor.Error(403, _$("User not found") );
 
   return user;
 };
@@ -114,7 +113,7 @@ var userQueryValidator = Match.Where(function (user) {
     email: Match.Optional(NonEmptyString)
   });
   if (_.keys(user).length !== 1)
-    throw new Match.Error("User property must have exactly one field");
+    throw new Match.Error( _$("User property must have exactly one field") );
   return true;
 });
 
@@ -151,7 +150,7 @@ Accounts.registerLoginHandler("password", function (options) {
 
   if (!user.services || !user.services.password ||
       !(user.services.password.bcrypt || user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+    throw new Meteor.Error(403, _$("User has no password set") );
 
   if (!user.services.password.bcrypt) {
     if (typeof options.password === "string") {
@@ -166,14 +165,14 @@ Accounts.registerLoginHandler("password", function (options) {
       if (verifier.verifier !== newVerifier.verifier) {
         return {
           userId: user._id,
-          error: new Meteor.Error(403, "Incorrect password")
+          error: new Meteor.Error(403, _$("Incorrect password") )
         };
       }
 
       return {userId: user._id};
     } else {
       // Tell the client to use the SRP upgrade process.
-      throw new Meteor.Error(400, "old password format", EJSON.stringify({
+      throw new Meteor.Error(400, _$("old password format"), EJSON.stringify({
         format: 'srp',
         identity: user.services.password.srp.identity
       }));
@@ -185,7 +184,6 @@ Accounts.registerLoginHandler("password", function (options) {
     options.password
   );
 });
-
 // Handler to login using the SRP upgrade path. To use this login
 // handler, the client must provide:
 //   - srp: H(identity + ":" + password)
@@ -219,7 +217,7 @@ Accounts.registerLoginHandler("password", function (options) {
     return checkPassword(user, options.password);
 
   if (!(user.services && user.services.password && user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+    throw new Meteor.Error(403, _$("User has no password set") );
 
   var v1 = user.services.password.srp.verifier;
   var v2 = SRP.generateVerifier(
@@ -232,7 +230,7 @@ Accounts.registerLoginHandler("password", function (options) {
   if (v1 !== v2)
     return {
       userId: user._id,
-      error: new Meteor.Error(403, "Incorrect password")
+      error: new Meteor.Error(403, _$("Incorrect password") )
     };
 
   // Upgrade to bcrypt on successful login.
@@ -273,18 +271,18 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   check(newPassword, passwordValidator);
 
   if (!this.userId)
-    throw new Meteor.Error(401, "Must be logged in");
+    throw new Meteor.Error(401, _$("Must be logged in") );
 
   var user = Meteor.users.findOne(this.userId);
   if (!user)
-    throw new Meteor.Error(403, "User not found");
+    throw new Meteor.Error(403, _$("User not found") );
 
   if (!user.services || !user.services.password ||
       (!user.services.password.bcrypt && !user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+    throw new Meteor.Error(403, $("User has no password set"));
 
   if (! user.services.password.bcrypt) {
-    throw new Meteor.Error(400, "old password format", EJSON.stringify({
+    throw new Meteor.Error(400, _$("old password format"), EJSON.stringify({
       format: 'srp',
       identity: user.services.password.srp.identity
     }));
@@ -319,7 +317,7 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
 Accounts.setPassword = function (userId, newPlaintextPassword) {
   var user = Meteor.users.findOne(userId);
   if (!user)
-    throw new Meteor.Error(403, "User not found");
+    throw new Meteor.Error(403, _$("User not found") );
 
   Meteor.users.update(
     {_id: user._id},
@@ -340,7 +338,7 @@ Meteor.methods({forgotPassword: function (options) {
 
   var user = Meteor.users.findOne({"emails.address": options.email});
   if (!user)
-    throw new Meteor.Error(403, "User not found");
+    throw new Meteor.Error(403, _$("User not found") );
 
   Accounts.sendResetPasswordEmail(user._id, options.email);
 }});
@@ -352,13 +350,13 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
-    throw new Error("Can't find user");
+    throw new Error( _$("Can't find user") );
   // pick the first email if we weren't passed an email.
   if (!email && user.emails && user.emails[0])
     email = user.emails[0].address;
   // make sure we have a valid email
   if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("No such email for user.");
+    throw new Error( _$("No such email for user.") );
 
   var token = Random.secret();
   var when = new Date();
@@ -403,13 +401,13 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   // Make sure the user exists, and email is in their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
-    throw new Error("Can't find user");
+    throw new Error( _$("Can't find user") );
   // pick the first email if we weren't passed an email.
   if (!email && user.emails && user.emails[0])
     email = user.emails[0].address;
   // make sure we have a valid email
   if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("No such email for user.");
+    throw new Error( _$("No such email for user.") );
 
   var token = Random.secret();
   var when = new Date();
@@ -421,7 +419,6 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   Meteor.users.update(userId, {$set: {
     "services.password.reset": tokenRecord
   }});
-
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
@@ -458,12 +455,12 @@ Meteor.methods({resetPassword: function (token, newPassword) {
       var user = Meteor.users.findOne({
         "services.password.reset.token": token});
       if (!user)
-        throw new Meteor.Error(403, "Token expired");
+        throw new Meteor.Error(403, _$("Token expired") );
       var email = user.services.password.reset.email;
       if (!_.include(_.pluck(user.emails || [], 'address'), email))
         return {
           userId: user._id,
-          error: new Meteor.Error(403, "Token has invalid email address")
+          error: new Meteor.Error(403, _$("Token has invalid email address") )
         };
 
       var hashed = hashPassword(newPassword);
@@ -496,7 +493,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
         if (affectedRecords !== 1)
           return {
             userId: user._id,
-            error: new Meteor.Error(403, "Invalid email")
+            error: new Meteor.Error(403, _$("Invalid email"))
           };
       } catch (err) {
         resetToOldToken();
@@ -528,7 +525,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
   // Make sure the user exists, and address is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
-    throw new Error("Can't find user");
+    throw new Error( _$("Can't find user") );
   // pick the first unverified address if we weren't passed an address.
   if (!address) {
     var email = _.find(user.emails || [],
@@ -537,7 +534,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
   }
   // make sure we have a valid address
   if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
-    throw new Error("No such email address for user.");
+    throw new Error( _$("No such email address for user.") );
 
 
   var tokenRecord = {
@@ -547,7 +544,6 @@ Accounts.sendVerificationEmail = function (userId, address) {
   Meteor.users.update(
     {_id: userId},
     {$push: {'services.email.verificationTokens': tokenRecord}});
-
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'email');
   if (!user.services.email.verificationTokens) {
@@ -586,7 +582,7 @@ Meteor.methods({verifyEmail: function (token) {
       var user = Meteor.users.findOne(
         {'services.email.verificationTokens.token': token});
       if (!user)
-        throw new Meteor.Error(403, "Verify email link expired");
+        throw new Meteor.Error(403, _$("Verify email link expired"));
 
       var tokenRecord = _.find(user.services.email.verificationTokens,
                                function (t) {
@@ -595,7 +591,7 @@ Meteor.methods({verifyEmail: function (token) {
       if (!tokenRecord)
         return {
           userId: user._id,
-          error: new Meteor.Error(403, "Verify email link expired")
+          error: new Meteor.Error(403, _$("Verify email link expired"))
         };
 
       var emailsRecord = _.find(user.emails, function (e) {
@@ -604,7 +600,7 @@ Meteor.methods({verifyEmail: function (token) {
       if (!emailsRecord)
         return {
           userId: user._id,
-          error: new Meteor.Error(403, "Verify email link is for unknown address")
+          error: new Meteor.Error(403, _$("Verify email link is for unknown address") )
         };
 
       // By including the address in the query, we can use 'emails.$' in the
@@ -646,7 +642,7 @@ var createUser = function (options) {
   var username = options.username;
   var email = options.email;
   if (!username && !email)
-    throw new Meteor.Error(400, "Need to set a username or email");
+    throw new Meteor.Error(400, _$("Need to set a username or email"));
 
   var user = {services: {}};
   if (options.password) {
@@ -675,7 +671,7 @@ Meteor.methods({createUser: function (options) {
       check(options, Object);
       if (Accounts._options.forbidClientAccountCreation)
         return {
-          error: new Meteor.Error(403, "Signups forbidden")
+          error: new Meteor.Error(403, _$("Signups forbidden"))
         };
 
       // Create user. result contains id and token.
@@ -683,7 +679,7 @@ Meteor.methods({createUser: function (options) {
       // safety belt. createUser is supposed to throw on error. send 500 error
       // instead of sending a verification email with empty userid.
       if (! userId)
-        throw new Error("createUser failed to insert new user");
+        throw new Error( _$("createUser failed to insert new user") );
 
       // If `Accounts._options.sendVerificationEmail` is set, register
       // a token to verify the user's primary email, and send it to
@@ -714,7 +710,7 @@ Accounts.createUser = function (options, callback) {
 
   // XXX allow an optional callback?
   if (callback) {
-    throw new Error("Accounts.createUser with callback not supported on the server yet.");
+    throw new Error(_$("Accounts.createUser with callback not supported on the server yet."));
   }
 
   return createUser(options);
@@ -727,3 +723,8 @@ Meteor.users._ensureIndex('emails.validationTokens.token',
                           {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.password.reset.token',
                           {unique: 1, sparse: 1});
+
+
+
+
+

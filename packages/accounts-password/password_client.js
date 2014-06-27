@@ -70,8 +70,7 @@ var srpUpgradePath = function (options, callback) {
   } catch (e) {}
   if (!(details && details.format === 'srp')) {
     callback(new Meteor.Error(400,
-                              "Password is old. Please reset your " +
-                              "password."));
+                              _$("Password is old. Please reset your password.") ));
   } else {
     Accounts.callLoginMethod({
       methodArguments: [{
@@ -90,7 +89,7 @@ Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
   if (!options.password)
-    throw new Error("Must set options.password");
+    throw new Error(  _$("Must set options.password") );
 
   // Replace password with the hashed password.
   options.password = hashPassword(options.password);
@@ -113,7 +112,7 @@ Accounts.createUser = function (options, callback) {
 // @param callback {Function(error|undefined)}
 Accounts.changePassword = function (oldPassword, newPassword, callback) {
   if (!Meteor.user()) {
-    callback && callback(new Error("Must be logged in to change password."));
+    callback && callback(new Error( _$("Must be logged in to change password.") ));
     return;
   }
 
@@ -143,7 +142,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
         } else {
           // A normal error, not an error telling us to upgrade to bcrypt
           callback && callback(
-            error || new Error("No result from changePassword."));
+            error || new Error(_$("No result from changePassword.") ));
         }
       } else {
         callback && callback();
@@ -160,7 +159,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 // @param callback (optional) {Function(error|undefined)}
 Accounts.forgotPassword = function(options, callback) {
   if (!options.email)
-    throw new Error("Must pass options.email");
+    throw new Error( _$("Must pass options.email") );
   Accounts.connection.call("forgotPassword", options, callback);
 };
 
@@ -172,9 +171,9 @@ Accounts.forgotPassword = function(options, callback) {
 // @param callback (optional) {Function(error|undefined)}
 Accounts.resetPassword = function(token, newPassword, callback) {
   if (!token)
-    throw new Error("Need to pass token");
+    throw new Error( _$("Need to pass token") );
   if (!newPassword)
-    throw new Error("Need to pass newPassword");
+    throw new Error(  _$("Need to pass newPassword") );
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
@@ -189,10 +188,12 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 // @param callback (optional) {Function(error|undefined)}
 Accounts.verifyEmail = function(token, callback) {
   if (!token)
-    throw new Error("Need to pass token");
+    throw new Error( _$("Need to pass token") );
 
   Accounts.callLoginMethod({
     methodName: 'verifyEmail',
     methodArguments: [token],
     userCallback: callback});
 };
+
+
