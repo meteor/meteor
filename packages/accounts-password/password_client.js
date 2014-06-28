@@ -41,9 +41,9 @@ Meteor.loginWithPassword = function (selector, password, callback) {
         }, callback);
       }
       else if (error) {
-        callback(error);
+        callback && callback(error);
       } else {
-        callback();
+        callback && callback();
       }
     }
   });
@@ -69,7 +69,7 @@ var srpUpgradePath = function (options, callback) {
     details = EJSON.parse(options.upgradeError.details);
   } catch (e) {}
   if (!(details && details.format === 'srp')) {
-    callback(new Meteor.Error(400,
+    callback && callback(new Meteor.Error(400,
                               _$("Password is old. Please reset your password.") ));
   } else {
     Accounts.callLoginMethod({
@@ -132,7 +132,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
             plaintextPassword: oldPassword
           }, function (err) {
             if (err) {
-              callback(err);
+              callback && callback(err);
             } else {
               // Now that we've successfully migrated from srp to
               // bcrypt, try changing the password again.
