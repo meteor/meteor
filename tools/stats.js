@@ -95,7 +95,7 @@ var recordPackages = function () {
             "package-stats-server"
           );
         } catch (err) {
-          logErrorIfRunningMeteorRelease(err);
+          logErrorIfInCheckout(err);
           // Do nothing. If we can't log in, we should continue and report
           // stats anonymously.
         }
@@ -106,7 +106,7 @@ var recordPackages = function () {
                 packages,
                 userAgentInfo);
     } catch (err) {
-      logErrorIfRunningMeteorRelease(err);
+      logErrorIfInCheckout(err);
       // Do nothing. A failure to record package stats shouldn't be
       // visible to the end user and shouldn't affect whatever command
       // they are running.
@@ -114,7 +114,7 @@ var recordPackages = function () {
   }).run();
 };
 
-var logErrorIfRunningMeteorRelease = function (err) {
+var logErrorIfInCheckout = function (err) {
   if (files.inCheckout()) {
     process.stderr.write("Failed to record package usage.\n");
     process.stderr.write(err.stack || err);
