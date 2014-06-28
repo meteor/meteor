@@ -95,9 +95,12 @@ var recordPackages = function () {
             "package-stats-server"
           );
         } catch (err) {
-          logErrorIfInCheckout(err);
           // Do nothing. If we can't log in, we should continue and report
           // stats anonymously.
+          //
+          // We log other errors with `logErrorIfInCheckout`, but login
+          // errors can happen in normal operation when nothing is wrong
+          // (e.g. login token expired or revoked) so we don't log them.
         }
       }
 
