@@ -18,9 +18,19 @@ var data = { 'zh-cn':{
   "Reset password":"重置密码"
 }
 }
+var dep = new Deps.Dependency();
+var language = 'en';
+i18n = {};
 
-getLocal = function (){
-   return 'zh-cn';
+i18n.getLanguage = function (){
+   dep.depend();
+   return language;
+}
+
+i18n.setLanguage = function(lan){
+  	
+  language = lan;
+  dep.changed();
 }
 
 
@@ -52,7 +62,9 @@ String.prototype.format=function(o){
 };
 
 _$ = function(str, vars){
-    var local = data[getLocal()],
+    console.log(str, vars);
+  	dep.depend();
+    var local = data[i18n.getLanguage()],
         s;
     if(!local){
         s = str;    
@@ -65,6 +77,20 @@ _$ = function(str, vars){
 
 
 
+
+
+
+if(Meteor.isClient) {
+  if(UI) {
+    UI.registerHelper('_', function (NAV, F) {
+      return _$(NAV, F);
+    });
+  } else if(Handlebars) {
+    Handlebars.registerHelper('_', function (NAV, F) {
+      return _$(NAV, F);
+    });
+  }
+}
 
 
 
