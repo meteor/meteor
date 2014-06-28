@@ -567,6 +567,10 @@ Accounts.sendVerificationEmail = function (userId, address) {
   Email.send(options);
 };
 
+
+Meteor.methods({sendVerificationEmail: function () {
+    return Accounts.sendVerificationEmail.apply(this , arguments );
+} });
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
 Meteor.methods({verifyEmail: function (token) {
@@ -723,6 +727,7 @@ Meteor.users._ensureIndex('emails.validationTokens.token',
                           {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.password.reset.token',
                           {unique: 1, sparse: 1});
+
 
 
 

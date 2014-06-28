@@ -219,6 +219,9 @@ Template._loginButtonsLoggedOutPasswordService.fields = function () {
   ];
 
   var signupFields = [
+    {fieldName:"name", fieldLabel:_$('name'), visible:function(){
+    	return true;
+    }},
     {fieldName: 'username', fieldLabel: _$('Username'),
      visible: function () {
        return _.contains(
@@ -378,7 +381,9 @@ var login = function () {
   }
 
   Meteor.loginWithPassword(loginSelector, password, function (error, result) {
-    if (error) {
+    if(error && error.error === 100002){
+      loginButtonsSession.sholdVerifiedEmail(error );
+    } else if(error){
       loginButtonsSession.errorMessage(error.reason || _$("Unknown error") );
     } else {
       loginButtonsSession.closeDropdown();
@@ -417,6 +422,12 @@ var signup = function () {
   if (!matchPasswordAgainIfPresent())
     return;
 
+  // name nickname
+  var name = elementValueById('name');
+  if(!validateName(name))
+    return;
+  else
+    options.profile = {name:name};
   Accounts.createUser(options, function (error) {
     if (error) {
       loginButtonsSession.errorMessage(error.reason || _$("Unknown error"));
@@ -497,6 +508,8 @@ var correctDropdownZIndexes = function () {
     if (n.style.zIndex === 0)
       n.style.zIndex = 1;
 };
+
+
 
 
 

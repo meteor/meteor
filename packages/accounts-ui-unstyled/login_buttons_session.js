@@ -6,10 +6,10 @@ var VALID_KEYS = [
   'inForgotPasswordFlow',
   'inChangePasswordFlow',
   'inMessageOnlyFlow',
+  'sholdVerifiedEmail',
 
   'errorMessage',
   'infoMessage',
-
   // dialogs with messages (info and error)
   'resetPasswordToken',
   'enrollAccountToken',
@@ -62,14 +62,22 @@ Accounts._loginButtonsSession = {
   infoMessage: function(message) {
     this._set("errorMessage", null);
     this._set("infoMessage", message);
+    this._set("sholdVerifiedEmail", null);
     this.ensureMessageVisible();
   },
-
   errorMessage: function(message) {
     this._set("errorMessage", message);
     this._set("infoMessage", null);
+    this._set("sholdVerifiedEmail", null);
     this.ensureMessageVisible();
   },
+  sholdVerifiedEmail: function(error) {
+    this._set("sholdVerifiedEmail", error);
+    this._set("infoMessage", null);
+    this._set("errorMessage", null);
+    this.ensureMessageVisible();
+  },
+  
 
   // is there a visible dialog that shows messages (info and error)
   isMessageDialogVisible: function () {
@@ -102,4 +110,5 @@ Accounts._loginButtonsSession = {
     this.set('configureLoginServiceDialogSaveDisabled', true);
   }
 };
+
 

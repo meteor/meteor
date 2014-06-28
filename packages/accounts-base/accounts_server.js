@@ -16,7 +16,7 @@ Meteor.userId = function () {
   // record changes.
   var currentInvocation = DDP._CurrentInvocation.get();
   if (!currentInvocation)
-    throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
+    throw new Error( _$("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions."));
   return currentInvocation.userId;
 };
 
@@ -1351,5 +1351,6 @@ Meteor.startup(function () {
     deleteSavedTokens(user._id, user.services.resume.loginTokensToDelete);
   });
 });
+
 
 

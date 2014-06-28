@@ -15,22 +15,20 @@ var data = { 'zh-cn':{
   "Current Password":"当前密码",
   "New Password":"新密码",
   "Incorrect password":"密码错误",
-  "Reset password":"重置密码"
+  "Reset password":"重置密码",
+  "Meteor Accounts <no-reply@meteor.com>":"417610285@qq.com"
 }
 }
-var dep = new Deps.Dependency();
 var language = 'en';
 i18n = {};
 
 i18n.getLanguage = function (){
-   dep.depend();
-   return language;
+   return 'zh-cn';
 }
 
 i18n.setLanguage = function(lan){
   	
   language = lan;
-  dep.changed();
 }
 
 
@@ -62,8 +60,7 @@ String.prototype.format=function(o){
 };
 
 _$ = function(str, vars){
-    console.log(str, vars);
-  	dep.depend();
+    
     var local = data[i18n.getLanguage()],
         s;
     if(!local){
@@ -91,6 +88,10 @@ if(Meteor.isClient) {
     });
   }
 }
+
+
+
+
 
 
 

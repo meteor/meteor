@@ -102,7 +102,14 @@ validatePassword = function (password) {
     return false;
   }
 };
-
+validateName = function(name){
+  if (name.length >= 2 && name.length<=8) {
+    return true;
+  } else {
+    loginButtonsSession.errorMessage(_$("name must be at 2-8 characters long") );
+    return false;
+  }
+}
 //
 // loginButtonLoggedOut template
 //
@@ -149,16 +156,27 @@ Template._loginButtonsLoggedInSingleLogoutButton.displayName = displayName;
 Template._loginButtonsMessages.errorMessage = function () {
   return loginButtonsSession.get('errorMessage');
 };
+Template._loginButtonsMessages.sholdVerifiedEmail = function () {
+  return loginButtonsSession.get('sholdVerifiedEmail');
+};
 
 Template._loginButtonsMessages.infoMessage = function () {
   return loginButtonsSession.get('infoMessage');
 };
-
+Template._loginButtonsMessages.events({
+  'click #re-send-verified-email': function() {
+    var result =Meteor.call("sendVerificationEmail", Template._loginButtonsMessages.sholdVerifiedEmail().details );
+    loginButtonsSession.infoMessage(_$("已经发送,请查收!") );
+  }
+});
 
 //
 // loginButtonsLoggingInPadding template
 //
 
 Template._loginButtonsLoggingInPadding.dropdown = dropdown;
+
+
+
 
 
