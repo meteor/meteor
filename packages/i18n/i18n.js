@@ -1,4 +1,5 @@
 var data = { 'zh-cn':{
+  'Name':'昵称',
   'Username':"用户名",
   'Password':"密码",
   'Create account':"注册",
@@ -16,7 +17,9 @@ var data = { 'zh-cn':{
   "New Password":"新密码",
   "Incorrect password":"密码错误",
   "Reset password":"重置密码",
-  "Meteor Accounts <no-reply@meteor.com>":"417610285@qq.com"
+  "Meteor Accounts <no-reply@meteor.com>":"417610285@qq.com",
+  "Email already exists.":"已经注册过了！",
+  "resend":"点击重新发送"
 }
 }
 var language = 'en';
@@ -88,6 +91,7 @@ if(Meteor.isClient) {
     });
   }
 }
+
 
 
 

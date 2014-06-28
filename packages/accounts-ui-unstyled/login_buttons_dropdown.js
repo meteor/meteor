@@ -219,7 +219,7 @@ Template._loginButtonsLoggedOutPasswordService.fields = function () {
   ];
 
   var signupFields = [
-    {fieldName:"name", fieldLabel:_$('name'), visible:function(){
+    {fieldName:"name", fieldLabel:_$('Name'), visible:function(){
     	return true;
     }},
     {fieldName: 'username', fieldLabel: _$('Username'),
@@ -423,7 +423,7 @@ var signup = function () {
     return;
 
   // name nickname
-  var name = elementValueById('name');
+  var name = elementValueById('login-name');
   if(!validateName(name))
     return;
   else
