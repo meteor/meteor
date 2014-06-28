@@ -55,6 +55,7 @@ Blaze.DOMMaterializer.def({
     }
 
     if (rawAttrs) {
+      // XXXXXXX blaze-views
       var attrUpdater = new ElementAttributesUpdater(elem);
       var controller = Blaze.currentController;
       Blaze._wrapAutorun(Deps.autorun(function (c) {

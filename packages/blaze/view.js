@@ -326,31 +326,94 @@ Blaze.Unless3 = function (conditionFunc, contentFunc, elseFunc) {
   return Blaze.If3(conditionFunc, contentFunc, elseFunc, true /*_not*/);
 };
 
-Blaze.Each3 = function (argFunc, contentFunc, elseContentFunc) {
-  var view = Blaze.View(function () {
-
+Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
+  var eachView = Blaze.View('each', function () {
+    var subviews = this.initialSubviews;
+    this.initialSubviews = null;
+    return subviews;
   });
-  var initialSubviews = [];
+  eachView.initialSubviews = [];
+  eachView.numItems = 0;
+  eachView.inElseMode = false;
+  eachView.stopHandle = null;
+  eachView.contentFunc = contentFunc;
+  eachView.elseFunc = elseFunc;
+  eachView.argVar = new Blaze.ReactiveVar;
 
-  var elseMode = false;
-  var handle = ObserveSequence.observe(argFunc, {
-    addedAt: function (id, item, index) {
-      var itemView = Blaze.With3(item, contentFunc);
+  eachView.onCreated(function () {
+    // We evaluate argFunc in an autorun to make sure
+    // Blaze.currentView is always set when it runs (rather than
+    // passing argFunc straight to ObserveSequence).
+    eachView.autorun(function () {
+      eachView.argVar.set(argFunc());
+    });
 
-      if (view.domrange) {
-        if (elseMode) {
-          view.domrange.removeMember(0);
-          elseMode = false;
+    eachView.stopHandle = ObserveSequence.observe(function () {
+      return eachView.argVar.get();
+    }, {
+      addedAt: function (id, item, index) {
+        var newItemView = Blaze.With3(item, eachView.contentFunc);
+        eachView.numItems++;
+
+        if (eachView.domrange) {
+          if (eachView.inElseMode) {
+            eachView.domrange.removeMember(0);
+            eachView.inElseMode = false;
+          }
+
+          var range = Blaze.materializeView(newItemView, eachView);
+          eachView.domrange.addMember(range, index);
+        } else {
+          eachView.initialSubviews.splice(index, 0, newItemView);
         }
-
-        var range = Blaze.materializeView(itemView);
-        view.domrange.addMember(range, range, index);
-      } else {
-        initialSubviews.splice(index, 0, itemView);
+      },
+      removedAt: function (id, item, index) {
+        eachView.numItems--;
+        if (eachView.domrange) {
+          eachView.domrange.removeMember(index);
+          if (eachView.elseFunc && eachView.numItems === 0) {
+            eachView.inElseMode = true;
+            eachView.domrange.addMember(
+              Blaze.materializeView(
+                Blaze.View('each_else',eachView.elseFunc),
+                eachView));
+        }
+        } else {
+          eachView.initialSubviews.splice(index, 1);
+        }
+      },
+      changedAt: function (id, newItem, oldItem, index) {
+        var itemView;
+        if (eachView.domrange) {
+          itemView = eachView.domrange.getMember(index).view;
+        } else {
+          itemView = eachView.initialSubviews[index];
+        }
+        itemView.dataVar.set(newItem);
+      },
+      movedTo: function (id, item, fromIndex, toIndex) {
+        if (eachView.domrange) {
+          eachView.domrange.moveMember(fromIndex, toIndex);
+        } else {
+          var subviews = eachView.initialSubviews;
+          var itemView = subviews[fromIndex];
+          subviews.splice(fromIndex, 1);
+          subviews.splice(toIndex, 0, itemView);
+        }
       }
+    });
+
+    if (eachView.elseFunc && eachView.numItems === 0) {
+      eachView.inElseMode = true;
+      eachView.initialSubviews[0] =
+        Blaze.View('each_else', eachView.elseFunc);
     }
-    // XXX
   });
 
-  // XXX
+  eachView.onDestroyed(function () {
+    if (eachView.stopHandle)
+      eachView.stopHandle.stop();
+  });
+
+  return eachView;
 };

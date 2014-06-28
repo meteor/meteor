@@ -273,3 +273,5 @@ Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
   }
   return Blaze.List(seq);
 };
+
+Spacebars.Each3 = Blaze.Each3;
