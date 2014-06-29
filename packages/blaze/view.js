@@ -3,8 +3,11 @@
 // - DOMRange
 //   - kill DOMAugmenter
 //   - consider moving to _callbacks (including memberOut)
-// - attributes
-// - write EACH
+// - port attributes
+// - EACH untested as far as:
+//   - toHTML
+//   - cleanup
+//   - most things really...
 // - Do you get access to the DOMRange from "destroyed"?
 
 Blaze.View = function (kind, render) {
@@ -103,7 +106,9 @@ Blaze.materializeView = function (view, parentView) {
 
   var lastHtmljs;
   view.autorun(function doRender(c) {
-    // `view.autorun` sets the current view
+    // `view.autorun` sets the current view.
+    // Any dependencies that should invalidate this Computation come
+    // from this line:
     var htmljs = view.render();
 
     Deps.nonreactive(function doMaterialize() {
