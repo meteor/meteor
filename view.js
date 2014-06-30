@@ -269,15 +269,15 @@ Blaze.withCurrentView = function (view, func) {
   }
 };
 
-Blaze.render3 = function (contentFunc) {
+Blaze.render = function (contentFunc) {
   return Blaze.materializeView(Blaze.View('render', contentFunc));
 };
 
-Blaze.toHTML3 = function (htmljs, parentView) {
+Blaze.toHTML = function (htmljs, parentView) {
   return HTML.toHTML(Blaze._expand(htmljs, parentView));
 };
 
-Blaze.toText3 = function (htmljs, parentView, textMode) {
+Blaze.toText = function (htmljs, parentView, textMode) {
   if ((parentView != null) && ! (parentView instanceof Blaze.View)) {
     // omitted parentView argument
     textMode = parentView;
@@ -338,7 +338,7 @@ Blaze._calculateCondition = function (cond) {
   return !! cond;
 };
 
-Blaze.With3 = function (data, contentFunc) {
+Blaze.With = function (data, contentFunc) {
   var view = Blaze.View('with', contentFunc);
 
   view.dataVar = new Blaze.ReactiveVar;
@@ -356,7 +356,7 @@ Blaze.With3 = function (data, contentFunc) {
   return view;
 };
 
-Blaze.If3 = function (conditionFunc, contentFunc, elseFunc, _not) {
+Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
   var conditionVar = new Blaze.ReactiveVar;
 
   var view = Blaze.View(_not ? 'unless' : 'if', function () {
@@ -372,11 +372,11 @@ Blaze.If3 = function (conditionFunc, contentFunc, elseFunc, _not) {
   return view;
 };
 
-Blaze.Unless3 = function (conditionFunc, contentFunc, elseFunc) {
-  return Blaze.If3(conditionFunc, contentFunc, elseFunc, true /*_not*/);
+Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
+  return Blaze.If(conditionFunc, contentFunc, elseFunc, true /*_not*/);
 };
 
-Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
+Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   var eachView = Blaze.View('each', function () {
     var subviews = this.initialSubviews;
     this.initialSubviews = null;
@@ -404,7 +404,7 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
       return eachView.argVar.get();
     }, {
       addedAt: function (id, item, index) {
-        var newItemView = Blaze.With3(item, eachView.contentFunc);
+        var newItemView = Blaze.With(item, eachView.contentFunc);
         eachView.numItems++;
 
         if (eachView.expandedValueDep) {
