@@ -35,6 +35,7 @@ Blaze.DOMMaterializer.def({
     return intoArray;
   },
   visitTag: function (tag, intoArray) {
+    var self = this;
     var tagName = tag.tagName;
     var elem;
     if (HTML.isKnownSVGElement(tagName) && document.createElementNS) {
@@ -55,24 +56,35 @@ Blaze.DOMMaterializer.def({
     }
 
     if (rawAttrs) {
-      // XXXXXXX blaze-views
       var attrUpdater = new ElementAttributesUpdater(elem);
-      var controller = Blaze.currentController;
-      Blaze._wrapAutorun(Deps.autorun(function (c) {
-        Blaze.withCurrentController(controller, function () {
-          var evaledAttrs = Blaze._evaluateAttributes(rawAttrs);
-          var flattenedAttrs = HTML.flattenAttributes(evaledAttrs);
-          var stringAttrs = {};
-          for (var attrName in flattenedAttrs) {
-            stringAttrs[attrName] = Blaze._toText(flattenedAttrs[attrName],
-                                                  HTML.TEXTMODE.STRING);
-          }
-          attrUpdater.update(stringAttrs);
+      var updateAttributes = function () {
+        var parentView = self.parentView;
+        var expandedAttrs = Blaze._expandAttributes(rawAttrs, parentView);
+        var flattenedAttrs = HTML.flattenAttributes(expandedAttrs);
+        var stringAttrs = {};
+        for (var attrName in flattenedAttrs) {
+          stringAttrs[attrName] = Blaze.toText3(flattenedAttrs[attrName],
+                                                parentView,
+                                                HTML.TEXTMODE.STRING);
+        }
+        attrUpdater.update(stringAttrs);
+      };
+      var updaterComputation;
+      if (self.parentView) {
+        updaterComputation = self.parentView.autorun(updateAttributes);
+      } else {
+        updaterComputation = Deps.nonreactive(function () {
+          return Deps.autorun(function () {
+            Deps.withCurrentView(self.parentView, updateAttributes);
+          });
         });
-      }));
+      }
+      Blaze.DOMBackend.Teardown.onElementTeardown(elem, function attrTeardown() {
+        updaterComputation.stop();
+      });
     }
 
-    var childNodesAndRanges = this.visit(children, []);
+    var childNodesAndRanges = self.visit(children, []);
     for (var i = 0; i < childNodesAndRanges.length; i++) {
       var x = childNodesAndRanges[i];
       if (x instanceof Blaze.DOMRange)
