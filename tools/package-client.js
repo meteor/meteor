@@ -505,9 +505,9 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // the same version lock file when we build this source elsewhere (ex:
   // publish-for-arch).
   // But see also #PackageVersionFilesHack
-  var versionsFileName = packageSource.versionsFileName();
-  if (fs.existsSync(path.join(packageSource.sourceRoot, versionsFileName))) {
-    sources.push(versionsFileName);
+  var versionsFile = packageSource.versionsFilePath();
+  if (versionsFile &&  fs.existsSync(versionsFile)) {
+    sources.push("versions.json");
   }
   var sourceBundleResult = bundleSource(
     compileResult.unipackage, sources, packageSource.sourceRoot);

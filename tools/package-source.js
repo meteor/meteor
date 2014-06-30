@@ -980,8 +980,8 @@ _.extend(PackageSource.prototype, {
     });
 
     // If we have built this before, read the versions that we ended up using.
-    var versionsFile = path.join(self.sourceRoot,  self.versionsFileName());
-    if (fs.existsSync(versionsFile)) {
+    var versionsFile = self.versionsFilePath();
+    if (versionsFile && fs.existsSync(versionsFile)) {
       try {
         var data = fs.readFileSync(versionsFile, 'utf8');
         var dependencyData = JSON.parse(data);
@@ -1246,21 +1246,11 @@ _.extend(PackageSource.prototype, {
     var self = this;
     var versions = _.extend(constraints, {"toolVersion": currentTool });
 
-    // If we are running from checkout and looking at a core package,
-    // don't record its versions. We know what its versions are, and having
-    // those extra version lock files is kind of annoying.
-    //
-    // (This is a medium-term hack. We can build something more modular if
-    //  there is any demand for it)
-    // See #PackageVersionFilesHack
-    if (self.isCore) {
-      return;
-    }
-
-    // If we have specified to not record a version file for this package,
-    // don't. Currently used to avoid recording version files for separately
-    // compiled plugins.
-    if (self.noVersionFile) {
+    // If we don't have a versions file path (because, probably, we are not
+    // supposed to record one for this package), then we clearly cannot record
+    // on.
+    var versionsFile = self.versionsFilePath();
+    if (!versionsFile) {
       return;
     }
 
@@ -1312,7 +1302,6 @@ _.extend(PackageSource.prototype, {
       // Uniload sets its sourceRoot to "/", which is a little strange. Uniload
       // does not need to store dependency versions either.
       if (self.name && self.sourceRoot !== "/") {
-        var versionsFile = path.join(self.sourceRoot, self.versionsFileName());
         fs.writeFileSync(versionsFile, JSON.stringify(versions, null, 2), 'utf8');
       }
     } catch (e) {
@@ -1324,10 +1313,38 @@ _.extend(PackageSource.prototype, {
     }
  },
 
-  // Returns the name of the file containing the version lock for this package
-  versionsFileName : function () {
+  // Returns the filepath to the file containing the version lock for this
+  // package, or null if we don't think that this package should have
+  // a versions file.
+  versionsFilePath : function () {
     var self = this;
-    return self.name + "-versions.json";
+    // If we are running from checkout and looking at a core package,
+    // don't record its versions. We know what its versions are, and having
+    // those extra version lock files is kind of annoying.
+    //
+    // (This is a medium-term hack. We can build something more modular if
+    //  there is any demand for it)
+    // See #PackageVersionFilesHack
+    if (self.isCore) {
+      return null;
+    }
+
+    // If we have specified to not record a version file for this package,
+    // don't. Currently used to avoid recording version files for separately
+    // compiled plugins.
+    if (self.noVersionFile) {
+      return null;
+    }
+
+    // Lastly, we don't record versions files for test packages because we don't
+    // see any particularly good reason to do it, and it is confusing to the
+    // users.
+    if (self.isTest) {
+      return null;
+    }
+
+    // All right, fine, return a path to the versions file.
+    return path.join(self.sourceRoot, "versions.json");
   },
 
   // If dependencies aren't consistent across unibuilds, return false and
