@@ -6,8 +6,7 @@ if (Package.blaze) {
     var view = this;
     var content = '';
     if (view.templateContentBlock) {
-      content = Blaze.toText(view.templateContentBlock.__makeView(),
-                             HTML.TEXTMODE.STRING);
+      content = Blaze.toText(view.templateContentBlock, HTML.TEXTMODE.STRING);
     }
     var converter = new Showdown.converter();
     return HTML.Raw(converter.makeHtml(content));
