@@ -23,8 +23,8 @@ var builtInUIPaths = {
   // function for the template in which `UI.contentBlock` (or
   // `UI.elseBlock`) is invoked. `template` is a reference to the
   // template itself.
-  'contentBlock': 'self.__contentBlock',
-  'elseBlock': 'self.__elseBlock',
+  'contentBlock': 'view.templateContentBlock',
+  'elseBlock': 'view.templateElseBlock',
 
   // `Template` is the global template namespace. If you define a
   // template named `foo` in Spacebars, it gets defined as
@@ -182,7 +182,7 @@ _.extend(CodeGen.prototype, {
     if (this.OLDSTYLE) {
       var code = 'Blaze.' + lookupMethod + '(' + firstPathItem + ', self)';
     } else {
-      var code = 'template.__' + lookupMethod + '(' + firstPathItem + ')';
+      var code = 'view.' + lookupMethod + '(' + firstPathItem + ')';
     }
 
     if (path.length > 1) {

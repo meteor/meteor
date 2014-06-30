@@ -43,7 +43,8 @@ Package.on_use(function (api) {
   api.add_files([
     'reactivevar.js',
     'materializer.js',
-    'view.js'
+    'view.js',
+    'lookup.js'
   ]);
 });
 

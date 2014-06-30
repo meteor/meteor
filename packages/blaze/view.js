@@ -161,7 +161,7 @@ Blaze._expandView = function (view, parentView) {
     return view.render();
   });
 
-  var result = (new Blaze.HTMLJSExpander({parentView: view})).visit(htmljs);
+  var result = Blaze._expand(htmljs, view);
 
   if (Deps.active) {
     Deps.onInvalidate(function () {
@@ -187,7 +187,7 @@ Blaze.HTMLJSExpander.def({
   visitAttributes: function (attrs) {
     // expand dynamic attributes
     if (typeof attrs === 'function')
-      attrs = attrs();
+      attrs = Blaze.withCurrentView(this.parentView, attrs);
 
     // call super (e.g. for case where `attrs` is an array)
     return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
@@ -196,7 +196,7 @@ Blaze.HTMLJSExpander.def({
     // expand attribute values that are functions.  Any attribute value
     // that contains Views must be wrapped in a function.
     if (typeof value === 'function')
-      value = value();
+      value = Blaze.withCurrentView(this.parentView, value);
 
     return HTML.TransformingVisitor.prototype.visitAttribute.call(
       this, name, value, tag);
