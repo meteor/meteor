@@ -4,7 +4,7 @@
 
 We've written our fair share of single-page JavaScript applications by hand.
 Writing an entire application in one language (JavaScript) with one
-data format (JSON) is a real joy.  Meteor is everything we wanted
+data format (JSON) is a real joy. Meteor is everything we wanted
 when writing those apps.
 
 {{> whatismeteor }}
@@ -79,17 +79,17 @@ Atmosphere.
 A Meteor application is a mix of JavaScript that runs inside a client web
 browser, JavaScript that runs on the Meteor server inside a
 [Node.js](http://nodejs.org/) container, and all the supporting HTML fragments,
-CSS rules, and static assets.  Meteor automates the packaging and transmission
-of these different components.  And, it is quite flexible about how you choose
+CSS rules, and static assets. Meteor automates the packaging and transmission
+of these different components. And, it is quite flexible about how you choose
 to structure those components in your file tree.
 
 The only server assets are JavaScript and files in the `private` subdirectory.
 Meteor gathers all your JavaScript
 files, excluding anything under the `client`, `public`, and `private`
 subdirectories, and loads them into a Node.js
-server instance inside a fiber.  In Meteor, your server code runs in
+server instance inside a fiber. In Meteor, your server code runs in
 a single thread per request, not in the asynchronous callback style
-typical of Node.  We find the linear execution model a better fit for
+typical of Node. We find the linear execution model a better fit for
 the typical server code in a Meteor application.
 
 Meteor gathers any files under the `private` subdirectory and makes the contents
@@ -97,22 +97,22 @@ of these files available to server code via the [`Assets`](#assets) API. The
 `private` subdirectory is the place for any files that should be accessible to
 server code but not served to the client, like private data files.
 
-There are more assets to consider on the client side.  Meteor
+There are more assets to consider on the client side. Meteor
 gathers all JavaScript files in your tree, with the exception of
 the `server`, `public`, and `private` subdirectories, for the
-client.  It minifies this bundle and serves it to each new client.
+client. It minifies this bundle and serves it to each new client.
 You're free to use a single JavaScript file for your entire application, or
 create a nested tree of separate files, or anything in between.
 
 Some JavaScript libraries only work when placed in the
-`client/compatibility` subdirectory.  Files in this directory are
-executed without being wrapped in a new variable scope.  This means
+`client/compatibility` subdirectory. Files in this directory are
+executed without being wrapped in a new variable scope. This means
 that each top-level `var` defines a global variable. In addition,
 these files are executed before other client-side JavaScript files.
 
 Files outside the `client`, `server` and `tests` subdirectories are loaded on
 both the client and the server!  That's the place for model definitions and
-other functions.  Meteor provides the variables [`isClient`](#meteor_isclient) and
+other functions. Meteor provides the variables [`isClient`](#meteor_isclient) and
 [`isServer`](#meteor_isserver) so that your code can alter its behavior depending
 on whether it's running on the client or the server. (Files in directories named
 `tests` are not loaded anywhere.)
@@ -129,14 +129,14 @@ In development mode, JavaScript and CSS files are sent individually to make
 debugging easier.
 
 HTML files in a Meteor application are treated quite a bit differently
-from a server-side framework.  Meteor scans all the HTML files in your
+from a server-side framework. Meteor scans all the HTML files in your
 directory for three top-level elements: `<head>`, `<body>`, and
-`<template>`.  The head and body sections are separately concatenated
+`<template>`. The head and body sections are separately concatenated
 into a single head and body, which are transmitted to the client on
 initial page load.
 
 Template sections, on the other hand, are converted into JavaScript
-functions, available under the `Template` namespace.  It's
+functions, available under the `Template` namespace. It's
 a really convenient way to ship HTML templates to the client.
 See the [templates](#livehtmltemplates) section for more.
 
@@ -174,28 +174,28 @@ application are loaded according to these rules:
 <h2 id="dataandsecurity">Data and security</h2>
 
 Meteor makes writing distributed client code as simple as talking to a
-local database.  It's a clean, simple, and secure approach that obviates
+local database. It's a clean, simple, and secure approach that obviates
 the need to implement individual RPC endpoints, manually cache data on
 the client to avoid slow roundtrips to the server, and carefully
 orchestrate invalidation messages to every client as data changes.
 
-In Meteor, the client and server share the same database API.  The same
+In Meteor, the client and server share the same database API. The same
 exact application code &mdash; like validators and computed properties &mdash; can
-often run in both places.  But while code running on the server has
+often run in both places. But while code running on the server has
 direct access to the database, code running on the client does *not*.
 This distinction is the basis for Meteor's data security model.
 
 {{#note}}
 By default, a new Meteor app includes the `autopublish` and `insecure`
 packages, which together mimic the effect of each client having full
-read/write access to the server's database.  These are useful
+read/write access to the server's database. These are useful
 prototyping tools, but typically not appropriate for production
-applications.  When you're ready, just remove the packages.
+applications. When you're ready, just remove the packages.
 {{/note}}
 
-Every Meteor client includes an in-memory database cache.  To manage the
+Every Meteor client includes an in-memory database cache. To manage the
 client cache, the server *publishes* sets of JSON documents, and the
-client *subscribes* to those sets.  As documents in a set change, the
+client *subscribes* to those sets. As documents in a set change, the
 server patches each client's cache.
 
 Today most Meteor apps use MongoDB as their database because it is the
@@ -218,9 +218,9 @@ can be used from both client and server code.
     Messages.insert({text: "Hello world", room: myRooms[0]._id});
     Parties.insert({name: "Super Bowl Party"});
 
-Each document set is defined by a publish function on the server.  The
+Each document set is defined by a publish function on the server. The
 publish function runs each time a new client subscribes to a document
-set.  The data in a document set can come from anywhere, but the common
+set. The data in a document set can come from anywhere, but the common
 case is to publish a database query.
 
     // server: publish all room documents
@@ -241,13 +241,13 @@ case is to publish a database query.
                                  {owner: this.userId}]});
     });
 
-Publish functions can provide different results to each client.  In the
+Publish functions can provide different results to each client. In the
 last example, a logged in user can only see `Party` documents that
 are public, that the user owns, or that the user has been invited to.
 
 Once subscribed, the client uses its cache as a fast local database,
-dramatically simplifying client code.  Reads never require a costly
-round trip to the server.  And they're limited to the contents of the
+dramatically simplifying client code. Reads never require a costly
+round trip to the server. And they're limited to the contents of the
 cache: a query for every document in a collection on a client will only
 return documents the server is publishing to that client.
 
@@ -258,13 +258,13 @@ return documents the server is publishing to that client.
     return Parties.find().fetch(); // synchronous!
 
 Sophisticated clients can turn subscriptions on and off to control how
-much data is kept in the cache and manage network traffic.  When a
+much data is kept in the cache and manage network traffic. When a
 subscription is turned off, all its documents are removed from the cache
 unless the same document is also provided by another active
 subscription.
 
 When the client *changes* one or more documents, it sends a message to
-the server requesting the change.  The server checks the proposed change
+the server requesting the change. The server checks the proposed change
 against a set of allow/deny rules you write as JavaScript functions.
 The server only accepts the change if all the rules pass.
 
@@ -281,20 +281,20 @@ The server only accepts the change if all the rules pass.
 
 If the server accepts the change, it applies the change to the database
 and automatically propagates the change to other clients subscribed to
-the affected documents.  If not, the update fails, the server's database
+the affected documents. If not, the update fails, the server's database
 remains untouched, and no other client sees the update.
 
-Meteor has a cute trick, though.  When a client issues a write to the
+Meteor has a cute trick, though. When a client issues a write to the
 server, it also updates its local cache immediately, without waiting for
-the server's response.  This means the screen will redraw right away.
+the server's response. This means the screen will redraw right away.
 If the server accepted the update &mdash; what ought to happen most of the
 time in a properly behaving client &mdash; then the client got a jump on the
 change and didn't have to wait for the round trip to update its own
-screen.  If the server rejects the change, Meteor patches up the
+screen. If the server rejects the change, Meteor patches up the
 client's cache with the server's result.
 
 Putting it all together, these techniques accomplish latency
-compensation.  Clients hold a fresh copy of the data they need, and
+compensation. Clients hold a fresh copy of the data they need, and
 never need to wait for a roundtrip to the server. And when clients
 modify data, those modifications can run locally without waiting for the
 confirmation from the server, while still giving the server final say
@@ -303,7 +303,7 @@ over the requested change.
 {{#note}}
 The current release of Meteor supports MongoDB, the popular document
 database, and the examples in this section use the
-        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
+        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual). Future
 releases will include support for other databases.
 {{/note}}
 
@@ -369,17 +369,17 @@ function will be automatically re-run, setting up a new subscription that
 replaces the old one.
 
 This automatic recomputation is achieved by a cooperation between
-`Session` and `Deps.autorun`.  `Deps.autorun` performs an arbitrary "reactive
+`Session` and `Deps.autorun`. `Deps.autorun` performs an arbitrary "reactive
 computation" inside of which data dependencies are tracked, and it
-will re-run its function argument as necessary.  Data providers like
+will re-run its function argument as necessary. Data providers like
 `Session`, on the other hand, make note of the computation they are
 called from and what data was requested, and they are prepared to send
 an invalidation signal to the computation when the data changes.
 
 This simple pattern (reactive computation + reactive data source) has wide
-applicability.  Above, the programmer is saved from writing
+applicability. Above, the programmer is saved from writing
 unsubscribe/resubscribe calls and making sure they are called at the
-right time.  In general, Meteor can eliminate whole classes of data
+right time. In general, Meteor can eliminate whole classes of data
 propagation code which would otherwise clog up your application with
 error-prone logic.
 
@@ -431,7 +431,7 @@ would, and Meteor will take care of making it update in realtime.
 
 Meteor ships with a templating language called
 [Spacebars](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md),
-inspired by [Handlebars](http://handlebarsjs.com/).  It shares some of the
+inspired by [Handlebars](http://handlebarsjs.com/). It shares some of the
 spirit and syntax of Handlebars, but it has been tailored to produce reactive
 Meteor templates when compiled.
 
@@ -699,33 +699,33 @@ check for it and throw an error if you do.
 
 <h2 id="deploying">Deploying</h2>
 
-Meteor is a full application server.  We include everything you need
+Meteor is a full application server. We include everything you need
 to deploy your application on the internet: you just provide the JavaScript,
 HTML, and CSS.
 
 <h3 class="nosection">Running on Meteor's infrastructure</h3>
 
 The easiest way to deploy your application is to use `meteor
-deploy`.  We provide it because it's what, personally, we've always
+deploy`. We provide it because it's what, personally, we've always
 wanted: an easy way to take an app idea, flesh it out over a weekend,
 and put it out there for the world to use, with nothing getting in the
 way of creativity.
 
     $ meteor deploy myapp.meteor.com
 
-Your application is now available at myapp.meteor.com.  If
+Your application is now available at myapp.meteor.com. If
 this is the first time deploying to this hostname, Meteor creates a
-fresh empty database for your application.  If you want to deploy an
+fresh empty database for your application. If you want to deploy an
 update, Meteor will preserve the existing data and just refresh the
 code.
 
-You can also deploy to your own domain.  Just set up the hostname you
+You can also deploy to your own domain. Just set up the hostname you
 want to use as a CNAME to `origin.meteor.com`,
 then deploy to that name.
 
     $ meteor deploy www.myapp.com
 
-We provide this as a free service so you can try Meteor.  It is also
+We provide this as a free service so you can try Meteor. It is also
 helpful for quickly putting up internal betas, demos, and so on.
 
 <h3 class="nosection">Running on your own infrastructure</h3>
@@ -738,11 +738,11 @@ To get started, run
     $ meteor bundle myapp.tgz
 
 This command will generate a fully-contained Node.js application in the form of
-a tarball.  To run this application, you need to provide Node.js 0.10 and a
-MongoDB server.  (The current release of Meteor has been tested with Node
+a tarball. To run this application, you need to provide Node.js 0.10 and a
+MongoDB server. (The current release of Meteor has been tested with Node
 0.10.29; older versions contain a serious bug that can cause production servers
 to stall.) You can then run the application by invoking node, specifying the
-HTTP port for the application to listen on, and the MongoDB endpoint.  If
+HTTP port for the application to listen on, and the MongoDB endpoint. If
 you don't already have a MongoDB server, we can recommend our friends at
 [MongoHQ](http://mongohq.com).
 
@@ -753,8 +753,8 @@ package requires a `MAIL_URL` environment variable).
 
 {{#warning}}
 For now, bundles will only run on the platform that the bundle was
-created on.  To run on a different platform, you'll need to rebuild
-the native packages included in the bundle.  To do that, make sure you
+created on. To run on a different platform, you'll need to rebuild
+the native packages included in the bundle. To do that, make sure you
 have `npm` available, and run the following:
 
     $ cd bundle/programs/server/node_modules

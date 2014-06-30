@@ -4,7 +4,7 @@
 <h1 id="api">The Meteor API</h1>
 
 Your JavaScript code can run in two environments: the *client* (browser), and
-the *server* (a [Node.js](http://nodejs.org/) container on a server).  For each
+the *server* (a [Node.js](http://nodejs.org/) container on a server). For each
 function in this API reference, we'll indicate if the function is available just
 on the client, just on the server, or *Anywhere*.
 
@@ -97,7 +97,7 @@ by calling the functions [`added`](#publish_added) (to add a new document to the
 published record set), [`changed`](#publish_changed) (to change or clear some
 fields on a document already in the published record set), and
 [`removed`](#publish_removed) (to remove documents from the published record
-set).  These methods are provided by `this` in your publish function.
+set). These methods are provided by `this` in your publish function.
 
 If a publish function does not return a cursor or array of cursors, it is
 assumed to be using the low-level `added`/`changed`/`removed` interface, and it
@@ -173,7 +173,7 @@ Example:
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
-project that includes the `autopublish` package.  Your publish function
+project that includes the `autopublish` package. Your publish function
 will still work.
 {{/warning}}
 
@@ -200,16 +200,16 @@ publish handler, this is the place to stop the observes.
 {{> api_box subscribe}}
 
 When you subscribe to a record set, it tells the server to send records to the
-client.  The client stores these records in local [Minimongo
+client. The client stores these records in local [Minimongo
 collections](#meteor_collection), with the same name as the `collection`
 argument used in the publish handler's [`added`](#publish_added),
 [`changed`](#publish_changed), and [`removed`](#publish_removed)
-callbacks.  Meteor will queue incoming records until you declare the
+callbacks. Meteor will queue incoming records until you declare the
 [`Meteor.Collection`](#meteor_collection) on the client with the matching
 collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
-    // the client collection that will hold it.  assume "allplayers"
+    // the client collection that will hold it. assume "allplayers"
     // publishes data from server's "players" collection.
     Meteor.subscribe("allplayers");
     ...
@@ -290,8 +290,8 @@ Example:
     });
 
 Calling `methods` on the server defines functions that can be called remotely by
-clients.  They should return an [EJSON](#ejson)-able value or throw an
-exception.  Inside your method invocation, `this` is bound to a method
+clients. They should return an [EJSON](#ejson)-able value or throw an
+exception. Inside your method invocation, `this` is bound to a method
 invocation object, which provides the following:
 
 * `isSimulation`: a boolean value, true if this invocation is a stub.
@@ -302,16 +302,16 @@ begin running.
 * `connection`: on the server, the [connection](#meteor_onconnection) this method call was received on.
 
 Calling `methods` on the client defines *stub* functions associated with
-server methods of the same name.  You don't have to define a stub for
-your method if you don't want to.  In that case, method calls are just
+server methods of the same name. You don't have to define a stub for
+your method if you don't want to. In that case, method calls are just
 like remote procedure calls in other systems, and you'll have to wait
 for the results from the server.
 
 If you do define a stub, when a client invokes a server method it will
-also run its stub in parallel.  On the client, the return value of a
-stub is ignored.  Stubs are run for their side-effects: they are
+also run its stub in parallel. On the client, the return value of a
+stub is ignored. Stubs are run for their side-effects: they are
 intended to *simulate* the result of what the server's method will do,
-but without waiting for the round trip delay.  If a stub throws an
+but without waiting for the round trip delay. If a stub throws an
 exception it will be logged to the console.
 
 You use methods all the time, because the database mutators
@@ -356,8 +356,8 @@ will allow the N+1th invocation to start running in a new fiber.
 
 {{> api_box error}}
 
-If you want to return an error from a method, throw an exception.  Methods can
-throw any kind of exception.  But `Meteor.Error` is the only kind of error that
+If you want to return an error from a method, throw an exception. Methods can
+throw any kind of exception. But `Meteor.Error` is the only kind of error that
 a server will send to the client. If a method function throws a different
 exception, then it will be mapped to a sanitized version on the
 wire. Specifically, if the `sanitizedError` field on the thrown error is set to
@@ -367,8 +367,8 @@ sanitized version is available, the client gets
 
 {{> api_box meteor_call}}
 
-This is how to invoke a method.  It will run the method on the server.  If a
-stub is available, it will also run the stub on the client.  (See also
+This is how to invoke a method. It will run the method on the server. If a
+stub is available, it will also run the stub on the client. (See also
 [`Meteor.apply`](#meteor_apply), which is identical to `Meteor.call` except that
 you specify the parameters as an array instead of as separate arguments and you
 can specify a few options controlling how the method is executed.)
@@ -376,17 +376,17 @@ can specify a few options controlling how the method is executed.)
 If you include a callback function as the last argument (which can't be
 an argument to the method, since functions aren't serializable), the
 method will run asynchronously: it will return nothing in particular and
-will not throw an exception.  When the method is complete (which may or
+will not throw an exception. When the method is complete (which may or
 may not happen before `Meteor.call` returns), the callback will be
 called with two arguments: `error` and `result`. If an error was thrown,
-then `error` will be the exception object.  Otherwise, `error` will be
+then `error` will be the exception object. Otherwise, `error` will be
 undefined and the return value (possibly undefined) will be in `result`.
 
     // async call
     Meteor.call('foo', 1, 2, function (error, result) { ... } );
 
 If you do not pass a callback on the server, the method invocation will
-block until the method is complete.  It will eventually return the
+block until the method is complete. It will eventually return the
 return value of the method, or it will throw an exception if the method
 threw an exception. (Possibly mapped to 500 Server Error if the
 exception happened remotely and it was not a `Meteor.Error` exception.)
@@ -402,9 +402,9 @@ execution of a method.
 
 Finally, if you are inside a stub on the client and call another
 method, the other method is not executed (no RPC is generated, nothing
-"real" happens).  If that other method has a stub, that stub stands in
+"real" happens). If that other method has a stub, that stub stands in
 for the method and is executed. The method call's return value is the
-return value of the stub function.  The client has no problem executing
+return value of the stub function. The client has no problem executing
 a stub synchronously, and that is why it's okay for the client to use
 the synchronous `Meteor.call` form from inside a method body, as
 described earlier.
@@ -491,12 +491,12 @@ updates are not required.
 
 {{> api_box onConnection}}
 
-`onConnection` returns an object with a single method `stop`.  Calling
+`onConnection` returns an object with a single method `stop`. Calling
 `stop` unregisters the callback, so that this callback will no longer
 be called on new connections.
 
 The callback is called with a single argument, the server-side
-`connection` representing the connection from the client.  This object
+`connection` representing the connection from the client. This object
 contains the following fields:
 
 <dl class="objdesc">
@@ -523,7 +523,7 @@ connection is already closed, the callback will be called immediately.
   for the correct IP address to be reported by `clientAddress`.
 
   Set `HTTP_FORWARDED_COUNT` to an integer representing the number of
-  proxies in front of your server.  For example, you'd set it to `"1"`
+  proxies in front of your server. For example, you'd set it to `"1"`
   when your server was behind one proxy.
 {{/dtdd}}
 
@@ -533,7 +533,7 @@ connection is already closed, the callback will be called immediately.
   whitelisted HTTP headers.
 
   Cookies are deliberately excluded from the headers as they are a
-  security risk for this transport.  For details and alternatives, see
+  security risk for this transport. For details and alternatives, see
   the [SockJS
   documentation](https://github.com/sockjs/sockjs-node#authorisation).
 {{/dtdd}}
@@ -542,7 +542,7 @@ connection is already closed, the callback will be called immediately.
 {{#note}}
 Currently when a client reconnects to the server (such as after
 temporarily losing its Internet connection), it will get a new
-connection each time.  The `onConnection` callbacks will be called
+connection each time. The `onConnection` callbacks will be called
 again, and the new connection will have a new connection `id`.
 
 In the future, when client reconnection is fully implemented,
@@ -590,7 +590,7 @@ server.
 
 <h2 id="collections"><span>Collections</span></h2>
 
-Meteor stores data in *collections*.  To get started, declare a
+Meteor stores data in *collections*. To get started, declare a
 collection with `new Meteor.Collection`.
 
 {{> api_box meteor_collection}}
@@ -599,7 +599,7 @@ Calling this function is analogous to declaring a model in a traditional ORM
 (Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
 space for records, or "documents") that can be used to store a particular type
 of information, like users, posts, scores, todo items, or whatever matters to
-your application.  Each document is a EJSON object.  It includes an `_id`
+your application. Each document is a EJSON object. It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
 first create the document.
 
@@ -612,7 +612,7 @@ The function returns an object with methods to [`insert`](#insert)
 documents in the collection, [`update`](#update) their properties, and
 [`remove`](#remove) them, and to [`find`](#find) the documents in the
 collection that match arbitrary criteria. The way these methods work is
-compatible with the popular Mongo database API.  The same database API
+compatible with the popular Mongo database API. The same database API
 works on both the client and the server (see below).
 
     // return array of my messages
@@ -659,11 +659,11 @@ client, it does not execute the write locally first.
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
 that supports Mongo-style [`find`](#find), [`insert`](#insert),
-[`update`](#update), and [`remove`](#remove) operations.  (On both the
+[`update`](#update), and [`remove`](#remove) operations. (On both the
 client and the server, this scratchpad is implemented using Minimongo.)
 
 By default, Meteor automatically publishes every document in your
-collection to each connected client.  To turn this behavior off, remove
+collection to each connected client. To turn this behavior off, remove
 the `autopublish` package:
 
     $ meteor remove autopublish
@@ -694,15 +694,15 @@ your collection should be published to which users.
     assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
 
 Generally, you'll assign `Meteor.Collection` objects in your app to global
-variables.  You can only create one `Meteor.Collection` object for each
+variables. You can only create one `Meteor.Collection` object for each
 underlying Mongo collection.
 
 If you specify a `transform` option to the `Collection` or any of its retrieval
 methods, documents are passed through the `transform` function before being
-returned or passed to callbacks.  This allows you to add methods or otherwise
-modify the contents of your collection from their database representation.  You
+returned or passed to callbacks. This allows you to add methods or otherwise
+modify the contents of your collection from their database representation. You
 can also specify `transform` on a particular `find`, `findOne`, `allow`, or
-`deny` call.  Transform functions must return an object and they may not change
+`deny` call. Transform functions must return an object and they may not change
 the value of the document's `_id` field (though it's OK to leave it out).
 
     // An Animal class that takes a document in its constructor
@@ -724,7 +724,7 @@ the value of the document's `_id` field (though it's OK to leave it out).
     Animals.insert({name: "raptor", sound: "roar"});
     Animals.findOne({name: "raptor"}).makeNoise(); // prints "roar"
 
-`transform` functions are not called reactively.  If you want to add a
+`transform` functions are not called reactively. If you want to add a
 dynamically changing attribute to an object, do it with a function that computes
 the value at the time it's called, not by computing the attribute at `transform`
 time.
@@ -750,14 +750,14 @@ index is worthwhile.
 
 {{> api_box find}}
 
-`find` returns a cursor.  It does not immediately access the database or return
-documents.  Cursors provide `fetch` to return all matching documents, `map` and
+`find` returns a cursor. It does not immediately access the database or return
+documents. Cursors provide `fetch` to return all matching documents, `map` and
 `forEach` to iterate over all matching documents, and `observe` and
 `observeChanges` to register callbacks when the set of matching documents
 changes.
 
 {{#warning}}
-Collection cursors are not query snapshots.  If the database changes
+Collection cursors are not query snapshots. If the database changes
 between calling `Collection.find` and fetching the
 results of the cursor, or while fetching results from the cursor,
 those changes may or may not appear in the result set.
@@ -767,8 +767,8 @@ Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
 [`autorun`](#deps_autorun)), Meteor will register a
-dependency on the underlying data.  Any change to the collection that
-changes the documents in a cursor will trigger a recomputation.  To
+dependency on the underlying data. Any change to the collection that
+changes the documents in a cursor will trigger a recomputation. To
 disable this behavior, pass `{reactive: false}` as an option to
 `find`.
 
@@ -796,17 +796,17 @@ applicable [`allow`](#allow) and [`deny`](#deny) rules.
 
 On the server, if you don't provide a callback, then `insert` blocks
 until the database acknowledges the write, or throws an exception if
-something went wrong.  If you do provide a callback, `insert` still
-returns the ID immediately.  Once the insert completes (or fails), the
-callback is called with error and result arguments.  In an error case,
-`result` is undefined.  If the insert is successful, `error` is
+something went wrong. If you do provide a callback, `insert` still
+returns the ID immediately. Once the insert completes (or fails), the
+callback is called with error and result arguments. In an error case,
+`result` is undefined. If the insert is successful, `error` is
 undefined and `result` is the new document ID.
 
-On the client, `insert` never blocks.  If you do not provide a callback
+On the client, `insert` never blocks. If you do not provide a callback
 and the insert fails on the server, then Meteor will log a warning to
-the console.  If you provide a callback, Meteor will call that function
-with `error` and `result` arguments.  In an error case, `result` is
-undefined.  If the insert is successful, `error` is undefined and
+the console. If you provide a callback, Meteor will call that function
+with `error` and `result` arguments. In an error case, `result` is
+undefined. If the insert is successful, `error` is undefined and
 `result` is the new document ID.
 
 Example:
@@ -840,14 +840,14 @@ handlers and a browser's JavaScript console.
 
 On the server, if you don't provide a callback, then `update` blocks
 until the database acknowledges the write, or throws an exception if
-something went wrong.  If you do provide a callback, `update` returns
-immediately.  Once the update completes, the callback is called with a
+something went wrong. If you do provide a callback, `update` returns
+immediately. Once the update completes, the callback is called with a
 single error argument in the case of failure, or a second argument
 indicating the number of affected documents if the update was successful.
 
-On the client, `update` never blocks.  If you do not provide a callback
+On the client, `update` never blocks. If you do not provide a callback
 and the update fails on the server, then Meteor will log a warning to
-the console.  If you provide a callback, Meteor will call that function
+the console. If you provide a callback, Meteor will call that function
 with an error argument if there was an error, or a second argument
 indicating the number of affected documents if the update was successful.
 
@@ -917,14 +917,14 @@ handlers and a browser's JavaScript console.
 On the server, if you don't provide a callback, then `remove` blocks
 until the database acknowledges the write and then returns the number
 of removed documents, or throws an exception if
-something went wrong.  If you do provide a callback, `remove` returns
-immediately.  Once the remove completes, the callback is called with a
+something went wrong. If you do provide a callback, `remove` returns
+immediately. Once the remove completes, the callback is called with a
 single error argument in the case of failure, or a second argument
 indicating the number of removed documents if the remove was successful.
 
-On the client, `remove` never blocks.  If you do not provide a callback
+On the client, `remove` never blocks. If you do not provide a callback
 and the remove fails on the server, then Meteor will log a warning to the
-console.  If you provide a callback, Meteor will call that function with an
+console. If you provide a callback, Meteor will call that function with an
 error argument if there was an error, or a second argument indicating the number
 of removed documents if the remove was successful.
 
@@ -1088,7 +1088,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 
 <h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
 
-To create a cursor, use [`find`](#find).  To access the documents in a
+To create a cursor, use [`find`](#find). To access the documents in a
 cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
 {{> api_box cursor_foreach}}
@@ -1129,7 +1129,7 @@ the matching documents.
 {{> api_box cursor_count}}
 
 Unlike the other functions, `count` registers a dependency only on the
-number of matching documents.  (Updates that just change or reorder the
+number of matching documents. (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
 {{> api_box cursor_observe}}
@@ -1243,7 +1243,7 @@ Before `observeChanges` returns, `added` (or `addedBefore`) will be called
 zero or more times to deliver the initial results of the query.
 
 `observeChanges` returns a live query handle, which is an object with a `stop`
-method.  Call `stop` with no arguments to stop calling the callback functions
+method. Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
 If
 `observeChanges` is called from a `Deps.autorun` computation, it is automatically
@@ -1384,9 +1384,9 @@ the value. The `_id` field is still included in the result.
     // Users.find({}, {fields: {firstname: 1, lastname: 1}})
 
 With one exception, it is not possible to mix inclusion and exclusion styles:
-the keys must either be all 1 or all 0.  The exception is that you may specify
+the keys must either be all 1 or all 0. The exception is that you may specify
 `_id: 0` in an inclusion specifier, which will leave `_id` out of the result
-object as well.  However, such field specifiers can not be used with
+object as well. However, such field specifiers can not be used with
 [`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
 from a [publish function](#meteor_publish), or cursors used in
 `{{dstache}}#each}}` in a template. They may be used with [`fetch`](#fetch),
@@ -1817,7 +1817,7 @@ Example:
 {{> api_box accounts_validateLoginAttempt}}
 
 Call `validateLoginAttempt` with a callback to be called on login
-attempts.  It returns an object with a single method, `stop`.  Calling
+attempts. It returns an object with a single method, `stop`. Calling
 `stop()` unregisters the callback.
 
 When a login attempt is made, the registered validate login callbacks
@@ -1830,21 +1830,21 @@ are called with a single argument, the attempt info object:
 
 {{#dtdd name="allowed" type="Boolean"}}
   Whether this login is allowed and will be successful (if not aborted
-  by any of the validateLoginAttempt callbacks).  False if the login
+  by any of the validateLoginAttempt callbacks). False if the login
   will not succeed (for example, an invalid password or the login was
   aborted by a previous validateLoginAttempt callback).
 {{/dtdd}}
 
 {{#dtdd name="error" type="Exception"}}
   When `allowed` is false, the exception describing why the login
-  failed.  It will be a `Meteor.Error` for failures reported to the
+  failed. It will be a `Meteor.Error` for failures reported to the
   user (such as invalid password), and can be a another kind of
   exception for internal errors.
 {{/dtdd}}
 
 {{#dtdd name="user" type="Object"}}
   When it is known which user was attempting to login, the Meteor user
-  object.  This will always be present for successful logins.
+  object. This will always be present for successful logins.
 {{/dtdd}}
 
 {{#dtdd name="connection" type="Object"}}
@@ -1862,13 +1862,13 @@ are called with a single argument, the attempt info object:
 </dl>
 
 A validate login callback must return a truthy value for the login to
-proceed.  If the callback returns a falsy value or throws an
-exception, the login is aborted.  Throwing a `Meteor.Error` will
+proceed. If the callback returns a falsy value or throws an
+exception, the login is aborted. Throwing a `Meteor.Error` will
 report the error reason to the user.
 
 All registered validate login callbacks are called, even if one of the callbacks
-aborts the login.  The later callbacks will see the `allowed` field set to
-`false` since the login will now not be successful.  This allows later callbacks
+aborts the login. The later callbacks will see the `allowed` field set to
+`false` since the login will now not be successful. This allows later callbacks
 to override an error from a previous callback; for example, you could override
 the "Incorrect password" error with a different message.
 
@@ -1887,7 +1887,7 @@ for each login attempt. The `onLogin` callbacks are called after the
 user has been successfully logged in. The `onLoginFailure` callbacks are
 called after a login attempt is denied.
 
-These functions return an object with a single method, `stop`.  Calling
+These functions return an object with a single method, `stop`. Calling
 `stop()` unregisters the callback.
 
 The callbacks are called with a single argument, the same attempt info
@@ -2048,11 +2048,11 @@ When you write a template as `<{{! }}template name="foo"> ... <{{!
 {{/note}}
 
 The same template may occur many times on a page, and these
-occurrences are called template instances.  Template instances have a
+occurrences are called template instances. Template instances have a
 life cycle of being created, put into the document, and later taken
-out of the document and destroyed.  Meteor manages these stages for
+out of the document and destroyed. Meteor manages these stages for
 you, including determining when a template instance has been removed
-or replaced and should be cleaned up.  You can associate data with a
+or replaced and should be cleaned up. You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
@@ -2098,7 +2098,7 @@ rendered into DOM nodes and put into the document for the first time.
 
 In the body of the callback, `this` is a [template
 instance](#template_inst) object that is unique to this occurrence of
-the template and persists across re-renderings.  Use the `created` and
+the template and persists across re-renderings. Use the `created` and
 `destroyed` callbacks to perform initialization or clean-up on the
 object.
 
@@ -2108,11 +2108,11 @@ Because your template has been rendered, you can use functions like
 {{> api_box template_created}}
 
 This callback is called before your template's logic is evaluated for the first
-time.  Inside the callback, `this` is the new [template
-instance](#template_inst) object.  Properties you set on this object will be
+time. Inside the callback, `this` is the new [template
+instance](#template_inst) object. Properties you set on this object will be
 visible from the `rendered` and `destroyed` callbacks and from event handlers.
 
-This callback fires once and is the first callback to fire.  Every
+This callback fires once and is the first callback to fire. Every
 `created` has a corresponding `destroyed`; that is, if you get a
 `created` callback with a certain template instance object in `this`,
 you will eventually get a `destroyed` callback for the same object.
@@ -2127,18 +2127,18 @@ you will eventually get a `destroyed` callback for the same object.
 {{> api_box template_destroyed}}
 
 This callback is called when an occurrence of a template is taken off
-the page for any reason and not replaced with a re-rendering.  Inside
+the page for any reason and not replaced with a re-rendering. Inside
 the callback, `this` is the [template instance](#template_inst) object
 being destroyed.
 
 This callback is most useful for cleaning up or undoing any external effects of
-`created` or `rendered`.  It fires once and is the last callback to fire.
+`created` or `rendered`. It fires once and is the last callback to fire.
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
 
 A template instance object represents an occurrence of a template in
-the document.  It can be used to access the DOM and it can be
+the document. It can be used to access the DOM and it can be
 assigned properties that persist as the template is reactively updated.
 
 Template instance objects are found as the value of `this` in the
@@ -2185,8 +2185,8 @@ the selector.
 {{> api_box template_firstNode}}
 
 The two nodes `firstNode` and `lastNode` indicate the extent of the
-rendered template in the DOM.  The rendered template includes these
-nodes, their intervening siblings, and their descendents.  These two
+rendered template in the DOM. The rendered template includes these
+nodes, their intervening siblings, and their descendents. These two
 nodes are siblings (they have the same parent), and `lastNode` comes
 after `firstNode`, or else they are the same node.
 
@@ -2195,15 +2195,15 @@ after `firstNode`, or else they are the same node.
 {{> api_box template_data}}
 
 This property provides access to the data context at the top level of
-the template.  It is updated each time the template is re-rendered.
+the template. It is updated each time the template is re-rendered.
 Access is read-only and non-reactive.
 
 
 <h2 id="ui"><span>Template utilities</span></h2>
 
 The `UI` namespace contains several utilities that are helpful when writing your
-user interface.  `UI.registerHelper` allows you to define helper functions which
-you can use in every template.  `UI.render`, `UI.renderWithData`, and
+user interface. `UI.registerHelper` allows you to define helper functions which
+you can use in every template. `UI.render`, `UI.renderWithData`, and
 `UI.insert` allow you to manually render templates and insert them directly into
 any part of the DOM for finer control than just using template inclusions.
 
@@ -2218,7 +2218,7 @@ You can define helpers and event maps on `UI.body` just like on any
 
 This returns an "instantiated component" object, which can be passed to
 [`UI.insert`](#ui_insert). The template's [`created`](#template_created) callback
-will be invoked.  The component will continue to be updated reactively as the
+will be invoked. The component will continue to be updated reactively as the
 data used changes.
 
 {{#warning}}
@@ -2227,11 +2227,11 @@ data used changes.
   do with them is pass them to `UI.insert`.
 
   Most users will not need to manually render components or manually insert them
-  into the DOM at all.  As of 0.8.0, if you call `UI.render` and never insert
+  into the DOM at all. As of 0.8.0, if you call `UI.render` and never insert
   the result into the DOM, the logic to keep the instantiated component updated
   will continue running in your browser forever. Additionally, if you remove any
   part of your DOM using any mechanism other than jQuery, the logic to keep that
-  part of the the DOM updated will continue running.  To avoid these issues,
+  part of the the DOM updated will continue running. To avoid these issues,
   either avoid directly updating the DOM or ensure that any removals go through
   jQuery.
 {{/warning}}
@@ -2270,9 +2270,9 @@ comma-separated list.
 The handler function receives two arguments: `event`, an object with
 information about the event, and `template`, a [template
 instance](#template_inst) for the template where the handler is
-defined.  The handler also receives some additional context data in
+defined. The handler also receives some additional context data in
 `this`, depending on the context of the current element handling the
-event.  In a template, an element's context is the
+event. In a template, an element's context is the
 data context where that element occurs, which is set by
 block helpers such as `#with` and `#each`.
 
@@ -2290,9 +2290,9 @@ Example:
     }
 
 Most events bubble up the document tree from their originating
-element.  For example, `'click p'` catches a click anywhere in a
+element. For example, `'click p'` catches a click anywhere in a
 paragraph, even if the click originated on a link, span, or some other
-element inside the paragraph.  The originating element of the event
+element inside the paragraph. The originating element of the event
 is available as the `target` property, while the element that matched
 the selector and is currently handling it is called `currentTarget`.
 
@@ -2305,7 +2305,7 @@ the selector and is currently handling it is called `currentTarget`.
 
 If a selector matches multiple elements that an event bubbles to, it
 will be called multiple times, for example in the case of `'click
-div'` or `'click *'`.  If no selector is given, the handler
+div'` or `'click *'`. If no selector is given, the handler
 will only be called once, on the original target element.
 
 The following properties and methods are available on the event object
@@ -2321,8 +2321,8 @@ The element that originated the event.
 {{/dtdd}}
 
 {{#dtdd name="currentTarget" type="DOM Element"}}
-The element currently handling the event.  This is the element that
-matched the selector in the event map.  For events that bubble, it may
+The element currently handling the event. This is the element that
+matched the selector in the event map. For events that bubble, it may
 be `target` or an ancestor of `target`, and its value changes as the
 event bubbles.
 {{/dtdd}}
@@ -2346,7 +2346,7 @@ bubbling, and handlers in other event maps.
 
 {{#dtdd "preventDefault()"}}
 Prevents the action the browser would normally take in response to this
-event, such as following a link or submitting a form.  Further handlers
+event, such as following a link or submitting a form. Further handlers
 are still called, but cannot reverse the effect.
 {{/dtdd}}
 
@@ -2380,19 +2380,19 @@ Double-click.
 {{/dtdd}}
 
 {{#dtdd "<code>focus, blur</code>"}}
-A text input field or other form control gains or loses focus.  You
+A text input field or other form control gains or loses focus. You
 can make any element focusable by giving it a `tabindex` property.
 Browsers differ on whether links, checkboxes, and radio buttons are
-natively focusable.  These events do not bubble.
+natively focusable. These events do not bubble.
 {{/dtdd}}
 
 {{#dtdd "<code>change</code>"}}
-A checkbox or radio button changes state.  For text fields, use
+A checkbox or radio button changes state. For text fields, use
 `blur` or key events to respond to changes.
 {{/dtdd}}
 
 {{#dtdd "<code>mouseenter, mouseleave</code>"}} The pointer enters or
-leaves the bounds of an element.  These events do not bubble.
+leaves the bounds of an element. These events do not bubble.
 {{/dtdd}}
 
 {{#dtdd "<code>mousedown, mouseup</code>"}}
@@ -2400,7 +2400,7 @@ The mouse button is newly down or up.
 {{/dtdd}}
 
 {{#dtdd "<code>keydown, keypress, keyup</code>"}}
-The user presses a keyboard key.  `keypress` is most useful for
+The user presses a keyboard key. `keypress` is most useful for
 catching typing in text fields, while `keydown` and `keyup` can be
 used for arrow keys or modifier keys.
 {{/dtdd}}
@@ -2533,7 +2533,7 @@ from the call to `check` or `Match.test`. Examples:
 <h2 id="timers"><span>Timers</span></h2>
 
 Meteor uses global environment variables
-to keep track of things like the current request's user.  To make sure
+to keep track of things like the current request's user. To make sure
 these variables have the right values, you need to use
 `Meteor.setTimeout` instead of `setTimeout` and `Meteor.setInterval`
 instead of `setInterval`.
@@ -2566,7 +2566,7 @@ dependencies &mdash; it "just works". The mechanism is simple and
 efficient. When you call a function that supports reactive updates
 (such as a database query), it automatically saves the current
 Computation object, if any (representing, for example, the current
-template being rendered).  Later, when the data changes, the function
+template being rendered). Later, when the data changes, the function
 can "invalidate" the Computation, causing it to rerun (rerendering the
 template).
 
@@ -2605,20 +2605,20 @@ prevent further rerunning:
     });
 
 The function is invoked immediately, at which point it may alert and
-stop right away if `shouldAlert` is already true.  If not, the
+stop right away if `shouldAlert` is already true. If not, the
 function is run again when `shouldAlert` becomes true.
 
 A change to a data dependency does not cause an immediate rerun, but
 rather "invalidates" the computation, causing it to rerun the next
-time a flush occurs.  A flush will occur automatically as soon as
-the system is idle if there are invalidated computations.  You can
+time a flush occurs. A flush will occur automatically as soon as
+the system is idle if there are invalidated computations. You can
 also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
 all pending reruns.
 
 If you nest calls to `Deps.autorun`, then when the outer call stops or
-reruns, the inner call will stop automatically.  Subscriptions and
+reruns, the inner call will stop automatically. Subscriptions and
 observers are also automatically stopped when used as part of a
-computation that is rerun, allowing new ones to be established.  See
+computation that is rerun, allowing new ones to be established. See
 [`Meteor.subscribe`](#meteor_subscribe) for more information about
 subscriptions and reactivity.
 
@@ -2640,10 +2640,10 @@ handler can call `flush` to perform the rerender immediately and then
 access the resulting DOM.
 
 An automatic flush occurs whenever the system is idle which performs
-exactly the same work as `Deps.flush`.  The flushing process consists
-of rerunning any invalidated computations.  If additional
+exactly the same work as `Deps.flush`. The flushing process consists
+of rerunning any invalidated computations. If additional
 invalidations happen while flushing, they are processed as part of the
-same flush until there is no more work to be done.  Callbacks
+same flush until there is no more work to be done. Callbacks
 registered with [`Deps.afterFlush`](#deps_afterflush) are called
 after processing outstanding invalidations.
 
@@ -2653,7 +2653,7 @@ computation.
 {{> api_box deps_nonreactive }}
 
 Calls `func` with `Deps.currentComputation` temporarily set to `null`
-and returns `func`'s own return value.  If `func` accesses reactive data
+and returns `func`'s own return value. If `func` accesses reactive data
 sources, these data sources will never cause a rerun of the enclosing
 computation.
 
@@ -2664,7 +2664,7 @@ whether they are being accessed reactively or not.
 
 {{> api_box deps_currentcomputation }}
 
-It's very rare to need to access `currentComputation` directly.  The
+It's very rare to need to access `currentComputation` directly. The
 current computation is used implicitly by
 [`Deps.active`](#deps_active) (which tests whether there is one),
 [`dependency.depend()`](#dependency_depend) (which registers that it depends on a
@@ -2679,25 +2679,25 @@ details.
 {{> api_box deps_afterflush }}
 
 Functions scheduled by multiple calls to `afterFlush` are guaranteed
-to run in the order that `afterFlush` was called.  Functions are
+to run in the order that `afterFlush` was called. Functions are
 guaranteed to be called at a time when there are no invalidated
-computations that need rerunning.  This means that if an `afterFlush`
+computations that need rerunning. This means that if an `afterFlush`
 function invalidates a computation, that computation will be rerun
 before any other `afterFlush` functions are called.
 
 <h2 id="deps_computation"><span>Deps.Computation</span></h2>
 
 A Computation object represents code that is repeatedly rerun in
-response to reactive data changes.  Computations don't have return
+response to reactive data changes. Computations don't have return
 values; they just perform actions, such as rerendering a template on
-the screen.  Computations are created using [`Deps.autorun`](#deps_autorun).
+the screen. Computations are created using [`Deps.autorun`](#deps_autorun).
 Use [`stop`](#computation_stop) to prevent further rerunning of a
 computation.
 
 Each time a computation runs, it may access various reactive data
 sources that serve as inputs to the computation, which are called its
-dependencies.  At some future time, one of these dependencies may
-trigger the computation to be rerun by invalidating it.  When this
+dependencies. At some future time, one of these dependencies may
+trigger the computation to be rerun by invalidating it. When this
 happens, the dependencies are cleared, and the computation is
 scheduled to be rerun at flush time.
 
@@ -2710,10 +2710,10 @@ Data sources are responsible for tracking these dependencies using
 
 Invalidating a computation sets its `invalidated` property to true
 and immediately calls all of the computation's `onInvalidate`
-callbacks.  When a flush occurs, if the computation has been invalidated
+callbacks. When a flush occurs, if the computation has been invalidated
 and not stopped, then the computation is rerun by setting the
 `invalidated` property to `false` and calling the original function
-that was passed to `Deps.autorun`.  A flush will occur when the current
+that was passed to `Deps.autorun`. A flush will occur when the current
 code finishes running, or sooner if `Deps.flush` is called.
 
 Stopping a computation invalidates it (if it is valid) for the purpose
@@ -2734,8 +2734,8 @@ Example:
 {{> api_box computation_stop}}
 
 Stopping a computation is irreversible and guarantees that it will
-never be rerun.  You can stop a computation at any time, including
-from the computation's own run function.  Stopping a computation that
+never be rerun. You can stop a computation at any time, including
+from the computation's own run function. Stopping a computation that
 is already stopped has no effect.
 
 Stopping a computation causes its `onInvalidate` callbacks to run
@@ -2748,15 +2748,15 @@ computation is rerun.
 
 Invalidating a computation marks it to be rerun at
 [flush time](#deps_flush), at
-which point the computation becomes valid again.  It is rare to
+which point the computation becomes valid again. It is rare to
 invalidate a computation manually, because reactive data sources
-invalidate their calling computations when they change.  Reactive data
+invalidate their calling computations when they change. Reactive data
 sources in turn perform this invalidation using one or more
 [`Deps.Dependency`](#deps_dependency) objects.
 
 Invalidating a computation immediately calls all `onInvalidate`
-callbacks registered on it.  Invalidating a computation that is
-currently invalidated or is stopped has no effect.  A computation can
+callbacks registered on it. Invalidating a computation that is
+currently invalidated or is stopped has no effect. A computation can
 invalidate itself, but if it continues to do so indefinitely, the
 result will be an infinite loop.
 
@@ -2764,7 +2764,7 @@ result will be an infinite loop.
 
 `onInvalidate` registers a one-time callback that either fires
 immediately or as soon as the computation is next invalidated or
-stopped.  It is used by reactive data sources to clean up resources or
+stopped. It is used by reactive data sources to clean up resources or
 break dependencies when a computation is rerun or stopped.
 
 To get a callback after a computation has been recomputed, you can
@@ -2774,8 +2774,8 @@ call [`Deps.afterFlush`](#deps_afterflush) from `onInvalidate`.
 
 {{> api_box computation_invalidated }}
 
-This property is initially false.  It is set to true by `stop()` and
-`invalidate()`.  It is reset to false when the computation is
+This property is initially false. It is set to true by `stop()` and
+`invalidate()`. It is reset to false when the computation is
 recomputed at flush time.
 
 {{> api_box computation_firstrun }}
@@ -2786,14 +2786,14 @@ computation has logic specific to the first run.
 <h2 id="deps_dependency"><span>Deps.Dependency</span></h2>
 
 A Dependency represents an atomic unit of reactive data that a
-computation might depend on.  Reactive data sources such as Session or
+computation might depend on. Reactive data sources such as Session or
 Minimongo internally create different Dependency objects for different
 pieces of data, each of which may be depended on by multiple
-computations.  When the data changes, the computations are
+computations. When the data changes, the computations are
 invalidated.
 
 Dependencies don't store data, they just track the set of computations to
-invalidate if something changes.  Typically, a data value will be
+invalidate if something changes. Typically, a data value will be
 accompanied by a Dependency object that tracks the computations that depend
 on it, as in this example:
 
@@ -2813,7 +2813,7 @@ on it, as in this example:
     };
 
 This example implements a weather data source with a simple getter and
-setter.  The getter records that the current computation depends on
+setter. The getter records that the current computation depends on
 the `weatherDep` dependency using `depend()`, while the setter
 signals the dependency to invalidate all dependent computations by
 calling `changed()`.
@@ -2822,10 +2822,10 @@ The reason Dependencies do not store data themselves is that it can be
 useful to associate multiple Dependencies with the same piece of data.
 For example, one Dependency might represent the result of a database
 query, while another might represent just the number of documents in
-the result.  A Dependency could represent whether the weather is sunny
+the result. A Dependency could represent whether the weather is sunny
 or not, or whether the temperature is above freezing.
 [`Session.equals`](#session_equals) is implemented this way for
-efficiency.  When you call `Session.equals("weather", "sunny")`, the
+efficiency. When you call `Session.equals("weather", "sunny")`, the
 current computation is made to depend on an internal Dependency that
 does not change if the weather goes from, say, "rainy" to "cloudy".
 
@@ -2833,7 +2833,7 @@ Conceptually, the only two things a Dependency can do are gain a
 dependent and change.
 
 A Dependency's dependent computations are always valid (they have
-`invalidated === false`).  If a dependent is invalidated at any time,
+`invalidated === false`). If a dependent is invalidated at any time,
 either by the Dependency itself or some other way, it is immediately
 removed.
 
@@ -2859,10 +2859,10 @@ types, as well as:
  - **Date** (JavaScript `Date`)
  - **Binary** (JavaScript `Uint8Array` or the
    result of [`EJSON.newBinary`](#ejson_new_binary))
- - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
+ - **User-defined types** (see [`EJSON.addType`](#ejson_add_type). For example,
  [`Meteor.Collection.ObjectID`](#collection_object_id) is implemented this way.)
 
-All EJSON serializations are also valid JSON.  For example an object with a date
+All EJSON serializations are also valid JSON. For example an object with a date
 and a binary buffer would be serialized in EJSON as:
 
     {
@@ -2888,7 +2888,7 @@ and results, Mongo databases, and [`Session`](#session) variables.
 {{> api_box ejsonNewBinary}}
 
 Buffers of binary data are represented by `Uint8Array` instances on JavaScript
-platforms that support them.  On implementations of JavaScript that do not
+platforms that support them. On implementations of JavaScript that do not
 support `Uint8Array`, binary data buffers are represented by standard arrays
 containing numbers ranging from 0 to 255, and the `$Uint8ArrayPolyfill` key
 set to `true`.
@@ -2907,7 +2907,7 @@ When you add a type to EJSON, Meteor will be able to use that type in:
 
 {{#note}}
 
-  MongoDB cannot store most user-defined types natively on the server.  Your
+  MongoDB cannot store most user-defined types natively on the server. Your
   type will work in Minimongo, and you can send it to the client using a custom
   publisher, but MongoDB can only store the types defined in
   [BSON](http://bsonspec.org/).
@@ -2937,7 +2937,7 @@ If your type does not have a `clone` method, `EJSON.clone` will use
 {{> api_box ejsonTypeEquals}}
 
 The `equals` method should define an [equivalence
-relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have
+relation](http://en.wikipedia.org/wiki/Equivalence_relation). It should have
 the following properties:
 
  - *Reflexivity* - for any instance `a`: `a.equals(a)` must be true.
@@ -2950,7 +2950,7 @@ result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
 
 <h2 id="http"><span>HTTP</span></h2>
 
-`HTTP` provides an HTTP request API on the client and server.  To use
+`HTTP` provides an HTTP request API on the client and server. To use
 these functions, add the HTTP package to your project with `$ meteor add http`.
 
 {{> api_box httpcall}}
@@ -2958,41 +2958,41 @@ these functions, add the HTTP package to your project with `$ meteor add http`.
 This function initiates an HTTP request to a remote server.
 
 On the server, this function can be run either synchronously or
-asynchronously.  If the callback is omitted, it runs synchronously
+asynchronously. If the callback is omitted, it runs synchronously
 and the results are returned once the request completes successfully.
 If the request was not successful, an error is thrown.
 This is
 useful when making server-to-server HTTP API calls from within Meteor
 methods, as the method can succeed or fail based on the results of the
-synchronous HTTP call.  In this case, consider using
+synchronous HTTP call. In this case, consider using
 [`this.unblock()`](#method_unblock) to allow other methods on the same
 connection to run in
-the mean time.  On the client, this function must be used
+the mean time. On the client, this function must be used
 asynchronously by passing a callback.
 
-Both HTTP and HTTPS protocols are supported.  The `url` argument must be
+Both HTTP and HTTPS protocols are supported. The `url` argument must be
 an absolute URL including protocol and host name on the server, but may be
-relative to the current host on the client.  The `query` option
-replaces the query string of `url`.  Parameters specified in `params`
+relative to the current host on the client. The `query` option
+replaces the query string of `url`. Parameters specified in `params`
 that are put in the URL are appended to any query string.
 For example, with a `url` of `"/path?query"` and
 `params` of `{foo:"bar"}`, the final URL will be `"/path?query&foo=bar"`.
 
 The `params` are put in the URL or the request body, depending on the
-type of request.  In the case of request with no bodies, like GET and
-HEAD, the parameters will always go in the URL.  For a POST or other
+type of request. In the case of request with no bodies, like GET and
+HEAD, the parameters will always go in the URL. For a POST or other
 type of request, the parameters will be encoded into the body with a
 standard `x-www-form-urlencoded` content type, unless the `content`
 or `data` option is used to specify a body, in which case the
 parameters will be appended to the URL instead.
 
 When run in asynchronous mode, the callback receives two arguments,
-`error` and `result`.  The
+`error` and `result`. The
 `error` argument will contain an Error if the request fails in any
 way, including a network error, time-out, or an HTTP status code in
-the 400 or 500 range.  In case of a 4xx/5xx HTTP status code, the
+the 400 or 500 range. In case of a 4xx/5xx HTTP status code, the
 `response` property on `error` matches the contents of the result
-object.  When run in synchronous mode, either `result` is returned
+object. When run in synchronous mode, either `result` is returned
 from the function, or `error` is thrown.
 
 Contents of the result object:
