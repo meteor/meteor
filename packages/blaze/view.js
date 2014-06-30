@@ -66,6 +66,8 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
     });
   });
   self.onDestroyed(function () { c.stop(); });
+
+  return c;
 };
 
 Blaze._fireCallbacks = function (view, which) {
@@ -136,53 +138,79 @@ Blaze.materializeView = function (view, parentView) {
   return domrange;
 };
 
-// Renders a view to text or HTML.  Calls `created` callbacks
-// and `render`, but not `materialized` or `rendered` callbacks.
-// After rendering, immediately calls `destroyed` callbacks and
-//
-Blaze._stringifyView = function (view, parentView, stringifier) {
+// Expands a View to HTMLjs, calling `render` recursively on all
+// Views and evaluating any dynamic attributes.  Calls the `created`
+// callback, but not the `materialized` or `rendered` callbacks.
+// Destroys the view immediately, unless called in a Deps Computation,
+// in which case the view will be destroyed when the Computation is
+// invalidated.  If called in a Deps Computation, the result is a
+// reactive string; that is, the Computation will be invalidated
+// if any changes are made to the view or subviews that might affect
+// the HTML.
+Blaze._expandView = function (view, parentView) {
   view.parentView = (parentView || null);
 
   if (view.isCreated)
     throw new Error("Can't render the same View twice");
   view.isCreated = true;
+  view.isBeingExpanded = true;
 
   Blaze._fireCallbacks(view, 'created');
 
   var htmljs = Blaze.withCurrentView(view, function () {
     return view.render();
   });
-  var result = stringifier.visit(htmljs);
 
-  Blaze.destroyView(view);
+  var result = (new Blaze.HTMLJSExpander({parentView: view})).visit(htmljs);
+
+  if (Deps.active) {
+    Deps.onInvalidate(function () {
+      Blaze.destroyView(view);
+    });
+  } else {
+    Blaze.destroyView(view);
+  }
 
   return result;
 };
 
-Blaze.viewToHTML = function (view, parentView) {
-  return Blaze._stringifyView(
-    view, parentView,
-    new Blaze.HTMLStringifier({parentView: view}));
+// Options: `parentView`
+Blaze.HTMLJSExpander = HTML.TransformingVisitor.extend();
+Blaze.HTMLJSExpander.def({
+  visitObject: function (x) {
+    if (x instanceof Blaze.View)
+      return Blaze._expandView(x, this.parentView);
+
+    // this will throw an error; other objects are not allowed!
+    return HTML.TransformingVisitor.prototype.visitObject.call(this, x);
+  },
+  visitAttributes: function (attrs) {
+    // expand dynamic attributes
+    if (typeof attrs === 'function')
+      attrs = attrs();
+
+    // call super (e.g. for case where `attrs` is an array)
+    return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
+  },
+  visitAttribute: function (name, value, tag) {
+    // expand attribute values that are functions.  Any attribute value
+    // that contains Views must be wrapped in a function.
+    if (typeof value === 'function')
+      value = value();
+
+    return HTML.TransformingVisitor.prototype.visitAttribute.call(
+      this, name, value, tag);
+  }
+});
+
+Blaze._expand = function (htmljs, parentView) {
+  return (new Blaze.HTMLJSExpander(
+    {parentView: parentView})).visit(htmljs);
 };
 
-Blaze.viewToText = function (view, parentView, textMode) {
-  if ((parentView != null) && ! (parentView instanceof Blaze.View)) {
-    // omitted parentView argument
-    textMode = parentView;
-    parentView = null;
-  }
-
-  if (! textMode)
-    throw new Error("textMode required");
-  if (! (textMode === HTML.TEXTMODE.STRING ||
-         textMode === HTML.TEXTMODE.RCDATA ||
-         textMode === HTML.TEXTMODE.ATTRIBUTE))
-    throw new Error("Unknown textMode: " + textMode);
-
-  return Blaze._stringifyView(
-    view, parentView,
-    new Blaze.TextStringifier({textMode: textMode,
-                               parentView: view}));
+Blaze._expandAttributes = function (attrs, parentView) {
+  return (new Blaze.HTMLJSExpander(
+    {parentView: parentView})).visitAttributes(attrs);
 };
 
 Blaze.destroyView = function (view, _viaTeardown) {
@@ -245,26 +273,25 @@ Blaze.render3 = function (contentFunc) {
   return Blaze.materializeView(Blaze.View('render', contentFunc));
 };
 
-Blaze.toHTML3 = function (contentFunc) {
-  return Blaze.viewToHTML(Blaze.View('toHTML', contentFunc));
+Blaze.toHTML3 = function (htmljs, parentView) {
+  return HTML.toHTML(Blaze._expand(htmljs, parentView));
 };
 
-Blaze.With3 = function (data, contentFunc) {
-  var view = Blaze.View('with', contentFunc);
+Blaze.toText3 = function (htmljs, parentView, textMode) {
+  if ((parentView != null) && ! (parentView instanceof Blaze.View)) {
+    // omitted parentView argument
+    textMode = parentView;
+    parentView = null;
+  }
 
-  view.dataVar = new Blaze.ReactiveVar;
+  if (! textMode)
+    throw new Error("textMode required");
+  if (! (textMode === HTML.TEXTMODE.STRING ||
+         textMode === HTML.TEXTMODE.RCDATA ||
+         textMode === HTML.TEXTMODE.ATTRIBUTE))
+    throw new Error("Unknown textMode: " + textMode);
 
-  view.onCreated(function () {
-    if (typeof data === 'function') {
-      view.autorun(function () {
-        view.dataVar.set(data());
-      }, view.parentView);
-    } else {
-        view.dataVar.set(data);
-    }
-  });
-
-  return view;
+  return HTML.toText(Blaze._expand(htmljs, parentView), textMode);
 };
 
 Blaze.getCurrentData = function () {
@@ -311,6 +338,24 @@ Blaze._calculateCondition = function (cond) {
   return !! cond;
 };
 
+Blaze.With3 = function (data, contentFunc) {
+  var view = Blaze.View('with', contentFunc);
+
+  view.dataVar = new Blaze.ReactiveVar;
+
+  view.onCreated(function () {
+    if (typeof data === 'function') {
+      view.autorun(function () {
+        view.dataVar.set(data());
+      }, view.parentView);
+    } else {
+        view.dataVar.set(data);
+    }
+  });
+
+  return view;
+};
+
 Blaze.If3 = function (conditionFunc, contentFunc, elseFunc, _not) {
   var conditionVar = new Blaze.ReactiveVar;
 
@@ -335,6 +380,8 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
   var eachView = Blaze.View('each', function () {
     var subviews = this.initialSubviews;
     this.initialSubviews = null;
+    if (this.isBeingExpanded)
+      this.expandedValueDep = new Deps.Dependency;
     return subviews;
   });
   eachView.initialSubviews = [];
@@ -360,7 +407,9 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
         var newItemView = Blaze.With3(item, eachView.contentFunc);
         eachView.numItems++;
 
-        if (eachView.domrange) {
+        if (eachView.expandedValueDep) {
+          eachView.expandedValueDep.changed();
+        } else if (eachView.domrange) {
           if (eachView.inElseMode) {
             eachView.domrange.removeMember(0);
             eachView.inElseMode = false;
@@ -374,7 +423,9 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
       },
       removedAt: function (id, item, index) {
         eachView.numItems--;
-        if (eachView.domrange) {
+        if (eachView.expandedValueDep) {
+          eachView.expandedValueDep.changed();
+        } else if (eachView.domrange) {
           eachView.domrange.removeMember(index);
           if (eachView.elseFunc && eachView.numItems === 0) {
             eachView.inElseMode = true;
@@ -389,7 +440,9 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
       },
       changedAt: function (id, newItem, oldItem, index) {
         var itemView;
-        if (eachView.domrange) {
+        if (eachView.expandedValueDep) {
+          eachView.expandedValueDep.changed();
+        } else if (eachView.domrange) {
           itemView = eachView.domrange.getMember(index).view;
         } else {
           itemView = eachView.initialSubviews[index];
@@ -397,7 +450,9 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
         itemView.dataVar.set(newItem);
       },
       movedTo: function (id, item, fromIndex, toIndex) {
-        if (eachView.domrange) {
+        if (eachView.expandedValueDep) {
+          eachView.expandedValueDep.changed();
+        } else if (eachView.domrange) {
           eachView.domrange.moveMember(fromIndex, toIndex);
         } else {
           var subviews = eachView.initialSubviews;
