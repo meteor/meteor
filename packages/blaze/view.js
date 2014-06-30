@@ -52,7 +52,7 @@ Blaze.View.prototype.onDestroyed = function (cb) {
   this._callbacks.destroyed.push(cb);
 };
 
-Blaze.View.prototype.autorun = function (f) {
+Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
 
   if (! self.isCreated)
@@ -60,7 +60,7 @@ Blaze.View.prototype.autorun = function (f) {
 
   var c = Deps.nonreactive(function () {
     return Deps.autorun(function viewAutorun(c) {
-      return Blaze.withCurrentView(self, function () {
+      return Blaze.withCurrentView(_inViewScope || self, function () {
         return f.call(self, c);
       });
     });
@@ -162,7 +162,7 @@ Blaze._stringifyView = function (view, parentView, stringifier) {
 Blaze.viewToHTML = function (view, parentView) {
   return Blaze._stringifyView(
     view, parentView,
-    new Blaze.HTMLStringifier({parentView: parentView}));
+    new Blaze.HTMLStringifier({parentView: view}));
 };
 
 Blaze.viewToText = function (view, parentView, textMode) {
@@ -182,7 +182,7 @@ Blaze.viewToText = function (view, parentView, textMode) {
   return Blaze._stringifyView(
     view, parentView,
     new Blaze.TextStringifier({textMode: textMode,
-                               parentView: parentView}));
+                               parentView: view}));
 };
 
 Blaze.destroyView = function (view, _viaTeardown) {
@@ -258,7 +258,7 @@ Blaze.With3 = function (data, contentFunc) {
     if (typeof data === 'function') {
       view.autorun(function () {
         view.dataVar.set(data());
-      });
+      }, view.parentView);
     } else {
         view.dataVar.set(data);
     }
@@ -318,7 +318,7 @@ Blaze.If3 = function (conditionFunc, contentFunc, elseFunc, _not) {
     this.autorun(function () {
       var cond = Blaze._calculateCondition(conditionFunc());
       conditionVar.set(_not ? (! cond) : cond);
-    });
+    }, this.parentView);
     return conditionVar.get() ? contentFunc() :
       (elseFunc ? elseFunc() : null);
   });
@@ -351,7 +351,7 @@ Blaze.Each3 = function (argFunc, contentFunc, elseFunc) {
     // passing argFunc straight to ObserveSequence).
     eachView.autorun(function () {
       eachView.argVar.set(argFunc());
-    });
+    }, eachView.parentView);
 
     eachView.stopHandle = ObserveSequence.observe(function () {
       return eachView.argVar.get();
