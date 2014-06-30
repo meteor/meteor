@@ -42,8 +42,8 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
   } else if (template && (name in template)) {
     return bindToCurrentDataIfIsFunction(template[name]);
-  } else if (lookupTemplate && _.has(Template, name)) {
-    return Template[name];
+  } else if (lookupTemplate && Template.__lookup__(name)) {
+    return Template.__lookup__(name);
   } else if (UI._globalHelpers[name]) {
     return bindToCurrentDataIfIsFunction(UI._globalHelpers[name]);
   } else {
