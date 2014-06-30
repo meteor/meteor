@@ -8,7 +8,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
 
   if (typeof templateOrFunction !== 'function') {
     var template = templateOrFunction;
-    if (! template.__makeView)
+    if (! Template.__isTemplate__(template))
       throw new Error("Expected template or null, found: " + template);
     return templateOrFunction.__makeView(contentFunc, elseFunc);
   }
@@ -22,7 +22,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     if (template === null)
       return null;
 
-    if (! (template.__makeView))
+    if (! Template.__isTemplate__(template))
       throw new Error("Expected template or null, found: " + template);
 
     return template.__makeView(contentFunc, elseFunc);
