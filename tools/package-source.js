@@ -16,7 +16,7 @@ var catalog = require('./catalog.js');
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
-var AUTO_TEST_PREFIX = "test:";
+var AUTO_TEST_PREFIX = "local-test:";
 var isTestName = function (name) {
   var nameStart = name.slice(0, AUTO_TEST_PREFIX.length);
   return nameStart === AUTO_TEST_PREFIX;
