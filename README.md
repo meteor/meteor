@@ -61,7 +61,7 @@ the app:
     ../meteor
 
 You'll then be able to read the docs locally in your browser at
-`http://localhost:3000/`
+`http://localhost:3000/`.
 
 Note that if you run Meteor from a git checkout, you cannot pin apps to specific
 Meteor releases or run using different Meteor releases using `--release`.
@@ -88,6 +88,6 @@ Interested in contributing to Meteor?
 * Core framework design mailing list: https://groups.google.com/group/meteor-core
 * Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
 
-We are hiring!  Visit https://www.meteor.com/jobs/working-at-meteor to
+We are hiring! Visit https://www.meteor.com/jobs/working-at-meteor to
 learn more about working full-time on the Meteor project.
 
