@@ -16,13 +16,13 @@ var catalog = require('./catalog.js');
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
-var AUTO_TEST_POSTFIX = ":test";
+var AUTO_TEST_PREFIX = "test:";
 var isTestName = function (name) {
-  var nameEnd = name.substr(name.length - AUTO_TEST_POSTFIX.length);
-  return nameEnd === AUTO_TEST_POSTFIX;
+  var nameStart = name.slice(0, AUTO_TEST_PREFIX.length);
+  return nameStart === AUTO_TEST_PREFIX;
 };
 var genTestName = function (name) {
-  return name + AUTO_TEST_POSTFIX;
+  return AUTO_TEST_PREFIX + name;
 };
 
 // Given a semver version string, return the earliest semver for which
