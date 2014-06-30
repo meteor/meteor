@@ -30,16 +30,14 @@ SpacebarsCompiler._TemplateTagReplacer.def({
   },
   visitAttribute: function (name, value, tag) {
     var result = this.visit(value);
-    if (! this.codegen.OLDSTYLE) {
-      if (result !== value) {
-        // some template tags must have been replaced, because otherwise
-        // we try to keep things `===` when transforming.  Wrap the code
-        // in a function as per the rules.  You can't have
-        // `{id: Blaze.View(...)}` as an attributes dict because the View
-        // would be rendered more than once; you need to wrap it in a function
-        // so that it's a different View each time.
-        return BlazeTools.EmitCode(this.codegen.codeGenBlock(result));
-      }
+    if (result !== value) {
+      // some template tags must have been replaced, because otherwise
+      // we try to keep things `===` when transforming.  Wrap the code
+      // in a function as per the rules.  You can't have
+      // `{id: Blaze.View(...)}` as an attributes dict because the View
+      // would be rendered more than once; you need to wrap it in a function
+      // so that it's a different View each time.
+      return BlazeTools.EmitCode(this.codegen.codeGenBlock(result));
     }
     return result;
   }
@@ -61,8 +59,6 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   }
 
   var codegen = new SpacebarsCompiler.CodeGen;
-  if (options && options.OLDSTYLE)
-    codegen.OLDSTYLE = true;
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
     {codegen: codegen})).visit(tree);
 

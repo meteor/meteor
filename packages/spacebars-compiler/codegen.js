@@ -10,7 +10,7 @@ var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
   'unless': 'Blaze.Unless',
   'with': 'Spacebars.With',
-  'each': 'Spacebars.Each'
+  'each': 'Blaze.Each'
 };
 
 
@@ -51,16 +51,15 @@ _.extend(CodeGen.prototype, {
     if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
       // Special dynamic attributes: `<div {{attrs}}>...`
       // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
-      return BlazeTools.EmitCode(
-        (this.OLDSTYLE?'Blaze.Var(':'')+'function () { return ' +
+      return BlazeTools.EmitCode('function () { return ' +
           self.codeGenMustache(tag.path, tag.args, 'attrMustache')
-          + '; }'+(this.OLDSTYLE?')':''));
+          + '; }');
     } else {
       if (tag.type === 'DOUBLE') {
-        return BlazeTools.EmitCode('Blaze.'+(this.OLDSTYLE?'Isolate':'View')+'(function () { return ' +
+        return BlazeTools.EmitCode('Blaze.View(function () { return ' +
                                    self.codeGenMustache(tag.path, tag.args) + '; })');
       } else if (tag.type === 'TRIPLE') {
-        return BlazeTools.EmitCode('Blaze.'+(this.OLDSTYLE?'Isolate':'View')+'(function () { return Spacebars.makeRaw(' +
+        return BlazeTools.EmitCode('Blaze.View(function () { return Spacebars.makeRaw(' +
                                    self.codeGenMustache(tag.path, tag.args) + '); })');
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
@@ -93,7 +92,7 @@ _.extend(CodeGen.prototype, {
             callArgs.push(elseContentBlock);
 
           return BlazeTools.EmitCode(
-            builtInBlockHelpers[path[0]] + (this.OLDSTYLE ? '' : '3') + '(' + callArgs.join(', ') + ')');
+            builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
 
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
@@ -179,11 +178,7 @@ _.extend(CodeGen.prototype, {
     var lookupMethod = 'lookup';
     if (opts && opts.lookupTemplate && path.length === 1)
       lookupMethod = 'lookupTemplate';
-    if (this.OLDSTYLE) {
-      var code = 'Blaze.' + lookupMethod + '(' + firstPathItem + ', self)';
-    } else {
-      var code = 'view.' + lookupMethod + '(' + firstPathItem + ')';
-    }
+    var code = 'view.' + lookupMethod + '(' + firstPathItem + ')';
 
     if (path.length > 1) {
       code = 'Spacebars.dot(' + code + ', ' +
@@ -270,7 +265,7 @@ _.extend(CodeGen.prototype, {
   },
 
   codeGenBlock: function (content) {
-    return SpacebarsCompiler.codeGen(content, {OLDSTYLE: this.OLDSTYLE});
+    return SpacebarsCompiler.codeGen(content);
   },
 
   codeGenInclusionDataFunc: function (args) {

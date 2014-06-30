@@ -490,7 +490,7 @@ var runWebAppServer = function () {
         var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
                                        boilerplateBaseData);
         boilerplateByAttributes[attributeKey] = "<!DOCTYPE html>\n" +
-          Blaze.toHTML3(Blaze.With3(boilerplateData, boilerplateFunc));
+          Blaze.toHTML(Blaze.With(boilerplateData, boilerplateFunc));
       } catch (e) {
         Log.error("Error running template: " + e.stack);
         res.writeHead(500, headers);
@@ -630,7 +630,7 @@ var runWebAppServer = function () {
 
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = SpacebarsCompiler.compile(
-      boilerplateTemplateSource, { isBody: true, OLDSTYLE: false });
+      boilerplateTemplateSource, { isBody: true });
 
     // Note that we are actually depending on eval's local environment capture
     // so that UI and HTML are visible to the eval'd code.
