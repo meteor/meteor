@@ -208,70 +208,17 @@ Spacebars.TemplateWith = function (argFunc, contentBlock) {
   return w;
 };
 
-Spacebars.With = function (argFunc, contentFunc, elseContentFunc) {
-  var data = Blaze.Var(argFunc);
-  return Blaze.If(function () { return data.get(); },
-                  function () {
-                    return Blaze.With(data, contentFunc);
-                  },
-                  elseContentFunc);
-};
-
-Spacebars.With3 = function (argFunc, contentFunc, elseFunc) {
+Spacebars.With = function (argFunc, contentFunc, elseFunc) {
   var argVar = new Blaze.ReactiveVar;
   var view = Blaze.View('Spacebars_with', function () {
     this.autorun(function () {
       argVar.set(argFunc());
     });
-    return Blaze.If3(function () { return argVar.get(); },
-                     function () { return Blaze.With3(function () {
-                       return argVar.get(); }, contentFunc); },
-                     elseFunc);
+    return Blaze.If(function () { return argVar.get(); },
+                    function () { return Blaze.With(function () {
+                      return argVar.get(); }, contentFunc); },
+                    elseFunc);
   });
 
   return view;
 };
-
-Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
-  var seq = new Blaze.Sequence;
-  var elseMode = false;
-
-  var argVar = Blaze.Var(argFunc);
-  ObserveSequence.observe(function () {
-    return argVar.get();
-  }, {
-    addedAt: function (id, item, index) {
-      if (elseMode) {
-        seq.removeItem(0);
-        elseMode = false;
-      }
-      var dataVar = Blaze.Var(item);
-      var func = function () {
-        return Blaze.With(dataVar, contentFunc);
-      };
-      func.dataVar = dataVar;
-      seq.addItem(func, index);
-    },
-    removedAt: function (id, item, index) {
-      seq.removeItem(index);
-      if (elseContentFunc && seq.size() === 0) {
-        elseMode = true;
-        seq.addItem(elseContentFunc, 0);
-      }
-    },
-    changedAt: function (id, newItem, oldItem, index) {
-      seq.get(index).dataVar.set(newItem);
-    },
-    movedTo: function (id, item, fromIndex, toIndex) {
-      seq.moveItem(fromIndex, toIndex);
-    }
-  });
-
-  if (elseContentFunc && seq.size() === 0) {
-    elseMode = true;
-    seq.addItem(elseContentFunc, 0);
-  }
-  return Blaze.List(seq);
-};
-
-Spacebars.Each3 = Blaze.Each3;
