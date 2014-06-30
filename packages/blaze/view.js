@@ -204,11 +204,13 @@ Blaze.HTMLJSExpander.def({
 });
 
 Blaze._expand = function (htmljs, parentView) {
+  parentView = parentView || Blaze.currentView;
   return (new Blaze.HTMLJSExpander(
     {parentView: parentView})).visit(htmljs);
 };
 
 Blaze._expandAttributes = function (attrs, parentView) {
+  parentView = parentView || Blaze.currentView;
   return (new Blaze.HTMLJSExpander(
     {parentView: parentView})).visitAttributes(attrs);
 };
@@ -274,6 +276,7 @@ Blaze.render = function (contentFunc) {
 };
 
 Blaze.toHTML = function (htmljs, parentView) {
+  parentView = parentView || Blaze.currentView;
   return HTML.toHTML(Blaze._expand(htmljs, parentView));
 };
 
@@ -283,6 +286,7 @@ Blaze.toText = function (htmljs, parentView, textMode) {
     textMode = parentView;
     parentView = null;
   }
+  parentView = parentView || Blaze.currentView;
 
   if (! textMode)
     throw new Error("textMode required");

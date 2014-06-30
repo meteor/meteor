@@ -11,19 +11,42 @@ Template.prototype = (function () {
   return (function Template() {}).prototype;
 })();
 
+Template.prototype.helpers = function (dict) {
+  for (var k in dict)
+    this[k] = dict[k];
+};
+
+Template.prototype.events = function () {
+  // XXX
+};
+
 Template.prototype.__makeView = function (contentFunc, elseFunc) {
-  var view = Blaze.View('Template.' + this.__templateName, this.__render);
+  var view = Blaze.View(this.__viewName, this.__render);
   view.template = this;
-  view.templateContentBlock = contentFunc ? { __makeView: function () {
-    return Blaze.View('(contentBlock)', contentFunc);
-  } } : null;
-  view.templateElseBlock = elseFunc ? { __makeView: function () {
-    return Blaze.View('(elseBlock)', elseFunc);
-  } } : null;
+  view.templateContentBlock = (
+    contentFunc ? Template.__create__('(contentBlock)', contentFunc) : null);
+  view.templateElseBlock = (
+    elseFunc ? Template.__create__('(elseBlock)', elseFunc) : null);
   return view;
 };
 
 var _hasOwnProperty = Object.prototype.hasOwnProperty;
+
+Template.__lookup__ = function (templateName) {
+  if (! _hasOwnProperty.call(Template, templateName))
+    return null;
+  var tmpl = Template[templateName];
+  if (Template.__isTemplate__(tmpl))
+    return tmpl;
+  return null;
+};
+
+Template.__create__ = function (viewName, templateFunc) {
+  var tmpl = new Template.prototype.constructor;
+  tmpl.__viewName = viewName;
+  tmpl.__render = templateFunc;
+  return tmpl;
+};
 
 Template.__define__ = function (templateName, templateFunc) {
   if (_hasOwnProperty.call(Template, templateName)) {
@@ -32,11 +55,15 @@ Template.__define__ = function (templateName, templateFunc) {
     throw new Error("This template name is reserved: " + templateName);
   }
 
-  var tmpl = new Template.prototype.constructor;
+  var tmpl = Template.__create__('Template.' + templateName, templateFunc);
   tmpl.__templateName = templateName;
-  tmpl.__render = templateFunc;
 
   Template[templateName] = tmpl;
+  return tmpl;
+};
+
+Template.__isTemplate__ = function (x) {
+  return x && x.__makeView;
 };
 
 // Define a template `Template.__body__` that renders its
