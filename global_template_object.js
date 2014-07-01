@@ -16,6 +16,45 @@ Template.prototype.helpers = function (dict) {
     this[k] = dict[k];
 };
 
+updateTemplateInstance = function (view) {
+  // Populate `view.templateInstance.{firstNode,lastNode,data}`
+  // on demand.
+  var tmpl = view._templateInstance;
+  if (! tmpl) {
+    tmpl = view._templateInstance = {
+      $: function (selector) {
+        if (! view.domrange)
+          throw new Error("Can't use $ on component with no DOM");
+        return view.domrange.$(selector);
+      },
+      findAll: function (selector) {
+        return Array.prototype.slice.call(this.$(selector));
+      },
+      find: function (selector) {
+        var result = this.$(selector);
+        return result[0] || null;
+      },
+      data: null,
+      firstNode: null,
+      lastNode: null,
+      __view__: view
+    };
+  }
+
+  tmpl.data = Blaze.getViewData(view);
+
+  if (view.domrange && !view.isDestroyed) {
+    tmpl.firstNode = view.domrange.firstNode();
+    tmpl.lastNode = view.domrange.lastNode();
+  } else {
+    // on 'created' or 'destroyed' callbacks we don't have a DomRange
+    tmpl.firstNode = null;
+    tmpl.lastNode = null;
+  }
+
+  return tmpl;
+};
+
 Template.prototype.events = function (eventMap) {
   var template = this;
   template.__eventMaps = (template.__eventMaps || []);
@@ -28,7 +67,7 @@ Template.prototype.events = function (eventMap) {
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
-        var tmplInstance = {data: null};//////updateTemplateInstance(component);
+        var tmplInstance = updateTemplateInstance(view);
         args.splice(1, 0, tmplInstance);
         return v.apply(data, args);
       };
