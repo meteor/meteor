@@ -2132,7 +2132,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - access template instance from helper",
+  "spacebars-tests - template_tests - UI._templateInstance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
     // there from a helper.
@@ -2154,7 +2154,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - access template instance from helper, " +
+  "spacebars-tests - template_tests - UI._templateInstance from helper, " +
     "template instance is kept up-to-date",
   function (test) {
     var tmpl = Template.spacebars_test_template_instance_helper;
