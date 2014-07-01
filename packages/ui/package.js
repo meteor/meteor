@@ -25,7 +25,6 @@ Package.on_use(function (api) {
 
   api.add_files(['ui.js']);
   api.add_files(['handlebars_backcompat.js']);
-  api.add_files(['render.js']);
 });
 
 Package.on_test(function (api) {
