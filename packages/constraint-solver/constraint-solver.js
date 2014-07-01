@@ -147,7 +147,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
 
     var constrType = options.breaking ? ">=" : "";
     dc.constraints.push(
-      new ConstraintSolver.Constraint(uv.name, constrType + uv.version));
+      self.resolver.getConstraint(uv.name, constrType + uv.version));
   });
 
   options.rootDependencies = dc.dependencies;
