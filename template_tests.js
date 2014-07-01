@@ -2207,39 +2207,40 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI._parentData from helper",
+  "spacebars-tests - template_tests - UI._parentData from helpers",
   function (test) {
     var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
     var parentTmpl = Template.spacebars_test_template_parent_data_helper;
-    var rv = new ReactiveVar(0);
+
+    var height = new ReactiveVar(0);
+    var bar = new ReactiveVar("bar");
 
     childTmpl.a = ["a"];
-    childTmpl.b = new ReactiveVar("b");
+    childTmpl.b = function () { return bar.get(); };
     childTmpl.c = ["c"];
 
     childTmpl.foo = function () {
-      var data =  UI._parentData(rv.get());
-      return data.get === undefined ? data : data.get();
+      return UI._parentData(height.get());
     };
 
     var div = renderToDiv(parentTmpl);
     test.equal(canonicalizeHtml(div.innerHTML), "d");
 
-    rv.set(1);
+    height.set(1);
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), "b");
+    test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
     // Test UI._parentData() reactivity
 
-    childTmpl.b.set("bNew");
+    bar.set("baz");
     Deps.flush();
-    test.equal(canonicalizeHtml(div.innerHTML), "bNew");
+    test.equal(canonicalizeHtml(div.innerHTML), "baz");
 
-    rv.set(2);
+    height.set(2);
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "a");
 
-    rv.set(3);
+    height.set(3);
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
@@ -2280,3 +2281,71 @@ Tinytest.add(
     $(div).remove();
     test.equal(buf, 'CaRaDaCbRbDbCcRcDc');
   });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - UI.render/UI.insert",
+  function (test) {
+    var div = document.createElement("DIV");
+    document.body.appendChild(div);
+
+    var created = false, rendered = false, destroyed = false;
+    var R = ReactiveVar('aaa');
+
+    var tmpl = Template.spacebars_test_ui_render;
+    tmpl.greeting = function () { return this.greeting || 'Hello'; };
+    tmpl.r = function () { return R.get(); };
+    tmpl.created = function () { created = true; };
+    tmpl.rendered = function () { rendered = true; };
+    tmpl.destroyed = function () { destroyed = true; };
+
+    test.equal([created, rendered, destroyed], [false, false, false]);
+
+    var renderedTmpl = UI.render(tmpl);
+    test.equal([created, rendered, destroyed], [true, false, false]);
+
+    UI.insert(renderedTmpl, div);
+    // Flush now. We fire the rendered callback in an afterFlush block,
+    // to ensure that the DOM is completely updated.
+    Deps.flush();
+    test.equal([created, rendered, destroyed], [true, true, false]);
+
+    UI.render(tmpl); // can run a second time without throwing
+
+    UI.insert(UI.renderWithData(tmpl, {greeting: 'Bye'}), div);
+    test.equal(canonicalizeHtml(div.innerHTML),
+               "<span>Hello aaa</span><span>Bye aaa</span>");
+    R.set('bbb');
+    Deps.flush();
+    test.equal(canonicalizeHtml(div.innerHTML),
+               "<span>Hello bbb</span><span>Bye bbb</span>");
+
+    test.equal([created, rendered, destroyed], [true, true, false]);
+    $(div).remove();
+    test.equal([created, rendered, destroyed], [true, true, true]);
+  });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - UI.insert fails on jQuery objects",
+  function (test) {
+    var tmpl = Template.spacebars_test_ui_render;
+    test.throws(function () {
+      UI.insert(UI.render(tmpl), $('body'));
+    }, /'parentElement' must be a DOM node/);
+    test.throws(function () {
+      UI.insert(UI.render(tmpl), document.body, $('body'));
+    }, /'nextNode' must be a DOM node/);
+  });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - UI.getElementData",
+  function (test) {
+    var div = document.createElement("DIV");
+    var tmpl = Template.spacebars_test_ui_getElementData;
+    UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
+
+    var span = div.querySelector('SPAN');
+    test.isTrue(span);
+    test.equal(UI.getElementData(span), {foo: "bar"});
+  });
+
+
