@@ -48,7 +48,6 @@ var runTest = function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
       buildOptions: { minify: true },
       packageLoader: loader
     });
@@ -80,7 +79,6 @@ var runTest = function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
       buildOptions: { minify: false },
       packageLoader: loader
     });
@@ -110,31 +108,12 @@ var runTest = function () {
     assert(foundDeps);
   });
 
-  console.log("nodeModules: 'copy'");
+  console.log("includeNodeModulesSymlink");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'copy',
-      packageLoader: loader
-    });
-    assert.strictEqual(result.errors, false);
-
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-    // node_modules directory exists and is not a symlink
-    assert(!fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-    // node_modules contains fibers
-    assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-  });
-
-  console.log("nodeModules: 'symlink'");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'symlink',
+      includeNodeModulesSymlink: true,
       packageLoader: loader
     });
     assert.strictEqual(result.errors, false);
@@ -147,6 +126,7 @@ var runTest = function () {
     // node_modules contains fibers
     assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
     // package node_modules directory also a symlink
+    // XXX might be breaking this
     assert(fs.lstatSync(path.join(
       tmpOutputDir, "programs", "server", "npm", "livedata", "node_modules"))
            .isSymbolicLink());

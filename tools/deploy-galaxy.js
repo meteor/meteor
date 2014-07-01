@@ -209,7 +209,6 @@ exports.deploy = function (options) {
       stats.recordPackages();
       var bundleResult = bundler.bundle({
         outputPath: bundlePath,
-        nodeModulesMode: 'skip',
         buildOptions: options.buildOptions
       });
 

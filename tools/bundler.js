@@ -1346,7 +1346,7 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - omitDependencyKit: if true, don't copy node_modules from dev_bundle
+  // - includeNodeModulesSymlink: if true, add a node_modules symlink
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
@@ -1380,8 +1380,7 @@ _.extend(ServerTarget.prototype, {
       client: clientTargetPath || undefined
     });
 
-    if (! options.omitDependencyKit)
-      builder.reserve("node_modules", { directory: true });
+    options.includeNodeModulesSymlink && builder.reserve("node_modules");
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
@@ -1421,14 +1420,11 @@ _.extend(ServerTarget.prototype, {
                                 executable: true });
 
     // Main, architecture-dependent node_modules from the dependency
-    // kit. This one is copied in 'meteor bundle', symlinked in
-    // 'meteor run', and omitted by 'meteor deploy' (Galaxy provides a
-    // version that's appropriate for the server architecture).
-    if (! options.omitDependencyKit) {
-      builder.copyDirectory({
-        from: path.join(files.getDevBundle(), 'lib', 'node_modules'),
-        to: 'node_modules',
-        ignore: exports.ignoreFiles
+    // kit. This is hack for 'meteor run'; other uses of the bundler
+    // will contain a package.json that can used to get the node modules.
+    if (options.includeNodeModulesSymlink) {
+      builder.write('node_modules', {
+        symlink: path.join(files.getDevBundle(), 'lib', 'node_modules')
       });
     }
 
@@ -1467,14 +1463,16 @@ var writeFile = function (file, builder) {
 // into the bundle.
 //
 // options:
-// - nodeModulesMode: "skip", "symlink", "copy"
+// - includeNodeModulesSymlink: bool
 // - builtBy: vanity identification string to write into metadata
 // - controlProgram: name of the control program (should be a target name)
 // - releaseName: The Meteor release version
 var writeSiteArchive = function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
-    symlink: options.nodeModulesMode === "symlink"
+    // This is a bit of a hack, but it means that things like node_modules
+    // directories for packages end up as symlinks too.
+    symlink: options.includeNodeModulesSymlink
   });
 
   if (options.controlProgram && ! (options.controlProgram in targets))
@@ -1524,9 +1522,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // Write out each target
     _.each(targets, function (target, name) {
       var relControlFilePath =
-        target.write(builder.enter(paths[name]),
-                     { omitDependencyKit: options.nodeModulesMode === "skip",
-                       getRelativeTargetPath: getRelativeTargetPath });
+        target.write(builder.enter(paths[name]), {
+          includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+          getRelativeTargetPath: getRelativeTargetPath });
+
       json.programs.push({
         name: name,
         arch: target.mostCompatibleArch(),
@@ -1605,22 +1604,13 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
  *
- * - nodeModulesMode: what to do about the core npm modules needed by
- *   the server bootstrap. one of:
- *   - 'copy': copy from a prebuilt local installation. used by
- *     'meteor bundle'. the default.
- *   - 'symlink': symlink from a prebuild local installation. used
- *     by 'meteor run'
- *   - 'skip': just leave them out. used by `meteor deploy`. the
- *     server running the app will need to supply appropriate builds
- *     of the modules.
- *
- *   Note that this does not affect the handling of npm modules used
- *   by *packages*, which could be the majority of the npm modules in
- *   your app -- EXCEPT that "symlink" has the added bonus that it
- *   will cause files (not just npm modules) to symlinked rather than
- *   copied whenever possible in the building process. Yeah, this
- *   could stand some refactoring.
+ * - includeNodeModulesSymlink: if set, we create a symlink from
+ *   programs/server/node_modules to the dev bundle's lib/node_modules.
+ *   This is a hack to make 'meteor run' faster. (We can't just set
+ *   $NODE_PATH because then random node_modules directories above cwd
+ *   take precedence.) To make it even hackier, this also means we
+ *   make node_modules directories for packages symlinks instead of
+ *   copies.
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
@@ -1647,7 +1637,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  */
 exports.bundle = function (options) {
   var outputPath = options.outputPath;
-  var nodeModulesMode = options.nodeModulesMode || 'copy';
+  var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
 
   if (! release.usingRightReleaseForApp(appDir))
@@ -1899,7 +1889,7 @@ exports.bundle = function (options) {
 
     // Write to disk
     starResult = writeSiteArchive(targets, outputPath, {
-      nodeModulesMode: nodeModulesMode,
+      includeNodeModulesSymlink: includeNodeModulesSymlink,
       builtBy: builtBy,
       controlProgram: controlProgram,
       releaseName: releaseName

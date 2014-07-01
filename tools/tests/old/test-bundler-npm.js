@@ -173,8 +173,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0'});
@@ -185,8 +184,7 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0'});
@@ -220,8 +218,7 @@ var runTest = function () {
       return bareExecFileSync(file, args, opts);
     };
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     meteorNpm._execFileSync = bareExecFileSync;
 
@@ -236,8 +233,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
@@ -260,8 +256,7 @@ var runTest = function () {
 
     reloadPackages();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
@@ -273,8 +268,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'});
@@ -286,8 +280,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert(result.errors);
     var job = _.find(result.errors.jobs, function (job) {
@@ -303,8 +296,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -319,8 +311,7 @@ var runTest = function () {
     updateTestPackage(deps);
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir(deps);
