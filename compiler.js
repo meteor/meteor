@@ -16,8 +16,19 @@ SpacebarsCompiler.compile = function (input, options) {
 SpacebarsCompiler._TemplateTagReplacer = HTML.TransformingVisitor.extend();
 SpacebarsCompiler._TemplateTagReplacer.def({
   visitObject: function (x) {
-    if (x instanceof HTMLTools.TemplateTag)
+    if (x instanceof HTMLTools.TemplateTag) {
+
+      // Make sure all TemplateTags in attributes have the right
+      // `.position` set on them.  This is a bit of a hack
+      // (we shouldn't be mutating that here), but it allows
+      // cleaner codegen of "synthetic" attributes like TEXTAREA's
+      // "value", where the template tags were originally not
+      // in an attribute.
+      if (this.inAttributeValue)
+        x.position = HTMLTools.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE;
+
       return this.codegen.codeGenTemplateTag(x);
+    }
 
     return HTML.TransformingVisitor.prototype.visitObject.call(this, x);
   },
@@ -29,7 +40,10 @@ SpacebarsCompiler._TemplateTagReplacer.def({
     return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
   },
   visitAttribute: function (name, value, tag) {
+    this.inAttributeValue = true;
     var result = this.visit(value);
+    this.inAttributeValue = false;
+
     if (result !== value) {
       // some template tags must have been replaced, because otherwise
       // we try to keep things `===` when transforming.  Wrap the code

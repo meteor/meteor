@@ -228,9 +228,10 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         var view = this;
         return HTML.A(HTML.Attrs({
-          c: (function() { return [ "d", Blaze.View(function() {
-            return Spacebars.mustache(view.lookup("e"));
-          }), "f" ]; })
+          c: (function() { return [
+            "d",
+            Spacebars.mustache(view.lookup("e")),
+            "f" ]; })
         }, function() {
           return Spacebars.attrMustache(view.lookup("b"));
         }));
@@ -248,9 +249,7 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       function() {
         var view = this;
         return HTML.TEXTAREA({value: (function () {
-          return Blaze.View(function() {
-            return Spacebars.mustache(view.lookup("foo"));
-          });
+          return Spacebars.mustache(view.lookup("foo"));
         }) });
       });
 });
