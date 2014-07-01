@@ -18,7 +18,7 @@ Template.prototype.helpers = function (dict) {
 
 Template.prototype.events = function (eventMap) {
   var template = this;
-  template._eventMaps = (template._eventMaps || []);
+  template.__eventMaps = (template.__eventMaps || []);
   var eventMap2 = {};
   for (var k in eventMap) {
     eventMap2[k] = (function (k, v) {
@@ -35,7 +35,7 @@ Template.prototype.events = function (eventMap) {
     })(k, eventMap[k]);
   }
 
-  template._eventMaps.push(eventMap2);
+  template.__eventMaps.push(eventMap2);
 };
 
 Template.prototype.__makeView = function (contentFunc, elseFunc) {
@@ -48,26 +48,29 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
   view.templateElseBlock = (
     elseFunc ? Template.__create__('(elseBlock)', elseFunc) : null);
 
-  if (template._eventMaps ||
+  if (template.__eventMaps ||
       typeof template.events === 'object') {
     view.onMaterialized(function () {
-      if (! template._eventMaps &&
+      if (! template.__eventMaps &&
           typeof template.events === "object") {
         // Provide limited back-compat support for `.events = {...}`
-        // syntax.  Pass `self.events` to the original `.events(...)`
-        // function.  This code must run only once per component, in
+        // syntax.  Pass `template.events` to the original `.events(...)`
+        // function.  This code must run only once per template, in
         // order to not bind the handlers more than once, which is
-        // ensured by the fact that we only do this when `self._eventMaps`
+        // ensured by the fact that we only do this when `__eventMaps`
         // is falsy, and we cause it to be set now.
         Template.prototype.events.call(template, template.events);
       }
 
       var range = view.domrange;
-      _.each(template._eventMaps, function (m) {
+      _.each(template.__eventMaps, function (m) {
         range.addDOMAugmenter(new Blaze.EventAugmenter(m, view));
       });
     });
   }
+
+  if (template.__initView)
+    template.__initView(view);
 
   return view;
 };
@@ -83,10 +86,13 @@ Template.__lookup__ = function (templateName) {
   return null;
 };
 
-Template.__create__ = function (viewName, templateFunc) {
+Template.__create__ = function (viewName, templateFunc, initView) {
   var tmpl = new Template.prototype.constructor;
   tmpl.__viewName = viewName;
   tmpl.__render = templateFunc;
+  if (initView)
+    tmpl.__initView = initView;
+
   return tmpl;
 };
 
