@@ -25,7 +25,7 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
   this.attached = false;
   this.parentElement = null;
   this.parentRange = null;
-  this.augmenters = _emptyArray;
+  this.attachedCallbacks = _emptyArray;
 };
 var DOMRange = Blaze.DOMRange;
 
@@ -126,8 +126,10 @@ DOMRange.prototype.attach = function (parentElement, nextNode, _isMove) {
   this.parentElement = parentElement;
 
   if (! _isMove) {
-    for(var i = 0; i < this.augmenters.length; i++)
-      this.augmenters[i].attach(this, parentElement);
+    for(var i = 0; i < this.attachedCallbacks.length; i++) {
+      var obj = this.attachedCallbacks[i];
+      obj.attached && obj.attached(this, parentElement);
+    }
   }
 };
 
@@ -198,8 +200,10 @@ DOMRange.prototype.detach = function () {
   this.attached = false;
   this.parentElement = null;
 
-  for(var i = 0; i < this.augmenters.length; i++)
-    this.augmenters[i].detach(this, oldParentElement);
+  for(var i = 0; i < this.attachedCallbacks.length; i++) {
+    var obj = this.attachedCallbacks[i];
+    obj.detached && obj.detached(this, oldParentElement);
+  }
 };
 
 DOMRange.prototype.addMember = function (newMember, atIndex, _isMove) {
@@ -343,15 +347,19 @@ DOMRange.prototype.containsRange = function (range) {
   return range === this;
 };
 
-DOMRange.prototype.addDOMAugmenter = function (augmenter) {
-  if (this.augmenters === _emptyArray)
-    this.augmenters = [];
-  this.augmenters.push(augmenter);
+DOMRange.prototype.onAttached = function (attached) {
+  this.onAttachedDetached({ attached: attached });
 };
 
-DOMRange.prototype.onAttached = function (attached) {
-  this.addDOMAugmenter({ attach: attached,
-                         detach: function () {} });
+// callbacks are `attached(range, element)` and
+// `detached(range, element)`, and they may
+// access the `callbacks` object in `this`.
+// The arguments to `detached` are the same
+// range and element that were passed to `attached`.
+DOMRange.prototype.onAttachedDetached = function (callbacks) {
+  if (this.attachedCallbacks === _emptyArray)
+    this.attachedCallbacks = [];
+  this.attachedCallbacks.push(callbacks);
 };
 
 DOMRange.prototype.$ = function (selector) {
@@ -411,53 +419,47 @@ DOMRange.prototype.$ = function (selector) {
   return results;
 };
 
-Blaze.DOMAugmenter = JSClass.create({
-  attach: function (range, element) {},
-  // arguments are same as were passed to `attach`
-  detach: function (range, element) {}
-});
+DOMRange.prototype.addEventMap = function (eventMap, thisInHandler) {
+  this.onAttachedDetached({
+    eventMap: eventMap,
+    thisInHandler: (thisInHandler || null),
+    handles: [],
+    attached: function (range, element) {
+      var self = this;
+      var eventMap = self.eventMap;
+      var handles = self.handles;
 
-Blaze.EventAugmenter = Blaze.DOMAugmenter.extend({
-  constructor: function (eventMap, thisInHandler) {
-    this.eventMap = eventMap;
-    this.handles = [];
-    this.thisInHandler = thisInHandler; // optional
-  },
-  attach: function (range, element) {
-    var self = this;
-    var eventMap = self.eventMap;
-    var handles = self.handles;
+      _.each(eventMap, function (handler, spec) {
+        var clauses = spec.split(/,\s+/);
+        // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+        _.each(clauses, function (clause) {
+          var parts = clause.split(/\s+/);
+          if (parts.length === 0)
+            return;
 
-    _.each(eventMap, function (handler, spec) {
-      var clauses = spec.split(/,\s+/);
-      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var newEvents = parts.shift();
-        var selector = parts.join(' ');
-        handles.push(Blaze.EventSupport.listen(
-          element, newEvents, selector,
-          function (evt) {
-            if (! range.containsElement(evt.currentTarget))
-              return null;
-            return handler.apply(self.thisInHandler || this, arguments);
-          },
-          range, function (r) {
-            return r.parentRange;
-          }));
+          var newEvents = parts.shift();
+          var selector = parts.join(' ');
+          handles.push(Blaze.EventSupport.listen(
+            element, newEvents, selector,
+            function (evt) {
+              if (! range.containsElement(evt.currentTarget))
+                return null;
+              return handler.apply(self.thisInHandler || this, arguments);
+            },
+            range, function (r) {
+              return r.parentRange;
+            }));
+        });
       });
-    });
-  },
-  detach: function () {
-    _.each(this.handles, function (h) {
-      h.stop();
-    });
-    this.handles.length = 0;
-  }
-});
+    },
+    detached: function () {
+      _.each(this.handles, function (h) {
+        h.stop();
+      });
+      this.handles.length = 0;
+    }
+  });
+};
 
 
 // Returns true if element a contains node b and is not node b.

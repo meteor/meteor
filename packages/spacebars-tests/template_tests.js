@@ -1714,6 +1714,9 @@ Tinytest.add("spacebars-tests - template_tests - event handler returns false",
     var div = renderToDiv(tmpl);
     document.body.appendChild(div);
     clickIt(document.getElementById(elemId));
+    // NOTE: This failure can stick across test runs!  Try
+    // removing '#bad-url' from the location bar and run
+    // the tests again. :)
     test.isFalse(/#bad-url/.test(window.location.hash));
     document.body.removeChild(div);
   }
