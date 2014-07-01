@@ -1173,11 +1173,9 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
       test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
     }
 
-    var html = Blaze.toHTML(function () {
-      return Blaze.With(data, function () {
-        return new tmpls[whichTemplate].constructor;
-      });
-    });
+    var html = Blaze.toHTML(Blaze.With(data, function () {
+      return new tmpls[whichTemplate].constructor;
+    }));
 
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
     test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
@@ -1828,9 +1826,7 @@ Tinytest.add("spacebars-tests - template_tests - toHTML", function (test) {
 
     R.set(val);
     tmplForHelper[helper] = getR;
-    test.equal(canonicalizeHtml(Blaze.toHTML(function () {
-      return new tmplToRender.constructor;
-    })), "bar");
+    test.equal(canonicalizeHtml(Blaze.toHTML(tmplToRender)), "bar");
     test.equal(count, 1);
     R.set("");
     Deps.flush();
