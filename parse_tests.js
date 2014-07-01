@@ -109,26 +109,26 @@ Tinytest.add("html-tools - parser getContent", function (test) {
   fatal('<a>Foo</a/>');
   fatal('<a>Foo</a b=c>');
 
-  succeed('<textarea>asdf</textarea>', TEXTAREA("asdf"));
-  succeed('<textarea x=y>asdf</textarea>', TEXTAREA({x: "y"}, "asdf"));
-  succeed('<textarea><p></textarea>', TEXTAREA("<p>"));
+  succeed('<textarea>asdf</textarea>', TEXTAREA({value: "asdf"}));
+  succeed('<textarea x=y>asdf</textarea>', TEXTAREA({x: "y", value: "asdf"}));
+  succeed('<textarea><p></textarea>', TEXTAREA({value: "<p>"}));
   succeed('<textarea>a&amp;b</textarea>',
-          TEXTAREA("a", CharRef({html: '&amp;', str: '&'}), "b"));
-  succeed('<textarea></textarea</textarea>', TEXTAREA("</textarea"));
+          TEXTAREA({value: ["a", CharRef({html: '&amp;', str: '&'}), "b"]}));
+  succeed('<textarea></textarea</textarea>', TEXTAREA({value: "</textarea"}));
   // absorb up to one initial newline, as per HTML parsing spec
   succeed('<textarea>\n</textarea>', TEXTAREA());
-  succeed('<textarea>\nasdf</textarea>', TEXTAREA("asdf"));
-  succeed('<textarea>\n\nasdf</textarea>', TEXTAREA("\nasdf"));
-  succeed('<textarea>\n\n</textarea>', TEXTAREA("\n"));
-  succeed('<textarea>\nasdf\n</textarea>', TEXTAREA("asdf\n"));
-  succeed('<textarea><!-- --></textarea>', TEXTAREA("<!-- -->"));
-  succeed('<tExTaReA>asdf</TEXTarea>', TEXTAREA("asdf"));
+  succeed('<textarea>\nasdf</textarea>', TEXTAREA({value: "asdf"}));
+  succeed('<textarea>\n\nasdf</textarea>', TEXTAREA({value: "\nasdf"}));
+  succeed('<textarea>\n\n</textarea>', TEXTAREA({value: "\n"}));
+  succeed('<textarea>\nasdf\n</textarea>', TEXTAREA({value: "asdf\n"}));
+  succeed('<textarea><!-- --></textarea>', TEXTAREA({value: "<!-- -->"}));
+  succeed('<tExTaReA>asdf</TEXTarea>', TEXTAREA({value: "asdf"}));
   fatal('<textarea>asdf');
   fatal('<textarea>asdf</textarea');
   fatal('<textarea>&davidgreenspan;</textarea>');
-  succeed('<textarea>&</textarea>', TEXTAREA("&"));
+  succeed('<textarea>&</textarea>', TEXTAREA({value: "&"}));
   succeed('<textarea></textarea  \n<</textarea  \n>asdf',
-          [TEXTAREA("</textarea  \n<"), "asdf"]);
+          [TEXTAREA({value: "</textarea  \n<"}), "asdf"]);
 
   // CR/LF behavior
   succeed('<br\r\n x>', BR({x:''}));
@@ -140,8 +140,8 @@ Tinytest.add("html-tools - parser getContent", function (test) {
   succeed('<br x\r=\r"y">', BR({x:'y'}));
   succeed('<!--\r\n-->', Comment('\n'));
   succeed('<!--\r-->', Comment('\n'));
-  succeed('<textarea>a\r\nb\r\nc</textarea>', TEXTAREA('a\nb\nc'));
-  succeed('<textarea>a\rb\rc</textarea>', TEXTAREA('a\nb\nc'));
+  succeed('<textarea>a\r\nb\r\nc</textarea>', TEXTAREA({value: 'a\nb\nc'}));
+  succeed('<textarea>a\rb\rc</textarea>', TEXTAREA({value: 'a\nb\nc'}));
   succeed('<br x="\r\n\r\n">', BR({x:'\n\n'}));
   succeed('<br x="\r\r">', BR({x:'\n\n'}));
   succeed('<br x=y\r>', BR({x:'y'}));
