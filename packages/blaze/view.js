@@ -270,14 +270,14 @@ Blaze.destroyView = function (view, _skipNodes) {
     return;
   view.isDestroyed = true;
 
+  Blaze._fireCallbacks(view, 'destroyed');
+
   // Destroy views and elements recursively.  If _skipNodes,
   // only recurse up to views, not elements, for the case where
   // the backend (jQuery) is recursing over the elements already.
 
   if (view.domrange)
     view.domrange.destroyMembers();
-
-  Blaze._fireCallbacks(view, 'destroyed');
 };
 
 Blaze.destroyNode = function (node) {
