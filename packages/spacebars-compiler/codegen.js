@@ -55,12 +55,18 @@ _.extend(CodeGen.prototype, {
           self.codeGenMustache(tag.path, tag.args, 'attrMustache')
           + '; }');
     } else {
-      if (tag.type === 'DOUBLE') {
-        return BlazeTools.EmitCode('Blaze.View(function () { return ' +
-                                   self.codeGenMustache(tag.path, tag.args) + '; })');
-      } else if (tag.type === 'TRIPLE') {
-        return BlazeTools.EmitCode('Blaze.View(function () { return Spacebars.makeRaw(' +
-                                   self.codeGenMustache(tag.path, tag.args) + '); })');
+      if (tag.type === 'DOUBLE' || tag.type === 'TRIPLE') {
+        var code = self.codeGenMustache(tag.path, tag.args);
+        if (tag.type === 'TRIPLE') {
+          code = 'Spacebars.makeRaw(' + code + ')';
+        }
+        if (tag.position !== HTMLTools.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+          // Reactive attributes are already wrapped in a function,
+          // and there's no fine-grained reactivity.
+          // Anywhere else, we need to create a View.
+          code = 'Blaze.View(function () { return ' + code + '; })';
+        }
+        return BlazeTools.EmitCode(code);
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
 
