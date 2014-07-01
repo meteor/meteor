@@ -1,7 +1,3 @@
-// TODO
-//
-// - Do you get access to the DOMRange from "destroyed"?
-
 
 Blaze.View = function (kind, render) {
   if (! (this instanceof Blaze.View))
