@@ -14,16 +14,16 @@ var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
 
 var materialize = function (content, parent) {
-  Blaze.render(function () {
-    return content;
-  }).attach(parent);
+  var func = content;
+  if (typeof content !== 'function') {
+    func = function () {
+      return content;
+    };
+  }
+  Blaze.render(func).attach(parent);
 };
 
-var toHTML = function (htmljs) {
-  return Blaze.toHTML(function () {
-    return htmljs;
-  });
-};
+var toHTML = Blaze.toHTML;
 
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -94,8 +94,8 @@ Tinytest.add("ui - render - basic", function (test) {
       'HTML.BR({a: [[""]]})');
 
   run(BR({
-    x: Blaze.Isolate(function () { return Blaze.Isolate(function () { return []; }); }),
-    a: Blaze.Isolate(function () { return Blaze.Isolate(function () { return ''; }); }) }),
+    x: function () { return Blaze.View(function () { return Blaze.View(function () { return []; }); }); },
+    a: function () { return Blaze.View(function () { return Blaze.View(function () { return ''; }); }); }}),
       '<br a="">',
       '<br a="">');
 });
@@ -143,7 +143,7 @@ Tinytest.add("ui - render - textarea", function (test) {
       optNode = null;
     }
     var div = document.createElement("DIV");
-    var node = TEXTAREA(optNode || text);
+    var node = TEXTAREA({value: optNode || text});
     materialize(node, div);
 
     var value = div.querySelector('textarea').value;
@@ -157,35 +157,38 @@ Tinytest.add("ui - render - textarea", function (test) {
 
   run('Hello',
       '<textarea>Hello</textarea>',
-      'HTML.TEXTAREA("Hello")');
+      'HTML.TEXTAREA({value: "Hello"})');
 
   run('\nHello',
       '<textarea>\n\nHello</textarea>',
-      'HTML.TEXTAREA("\\nHello")');
+      'HTML.TEXTAREA({value: "\\nHello"})');
 
   run('</textarea>',
       '<textarea>&lt;/textarea></textarea>',
-      'HTML.TEXTAREA("</textarea>")');
+      'HTML.TEXTAREA({value: "</textarea>"})');
 
   run(CharRef({html: '&amp;', str: '&'}),
       '&',
       '<textarea>&amp;</textarea>',
-      'HTML.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
+      'HTML.TEXTAREA({value: HTML.CharRef({html: "&amp;", str: "&"})})');
 
-  run(['a', Blaze.Isolate(function () { return 'b'; }), 'c'],
+  run(function () {
+    return ['a', Blaze.View(function () { return 'b'; }), 'c'];
+  },
       'abc',
       '<textarea>abc</textarea>');
-
 });
 
-Tinytest.add("ui - render - isolates", function (test) {
+Tinytest.add("ui - render - view isolation", function (test) {
 
   // Reactively change a text node
   (function () {
     var R = ReactiveVar('Hello');
-    var test1 = P(Blaze.Isolate(function () { return R.get(); }));
+    var test1 = function () {
+      return P(Blaze.View(function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(test1), '<p>Hello</p>');
+    test.equal(toHTML(test1()), '<p>Hello</p>');
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -199,9 +202,11 @@ Tinytest.add("ui - render - isolates", function (test) {
   // Reactively change an array of text nodes
   (function () {
     var R = ReactiveVar(['Hello', ' World']);
-    var test1 = P(Blaze.Isolate(function () { return R.get(); }));
+    var test1 = function () {
+      return P(Blaze.View(function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(test1), '<p>Hello World</p>');
+    test.equal(toHTML(test1()), '<p>Hello World</p>');
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -223,11 +228,11 @@ var malformedStylesAllowed = function () {
   return (div.getAttribute("style") === "bar::d;");
 };
 
-Tinytest.add("ui - render - isolate GC", function (test) {
+Tinytest.add("ui - render - view GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
     var R = ReactiveVar('Hello');
-    var test1 = P(Blaze.Isolate(function () { return R.get(); }));
+    var test1 = P(Blaze.View(function () { return R.get(); }));
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -261,7 +266,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
         Blaze.Var(function () { return R.get(); })));
     };
 
-    test.equal(Blaze.toHTML(spanFunc),
+    test.equal(Blaze.toHTML(spanFunc()),
                '<span class="david gre&euml;nspan" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
@@ -301,7 +306,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
       return SPAN(HTML.Attrs(Blaze.Var(function () { return R.get(); })));
     };
 
-    test.equal(Blaze.toHTML(spanFunc), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
+    test.equal(Blaze.toHTML(spanFunc()), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
 
@@ -392,7 +397,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
         Blaze.Var(function () { return R.get(); })));
     };
 
-    test.equal(Blaze.toHTML(spanFunc), '<span id="foo" ggg="xyz"></span>');
+    test.equal(Blaze.toHTML(spanFunc()), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),
                'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
@@ -420,38 +425,31 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
   })();
 });
 
-Tinytest.add("ui - render - components", function (test) {
+Tinytest.add("ui - render - views", function (test) {
   (function () {
     var counter = 1;
     var buf = [];
 
-    var myComponent = UI.TemplateComponent.extend({
-      constructor: function () {
-        var self = this;
-        myComponent.__super__.constructor.call(self, function () {
-          return self.number;
-        });
-
-        // `this` is the component instance
-        var number = counter++;
-        self.number = number;
-
-        var parent = Blaze.getParentControllerOfType(self, myComponent);
-        if (parent)
-          buf.push('parent of ' + self.number + ' is ' + parent.number);
-      },
-      created: function () {
-        // `this` is the template instance
-        buf.push('created ' + this.data);
-      },
-      renderTemplate: function () {
-        // `this` is the component instance
+    var makeView = function () {
+      var view = Blaze.View('myView', function () {
         return [String(this.number),
+                (this.number < 3 ? makeView() : HR())];
+      });
 
-                (this.number < 3 ? new myComponent : HR())];
-      },
-      rendered: function () {
-        // `this` is the template instance
+      var number = counter++;
+      view.number = number;
+
+      view.onCreated(function () {
+        var parent = Blaze.getParentView(view, 'myView');
+        if (parent) {
+          buf.push('parent of ' + view.number + ' is ' +
+                   parent.number);
+        }
+
+        buf.push('created ' + Blaze.getCurrentData());
+      });
+
+      view.onRendered(function () {
         var nodeDescr = function (node) {
           if (node.nodeType === 8) // comment
             return '';
@@ -461,28 +459,29 @@ Tinytest.add("ui - render - components", function (test) {
           return node.nodeName;
         };
 
-        var start = this.firstNode;
-        var end = this.lastNode;
+        var start = this.domrange.firstNode();
+        var end = this.domrange.lastNode();
         // skip marker nodes
         while (start !== end && ! nodeDescr(start))
           start = start.nextSibling;
         while (end !== start && ! nodeDescr(end))
           end = end.previousSibling;
 
-
-        // `this` is the template instance
-        buf.push('dom-' + this.data + ' is ' + nodeDescr(start) +'..' +
+        buf.push('dom-' + Blaze.getCurrentData() +
+                 ' is ' + nodeDescr(start) +'..' +
                  nodeDescr(end));
-      },
-      destroyed: function () {
-        // `this` is the template instance
-        buf.push('destroyed ' + this.data);
-      }
-    });
+      });
+
+      view.onDestroyed(function () {
+        buf.push('destroyed ' + Blaze.getCurrentData());
+      });
+
+      return Blaze.With(number, function () { return view; });
+    };
 
     var div = document.createElement("DIV");
 
-    Blaze.renderComponent(myComponent, div);
+    Blaze.render(makeView).attach(div);
     buf.push('---flush---');
     Deps.flush();
     test.equal(buf, ['created 1',
@@ -508,15 +507,16 @@ Tinytest.add("ui - render - components", function (test) {
     buf.length = 0;
     counter = 1;
 
-    var html = Blaze.toHTML(function () {
-      return new myComponent;
-    });
+    var html = Blaze.toHTML(makeView());
 
     test.equal(buf, ['created 1',
                      'parent of 2 is 1',
                      'created 2',
                      'parent of 3 is 2',
-                     'created 3']);
+                     'created 3',
+                     'destroyed 3',
+                     'destroyed 2',
+                     'destroyed 1']);
 
     test.equal(html, '123<hr>');
   })();
@@ -526,19 +526,19 @@ Tinytest.add("ui - render - findAll", function (test) {
   var found = null;
   var $found = null;
 
-  var myComponent = UI.TemplateComponent.extend({
-    renderTemplate: function() {
+  var myTemplate = Template.__create__(
+    'findAllTest',
+    function() {
       return DIV([P('first'), P('second')]);
-    },
-    rendered: function() {
-      found = this.findAll('p');
-      $found = this.$('p');
-    }
-  });
+    });
+  myTemplate.rendered = function() {
+    found = this.findAll('p');
+    $found = this.$('p');
+  };
 
   var div = document.createElement("DIV");
 
-  Blaze.renderComponent(myComponent, div);
+  Blaze.render(myTemplate).attach(div);
   Deps.flush();
 
   test.equal(_.isArray(found), true);
@@ -560,7 +560,7 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var div = document.createElement("DIV");
   Blaze.render(spanFunc).attach(div);
   var check = function (expected) {
-    test.equal(Blaze.toHTML(spanFunc), expected);
+    test.equal(Blaze.toHTML(spanFunc()), expected);
     test.equal(canonicalizeHtml(div.innerHTML), expected);
   };
   check('<span blah="bar"></span>');

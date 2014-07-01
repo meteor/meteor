@@ -280,10 +280,10 @@ HTML.ToHTMLVisitor.def({
     if (attrs) {
       attrs = HTML.flattenAttributes(attrs);
       for (var k in attrs) {
-        var v = this.toText(attrs[k], HTML.TEXTMODE.ATTRIBUTE);
         if (k === 'value' && tagName === 'textarea') {
-          children = [v, children];
+          children = [attrs[k], children];
         } else {
+          var v = this.toText(attrs[k], HTML.TEXTMODE.ATTRIBUTE);
           attrStrs.push(' ' + k + '="' + v + '"');
         }
       }
