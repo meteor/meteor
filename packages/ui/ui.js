@@ -32,3 +32,5 @@ UI._allowJavascriptUrls = function () {
 UI._javascriptUrlsAllowed = function () {
   return jsUrlsAllowed;
 };
+
+UI._parentData = Blaze._parentData;
