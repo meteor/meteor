@@ -172,6 +172,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   return resultChoices;
 };
 
+// This method, along with the stopAfterFirstPropagation, are designed for
+// tests; they allow us to test Resolver._propagateExactTransDeps but with an
+// interface that's a little more like PackagesResolver.resolver.
 ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
   function (dependencies, constraints) {
   var self = this;
