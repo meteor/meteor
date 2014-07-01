@@ -617,8 +617,17 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   return eachView;
 };
 
-Blaze.SetParentView = function (parentView, contentFunc) {
-  var view = Blaze.View('SetParentView', contentFunc);
+Blaze.InOuterTemplateScope = function (templateView, contentFunc) {
+  var view = Blaze.View('InOuterTemplateScope', contentFunc);
+  var parentView = templateView.parentView;
+
+  // Hack so that if you call `{{> foo bar}}` and it expands into
+  // `{{#with bar}}{{> foo}}{{/with}}`, and then `foo` is a template
+  // that inserts `{{> UI.contentBlock}}`, the data context for
+  // `UI.contentBlock` is not `bar` but the one enclosing that.
+  if (parentView.__isTemplateWith)
+    parentView = parentView.parentView;
+
   view.onCreated(function () {
     this.parentView = parentView;
   });
