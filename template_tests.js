@@ -205,12 +205,10 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
 
 // maybe use created callback on the template instead of this?
 var extendTemplateWithInit = function (template, initFunc) {
-  return template.constructor.extend({
-    constructor: function () {
-      template.constructor.apply(this, arguments);
-      initFunc.call(this);
-    }
-  }).prototype;
+  return Template.__create__(
+    template.__viewName+'-extended',
+    template.__render,
+    initFunc);
 };
 
 Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", function (test) {
