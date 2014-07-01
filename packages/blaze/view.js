@@ -361,6 +361,33 @@ Blaze.getParentView = function (view, kind) {
   return v || null;
 };
 
+Blaze.getElementView = function (elem, kind) {
+  var range = Blaze.DOMRange.forElement(elem);
+  var view = null;
+  while (range && ! view) {
+    view = (range.view || null);
+    if (! view) {
+      if (range.parentRange)
+        range = range.parentRange;
+      else
+        range = Blaze.DOMRange.forElement(range.parentElement);
+    }
+  }
+
+  if (kind) {
+    while (view && view.kind !== kind)
+      view = view.parentView;
+    return view || null;
+  } else {
+    return view;
+  }
+};
+
+Blaze.getElementData = function (elem) {
+  var theWith = Blaze.getElementView(elem, 'with');
+  return theWith ? theWith.dataVar.get() : null;
+};
+
 Blaze._calculateCondition = function (cond) {
   if (cond instanceof Array && cond.length === 0)
     cond = false;
@@ -461,7 +488,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.domrange.addMember(
               Blaze.materializeView(
                 Blaze.View('each_else',eachView.elseFunc),
-                eachView));
+                eachView), 0);
         }
         } else {
           eachView.initialSubviews.splice(index, 1);
