@@ -50,7 +50,7 @@ PLATFORM="${UNAME}_${ARCH}"
 
 # save off meteor checkout dir as final target
 cd "`dirname "$0"`"/..
-TARGET_DIR=`pwd`
+CHECKOUT_DIR=`pwd`
 
 # Read the bundle version from the meteor shell script.
 BUNDLE_VERSION=$(perl -ne 'print $1 if /BUNDLE_VERSION=(\S+)/' meteor)
@@ -96,15 +96,43 @@ which npm
 # packages that these depend on, so watch out for new dependencies when
 # you update version numbers.
 
-cd "$DIR/lib/node_modules"
-npm install semver@2.2.1
+# First, we install the modules that are dependencies of tools/server/boot.js:
+# the modules that users of 'meteor bundle' will also have to install. We save a
+# shrinkwrap file with it, too.  We do this in a separate place from
+# $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
+# confused by the pre-existing modules.
+mkdir "${DIR}/build/npm-install"
+cd "${DIR}/build/npm-install"
+cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
+npm install
+npm shrinkwrap
+
+# This ignores the stuff in node_modules/.bin, but that's OK.
+cp -R node_modules/* "${DIR}/lib/node_modules/"
+mkdir "${DIR}/etc"
+mv package.json npm-shrinkwrap.json "${DIR}/etc/"
+
+# Fibers ships with compiled versions of its C code for a dozen platforms. This
+# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
+# thinking that the packages need to depend on both 32- and 64-bit versions of
+# libstd++. Remove all the ones other than our architecture. (Expression based
+# on build.js in fibers source.)
+# XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
+#     will it let you skip the "npm install fibers" step for running bundles?
+cd "$DIR/lib/node_modules/fibers/bin"
+FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+mv $FIBERS_ARCH ..
+rm -rf *
+mv ../$FIBERS_ARCH .
+
+# Now, install the rest of the npm modules, which are only used by the 'meteor'
+# tool (and not by the bundled app boot.js script).
+cd "${DIR}/lib"
 npm install request@2.33.0
-npm install underscore@1.5.2
 npm install fstream@0.1.25
 npm install tar@0.1.19
 npm install kexec@0.2.0
 npm install source-map@0.1.32
-npm install source-map-support@0.2.5
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
 npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
@@ -117,24 +145,6 @@ npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c8
 # 2.4.0 (more or less, the package.json change isn't committed) plus our PR
 # https://github.com/williamwicks/node-eachline/pull/4
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
-
-# If you update the version of fibers in the dev bundle, also update the "npm
-# install" command in docs/client/concepts.html and in the README in
-# tools/bundler.js.
-npm install fibers@1.0.1
-# Fibers ships with compiled versions of its C code for a dozen platforms. This
-# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
-# thinking that the packages need to depend on both 32- and 64-bit versions of
-# libstd++. Remove all the ones other than our architecture. (Expression based
-# on build.js in fibers source.)
-# XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
-#     will it let you skip the "npm install fibers" step for running bundles?
-FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
-cd fibers/bin
-mv $FIBERS_ARCH ..
-rm -rf *
-mv ../$FIBERS_ARCH .
-cd ../..
 
 # Checkout and build mongodb.
 # We want to build a binary that includes SSL support but does not depend on a
@@ -207,6 +217,6 @@ cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
 rm -rf build
 
-tar czf "${TARGET_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
+tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 
 echo DONE
