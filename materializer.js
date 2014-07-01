@@ -48,7 +48,7 @@ Blaze.DOMMaterializer.def({
 
     var rawAttrs = tag.attrs;
     var children = tag.children;
-    if (tagName === 'textarea') {
+    if (tagName === 'textarea' && ! ('value' in rawAttrs)) {
       // turn TEXTAREA contents into a value attribute
       rawAttrs = (rawAttrs || {});
       rawAttrs.value = children;
