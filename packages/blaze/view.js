@@ -301,11 +301,16 @@ Blaze.render = function (content, parentView) {
 };
 
 Blaze.toHTML = function (htmljs, parentView) {
+  if (typeof htmljs === 'function')
+    throw new Error("Blaze.toHTML doesn't take a function, just HTMLjs");
   parentView = parentView || Blaze.currentView;
   return HTML.toHTML(Blaze._expand(htmljs, parentView));
 };
 
 Blaze.toText = function (htmljs, parentView, textMode) {
+  if (typeof htmljs === 'function')
+    throw new Error("Blaze.toText doesn't take a function, just HTMLjs");
+
   if ((parentView != null) && ! (parentView instanceof Blaze.View)) {
     // omitted parentView argument
     textMode = parentView;
