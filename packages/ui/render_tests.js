@@ -634,50 +634,6 @@ Tinytest.add("ui - render - SVG", function (test) {
   test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
 });
 
-Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
-  _.each([true, false], function (nest) {
-
-    var firstComputation;
-    var rv1 = new ReactiveVar;
-    var rv2 = new ReactiveVar;
-
-    // Render a component in an autorun. Save the current computation
-    // from the first time we run the render function. Invalidate the
-    // autorun, and check whether that stops the computation from the
-    // first time the component rendered.
-
-    var tmpl = UI.Component.extend({
-      render: function () {
-        return function () {
-          if (! firstComputation) {
-            firstComputation = Deps.currentComputation;
-          }
-          return rv1.get();
-        };
-      }
-    });
-
-    Deps.autorun(function () {
-      rv2.get(); // register a dependency
-      UI.render(tmpl, undefined, {
-        _nestInCurrentComputation: nest
-      });
-    });
-
-    rv2.set("foo");
-    Deps.flush();
-
-    // If we nested inside the current computation, then we expect the
-    // computation from within the render function to have been stopped
-    // when the outer computation was invalidated.
-    if (nest) {
-      test.equal(firstComputation.stopped, true);
-    } else {
-      test.equal(firstComputation.stopped, false);
-    }
-  });
-});
-
 Tinytest.add("ui - attributes", function (test) {
   var SPAN = HTML.SPAN;
   var amp = HTML.CharRef({html: '&amp;', str: '&'});
