@@ -25,38 +25,25 @@ var insertVersion = function (name, version, ecv, deps) {
           implied: false, unordered: false }]
     };
   });
-  Versions.insert({ packageName: name, version: version, earliestCompatibleVersion: ecv,
+  Versions.insert({ packageName: name, version: version,
+                    earliestCompatibleVersion: ecv,
                     dependencies: constructedDeps });
+  Builds.insert({ packageName: name, version: version,
+                  buildArchitectures: "browser+os" });
 };
 insertVersion("sparky-forms", "1.1.2", "1.0.0", {"forms": "=1.0.1", "sparkle": "=2.1.1"});
+insertVersion("sparky-forms", "1.0.0", "1.0.0", {"awesome-dropdown": "=1.4.0"});
 insertVersion("forms", "1.0.1", "1.0.0", {"sparkle": "2.1.0", "jquery-widgets": "1.0.0"});
 insertVersion("sparkle", "2.1.0", "2.1.0", {"jquery": "1.8.2"});
 insertVersion("sparkle", "2.1.1", "2.1.0", {"jquery": "1.8.2"});
 insertVersion("sparkle", "1.0.0", "1.0.0");
+insertVersion("awesome-dropdown", "1.4.0", "1.0.0", {"dropdown": "=1.2.2"});
 insertVersion("awesome-dropdown", "1.5.0", "1.0.0", {"dropdown": "=1.2.2"});
 insertVersion("dropdown", "1.2.2", "1.0.0", {"jquery-widgets": "1.0.0"});
 insertVersion("jquery-widgets", "1.0.0", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"});
 insertVersion("jquery-widgets", "1.0.2", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"});
 insertVersion("jquery", "1.8.0", "1.8.0");
 insertVersion("jquery", "1.8.2", "1.8.0");
-
-var insertBuild = function (name, version, ecv) {
-  Builds.insert({ packageName: name, version: version,
-                  earliestCompatibleVersion: ecv,
-                  buildArchitectures: "browser+os" });
-};
-
-insertBuild("sparky-forms", "1.1.2", "1.1.0");
-insertBuild("forms", "1.0.1", "1.0.0");
-insertBuild("sparkle", "2.1.1", "2.1.0");
-insertBuild("sparkle", "2.1.0", "2.1.0");
-insertBuild("sparkle", "1.0.0", "1.0.0");
-insertBuild("awesome-dropdown", "1.5.0", "1.0.0");
-insertBuild("dropdown", "1.2.2", "1.0.0");
-insertBuild("jquery-widgets", "1.0.0", "1.0.0");
-insertBuild("jquery-widgets", "1.0.2", "1.0.0");
-insertBuild("jquery", "1.8.0", "1.0.0");
-insertBuild("jquery", "1.9.0", "1.0.0");
 
 // XXX Temporary hack: make a catalog stub to pass in to the constraint
 // solver. We'll soon move constraint-solver into tools and just run
@@ -212,6 +199,13 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra",
   r.resolve(args.dependencies, args.constraints);
 });
 
+// Add a few versions that are referenced by other versions but don't exist. We
+// now require referenced versions to exist.
+railsGems.push({name: "bcrypt", number: "3.0.0", dependencies: []});
+railsGems.push({name: "mime-types", number: "1.16.0", dependencies: []});
+railsGems.push({"name":"pyu-ruby-sasl","number":"0.3.1","platform":"ruby","dependencies":[]});
+railsGems.push({"name":"backports","number":"3.0.0","platform":"ruby","dependencies":[]});
+railsGems.push({"name":"diff-lcs","number":"1.1.0","platform":"ruby","dependencies":[]});
 var railsCatalog = getCatalogStub(railsGems);
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
@@ -274,7 +268,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
     'redis-rails': null,
     'tinder': '1.9.2',
     'hipchat': '0.14.0',
-    'gemnasium-gitlab-service': '0.2.0',
+    'gemnasium-gitlab-service': '0.2.1',
     'slack-notifier': '0.2.0',
     'd3_rails': '3.1.4',
     'underscore-rails': '1.4.4',
@@ -353,7 +347,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
     'redis-rails': null,
     'tinder': '1.9.2',
     'hipchat': '0.14.0',
-    'gemnasium-gitlab-service': '0.2.0',
+    'gemnasium-gitlab-service': '0.2.1',
     'slack-notifier': '0.2.0',
     'd3_rails': '3.1.4',
     'underscore-rails': '1.4.4',

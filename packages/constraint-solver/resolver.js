@@ -45,6 +45,11 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
     self._latestVersion[unitVersion.name] = unitVersion.version;
 };
 
+ConstraintSolver.Resolver.prototype.getUnitVersion = function (unitName, version) {
+  var self = this;
+  return self._unitsVersionsMap[unitName + "@" + version];
+};
+
 // name - String - "someUnit"
 // versionConstraint - String - "=1.2.3" or "2.1.0"
 ConstraintSolver.Resolver.prototype.getConstraint =
@@ -258,7 +263,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices, nConstraintAncestors);
   }).filter(function (state) {
     var vcfc =
-      violatedConstraintsForSomeChoice(state.choices, state.constraints);
+      violatedConstraintsForSomeChoice(state.choices, state.constraints, self);
 
     if (! vcfc)
       return true;
@@ -410,13 +415,13 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   };
 };
 
-var violatedConstraintsForSomeChoice = function (choices, constraints) {
+var violatedConstraintsForSomeChoice = function (choices, constraints, resolver) {
   var ret = null;
   _.each(choices, function (choice) {
     if (ret)
       return;
 
-    var violatedConstraints = constraints.violatedConstraints(choice);
+    var violatedConstraints = constraints.violatedConstraints(choice, resolver);
     if (! _.isEmpty(violatedConstraints))
       ret = { constraints: violatedConstraints, choice: choice };
   });
@@ -569,28 +574,50 @@ ConstraintSolver.Constraint.prototype.toString = function () {
 };
 
 
-ConstraintSolver.Constraint.prototype.isSatisfied = function (unitVersion) {
+ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV,
+                                                              resolver) {
   var self = this;
-  check(unitVersion, ConstraintSolver.UnitVersion);
+  check(candidateUV, ConstraintSolver.UnitVersion);
 
   if (self.type === "exactly")
-    return self.version === unitVersion.version;
-  if (self.type === "at-least")
-    return semver.lte(self.version, unitVersion.version);
+    return self.version === candidateUV.version;
 
-  return semver.lte(self.version, unitVersion.version) &&
-    semver.lte(unitVersion.earliestCompatibleVersion, self.version);
+  // If the candidate version is less than the version named in the constraint,
+  // we are not satisfied.
+  if (semver.lt(candidateUV.version, self.version))
+    return false;
+
+  // If we only care about "at-least" and not backwards-incompatible changes in
+  // the middle, then candidateUV is good enough.
+  if (self.type === "at-least")
+    return true;
+
+  var myUV = resolver.getUnitVersion(self.name, self.version);
+  // If the constraint is "@1.2.3" and 1.2.3 doesn't exist, then nothing can
+  // match. This is because we don't know the ECV (compatibility class) of
+  // 1.2.3!
+  if (!myUV)
+    return false;
+
+  // To be compatible, the two versions must have the same
+  // earliestCompatibleVersion. If the earliestCompatibleVersions haven't been
+  // overridden from their default, this means that the two versions have the
+  // same major version number.
+  return myUV.earliestCompatibleVersion ===
+    candidateUV.earliestCompatibleVersion;
 };
 
 // Returns any unit version satisfying the constraint in the resolver
-ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion =
-  function (resolver) {
+ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion = function (
+    resolver) {
   var self = this;
 
-  if (self.type === "exactly")
-    return resolver._unitsVersionsMap[self.toString().replace("=", "")];
+  if (self.type === "exactly") {
+    return resolver.getUnitVersion(self.name, self.version);
+  }
 
-  var unitVersion = _.find(resolver.unitsVersions[self.name],
-                           _.bind(self.isSatisfied, self));
-  return unitVersion;
+  // XXX this chooses a random UV, not the earliest or latest. Is that OK?
+  return _.find(resolver.unitsVersions[self.name], function (uv) {
+    return self.isSatisfied(uv, resolver);
+  });
 };

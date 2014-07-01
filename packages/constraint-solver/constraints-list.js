@@ -134,13 +134,14 @@ ConstraintSolver.ConstraintsList.prototype.union = function (anotherList) {
 // Returns a list of constraints that are violated (empty if the unit
 // version does not violate any constraints).
 // XXX Returns a regular array, not a ConstraintsList.
-ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (uv) {
+ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (
+    uv, resolver) {
   var self = this;
 
   var violated = [];
 
   self.forPackage(uv.name, function (c) {
-    if (! c.isSatisfied(uv)) {
+    if (! c.isSatisfied(uv, resolver)) {
       violated.push(c);
     }
   });
@@ -182,66 +183,90 @@ ConstraintSolver.ConstraintsList.prototype.exactDependenciesIntersection =
 // The feature is: it runs in linear time of all constraints for given package
 // and linear time of all uvs for the package:
 // O(|constraintsForDep| + |uvsOfDep|)
-ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor =
-  function (dep, resolver) {
+ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor = function (
+    packageName, resolver) {
   var self = this;
 
-  // earliest, latest and exact constraints found
-  var earliest = null;
-  var latest = null;
-  var exact = null;
-  var greatestAtLeast = null;
+  var exactConstraint = null;
+  var lowerBoundVersion = null;  // inclusive
+  var earliestCompatibleVersion = null;
+  var impossible = false;
 
-  self.forPackage(dep, function (c) {
-    if (c.type === "exactly")
-      exact = c;
-    if (exact)
+  self.forPackage(packageName, function (c) {
+    // Short circuit if we've already found an exact match or a contradiction.
+    if (exactConstraint || impossible)
       return;
 
-    if (c.type === "at-least") {
-      if (! greatestAtLeast || semver.lt(greatestAtLeast.version, c.version))
-        greatestAtLeast = c;
+    // If there's an exact constraint, then remember that, and we'll ignore all
+    // the other constraints. (We'll later use self.violatedConstraints to
+    // ensure that there aren't any constraints that conflict with this choice.)
+    if (c.type === "exactly") {
+      exactConstraint = c;
       return;
     }
 
-    if (! earliest || semver.lt(c.version, earliest.version))
-      earliest = c;
-    if (! latest || semver.gt(c.version, latest.version))
-      latest = c;
+    // The constraint is "at-least" or "compatible-with". Both of these mean we
+    // need to update our lower bound.
+    if (! lowerBoundVersion || semver.lt(lowerBoundVersion, c.version)) {
+      lowerBoundVersion = c.version;
+    }
+
+    if (c.type === "compatible-with") {
+      var uv = resolver.getUnitVersion(packageName, c.version);
+      if (uv) {
+        if (earliestCompatibleVersion &&
+            earliestCompatibleVersion !== uv.earliestCompatibleVersion) {
+          // Two constraints name versions with different ECV. Nothing can be
+          // compatible with both!
+          impossible = true;
+        } else if (! earliestCompatibleVersion) {
+          earliestCompatibleVersion = uv.earliestCompatibleVersion;
+        }
+        // else the ECV matches, which is great.
+      } else {
+        // A constraint names a non-existing version? Nothing can match. It's
+        // probably a typo.
+        // XXX Maybe we should let this work? But we have no idea what the ECV
+        //     of c.version is, maybe it points to itself and it is compatible
+        //     with nothing else!
+        // XXX Alternatively, this should be a loudly reported error at an
+        //     earlier point rather than an unsatisfiable constraint.
+        impossible = true;
+      }
+    }
   });
 
-  // there is some exact constraint, the choice is obvious
-  if (exact) {
-    var uv = exact.getSatisfyingUnitVersion(resolver);
-    if (uv && _.isEmpty(self.violatedConstraints(uv)))
+  if (impossible) {
+    return { earliest: null, latest: null };
+  }
+
+  // there is some exact constraint, the choice is obvious... if it works.
+  if (exactConstraint) {
+    var uv = exactConstraint.getSatisfyingUnitVersion(resolver);
+    if (uv && _.isEmpty(self.violatedConstraints(uv, resolver)))
       return { earliest: uv, latest: uv };
     else
       return { earliest: null, latest: null };
   }
 
-  var earliestUv = null;
-  var latestUv = null;
+  // OK, maybe we have a lower bound and/or an earliestCompatibleVersion
+  // class. Or maybe we have absolutely nothing specified! Look at all the
+  // available versions and choose the ones that match this constraint.
+  var ret = { earliest: null, latest: null};
+  _.each(resolver.unitsVersions[packageName], function (uv) {
+    if (lowerBoundVersion && semver.gt(lowerBoundVersion, uv.version))
+      return;
+    if (earliestCompatibleVersion &&
+        uv.earliestCompatibleVersion !== earliestCompatibleVersion) {
+      return;
+    }
+    if (! ret.earliest || semver.lt(uv.version, ret.earliest.version))
+      ret.earliest = uv;
+    if (! ret.latest || semver.gt(uv.version, ret.latest.version))
+      ret.latest = uv;
+  });
 
-  // The range of constraints is consistent and can have some matching uvs if
-  // uvs corresponding to both earliest and latest constraints have the same ecv
-  if (! earliest ||
-      earliest.getSatisfyingUnitVersion(resolver).earliestCompatibleVersion
-    === latest.getSatisfyingUnitVersion(resolver).earliestCompatibleVersion) {
-    _.each(resolver.unitsVersions[dep], function (uv) {
-      if (earliest && latest)
-        if (! earliest.isSatisfied(uv) || ! latest.isSatisfied(uv))
-          return;
-      // return if one of the >= constraints is not satisfied
-      if (greatestAtLeast && ! greatestAtLeast.isSatisfied(uv))
-        return;
-      if (! earliestUv || semver.lt(uv.version, earliestUv.version))
-        earliestUv = uv;
-      if (! latestUv || semver.gt(uv.version, latestUv.version))
-        latestUv = uv;
-    });
-  }
-
-  return { earliest: earliestUv, latest: latestUv };
+  return ret;
 };
 
 ConstraintSolver.ConstraintsList.prototype.earliestMatchingVersionFor =
