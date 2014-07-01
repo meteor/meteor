@@ -89,8 +89,13 @@ ConstraintSolver.DependenciesList.prototype.toString = function (simple) {
   var self = this;
   var str = "";
 
-  strs.sort();
+  var strs = [];
   self.each(function (d) {
+    strs.push(d);
+  });
+
+  strs.sort();
+  _.each(strs, function (d) {
     if (str !== "") {
       str += simple ? " " : ", ";
     }
