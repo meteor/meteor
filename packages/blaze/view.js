@@ -167,13 +167,21 @@ Blaze.materializeView = function (view, parentView) {
       });
     });
 
+    var teardownHook = null;
+
     domrange.onAttached(function attached(range, element) {
-      Blaze.DOMBackend.Teardown.onElementTeardown(
+      teardownHook = Blaze.DOMBackend.Teardown.onElementTeardown(
         element, function teardown() {
           Blaze.destroyView(view, true /* _skipNodes */);
         });
 
       scheduleRenderedCallback();
+    });
+
+    // tear down the teardown hook
+    view.onDestroyed(function () {
+      teardownHook && teardownHook.stop();
+      teardownHook = null;
     });
   });
 

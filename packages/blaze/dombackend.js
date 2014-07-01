@@ -82,6 +82,33 @@ DOMBackend.Events = {
 
 var NOOP = function () {};
 
+// Circular doubly-linked list
+var TeardownCallback = function (func) {
+  this.next = this;
+  this.prev = this;
+  this.func = func;
+};
+
+// Insert newElt before oldElt in the circular list
+TeardownCallback.prototype.linkBefore = function(oldElt) {
+  this.prev = oldElt.prev;
+  this.next = oldElt;
+  oldElt.prev.next = this;
+  oldElt.prev = this;
+};
+
+TeardownCallback.prototype.unlink = function () {
+  this.prev.next = this.next;
+  this.next.prev = this.prev;
+};
+
+TeardownCallback.prototype.go = function () {
+  var func = this.func;
+  func && func();
+};
+
+TeardownCallback.prototype.stop = TeardownCallback.prototype.unlink;
+
 DOMBackend.Teardown = {
   _JQUERY_EVENT_NAME: 'blaze_teardown_watcher',
   _CB_PROP: '$blaze_teardown_callbacks',
@@ -90,15 +117,20 @@ DOMBackend.Teardown = {
   // The callback function is called at most once, and it receives the element
   // in question as an argument.
   onElementTeardown: function (elem, func) {
+    var elt = new TeardownCallback(func);
+
     var propName = DOMBackend.Teardown._CB_PROP;
     if (! elem[propName]) {
-      elem[propName] = [];
+      // create an empty node that is never unlinked
+      elem[propName] = new TeardownCallback;
 
       // Set up the event, only the first time.
       $jq(elem).on(DOMBackend.Teardown._JQUERY_EVENT_NAME, NOOP);
     }
 
-    elem[propName].push(func);
+    elt.linkBefore(elem[propName]);
+
+    return elt; // so caller can call stop()
   },
   // Recursively call all teardown hooks, in the backend and registered
   // through DOMBackend.onElementTeardown.
@@ -120,8 +152,13 @@ $jq.event.special[DOMBackend.Teardown._JQUERY_EVENT_NAME] = {
     var elem = this;
     var callbacks = elem[DOMBackend.Teardown._CB_PROP];
     if (callbacks) {
-      for (var i = 0; i < callbacks.length; i++)
-        callbacks[i](elem);
+      var elt = callbacks.next;
+      while (elt !== callbacks) {
+        elt.go();
+        elt = elt.next;
+      }
+      callbacks.go();
+
       elem[DOMBackend.Teardown._CB_PROP] = null;
     }
   }
