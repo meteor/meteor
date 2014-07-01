@@ -5,6 +5,8 @@ Package.describe({
   version: '1.0.0'
 });
 
+Npm.depends({request: "2.33.0"});
+
 Package.on_use(function (api) {
   api.use('underscore');
   api.export('HTTP');
