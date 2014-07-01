@@ -15,9 +15,6 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
 
   var templateVar = Blaze.ReactiveVar(null, tripleEquals);
   var view = Blaze.View('Spacebars.include', function () {
-    this.autorun(function () {
-      templateVar.set(templateOrFunction());
-    });
     var template = templateVar.get();
     if (template === null)
       return null;
@@ -28,6 +25,11 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     return Blaze.runTemplate(template, contentFunc, elseFunc);
   });
   view.__templateVar = templateVar;
+  view.onCreated(function () {
+    this.autorun(function () {
+      templateVar.set(templateOrFunction());
+    });
+  });
 
   return view;
 };
@@ -211,13 +213,15 @@ Spacebars.TemplateWith = function (argFunc, contentBlock) {
 Spacebars.With = function (argFunc, contentFunc, elseFunc) {
   var argVar = new Blaze.ReactiveVar;
   var view = Blaze.View('Spacebars_with', function () {
-    this.autorun(function () {
-      argVar.set(argFunc());
-    });
     return Blaze.If(function () { return argVar.get(); },
                     function () { return Blaze.With(function () {
                       return argVar.get(); }, contentFunc); },
                     elseFunc);
+  });
+  view.onCreated(function () {
+    this.autorun(function () {
+      argVar.set(argFunc());
+    });
   });
 
   return view;
