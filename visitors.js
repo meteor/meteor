@@ -273,19 +273,24 @@ HTML.ToHTMLVisitor.def({
   visitTag: function (tag) {
     var attrStrs = [];
 
+    var tagName = tag.tagName;
+    var children = tag.children;
+
     var attrs = tag.attrs;
     if (attrs) {
       attrs = HTML.flattenAttributes(attrs);
       for (var k in attrs) {
         var v = this.toText(attrs[k], HTML.TEXTMODE.ATTRIBUTE);
-        attrStrs.push(' ' + k + '="' + v + '"');
+        if (k === 'value' && tagName === 'textarea') {
+          children = [v, children];
+        } else {
+          attrStrs.push(' ' + k + '="' + v + '"');
+        }
       }
     }
 
-    var tagName = tag.tagName;
     var startTag = '<' + tagName + attrStrs.join('') + '>';
 
-    var children = tag.children;
     var childStrs = [];
     var content;
     if (tagName === 'textarea') {
