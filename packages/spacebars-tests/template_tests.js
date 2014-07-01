@@ -205,12 +205,10 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
 
 // maybe use created callback on the template instead of this?
 var extendTemplateWithInit = function (template, initFunc) {
-  return template.constructor.extend({
-    constructor: function () {
-      template.constructor.apply(this, arguments);
-      initFunc.call(this);
-    }
-  }).prototype;
+  return Template.__create__(
+    template.__viewName+'-extended',
+    template.__render,
+    initFunc);
 };
 
 Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", function (test) {
@@ -1125,22 +1123,24 @@ Tinytest.add('spacebars-tests - template_tests - attribute object helpers are is
 Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated', function (test) {
   var tmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated;
   var dep = new Deps.Dependency;
-  var subtmpl = Template.
-        spacebars_template_test_inclusion_helpers_are_isolated_subtemplate
-        .constructor.extend().prototype; // fresh subclass
-  var R = new ReactiveVar(subtmpl);
+  var subtmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated_subtemplate;
+  // make a copy so we can set "rendered" without mutating the original
+  var subtmplCopy = Template.__create__(
+    subtmpl.__viewName,
+    subtmpl.__render);
+  var R = new ReactiveVar(subtmplCopy);
   tmpl.foo = function () {
     dep.depend();
     return R.get();
   };
 
   var div = renderToDiv(tmpl);
-  subtmpl.rendered = function () {
+    subtmplCopy.rendered = function () {
     test.fail("shouldn't re-render when same value returned from helper");
   };
 
   dep.changed();
-  Deps.flush({_throwFirstError: true}); // `subtmpl.rendered` not called
+  Deps.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
 
   R.set(null);
   Deps.flush({_throwFirstError: true}); // no error thrown
@@ -1175,11 +1175,9 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
       test.equal(JSON.stringify(input.getAttribute('stuff')), 'null', descr);
     }
 
-    var html = Blaze.toHTML(function () {
-      return Blaze.With(data, function () {
-        return new tmpls[whichTemplate].constructor;
-      });
-    });
+    var html = Blaze.toHTML(Blaze.With(data, function () {
+      return tmpls[whichTemplate];
+    }));
 
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
     test.equal(/ stuff="[^"]*"/.test(html), !! expectTrue);
@@ -1830,9 +1828,7 @@ Tinytest.add("spacebars-tests - template_tests - toHTML", function (test) {
 
     R.set(val);
     tmplForHelper[helper] = getR;
-    test.equal(canonicalizeHtml(Blaze.toHTML(function () {
-      return new tmplToRender.constructor;
-    })), "bar");
+    test.equal(canonicalizeHtml(Blaze.toHTML(tmplToRender)), "bar");
     test.equal(count, 1);
     R.set("");
     Deps.flush();
@@ -2136,7 +2132,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - access template instance from helper",
+  "spacebars-tests - template_tests - UI._templateInstance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
     // there from a helper.
@@ -2158,7 +2154,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - access template instance from helper, " +
+  "spacebars-tests - template_tests - UI._templateInstance from helper, " +
     "template instance is kept up-to-date",
   function (test) {
     var tmpl = Template.spacebars_test_template_instance_helper;
@@ -2249,6 +2245,42 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );
+
+Tinytest.add(
+  "spacebars-tests - template_tests - created/rendered/destroyed by each",
+  function (test) {
+    var outerTmpl =
+          Template.spacebars_test_template_created_rendered_destroyed_each;
+    var innerTmpl =
+          Template.spacebars_test_template_created_rendered_destroyed_each_sub;
+
+    var buf = '';
+
+    innerTmpl.created = function () { buf += 'C' + String(this.data).toLowerCase(); };
+    innerTmpl.rendered = function () { buf += 'R' + String(this.data).toLowerCase(); };
+    innerTmpl.destroyed = function () { buf += 'D' + String(this.data).toLowerCase(); };
+
+    var R = ReactiveVar([{_id: 'A'}]);
+
+    outerTmpl.items = function () {
+      return R.get();
+    };
+
+    var div = renderToDiv(outerTmpl);
+    divRendersTo(test, div, '<div>A</div>');
+    test.equal(buf, 'CaRa');
+
+    R.set([{_id: 'B'}]);
+    divRendersTo(test, div, '<div>B</div>');
+    test.equal(buf, 'CaRaDaCbRb');
+
+    R.set([{_id: 'C'}]);
+    divRendersTo(test, div, '<div>C</div>');
+    test.equal(buf, 'CaRaDaCbRbDbCcRc');
+
+    $(div).remove();
+    test.equal(buf, 'CaRaDaCbRbDbCcRcDc');
+  });
 
 Tinytest.add(
   "spacebars-tests - template_tests - UI.render/UI.insert",

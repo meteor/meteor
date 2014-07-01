@@ -10,12 +10,12 @@ Package.on_use(function (api) {
   api.use('underscore'); // only the subset in microscore.js
   api.use('htmljs');
   api.use('jsclass');
-  //api.use('observe-sequence');
+  api.use('observe-sequence');
 
   api.add_files([
-    'preamble.js',
-    'sequence.js',
-    'var.js'
+    'preamble.js'
+//    'sequence.js',
+//    'var.js'
   ]);
 
   api.add_files([
@@ -25,7 +25,7 @@ Package.on_use(function (api) {
     'attrs.js'
   ], 'client');
 
-  api.add_files([
+  /*  api.add_files([
     'renderpoint.js',
     'component.js'
   ]);
@@ -37,6 +37,14 @@ Package.on_use(function (api) {
   api.add_files([
     'materialize.js',
     'builtins.js'
+  ]);*/
+
+  // new files for blaze-views
+  api.add_files([
+    'reactivevar.js',
+    'materializer.js',
+    'view.js',
+    'lookup.js'
   ]);
 });
 

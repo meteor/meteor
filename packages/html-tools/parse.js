@@ -156,7 +156,13 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
         if (token.n === 'textarea') {
           if (scanner.peek() === '\n')
             scanner.pos++;
-          content = getRCData(scanner, token.n, shouldStopFunc);
+          attrs = (attrs || {});
+          var textareaValue = getRCData(scanner, token.n, shouldStopFunc);
+          if (HTML.isArray(attrs)) {
+            attrs.push({value: textareaValue});
+          } else {
+            attrs.value = textareaValue;
+          }
         } else {
           content = getContent(scanner, shouldStopFunc);
         }

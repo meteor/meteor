@@ -16,8 +16,19 @@ SpacebarsCompiler.compile = function (input, options) {
 SpacebarsCompiler._TemplateTagReplacer = HTML.TransformingVisitor.extend();
 SpacebarsCompiler._TemplateTagReplacer.def({
   visitObject: function (x) {
-    if (x instanceof HTMLTools.TemplateTag)
+    if (x instanceof HTMLTools.TemplateTag) {
+
+      // Make sure all TemplateTags in attributes have the right
+      // `.position` set on them.  This is a bit of a hack
+      // (we shouldn't be mutating that here), but it allows
+      // cleaner codegen of "synthetic" attributes like TEXTAREA's
+      // "value", where the template tags were originally not
+      // in an attribute.
+      if (this.inAttributeValue)
+        x.position = HTMLTools.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE;
+
       return this.codegen.codeGenTemplateTag(x);
+    }
 
     return HTML.TransformingVisitor.prototype.visitObject.call(this, x);
   },
@@ -27,6 +38,22 @@ SpacebarsCompiler._TemplateTagReplacer.def({
 
     // call super (e.g. for case where `attrs` is an array)
     return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
+  },
+  visitAttribute: function (name, value, tag) {
+    this.inAttributeValue = true;
+    var result = this.visit(value);
+    this.inAttributeValue = false;
+
+    if (result !== value) {
+      // some template tags must have been replaced, because otherwise
+      // we try to keep things `===` when transforming.  Wrap the code
+      // in a function as per the rules.  You can't have
+      // `{id: Blaze.View(...)}` as an attributes dict because the View
+      // would be rendered more than once; you need to wrap it in a function
+      // so that it's a different View each time.
+      return BlazeTools.EmitCode(this.codegen.codeGenBlock(result));
+    }
+    return result;
   }
 });
 
@@ -51,7 +78,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
 
   var code = '(function () { ';
   if (isTemplate || isBody) {
-    code += 'var self = this; ';
+    code += 'var view = this; ';
   }
   code += 'return ';
   code += BlazeTools.toJS(tree);

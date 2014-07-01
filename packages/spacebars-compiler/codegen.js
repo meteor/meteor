@@ -10,7 +10,7 @@ var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
   'unless': 'Blaze.Unless',
   'with': 'Spacebars.With',
-  'each': 'Spacebars.Each'
+  'each': 'Blaze.Each'
 };
 
 
@@ -23,8 +23,8 @@ var builtInUIPaths = {
   // function for the template in which `UI.contentBlock` (or
   // `UI.elseBlock`) is invoked. `template` is a reference to the
   // template itself.
-  'contentBlock': 'self.__contentBlock',
-  'elseBlock': 'self.__elseBlock',
+  'contentBlock': 'view.templateContentBlock',
+  'elseBlock': 'view.templateElseBlock',
 
   // `Template` is the global template namespace. If you define a
   // template named `foo` in Spacebars, it gets defined as
@@ -51,17 +51,22 @@ _.extend(CodeGen.prototype, {
     if (tag.position === HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG) {
       // Special dynamic attributes: `<div {{attrs}}>...`
       // only `tag.type === 'DOUBLE'` allowed (by earlier validation)
-      return BlazeTools.EmitCode(
-        'Blaze.Var(function () { return ' +
+      return BlazeTools.EmitCode('function () { return ' +
           self.codeGenMustache(tag.path, tag.args, 'attrMustache')
-          + '; })');
+          + '; }');
     } else {
-      if (tag.type === 'DOUBLE') {
-        return BlazeTools.EmitCode('Blaze.Isolate(function () { return ' +
-                                   self.codeGenMustache(tag.path, tag.args) + '; })');
-      } else if (tag.type === 'TRIPLE') {
-        return BlazeTools.EmitCode('Blaze.Isolate(function () { return Spacebars.makeRaw(' +
-                                   self.codeGenMustache(tag.path, tag.args) + '); })');
+      if (tag.type === 'DOUBLE' || tag.type === 'TRIPLE') {
+        var code = self.codeGenMustache(tag.path, tag.args);
+        if (tag.type === 'TRIPLE') {
+          code = 'Spacebars.makeRaw(' + code + ')';
+        }
+        if (tag.position !== HTMLTools.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
+          // Reactive attributes are already wrapped in a function,
+          // and there's no fine-grained reactivity.
+          // Anywhere else, we need to create a View.
+          code = 'Blaze.View(function () { return ' + code + '; })';
+        }
+        return BlazeTools.EmitCode(code);
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
 
@@ -134,7 +139,7 @@ _.extend(CodeGen.prototype, {
 
           if (path[0] === 'UI' &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
-            includeCode = 'UI.InTemplateScope(self, function () { return '
+            includeCode = 'Blaze.InOuterTemplateScope(view, function () { return '
               + includeCode + '; })';
           }
 
@@ -175,11 +180,11 @@ _.extend(CodeGen.prototype, {
       return builtInUIPaths[path[1]];
     }
 
-    var args = [BlazeTools.toJSLiteral(path[0]), 'self'];
+    var firstPathItem = BlazeTools.toJSLiteral(path[0]);
     var lookupMethod = 'lookup';
     if (opts && opts.lookupTemplate && path.length === 1)
       lookupMethod = 'lookupTemplate';
-    var code = 'Blaze.' + lookupMethod + '(' + args.join(', ') + ')';
+    var code = 'view.' + lookupMethod + '(' + firstPathItem + ')';
 
     if (path.length > 1) {
       code = 'Spacebars.dot(' + code + ', ' +

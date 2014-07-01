@@ -3,19 +3,35 @@ Spacebars = {};
 var tripleEquals = function (a, b) { return a === b; };
 
 Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
-  var templateVar = Blaze.Var(templateOrFunction, tripleEquals);
-  return Blaze.Isolate(function () {
+  if (! templateOrFunction)
+    return null;
+
+  if (typeof templateOrFunction !== 'function') {
+    var template = templateOrFunction;
+    if (! Blaze.isTemplate(template))
+      throw new Error("Expected template or null, found: " + template);
+    return Blaze.runTemplate(templateOrFunction, contentFunc, elseFunc);
+  }
+
+  var templateVar = Blaze.ReactiveVar(null, tripleEquals);
+  var view = Blaze.View('Spacebars.include', function () {
     var template = templateVar.get();
     if (template === null)
       return null;
 
-    if (! (template instanceof Blaze.Component))
+    if (! Template.__isTemplate__(template))
       throw new Error("Expected template or null, found: " + template);
 
-    // Current calling convention (as of 0.8) means we have to wrap data
-    // around the whole inclusion, not pass it here (the `null` arg)
-    return new template.constructor(null, contentFunc, elseFunc);
+    return Blaze.runTemplate(template, contentFunc, elseFunc);
   });
+  view.__templateVar = templateVar;
+  view.onCreated(function () {
+    this.autorun(function () {
+      templateVar.set(templateOrFunction());
+    });
+  });
+
+  return view;
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
@@ -194,53 +210,19 @@ Spacebars.TemplateWith = function (argFunc, contentBlock) {
   return w;
 };
 
-Spacebars.With = function (argFunc, contentFunc, elseContentFunc) {
-  var data = Blaze.Var(argFunc);
-  return Blaze.If(function () { return data.get(); },
-                  function () {
-                    return Blaze.With(data, contentFunc);
-                  },
-                  elseContentFunc);
-};
-
-Spacebars.Each = function (argFunc, contentFunc, elseContentFunc) {
-  var seq = new Blaze.Sequence;
-  var elseMode = false;
-
-  var argVar = Blaze.Var(argFunc);
-  ObserveSequence.observe(function () {
-    return argVar.get();
-  }, {
-    addedAt: function (id, item, index) {
-      if (elseMode) {
-        seq.removeItem(0);
-        elseMode = false;
-      }
-      var dataVar = Blaze.Var(item);
-      var func = function () {
-        return Blaze.With(dataVar, contentFunc);
-      };
-      func.dataVar = dataVar;
-      seq.addItem(func, index);
-    },
-    removedAt: function (id, item, index) {
-      seq.removeItem(index);
-      if (elseContentFunc && seq.size() === 0) {
-        elseMode = true;
-        seq.addItem(elseContentFunc, 0);
-      }
-    },
-    changedAt: function (id, newItem, oldItem, index) {
-      seq.get(index).dataVar.set(newItem);
-    },
-    movedTo: function (id, item, fromIndex, toIndex) {
-      seq.moveItem(fromIndex, toIndex);
-    }
+Spacebars.With = function (argFunc, contentFunc, elseFunc) {
+  var argVar = new Blaze.ReactiveVar;
+  var view = Blaze.View('Spacebars_with', function () {
+    return Blaze.If(function () { return argVar.get(); },
+                    function () { return Blaze.With(function () {
+                      return argVar.get(); }, contentFunc); },
+                    elseFunc);
+  });
+  view.onCreated(function () {
+    this.autorun(function () {
+      argVar.set(argFunc());
+    });
   });
 
-  if (elseContentFunc && seq.size() === 0) {
-    elseMode = true;
-    seq.addItem(elseContentFunc, 0);
-  }
-  return Blaze.List(seq);
+  return view;
 };
