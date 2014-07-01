@@ -16,7 +16,7 @@ Template.prototype.helpers = function (dict) {
     this[k] = dict[k];
 };
 
-updateTemplateInstance = function (view) {
+Template.__updateTemplateInstance = function (view) {
   // Populate `view.templateInstance.{firstNode,lastNode,data}`
   // on demand.
   var tmpl = view._templateInstance;
@@ -67,7 +67,7 @@ Template.prototype.events = function (eventMap) {
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
-        var tmplInstance = updateTemplateInstance(view);
+        var tmplInstance = Template.__updateTemplateInstance(view);
         args.splice(1, 0, tmplInstance);
         return v.apply(data, args);
       };
@@ -110,6 +110,27 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
 
   if (template.__initView)
     template.__initView(view);
+
+  if (template.created) {
+    view.onCreated(function () {
+      var inst = Template.__updateTemplateInstance(view);
+      template.created.call(inst);
+    });
+  }
+
+  if (template.rendered) {
+    view.onRendered(function () {
+      var inst = Template.__updateTemplateInstance(view);
+      template.rendered.call(inst);
+    });
+  }
+
+  if (template.destroyed) {
+    view.onDestroyed(function () {
+      var inst = Template.__updateTemplateInstance(view);
+      template.destroyed.call(inst);
+    });
+  }
 
   return view;
 };
