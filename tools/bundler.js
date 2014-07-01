@@ -1380,7 +1380,23 @@ _.extend(ServerTarget.prototype, {
       client: clientTargetPath || undefined
     });
 
-    options.includeNodeModulesSymlink && builder.reserve("node_modules");
+    // Write package.json and npm-shrinkwrap.json for the dependencies of
+    // boot.js.
+    builder.write('package.json', {
+      file: path.join(files.getDevBundle(), 'etc', 'package.json')
+    });
+    builder.write('npm-shrinkwrap.json', {
+      file: path.join(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
+    });
+
+    // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
+    // install' using the above package.json and npm-shrinkwrap.json on every
+    // rebuild).
+    if (options.includeNodeModulesSymlink) {
+      builder.write('node_modules', {
+        symlink: path.join(files.getDevBundle(), 'lib', 'node_modules')
+      });
+    }
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
@@ -1418,15 +1434,6 @@ _.extend(ServerTarget.prototype, {
     script = script.replace(/##RUN_FILE##/g, 'boot.js');
     builder.write(scriptName, { data: new Buffer(script, 'utf8'),
                                 executable: true });
-
-    // Main, architecture-dependent node_modules from the dependency
-    // kit. This is hack for 'meteor run'; other uses of the bundler
-    // will contain a package.json that can used to get the node modules.
-    if (options.includeNodeModulesSymlink) {
-      builder.write('node_modules', {
-        symlink: path.join(files.getDevBundle(), 'lib', 'node_modules')
-      });
-    }
 
     return scriptName;
   }
@@ -1550,11 +1557,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builder.write('main.js', { data: stub });
 
       builder.write('README', { data: new Buffer(
-"This is a Meteor application bundle. It has only one dependency:\n" +
-"Node.js 0.10.29 or newer, plus the 'fibers' module. To run the application:\n" +
+"This is a Meteor application bundle. It has only one external dependency:\n" +
+"Node.js 0.10.29 or newer. To run the application:\n" +
 "\n" +
-"  $ rm -r programs/server/node_modules/fibers\n" +
-"  $ npm install fibers@1.0.1\n" +
+"  $ (cd programs/server && npm install)\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
 "  $ export ROOT_URL='http://example.com'\n" +
 "  $ export MAIL_URL='smtp://user:password@mailhost:port/'\n" +
