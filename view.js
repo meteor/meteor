@@ -436,8 +436,10 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   var eachView = Blaze.View('each', function () {
     var subviews = this.initialSubviews;
     this.initialSubviews = null;
-    if (this.isBeingExpanded)
+    if (this.isBeingExpanded) {
       this.expandedValueDep = new Deps.Dependency;
+      this.expandedValueDep.depend();
+    }
     return subviews;
   });
   eachView.initialSubviews = [];
