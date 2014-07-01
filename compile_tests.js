@@ -44,79 +44,79 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("abc",
       function () {
-        var self = this;
+        var view = this;
         return "abc";
       });
 
   run("{{foo}}",
       function() {
-        var self = this;
-        return Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self));
+        var view = this;
+        return Blaze.View(function() {
+          return Spacebars.mustache(view.lookup("foo"));
         });
       });
 
   run("{{foo bar}}",
       function() {
-        var self = this;
-        return Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self),
-                                    Blaze.lookup("bar", self));
+        var view = this;
+        return Blaze.View(function() {
+          return Spacebars.mustache(view.lookup("foo"),
+                                    view.lookup("bar"));
         });
       });
 
   run("{{foo x=bar}}",
       function() {
-        var self = this;
-        return Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self), Spacebars.kw({
-            x: Blaze.lookup("bar", self)
+        var view = this;
+        return Blaze.View(function() {
+          return Spacebars.mustache(view.lookup("foo"), Spacebars.kw({
+            x: view.lookup("bar")
           }));
         });
       });
 
   run("{{foo.bar baz}}",
       function() {
-        var self = this;
-        return Blaze.Isolate(function() {
+        var view = this;
+        return Blaze.View(function() {
           return Spacebars.mustache(Spacebars.dot(
-                   Blaze.lookup("foo", self), "bar"),
-                   Blaze.lookup("baz", self));
+                   view.lookup("foo"), "bar"),
+                   view.lookup("baz"));
         });
       });
 
   run("{{foo bar.baz}}",
       function() {
-        var self = this;
-        return Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self),
-                 Spacebars.dot(Blaze.lookup("bar", self), "baz"));
+        var view = this;
+        return Blaze.View(function() {
+          return Spacebars.mustache(view.lookup("foo"),
+                 Spacebars.dot(view.lookup("bar"), "baz"));
         });
       });
 
   run("{{foo x=bar.baz}}",
       function() {
-        var self = this;
-        return Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self), Spacebars.kw({
-            x: Spacebars.dot(Blaze.lookup("bar", self), "baz")
+        var view = this;
+        return Blaze.View(function() {
+          return Spacebars.mustache(view.lookup("foo"), Spacebars.kw({
+            x: Spacebars.dot(view.lookup("bar"), "baz")
           }));
         });
       });
 
   run("{{#foo}}abc{{/foo}}",
       function() {
-        var self = this;
-        return Spacebars.include(Blaze.lookupTemplate("foo", self), (function() {
+        var view = this;
+        return Spacebars.include(view.lookupTemplate("foo"), (function() {
           return "abc";
         }));
       });
 
   run("{{#if cond}}aaa{{else}}bbb{{/if}}",
       function() {
-        var self = this;
+        var view = this;
         return Blaze.If(function () {
-          return Spacebars.call(Blaze.lookup("cond", self));
+          return Spacebars.call(view.lookup("cond"));
         }, (function() {
           return "aaa";
         }), (function() {
@@ -126,9 +126,9 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("{{!-- --}}{{#if cond}}aaa{{!\n}}{{else}}{{!}}bbb{{!-- --}}{{/if}}{{!}}",
     function() {
-      var self = this;
+      var view = this;
       return Blaze.If(function () {
-        return Spacebars.call(Blaze.lookup("cond", self));
+        return Spacebars.call(view.lookup("cond"));
       }, (function() {
         return "aaa";
       }), (function() {
@@ -138,67 +138,67 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("{{> foo bar}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
-          return Spacebars.call(Blaze.lookup("bar", self));
+          return Spacebars.call(view.lookup("bar"));
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self));
+          return Spacebars.include(view.lookupTemplate("foo"));
         });
       });
 
   run("{{> foo x=bar}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
           return {
-            x: Spacebars.call(Blaze.lookup("bar", self))
+            x: Spacebars.call(view.lookup("bar"))
           };
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self));
+          return Spacebars.include(view.lookupTemplate("foo"));
         });
       }
      );
 
   run("{{> foo bar.baz}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
-          return Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self), "baz"));
+          return Spacebars.call(Spacebars.dot(view.lookup("bar"), "baz"));
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self));
+          return Spacebars.include(view.lookupTemplate("foo"));
         });
       });
 
   run("{{> foo x=bar.baz}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
           return {
-            x: Spacebars.call(Spacebars.dot(Blaze.lookup("bar", self), "baz"))
+            x: Spacebars.call(Spacebars.dot(view.lookup("bar"), "baz"))
           };
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self));
+          return Spacebars.include(view.lookupTemplate("foo"));
         });
       });
 
   run("{{> foo bar baz}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(Blaze.lookup("bar", self), Blaze.lookup("baz", self));
+          return Spacebars.dataMustache(view.lookup("bar"), view.lookup("baz"));
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self));
+          return Spacebars.include(view.lookupTemplate("foo"));
         });
       }
      );
 
   run("{{#foo bar baz}}aaa{{/foo}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(Blaze.lookup("bar", self), Blaze.lookup("baz", self));
+          return Spacebars.dataMustache(view.lookup("bar"), view.lookup("baz"));
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self), (function() {
+          return Spacebars.include(view.lookupTemplate("foo"), (function() {
             return "aaa";
           }));
         });
@@ -206,11 +206,11 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("{{#foo p.q r.s}}aaa{{/foo}}",
       function() {
-        var self = this;
+        var view = this;
         return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(Spacebars.dot(Blaze.lookup("p", self), "q"), Spacebars.dot(Blaze.lookup("r", self), "s"));
+          return Spacebars.dataMustache(Spacebars.dot(view.lookup("p"), "q"), Spacebars.dot(view.lookup("r"), "s"));
         }, function() {
-          return Spacebars.include(Blaze.lookupTemplate("foo", self), (function() {
+          return Spacebars.include(view.lookupTemplate("foo"), (function() {
             return "aaa";
           }));
         });
@@ -218,40 +218,41 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   run("<a {{b}}></a>",
       function() {
-        var self = this;
-        return HTML.A(HTML.Attrs(Blaze.Var(function() {
-          return Spacebars.attrMustache(Blaze.lookup("b", self));
-        })));
+        var view = this;
+        return HTML.A(HTML.Attrs(function() {
+          return Spacebars.attrMustache(view.lookup("b"));
+        }));
       });
 
   run("<a {{b}} c=d{{e}}f></a>",
       function() {
-        var self = this;
+        var view = this;
         return HTML.A(HTML.Attrs({
-          c: [ "d", Blaze.Isolate(function() {
-            return Spacebars.mustache(Blaze.lookup("e", self));
-          }), "f" ]
-        }, Blaze.Var(function() {
-          return Spacebars.attrMustache(Blaze.lookup("b", self));
-        })));
+          c: (function() { return [ "d", Blaze.View(function() {
+            return Spacebars.mustache(view.lookup("e"));
+          }), "f" ]; })
+        }, function() {
+          return Spacebars.attrMustache(view.lookup("b"));
+        }));
       });
 
   run("<asdf>{{foo}}</asdf>",
       function() {
-        var self = this;
-        return HTML.getTag("asdf")(Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self));
+        var view = this;
+        return HTML.getTag("asdf")(Blaze.View(function() {
+          return Spacebars.mustache(view.lookup("foo"));
         }));
       });
 
   run("<textarea>{{foo}}</textarea>",
       function() {
-        var self = this;
-        return HTML.TEXTAREA(Blaze.Isolate(function() {
-          return Spacebars.mustache(Blaze.lookup("foo", self));
-        }));
+        var view = this;
+        return HTML.TEXTAREA({value: (function () {
+          return Blaze.View(function() {
+            return Spacebars.mustache(view.lookup("foo"));
+          });
+        }) });
       });
-
 });
 
 Tinytest.add("spacebars-compiler - compiler errors", function (test) {
