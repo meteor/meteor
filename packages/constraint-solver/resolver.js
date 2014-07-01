@@ -490,6 +490,7 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
         throw new Error("No unit version was found for the constraint -- " + c.toString());
 
       // Collect the transitive dependencies of the direct exact dependencies.
+      // XXX how does this not lead to infinite recursion?
       exactTransitiveConstraints = exactTransitiveConstraints.union(
                 unitVersion._exactTransitiveConstraints(resolver));
     });
