@@ -2347,5 +2347,3 @@ Tinytest.add(
     test.isTrue(span);
     test.equal(UI.getElementData(span), {foo: "bar"});
   });
-
-
