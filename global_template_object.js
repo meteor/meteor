@@ -16,17 +16,59 @@ Template.prototype.helpers = function (dict) {
     this[k] = dict[k];
 };
 
-Template.prototype.events = function () {
-  // XXX
+Template.prototype.events = function (eventMap) {
+  var template = this;
+  template._eventMaps = (template._eventMaps || []);
+  var eventMap2 = {};
+  for (var k in eventMap) {
+    eventMap2[k] = (function (k, v) {
+      return function (event/*, ...*/) {
+        var view = this; // passed by EventAugmenter
+        var data = Blaze.getElementData(event.currentTarget);
+        if (data == null)
+          data = {};
+        var args = Array.prototype.slice.call(arguments);
+        var tmplInstance = {data: null};//////updateTemplateInstance(component);
+        args.splice(1, 0, tmplInstance);
+        return v.apply(data, args);
+      };
+    })(k, eventMap[k]);
+  }
+
+  template._eventMaps.push(eventMap2);
 };
 
 Template.prototype.__makeView = function (contentFunc, elseFunc) {
+  var template = this;
   var view = Blaze.View(this.__viewName, this.__render);
-  view.template = this;
+  view.template = template;
+
   view.templateContentBlock = (
     contentFunc ? Template.__create__('(contentBlock)', contentFunc) : null);
   view.templateElseBlock = (
     elseFunc ? Template.__create__('(elseBlock)', elseFunc) : null);
+
+  if (template._eventMaps ||
+      typeof template.events === 'object') {
+    view.onMaterialized(function () {
+      if (! template._eventMaps &&
+          typeof template.events === "object") {
+        // Provide limited back-compat support for `.events = {...}`
+        // syntax.  Pass `self.events` to the original `.events(...)`
+        // function.  This code must run only once per component, in
+        // order to not bind the handlers more than once, which is
+        // ensured by the fact that we only do this when `self._eventMaps`
+        // is falsy, and we cause it to be set now.
+        Template.prototype.events.call(template, template.events);
+      }
+
+      var range = view.domrange;
+      _.each(template._eventMaps, function (m) {
+        range.addDOMAugmenter(new Blaze.EventAugmenter(m, view));
+      });
+    });
+  }
+
   return view;
 };
 
