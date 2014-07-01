@@ -1,10 +1,6 @@
 // TODO
 //
-// - DOMRange
-//   - kill DOMAugmenter
-//   - consider moving to _callbacks (including memberOut)
 // - Do you get access to the DOMRange from "destroyed"?
-// - Remove dead code files
 
 
 Blaze.View = function (kind, render) {
