@@ -106,7 +106,6 @@ UI.TemplateComponent = Blaze.Component.extend({
   render: function () {
     var self = this;
 
-    var self = this;
     if (self.created) {
       var templateInstance = updateTemplateInstance(self);
       Deps.nonreactive(function () {
