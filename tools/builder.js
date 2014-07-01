@@ -156,6 +156,7 @@ _.extend(Builder.prototype, {
   // - append: if true, append to the file if it exists rather than
   //   throwing an exception.
   // - executable: if true, mark the file as executable.
+  // - symlink: if set to a string, create a symlink to its value
   //
   // Returns the final canonicalize relPath that was written to.
   //
@@ -186,10 +187,13 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(path.dirname(relPath));
     var absPath = path.join(self.buildPath, relPath);
-    if (options.append)
+    if (options.symlink) {
+      fs.symlinkSync(options.symlink, absPath);
+    } else if (options.append) {
       fs.appendFileSync(absPath, data);
-    else
+    } else {
       fs.writeFileSync(absPath, data);
+    }
     self.usedAsFile[relPath] = true;
 
     if (options.executable)

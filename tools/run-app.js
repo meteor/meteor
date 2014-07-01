@@ -419,7 +419,7 @@ _.extend(AppRunner.prototype, {
 
     var bundleResult = bundler.bundle({
       outputPath: bundlePath,
-      nodeModulesMode: "symlink",
+      includeNodeModulesSymlink: true,
       buildOptions: self.buildOptions
     });
     var watchSet = bundleResult.watchSet;

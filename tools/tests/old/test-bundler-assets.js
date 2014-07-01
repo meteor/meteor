@@ -44,8 +44,7 @@ var runTest = function () {
 
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     var clientManifest = JSON.parse(
       fs.readFileSync(
@@ -78,8 +77,7 @@ var runTest = function () {
     var tmpOutputDir = tmpDir();
 
     var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
 
     var serverManifest = JSON.parse(

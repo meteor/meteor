@@ -402,7 +402,6 @@ var bundleAndDeploy = function (options) {
 
     var bundleResult = bundler.bundle({
       outputPath: bundlePath,
-      nodeModulesMode: "skip",
       buildOptions: options.buildOptions
     });
 

@@ -496,7 +496,6 @@ main.registerCommand({
 
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,
-    nodeModulesMode: options['for-deploy'] ? 'skip' : 'copy',
     buildOptions: {
       minify: ! options.debug,
       // XXX is this a good idea, or should linux be the default since
