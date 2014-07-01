@@ -89,9 +89,7 @@ Blaze.materializeView = function (view, parentView) {
 
   Blaze._fireCallbacks(view, 'created');
 
-  var domrange = new Blaze.DOMRange;
-  view.domrange = domrange;
-  domrange.view = view;
+  var domrange;
 
   var needsRenderedCallback = false;
   var scheduleRenderedCallback = function () {
@@ -117,7 +115,13 @@ Blaze.materializeView = function (view, parentView) {
       var materializer = new Blaze.DOMMaterializer({parentView: view});
       var rangesAndNodes = materializer.visit(htmljs, []);
       if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-        domrange.setMembers(rangesAndNodes);
+        if (c.firstRun) {
+          domrange = new Blaze.DOMRange(rangesAndNodes);
+          view.domrange = domrange;
+          domrange.view = view;
+        } else {
+          domrange.setMembers(rangesAndNodes);
+        }
         Blaze._fireCallbacks(view, 'materialized');
         needsRenderedCallback = true;
         if (! c.firstRun)
