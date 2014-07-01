@@ -3,12 +3,9 @@
 // - DOMRange
 //   - kill DOMAugmenter
 //   - consider moving to _callbacks (including memberOut)
-// - port attributes
-// - EACH untested as far as:
-//   - toHTML
-//   - cleanup
-//   - most things really...
 // - Do you get access to the DOMRange from "destroyed"?
+// - Remove dead code files
+
 
 Blaze.View = function (kind, render) {
   if (! (this instanceof Blaze.View))
@@ -27,13 +24,21 @@ Blaze.View = function (kind, render) {
     created: null,
     materialized: null,
     rendered: null,
-    destroyed: null };
+    destroyed: null
+  };
+
+  // Setting all properties here is good for readability,
+  // and also may help Chrome optimize the code by keeping
+  // the View object from changing shape too much.
+  this.isCreated = false;
+  this.isCreatedForExpansion = false;
+  this.isDestroyed = false;
+  this.isInRender = false;
+  this.parentView = null;
+  this.domrange = null;
 };
 
 Blaze.View.prototype.render = function () { return null; };
-
-Blaze.View.prototype.isCreated = false;
-Blaze.View.prototype.isDestroyed = false;
 
 Blaze.View.prototype.onCreated = function (cb) {
   this._callbacks.created = this._callbacks.created || [];
@@ -55,14 +60,40 @@ Blaze.View.prototype.onDestroyed = function (cb) {
 Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
 
-  if (! self.isCreated)
+  // The restrictions on when View#autorun can be called are in order
+  // to avoid bad patterns, like creating a Blaze.View and immediately
+  // calling autorun on it.  A freshly created View is not ready to
+  // have logic run on it; it doesn't have a parentView, for example.
+  // It's when the View is materialized or expanded that the onCreated
+  // handlers are fired and the View starts up.
+  //
+  // Letting the render() method call `this.autorun()` is problematic
+  // because of re-render.  The best we can do is to stop the old
+  // autorun and start a new one for each render, but that's a pattern
+  // we try to avoid internally because it leads to helpers being
+  // called extra times, in the case where the autorun causes the
+  // view to re-render (and thus the autorun to be torn down and a
+  // new one established).
+  //
+  // We could lift these restrictions in various ways.  One interesting
+  // idea is to allow you to call `view.autorun` after instantiating
+  // `view`, and automatically wrap it in `view.onCreated`, deferring
+  // the autorun so that it starts at an appropriate time.  However,
+  // then we can't return the Computation object to the caller, because
+  // it doesn't exist yet.
+  if (! self.isCreated) {
     throw new Error("View#autorun must be called from the created callback at the earliest");
+  }
+  if (this.isInRender) {
+    throw new Error("Can't call View#autorun from inside render(); try calling it from the created or rendered callback");
+  }
+  if (Deps.active) {
+    throw new Error("Can't call View#autorun from a Deps Computation; try calling it from the created or rendered callback");
+  }
 
-  var c = Deps.nonreactive(function () {
-    return Deps.autorun(function viewAutorun(c) {
-      return Blaze.withCurrentView(_inViewScope || self, function () {
-        return f.call(self, c);
-      });
+  var c = Deps.autorun(function viewAutorun(c) {
+    return Blaze.withCurrentView(_inViewScope || self, function () {
+      return f.call(self, c);
     });
   });
   self.onDestroyed(function () { c.stop(); });
@@ -105,38 +136,53 @@ Blaze.materializeView = function (view, parentView) {
   };
 
   var lastHtmljs;
-  view.autorun(function doRender(c) {
-    // `view.autorun` sets the current view.
-    // Any dependencies that should invalidate this Computation come
-    // from this line:
-    var htmljs = view.render();
+  // We don't expect to be called in a Computation, but just in case,
+  // wrap in Deps.nonreactive.
+  Deps.nonreactive(function () {
+    view.autorun(function doRender(c) {
+      // `view.autorun` sets the current view.
+      // Any dependencies that should invalidate this Computation come
+      // from this line:
+      view.isInRender = true;
+      var htmljs = view.render();
+      view.isInRender = false;
 
-    Deps.nonreactive(function doMaterialize() {
-      var materializer = new Blaze.DOMMaterializer({parentView: view});
-      var rangesAndNodes = materializer.visit(htmljs, []);
-      if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-        if (c.firstRun) {
-          domrange = new Blaze.DOMRange(rangesAndNodes);
-          view.domrange = domrange;
-          domrange.view = view;
-        } else {
-          domrange.setMembers(rangesAndNodes);
+      Deps.nonreactive(function doMaterialize() {
+        var materializer = new Blaze.DOMMaterializer({parentView: view});
+        var rangesAndNodes = materializer.visit(htmljs, []);
+        if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
+          if (c.firstRun) {
+            domrange = new Blaze.DOMRange(rangesAndNodes);
+            view.domrange = domrange;
+            domrange.view = view;
+          } else {
+            domrange.setMembers(rangesAndNodes);
+          }
+          Blaze._fireCallbacks(view, 'materialized');
+          needsRenderedCallback = true;
+          if (! c.firstRun)
+            scheduleRenderedCallback();
         }
-        Blaze._fireCallbacks(view, 'materialized');
-        needsRenderedCallback = true;
-        if (! c.firstRun)
-          scheduleRenderedCallback();
-      }
-    });
-    lastHtmljs = htmljs;
-  });
+      });
+      lastHtmljs = htmljs;
 
-  domrange.onAttached(function attached(range, element) {
-    Blaze.DOMBackend.Teardown.onElementTeardown(element, function teardown() {
-      Blaze.destroyView(view, true /* _viaTeardown */);
+      // Causes any nested views to stop immediately, not when we call
+      // `setMembers` the next time around the autorun.  Otherwise,
+      // helpers in the DOM tree to be replaced might be scheduled
+      // to re-run before we have a chance to stop them.
+      Deps.onInvalidate(function () {
+        domrange.destroyMembers();
+      });
     });
 
-    scheduleRenderedCallback();
+    domrange.onAttached(function attached(range, element) {
+      Blaze.DOMBackend.Teardown.onElementTeardown(
+        element, function teardown() {
+          Blaze.destroyView(view, true /* _skipNodes */);
+        });
+
+      scheduleRenderedCallback();
+    });
   });
 
   return domrange;
@@ -157,13 +203,15 @@ Blaze._expandView = function (view, parentView) {
   if (view.isCreated)
     throw new Error("Can't render the same View twice");
   view.isCreated = true;
-  view.isBeingExpanded = true;
+  view.isCreatedForExpansion = true;
 
   Blaze._fireCallbacks(view, 'created');
 
+  view.isInRender = true;
   var htmljs = Blaze.withCurrentView(view, function () {
     return view.render();
   });
+  view.isInRender = false;
 
   var result = Blaze._expand(htmljs, view);
 
@@ -221,26 +269,17 @@ Blaze._expandAttributes = function (attrs, parentView) {
     {parentView: parentView})).visitAttributes(attrs);
 };
 
-Blaze.destroyView = function (view, _viaTeardown) {
+Blaze.destroyView = function (view, _skipNodes) {
   if (view.isDestroyed)
     return;
   view.isDestroyed = true;
 
-  // Destroy views and elements recursively.  If _viaTeardown,
-  // only recurse up to views, not elements, because we assume
+  // Destroy views and elements recursively.  If _skipNodes,
+  // only recurse up to views, not elements, for the case where
   // the backend (jQuery) is recursing over the elements already.
-  if (view.domrange) {
-    var members = view.domrange.members;
-    for (var i = 0; i < members.length; i++) {
-      var m = members[i];
-      if (m instanceof Blaze.DOMRange) {
-        if (m.view)
-          Blaze.destroyView(m.view, _viaTeardown);
-      } else if (! _viaTeardown && m.nodeType === 1) {
-        Blaze.destroyNode(m);
-      }
-    }
-  }
+
+  if (view.domrange)
+    view.domrange.destroyMembers();
 
   Blaze._fireCallbacks(view, 'destroyed');
 };
@@ -263,6 +302,14 @@ Blaze._isContentEqual = function (a, b) {
       ((typeof a === 'number') || (typeof a === 'boolean') ||
        (typeof a === 'string'));
   }
+};
+
+// Whether the DOM created from `htmljs`s
+Blaze._mayContainViews = function (htmljs) {
+  if (htmljs && (typeof htmljs === 'object') &&
+      ! (htmljs instanceof HTML.Raw))
+    return true;
+  return false;
 };
 
 Blaze.currentView = null;
@@ -440,14 +487,16 @@ Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
   var conditionVar = new Blaze.ReactiveVar;
 
   var view = Blaze.View(_not ? 'unless' : 'if', function () {
-    this.autorun(function () {
-      var cond = Blaze._calculateCondition(conditionFunc());
-      conditionVar.set(_not ? (! cond) : cond);
-    }, this.parentView);
     return conditionVar.get() ? contentFunc() :
       (elseFunc ? elseFunc() : null);
   });
   view.__conditionVar = conditionVar;
+  view.onCreated(function () {
+    this.autorun(function () {
+      var cond = Blaze._calculateCondition(conditionFunc());
+      conditionVar.set(_not ? (! cond) : cond);
+    }, this.parentView);
+  });
 
   return view;
 };
@@ -460,7 +509,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   var eachView = Blaze.View('each', function () {
     var subviews = this.initialSubviews;
     this.initialSubviews = null;
-    if (this.isBeingExpanded) {
+    if (this.isCreatedForExpansion) {
       this.expandedValueDep = new Deps.Dependency;
       this.expandedValueDep.depend();
     }
@@ -486,62 +535,70 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
       return eachView.argVar.get();
     }, {
       addedAt: function (id, item, index) {
-        var newItemView = Blaze.With(item, eachView.contentFunc);
-        eachView.numItems++;
+        Deps.nonreactive(function () {
+          var newItemView = Blaze.With(item, eachView.contentFunc);
+          eachView.numItems++;
 
-        if (eachView.expandedValueDep) {
-          eachView.expandedValueDep.changed();
-        } else if (eachView.domrange) {
-          if (eachView.inElseMode) {
-            eachView.domrange.removeMember(0);
-            eachView.inElseMode = false;
+          if (eachView.expandedValueDep) {
+            eachView.expandedValueDep.changed();
+          } else if (eachView.domrange) {
+            if (eachView.inElseMode) {
+              eachView.domrange.removeMember(0);
+              eachView.inElseMode = false;
+            }
+
+            var range = Blaze.materializeView(newItemView, eachView);
+            eachView.domrange.addMember(range, index);
+          } else {
+            eachView.initialSubviews.splice(index, 0, newItemView);
           }
-
-          var range = Blaze.materializeView(newItemView, eachView);
-          eachView.domrange.addMember(range, index);
-        } else {
-          eachView.initialSubviews.splice(index, 0, newItemView);
-        }
+        });
       },
       removedAt: function (id, item, index) {
-        eachView.numItems--;
-        if (eachView.expandedValueDep) {
-          eachView.expandedValueDep.changed();
-        } else if (eachView.domrange) {
-          eachView.domrange.removeMember(index);
-          if (eachView.elseFunc && eachView.numItems === 0) {
-            eachView.inElseMode = true;
-            eachView.domrange.addMember(
-              Blaze.materializeView(
-                Blaze.View('each_else',eachView.elseFunc),
-                eachView), 0);
-        }
-        } else {
-          eachView.initialSubviews.splice(index, 1);
-        }
+        Deps.nonreactive(function () {
+          eachView.numItems--;
+          if (eachView.expandedValueDep) {
+            eachView.expandedValueDep.changed();
+          } else if (eachView.domrange) {
+            eachView.domrange.removeMember(index);
+            if (eachView.elseFunc && eachView.numItems === 0) {
+              eachView.inElseMode = true;
+              eachView.domrange.addMember(
+                Blaze.materializeView(
+                  Blaze.View('each_else',eachView.elseFunc),
+                  eachView), 0);
+            }
+          } else {
+            eachView.initialSubviews.splice(index, 1);
+          }
+        });
       },
       changedAt: function (id, newItem, oldItem, index) {
-        var itemView;
-        if (eachView.expandedValueDep) {
-          eachView.expandedValueDep.changed();
-        } else if (eachView.domrange) {
-          itemView = eachView.domrange.getMember(index).view;
-        } else {
-          itemView = eachView.initialSubviews[index];
-        }
-        itemView.dataVar.set(newItem);
+        Deps.nonreactive(function () {
+          var itemView;
+          if (eachView.expandedValueDep) {
+            eachView.expandedValueDep.changed();
+          } else if (eachView.domrange) {
+            itemView = eachView.domrange.getMember(index).view;
+          } else {
+            itemView = eachView.initialSubviews[index];
+          }
+          itemView.dataVar.set(newItem);
+        });
       },
       movedTo: function (id, item, fromIndex, toIndex) {
-        if (eachView.expandedValueDep) {
-          eachView.expandedValueDep.changed();
-        } else if (eachView.domrange) {
-          eachView.domrange.moveMember(fromIndex, toIndex);
-        } else {
-          var subviews = eachView.initialSubviews;
-          var itemView = subviews[fromIndex];
-          subviews.splice(fromIndex, 1);
-          subviews.splice(toIndex, 0, itemView);
-        }
+        Deps.nonreactive(function () {
+          if (eachView.expandedValueDep) {
+            eachView.expandedValueDep.changed();
+          } else if (eachView.domrange) {
+            eachView.domrange.moveMember(fromIndex, toIndex);
+          } else {
+            var subviews = eachView.initialSubviews;
+            var itemView = subviews[fromIndex];
+            subviews.splice(fromIndex, 1);
+            subviews.splice(toIndex, 0, itemView);
+          }
+        });
       }
     });
 

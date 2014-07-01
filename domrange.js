@@ -25,7 +25,6 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
   this.attached = false;
   this.parentElement = null;
   this.parentRange = null;
-  this.stopCallbacks = _emptyArray;
   this.augmenters = _emptyArray;
 };
 var DOMRange = Blaze.DOMRange;
@@ -266,19 +265,6 @@ DOMRange.prototype.getMember = function (atIndex) {
   return this.members[atIndex];
 };
 
-DOMRange.prototype.stop = function () {
-  var stopCallbacks = this.stopCallbacks;
-  for (var i = 0; i < stopCallbacks.length; i++)
-    stopCallbacks[i].call(this);
-  this.stopCallbacks = _emptyArray;
-};
-
-DOMRange.prototype.onstop = function (cb) {
-  if (this.stopCallbacks === _emptyArray)
-    this.stopCallbacks = [];
-  this.stopCallbacks.push(cb);
-};
-
 DOMRange.prototype._memberIn = function (m) {
   if (m instanceof DOMRange)
     m.parentRange = this;
@@ -286,17 +272,26 @@ DOMRange.prototype._memberIn = function (m) {
     m.$blaze_range = this;
 };
 
-DOMRange.prototype._memberOut = function (m) {
+DOMRange.prototype._memberOut = function (m, _skipNodes) {
   if (m instanceof DOMRange) {
-    m.stop();
     if (m.view)
-      Blaze.destroyView(m.view);
+      Blaze.destroyView(m.view, _skipNodes);
     m.parentRange = null;
-  } else if (m.nodeType === 1) {
+  } else if ((! _skipNodes) && m.nodeType === 1) {
     // DOM Element
-    Blaze.destroyNode(m);
-    m.$blaze_range = null;
+    if (m.$blaze_range) {
+      Blaze.destroyNode(m);
+      m.$blaze_range = null;
+    }
   }
+};
+
+// Tear down, but don't remove, the members.  Used when chunks
+// of DOM are being torn down or replaced.
+DOMRange.prototype.destroyMembers = function (_skipNodes) {
+  var members = this.members;
+  for (var i = 0; i < members.length; i++)
+    this._memberOut(members[i], _skipNodes);
 };
 
 DOMRange.prototype.containsElement = function (elem) {
