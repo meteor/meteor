@@ -388,6 +388,11 @@ Blaze.getElementData = function (elem) {
   return theWith ? theWith.dataVar.get() : null;
 };
 
+Blaze.getViewData = function (view) {
+  var theWith = Blaze.getParentView(view, 'with');
+  return theWith ? theWith.dataVar.get() : null;
+};
+
 Blaze._calculateCondition = function (cond) {
   if (cond instanceof Array && cond.length === 0)
     cond = false;
