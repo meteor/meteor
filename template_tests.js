@@ -1123,22 +1123,24 @@ Tinytest.add('spacebars-tests - template_tests - attribute object helpers are is
 Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated', function (test) {
   var tmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated;
   var dep = new Deps.Dependency;
-  var subtmpl = Template.
-        spacebars_template_test_inclusion_helpers_are_isolated_subtemplate
-        .constructor.extend().prototype; // fresh subclass
-  var R = new ReactiveVar(subtmpl);
+  var subtmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated_subtemplate;
+  // make a copy so we can set "rendered" without mutating the original
+  var subtmplCopy = Template.__create__(
+    subtmpl.__viewName,
+    subtmpl.__render);
+  var R = new ReactiveVar(subtmplCopy);
   tmpl.foo = function () {
     dep.depend();
     return R.get();
   };
 
   var div = renderToDiv(tmpl);
-  subtmpl.rendered = function () {
+    subtmplCopy.rendered = function () {
     test.fail("shouldn't re-render when same value returned from helper");
   };
 
   dep.changed();
-  Deps.flush({_throwFirstError: true}); // `subtmpl.rendered` not called
+  Deps.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
 
   R.set(null);
   Deps.flush({_throwFirstError: true}); // no error thrown
@@ -1174,7 +1176,7 @@ Tinytest.add('spacebars-tests - template_tests - nully attributes', function (te
     }
 
     var html = Blaze.toHTML(Blaze.With(data, function () {
-      return new tmpls[whichTemplate].constructor;
+      return tmpls[whichTemplate];
     }));
 
     test.equal(/ checked="[^"]*"/.test(html), !! expectTrue);
