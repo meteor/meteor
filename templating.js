@@ -55,6 +55,14 @@ Template.__updateTemplateInstance = function (view) {
   return tmpl;
 };
 
+UI._templateInstance = function () {
+  var templateView = Blaze.getCurrentTemplateView();
+  if (! templateView)
+    throw new Error("No current template");
+
+  return Template.__updateTemplateInstance(templateView);
+};
+
 Template.prototype.events = function (eventMap) {
   var template = this;
   template.__eventMaps = (template.__eventMaps || []);
