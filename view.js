@@ -533,3 +533,11 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
 
   return eachView;
 };
+
+Blaze.SetParentView = function (parentView, contentFunc) {
+  var view = Blaze.View('SetParentView', contentFunc);
+  view.onCreated(function () {
+    this.parentView = parentView;
+  });
+  return view;
+};
