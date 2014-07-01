@@ -2207,7 +2207,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - access parent data contexts from helper",
+  "spacebars-tests - template_tests - UI._parentData from helper",
   function (test) {
     var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
     var parentTmpl = Template.spacebars_test_template_parent_data_helper;
