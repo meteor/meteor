@@ -106,7 +106,7 @@ Tinytest.add("ui - render - basic", function (test) {
 Tinytest.add("ui - render - input - value", function (test) {
   var R = ReactiveVar("hello");
   var div = document.createElement("DIV");
-  materialize(INPUT({value: Blaze.Isolate(function () { return R.get(); })}), div);
+  materialize(INPUT({value: function () { return R.get(); }}), div);
   var inputEl = div.querySelector('input');
   test.equal(inputEl.value, "hello");
   inputEl.value = "goodbye";
@@ -121,7 +121,7 @@ Tinytest.add("ui - render - input - value", function (test) {
 Tinytest.add("ui - render - input - checked", function (test) {
   var R = ReactiveVar(null);
   var div = document.createElement("DIV");
-  materialize(INPUT({type: "checkbox", checked: Blaze.Isolate(function () { return R.get(); })}), div);
+  materialize(INPUT({type: "checkbox", checked: function () { return R.get(); }}), div);
   var inputEl = div.querySelector('input');
   test.equal(inputEl.checked, false);
   inputEl.checked = true;
@@ -263,7 +263,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var spanFunc = function () {
       return SPAN(HTML.Attrs(
-        Blaze.Var(function () { return R.get(); })));
+        function () { return R.get(); }));
     };
 
     test.equal(Blaze.toHTML(spanFunc()),
@@ -303,7 +303,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
       id: 'foo'});
 
     var spanFunc = function () {
-      return SPAN(HTML.Attrs(Blaze.Var(function () { return R.get(); })));
+      return SPAN(HTML.Attrs(function () { return R.get(); }));
     };
 
     test.equal(Blaze.toHTML(spanFunc()), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
@@ -341,7 +341,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'style': 'foo: a;'});
 
     var spanFunc = function () {
-      return SPAN(HTML.Attrs(Blaze.Var(function () { return R.get(); })));
+      return SPAN(HTML.Attrs(function () { return R.get(); }));
     };
 
     var div = document.createElement("DIV");
@@ -394,7 +394,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var spanFunc = function () {
       return SPAN(HTML.Attrs(
-        Blaze.Var(function () { return R.get(); })));
+        function () { return R.get(); }));
     };
 
     test.equal(Blaze.toHTML(spanFunc()), '<span id="foo" ggg="xyz"></span>');
@@ -553,8 +553,8 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
 
   var spanFunc = function () {
     return SPAN(HTML.Attrs(
-      { blah: Blaze.Isolate(function () { return R1.get(); }) },
-      Blaze.Var(function () { return { blah: R2.get() }; })));
+      { blah: function () { return R1.get(); } },
+      function () { return { blah: R2.get() }; }));
   };
 
   var div = document.createElement("DIV");
@@ -613,8 +613,8 @@ Tinytest.add("ui - render - SVG", function (test) {
     {width: 100, height: 100},
     HTML.CIRCLE({cx: 50, cy: 50, r: 40,
                  stroke: 'black', 'stroke-width': 3,
-                 'class': Blaze.Isolate(function () { return classes.get(); }),
-                 fill: Blaze.Isolate(function () { return fillColor.get(); })})));
+                 'class': function () { return classes.get(); },
+                 fill: function () { return fillColor.get(); }})));
 
   var div = document.createElement("DIV");
   materialize(content, div);
