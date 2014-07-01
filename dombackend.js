@@ -110,6 +110,12 @@ DOMBackend.Teardown = {
 };
 
 $jq.event.special[DOMBackend.Teardown._JQUERY_EVENT_NAME] = {
+  setup: function () {
+    // This "setup" callback is important even though it is empty!
+    // Without it, jQuery will call addEventListener, which is a
+    // performance hit, especially with Chrome's async stack trace
+    // feature enabled.
+  },
   teardown: function() {
     var elem = this;
     var callbacks = elem[DOMBackend.Teardown._CB_PROP];
