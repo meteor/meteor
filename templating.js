@@ -111,7 +111,7 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
 
       var range = view.domrange;
       _.each(template.__eventMaps, function (m) {
-        range.addDOMAugmenter(new Blaze.EventAugmenter(m, view));
+        range.addEventMap(m, view);
       });
     });
   }
@@ -248,4 +248,3 @@ UI.insert = function (range, parentElement, nextNode) {
 
   range.attach(parentElement, nextNode);
 };
-
