@@ -16,6 +16,7 @@ Package.on_use(function (api) {
     'preamble.js'
   ]);
 
+  // client-only files
   api.add_files([
     'dombackend.js',
     'domrange.js',
@@ -24,9 +25,11 @@ Package.on_use(function (api) {
     'materializer.js'
   ], 'client');
 
+  // client and server
   api.add_files([
     'reactivevar.js',
     'view.js',
+    'builtins.js',
     'lookup.js'
   ]);
 });
