@@ -306,8 +306,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             semverToNum(prev.version);
 
           var isCompatible =
-            semver.gte(prev.version, uv.earliestCompatibleVersion) ||
-            semver.gte(uv.version, prev.earliestCompatibleVersion);
+                prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -370,7 +369,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
         if (_.has(prevSolMapping, dep)) {
           var prev = prevSolMapping[dep];
           var prevVersionMatches =
-            _.isEmpty(constraints.violatedConstraints(prev));
+            _.isEmpty(constraints.violatedConstraints(prev, self.resolver));
 
           // if it matches, assume we would pick it and the cost doesn't
           // increase
@@ -391,6 +390,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             semverToNum(prev.version);
 
           var isCompatible =
+                prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
             semver.gte(prev.version, uv.earliestCompatibleVersion) ||
             semver.gte(uv.version, prev.earliestCompatibleVersion);
 
