@@ -5,15 +5,11 @@ var Packages = new LocalCollection;
 var Versions = new LocalCollection;
 var Builds = new LocalCollection;
 
-Packages.insert({ name: "sparky-forms" });
-Packages.insert({ name: "forms" });
-Packages.insert({ name: "sparkle" });
-Packages.insert({ name: "awesome-dropdown" });
-Packages.insert({ name: "dropdown" });
-Packages.insert({ name: "jquery-widgets" });
-Packages.insert({ name: "jquery" });
-
 var insertVersion = function (name, version, ecv, deps) {
+  if (!Packages.findOne({name: name})) {
+    Packages.insert({name: name});
+  }
+
   var constructedDeps = {};
   _.each(deps, function (constraint, name) {
     constructedDeps[name] = {
@@ -44,6 +40,8 @@ insertVersion("jquery-widgets", "1.0.0", "1.0.0", {"jquery": "1.8.0", "sparkle":
 insertVersion("jquery-widgets", "1.0.2", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"});
 insertVersion("jquery", "1.8.0", "1.8.0");
 insertVersion("jquery", "1.8.2", "1.8.0");
+insertVersion("foobar1", "1.0.0", "1.0.0", {foobar2: "=1.0.0"});
+insertVersion("foobar2", "1.0.0", "1.0.0", {foobar1: "=1.0.0"});
 
 // XXX Temporary hack: make a catalog stub to pass in to the constraint
 // solver. We'll soon move constraint-solver into tools and just run
@@ -119,6 +117,7 @@ Tinytest.add("constraint solver - exact dependencies", function (test) {
   t_progagateExact({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
   t_progagateExact({ "awesome-dropdown": "=1.5.0" }, { "awesome-dropdown": "1.5.0", "dropdown": "1.2.2" });
+  t_progagateExact({ foobar1: "=1.0.0" }, {foobar1: "1.0.0", foobar2: "1.0.0"});
 
   FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=1.0.0" }, /(.*sparkle.*sparky-forms.*)|(.*sparky-forms.*sparkle.*).*sparkle/);
   // something that isn't available for your architecture

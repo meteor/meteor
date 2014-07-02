@@ -37,8 +37,6 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   A100.addDependency("F");
   A100.addConstraint(resolver.getConstraint("F", "1.1.0"));
 
-  test.equal(A100.exactTransitiveDependenciesVersions(resolver), [B100, C100]);
-  test.equal(A100.inexactTransitiveDependencies(resolver).toArray(), ["D", "F"]);
   test.equal(resolver.resolve(["A"]), [A100, B100, C100, D110, E100, F120]);
 });
 

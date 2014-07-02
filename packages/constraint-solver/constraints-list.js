@@ -37,6 +37,15 @@ ConstraintSolver.ConstraintsList.prototype.contains = function (c) {
   return mori.has_key(constraints, c.version);
 };
 
+ConstraintSolver.ConstraintsList.prototype.containsName = function (name) {
+  var self = this;
+  if (! mori.has_key(self.byName, name))
+    return false;
+  var bn = mori.get(self.byName, name);
+  return !mori.is_empty(mori.get(bn, "exact")) ||
+    !mori.is_empty(mori.get(bn, "inexact"));
+};
+
 // returns a new version containing passed constraint
 ConstraintSolver.ConstraintsList.prototype.push = function (c) {
   var self = this;
@@ -309,6 +318,18 @@ ConstraintSolver.ConstraintsList.prototype.toArray = function () {
   });
 
   return arr;
+};
+
+ConstraintSolver.ConstraintsList.prototype.toExactUnitVersionArray = function (resolver) {
+  var self = this;
+  var uvs = [];
+  self.eachExact(function (c) {
+    var uv = c.getSatisfyingUnitVersion(resolver);
+      if (! uv)
+        throw new Error("No unit version was found for the constraint -- " + c.toString());
+    uvs.push(uv);
+  });
+  return uvs;
 };
 
 ConstraintSolver.ConstraintsList.fromArray = function (arr) {
