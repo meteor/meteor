@@ -303,7 +303,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   var queue = [];
   // Boolean map to avoid adding the same stuff to queue over and over again.
   // Keeps the time complexity the same but can save some memory.
-  var isEnqueued = {};
+  var hasBeenEnqueued = {};
   // For keeping track of new choices in this iteration
   var oldChoice = {};
   _.each(choices, function (uv) { oldChoice[uv.name] = uv; });
@@ -312,7 +312,7 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   var exactConstrForChoice = {};
 
   queue.push(uv);
-  isEnqueued[uv.name] = true;
+  hasBeenEnqueued[uv.name] = true;
 
   while (queue.length > 0) {
     uv = queue[0];
@@ -356,10 +356,10 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
         throw new Error("No unit version was found for the constraint -- " + c.toString());
 
       // Enqueue all new exact dependencies.
-      if (_.has(isEnqueued, dep.name))
+      if (_.has(hasBeenEnqueued, dep.name))
         return;
       queue.push(dep);
-      isEnqueued[dep.name] = true;
+      hasBeenEnqueued[dep.name] = true;
       exactConstrForChoice[dep.name] = c;
     });
 
