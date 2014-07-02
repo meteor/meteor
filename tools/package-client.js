@@ -169,16 +169,9 @@ exports.updateServerPackageData = function (cachedServerData) {
 
   // If there is no new data from the server, don't bother writing things to
   // disk.
-  var empty = true;
-  _.each(remoteData.collections, function (value, key) {
-    if (!_.isEqual([], value)) {
-      empty = false;
-    }
-  });
-  if (empty) {
+  if (_.isEqual(remoteData.collections, {})) {
     return cachedServerData;
   }
-
 
   sources.push(remoteData.collections);
   var allCollections = mergeCollections(sources);
