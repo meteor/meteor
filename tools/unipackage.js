@@ -343,8 +343,6 @@ _.extend(Unipackage.prototype, {
 
     var chosenArch = archinfo.mostSpecificMatch(
       arch, _.pluck(self.unibuilds, 'arch'));
-    // console.log("unibuilds", _.pluck(self.unibuilds, 'arch'));
-    // console.log("chosen arch: " + chosenArch);
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
@@ -549,7 +547,6 @@ _.extend(Unipackage.prototype, {
       }
     });
     self.pluginsBuilt = true;
-    // console.log(mainJson.unibuilds);
     _.each(mainJson.unibuilds, function (unibuildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
@@ -730,7 +727,6 @@ _.extend(Unipackage.prototype, {
           builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
-        console.log("unibuild arch", unibuild.arch);
         mainJson.unibuilds.push({
           arch: unibuild.arch,
           path: unibuildJsonFile
@@ -894,7 +890,6 @@ _.extend(Unipackage.prototype, {
         }
         mainJson.tools.push(toolMeta);
       });
-      console.log("writing json: ", mainJson);
       builder.writeJson("unipackage.json", mainJson);
       builder.writeJson("buildinfo.json", buildInfoJson);
       builder.complete();
