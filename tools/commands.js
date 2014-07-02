@@ -451,6 +451,7 @@ main.registerCommand({
 // bundle
 ///////////////////////////////////////////////////////////////////////////////
 
+// XXX document
 main.registerCommand({
   name: 'bundle',
   minArgs: 1,
@@ -458,6 +459,8 @@ main.registerCommand({
   requiresApp: true,
   options: {
     debug: { type: Boolean },
+    ios: { type: Boolean },
+    browser: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
     // Undocumented
@@ -488,6 +491,15 @@ main.registerCommand({
   }
   var bundleArch =  options.architecture || archinfo.host();
 
+  // XXX
+  var clientArchs = [];
+  if (options.ios) {
+    clientArchs.push("client.ios");
+  }
+  if (options.browser) {
+    clientArchs.push("client.browser");
+  }
+
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
   var bundlePath = options['directory'] ?
@@ -506,7 +518,8 @@ main.registerCommand({
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      arch: bundleArch
+      arch: bundleArch,
+      clientArchs: clientArchs
     }
   });
   if (bundleResult.errors) {

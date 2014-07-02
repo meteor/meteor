@@ -156,7 +156,7 @@ _.extend(Unibuild.prototype, {
       importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
       packageVariables: self.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
+      includeSourceMapInstructions: archinfo.matches(self.arch, "client"),
       name: self.pkg.name || null
     });
 
@@ -305,7 +305,7 @@ _.extend(Unipackage.prototype, {
       _.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())
     ).sort();
     // Ensure that our buildArchitectures string does not look like
-    //    browser+os+os.osx.x86_64
+    //    client+os+os.osx.x86_64
     // This would happen if there is an 'os' unibuild but a platform-specific
     // tool (eg, in meteor-tool).  This would confuse catalog.getBuildsForArches
     // into thinking that it would work for Linux, since the 'os' means
@@ -336,14 +336,15 @@ _.extend(Unipackage.prototype, {
   },
 
   // Return the unibuild of the package to use for a given target architecture
-  // (eg, 'os.linux.x86_64' or 'browser'), or throw an exception if that
+  // (eg, 'os.linux.x86_64' or 'client'), or throw an exception if that
   // packages can't be loaded under these circumstances.
   getUnibuildAtArch: function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(
       arch, _.pluck(self.unibuilds, 'arch'));
-
+    // console.log("unibuilds", _.pluck(self.unibuilds, 'arch'));
+    // console.log("chosen arch: " + chosenArch);
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
@@ -461,7 +462,6 @@ _.extend(Unipackage.prototype, {
 
     var mainJson =
       JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
-
     // We don't support pre-0.9.0 unipackages, but we do know enough to delete
     // them if we find them in .build.* somehow (rather than crash).
     if (mainJson.format === "unipackage-pre1")
@@ -549,7 +549,7 @@ _.extend(Unipackage.prototype, {
       }
     });
     self.pluginsBuilt = true;
-
+    // console.log(mainJson.unibuilds);
     _.each(mainJson.unibuilds, function (unibuildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
@@ -581,7 +581,6 @@ _.extend(Unipackage.prototype, {
 
       _.each(unibuildJson.resources, function (resource) {
         rejectBadPath(resource.file);
-
         var data = new Buffer(resource.length);
         // Read the data from disk, if it is non-empty. Avoid doing IO for empty
         // files, because (a) unnecessary and (b) fs.readSync with length 0
@@ -622,7 +621,8 @@ _.extend(Unipackage.prototype, {
           throw new Error("bad resource type in unipackage: " +
                           JSON.stringify(resource.type));
       });
-
+      if (unibuildMeta.arch === 'browser')
+        unibuildMeta.arch = 'client'
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
         arch: unibuildMeta.arch,
@@ -730,7 +730,7 @@ _.extend(Unipackage.prototype, {
           builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
-
+        console.log("unibuild arch", unibuild.arch);
         mainJson.unibuilds.push({
           arch: unibuild.arch,
           path: unibuildJsonFile
@@ -894,7 +894,7 @@ _.extend(Unipackage.prototype, {
         }
         mainJson.tools.push(toolMeta);
       });
-
+      console.log("writing json: ", mainJson);
       builder.writeJson("unipackage.json", mainJson);
       builder.writeJson("buildinfo.json", buildInfoJson);
       builder.complete();

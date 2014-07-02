@@ -563,9 +563,9 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         return ret;
       },
       appendDocument: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "client"))
           throw new Error("Document sections can only be emitted to " +
-                          "browser targets");
+                          "client targets");
         if (options.section !== "head" && options.section !== "body")
           throw new Error("'section' must be 'head' or 'body'");
         if (typeof options.data !== "string")
@@ -577,9 +577,9 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         });
       },
       addStylesheet: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "client"))
           throw new Error("Stylesheets can only be emitted to " +
-                          "browser targets");
+                          "client targets");
         if (typeof options.data !== "string")
           throw new Error("'data' option to addStylesheet must be a string");
         sourceIsWatched = true;
@@ -596,7 +596,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "client"))
           throw new Error("'bare' option may only be used for browser targets");
         sourceIsWatched = true;
         js.push({

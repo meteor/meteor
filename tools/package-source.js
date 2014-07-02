@@ -949,8 +949,8 @@ _.extend(PackageSource.prototype, {
     });
 
     // Create source architectures, one for the server and one for the client.
-    _.each(["browser", "os"], function (arch) {
-      var where = (arch === "browser") ? "client" : "server";
+    _.each(["client", "os"], function (arch) {
+      var where = (arch === "client") ? "client" : "server";
 
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
@@ -1034,7 +1034,7 @@ _.extend(PackageSource.prototype, {
       // Determine used packages
       var project = require('./project.js').project;
       var names = project.getConstraints();
-      var arch = archName === "server" ? "os" : "browser";
+      var arch = archName === "server" ? "os" : "client";
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {

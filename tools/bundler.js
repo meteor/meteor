@@ -576,7 +576,7 @@ _.extend(Target.prototype, {
   _emitResources: function () {
     var self = this;
 
-    var isBrowser = archinfo.matches(self.arch, "browser");
+    var isBrowser = archinfo.matches(self.arch, "client");
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
@@ -757,7 +757,7 @@ var ClientTarget = function (options) {
   self.head = [];
   self.body = [];
 
-  if (! archinfo.matches(self.arch, "browser"))
+  if (! archinfo.matches(self.arch, "client"))
     throw new Error("ClientTarget targeting something that isn't a browser?");
 };
 
@@ -1656,6 +1656,8 @@ exports.bundle = function (options) {
     throw new Error("running wrong release for app?");
 
   var arch = buildOptions.arch || archinfo.host();
+  var clientArchs = buildOptions.clientArchs.length === 0 ?
+                      ["client.browser"] : buildOptions.clientArchs;
 
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();
@@ -1685,10 +1687,10 @@ exports.bundle = function (options) {
   }, function () {
     var controlProgram = null;
 
-    var makeClientTarget = function (app) {
+    var makeClientTarget = function (app, arch) {
       var client = new ClientTarget({
         packageLoader: packageLoader,
-        arch: "browser"
+        arch: arch
       });
 
       client.make({
@@ -1701,6 +1703,7 @@ exports.bundle = function (options) {
     };
 
     var makeBlankClientTarget = function () {
+      // XXX
       var client = new ClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
@@ -1746,13 +1749,19 @@ exports.bundle = function (options) {
         appDir, exports.ignoreFiles);
 
       // Client
-      var client = makeClientTarget(app);
-      targets.client = client;
+      _.each(clientArchs, function (arch) {
+        var client = makeClientTarget(app, arch);
+        targets[arch] = client;
+      });
 
       // Server
-      var server = options.cachedServerTarget || makeServerTarget(app, client);
-      server.clientTarget = client;
-      targets.server = server;
+      var browserClient = targets["client.browser"];
+      if (browserClient) {
+        var server = makeServerTarget(app, browserClient);
+        var server = options.cachedServerTarget || makeServerTarget(app, client);
+        server.clientTarget = client;
+        targets.server = server;
+      }
     }
 
     // Pick up any additional targets in /programs

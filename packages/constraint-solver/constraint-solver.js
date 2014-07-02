@@ -37,9 +37,9 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   forEveryVersion(function (packageName, version, versionDef) {
     var unibuilds = {};
     // XXX in theory there might be different archs but in practice they are
-    // always "os" and "browser". Fix this once we actually have different
+    // always "os" and "client". Fix this once we actually have different
     // archs used.
-    _.each(["os", "browser"], function (arch) {
+    _.each(["os", "client"], function (arch) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
@@ -51,7 +51,6 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       _.each(dep.references, function (ref) {
         var unitName = packageName + "#" + ref.arch;
         var unitVersion = unibuilds[unitName];
-
         if (! unitVersion)
           throw new Error("A non-standard arch " + ref.arch + " for package " + packageName);
 
@@ -234,7 +233,7 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
   var unibuildPrefix = packageName + "#";
   var unibuilds = [];
   // XXX hardcode os and browser
-  _.each(["os", "browser"], function (arch) {
+  _.each(["os", "client"], function (arch) {
     if (self.resolver.unitsVersions[unibuildPrefix + arch])
       unibuilds.push(unibuildPrefix + arch);
   });
