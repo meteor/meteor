@@ -754,15 +754,8 @@ _.extend(BrowserStackClient.prototype, {
     ];
     self.tunnelProcess = child_process.execFile(
       '/bin/bash',
-      ['-c', args.join(' ')],
-      function (err, stdout, stderr) {
-        if (stderr.match(/not found/)) {
-          console.log("ERROR: BrowserStackLocal binary not installed. " +
-                      "Instructions for installing the binary can be found " +
-                      "at http://www.browserstack.com/local-testing " +
-                      "XXX add to dev_bundle.");
-        }
-    });
+      ['-c', args.join(' ')]
+    );
 
     // Called when the SSH tunnel is established.
     self.tunnelProcess.stdout.on('data', function(data) {
