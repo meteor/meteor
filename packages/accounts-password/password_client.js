@@ -49,7 +49,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
-var hashPassword = function (password) {
+Accounts.hashPassword = function (password) {
   return {
     digest: SHA256(password),
     algorithm: "sha-256"
@@ -93,7 +93,7 @@ Accounts.createUser = function (options, callback) {
     throw new Error("Must set options.password");
 
   // Replace password with the hashed password.
-  options.password = hashPassword(options.password);
+  options.password = Accounts.hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
