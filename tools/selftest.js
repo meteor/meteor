@@ -10,6 +10,10 @@ var archinfo = require('./archinfo.js');
 var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
 var uniload = require('./uniload.js');
+var util = require('util');
+var child_process = require('child_process');
+var webdriver = require('browserstack-webdriver');
+var phantomjs = require('phantomjs');
 
 var Package = uniload.load({ packages: ["ejson"] });
 
@@ -70,6 +74,13 @@ var getToolsPackage = function () {
   return toolPackage;
 };
 
+// Execute a command synchronously, discarding stderr.
+var execFileSync = function (binary, args) {
+  return Future.wrap(function(cb) {
+    var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
+    child_process.execFile(binary, args, cb2);
+  })().wait();
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
@@ -346,6 +357,18 @@ var Sandbox = function (options) {
     self._makeWarehouse(options.warehouse);
   }
 
+  self.clients = [ new PhantomClient({
+    host: 'localhost',
+    port: 3000
+  })];
+
+  if (options.clients && options.clients.browserstack) {
+    self.clients.push(new BrowserStackClient({
+      host: 'localhost',
+      port: 3000
+    }));
+  }
+
   // Figure out the 'meteor' to run
   if (self.warehouse)
     self.execPath = path.join(self.warehouse, 'meteor');
@@ -358,28 +381,41 @@ _.extend(Sandbox.prototype, {
   run: function (/* arguments */) {
     var self = this;
 
-    var env = _.clone(self.env);
-    env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
-
-    if (self.warehouse) {
-      // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = self.warehouse;
-      // Don't ever try to refresh the stub catalog we made.
-      env.METEOR_OFFLINE_CATALOG = "t";
-    }
-
-    // By default (ie, with no mock warehouse and no --release arg) we should be
-    // testing the actual release this is built in, so we pretend that it is the
-    // latest release.
-    if (!self.warehouse && release.current.isProperRelease())
-      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
-
     return new Run(self.execPath, {
       sandbox: self,
       args: _.toArray(arguments),
       cwd: self.cwd,
-      env: env,
+      env: self._makeEnv(),
       fakeMongo: self.fakeMongo
+    });
+  },
+
+  // Tests a set of clients with the argument function. Each call to f(run)
+  // instantiates a Run with a different client.
+  // Use:
+  // sandbox.testWithAllClients(function (run) {
+  //   // pre-connection checks
+  //   run.connectClient();
+  //   // post-connection checks
+  // });
+  testWithAllClients: function (f) {
+    var self = this;
+
+    if (self.clients.length) {
+      console.log("running test with " + self.clients.length + " client(s).");
+    } else {
+      console.log("running a client test with no clients. Use --browserstack" +
+                  " to run against clients." );
+    }
+    _.each(self.clients, function (client) {
+      f(new Run(self.execPath, {
+        sandbox: self,
+        args: [],
+        cwd: self.cwd,
+        env: self._makeEnv(),
+        fakeMongo: self.fakeMongo,
+        client: client
+      }));
     });
   },
 
@@ -480,6 +516,26 @@ _.extend(Sandbox.prototype, {
                             contents, 'utf8');
   },
 
+  _makeEnv: function () {
+    var self = this;
+    var env = _.clone(self.env);
+    env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
+
+    if (self.warehouse) {
+      // Tell it where the warehouse lives.
+      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      // Don't ever try to refresh the stub catalog we made.
+      env.METEOR_OFFLINE_CATALOG = "t";
+    }
+
+    // By default (ie, with no mock warehouse and no --release arg) we should be
+    // testing the actual release this is built in, so we pretend that it is the
+    // latest release.
+    if (!self.warehouse && release.current.isProperRelease())
+      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
+    return env;
+  },
+
   // Writes a stub warehouse (really a tropohouse) to the directory
   // self.warehouse. This warehouse only contains a meteor-tool package and some
   // releases containing that tool only (and no packages).
@@ -569,6 +625,152 @@ _.extend(Sandbox.prototype, {
   }
 });
 
+///////////////////////////////////////////////////////////////////////////////
+// Client
+///////////////////////////////////////////////////////////////////////////////
+
+var Client = function (options) {
+  var self = this;
+
+  self.host = options.host;
+  self.port = options.port;
+  self.url = "http://" + self.host + ":" + self.port;
+
+  if (! self.connect || ! self.stop) {
+    console.log("Missing methods in subclass of Client.");
+  }
+};
+
+// PhantomClient
+var PhantomClient = function (options) {
+  var self = this;
+  Client.apply(this, arguments);
+
+  self.process = null;
+};
+
+util.inherits(PhantomClient, Client);
+
+_.extend(PhantomClient.prototype, {
+  connect: function () {
+    var self = this;
+
+    var phantomScript = "require('webpage').create().open('" + self.url + "');";
+    var phantomPath = phantomjs.path;
+    self.process = child_process.execFile(
+      '/bin/bash',
+      ['-c',
+       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
+        phantomScript + "END\n")], function (err, stdout, stderr) {
+          if (stderr.match(/not found/)) {
+            console.log("ERROR: phantomjs not installed properly.");
+          }
+    });
+  },
+  stop: function() {
+    var self = this;
+    self.process && self.process.kill();
+    self.process = null;
+  }
+});
+
+// BrowserStackClient
+var browserStackKey = null;
+
+var BrowserStackClient = function (options) {
+  var self = this;
+  Client.apply(this, arguments);
+
+  self.tunnelProcess = null;
+  self.driver = null;
+};
+
+util.inherits(BrowserStackClient, Client);
+
+_.extend(BrowserStackClient.prototype, {
+  connect: function () {
+    var self = this;
+
+    // memoize the key
+    if (browserStackKey === null)
+      browserStackKey = self._getBrowserStackKey();
+    if (! browserStackKey)
+      throw new Error("BrowserStack key not found. Ensure that you " +
+        "have installed your S3 credentials.");
+
+    var capabilities = {
+      'browserName' : 'chrome',
+      'browserstack.user' : 'meteor',
+      'browserstack.local' : 'true',
+      'browserstack.key' : browserStackKey
+    };
+
+    self._launchBrowserStackTunnel(function (error) {
+      if (error)
+        throw error;
+
+      self.driver = new webdriver.Builder().
+        usingServer('http://hub.browserstack.com/wd/hub').
+        withCapabilities(capabilities).
+        build();
+      self.driver.get(self.url);
+    });
+  },
+
+  stop: function() {
+    var self = this;
+    self.tunnelProcess && self.tunnelProcess.kill();
+    self.tunnelProcess = null;
+
+    self.driver && self.driver.quit();
+    self.driver = null;
+  },
+
+  _getBrowserStackKey: function () {
+    var outputDir = path.join(files.mkdtemp(), "key");
+
+    try {
+      execFileSync("s3cmd", ["get",
+        "s3://meteor-browserstack-keys/browserstack-key",
+        outputDir
+      ]);
+
+      return fs.readFileSync(outputDir, "utf8").trim();
+    } catch (e) {
+      return null;
+    }
+  },
+
+  _launchBrowserStackTunnel: function (callback) {
+    var self = this;
+    var args = [
+      'BrowserStackLocal',
+      browserStackKey,
+      [self.host, self.port, 0].join(','),
+      // Disable Live Testing and Screenshots, just test with Automate.
+      '-onlyAutomate',
+      // Do not wait for the server to be ready to spawn the process.
+      '-skipCheck'
+    ];
+    self.tunnelProcess = child_process.execFile(
+      '/bin/bash',
+      ['-c', args.join(' ')],
+      function (err, stdout, stderr) {
+        if (stderr.match(/not found/)) {
+          console.log("ERROR: BrowserStackLocal binary not installed. " +
+                      "Instructions for installing the binary can be found " +
+                      "at http://www.browserstack.com/local-testing " +
+                      "XXX add to dev_bundle.");
+        }
+    });
+
+    // Called when the SSH tunnel is established.
+    self.tunnelProcess.stdout.on('data', function(data) {
+      if (data.toString().match(/You can now access your local server/))
+        callback();
+    });
+  }
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Run
@@ -590,6 +792,7 @@ var Run = function (execPath, options) {
   self.proc = null;
   self.baseTimeout = 2;
   self.extraTime = 0;
+  self.client = options.client;
 
   self.stdoutMatcher = new Matcher(self);
   self.stderrMatcher = new Matcher(self);
@@ -639,11 +842,22 @@ _.extend(Run.prototype, {
     });
   },
 
+  connectClient: function () {
+    var self = this;
+    if (! self.client)
+      throw new Error("Must create Run with a client to use connectClient().");
+
+    self._ensureStarted();
+    self.client.connect();
+  },
+
   _exited: function (status) {
     var self = this;
 
     if (self.exitStatus !== undefined)
       throw new Error("already exited?");
+
+    self.client && self.client.stop();
 
     self.exitStatus = status;
     var exitFutures = self.exitFutures;
@@ -820,6 +1034,7 @@ _.extend(Run.prototype, {
     var self = this;
     if (self.exitStatus === undefined) {
       self._ensureStarted();
+      self.client && self.client.stop();
       self.proc.kill();
       self.expectExit();
     }
@@ -829,6 +1044,7 @@ _.extend(Run.prototype, {
   _stopWithoutWaiting: function () {
     var self = this;
     if (self.exitStatus === undefined && self.proc) {
+      self.client && self.client.stop();
       self.proc.kill();
     }
   },
@@ -1010,6 +1226,8 @@ var tagDescriptions = {
 };
 
 // options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
+//          clients:
+//             - browserstack (need s3cmd credentials)
 var runTests = function (options) {
   var failureCount = 0;
 
@@ -1081,7 +1299,7 @@ var runTests = function (options) {
     var failure = null;
     try {
       runningTest = test;
-      test.f();
+      test.f(options);
     } catch (e) {
       if (e instanceof TestFailure) {
         failure = e;

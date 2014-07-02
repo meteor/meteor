@@ -307,6 +307,9 @@ pass --force-online.
 Use --history to change the number of lines of program output that are
 shown on test failure. The default is 10.
 
+Pass --browserstack to enable client side tests using BrowserStack.
+--browserstack requires s3cmd credentials.
+
 
 >>> admin
 Administrative commands

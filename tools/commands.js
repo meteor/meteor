@@ -1326,6 +1326,7 @@ main.registerCommand({
     changed: { type: Boolean },
     'force-online': { type: Boolean },
     slow: { type: Boolean },
+    browserstack: { type: Boolean },
     history: { type: Number }
   },
   hidden: true
@@ -1355,11 +1356,16 @@ main.registerCommand({
     }
   }
 
+  var clients = {
+    browserstack: options.browserstack
+  };
+
   return selftest.runTests({
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
     historyLines: options.history,
+    clients: clients,
     testRegexp: testRegexp
   });
 });
