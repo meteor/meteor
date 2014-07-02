@@ -13,7 +13,7 @@ if [ "$UNAME" == "Linux" ] ; then
         exit 1
     fi
 
-    MONGO_OS="linux"
+    OS="linux"
 
     stripBinary() {
         strip --remove-section=.comment --remove-section=.note $1
@@ -33,7 +33,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
         exit 1
     fi
 
-    MONGO_OS="osx"
+    OS="osx"
 
     # We don't strip on Mac because we don't know a safe command. (Can't strip
     # too much because we do need node to be able to load objects like
@@ -185,11 +185,11 @@ git checkout ssl-r$MONGO_VERSION
 MONGO_FLAGS="--ssl --release -j4 "
 MONGO_FLAGS+="--cpppath=$DIR/build/openssl-out/include --libpath=$DIR/build/openssl-out/lib "
 
-if [ "$MONGO_OS" == "osx" ]; then
+if [ "$OS" == "osx" ]; then
     # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
     MONGO_FLAGS+="--openssl=$DIR/build/openssl-out/lib "
     /usr/local/bin/scons $MONGO_FLAGS mongo mongod
-elif [ "$MONGO_OS" == "linux" ]; then
+elif [ "$OS" == "linux" ]; then
     MONGO_FLAGS+="--no-glibc-check --prefix=./ "
     if [ "$ARCH" == "x86_64" ]; then
       MONGO_FLAGS+="--64"
@@ -212,6 +212,26 @@ cd "$DIR"
 stripBinary bin/node
 stripBinary mongodb/bin/mongo
 stripBinary mongodb/bin/mongod
+
+# Download BrowserStackLocal binary.
+BROWSER_STACK_LOCAL_URL=""
+if [ "$OS" == "osx" ]; then
+    BROWSER_STACK_LOCAL_URL="https://www.browserstack.com/browserstack-local/BrowserStackLocal-darwin-x64.zip"
+elif [ "$OS" == "linux" ]; then
+    if [ "$ARCH" == "x86_64" ]; then
+        BROWSER_STACK_LOCAL_URL="https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-x64.zip"
+    else
+        BROWSER_STACK_LOCAL_URL="https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-ia32.zip"
+    fi
+else
+    echo "There is no BrowserStackLocal binary for this platform"
+    exit 1
+fi
+
+cd "$DIR/build"
+curl -O $BROWSER_STACK_LOCAL_URL
+unzip BrowserStackLocal*
+cp BrowserStackLocal "$DIR/bin"
 
 echo BUNDLING
 

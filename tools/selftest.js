@@ -744,7 +744,7 @@ _.extend(BrowserStackClient.prototype, {
   _launchBrowserStackTunnel: function (callback) {
     var self = this;
     var args = [
-      'BrowserStackLocal',
+      path.join(files.getDevBundle(), 'bin', 'BrowserStackLocal'),
       browserStackKey,
       [self.host, self.port, 0].join(','),
       // Disable Live Testing and Screenshots, just test with Automate.
