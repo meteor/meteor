@@ -325,7 +325,7 @@ main.registerCommand({
     // XXX: Make this cooler.
     files.cp_r(path.join(__dirname, 'skel-pack'), packageName);
 
-    process.stderr.write(packageName + ": created \n");
+    process.stdout.write(packageName + ": created \n");
     return 0;
   }
 
