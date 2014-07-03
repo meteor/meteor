@@ -27,7 +27,7 @@ DOMBackend.Events = {
   },
 
   undelegateEvents: function (elem, type, handler) {
-    $jq(elem).off(type, handler);
+    $jq(elem).off(type, '**', handler);
   },
 
   bindEventCapturer: function (elem, type, selector, handler) {
