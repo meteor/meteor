@@ -276,7 +276,7 @@ DOMRange.prototype._memberIn = function (m) {
     m.$blaze_range = this;
 };
 
-DOMRange.prototype._memberOut = function (m, _skipNodes) {
+DOMRange._destroy = function (m, _skipNodes) {
   if (m instanceof DOMRange) {
     if (m.view)
       Blaze.destroyView(m.view, _skipNodes);
@@ -290,12 +290,18 @@ DOMRange.prototype._memberOut = function (m, _skipNodes) {
   }
 };
 
+DOMRange.prototype._memberOut = DOMRange._destroy;
+
 // Tear down, but don't remove, the members.  Used when chunks
 // of DOM are being torn down or replaced.
 DOMRange.prototype.destroyMembers = function (_skipNodes) {
   var members = this.members;
   for (var i = 0; i < members.length; i++)
     this._memberOut(members[i], _skipNodes);
+};
+
+DOMRange.prototype.destroy = function (_skipNodes) {
+  DOMRange._destroy(this, _skipNodes);
 };
 
 DOMRange.prototype.containsElement = function (elem) {
