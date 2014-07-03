@@ -248,4 +248,14 @@ UI.insert = function (range, parentElement, nextNode) {
   range.attach(parentElement, nextNode);
 };
 
+// XXX test and document
+UI.remove = function (range) {
+  if (! range instanceof Blaze.DOMRange)
+    throw new Error("Expected template rendered with UI.render");
+
+  if (range.attached)
+    range.detach();
+  range.destroy();
+};
+
 UI.body = Template.__body__;
