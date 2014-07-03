@@ -115,9 +115,7 @@ Autoupdate._retrySubscription = function () {
                   });
                 });
 
-                document.getElementsByTagName("head").
-                  item(0).
-                  insertBefore(newLink);
+                document.getElementsByTagName("head").item(0).appendChild(newLink);
 
                 waitUntilCssLoads(newLink, function () {
                   Meteor.setTimeout(removeOldLinks, 200);
