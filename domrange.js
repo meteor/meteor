@@ -419,49 +419,6 @@ DOMRange.prototype.$ = function (selector) {
   return results;
 };
 
-DOMRange.prototype.addEventMap = function (eventMap, thisInHandler) {
-  this.onAttachedDetached({
-    eventMap: eventMap,
-    thisInHandler: (thisInHandler || null),
-    handles: [],
-    attached: function (range, element) {
-      var self = this;
-      var eventMap = self.eventMap;
-      var handles = self.handles;
-
-      _.each(eventMap, function (handler, spec) {
-        var clauses = spec.split(/,\s+/);
-        // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
-        _.each(clauses, function (clause) {
-          var parts = clause.split(/\s+/);
-          if (parts.length === 0)
-            return;
-
-          var newEvents = parts.shift();
-          var selector = parts.join(' ');
-          handles.push(Blaze.EventSupport.listen(
-            element, newEvents, selector,
-            function (evt) {
-              if (! range.containsElement(evt.currentTarget))
-                return null;
-              return handler.apply(self.thisInHandler || this, arguments);
-            },
-            range, function (r) {
-              return r.parentRange;
-            }));
-        });
-      });
-    },
-    detached: function () {
-      _.each(this.handles, function (h) {
-        h.stop();
-      });
-      this.handles.length = 0;
-    }
-  });
-};
-
-
 // Returns true if element a contains node b and is not node b.
 //
 // The restriction that `a` be an element (not a document fragment,
