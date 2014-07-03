@@ -714,7 +714,7 @@ _.extend(BrowserStackClient.prototype, {
         "have installed your S3 credentials.");
 
     var capabilities = {
-      'browserName' : 'chrome',
+      'browserName' : 'firefox',
       'browserstack.user' : 'meteor',
       'browserstack.local' : 'true',
       'browserstack.key' : browserStackKey
