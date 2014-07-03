@@ -214,24 +214,13 @@ stripBinary mongodb/bin/mongo
 stripBinary mongodb/bin/mongod
 
 # Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL=""
-if [ "$OS" == "osx" ]; then
-    BROWSER_STACK_LOCAL_URL="https://www.browserstack.com/browserstack-local/BrowserStackLocal-darwin-x64.zip"
-elif [ "$OS" == "linux" ]; then
-    if [ "$ARCH" == "x86_64" ]; then
-        BROWSER_STACK_LOCAL_URL="https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-x64.zip"
-    else
-        BROWSER_STACK_LOCAL_URL="https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-ia32.zip"
-    fi
-else
-    echo "There is no BrowserStackLocal binary for this platform"
-    exit 1
-fi
+BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
 
 cd "$DIR/build"
 curl -O $BROWSER_STACK_LOCAL_URL
-unzip BrowserStackLocal*
-cp BrowserStackLocal "$DIR/bin"
+gunzip BrowserStackLocal*
+mv BrowserStackLocal* BrowserStackLocal
+mv BrowserStackLocal "$DIR/bin/"
 
 echo BUNDLING
 
