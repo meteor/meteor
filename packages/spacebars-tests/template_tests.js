@@ -2390,12 +2390,9 @@ Tinytest.add(
     assertCallsAndListeners(10, 1, 10, 1);
     A.set('');
     Deps.flush();
-    // a_calls could be as low as 7, but
-    // the if/else feature of a "with" makes use of an
-    // intermediary ReactiveVar that keeps the contents
-    // from being torn down right away, so they
-    // re-run (template tags 4, 5, and 6).
-    assertCallsAndListeners(10, 0, 7, 1);
+    // Confirm that #4, #5, #6, and #9 are not re-run.
+    // #a is newly run, for a total of 10 - 4 + 1 = 7,
+    assertCallsAndListeners(7, 0, 7, 1);
     A.set('hi');
     Deps.flush();
     assertCallsAndListeners(10, 0, 10, 1);

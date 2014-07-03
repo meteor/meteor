@@ -210,6 +210,11 @@ Spacebars.TemplateWith = function (argFunc, contentBlock) {
   return w;
 };
 
+// Spacebars.With implements the conditional logic of rendering
+// the `{{else}}` block if the argument is falsy.  It combines
+// a Blaze.If with a Blaze.With (the latter only in the truthy
+// case, since the else block is evaluated without entering
+// a new data context).
 Spacebars.With = function (argFunc, contentFunc, elseFunc) {
   var argVar = new Blaze.ReactiveVar;
   var view = Blaze.View('Spacebars_with', function () {
@@ -221,6 +226,53 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
   view.onCreated(function () {
     this.autorun(function () {
       argVar.set(argFunc());
+
+      // This is a hack so that autoruns inside the body
+      // of the #with get stopped sooner.  It reaches inside
+      // our ReactiveVar to access its dep.
+
+      Deps.onInvalidate(function () {
+        argVar.dep.changed();
+      });
+
+      // Take the case of `{{#with A}}{{B}}{{/with}}`.  The goal
+      // is to not re-render `B` if `A` changes to become falsy
+      // and `B` is simultaneously invalidated.
+      //
+      // A series of autoruns are involved:
+      //
+      // 1. This autorun (argument to Spacebars.With)
+      // 2. Argument to Blaze.If
+      // 3. Blaze.If view re-render
+      // 4. Argument to Blaze.With
+      // 5. The template tag `{{B}}`
+      //
+      // When (3) is invalidated, it immediately stops (4) and (5)
+      // because of a Deps.onInvalidate built into materializeView.
+      // (When a View's render method is invalidated, it immediately
+      // tears down all the subviews, via a Deps.onInvalidate much
+      // like this one.
+      //
+      // Suppose `A` changes to become falsy, and `B` changes at the
+      // same time (i.e. without an intervening flush).
+      // Without the code above, this happens:
+      //
+      // - (1) and (5) are invalidated.
+      // - (1) runs, invalidating (2) and (4).
+      // - (5) runs.
+      // - (2) runs, invalidating (3), stopping (4) and (5).
+      //
+      // With the code above:
+      //
+      // - (1) and (5) are invalidated, invalidating (2) and (4).
+      // - (1) runs.
+      // - (2) runs, invalidating (3), stopping (4) and (5).
+      //
+      // If the re-run of (5) is originally enqueued before (1), all
+      // bets are off, but typically that doesn't seem to be the
+      // case.  Anyway, doing this is always better than not doing it,
+      // because it might save a bunch of DOM from being updated
+      // needlessly.
     });
   });
 
