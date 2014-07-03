@@ -248,3 +248,5 @@ UI.insert = function (range, parentElement, nextNode) {
 
   range.attach(parentElement, nextNode);
 };
+
+UI.body = Template.__body__;
