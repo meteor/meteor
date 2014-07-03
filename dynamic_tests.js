@@ -106,9 +106,7 @@ Tinytest.add(
   }
 );
 
-// This test doesn't work now that we catch and report
-// exceptions thrown from helpers to the console.
-/*Tinytest.add(
+Tinytest.add(
   "spacebars - ui-dynamic-template - render template " +
     "dynamically, bad arguments",
   function (test, expect) {
@@ -122,11 +120,12 @@ Tinytest.add(
     for (var i = 0; i < 3; i++) {
       var tmpl = Template[tmplPrefix + i];
       test.throws(function () {
+        Blaze._throwNextException = true;
         var div = renderToDiv(tmpl);
       });
     }
   }
-);*/
+);
 
 Tinytest.add(
   "spacebars - ui-dynamic-template - render template " +
