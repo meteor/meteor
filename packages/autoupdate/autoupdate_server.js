@@ -53,63 +53,69 @@ var syncQueue = new Meteor._SynchronousQueue();
 var startupVersion = null;
 
 // updateVersions can only be called after the server has fully loaded.
-var updateVersions = function () {
-  syncQueue.runTask(function () {
-    var oldVersion = Autoupdate.autoupdateVersion;
-    var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
+var updateVersions = function (shouldReloadClientProgram) {
+  return function () {
+    syncQueue.runTask(function () {
+      var oldVersion = Autoupdate.autoupdateVersion;
+      var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
 
-    // Step 1: load the current client program on the server and update the
-    // hash values in __meteor_runtime_config__.
-    WebAppInternals.reloadClientProgram();
+      // Step 1: load the current client program on the server and update the
+      // hash values in __meteor_runtime_config__.
+      if (shouldReloadClientProgram) {
+        WebAppInternals.reloadClientProgram();
+      }
 
-    if (startupVersion === null) {
-      Autoupdate.autoupdateVersion =
-        __meteor_runtime_config__.autoupdateVersion =
+      if (startupVersion === null) {
+        Autoupdate.autoupdateVersion =
+          __meteor_runtime_config__.autoupdateVersion =
+            process.env.AUTOUPDATE_VERSION ||
+            process.env.SERVER_ID || // XXX COMPAT 0.6.6
+            WebApp.calculateClientHashNonRefreshable();
+      }
+
+      Autoupdate.autoupdateVersionRefreshable =
+        __meteor_runtime_config__.autoupdateVersionRefreshable =
           process.env.AUTOUPDATE_VERSION ||
           process.env.SERVER_ID || // XXX COMPAT 0.6.6
-          WebApp.calculateClientHashNonRefreshable();
-    }
+          WebApp.calculateClientHashRefreshable();
 
-    Autoupdate.autoupdateVersionRefreshable =
-      __meteor_runtime_config__.autoupdateVersionRefreshable =
-        process.env.AUTOUPDATE_VERSION ||
-        process.env.SERVER_ID || // XXX COMPAT 0.6.6
-        WebApp.calculateClientHashRefreshable();
-
-    // Step 2: form the new client boilerplate which contains the updated
-    // assets and __meteor_runtime_config__.
-    WebAppInternals.generateBoilerplate();
-
-    if (Autoupdate.autoupdateVersion !== oldVersion) {
-      if (oldVersion) {
-        ClientVersions.remove(oldVersion);
+      // Step 2: form the new client boilerplate which contains the updated
+      // assets and __meteor_runtime_config__.
+      if (shouldReloadClientProgram) {
+        WebAppInternals.generateBoilerplate();
       }
 
-      ClientVersions.insert({
-        _id: Autoupdate.autoupdateVersion,
-        refreshable: false,
-        current: true,
-      });
-    }
+      if (Autoupdate.autoupdateVersion !== oldVersion) {
+        if (oldVersion) {
+          ClientVersions.remove(oldVersion);
+        }
 
-    if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
-      if (oldVersionRefreshable) {
-        ClientVersions.remove(oldVersionRefreshable);
+        ClientVersions.insert({
+          _id: Autoupdate.autoupdateVersion,
+          refreshable: false,
+          current: true,
+        });
       }
-      ClientVersions.insert({
-        _id: Autoupdate.autoupdateVersionRefreshable,
-        refreshable: true,
-        assets: WebAppInternals.refreshableAssets
-      });
-    }
-  });
+
+      if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
+        if (oldVersionRefreshable) {
+          ClientVersions.remove(oldVersionRefreshable);
+        }
+        ClientVersions.insert({
+          _id: Autoupdate.autoupdateVersionRefreshable,
+          refreshable: true,
+          assets: WebAppInternals.refreshableAssets
+        });
+      }
+    });
+  };
 };
 
 Meteor.startup(function () {
   // Allow people to override Autoupdate.autoupdateVersion before startup.
   // Tests do this.
   startupVersion = Autoupdate.autoupdateVersion;
-  WebApp.onListening(updateVersions);
+  WebApp.onListening(updateVersions(false));
 });
 
 Meteor.publish(
@@ -122,5 +128,5 @@ Meteor.publish(
 
 // Listen for SIGUSR2, which signals that a client asset has changed.
 process.on('SIGUSR2', Meteor.bindEnvironment(function () {
-  updateVersions();
+  updateVersions(true)();
 }));
