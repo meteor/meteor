@@ -111,11 +111,11 @@ HandlerRec.prototype.bind = function () {
 HandlerRec.prototype.unbind = function () {
   if (this.mode !== EVENT_MODE.BUBBLING)
     DOMBackend.Events.unbindEventCapturer(this.elem, this.type,
-                                   this.capturingHandler);
+                                          this.capturingHandler);
 
   if (this.mode !== EVENT_MODE.CAPTURING)
     DOMBackend.Events.undelegateEvents(this.elem, this.type,
-                                this.delegatedHandler);
+                                       this.delegatedHandler);
 };
 
 EventSupport.listen = function (element, events, selector, handler, recipient, getParentRecipient) {
