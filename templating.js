@@ -109,9 +109,8 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
         Template.prototype.events.call(template, template.events);
       }
 
-      var range = view.domrange;
       _.each(template.__eventMaps, function (m) {
-        range.addEventMap(m, view);
+        Blaze._addEventMap(view, m, view);
       });
     });
   }
