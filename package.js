@@ -27,6 +27,7 @@ Package.on_use(function (api) {
 
   // client and server
   api.add_files([
+    'exceptions.js',
     'reactivevar.js',
     'view.js',
     'builtins.js',

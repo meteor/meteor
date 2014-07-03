@@ -18,6 +18,10 @@ var bindToCurrentDataIfIsFunction = function (x) {
   return x;
 };
 
+var wrapHelper = function (f) {
+  return Blaze.wrapCatchingExceptions(f, 'template helper');
+};
+
 // Implements {{foo}} where `name` is "foo"
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
@@ -37,15 +41,15 @@ Blaze.View.prototype.lookup = function (name, _options) {
     return Blaze._parentData(name.length - 1);
 
   } else if (template && (name in template)) {
-    return bindToCurrentDataIfIsFunction(template[name]);
+    return wrapHelper(bindToCurrentDataIfIsFunction(template[name]));
   } else if (lookupTemplate && Template.__lookup__(name)) {
     return Template.__lookup__(name);
   } else if (UI._globalHelpers[name]) {
-    return bindToCurrentDataIfIsFunction(UI._globalHelpers[name]);
+    return wrapHelper(bindToCurrentDataIfIsFunction(UI._globalHelpers[name]));
   } else {
     var data = Blaze.getCurrentData();
     if (data)
-      return bindIfIsFunction(data[name], data);
+      return wrapHelper(bindIfIsFunction(data[name], data));
   }
   return null;
 };
