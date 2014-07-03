@@ -743,8 +743,12 @@ _.extend(BrowserStackClient.prototype, {
 
   _launchBrowserStackTunnel: function (callback) {
     var self = this;
+    var browserStackPath =
+      path.join(files.getDevBundle(), 'bin', 'BrowserStackLocal');
+    fs.chmodSync(browserStackPath, 0755);
+
     var args = [
-      path.join(files.getDevBundle(), 'bin', 'BrowserStackLocal'),
+      browserStackPath,
       browserStackKey,
       [self.host, self.port, 0].join(','),
       // Disable Live Testing and Screenshots, just test with Automate.
