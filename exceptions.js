@@ -17,7 +17,17 @@ var debugFunc;
 //
 // An optional second argument overrides the default message.
 
+// Set this to `true` to cause `reportException` to throw
+// the next exception rather than reporting it.  This is
+// useful in unit tests that test error messages.
+Blaze._throwNextException = false;
+
 Blaze.reportException = function (e, msg) {
+  if (Blaze._throwNextException) {
+    Blaze._throwNextException = false;
+    throw e;
+  }
+
   if (! debugFunc)
     // adapted from Deps
     debugFunc = function () {
