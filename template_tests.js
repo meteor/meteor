@@ -2350,3 +2350,58 @@ Tinytest.add(
     test.isTrue(span);
     test.equal(UI.getElementData(span), {foo: "bar"});
   });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - autorun cleanup",
+  function (test) {
+    var tmpl = Template.spacebars_test_parent_removal;
+
+    var Acalls = '';
+    var A = ReactiveVar('hi');
+    tmpl.A = function (chr) {
+      Acalls += chr;
+      return A.get();
+    };
+    var Bcalls = 0;
+    var B = ReactiveVar(['one', 'two']);
+    tmpl.B = function () {
+      Bcalls++;
+      return B.get();
+    };
+
+    // Assert how many times A and B were accessed (since last time)
+    // and how many autoruns are listening to them.
+    var assertCallsAndListeners =
+          function (a_calls, b_calls, a_listeners, b_listeners) {
+            test.equal('A calls: ' + Acalls.length,
+                       'A calls: ' + a_calls,
+                       Acalls);
+            test.equal('B calls: ' + Bcalls,
+                       'B calls: ' + b_calls);
+            test.equal('A listeners: ' + A.numListeners(),
+                       'A listeners: ' + a_listeners);
+            test.equal('B listeners: ' + B.numListeners(),
+                       'B listeners: ' + b_listeners);
+            Acalls = '';
+            Bcalls = 0;
+          };
+
+    var div = renderToDiv(tmpl);
+    assertCallsAndListeners(10, 1, 10, 1);
+    A.set('');
+    Deps.flush();
+    // a_calls could be as low as 7, but
+    // the if/else feature of a "with" makes use of an
+    // intermediary ReactiveVar that keeps the contents
+    // from being torn down right away, so they
+    // re-run (template tags 4, 5, and 6).
+    assertCallsAndListeners(10, 0, 7, 1);
+    A.set('hi');
+    Deps.flush();
+    assertCallsAndListeners(10, 0, 10, 1);
+
+    // Now see that removing the DOM with jQuery, below
+    // the level of the entire template, stops everything.
+    $(div.querySelector('.toremove')).remove();
+    assertCallsAndListeners(0, 0, 0, 0);
+  });

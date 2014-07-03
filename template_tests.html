@@ -842,3 +842,29 @@ Hi there!
   <span>{{greeting}} {{r}}</span>
 </template>
 
+<template name="spacebars_test_parent_removal">
+  <div class="a">
+    <div class="b">
+      <div class="toremove">
+        <div class="c">
+          {{A 1}}
+          {{{A 2}}}
+          {{#with A 3}}
+            {{A 4}}
+            {{#with A 5}}
+              {{A 6}}
+            {{/with}}
+          {{/with}}
+          {{#each B}}
+            {{A 7}}
+          {{/each}}
+          {{#if A 8}}
+            {{A 9}}
+          {{else}}
+            {{A 'a'}}
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
