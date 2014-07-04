@@ -619,6 +619,16 @@
     })
 
   Tinytest.add(
+    'roles - can get all roles for user by group with periods in name', 
+    function (test) {
+      reset()
+
+      Roles.addUsersToRoles(users.joe, ['admin'], 'example.k12.va.us')
+
+      test.equal(Roles.getRolesForUser(users.joe, 'example.k12.va.us'), ['admin'])
+    })
+
+  Tinytest.add(
     'roles - can get all roles for user by group including Roles.GLOBAL_GROUP', 
     function (test) {
       reset()
