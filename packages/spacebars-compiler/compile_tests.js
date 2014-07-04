@@ -84,6 +84,30 @@ Tinytest.add("spacebars - compiler output", function (test) {
         };
       });
 
+  run("{{foo.[0].bar}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache(Spacebars.dot(self.lookup("foo"), "0", "bar"));
+        };
+      });
+
+  run("{{foo.[0].[1]}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache(Spacebars.dot(self.lookup("foo"), "0", "1"));
+        };
+      });
+
+  run("{{foo.0.1}}",
+      function() {
+        var self = this;
+        return function() {
+          return Spacebars.mustache(Spacebars.dot(self.lookup("foo"), "0", "1"));
+        };
+      });
+
   run("{{foo bar.baz}}",
       function() {
         var self = this;
@@ -296,7 +320,8 @@ Tinytest.add("spacebars - compiler errors", function (test) {
   isError("{{#each}}{{/each}}", "#each requires an argument");
   isError("{{#unless}}{{/unless}}", "#unless requires an argument");
 
-  isError("{{0 0}}", "Expected IDENTIFIER");
+  isError("{{0 0}}", "Path can't start with a number");
+  isError("{{[0].foo.bar}}", "Path can't start with a number");
 
   isError("{{> foo 0 0}}",
           "First argument must be a function");
