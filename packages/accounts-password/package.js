@@ -18,6 +18,8 @@ Package.on_use(function(api) {
   api.add_files('email_templates.js', 'server');
   api.add_files('password_server.js', 'server');
   api.add_files('password_client.js', 'client');
+  api.add_files('profile_server.js', 'server');
+  api.add_files('profile_client.js', 'client');
 });
 
 Package.on_test(function(api) {
@@ -29,4 +31,5 @@ Package.on_test(function(api) {
   api.add_files('email_tests_setup.js', 'server');
   api.add_files('email_tests.js', 'client');
 });
+
 

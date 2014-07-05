@@ -18,7 +18,11 @@
           {{#if inChangePasswordFlow}}
             {{> _loginButtonsChangePassword}}
           {{else}}
+            {{#if inProfileFlow}}
+            {{> _loginButtonsChangeProfile}}
+            {{else}}
             {{> _loginButtonsLoggedInDropdownActions}}
+          {{/if}}
           {{/if}}
         {{/if}}
       </div>
@@ -32,6 +36,9 @@
       {{_ "Change password"}}
     </div>
   {{/if}}
+    <div class="login-button" id="login-buttons-open-profile">
+      {{_ "Profile"}}
+    </div>
 
   <div class="login-button" id="login-buttons-logout">
     {{_ "Sign out"}}
@@ -182,7 +189,7 @@ https://gist.github.com/968927
       <label id="login-{{fieldName}}-label" for="login-{{fieldName}}">
         {{fieldLabel}}
       </label>
-      <input id="login-{{fieldName}}" type="{{inputType}}" />
+      <input id="login-{{fieldName}}" type="{{inputType}}" value="{{fieldValue}}" />
     </div>
   {{/if}}
 </template>
@@ -199,5 +206,15 @@ https://gist.github.com/968927
   </div>
 </template>
 
+
+
+<template name="_loginButtonsChangeProfile">
+{{#each fields}}
+    {{> _loginButtonsFormField}}
+{{/each}}
+<div class="login-button login-button-form-submit" id="login-buttons-do-change-profile">
+    {{_ "Change profile"}}
+</div>
+</template>
 
 

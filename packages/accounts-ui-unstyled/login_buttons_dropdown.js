@@ -23,6 +23,10 @@ Template._loginButtonsLoggedInDropdown.events({
   'click #login-buttons-open-change-password': function() {
     loginButtonsSession.resetMessages();
     loginButtonsSession.set('inChangePasswordFlow', true);
+  },
+  'click #login-buttons-open-profile':function(){
+    loginButtonsSession.resetMessages();
+    loginButtonsSession.set('inProfileFlow', true);
   }
 });
 
@@ -36,6 +40,9 @@ Template._loginButtonsLoggedInDropdown.inMessageOnlyFlow = function () {
   return loginButtonsSession.get('inMessageOnlyFlow');
 };
 
+Template._loginButtonsLoggedInDropdown.inProfileFlow = function () {
+  return loginButtonsSession.get('inProfileFlow');
+};
 Template._loginButtonsLoggedInDropdown.dropdownVisible = function () {
   return loginButtonsSession.get('dropdownVisible');
 };
@@ -285,6 +292,26 @@ Template._loginButtonsFormField.inputType = function () {
 
 
 //
+// loginButtonsChangeProfile template
+//
+
+Template._loginButtonsChangeProfile.events({
+  'click #login-buttons-do-change-profile': function () {
+    changeProfile();
+  }
+    
+})
+Template._loginButtonsChangeProfile.fields = function () {
+  var user = Meteor.user();
+  return [
+    {fieldName: 'gender', fieldLabel: _$('gender'), fieldValue:user.profile.gender,
+     visible: function () {
+       return true;
+     }}]
+}
+
+
+//
 // loginButtonsChangePassword template
 //
 
@@ -478,6 +505,23 @@ var changePassword = function () {
   });
 };
 
+
+var changeProfile = function(){
+    loginButtonsSession.resetMessages();
+    var profile = Meteor.user().profile;
+    profile.gender =  elementValueById('login-gender')
+    Accounts.changeProfile(profile, function(error){
+    
+    if (error) {
+      loginButtonsSession.errorMessage(error.reason ||  _$("Unknown error"));
+    } else {
+      loginButtonsSession.set('inProfileFlow', false);
+      loginButtonsSession.set('inMessageOnlyFlow', true);
+      loginButtonsSession.infoMessage( _$("profile changed") );
+    }
+    });
+}
+
 var matchPasswordAgainIfPresent = function () {
   // notably not trimmed. a password could (?) start or end with a space
   var passwordAgain = elementValueById('login-password-again');
@@ -508,6 +552,8 @@ var correctDropdownZIndexes = function () {
     if (n.style.zIndex === 0)
       n.style.zIndex = 1;
 };
+
+
 
 
 

@@ -6,6 +6,7 @@ var VALID_KEYS = [
   'inForgotPasswordFlow',
   'inChangePasswordFlow',
   'inMessageOnlyFlow',
+  'inProfileFlow',
   'sholdVerifiedEmail',
 
   'errorMessage',
@@ -54,6 +55,7 @@ Accounts._loginButtonsSession = {
     this.set('inSignupFlow', false);
     this.set('inForgotPasswordFlow', false);
     this.set('inChangePasswordFlow', false);
+    this.set('inProfileFlow', false);
     this.set('inMessageOnlyFlow', false);
     this.set('dropdownVisible', false);
     this.resetMessages();
