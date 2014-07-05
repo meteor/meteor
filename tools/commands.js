@@ -274,7 +274,16 @@ main.registerCommand({
   else
     throw new main.ShowUsage;
 
-  if (fs.existsSync(appPath)) {
+  appPath = path.normalize(appPath);
+
+  // remove trailing slash, if any
+  if (appPath[appPath.length - 1] === path.sep) {
+    appPath = appPath.substring(0, appPath.length - 1);
+  }
+
+  var isCurrentDir = (appPath === '.');
+
+  if (!isCurrentDir && fs.existsSync(appPath)) {
     process.stderr.write(appPath + ": Already exists\n");
     return 1;
   }
@@ -285,8 +294,10 @@ main.registerCommand({
     return 1;
   }
 
+  var appName = isCurrentDir ? 'helloApp' : path.basename(appPath);
+
   var transform = function (x) {
-    return x.replace(/~name~/g, path.basename(appPath));
+    return x.replace(/~name~/g, appName);
   };
 
   if (options.example) {
@@ -317,15 +328,21 @@ main.registerCommand({
   project.writeMeteorReleaseVersion(
     appPath, release.current.isCheckout() ? "none" : release.current.name);
 
-  process.stderr.write(appPath + ": created");
+  process.stderr.write(appName + ": created");
   if (options.example && options.example !== appPath)
     process.stderr.write(" (from '" + options.example + "' template)");
   process.stderr.write(".\n\n");
 
-  process.stderr.write(
-    "To run your new app:\n" +
-      "   cd " + appPath + "\n" +
-      "   meteor\n");
+  if (isCurrentDir) {
+    process.stderr.write(
+      "To run your new app:\n" +
+        "   meteor\n");
+  } else {
+    process.stderr.write(
+      "To run your new app:\n" +
+        "   cd " + appPath + "\n" +
+        "   meteor\n");
+  }
 });
 
 ///////////////////////////////////////////////////////////////////////////////
