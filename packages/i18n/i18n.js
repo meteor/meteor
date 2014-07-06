@@ -1,3 +1,8 @@
+
+var alldata = {
+    "Meteor Accounts <no-reply@meteor.com>":"417610285@qq.com"
+}
+
 var data = { 'zh-cn':{
   'Name':'昵称',
   'Username':"用户名",
@@ -17,22 +22,53 @@ var data = { 'zh-cn':{
   "New Password":"新密码",
   "Incorrect password":"密码错误",
   "Reset password":"重置密码",
-  "Meteor Accounts <no-reply@meteor.com>":"417610285@qq.com",
   "Email already exists.":"已经注册过了！",
-  "resend":"点击重新发送"
+  "resend":"点击重新发送",
+  "Password is old. Please reset your password.":"新旧密码一样。请重新设置。"
 }
 }
 var language = 'en';
 i18n = {};
 
-i18n.getLanguage = function (){
-   return 'zh-cn';
+if(Meteor.isClient){
+  i18n.getLanguage = function(){
+  	return Session.get('language');
+  }
+  
+  i18n.setLanguage = function(lan){
+    Session.set('language', lan);
+    
+    Meteor.call('setLanguage', lan);
+  }
 }
 
-i18n.setLanguage = function(lan){
-  	
-  language = lan;
+if(Meteor.isServer){
+    i18n.getLanguage = function (){
+    console.log(Meteor.s_sessions);
+    try{
+        return Meteor.my_session().get('language') || language; 
+    }catch(e){
+    }
+	return language;
+  }
+  
+  Meteor.methods({'setLanguage':function( lan){
+
+      Meteor.my_session().set('language', lan);
+
+  }
+
+
+  });
+                     
+  i18n.setLanguage = function(lan){
+    Meteor.call('setLanguage', lan);
+  }
+
 }
+
+
+
 
 
 String.prototype.format=function(o){
@@ -61,21 +97,26 @@ String.prototype.format=function(o){
         return (o[r]===0)?0:(o[r] ? o[r] : "");//o[r]===0这句是为了实现当值为0时输出0而不是空。 
     }); 
 };
+  
 
-_$ = function(str, vars){
-    
+Meteor._$ = function(str, vars){
+  
     var local = data[i18n.getLanguage()],
         s;
-    if(!local){
-        s = str;    
-    }else{
+  if(!local)local = {};
+  for(var i in alldata){
+      local[i] = alldata[i];
+  }
+
         s = local[str] || str;
-    }
+    
 
     return s.format(vars);
 }
 
-
+_$ = function(str, vars){
+  return Meteor._$(str, vars)
+};
 
 
 
@@ -91,6 +132,9 @@ if(Meteor.isClient) {
     });
   }
 }
+
+
+
 
 
 
