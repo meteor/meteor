@@ -49,7 +49,7 @@ Deploy the project in your current directory to Meteor's servers.
 
 You can deploy to any available name
 under `meteor.com` without any additional
-configuration, for example, `myapp.meteor.com`.  If
+configuration, for example, `myapp.meteor.com`. If
 you deploy to a custom domain, such as `myapp.mydomain.com`,
 then you'll need to make sure the DNS for that domain is configured to
 point at `origin.meteor.com`.
@@ -79,7 +79,7 @@ the `--delete` option along with the site.
 {{#warning}}
 If you use a domain name other than `meteor.com`
 you must ensure that the name resolves
-to `origin.meteor.com`.  If you want a top-level
+to `origin.meteor.com`. If you want a top-level
 domain like myapp.com, you'll need a DNS A record, matching the IP
 address of origin.meteor.com.
 {{/warning}}
@@ -87,11 +87,11 @@ address of origin.meteor.com.
 
 
 You can add information specific to a particular deployment of your application
-by using the `--settings` option.  The argument to `--settings` is a file
-containing any JSON string.  The object in your settings file will appear on the
+by using the `--settings` option. The argument to `--settings` is a file
+containing any JSON string. The object in your settings file will appear on the
 server side of your application in [`Meteor.settings`](#meteor_settings).
 
-Settings are persistent.  When you redeploy your app, the old value will be
+Settings are persistent. When you redeploy your app, the old value will be
 preserved unless you explicitly pass new settings using the `--settings` option.
 To unset `Meteor.settings`, pass an empty settings file.
 
@@ -101,8 +101,8 @@ Retrieves the server logs for the named Meteor application.
 
 
 Meteor redirects the output of `console.log()` in your
-server code into a logging server.  `meteor logs`
-displays those logs.  In client code, the output
+server code into a logging server. `meteor logs`
+displays those logs. In client code, the output
 of `console.log()` is available in your web browser's
 inspector, just like any other client-side JavaScript.
 
@@ -175,7 +175,7 @@ that includes everything necessary to run the
 application. See `README` in the tarball for details.
 
 You can use this to host a Meteor application on your own server,
-instead of deploying to Meteor's servers.  You will have to deal with
+instead of deploying to Meteor's servers. You will have to deal with
 logging, monitoring, backups, load-balancing, etc, all of which we
 handle for you if you use `meteor deploy`.
 
