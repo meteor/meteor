@@ -6,7 +6,7 @@ var net = require('net');
 var _ = require('underscore');
 var files = require('../files.js');
 
-selftest.define("css injection", function (options) {
+selftest.define("css hot code push", function (options) {
   var s = new Sandbox({
     clients: options.clients,
   });
@@ -105,7 +105,8 @@ selftest.define("javascript hot code push", function (options) {
     run.match("server restarted");
     s.write("client/empty.js", "");
     run.match("client connected: 0");
-    run.match("jsVar: undefined"); // cannot access a server variable from the client.
+    // We should not be able to access a server variable from the client.
+    run.match("jsVar: undefined");
 
     s.unlink("server/test.js");
     run.match("server restarted");
