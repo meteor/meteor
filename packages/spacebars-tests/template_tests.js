@@ -2286,7 +2286,7 @@ Tinytest.add(
   });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.render/UI.insert",
+  "spacebars-tests - template_tests - UI.render/UI.insert/UI.remove",
   function (test) {
     var div = document.createElement("DIV");
     document.body.appendChild(div);
@@ -2312,19 +2312,26 @@ Tinytest.add(
     Deps.flush();
     test.equal([created, rendered, destroyed], [true, true, false]);
 
-    UI.render(tmpl); // can run a second time without throwing
+    var x = UI.render(tmpl); // can run a second time without throwing
+    // note: we'll have clean up `x` below
 
-    UI.insert(UI.renderWithData(tmpl, {greeting: 'Bye'}), div);
+    var renderedTmpl2;
+    UI.insert(renderedTmpl2 = UI.renderWithData(tmpl, {greeting: 'Bye'}),
+              div);
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello aaa</span><span>Bye aaa</span>");
     R.set('bbb');
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello bbb</span><span>Bye bbb</span>");
-
     test.equal([created, rendered, destroyed], [true, true, false]);
-    $(div).remove();
+    test.equal(R.numListeners(), 3);
+    UI.remove(renderedTmpl);
+    UI.remove(renderedTmpl2);
+    UI.remove(x);
     test.equal([created, rendered, destroyed], [true, true, true]);
+    test.equal(R.numListeners(), 0);
+    test.equal(canonicalizeHtml(div.innerHTML), "");
   });
 
 Tinytest.add(
