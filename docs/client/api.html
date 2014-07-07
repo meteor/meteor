@@ -1886,12 +1886,10 @@ authentication. In addition to the basic username and password-based
 sign-in process, it also supports email-based sign-in including
 address verification and password recovery emails.
 
-Unlike most web applications, the Meteor client does not send the user's
-password directly to the server. It uses the [Secure Remote Password
-protocol](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)
-to ensure the server never sees the user's plain-text password. This
-helps protect against embarrassing password leaks if the server's
-database is compromised.
+The Meteor server stores passwords using the
+[bcrypt](http://en.wikipedia.org/wiki/Bcrypt) algorithm. This helps
+protect against embarrassing password leaks if the server's database is
+compromised.
 
 To add password support to your application, run `$ meteor add
 accounts-password`. You can construct your own user interface using the
