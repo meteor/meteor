@@ -880,3 +880,15 @@ Hi there!
 <template name="spacebars_test_focus_blur_inner">
   <input type="text">
 </template>
+
+<template name="spacebars_test_event_cleanup_on_destroyed_outer">
+  {{#if cond}}
+    <div>a {{> spacebars_test_event_cleanup_on_destroyed_inner}}</div>
+  {{else}}
+    <div>b {{> spacebars_test_event_cleanup_on_destroyed_inner}}</div>
+  {{/if}}
+</template>
+
+<template name="spacebars_test_event_cleanup_on_destroyed_inner">
+  <span>foo</span>
+</template>

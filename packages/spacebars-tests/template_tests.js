@@ -2411,7 +2411,7 @@ Tinytest.add(
   });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - focus/blur get cleaned up",
+  "spacebars-tests - template_tests - focus/blur with clean-up",
   function (test) {
     var tmpl = Template.spacebars_test_focus_blur_outer;
     var cond = ReactiveVar(true);
@@ -2438,11 +2438,25 @@ Tinytest.add(
     focusElement(input = div.querySelector('input'));
     // We don't get focus events when the Chrome Dev Tools are focused,
     // unfortunately, as of Chrome 35.  I think this is a regression in
-    // Chrome 34.
-    if (buf.length === 0 && document.activeElement === input)
-      test.fail("NOTE: You might need to defocus the Chrome Dev Tools!");
+    // Chrome 34.  So, the goal is to work whether or not focus is
+    // "borken," where "working" means always failing if DOMBackend isn't
+    // correctly unbinding the old event handlers when we switch the IF,
+    // and always passing if it is.  To cause the problem in DOMBackend,
+    // delete the '**' argument to jQuery#off in
+    // DOMBackend.Events.undelegateEvents.  The only compromise we are
+    // making here is that if some unrelated bug in Blaze makes
+    // focus/blur not work, the failure might be masked while the Dev
+    // Tools are open.
+    var borken = false;
+    if (buf.length === 0 && document.activeElement === input) {
+      test.ok({note:"You might need to defocus the Chrome Dev Tools to get a more accurate run of this test!"});
+      borken = true;
+      $(input).trigger('focus');
+    }
     test.equal(buf.join(), 'FOCUS');
     blurElement(div.querySelector('input'));
+    if (buf.length === 1)
+      $(input).trigger('blur');
     test.equal(buf.join(), 'FOCUS,BLUR');
 
     // now switch the IF and check again.  The failure mode
@@ -2456,10 +2470,44 @@ Tinytest.add(
     buf.length = 0;
     Deps.flush();
     test.equal(div.querySelectorAll('input').length, 1);
-    focusElement(div.querySelector('input'));
+    focusElement(input = div.querySelector('input'));
+    if (borken)
+      $(input).trigger('focus');
     test.equal(buf.join(), 'FOCUS');
     blurElement(div.querySelector('input'));
-    test.equal(buf.join(), 'FOCUS,BLUR');
+    if (! borken)
+      test.equal(buf.join(), 'FOCUS,BLUR');
+
+    document.body.removeChild(div);
+  });
+
+// We used to remove event handlers on DOMRange detached, but when
+// tearing down a view, we don't "detach" all the DOMRanges recursively.
+// Mainly, we destroy the View.  Destroying a View should remove its
+// event listeners.  (In practice, however, it's hard to think of
+// consequences to not removing event handlers on removed DOM nodes,
+// which will probably be GCed anyway.)
+Tinytest.add(
+  "spacebars-tests - template_tests - event cleanup on destroyed",
+  function (test) {
+    var tmpl = Template.spacebars_test_event_cleanup_on_destroyed_outer;
+    var cond = ReactiveVar(true);
+    tmpl.cond = function () {
+      return cond.get();
+    };
+
+    Template.spacebars_test_event_cleanup_on_destroyed_inner.events({
+      'click span': function () {}});
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+
+    var eventDiv = div.querySelector('div');
+    test.equal(eventDiv.$blaze_events.click.handlers.length, 1);
+
+    cond.set(false);
+    Deps.flush();
+    test.equal(eventDiv.$blaze_events.click.handlers.length, 0);
 
     document.body.removeChild(div);
   });
