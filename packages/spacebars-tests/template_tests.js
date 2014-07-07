@@ -2409,3 +2409,57 @@ Tinytest.add(
     $(div.querySelector('.toremove')).remove();
     assertCallsAndListeners(0, 0, 0, 0);
   });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - focus/blur get cleaned up",
+  function (test) {
+    var tmpl = Template.spacebars_test_focus_blur_outer;
+    var cond = ReactiveVar(true);
+    tmpl.cond = function () {
+      return cond.get();
+    };
+    var buf = [];
+    Template.spacebars_test_focus_blur_inner.events({
+      'focus input': function () {
+        buf.push('FOCUS');
+      },
+      'blur input': function () {
+        buf.push('BLUR');
+      }
+    });
+
+    var div = renderToDiv(tmpl);
+    document.body.appendChild(div);
+
+    // check basic focus and blur to make sure
+    // everything is sane
+    test.equal(div.querySelectorAll('input').length, 1);
+    var input;
+    focusElement(input = div.querySelector('input'));
+    // We don't get focus events when the Chrome Dev Tools are focused,
+    // unfortunately, as of Chrome 35.  I think this is a regression in
+    // Chrome 34.
+    if (buf.length === 0 && document.activeElement === input)
+      test.fail("NOTE: You might need to defocus the Chrome Dev Tools!");
+    test.equal(buf.join(), 'FOCUS');
+    blurElement(div.querySelector('input'));
+    test.equal(buf.join(), 'FOCUS,BLUR');
+
+    // now switch the IF and check again.  The failure mode
+    // we observed was that DOMBackend would not correctly
+    // unbind the old event listener at the jQuery level,
+    // so the old event listener would fire and cause an
+    // exception inside Blaze ("Must be attached" in
+    // DOMRange#containsElement), which would show up in
+    // the console and cause our handler not to fire.
+    cond.set(false);
+    buf.length = 0;
+    Deps.flush();
+    test.equal(div.querySelectorAll('input').length, 1);
+    focusElement(div.querySelector('input'));
+    test.equal(buf.join(), 'FOCUS');
+    blurElement(div.querySelector('input'));
+    test.equal(buf.join(), 'FOCUS,BLUR');
+
+    document.body.removeChild(div);
+  });

@@ -868,3 +868,15 @@ Hi there!
     </div>
   </div>
 </template>
+
+<template name="spacebars_test_focus_blur_outer">
+  {{#if cond}}
+    a {{> spacebars_test_focus_blur_inner}}
+  {{else}}
+    b {{> spacebars_test_focus_blur_inner}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_focus_blur_inner">
+  <input type="text">
+</template>
