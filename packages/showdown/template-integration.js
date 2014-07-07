@@ -1,6 +1,8 @@
-if (Package.blaze) {
-  var Blaze = Package.blaze.Blaze;
+if (Package.templating) {
+  var Template = Package.templating.Template;
+  var UI = Package.ui.UI; // implied by `templating`
   var HTML = Package.htmljs.HTML; // implied by `ui`
+  var Blaze = Package.blaze.Blaze; // implied by `ui`
 
   UI.registerHelper("markdown", Template.__create__('markdown', function () {
     var view = this;
