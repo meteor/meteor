@@ -2,8 +2,7 @@ var path = Npm.require('path');
 
 var doHTMLScanning = function (compileStep, htmlScanner) {
 
-  // XXX use archinfo rather than rolling our own
-  if (! compileStep.arch.match(/^browser(\.|$)/))
+  if (! compileStep.archMatches("client"))
     // XXX might be nice to throw an error here, but then we'd have to
     // make it so that packages.js ignores html files that appear in
     // the server directories in an app tree.. or, it might be nice to

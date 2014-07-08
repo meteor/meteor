@@ -631,6 +631,15 @@ _.extend(Target.prototype, {
           var f = new File({data: resource.data, cacheable: false});
 
           var relPath = stripLeadingSlash(resource.servePath);
+
+          if (archinfo.matches(self.arch, "client.cordova")) {
+            relPath = path.join(resource.type, relPath);
+
+            if (resource.type === "css") {
+              f.targetPath = relPath;
+            }
+          }
+
           f.setTargetPathFromRelPath(relPath);
 
           if (isBrowser) {
@@ -1656,8 +1665,7 @@ exports.bundle = function (options) {
     throw new Error("running wrong release for app?");
 
   var arch = buildOptions.arch || archinfo.host();
-  var clientArchs = buildOptions.clientArchs.length === 0 ?
-                      ["client.browser"] : buildOptions.clientArchs;
+  var clientArchs = buildOptions.clientArchs || ["client.browser"];
 
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();

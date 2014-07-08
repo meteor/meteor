@@ -29,7 +29,7 @@ var unipackage = require('./unipackage.js');
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'spacebars', 'spacebars-compiler' ]
+    packages: [ 'spacebars', 'spacebars-compiler', 'htmljs', 'deps' ]
   });
 });
 
@@ -87,8 +87,8 @@ var execFileSync = function (file, args, opts) {
   child_process.execFile(file, args, opts, function (err, stdout, stderr) {
     console.log(err ? 'failed\n' : 'done\n');
     console.log(stderr);
-    console.log(stdout);
-    console.log(err);
+    // console.log(stdout);
+    // console.log(err);
     future.return({
       success: ! err,
       stdout: stdout,
@@ -479,45 +479,33 @@ main.registerCommand({
 // bundle
 ///////////////////////////////////////////////////////////////////////////////
 
-// The reload safetybelt is some js that will be loaded after everything else in
-// the HTML.  In some multi-server deployments, when you update, you have a
-// chance of hitting an old server for the HTML and the new server for the JS or
-// CSS.  This prevents you from displaying the page in that case, and instead
-// reloads it, presumably all on the new version now.
-var RELOAD_SAFETYBELT = "\n" +
-      "if (typeof Package === 'undefined' ||\n" +
-      "    ! Package.webapp ||\n" +
-      "    ! Package.webapp.WebApp ||\n" +
-      "    ! Package.webapp.WebApp._isCssLoaded())\n" +
-      "  document.location.reload(); \n";
 
-var generateCordovaBoilerplate = function (clientJson, boilerplateTemplateSource) {
-  var boilerplateBaseData = {
+
+var generateCordovaBoilerplate = function (clientDir, clientJson, boilerplateTemplateSource) {
+  var boilerplateData = {
     css: [],
     js: [],
     head: '',
     body: '',
-    reloadSafetyBelt: RELOAD_SAFETYBELT,
   };
 
   _.each(clientJson.manifest, function (item) {
     if (item.type === 'css' && item.where === 'client') {
-      boilerplateBaseData.css.push({url: item.url});
+      boilerplateData.css.push({url: item.url});
     }
     if (item.type === 'js' && item.where === 'client') {
-      boilerplateBaseData.js.push({url: item.url});
+      boilerplateData.js.push({url: item.url});
     }
     if (item.type === 'head') {
-      boilerplateBaseData.head = fs.readFileSync(
+      boilerplateData.head = fs.readFileSync(
         path.join(clientDir, item.path), 'utf8');
     }
     if (item.type === 'body') {
-      boilerplateBaseData.body = fs.readFileSync(
+      boilerplateData.body = fs.readFileSync(
         path.join(clientDir, item.path), 'utf8');
     }
   });
 
-  console.log(getLoadedPackages());
   var Spacebars = getLoadedPackages()['spacebars-common'].Spacebars;
   var boilerplateRenderCode = Spacebars.compile(
     boilerplateTemplateSource, { isBody: true });
@@ -528,12 +516,19 @@ var generateCordovaBoilerplate = function (clientJson, boilerplateTemplateSource
   var boilerplateRender = eval(boilerplateRenderCode);
 
   var UI = getLoadedPackages()['ui'].UI;
+  var HTML = getLoadedPackages()['htmljs'].HTML;
 
-  boilerplateTemplate = UI.Component.extend({
+  var boilerplateTemplate = UI.Component.extend({
     kind: "MainPage",
     render: boilerplateRender
   });
 
+  var boilerplateInstance = boilerplateTemplate.extend({
+    data: boilerplateData
+  });
+  var boilerplateHtmlJs = boilerplateInstance.render();
+  return "<!DOCTYPE html>\n" +
+        HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
 };
 
 // XXX document
@@ -545,6 +540,7 @@ main.registerCommand({
   options: {
     debug: { type: Boolean },
     ios: { type: Boolean },
+    android: { type: Boolean },
     browser: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
@@ -575,12 +571,20 @@ main.registerCommand({
     process.exit(1);
   }
   var bundleArch =  options.architecture || archinfo.host();
-  var isCordova = options.ios;
 
   // XXX
-  var clientArchs = ["client.browser"];
+  var cordovaBuilds = [];
   if (options.ios) {
-    clientArchs.push("client.cordova.ios");
+    cordovaBuilds.push('ios');
+  }
+  if (options.android) {
+    cordovaBuilds.push('android');
+  }
+  var isCordova = cordovaBuilds.length > 0;
+
+  var clientArchs = ["client.browser"];
+  if (isCordova) {
+    clientArchs.push("client.cordova.build");
   }
 
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
@@ -613,10 +617,16 @@ main.registerCommand({
 
   if (isCordova) {
     var programPath = path.join(bundlePath, "programs");
-    var fromPath = path.join(programPath, "client.cordova.ios");
+    var fromPath = path.join(programPath, "client.cordova.build");
     execFileSync("cordova", ["create", "client.cordova"], { cwd: programPath });
     var cordovaPath = path.join(programPath, "client.cordova");
+
     var wwwPath = path.join(cordovaPath, "www");
+
+    var appPath = path.join(fromPath, 'app');
+    files.cp_r(appPath, fromPath);
+    files.rm_recursive(appPath);
+
     files.rm_recursive(wwwPath);
     files.cp_r(fromPath, wwwPath);
 
@@ -624,7 +634,14 @@ main.registerCommand({
     var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
     var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
     var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
-    generateCordovaBoilerplate(clientJson, boilerplateTemplateSource);
+    var indexHtml = generateCordovaBoilerplate(wwwPath, clientJson, boilerplateTemplateSource);
+    fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
+
+    _.each(cordovaBuilds, function (arch) {
+      execFileSync("cordova", ["platform", "add", arch], { cwd: cordovaPath });
+    });
+    execFileSync("cordova", ["build"], { cwd: cordovaPath });
+    files.rm_recursive(fromPath);
   }
 
   if (!options['directory']) {

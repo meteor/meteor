@@ -4,6 +4,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
+  api.use('deps');
+
   api.export('HTML');
 
   api.add_files(['utils.js', 'html.js', 'tohtml.js']);
