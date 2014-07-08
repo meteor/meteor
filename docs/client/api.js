@@ -1866,7 +1866,7 @@ Template.api.ui_body = {
   id: "ui_body",
   name: "UI.body",
   locus: "Client",
-  descr: ["The [component object](#templates_api) representing your `<body>` tag."]
+  descr: ["The [template object](#templates_api) representing your `<body>` tag."]
 };
 
 Template.api.ui_render = {
@@ -1899,12 +1899,12 @@ Template.api.ui_renderwithdata = {
 
 Template.api.ui_insert = {
   id: "ui_insert",
-  name: "UI.insert(instantiatedComponent, parentNode[, nextNode])",
+  name: "UI.insert(renderedTemplate, parentNode[, nextNode])",
   locus: "Client",
-  descr: ["Inserts an instantiated component into the DOM and calls its [`rendered`](#template_rendered) callback."],
+  descr: ["Inserts a rendered template into the DOM and calls its [`rendered`](#template_rendered) callback."],
   args: [
-    {name: "instantiatedComponent",
-     type: "Instantiated component object",
+    {name: "renderedTemplate",
+     type: "Rendered template object",
      descr: "The return value from `UI.render` or `UI.renderWithData`."
     },
     {name: "parentNode",
