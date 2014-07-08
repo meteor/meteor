@@ -451,10 +451,10 @@ _.extend(PackageSource.prototype, {
         });
       },
 
-      on_use: function (f) {
+      onUse: function (f) {
         if (!self.isTest) {
           if (fileAndDepLoader) {
-            buildmessage.error("duplicate on_use handler; a package may have " +
+            buildmessage.error("duplicate onUse handler; a package may have " +
                                "only one", { useMyCaller: true });
             // Recover by ignoring the duplicate
             return;
@@ -463,7 +463,12 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      on_test: function (f) {
+      // Backwards compatibility for old interfaces.
+      on_use: function (f) {
+        this.onUse(f);
+      },
+
+      onTest: function (f) {
         // If we are not initializing the test package, then we are initializing
         // the normal package and have now noticed that it has tests. So, let's
         // register the test. This is a medium-length hack until we have new
@@ -476,13 +481,18 @@ _.extend(PackageSource.prototype, {
         // We are initializing the test, so proceed as normal.
         if (self.isTest) {
           if (fileAndDepLoader) {
-            buildmessage.error("duplicate on_test handler; a package may have " +
+            buildmessage.error("duplicate onTest handler; a package may have " +
                                "only one", { useMyCaller: true });
             // Recover by ignoring the duplicate
             return;
           }
           fileAndDepLoader = f;
         }
+      },
+
+      // Backwards compatibility for old interfaces.
+      on_test: function (f) {
+        this.onTest(f);
       },
 
       // Define a plugin. A plugin extends the build process for
