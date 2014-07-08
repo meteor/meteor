@@ -261,6 +261,7 @@ var toc = [
         "UI.render",
         "UI.renderWithData",
         "UI.insert",
+        "UI.remove",
         "UI.getElementData"
       ],
       {type: "spacer"},

@@ -2219,20 +2219,24 @@ changes.
   Future releases will provide a richer API for working with rendered
   templates, for example unifying them "template instances."  For now, all you
   can do with them is pass them to `UI.insert`.
+{{/warning}}
 
+{{#warning}}
   Most users will not need to manually render templates or manually insert them
-  into the DOM at all.  As of 0.8.0, if you call `UI.render` and never insert
+  into the DOM at all.  As of 0.8.x, if you call `UI.render` and never insert
   the result into the DOM, the logic to keep the rendered template updated
   will continue running in your browser forever. Additionally, if you remove any
-  part of your DOM using any mechanism other than jQuery, the logic to keep that
-  part of the the DOM updated will continue running.  To avoid these issues,
-  either avoid directly updating the DOM or ensure that any removals go through
-  jQuery.
+  part of your DOM using any mechanism other than Meteor or jQuery, the logic
+  to keep that  part of the the DOM updated will continue running.  To avoid these
+  issues, either avoid directly updating the DOM or ensure that any removals go
+  through Meteor or jQuery.
 {{/warning}}
 
 {{> api_box ui_renderwithdata}}
 
 {{> api_box ui_insert}}
+
+{{> api_box ui_remove}}
 
 {{> api_box ui_getelementdata}}
 
