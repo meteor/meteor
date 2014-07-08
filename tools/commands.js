@@ -6,7 +6,6 @@ var child_process = require("child_process");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var uniload = require('./uniload.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
@@ -26,6 +25,13 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+
+var getLoadedPackages = _.once(function () {
+  var uniload = require('./uniload.js');
+  return uniload.load({
+    packages: [ 'spacebars', 'spacebars-compiler' ]
+  });
+});
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -473,6 +479,63 @@ main.registerCommand({
 // bundle
 ///////////////////////////////////////////////////////////////////////////////
 
+// The reload safetybelt is some js that will be loaded after everything else in
+// the HTML.  In some multi-server deployments, when you update, you have a
+// chance of hitting an old server for the HTML and the new server for the JS or
+// CSS.  This prevents you from displaying the page in that case, and instead
+// reloads it, presumably all on the new version now.
+var RELOAD_SAFETYBELT = "\n" +
+      "if (typeof Package === 'undefined' ||\n" +
+      "    ! Package.webapp ||\n" +
+      "    ! Package.webapp.WebApp ||\n" +
+      "    ! Package.webapp.WebApp._isCssLoaded())\n" +
+      "  document.location.reload(); \n";
+
+var generateCordovaBoilerplate = function (clientJson, boilerplateTemplateSource) {
+  var boilerplateBaseData = {
+    css: [],
+    js: [],
+    head: '',
+    body: '',
+    reloadSafetyBelt: RELOAD_SAFETYBELT,
+  };
+
+  _.each(clientJson.manifest, function (item) {
+    if (item.type === 'css' && item.where === 'client') {
+      boilerplateBaseData.css.push({url: item.url});
+    }
+    if (item.type === 'js' && item.where === 'client') {
+      boilerplateBaseData.js.push({url: item.url});
+    }
+    if (item.type === 'head') {
+      boilerplateBaseData.head = fs.readFileSync(
+        path.join(clientDir, item.path), 'utf8');
+    }
+    if (item.type === 'body') {
+      boilerplateBaseData.body = fs.readFileSync(
+        path.join(clientDir, item.path), 'utf8');
+    }
+  });
+
+  console.log(getLoadedPackages());
+  var Spacebars = getLoadedPackages()['spacebars-common'].Spacebars;
+  var boilerplateRenderCode = Spacebars.compile(
+    boilerplateTemplateSource, { isBody: true });
+
+
+  // Note that we are actually depending on eval's local environment capture
+  // so that UI and HTML are visible to the eval'd code.
+  var boilerplateRender = eval(boilerplateRenderCode);
+
+  var UI = getLoadedPackages()['ui'].UI;
+
+  boilerplateTemplate = UI.Component.extend({
+    kind: "MainPage",
+    render: boilerplateRender
+  });
+
+};
+
 // XXX document
 main.registerCommand({
   name: 'bundle',
@@ -556,6 +619,12 @@ main.registerCommand({
     var wwwPath = path.join(cordovaPath, "www");
     files.rm_recursive(wwwPath);
     files.cp_r(fromPath, wwwPath);
+
+    var clientJsonPath = path.join(wwwPath, 'program.json');
+    var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
+    var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
+    var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
+    generateCordovaBoilerplate(clientJson, boilerplateTemplateSource);
   }
 
   if (!options['directory']) {
