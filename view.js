@@ -1,4 +1,30 @@
-
+/// [new] Blaze.View([kind], renderMethod)
+///
+/// Blaze.View is the building block of reactive DOM.  Views have
+/// the following features:
+///
+/// * lifecycle callbacks - Views are created, rendered, and destroyed,
+///   and callbacks can be registered to fire when these things happen.
+///
+/// * parent pointer - A View points to its parentView, which is the
+///   View that caused it to be rendered.  These pointers form a
+///   hierarchy or tree of Views.
+///
+/// * render() method - A View's render() method specifies the DOM
+///   (or HTML) content of the View.  If the method establishes
+///   reactive dependencies, it may be re-run.
+///
+/// * a DOMRange - If a View is rendered to DOM, its position and
+///   extent in the DOM are tracked using a DOMRange object.
+///
+/// When a View is constructed by calling Blaze.View, the View is
+/// not yet considered "created."  It doesn't have a parentView yet,
+/// and no logic has been run to initialize the View.  All real
+/// work is deferred until at least creation time, when the onCreated
+/// callbacks are fired, which happens when the View is "used" in
+/// some way that requires it to be rendered.
+///
+/// ...
 Blaze.View = function (kind, render) {
   if (! (this instanceof Blaze.View))
     // called without `new`
@@ -49,6 +75,25 @@ Blaze.View.prototype.onDestroyed = function (cb) {
   this._callbacks.destroyed.push(cb);
 };
 
+/// View#autorun(func)
+///
+/// Sets up a Deps autorun that is "scoped" to this View in two
+/// important ways: 1) Blaze.currentView is automatically set
+/// on every re-run, and 2) the autorun is stopped when the
+/// View is destroyed.  As with Deps.autorun, the first run of
+/// the function is immediate, and a Computation object that can
+/// be used to stop the autorun is returned.
+///
+/// View#autorun is meant to be called from View callbacks like
+/// onCreated, or from outside the rendering process.  It may not
+/// be called before the onCreated callbacks are fired (too early),
+/// or from a render() method (too confusing).
+///
+/// Typically, autoruns that update the state
+/// of the View (as in Blaze.With) should be started from an onCreated
+/// callback.  Autoruns that update the DOM should be started
+/// from either onCreated (guarded against the absence of
+/// view.domrange), onMaterialized, or onRendered.
 Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
 
