@@ -93,46 +93,6 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   return c;
 };
 
-Blaze._addEventMap = function (view, eventMap, thisInHandler) {
-  thisInHandler = (thisInHandler || null);
-  var handles = [];
-
-  if (! view.domrange)
-    throw new Error("View must have a DOMRange");
-
-  view.domrange.onAttached(function attached_eventMaps(range, element) {
-    _.each(eventMap, function (handler, spec) {
-      var clauses = spec.split(/,\s+/);
-      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
-      _.each(clauses, function (clause) {
-        var parts = clause.split(/\s+/);
-        if (parts.length === 0)
-          return;
-
-        var newEvents = parts.shift();
-        var selector = parts.join(' ');
-        handles.push(Blaze.EventSupport.listen(
-          element, newEvents, selector,
-          function (evt) {
-            if (! range.containsElement(evt.currentTarget))
-              return null;
-            return handler.apply(thisInHandler || this, arguments);
-          },
-          range, function (r) {
-            return r.parentRange;
-          }));
-      });
-    });
-  });
-
-  view.onDestroyed(function () {
-    _.each(handles, function (h) {
-      h.stop();
-    });
-    handles.length = 0;
-  });
-};
-
 Blaze._fireCallbacks = function (view, which) {
   Blaze.withCurrentView(view, function () {
     Deps.nonreactive(function fireCallbacks() {
@@ -489,4 +449,44 @@ Blaze.getElementData = function (elem) {
 Blaze.getViewData = function (view) {
   var theWith = Blaze.getParentView(view, 'with');
   return theWith ? theWith.dataVar.get() : null;
+};
+
+Blaze._addEventMap = function (view, eventMap, thisInHandler) {
+  thisInHandler = (thisInHandler || null);
+  var handles = [];
+
+  if (! view.domrange)
+    throw new Error("View must have a DOMRange");
+
+  view.domrange.onAttached(function attached_eventMaps(range, element) {
+    _.each(eventMap, function (handler, spec) {
+      var clauses = spec.split(/,\s+/);
+      // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+      _.each(clauses, function (clause) {
+        var parts = clause.split(/\s+/);
+        if (parts.length === 0)
+          return;
+
+        var newEvents = parts.shift();
+        var selector = parts.join(' ');
+        handles.push(Blaze.EventSupport.listen(
+          element, newEvents, selector,
+          function (evt) {
+            if (! range.containsElement(evt.currentTarget))
+              return null;
+            return handler.apply(thisInHandler || this, arguments);
+          },
+          range, function (r) {
+            return r.parentRange;
+          }));
+      });
+    });
+  });
+
+  view.onDestroyed(function () {
+    _.each(handles, function (h) {
+      h.stop();
+    });
+    handles.length = 0;
+  });
 };
