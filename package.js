@@ -1,9 +1,6 @@
 Package.describe({
-  name: "templating",
-  test: "templating-test",
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
