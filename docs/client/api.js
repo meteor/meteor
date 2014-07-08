@@ -1917,6 +1917,19 @@ Template.api.ui_insert = {
     }]
 };
 
+Template.api.ui_remove = {
+  id: "ui_remove",
+  name: "UI.remove(renderedTemplate)",
+  locus: "Client",
+  descr: ["Removes a rendered template from the DOM and destroys it, calling the [`destroyed`](#template_destroyed) callback and stopping the logic that reactively updates the template."],
+  args: [
+    {name: "renderedTemplate",
+     type: "Rendered template object",
+     descr: "The return value from `UI.render` or `UI.renderWithData`."
+    }
+  ]
+};
+
 Template.api.ui_getelementdata = {
   id: "ui_getelementdata",
   name: "UI.getElementData(el)",
