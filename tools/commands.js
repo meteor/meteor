@@ -2,6 +2,7 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require("fs");
+var child_process = require("child_process");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -69,6 +70,27 @@ var getLocalPackages = function () {
   });
 
   return ret;
+};
+
+var execFileSync = function (file, args, opts) {
+  console.log('cd ' + opts.cwd + ' && ' + file + ' ' +
+                     args.join(' ') + ' ...\n');
+  var future = new Future;
+
+  var child_process = require('child_process');
+  child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+    console.log(err ? 'failed\n' : 'done\n');
+    console.log(stderr);
+    console.log(stdout);
+    console.log(err);
+    future.return({
+      success: ! err,
+      stdout: stdout,
+      stderr: stderr
+    });
+  });
+
+  return future.wait();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -490,14 +512,12 @@ main.registerCommand({
     process.exit(1);
   }
   var bundleArch =  options.architecture || archinfo.host();
+  var isCordova = options.ios;
 
   // XXX
-  var clientArchs = [];
+  var clientArchs = ["client.browser"];
   if (options.ios) {
-    clientArchs.push("client.ios");
-  }
-  if (options.browser) {
-    clientArchs.push("client.browser");
+    clientArchs.push("client.cordova.ios");
   }
 
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
@@ -526,6 +546,16 @@ main.registerCommand({
     process.stdout.write("Errors prevented bundling:\n");
     process.stdout.write(bundleResult.errors.formatMessages());
     return 1;
+  }
+
+  if (isCordova) {
+    var programPath = path.join(bundlePath, "programs");
+    var fromPath = path.join(programPath, "client.cordova.ios");
+    execFileSync("cordova", ["create", "client.cordova"], { cwd: programPath });
+    var cordovaPath = path.join(programPath, "client.cordova");
+    var wwwPath = path.join(cordovaPath, "www");
+    files.rm_recursive(wwwPath);
+    files.cp_r(fromPath, wwwPath);
   }
 
   if (!options['directory']) {
