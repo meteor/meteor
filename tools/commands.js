@@ -409,17 +409,20 @@ main.registerCommand({
   }
 
   // We are actually working with a new meteor project at this point, so
-  // reorient its path.
+  // reorient its path. We might do some things to it, but they should be
+  // invisible to the user, so mute non-error output.
   project.setRootDir(appPath);
+  project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
+  project._ensureDepsUpToDate();
 
-  process.stderr.write(appPath + ": created");
+  process.stdout.write(appPath + ": created");
   if (options.example && options.example !== appPath)
     process.stderr.write(" (from '" + options.example + "' template)");
-  process.stderr.write(".\n\n");
+  process.stdout.write(".\n\n");
 
-  process.stderr.write(
+  process.stdout.write(
     "To run your new app:\n" +
       "   cd " + appPath + "\n" +
       "   meteor\n");
