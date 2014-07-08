@@ -1,9 +1,6 @@
 Package.describe({
-  name: "test-helpers",
-  test: "test-helpers-test",
   summary: "Utility functions for tests",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

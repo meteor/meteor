@@ -205,8 +205,8 @@ var PackageSource = function () {
   // it's still nice to get it right).
   self.serveRoot = null;
 
-  // Package metadata. Keys are 'summary' and 'internal' and
-  // 'githubUrl'. Currently all of these are optional.
+  // Package metadata. Keys are 'summary' and 'githubUrl'. Github URL is
+  // optional.
   self.metadata = {};
 
   // Package version as a semver string. Optional; not all packages
@@ -426,17 +426,15 @@ _.extend(PackageSource.prototype, {
     // == 'Package' object visible in package.js ==
     var Package = {
       // Set package metadata. Options:
-      // - summary: for 'meteor list'
-      // - internal: if true, hide in list
+      // - summary: for 'meteor list' & package server
       // - version: package version string (semver)
-      // - test: name of the test package (string)
       // - earliestCompatibleVersion: version string
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
       describe: function (options) {
         _.each(options, function (value, key) {
-          if (key === "summary" || key === "internal" ||
+          if (key === "summary" ||
               key === "githubUrl") {
             self.metadata[key] = value;
           } else if (key === "version") {
@@ -445,9 +443,6 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
-          } else if (key === "name") {
-          }
-          else if (key === "test") {
           }
           else {
             buildmessage.error("unknown attribute '" + key + "' " +

@@ -1,9 +1,6 @@
 Package.describe({
-  name: "handlebars",
-  test: "handlebars-test",
   summary: "Deprecated",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -14,4 +11,3 @@ Package.on_use(function (api) {
 //    "The 'handlebars' package is deprecated. "
 //      + "`Handlebars.registerHelper` is now `UI.registerHelper` in the 'ui' package.");
 });
-

@@ -1,8 +1,6 @@
 Package.describe({
   summary: "Parses Meteor Smart Package version string",
-  version: "1.0.0",
-  test: "package-version-parser-test",
-  internal: true
+  version: "1.0.0"
 });
 
 Npm.depends({

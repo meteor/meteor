@@ -1,6 +1,4 @@
 Package.describe({
-  name: "accounts-ui-unstyled",
-  test: "accounts-ui-unstyled-test",
   summary: "Unstyled version of login widgets",
   version: "1.0.0"
 });

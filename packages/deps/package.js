@@ -1,11 +1,8 @@
 // XXX rename package?
 
 Package.describe({
-  name: "deps",
-  test: "deps-test",
   summary: "Dependency mananger to allow reactive callbacks",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

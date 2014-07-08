@@ -1,6 +1,4 @@
 Package.describe({
-  name: "email",
-  test: "email-test",
   summary: "Send email messages",
   version: "1.0.0"
 });

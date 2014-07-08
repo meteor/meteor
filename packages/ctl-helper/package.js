@@ -1,7 +1,6 @@
 Package.describe({
   summary: "Helpers for control programs",
-  version: "1.0.0",
-  internal: true
+  version: "1.0.0"
 });
 
 Npm.depends({optimist: '0.6.0'});

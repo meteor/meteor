@@ -1,6 +1,4 @@
 Package.describe({
-  name: "browser-policy",
-  test: "browser-policy-test",
   summary: "Configure security policies enforced by the browser",
   version: "1.0.0"
 });

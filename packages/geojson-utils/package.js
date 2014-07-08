@@ -1,9 +1,6 @@
 Package.describe({
-  name: "geojson-utils",
-  test: "geojson-utils-test",
   summary: 'GeoJSON utility functions (from https://github.com/maxogden/geojson-js-utils)',
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -16,4 +13,3 @@ Package.on_test(function (api) {
   api.use('geojson-utils');
   api.add_files(['geojson-utils.tests.js'], 'client');
 });
-

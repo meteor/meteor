@@ -1,6 +1,4 @@
 Package.describe({
-  name: "stylus",
-  test: "stylus-test",
   summary: 'Expressive, dynamic, robust CSS',
   version: "1.0.0"
 });

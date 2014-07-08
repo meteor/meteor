@@ -1,9 +1,6 @@
 Package.describe({
-  name: "oauth1",
-  test: "oauth1-test",
   summary: "Common code for OAuth1-based login services",
-  version: "1.0.0",
-  internal: true
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

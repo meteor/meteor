@@ -1,6 +1,4 @@
 Package.describe({
-  name: "underscore",
-  test: "underscore-test",
   summary: "Collection of small helpers: _.map, _.each, ...",
   version: '1.0.0'
 });

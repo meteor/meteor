@@ -4,11 +4,8 @@
 // databases to be upgraded from SRP to bcrypt.
 
 Package.describe({
-  name: "srp",
-  test: "srp-test",
   summary: "Library for Secure Remote Password (SRP) exchanges",
-  version: "1.0.0",
-  internal: true
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

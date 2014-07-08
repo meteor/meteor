@@ -1,8 +1,6 @@
 Package.describe({
-  name: "npm-bcrypt",
   summary: "Wrapper around the bcrypt npm package",
-  version: '0.7.7',
-  internal: true
+  version: '0.7.7'
 });
 
 Npm.depends({

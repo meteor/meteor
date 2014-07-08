@@ -1,8 +1,6 @@
 Package.describe({
-  name: 'test-server-tests-in-console-once',
   summary: "Run server tests noninteractively, with results going to the console.",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

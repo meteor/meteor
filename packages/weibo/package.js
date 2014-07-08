@@ -1,9 +1,6 @@
 Package.describe({
   summary: "Weibo OAuth flow",
   version: '1.0.0',
-  // internal for now. Should be external when it has a richer API to do
-  // actual API things with the service, not just handle the OAuth flow.
-  internal: true
 });
 
 Package.on_use(function(api) {

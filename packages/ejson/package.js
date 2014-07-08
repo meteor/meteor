@@ -1,9 +1,6 @@
 Package.describe({
-  name: "ejson",
-  test: "ejson-test",
   summary: "Extended and Extensible JSON library",
-  version: '1.0.0',
-  internal: false
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

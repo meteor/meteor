@@ -1,6 +1,4 @@
 Package.describe({
-  name:"less",
-  test:"less-test",
   summary: "The dynamic stylesheet language",
   version: "1.0.0"
 });

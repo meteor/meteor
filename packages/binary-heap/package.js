@@ -1,9 +1,6 @@
 Package.describe({
-  name: "binary-heap",
-  test: "binary-heap-test",
   summary: "Binary Heap datastructure implementation",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -19,4 +16,3 @@ Package.on_test(function (api) {
   api.use('binary-heap');
   api.add_files('binary-heap-tests.js');
 });
-

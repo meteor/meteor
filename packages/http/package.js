@@ -1,6 +1,4 @@
 Package.describe({
-  name: "http",
-  test: "http-test",
   summary: "Make HTTP calls to remote servers",
   version: '1.0.0'
 });

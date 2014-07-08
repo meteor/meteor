@@ -529,8 +529,7 @@ _.extend(Unipackage.prototype, {
     if (options.firstUnipackage) {
       self.name = name;
       self.metadata = {
-        summary: mainJson.summary,
-        internal: mainJson.internal
+        summary: mainJson.summary
       };
       self.version = mainJson.version;
       self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
@@ -664,7 +663,6 @@ _.extend(Unipackage.prototype, {
         format: "unipackage-pre2",
         name: self.name,
         summary: self.metadata.summary,
-        internal: self.metadata.internal,
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,

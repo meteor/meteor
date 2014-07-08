@@ -1,9 +1,6 @@
 Package.describe({
-  name: "js-analyze-tests",
-  test: "js-analyze-tests-test",
   summary: "Tests for JavaScript code analysis for Meteor",
-  version: "1.0.0",
-  internal: true
+  version: "1.0.0"
 });
 
 // The tests are in a separate package so that it is possible to compile

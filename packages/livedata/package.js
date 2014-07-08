@@ -1,9 +1,6 @@
 Package.describe({
-  name: "livedata",
-  test: "livedata-test",
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 // We use 'faye-websocket' for connections in server-to-server DDP, mostly

@@ -1,6 +1,4 @@
 Package.describe({
-  name: "spacebars-compiler",
-  test: "spacebars-compiler-test",
   summary: "Compiler for Spacebars template language",
   version: '1.0.0'
 });

@@ -1,7 +1,6 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: '1.0.0',
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -20,4 +19,3 @@ Package.on_use(function (api) {
 
   api.export('Facts');
 });
-

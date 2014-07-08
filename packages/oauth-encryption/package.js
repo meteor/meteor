@@ -1,6 +1,4 @@
 Package.describe({
-  name: "oauth-encryption",
-  test: "oauth-encryption-test",
   summary: "Encrypt account secrets stored in the database",
   version: '1.0.0'
 });
