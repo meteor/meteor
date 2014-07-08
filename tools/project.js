@@ -83,9 +83,23 @@ var Project = function () {
   // fields. Rather than recomputing immediately, let's wait until we are done
   // and then recompute when needed.
   self._depsUpToDate = false;
+
+  // In verbose mode (default) we print stuff out. When the project is something
+  // automatic, like test-packages or get-ready, we should mute the (expected)
+  // output. For example, we don't need to tell the user that we are adding
+  // packages to an app during test-packages.
+  self.muted = false;
 };
 
 _.extend(Project.prototype, {
+
+  // Sets the mute flag on the project. Muted projects don't print out non-error
+  // output.
+  setMuted : function (muted) {
+    var self = this;
+    self.muted = muted;
+  },
+
   // Set a given root directory as the project's root directory. Figure out all
   // relevant file paths and read in data that is independent of the constraint
   // solver.
@@ -272,6 +286,7 @@ _.extend(Project.prototype, {
   //
   // return 0 if everything went well, or 1 if we failed in some way.
   showPackageChanges : function (versions, newVersions, options) {
+    var self = this;
     // options.skipPackages
     // options.ondiskPackages
 
@@ -331,9 +346,11 @@ _.extend(Project.prototype, {
       return 1;
 
     // Show the user the messageLog of packages we added.
-    _.each(messageLog, function (msg) {
-      process.stdout.write(msg + "\n");
-    });
+    if (!self.muted) {
+      _.each(messageLog, function (msg) {
+        process.stdout.write(msg + "\n");
+      });
+    }
     return 0;
   },
 
@@ -617,8 +634,11 @@ _.extend(Project.prototype, {
   //
   // This primarily exists as a safety check to be used when doing operations
   // that could lead to changes in the versions file.
-  _ensurePackagesExistOnDisk : function (versions, arch) {
-    arch = arch || archinfo.host();
+  _ensurePackagesExistOnDisk : function (versions, options) {
+    var self = this;
+    options = options || {};
+    var arch = options.arch || archinfo.host();
+    var verbose = options.verbose || !self.muted;
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
       var packageVersionInfo = { packageName: name, version: version };
@@ -626,7 +646,7 @@ _.extend(Project.prototype, {
         var available = tropohouse.default.maybeDownloadPackageForArchitectures(
           packageVersionInfo,
           ['browser', arch],
-          true /* print downloading message */
+          verbose /* print downloading message */
         );
         downloadedPackages[name] = version;
       } catch (err) {
@@ -660,7 +680,8 @@ _.extend(Project.prototype, {
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to
     // make sure that we have them.
-    var downloadedPackages = self._ensurePackagesExistOnDisk(newVersions);
+    var downloadedPackages = self._ensurePackagesExistOnDisk(newVersions,
+                                                             { verbose: true });
 
     // Return the packages that we have downloaded successfully and let the
     // client deal with reporting the error to the user.

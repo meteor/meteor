@@ -1654,7 +1654,7 @@ exports.bundle = function (options) {
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();
   var downloaded = project.project._ensurePackagesExistOnDisk(
-    project.project.dependencies, arch);
+    project.project.dependencies, { arch: arch, verbose: true });
 
   if (_.keys(downloaded).length !==
       _.keys(project.project.dependencies).length) {

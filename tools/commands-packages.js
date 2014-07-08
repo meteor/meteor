@@ -457,6 +457,7 @@ main.registerCommand({
     var contents = fs.readdirSync(localPackageDir);
     var myPackages = {};
     var toPublish = {};
+    var canBuild = true;
     var messages = buildmessage.capture(
       {title: "rebuilding local packages"},
       function () {
@@ -486,7 +487,8 @@ main.registerCommand({
                   requireVersion: true });
 
                 if (buildmessage.jobHasMessages()) {
-                  process.stderr.write("Error reading package:" + item + "\n");
+                  process.stderr.write("\n ...Error reading package:" + item + "\n");
+                  canBuild = false;
                   return;
                 };
 
@@ -505,10 +507,14 @@ main.registerCommand({
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
                 // server, but we need to be careful.
+                var directDeps =
+                      compiler.determineBuildTimeDependencies(packageSource).directDependencies;
+                project._ensurePackagesExistOnDisk(directDeps);
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  process.stderr.write("Error compiling unipackage:" + item + "\n");
+                  process.stderr.write("\n ... Error compiling unipackage: " + item + "\n");
+                  canBuild = false;
                   return;
                 };
                 process.stdout.write(".");
@@ -545,6 +551,15 @@ main.registerCommand({
                   process.stdout.write("new package or version\n");
                   return;
                 } else {
+                  // If we can't build some of our packages, then we care about
+                  // that far more than we care about hash conflicts (and fixing
+                  // the errors will change the hashes as well). Don't even
+                  // bother checking until that happens.
+                  if (!canBuild) {
+                    process.stdout.write("hash comparison skipped \n");
+                    return;
+                  }
+
                   var existingBuild =
                         catalog.official.getBuildWithPreciseBuildArchitectures(
                           oldVersion,

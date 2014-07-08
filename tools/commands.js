@@ -191,7 +191,7 @@ main.registerCommand({
       var releasePackages = release.current.getPackages();
       // HACK: relies on fact that the function below doesn't actually
       //       have any relation to the project directory
-      project._ensurePackagesExistOnDisk(releasePackages);
+      project._ensurePackagesExistOnDisk(releasePackages, { verbose: true });
       loadPackages(
         _.keys(releasePackages),
         new packageLoader.PackageLoader({versions: releasePackages}));
@@ -986,6 +986,7 @@ main.registerCommand({
   // We are going to operate in the special test project, so let's remap our
   // main project to the test directory.
   project.setRootDir(testRunnerAppDir);
+  project.setMuted(true); // Mute output where applicable
   project.writeMeteorReleaseVersion(release.current.name || 'none');
   project.forceEditPackages(
     [options['driver-package'] || 'test-in-browser'],
