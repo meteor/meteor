@@ -39,7 +39,7 @@ LocalCollection._ObjectID.prototype.typeName = function() {
 
 LocalCollection._ObjectID.prototype.getTimestamp = function() {
   var self = this;
-  return parseInt(self._str.substr(0, 8), 16);
+  return new Date(parseInt(self._str.substr(0, 8), 16) * 1000);
 };
 
 LocalCollection._ObjectID.prototype.valueOf =
