@@ -1,10 +1,12 @@
-// Publish the current client version to the client.  When a client
+// Publish the current client versions to the client.  When a client
 // sees the subscription change and that there is a new version of the
 // client available on the server, it can reload.
 //
-// By default the current client version is identified by a hash of
-// the client resources seen by the browser (the HTML, CSS, code, and
-// static files in the `public` directory).
+// By default there are two current client versions. The refreshable client
+// version is identified by a hash of the client resources seen by the browser
+// that are refreshable, such as CSS, while the non refreshable client version
+// is identified by a hash of the rest of the client assets
+// (the HTML, code, and static files in the `public` directory).
 //
 // If the environment variable `AUTOUPDATE_VERSION` is set it will be
 // used as the client id instead.  You can use this to control when
@@ -31,9 +33,10 @@
 // `current` field set to `true`.  This is the version of the client
 // code that the browser will receive from the server if it reloads.
 //
-// In this implementation only one document is published, the current
-// client version.  Developers can easily experiment with different
-// versioning and updating models by forking this package.
+// In this implementation only two documents are present in the collection
+// the current refreshable client version and the current nonRefreshable client
+// version.  Developers can easily experiment with different versioning and
+// updating models by forking this package.
 
 Autoupdate = {};
 
@@ -54,68 +57,68 @@ var startupVersion = null;
 
 // updateVersions can only be called after the server has fully loaded.
 var updateVersions = function (shouldReloadClientProgram) {
-  return function () {
-    syncQueue.runTask(function () {
-      var oldVersion = Autoupdate.autoupdateVersion;
-      var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
+  syncQueue.runTask(function () {
+    var oldVersion = Autoupdate.autoupdateVersion;
+    var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
 
-      // Step 1: load the current client program on the server and update the
-      // hash values in __meteor_runtime_config__.
-      if (shouldReloadClientProgram) {
-        WebAppInternals.reloadClientProgram();
-      }
+    // Step 1: load the current client program on the server and update the
+    // hash values in __meteor_runtime_config__.
+    if (shouldReloadClientProgram) {
+      WebAppInternals.reloadClientProgram();
+    }
 
-      if (startupVersion === null) {
-        Autoupdate.autoupdateVersion =
-          __meteor_runtime_config__.autoupdateVersion =
-            process.env.AUTOUPDATE_VERSION ||
-            process.env.SERVER_ID || // XXX COMPAT 0.6.6
-            WebApp.calculateClientHashNonRefreshable();
-      }
-
-      Autoupdate.autoupdateVersionRefreshable =
-        __meteor_runtime_config__.autoupdateVersionRefreshable =
+    if (startupVersion === null) {
+      Autoupdate.autoupdateVersion =
+        __meteor_runtime_config__.autoupdateVersion =
           process.env.AUTOUPDATE_VERSION ||
           process.env.SERVER_ID || // XXX COMPAT 0.6.6
-          WebApp.calculateClientHashRefreshable();
+          WebApp.calculateClientHashNonRefreshable();
+    }
 
-      // Step 2: form the new client boilerplate which contains the updated
-      // assets and __meteor_runtime_config__.
-      if (shouldReloadClientProgram) {
-        WebAppInternals.generateBoilerplate();
+    Autoupdate.autoupdateVersionRefreshable =
+      __meteor_runtime_config__.autoupdateVersionRefreshable =
+        process.env.AUTOUPDATE_VERSION ||
+        process.env.SERVER_ID || // XXX COMPAT 0.6.6
+        WebApp.calculateClientHashRefreshable();
+
+    // Step 2: form the new client boilerplate which contains the updated
+    // assets and __meteor_runtime_config__.
+    if (shouldReloadClientProgram) {
+      WebAppInternals.generateBoilerplate();
+    }
+
+    if (Autoupdate.autoupdateVersion !== oldVersion) {
+      if (oldVersion) {
+        ClientVersions.remove(oldVersion);
       }
 
-      if (Autoupdate.autoupdateVersion !== oldVersion) {
-        if (oldVersion) {
-          ClientVersions.remove(oldVersion);
-        }
+      ClientVersions.insert({
+        _id: Autoupdate.autoupdateVersion,
+        refreshable: false,
+        current: true,
+      });
+    }
 
-        ClientVersions.insert({
-          _id: Autoupdate.autoupdateVersion,
-          refreshable: false,
-          current: true,
-        });
+    if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
+      if (oldVersionRefreshable) {
+        ClientVersions.remove(oldVersionRefreshable);
       }
-
-      if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
-        if (oldVersionRefreshable) {
-          ClientVersions.remove(oldVersionRefreshable);
-        }
-        ClientVersions.insert({
-          _id: Autoupdate.autoupdateVersionRefreshable,
-          refreshable: true,
-          assets: WebAppInternals.refreshableAssets
-        });
-      }
-    });
-  };
+      ClientVersions.insert({
+        _id: Autoupdate.autoupdateVersionRefreshable,
+        refreshable: true,
+        assets: WebAppInternals.refreshableAssets
+      });
+    }
+  });
 };
 
 Meteor.startup(function () {
   // Allow people to override Autoupdate.autoupdateVersion before startup.
   // Tests do this.
   startupVersion = Autoupdate.autoupdateVersion;
-  WebApp.onListening(updateVersions(false));
+  WebApp.onListening(function () {
+    updateVersions(false);
+  });
 });
 
 Meteor.publish(
@@ -128,5 +131,5 @@ Meteor.publish(
 
 // Listen for SIGUSR2, which signals that a client asset has changed.
 process.on('SIGUSR2', Meteor.bindEnvironment(function () {
-  updateVersions(true)();
+  updateVersions(true);
 }));

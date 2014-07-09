@@ -5,10 +5,8 @@ if (Meteor.isClient) {
 }
 
 if (Meteor.isServer) {
-  var clientConnections;
-  Meteor.startup(function () {
-    clientConnections = 0;
-  });
+  var clientConnections = 0;
+
   Meteor.methods({
     clientLoad: function (jsVar) {
       console.log("client connected: " + clientConnections++);

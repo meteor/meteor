@@ -32,24 +32,27 @@ selftest.define("css hot code push", function (options) {
 
     // The css file is initially empty.
     run.match("numCssChanges: 0");
-    run.match(/css: (transparent|rgba\(0, 0, 0, 0\))/);
+
+    // Some browsers represent no background as 'transparent', others use
+    // rgba(0, 0, 0, 0).
+    run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
 
     // The server restarts if a new css file is added.
     s.write("test.css", "body { background-color: red; }");
     run.match("server restarted");
     run.match("numCssChanges: 1");
-    run.match("css: rgb(255, 0, 0)");
+    run.match("background-color: rgb(255, 0, 0)");
 
     s.write("test.css", "body { background-color: blue; }");
     run.match("refreshing");
     run.match("numCssChanges: 2");
-    run.match("css: rgb(0, 0, 255)");
+    run.match("background-color: rgb(0, 0, 255)");
 
     // The server restarts if a css file is removed.
     s.unlink("test.css");
     run.match("server restarted");
     run.match("numCssChanges: 3");
-    run.match(/css: (transparent|rgba\(0, 0, 0, 0\))/);
+    run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
     run.stop();
   });
 });
