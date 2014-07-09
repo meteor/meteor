@@ -18,6 +18,7 @@ selftest.define("publish-and-search", ["slow"], function () {
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
+  var githubUrl = "http://github.com/foo/bar";
 
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
@@ -25,6 +26,13 @@ selftest.define("publish-and-search", ["slow"], function () {
   run.match(fullPackageName);
 
   s.cd(fullPackageName);
+
+  // set a github URL in the package
+  var packageJsContents = s.read("package.js");
+  var newPackageJsContents = packageJsContents.replace(
+      /git: \".*\"/, "git: \"" + githubUrl + "\"");
+  s.write("package.js", newPackageJsContents);
+
   run = s.run("publish");
   run.waitSecs(15);
   run.expectExit(1);
@@ -39,6 +47,13 @@ selftest.define("publish-and-search", ["slow"], function () {
   run.waitSecs(15);
   run.expectExit(0);
   run.match(fullPackageName);
+
+  run = s.run("search", "--details", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match(fullPackageName);
+  run.match("Maintained");
+  run.match(githubUrl);
 });
 
 selftest.define("publish-one-arch", ["slow"], function () {
