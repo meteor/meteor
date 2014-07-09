@@ -441,6 +441,22 @@ _.extend(Sandbox.prototype, {
     }
   },
 
+  // Copy an app from a template into the current directory in the
+  // sandbox. 'to' is the subdirectory to put the app in, and
+  // 'template' is a subdirectory of tools/tests/apps to copy.
+  //
+  // Note that the arguments are the opposite order from 'cp'. That
+  // seems more intuitive to me -- if you disagree, my apologies.
+  //
+  // For example:
+  //   s.createApp('myapp', 'empty');
+  //   s.cd('myapp');
+  createPackage: function (to, template) {
+    var self = this;
+    files.cp_r(path.join(__dirname, 'tests', 'packages', template),
+               path.join(self.cwd, to));
+  },
+
   // Change the cwd to be used for subsequent runs. For example:
   //   s.run('create', 'myapp').expectExit(0);
   //   s.cd('myapp');

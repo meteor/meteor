@@ -1,5 +1,4 @@
 Package.describe({
-  name: "subprogram",
   version: "1.0.0",
   summary: "now with dependencies"
 });

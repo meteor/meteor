@@ -1,5 +1,4 @@
 Package.describe({
-  name: "depends-on-plugin",
   version: "1.0.0",
   summary: "depend on and watch a plugin"
 });

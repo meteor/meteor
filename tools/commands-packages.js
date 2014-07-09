@@ -172,11 +172,20 @@ main.registerCommand({
       existingVersion: options['existing-version']
     });
 
+  // Warn the user if their package is not good for all architectures.
+  if (compileResult.unipackage.buildArchitectures() !== "browser+os") {
+    process.stdout.write(
+      "\nWARNING: Your package contains binary code and is only compatible with " +
+       archinfo.host() + " architecture. \n" +
+       "Please use publish-for-arch to publish new builds of the package. \n\n");
+  };
+
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.
   conn.close();
 
   catalog.official.refresh();
+
   return ec;
 });
 
@@ -201,20 +210,20 @@ main.registerCommand({
   catalog.official.refresh(true);
 
   if (! catalog.complete.getPackage(name)) {
-    process.stderr.write('No package named ' + name);
+    process.stderr.write('No package named ' + name + "\n");
     return 1;
   }
   var pkgVersion = catalog.official.getVersion(name, versionString);
   if (! pkgVersion) {
     process.stderr.write('There is no version ' +
                          versionString + ' for package ' +
-                         name);
+                         name + "\n");
     return 1;
   }
 
   if (! pkgVersion.source || ! pkgVersion.source.url) {
     process.stderr.write('There is no source uploaded for ' +
-                         name + ' ' + versionString);
+                         name + ' ' + versionString + "\n");
     return 1;
   }
 
@@ -232,7 +241,7 @@ main.registerCommand({
   var packageDir = path.join(sourcePath, name);
 
   if (! fs.existsSync(packageDir)) {
-    process.stderr.write('Malformed source tarball');
+    process.stderr.write('Malformed source tarball \n');
     return 1;
   }
 
@@ -701,7 +710,7 @@ main.registerCommand({
     var allRecord = getReleaseOrPackageRecord(name);
     var record = allRecord.record;
     if (!record) {
-      console.log("Unknown package or release: ", name);
+      process.stderr.write("Unknown package or release: " +  name + "\n");
       return 1;
     }
     var versionRecords;
@@ -745,14 +754,16 @@ main.registerCommand({
     }
     if (_.isEqual(versionRecords, [])) {
       if (allRecord.release) {
-        console.log("No recommended versions of release " + name + " exist.");
+        process.stderr.write(
+          "No recommended versions of release " + name + " exist. \n");
       } else {
-        console.log("No versions of package" + name + " exist.");
+        process.stderr.write("No versions of package" + name + " exist. \n");
       }
     } else {
       var lastVersion = versionRecords[versionRecords.length - 1];
       if (!lastVersion && full.length > 1) {
-        console.log("Unknown version of", name, ":", full[1]);
+        process.stderr.write(
+          "Unknown version of" + name + ":" + full[1] + "\n");
         return 1;;
       }
       var unknown = "< unknown >";
@@ -760,23 +771,23 @@ main.registerCommand({
         var versionDesc = "Version " + v.version;
         if (v.description)
           versionDesc = versionDesc + " : " + v.description;
-        console.log(versionDesc);
+        process.stdout.write(versionDesc + "\n");
         if (v.buildArchitectures && full.length > 1)
-          console.log("      Architectures: "
-                           + v.buildArchitectures);
+          process.stdout.write("      Architectures: "
+                           + v.buildArchitectures + "\n");
         if (v.packages && full.length > 1) {
-          console.log("      tool: " + v.tool);
-          console.log("      packages:");
+          process.stdout.write("      tool: " + v.tool + "\n");
+          process.stdout.write("      packages:" + "\n");
 
           versionDesc = versionDesc + " \n      packages: \n";
           _.each(v.packages, function(pv, pn) {
-             console.log("          ", pn, ":", pv);
+             process.stdout.write("          " + pn + ":" + pv + "\n");
           });
         }
       });
-      console.log("\n");
-      console.log("The " + label + " " + name + " : "
-                  + lastVersion.description || unknown);
+      process.stdout.write("\n");
+      process.stdout.write("The " + label + " " + name + " : "
+                  + lastVersion.description || unknown + "\n");
     }
     var maintain = "Maintained by " + _.pluck(record.maintainers, 'username');
     if (lastVersion.githubUrl) {
@@ -786,7 +797,7 @@ main.registerCommand({
       maintain = maintain + "\nYou can find more information at "
           + record.homepage;
     }
-    console.log(maintain);
+    process.stdout.write(maintain + "\n");
   } else {
     var search = options.args[0];
 
@@ -819,22 +830,23 @@ main.registerCommand({
     var output = false;
     if (!_.isEqual(matchingPackages, [])) {
       output = true;
-      console.log("Found the following packages:");
+      process.stdout.write("Found the following packages:" + "\n");
       process.stdout.write(formatList(matchingPackages) + "\n");
     }
 
     if (!_.isEqual(matchingReleases, [])) {
       output = true;
-      console.log("Found the following releases:");
+      process.stdout.write("Found the following releases:" + "\n");
       process.stdout.write(formatList(matchingReleases) + "\n");
     }
 
     if (!output) {
-      console.log(
-"Neither packages nor releases containing the string \'" + search + "\' could be found.");
+      process.stderr.write(
+        "Neither packages nor releases containing the string \'" +
+        search + "\' could be found. \n");
     } else {
-      console.log(
-"To get more information on a specific item, use meteor search --details.");
+      process.stdout.write(
+"To get more information on a specific item, use meteor search --details. \n");
     }
 
   }
@@ -992,9 +1004,10 @@ main.registerCommand({
         // the requested release in the initialization code, before the
         // command even ran. They could equivalently have run 'meteor
         // help --release xyz'.
-        console.log(
+        process.stdout.write(
           "Installed. Run 'meteor update' inside of a particular project\n" +
-            "directory to update that project to Meteor %s.", release.current.name);
+            "directory to update that project to Meteor " +
+            release.current.name + ". \n");
       } else {
         // We get here if the user ran 'meteor update' and we didn't
         // find a new version.
@@ -1003,11 +1016,12 @@ main.registerCommand({
           // We already printed an error message about our inability to
           // ask the server if we're up to date.
         } else {
-          console.log(
-            "The latest version of Meteor, %s, is already installed on this\n" +
+          process.stdout.write(
+            "The latest version of Meteor," + release.current.name +
+              " is already installed on this\n" +
               "computer. Run 'meteor update' inside of a particular project\n" +
-              "directory to update that project to Meteor %s.",
-            release.current.name, release.current.name);
+              "directory to update that project to Meteor " +
+              release.current.name + "\n");
         }
       }
       return;
@@ -1019,10 +1033,10 @@ main.registerCommand({
       var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
       var maybeOnThisComputer =
             couldNotContactServer ? "\ninstalled on this computer" : "";
-      console.log(
-        "This project is already at %s%s%s.",
-        release.current.getDisplayName(), maybeTheLatestRelease,
-        maybeOnThisComputer);
+      process.stdout.write(
+        "This project is already at " +
+        release.current.getDisplayName() + maybeTheLatestRelease +
+        maybeOnThisComputer + ".\n");
       return;
     }
 
@@ -1040,16 +1054,16 @@ main.registerCommand({
     if (options.patch) {
       // XXX: something something something current release
       if (appRelease == null) {
-        console.log(
-          "Cannot patch update unless a release is set.");
+        process.stderr.write(
+          "Cannot patch update unless a release is set. \n");
         return 1;;
       }
       var r = appRelease.split('@');
       var record = catalog.official.getReleaseVersion(r[0], r[1]);
       var updateTo = record.patchReleaseVersion;
       if (!updateTo) {
-        console.log(
-          "You are at the latest patch version.");
+        process.stderr.write(
+          "You are at the latest patch version. \n");
         return 1;
       }
       releaseVersionsToTry = [updateTo];
@@ -1067,9 +1081,10 @@ main.registerCommand({
         // above truly does cover every other case
         var maybeOnThisComputer =
               couldNotContactServer ? "\ninstalled on this computer" : "";
-        console.log(
-          "This project is already at Meteor %s, which is newer than the latest release%s.",
-          appRelease, maybeOnThisComputer);
+        process.stdout.write(
+          "This project is already at Meteor " + appRelease +
+          ", which is newer than the latest release" + maybeOnThisComputer
+          +".\n");
         return;
       }
     }
@@ -1122,16 +1137,16 @@ main.registerCommand({
       ondiskPackages: setV.downloaded
     });
     if (!setV.success) {
-      process.stderr.write("Could not install all the requested packages.");
+      process.stderr.write("Could not install all the requested packages. \n");
       return 1;
     }
 
     // Write the release to .meteor/release.
     project.writeMeteorReleaseVersion(solutionReleaseName);
 
-    console.log("%s: updated to %s.",
-                path.basename(options.appDir),
-                utils.displayRelease(releaseTrack, solutionReleaseVersion));
+    process.stdout.write(path.basename(options.appDir) + ": updated to " +
+                utils.displayRelease(releaseTrack, solutionReleaseVersion) +
+                ". \n");
 
     // Now run the upgraders.
     // XXX should we also run upgraders on other random commands, in case there
@@ -1304,7 +1319,7 @@ main.registerCommand({
                                                { ignoreProjectDeps: true });
   if ( ! newVersions) {
     // XXX: Better error handling.
-    process.stderr.write("Cannot resolve package dependencies.");
+    process.stderr.write("Cannot resolve package dependencies. \n");
   }
 
   // Don't tell the user what all the operations were until we finish -- we
@@ -1455,14 +1470,14 @@ main.registerCommand({
 
     try {
       if (options.add) {
-        process.stdout.write("Adding a maintainer to " + name + "...");
+        process.stdout.write("Adding a maintainer to " + name + "... \n");
         if (fullRecord.release) {
           conn.call('addReleaseMaintainer', name, options.add);
         } else {
           conn.call('addMaintainer', name, options.add);
         }
       } else if (options.remove) {
-        process.stdout.write("Removing a maintainer from " + name + "...");
+        process.stdout.write("Removing a maintainer from " + name + "... \n");
         if (fullRecord.release) {
           conn.call('removeReleaseMaintainer', name, options.remove);
         } else {
@@ -1524,12 +1539,12 @@ main.registerCommand({
 
   try {
     if (options.unrecommend) {
-      process.stdout.write("Unrecommending " + options.args[0] + "...");
+      process.stdout.write("Unrecommending " + options.args[0] + "...\n");
       conn.call('unrecommendVersion', name, version);
       process.stdout.write("Done! \n " + options[0] +
                            " is no longer a recommended release \n");
     } else {
-      process.stdout.write("Recommending " + options.args[0] + "...");
+      process.stdout.write("Recommending " + options.args[0] + "...\n");
       conn.call('recommendVersion', name, version);
       process.stdout.write("Done! \n " + options[0] +
                            " is now  a recommended release \n");
@@ -1580,7 +1595,7 @@ main.registerCommand({
   try {
       process.stdout.write(
         "Setting earliest compatible version on "
-          + options.args[0] + " to " + ecv + "...");
+          + options.args[0] + " to " + ecv + "... \n");
       var versionInfo = { name : name,
                           version : version };
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
@@ -1625,7 +1640,7 @@ main.registerCommand({
   try {
       process.stdout.write(
         "Changing homepage on  "
-          + name + " to " + url + "...");
+          + name + " to " + url + "... \n");
       conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done! \n");
   } catch (err) {

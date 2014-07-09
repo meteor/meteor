@@ -1,5 +1,4 @@
 Package.describe({
-  name: "other",
   version: "1.0.0",
   summary: "another program, for testing"
 });

@@ -41,3 +41,26 @@ selftest.define("publish-and-search", ["slow"], function () {
   run.match(fullPackageName);
 });
 
+selftest.define("publish-one-arch", ["slow"], function () {
+  var s = new Sandbox;
+
+  var username = "test";
+  var password = "testtest";
+
+  testUtils.login(s, username, password);
+  var packageName = utils.randomToken();
+  var fullPackageName = username + ":" + packageName;
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match(fullPackageName);
+
+  s.cd(fullPackageName);
+
+  run = s.run("publish", "--create");
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match("Done");
+  run.forbidAll("WARNING");
+});
