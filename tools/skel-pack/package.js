@@ -1,7 +1,7 @@
 Package.describe({
   summary: " \* Fill me in! *\ ",
   version: "1.0.0",
-  githubUrl: " \* Fill me in! *\ "
+  git: " \* Fill me in! *\ "
 });
 
 Package.on_use(function(api) {

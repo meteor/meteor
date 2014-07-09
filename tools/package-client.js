@@ -551,7 +551,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       packageName: packageSource.name,
       version: version,
       description: packageSource.metadata.summary,
-      githubUrl: packageSource.metadata.githubUrl,
+      git: packageSource.metadata.git,
       earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
       compilerVersion: compiler.BUILT_BY,
       containsPlugins: packageSource.containsPlugins(),
