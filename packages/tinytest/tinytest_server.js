@@ -50,14 +50,11 @@ Meteor.methods({
     };
 
     var onComplete = function() {
-      if (! Fiber.current) {
-        Meteor._debug("Trying to report a test not in a fiber! "+
-                      "You probably forgot to wrap a callback in bindEnvironment.");
-        console.trace();
-      }
+      // We send an object for current and future compatibility,
+      // though we could get away with just sending { complete: true }
       var report = { done: true };
-      var doneKey = 'done';
-      addReport(doneKey, report);
+      var key = 'complete';
+      addReport(key, report);
     };
 
     Tinytest._runTests(onReport, onComplete, pathPrefix);

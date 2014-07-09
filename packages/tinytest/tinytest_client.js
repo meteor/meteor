@@ -30,9 +30,9 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
         return;
       // This will only work for added & changed messages.
       // hope that is all you get.
-      _.each(msg.fields, function (report) {
-        // Skip the 'done' report (deal with it last)
-        if (_.has(report, 'done')) {
+      _.each(msg.fields, function (report, key) {
+        // Skip the 'complete' report (deal with it last)
+        if (key === 'complete') {
           return;
         }
         _.each(report.events, function (event) {
@@ -41,8 +41,9 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
         report.server = true;
         onReport(report);
       });
-      // Check if we have the 'done' message
-      if (_.has(msg.fields, 'done')) {
+      // Now that we've processed all the other messages,
+      // check if we have the 'complete' message
+      if (_.has(msg.fields, 'complete')) {
         remoteComplete = true;
         handle.stop();
         Meteor.call('tinytest/clearResults', runId);
