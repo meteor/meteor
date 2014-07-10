@@ -236,14 +236,6 @@
   {{this.foo}}{{#unless this.bar}}asdf{{/unless}}
 </template>
 
-<template name="spacebars_template_test_isolate">
-  {{#isolate}}hello{{/isolate}}
-</template>
-
-<template name="spacebars_template_test_constant">
-  {{#constant}}hello{{/constant}}
-</template>
-
 <template name="spacebars_template_test_textarea">
   <textarea>{{foo}}</textarea>
 </template>
@@ -279,7 +271,7 @@
 </template>
 
 <template name="spacebars_template_test_block_helpers_in_attribute">
-  <div class="{{#each classes}}{{#if startsLowerCase name}}{{name}} {{/if}}{{else}}none{{/each}}">Hello</div>
+  <div class="{{#each classes}}{{#if startsLowerCase name}}{{name}} {{/if}}{{else}}none{{/each}}">Smurf</div>
 </template>
 
 <template name="spacebars_template_test_block_helpers_in_attribute_2">
@@ -765,6 +757,15 @@ Hi there!
   <div></div>
 </template>
 
+<template name="spacebars_test_data_context_for_event_handler_in_if">
+  {{#with foo="bar"}}
+    {{#if true}}
+      <span>Click me!</span>
+    {{/if}}
+  {{/with}}
+</template>
+
+
 <template name="spacebars_test_each_with_autorun_insert">
   {{#each items}}
     {{name}}
@@ -827,4 +828,73 @@ Hi there!
   <svg>
     <a xlink:href="http://www.example.com">Foo</a>
   </svg>
+</template>
+
+<template name="spacebars_test_template_created_rendered_destroyed_each">
+  {{#each items}}
+    <div>{{> spacebars_test_template_created_rendered_destroyed_each_sub _id}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_test_template_created_rendered_destroyed_each_sub">
+  {{.}}
+</template>
+
+<template name="spacebars_test_ui_getElementData">
+  <span></span>
+</template>
+
+<template name="spacebars_test_ui_render">
+  <span>{{greeting}} {{r}}</span>
+</template>
+
+<template name="spacebars_test_parent_removal">
+  <div class="a">
+    <div class="b">
+      <div class="toremove">
+        <div class="c">
+          {{A 1}}
+          {{{A 2}}}
+          {{#with A 3}}
+            {{A 4}}
+            {{#with A 5}}
+              {{A 6}}
+            {{/with}}
+          {{/with}}
+          {{#each B}}
+            {{A 7}}
+          {{/each}}
+          {{#if A 8}}
+            {{A 9}}
+          {{else}}
+            {{A 'a'}}
+          {{/if}}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template name="spacebars_test_focus_blur_outer">
+  {{#if cond}}
+    a {{> spacebars_test_focus_blur_inner}}
+  {{else}}
+    b {{> spacebars_test_focus_blur_inner}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_focus_blur_inner">
+  <input type="text">
+</template>
+
+<template name="spacebars_test_event_cleanup_on_destroyed_outer">
+  {{#if cond}}
+    <div>a {{> spacebars_test_event_cleanup_on_destroyed_inner}}</div>
+  {{else}}
+    <div>b {{> spacebars_test_event_cleanup_on_destroyed_inner}}</div>
+  {{/if}}
+</template>
+
+<template name="spacebars_test_event_cleanup_on_destroyed_inner">
+  <span>foo</span>
 </template>
