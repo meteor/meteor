@@ -24,7 +24,14 @@
 /// callbacks are fired, which happens when the View is "used" in
 /// some way that requires it to be rendered.
 ///
-/// ...
+/// ...more lifecycle stuff
+///
+/// `kind` is an optional string tag identifying the View.  The only
+/// time it's used is when looking in the View tree for a View of a
+/// particular kind; for example, data contexts are stored on Views
+/// of kind "with".  Kinds are also useful when debugging, so in
+/// general it's good for functions that create Views to set the kind.
+/// Templates have kinds of the form "Template.foo".
 Blaze.View = function (kind, render) {
   if (! (this instanceof Blaze.View))
     // called without `new`
