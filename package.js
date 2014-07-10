@@ -22,6 +22,8 @@ Package.on_test(function (api) {
   api.use('spacebars-compiler');
   api.use('tinytest');
   api.use('blaze-tools');
+  api.use('coffeescript');
   api.add_files('spacebars_tests.js');
   api.add_files('compile_tests.js');
+  api.add_files('compiler_output_tests.coffee');
 });
