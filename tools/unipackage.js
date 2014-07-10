@@ -100,6 +100,8 @@ var Unibuild = function (unipackage, options) {
   // resolve Npm.require() calls in this unibuild. null if this unibuild
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
+
+  self.cordovaDependencies = options.cordovaDependencies;
 };
 
 _.extend(Unibuild.prototype, {
@@ -215,6 +217,8 @@ var Unipackage = function () {
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
   self.plugins = {};
 
+  self.cordovaDependencies = {};
+
   // -- Information for up-to-date checks --
 
   // Version number of the tool that built this unipackage
@@ -283,6 +287,7 @@ _.extend(Unipackage.prototype, {
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
+    self.cordovaDependencies = options.cordovaDependencies;
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
@@ -460,6 +465,7 @@ _.extend(Unipackage.prototype, {
 
     var mainJson =
       JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
+
     // We don't support pre-0.9.0 unipackages, but we do know enough to delete
     // them if we find them in .build.* somehow (rather than crash).
     if (mainJson.format === "unipackage-pre1")
@@ -496,6 +502,8 @@ _.extend(Unipackage.prototype, {
       buildInfoJson.buildTimeDirectDependencies || null;
     self.buildTimePluginDependencies =
       buildInfoJson.buildTimePluginDependencies || null;
+    self.cordovaDependencies =
+      buildInfoJson.cordovaDependencies || null;
 
     if (options.buildOfPath &&
         (buildInfoJson.source !== options.buildOfPath)) {
@@ -619,7 +627,8 @@ _.extend(Unipackage.prototype, {
                           JSON.stringify(resource.type));
       });
       if (unibuildMeta.arch === 'browser')
-        unibuildMeta.arch = 'client'
+        unibuildMeta.arch = 'client';
+
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
         arch: unibuildMeta.arch,
@@ -629,7 +638,8 @@ _.extend(Unipackage.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources
+        resources: resources,
+        cordovaDependencies: unibuildJson.cordovaDependencies
       }));
     });
 
@@ -654,7 +664,6 @@ _.extend(Unipackage.prototype, {
     options = options || {};
 
     var builder = new Builder({ outputPath: outputPath });
-
     try {
       var mainJson = {
         format: "unipackage-pre2",
@@ -687,7 +696,8 @@ _.extend(Unipackage.prototype, {
         pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined,
         buildTimeDirectDependencies: buildTimeDirectDeps,
-        buildTimePluginDependencies: buildTimePluginDeps
+        buildTimePluginDependencies: buildTimePluginDeps,
+        cordovaDependencies: self.cordovaDependencies
       };
 
       builder.reserve("unipackage.json");
@@ -753,6 +763,10 @@ _.extend(Unipackage.prototype, {
           }
         }
 
+        console.log(unibuild.name);
+        if (unibuild.name === 'cordova-camera')
+        throw new Error("SAVING");
+
         // Construct unibuild metadata
         var unibuildJson = {
           format: "unipackage-unibuild-pre1",
@@ -769,6 +783,7 @@ _.extend(Unipackage.prototype, {
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
           node_modules: nodeModulesPath,
+          cordovaDependencies: unibuild.cordovaDependencies,
           resources: []
         };
 

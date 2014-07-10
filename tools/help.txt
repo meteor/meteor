@@ -343,6 +343,11 @@ Options:
   --changed    A boolean option.
 
 
+>>> cordova
+Run cordova commands.
+Usage: meteor cordova <command>
+
+
 >>> list-sites
 List sites for which you are authorized
 Usage: meteor list-sites

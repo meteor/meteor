@@ -413,6 +413,8 @@ var Target = function (options) {
   // Static assets to include in the bundle. List of File.
   // For browser targets, these are served over HTTP.
   self.asset = [];
+
+  self.cordovaDependencies = {};
 };
 
 _.extend(Target.prototype, {
@@ -581,6 +583,11 @@ _.extend(Target.prototype, {
 
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
+      _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+        // XXX fix conflicting versions eventually
+        self.cordovaDependencies[name] = version;
+      });
+
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
@@ -1501,7 +1508,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builtBy: options.builtBy,
       programs: [],
       control: options.controlProgram || undefined,
-      meteorRelease: options.releaseName
+      meteorRelease: options.releaseName,
+      cordovaDependencies: {}
     };
 
     // Pick a path in the bundle for each target
@@ -1542,13 +1550,17 @@ var writeSiteArchive = function (targets, outputPath, options) {
           includeNodeModulesSymlink: options.includeNodeModulesSymlink,
           getRelativeTargetPath: getRelativeTargetPath });
 
+      _.each(target.cordovaDependencies, function (version, name) {
+        json.cordovaDependencies[name] = version;
+      });
+
       json.programs.push({
         name: name,
         arch: target.mostCompatibleArch(),
         path: path.join(paths[name], relControlFilePath)
       });
     });
-
+    console.log(json.cordovaDependencies);
     // Tell Galaxy what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied
     // or symlinked a node_modules, since that's probably enough for
@@ -1706,7 +1718,7 @@ exports.bundle = function (options) {
         minify: buildOptions.minify,
         addCacheBusters: true
       });
-
+      console.log(client.cordovaDependencies);
       return client;
     };
 
@@ -1969,6 +1981,7 @@ exports.bundle = function (options) {
 //   interpreted. please set it to something reasonable so that any error
 //   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
+// - cordovaDependencies: map from cordova plugin name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
 //
@@ -1994,13 +2007,13 @@ exports.buildJsImage = function (options) {
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
+    cordovaDependencies: options.cordovaDependencies,
     npmDir: options.npmDir,
     dependencyVersions: options.dependencyVersions,
     noVersionFile: true
   });
 
   var unipackage = compiler.compile(packageSource).unipackage;
-
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does

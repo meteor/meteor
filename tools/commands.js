@@ -479,59 +479,6 @@ main.registerCommand({
 // bundle
 ///////////////////////////////////////////////////////////////////////////////
 
-
-
-var generateCordovaBoilerplate = function (clientDir, clientJson, boilerplateTemplateSource) {
-  var boilerplateData = {
-    css: [],
-    js: [],
-    head: '',
-    body: '',
-  };
-
-  _.each(clientJson.manifest, function (item) {
-    if (item.type === 'css' && item.where === 'client') {
-      boilerplateData.css.push({url: item.url});
-    }
-    if (item.type === 'js' && item.where === 'client') {
-      boilerplateData.js.push({url: item.url});
-    }
-    if (item.type === 'head') {
-      boilerplateData.head = fs.readFileSync(
-        path.join(clientDir, item.path), 'utf8');
-    }
-    if (item.type === 'body') {
-      boilerplateData.body = fs.readFileSync(
-        path.join(clientDir, item.path), 'utf8');
-    }
-  });
-
-  var Spacebars = getLoadedPackages()['spacebars-common'].Spacebars;
-  var boilerplateRenderCode = Spacebars.compile(
-    boilerplateTemplateSource, { isBody: true });
-
-
-  // Note that we are actually depending on eval's local environment capture
-  // so that UI and HTML are visible to the eval'd code.
-  var boilerplateRender = eval(boilerplateRenderCode);
-
-  var UI = getLoadedPackages()['ui'].UI;
-  var HTML = getLoadedPackages()['htmljs'].HTML;
-
-  var boilerplateTemplate = UI.Component.extend({
-    kind: "MainPage",
-    render: boilerplateRender
-  });
-
-  var boilerplateInstance = boilerplateTemplate.extend({
-    data: boilerplateData
-  });
-  var boilerplateHtmlJs = boilerplateInstance.render();
-  return "<!DOCTYPE html>\n" +
-        HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
-};
-
-// XXX document
 main.registerCommand({
   name: 'bundle',
   minArgs: 1,
@@ -539,9 +486,6 @@ main.registerCommand({
   requiresApp: true,
   options: {
     debug: { type: Boolean },
-    ios: { type: Boolean },
-    android: { type: Boolean },
-    browser: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
     // Undocumented
@@ -572,21 +516,6 @@ main.registerCommand({
   }
   var bundleArch =  options.architecture || archinfo.host();
 
-  // XXX
-  var cordovaBuilds = [];
-  if (options.ios) {
-    cordovaBuilds.push('ios');
-  }
-  if (options.android) {
-    cordovaBuilds.push('android');
-  }
-  var isCordova = cordovaBuilds.length > 0;
-
-  var clientArchs = ["client.browser"];
-  if (isCordova) {
-    clientArchs.push("client.cordova.build");
-  }
-
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
   var bundlePath = options['directory'] ?
@@ -605,43 +534,13 @@ main.registerCommand({
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      arch: bundleArch,
-      clientArchs: clientArchs
+      arch: bundleArch
     }
   });
   if (bundleResult.errors) {
     process.stdout.write("Errors prevented bundling:\n");
     process.stdout.write(bundleResult.errors.formatMessages());
     return 1;
-  }
-
-  if (isCordova) {
-    var programPath = path.join(bundlePath, "programs");
-    var fromPath = path.join(programPath, "client.cordova.build");
-    execFileSync("cordova", ["create", "client.cordova"], { cwd: programPath });
-    var cordovaPath = path.join(programPath, "client.cordova");
-
-    var wwwPath = path.join(cordovaPath, "www");
-
-    var appPath = path.join(fromPath, 'app');
-    files.cp_r(appPath, fromPath);
-    files.rm_recursive(appPath);
-
-    files.rm_recursive(wwwPath);
-    files.cp_r(fromPath, wwwPath);
-
-    var clientJsonPath = path.join(wwwPath, 'program.json');
-    var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
-    var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
-    var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
-    var indexHtml = generateCordovaBoilerplate(wwwPath, clientJson, boilerplateTemplateSource);
-    fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
-
-    _.each(cordovaBuilds, function (arch) {
-      execFileSync("cordova", ["platform", "add", arch], { cwd: cordovaPath });
-    });
-    execFileSync("cordova", ["build"], { cwd: cordovaPath });
-    files.rm_recursive(fromPath);
   }
 
   if (!options['directory']) {
@@ -1554,3 +1453,130 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// cordova
+///////////////////////////////////////////////////////////////////////////////
+
+var generateCordovaBoilerplate = function (clientDir, clientJson, boilerplateTemplateSource) {
+  var boilerplateData = {
+    css: [],
+    js: [],
+    head: '',
+    body: '',
+  };
+
+  _.each(clientJson.manifest, function (item) {
+    if (item.type === 'css' && item.where === 'client') {
+      boilerplateData.css.push({url: item.url});
+    }
+    if (item.type === 'js' && item.where === 'client') {
+      boilerplateData.js.push({url: item.url});
+    }
+    if (item.type === 'head') {
+      boilerplateData.head = fs.readFileSync(
+        path.join(clientDir, item.path), 'utf8');
+    }
+    if (item.type === 'body') {
+      boilerplateData.body = fs.readFileSync(
+        path.join(clientDir, item.path), 'utf8');
+    }
+  });
+
+  var Spacebars = getLoadedPackages()['spacebars-common'].Spacebars;
+  var boilerplateRenderCode = Spacebars.compile(
+    boilerplateTemplateSource, { isBody: true });
+
+
+  // Note that we are actually depending on eval's local environment capture
+  // so that UI and HTML are visible to the eval'd code.
+  var boilerplateRender = eval(boilerplateRenderCode);
+
+  var UI = getLoadedPackages()['ui'].UI;
+  var HTML = getLoadedPackages()['htmljs'].HTML;
+
+  var boilerplateTemplate = UI.Component.extend({
+    kind: "MainPage",
+    render: boilerplateRender
+  });
+
+  var boilerplateInstance = boilerplateTemplate.extend({
+    data: boilerplateData
+  });
+  var boilerplateHtmlJs = boilerplateInstance.render();
+  return "<!DOCTYPE html>\n" +
+        HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+};
+
+main.registerCommand({
+  name: 'cordova',
+  minArgs: 1,
+  maxArgs: 10,
+  requiresApp: true,
+  options: {
+    changed: { type: Boolean }
+  },
+}, function (options) {
+  var localDir = path.join(options.appDir, '.meteor', 'local');
+  var cordovaPath = path.join(localDir, 'client.cordova');
+
+  if (options.args[0] === 'build') {
+    files.rm_recursive(cordovaPath);
+    var buildDir = path.join(localDir, 'build_tar');
+    var outputPath = path.join(buildDir, 'bundle');
+
+    var bundler = require(path.join(__dirname, 'bundler.js'));
+    var loader = project.getPackageLoader();
+    stats.recordPackages(options.appDir);
+
+    var clientArchs = ['client.cordova'];
+
+    var bundleResult = bundler.bundle({
+      outputPath: outputPath,
+      buildOptions: {
+        minify: false, // XXX ! options.debug,
+        arch: archinfo.host(),
+        clientArchs: clientArchs
+      }
+    });
+    console.log(bundleResult.starManifest.cordovaDependencies);
+    if (bundleResult.errors) {
+      process.stdout.write("Errors prevented bundling:\n");
+      process.stdout.write(bundleResult.errors.formatMessages());
+      return 1;
+    }
+
+    var programPath = path.join(outputPath, 'programs');
+    execFileSync('cordova', ['create', 'client.cordova'], { cwd: localDir });
+
+    var wwwPath = path.join(cordovaPath, "www");
+
+    var fromPath = path.join(programPath, 'client.cordova');
+    var appPath = path.join(fromPath, 'app');
+
+    files.cp_r(appPath, fromPath);
+    files.rm_recursive(appPath);
+
+    files.rm_recursive(wwwPath);
+    files.cp_r(fromPath, wwwPath);
+
+    var clientJsonPath = path.join(wwwPath, 'program.json');
+    var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
+    var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
+    var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
+    var indexHtml = generateCordovaBoilerplate(wwwPath, clientJson, boilerplateTemplateSource);
+    fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
+
+    _.each(options.args.slice(1), function (arch) {
+      execFileSync('cordova', ['platform', 'add', arch], { cwd: cordovaPath });
+    });
+    execFileSync('cordova', ['build'], { cwd: cordovaPath });
+    // files.rm_recursive(fromPath);
+    // files.rm_recursive(buildDir);
+  } else {
+    // XXX error if not a Cordova project
+    execFileSync('cordova', options.args, { cwd: cordovaPath });
+  }
+});
+

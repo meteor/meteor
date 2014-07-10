@@ -765,6 +765,7 @@ compiler.compile = function (packageSource, options) {
         sourceRoot: packageSource.sourceRoot,
         sources: info.sources,
         npmDependencies: info.npmDependencies,
+        cordovaDependencies: packageSource.cordovaDependencies,
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
@@ -818,6 +819,11 @@ compiler.compile = function (packageSource, options) {
   }
 
   var unipackage = new Unipackage;
+  console.log(packageSource.name);
+  if (packageSource.name === 'cordova-camera') {
+    console.log("COMPILING CAMERA");
+  }
+
   unipackage.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
@@ -826,6 +832,7 @@ compiler.compile = function (packageSource, options) {
     isTest: packageSource.isTest,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
+    cordovaDependencies: packageSource.cordovaDependencies,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
     includeTool: packageSource.includeTool

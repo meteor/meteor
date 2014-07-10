@@ -53,7 +53,6 @@ _.extend(PackageCache.prototype, {
     var self = this;
     var key = name + "@" + loadPath;
     var buildDir = path.join(loadPath, '.build.'+  name);
-
     self.loadedPackages[key] = {
         pkg: unip,
         sourceDir: loadPath,
@@ -205,6 +204,7 @@ _.extend(PackageCache.prototype, {
   // and if given, it should be an array of regexps for filenames to
   // ignore when scanning for source files.)
   loadAppAtPath: function (appDir, ignoreFiles) {
+    console.log("LAOAFJIASFJDIAFJIAFJ");
     var self = this;
 
     var packageSource = new PackageSource;
