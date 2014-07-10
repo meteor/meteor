@@ -30,7 +30,9 @@ selftest.define("springboard", ['checkout'], function () {
   run.expectExit(0);
 
   // Apps are created with the latest release ...
-  run = s.run("create", "myapp").expectExit(0);
+  run = s.run("create", "myapp");
+  run.waitSecs(5);
+  run.expectExit(0);
   s.cd('myapp', function () {
     run = s.run("--long-version");
     run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');

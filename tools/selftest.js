@@ -408,7 +408,6 @@ _.extend(Sandbox.prototype, {
                   " to run against clients." );
     }
     _.each(self.clients, function (client) {
-      console.log("testing with " + client.name + "...");
       f(new Run(self.execPath, {
         sandbox: self,
         args: [],
@@ -588,6 +587,7 @@ _.extend(Sandbox.prototype, {
     fs.symlinkSync(toolPackageDirectory,
                    path.join(self.warehouse, 'packages', toolPackageName,
                              toolPackage.version));
+
     stubCatalog.collections.packages.push({
       name: toolPackageName,
       _id: utils.randomToken()
@@ -611,6 +611,61 @@ _.extend(Sandbox.prototype, {
       versionId: toolVersionId,
       _id: utils.randomToken()
     });
+
+
+    // XXX: This is an incremental hack to be able to create apps from the
+    // warehouse. We need the constraint solver that runs are create-time to be
+    // able to solve for the starting app packages (standrd-app-packages,
+    // insecure & autopublish). But the solution doesn't have to be
+    // accurate. Later, when we care about the solution making sense, we should
+    // consider actually importing real data.
+
+    // XXXX: HACK.  We are going to cheat and assume that these are already
+    // in the official catalog. Since we don't care about the contents, we
+    // should be OK.
+    var oldOffline = catalog.official.offline;
+    catalog.official.offline = true;
+    catalog.official.refresh();
+    _.each(
+      ['autopublish', 'standard-app-packages', 'insecure'],
+      function (name) {
+        var versionRec = catalog.official.getLatestVersion(name);
+        if (!versionRec) {
+          throw new Error(" hack fails for " + name);
+        }
+        var buildRec = catalog.official.getAllBuilds(
+          name, versionRec.version)[0];
+
+        // Insert into packages.
+        stubCatalog.collections.packages.push({
+          name: name,
+          _id: utils.randomToken()
+        });
+
+        // Insert into versions. We are making up a lot of this data.
+        var versionId = utils.randomToken();
+        stubCatalog.collections.versions.push({
+          packageName: name,
+          version: versionRec.version,
+          earliestCompatibleVersion: versionRec.earliestCompatibleVersion,
+          containsPlugins: false,
+          description: "warehouse test",
+          dependencies: {},
+          compilerVersion: require('./compiler.js').BUILT_BY,
+          _id: versionRec._id
+        });
+
+        // Insert into builds. Assume the package is available for all
+        // architectures.
+        stubCatalog.collections.builds.push({
+          buildArchitectures: "browser+os",
+          versionId: versionRec._id,
+          build: buildRec.build,
+          _id: utils.randomToken()
+        });
+    });
+    catalog.official.offline = oldOffline;
+
     stubCatalog.collections.releaseTracks.push({
       name: catalog.complete.DEFAULT_TRACK,
       _id: utils.randomToken()
@@ -663,7 +718,6 @@ var PhantomClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
-  self.name = "phantomjs";
   self.process = null;
 };
 
@@ -679,7 +733,11 @@ _.extend(PhantomClient.prototype, {
       '/bin/bash',
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "END\n")]);
+        phantomScript + "END\n")], function (err, stdout, stderr) {
+          if (stderr.match(/not found/)) {
+            console.log("ERROR: phantomjs not installed properly.");
+          }
+    });
   },
   stop: function() {
     var self = this;
@@ -695,7 +753,6 @@ var BrowserStackClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
-  self.name = "BrowserStack";
   self.tunnelProcess = null;
   self.driver = null;
 };
@@ -714,7 +771,7 @@ _.extend(BrowserStackClient.prototype, {
         "have installed your S3 credentials.");
 
     var capabilities = {
-      'browserName' : 'firefox',
+      'browserName' : 'chrome',
       'browserstack.user' : 'meteor',
       'browserstack.local' : 'true',
       'browserstack.key' : browserStackKey

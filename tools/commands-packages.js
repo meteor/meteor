@@ -789,7 +789,8 @@ main.registerCommand({
       process.stdout.write("The " + label + " " + name + " : "
                   + lastVersion.description || unknown + "\n");
     }
-    var maintain = "Maintained by " + _.pluck(record.maintainers, 'username');
+    var maintain = ". Maintained by " +
+          _.pluck(record.maintainers, 'username') + ".";
     if (lastVersion.git) {
       maintain = maintain + " at " + lastVersion.git;
     }
