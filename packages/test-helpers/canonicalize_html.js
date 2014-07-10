@@ -21,7 +21,7 @@ canonicalizeHtml = function(html) {
     attrs = attrs.replace(/sizcache[0-9]+="[^"]*"/g, ' ');
     // Similarly for expando properties used by jQuery to track data.
     attrs = attrs.replace(/jQuery[0-9]+="[0-9]+"/g, ' ');
-    // Similarly for expando properties used to DomBackend to keep
+    // Similarly for expando properties used to DOMBackend to keep
     // track of callbacks to fire when an element is removed
     attrs = attrs.replace(/\$meteor_ui_removal_callbacks="[^"]*"/g, ' ');
 

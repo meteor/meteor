@@ -1,6 +1,4 @@
-var materialize = UI.materialize;
-var toHTML = HTML.toHTML;
-var toCode = HTML.toJS;
+var toCode = BlazeTools.toJS;
 
 var P = HTML.P;
 var CharRef = HTML.CharRef;
@@ -14,6 +12,18 @@ var SPAN = HTML.SPAN;
 var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
+
+var materialize = function (content, parent) {
+  var func = content;
+  if (typeof content !== 'function') {
+    func = function () {
+      return content;
+    };
+  }
+  Blaze.render(func).attach(parent);
+};
+
+var toHTML = Blaze.toHTML;
 
 Tinytest.add("ui - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
@@ -84,8 +94,8 @@ Tinytest.add("ui - render - basic", function (test) {
       'HTML.BR({a: [[""]]})');
 
   run(BR({
-    x: function () { return function () { return []; }; },
-    a: function () { return function () { return ''; }; }}),
+    x: function () { return Blaze.View(function () { return Blaze.View(function () { return []; }); }); },
+    a: function () { return Blaze.View(function () { return Blaze.View(function () { return ''; }); }); }}),
       '<br a="">',
       '<br a="">');
 });
@@ -133,7 +143,7 @@ Tinytest.add("ui - render - textarea", function (test) {
       optNode = null;
     }
     var div = document.createElement("DIV");
-    var node = TEXTAREA(optNode || text);
+    var node = TEXTAREA({value: optNode || text});
     materialize(node, div);
 
     var value = div.querySelector('textarea').value;
@@ -147,35 +157,38 @@ Tinytest.add("ui - render - textarea", function (test) {
 
   run('Hello',
       '<textarea>Hello</textarea>',
-      'HTML.TEXTAREA("Hello")');
+      'HTML.TEXTAREA({value: "Hello"})');
 
   run('\nHello',
       '<textarea>\n\nHello</textarea>',
-      'HTML.TEXTAREA("\\nHello")');
+      'HTML.TEXTAREA({value: "\\nHello"})');
 
   run('</textarea>',
       '<textarea>&lt;/textarea></textarea>',
-      'HTML.TEXTAREA("</textarea>")');
+      'HTML.TEXTAREA({value: "</textarea>"})');
 
   run(CharRef({html: '&amp;', str: '&'}),
       '&',
       '<textarea>&amp;</textarea>',
-      'HTML.TEXTAREA(HTML.CharRef({html: "&amp;", str: "&"}))');
+      'HTML.TEXTAREA({value: HTML.CharRef({html: "&amp;", str: "&"})})');
 
-  run(['a', function () { return 'b'; }, 'c'],
+  run(function () {
+    return ['a', Blaze.View(function () { return 'b'; }), 'c'];
+  },
       'abc',
       '<textarea>abc</textarea>');
-
 });
 
-Tinytest.add("ui - render - closures", function (test) {
+Tinytest.add("ui - render - view isolation", function (test) {
 
   // Reactively change a text node
   (function () {
     var R = ReactiveVar('Hello');
-    var test1 = P(function () { return R.get(); });
+    var test1 = function () {
+      return P(Blaze.View(function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(test1), '<p>Hello</p>');
+    test.equal(toHTML(test1()), '<p>Hello</p>');
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -189,9 +202,11 @@ Tinytest.add("ui - render - closures", function (test) {
   // Reactively change an array of text nodes
   (function () {
     var R = ReactiveVar(['Hello', ' World']);
-    var test1 = P(function () { return R.get(); });
+    var test1 = function () {
+      return P(Blaze.View(function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(test1), '<p>Hello World</p>');
+    test.equal(toHTML(test1()), '<p>Hello World</p>');
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -213,11 +228,11 @@ var malformedStylesAllowed = function () {
   return (div.getAttribute("style") === "bar::d;");
 };
 
-Tinytest.add("ui - render - closure GC", function (test) {
+Tinytest.add("ui - render - view GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
     var R = ReactiveVar('Hello');
-    var test1 = P(function () { return R.get(); });
+    var test1 = P(Blaze.View(function () { return R.get(); }));
 
     var div = document.createElement("DIV");
     materialize(test1, div);
@@ -246,21 +261,25 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'class': ['david gre', CharRef({html: '&euml;', str: '\u00eb'}), 'nspan'],
                          id: 'foo'});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(
+        function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(spanCode), '<span class="david gre&euml;nspan" id="foo"></span>');
+    test.equal(Blaze.toHTML(spanFunc()),
+               '<span class="david gre&euml;nspan" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david gre\u00ebnspan" id="foo"></span>');
 
     test.equal(R.numListeners(), 1);
 
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
-    span.className += ' blah';
+    span.className += ' blah'; // change the element's class outside of Blaze. this simulates what a jQuery could do
 
     R.set({'class': 'david smith', id: 'bar'});
     Deps.flush();
@@ -283,14 +302,16 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     var R = ReactiveVar({'style': 'foo: "a;aa"; bar: b;',
       id: 'foo'});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(spanCode), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
+    test.equal(Blaze.toHTML(spanFunc()), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
 
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b"></span>');
 
     test.equal(R.numListeners(), 1);
@@ -319,11 +340,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var R = ReactiveVar({'style': 'foo: a;'});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(function () { return R.get(); }));
+    };
 
     var div = document.createElement("DIV");
     document.body.appendChild(div);
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a"></span>');
 
     var span = div.firstChild;
@@ -369,14 +392,17 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
                          fff: [[]],
                          ggg: ['x', ['y', ['z']]]});
 
-    var spanCode = SPAN({$dynamic: [function () { return R.get(); }]});
+    var spanFunc = function () {
+      return SPAN(HTML.Attrs(
+        function () { return R.get(); }));
+    };
 
-    test.equal(toHTML(spanCode), '<span id="foo" ggg="xyz"></span>');
+    test.equal(Blaze.toHTML(spanFunc()), '<span id="foo" ggg="xyz"></span>');
     test.equal(toCode(SPAN(R.get())),
                'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
-    materialize(spanCode, div);
+    Blaze.render(spanFunc).attach(div);
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
 
@@ -393,42 +419,37 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span ggg="" id="foo"></span>');
 
-    $(span).remove();
+    $(div).remove();
 
     test.equal(R.numListeners(), 0);
   })();
 });
 
-Tinytest.add("ui - render - components", function (test) {
+Tinytest.add("ui - render - views", function (test) {
   (function () {
     var counter = 1;
     var buf = [];
 
-    var myComponent = UI.Component.extend({
-      init: function () {
-        // `this` is the component instance
-        var number = counter++;
-        this.number = number;
-
-        if (this.parent)
-          buf.push('parent of ' + this.number + ' is ' + this.parent.number);
-
-        this.data = function () {
-          return this.number;
-        };
-      },
-      created: function () {
-        // `this` is the template instance
-        buf.push('created ' + this.data);
-      },
-      render: function () {
-        // `this` is the component instance
+    var makeView = function () {
+      var view = Blaze.View('myView', function () {
         return [String(this.number),
+                (this.number < 3 ? makeView() : HR())];
+      });
 
-                (this.number < 3 ? myComponent : HR())];
-      },
-      rendered: function () {
-        // `this` is the template instance
+      var number = counter++;
+      view.number = number;
+
+      view.onCreated(function () {
+        var parent = Blaze.getParentView(view, 'myView');
+        if (parent) {
+          buf.push('parent of ' + view.number + ' is ' +
+                   parent.number);
+        }
+
+        buf.push('created ' + Blaze.getCurrentData());
+      });
+
+      view.onRendered(function () {
         var nodeDescr = function (node) {
           if (node.nodeType === 8) // comment
             return '';
@@ -438,28 +459,29 @@ Tinytest.add("ui - render - components", function (test) {
           return node.nodeName;
         };
 
-        var start = this.firstNode;
-        var end = this.lastNode;
+        var start = this.domrange.firstNode();
+        var end = this.domrange.lastNode();
         // skip marker nodes
         while (start !== end && ! nodeDescr(start))
           start = start.nextSibling;
         while (end !== start && ! nodeDescr(end))
           end = end.previousSibling;
 
-
-        // `this` is the template instance
-        buf.push('dom-' + this.data + ' is ' + nodeDescr(start) +'..' +
+        buf.push('dom-' + Blaze.getCurrentData() +
+                 ' is ' + nodeDescr(start) +'..' +
                  nodeDescr(end));
-      },
-      destroyed: function () {
-        // `this` is the template instance
-        buf.push('destroyed ' + this.data);
-      }
-    });
+      });
+
+      view.onDestroyed(function () {
+        buf.push('destroyed ' + Blaze.getCurrentData());
+      });
+
+      return Blaze.With(number, function () { return view; });
+    };
 
     var div = document.createElement("DIV");
 
-    materialize(myComponent, div);
+    Blaze.render(makeView).attach(div);
     buf.push('---flush---');
     Deps.flush();
     test.equal(buf, ['created 1',
@@ -469,9 +491,9 @@ Tinytest.add("ui - render - components", function (test) {
                      'created 3',
                      '---flush---',
                      // (proper order for these has not be thought out:)
-                     'dom-1 is 1..HR',
+                     'dom-3 is 3..HR',
                      'dom-2 is 2..HR',
-                     'dom-3 is 3..HR']);
+                     'dom-1 is 1..HR']);
 
     test.equal(canonicalizeHtml(div.innerHTML), '123<hr>');
 
@@ -485,13 +507,16 @@ Tinytest.add("ui - render - components", function (test) {
     buf.length = 0;
     counter = 1;
 
-    var html = toHTML(myComponent);
+    var html = Blaze.toHTML(makeView());
 
     test.equal(buf, ['created 1',
                      'parent of 2 is 1',
                      'created 2',
                      'parent of 3 is 2',
-                     'created 3']);
+                     'created 3',
+                     'destroyed 3',
+                     'destroyed 2',
+                     'destroyed 1']);
 
     test.equal(html, '123<hr>');
   })();
@@ -501,19 +526,19 @@ Tinytest.add("ui - render - findAll", function (test) {
   var found = null;
   var $found = null;
 
-  var myComponent = UI.Component.extend({
-    render: function() {
+  var myTemplate = Template.__create__(
+    'findAllTest',
+    function() {
       return DIV([P('first'), P('second')]);
-    },
-    rendered: function() {
-      found = this.findAll('p');
-      $found = this.$('p');
-    },
-  });
+    });
+  myTemplate.rendered = function() {
+    found = this.findAll('p');
+    $found = this.$('p');
+  };
 
   var div = document.createElement("DIV");
 
-  materialize(myComponent, div);
+  Blaze.render(myTemplate).attach(div);
   Deps.flush();
 
   test.equal(_.isArray(found), true);
@@ -526,15 +551,16 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
 
-  var spanCode = SPAN({
-    blah: function () { return R1.get(); },
-    $dynamic: [function () { return { blah: [function () { return R2.get(); }] }; }]
-  });
+  var spanFunc = function () {
+    return SPAN(HTML.Attrs(
+      { blah: function () { return R1.get(); } },
+      function () { return { blah: R2.get() }; }));
+  };
 
   var div = document.createElement("DIV");
-  materialize(spanCode, div);
+  Blaze.render(spanFunc).attach(div);
   var check = function (expected) {
-    test.equal(toHTML(spanCode), expected);
+    test.equal(Blaze.toHTML(spanFunc()), expected);
     test.equal(canonicalizeHtml(div.innerHTML), expected);
   };
   check('<span blah="bar"></span>');
@@ -545,19 +571,16 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   R2.set([[]]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[[]]]`, which is nully.
-  test.equal(spanCode.evaluateAttributes().blah, ["foo"]);
   check('<span blah="foo"></span>');
 
   R2.set([['']]);
   Deps.flush();
   // We combine `['foo']` with what evaluates to `[[['']]]`, which is non-nully.
-  test.equal(spanCode.evaluateAttributes().blah, [[['']]]);
   check('<span blah=""></span>');
 
   R2.set(null);
   Deps.flush();
   // We combine `['foo']` with `[null]`, which is nully.
-  test.equal(spanCode.evaluateAttributes().blah, ['foo']);
   check('<span blah="foo"></span>');
 
   R1.set([[], []]);
@@ -611,101 +634,10 @@ Tinytest.add("ui - render - SVG", function (test) {
   test.equal(circle.parentNode.namespaceURI, "http://www.w3.org/2000/svg");
 });
 
-Tinytest.add("ui - UI.render", function (test) {
-  var div = document.createElement("DIV");
-  document.body.appendChild(div);
+Tinytest.add("ui - attributes", function (test) {
+  var SPAN = HTML.SPAN;
+  var amp = HTML.CharRef({html: '&amp;', str: '&'});
 
-  var R = ReactiveVar('aaa');
-  var tmpl = UI.Component.extend({
-    render: function () {
-      var self = this;
-      return SPAN(function () {
-        return (self.get('greeting') || 'Hello') + ' ' + R.get();
-      });
-    }
-  });
-
-  UI.insert(UI.render(tmpl), div);
-  UI.insert(UI.renderWithData(tmpl, {greeting: 'Bye'}), div);
-  test.equal(canonicalizeHtml(div.innerHTML),
-             "<span>Hello aaa</span><span>Bye aaa</span>");
-  R.set('bbb');
-  Deps.flush();
-  test.equal(canonicalizeHtml(div.innerHTML),
-             "<span>Hello bbb</span><span>Bye bbb</span>");
-
-  document.body.removeChild(div);
-});
-
-Tinytest.add("ui - UI.insert fails on jQuery objects", function (test) {
-  var tmpl = UI.Component.extend({
-    render: function () {
-      return SPAN();
-    }
-  });
-  test.throws(function () {
-    UI.insert(UI.render(tmpl), $('body'));
-  }, /'parentElement' must be a DOM node/);
-  test.throws(function () {
-    UI.insert(UI.render(tmpl), document.body, $('body'));
-  }, /'nextNode' must be a DOM node/);
-});
-
-Tinytest.add("ui - UI.getDataContext", function (test) {
-  var div = document.createElement("DIV");
-
-  var tmpl = UI.Component.extend({
-    render: function () {
-      return SPAN();
-    }
-  });
-
-  UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
-  var span = $(div).children('SPAN')[0];
-  test.isTrue(span);
-  test.equal(UI.getElementData(span), {foo: "bar"});
-});
-
-Tinytest.add("ui - UI.render _nestInCurrentComputation flag", function (test) {
-  _.each([true, false], function (nest) {
-
-    var firstComputation;
-    var rv1 = new ReactiveVar;
-    var rv2 = new ReactiveVar;
-
-    // Render a component in an autorun. Save the current computation
-    // from the first time we run the render function. Invalidate the
-    // autorun, and check whether that stops the computation from the
-    // first time the component rendered.
-
-    var tmpl = UI.Component.extend({
-      render: function () {
-        return function () {
-          if (! firstComputation) {
-            firstComputation = Deps.currentComputation;
-          }
-          return rv1.get();
-        };
-      }
-    });
-
-    Deps.autorun(function () {
-      rv2.get(); // register a dependency
-      UI.render(tmpl, undefined, {
-        _nestInCurrentComputation: nest
-      });
-    });
-
-    rv2.set("foo");
-    Deps.flush();
-
-    // If we nested inside the current computation, then we expect the
-    // computation from within the render function to have been stopped
-    // when the outer computation was invalidated.
-    if (nest) {
-      test.equal(firstComputation.stopped, true);
-    } else {
-      test.equal(firstComputation.stopped, false);
-    }
-  });
+  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
+             '<span title="M&amp;Ms">M&amp;M candies</span>');
 });

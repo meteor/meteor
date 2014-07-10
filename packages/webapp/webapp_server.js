@@ -224,7 +224,7 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 };
 
 // Will be updated by main before we listen.
-var boilerplateTemplate = null;
+var boilerplateFunc = null;
 var boilerplateBaseData = null;
 var memoizedBoilerplate = {};
 
@@ -248,12 +248,9 @@ var getBoilerplate = function (request) {
       htmlAttributes: htmlAttributes,
       inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
     }, boilerplateBaseData);
-    var boilerplateInstance = boilerplateTemplate.extend({
-      data: boilerplateData
-    });
-    var boilerplateHtmlJs = boilerplateInstance.render();
+
     memoizedBoilerplate[boilerplateKey] = "<!DOCTYPE html>\n" +
-      HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+      Blaze.toHTML(Blaze.With(boilerplateData, boilerplateFunc));
   }
   return memoizedBoilerplate[boilerplateKey];
 };
@@ -489,8 +486,8 @@ var runWebAppServer = function () {
     if (! appUrl(req.url))
       return next();
 
-    if (!boilerplateTemplate)
-      throw new Error("boilerplateTemplate should be set before listening!");
+    if (!boilerplateFunc)
+      throw new Error("boilerplateFunc should be set before listening!");
     if (!boilerplateBaseData)
       throw new Error("boilerplateBaseData should be set before listening!");
 
@@ -663,17 +660,12 @@ var runWebAppServer = function () {
     });
 
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
-    var boilerplateRenderCode = Spacebars.compile(
+    var boilerplateRenderCode = SpacebarsCompiler.compile(
       boilerplateTemplateSource, { isBody: true });
 
     // Note that we are actually depending on eval's local environment capture
     // so that UI and HTML are visible to the eval'd code.
-    var boilerplateRender = eval(boilerplateRenderCode);
-
-    boilerplateTemplate = UI.Component.extend({
-      kind: "MainPage",
-      render: boilerplateRender
-    });
+    boilerplateFunc = eval(boilerplateRenderCode);
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;

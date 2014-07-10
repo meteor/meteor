@@ -2036,14 +2036,7 @@ Example:
 
 When you write a template as `<{{! }}template name="foo"> ... <{{!
 }}/template>` in an HTML file in your app, Meteor generates a
-"component object" named `Template.foo`.
-
-{{#note}}
-   Meteor's component API is currently in flux. This section documents a few
-   features of the component object that are useful for writing apps; a future
-   release will elaborate more about how components work and about how to build
-   components that aren't just template.
-{{/note}}
+"template object" named `Template.foo`.
 
 The same template may occur many times on a page, and these
 occurrences are called template instances.  Template instances have a
@@ -2214,29 +2207,34 @@ You can define helpers and event maps on `UI.body` just like on any
 
 {{> api_box ui_render}}
 
-This returns an "instantiated component" object, which can be passed to
-[`UI.insert`](#ui_insert). The template's [`created`](#template_created) callback
-will be invoked.  The component will continue to be updated reactively as the
-data used changes.
+This returns an "rendered template" object, which can be passed to
+[`UI.insert`](#ui_insert). The template's
+[`created`](#template_created) callback will be invoked.  The rendered
+template will continue to be updated reactively as the data used
+changes.
 
 {{#warning}}
-  Future releases will provide a richer API for "instantiated components"
-  (probably unifying them with "template instances"). For now, all you can
-  do with them is pass them to `UI.insert`.
+  Future releases will provide a richer API for working with rendered
+  templates, for example unifying them "template instances."  For now, all you
+  can do with them is pass them to `UI.insert`.
+{{/warning}}
 
-  Most users will not need to manually render components or manually insert them
-  into the DOM at all.  As of 0.8.0, if you call `UI.render` and never insert
-  the result into the DOM, the logic to keep the instantiated component updated
+{{#warning}}
+  Most users will not need to manually render templates or manually insert them
+  into the DOM at all.  As of 0.8.x, if you call `UI.render` and never insert
+  the result into the DOM, the logic to keep the rendered template updated
   will continue running in your browser forever. Additionally, if you remove any
-  part of your DOM using any mechanism other than jQuery, the logic to keep that
-  part of the the DOM updated will continue running.  To avoid these issues,
-  either avoid directly updating the DOM or ensure that any removals go through
-  jQuery.
+  part of your DOM using any mechanism other than Meteor or jQuery, the logic
+  to keep that  part of the the DOM updated will continue running.  To avoid these
+  issues, either avoid directly updating the DOM or ensure that any removals go
+  through Meteor or jQuery.
 {{/warning}}
 
 {{> api_box ui_renderwithdata}}
 
 {{> api_box ui_insert}}
+
+{{> api_box ui_remove}}
 
 {{> api_box ui_getelementdata}}
 
