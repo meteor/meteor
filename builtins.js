@@ -11,11 +11,12 @@ Blaze.With = function (data, contentFunc) {
 
   view.onCreated(function () {
     if (typeof data === 'function') {
+      // `data` is a reactive function
       view.autorun(function () {
         view.dataVar.set(data());
       }, view.parentView);
     } else {
-        view.dataVar.set(data);
+      view.dataVar.set(data);
     }
   });
 
