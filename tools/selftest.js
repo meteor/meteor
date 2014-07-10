@@ -408,6 +408,7 @@ _.extend(Sandbox.prototype, {
                   " to run against clients." );
     }
     _.each(self.clients, function (client) {
+      console.log("testing with " + client.name + "...");
       f(new Run(self.execPath, {
         sandbox: self,
         args: [],
@@ -587,7 +588,6 @@ _.extend(Sandbox.prototype, {
     fs.symlinkSync(toolPackageDirectory,
                    path.join(self.warehouse, 'packages', toolPackageName,
                              toolPackage.version));
-
     stubCatalog.collections.packages.push({
       name: toolPackageName,
       _id: utils.randomToken()
@@ -611,7 +611,25 @@ _.extend(Sandbox.prototype, {
       versionId: toolVersionId,
       _id: utils.randomToken()
     });
+    stubCatalog.collections.releaseTracks.push({
+      name: catalog.complete.DEFAULT_TRACK,
+      _id: utils.randomToken()
+    });
 
+    // Now create each requested release.
+    _.each(releases, function (config, releaseName) {
+      // Release info
+      stubCatalog.collections.releaseVersions.push({
+        track: catalog.complete.DEFAULT_TRACK,
+        version: releaseName,
+        orderKey: releaseName,
+        description: "test release " + releaseName,
+        recommended: !!config.recommended,
+        // XXX support multiple tools packages for springboard tests
+        tool: toolPackageName + "@" + toolPackage.version,
+        packages: {}
+      });
+    });
 
     // XXX: This is an incremental hack to be able to create apps from the
     // warehouse. We need the constraint solver that runs are create-time to be
@@ -666,26 +684,6 @@ _.extend(Sandbox.prototype, {
     });
     catalog.official.offline = oldOffline;
 
-    stubCatalog.collections.releaseTracks.push({
-      name: catalog.complete.DEFAULT_TRACK,
-      _id: utils.randomToken()
-    });
-
-    // Now create each requested release.
-    _.each(releases, function (config, releaseName) {
-      // Release info
-      stubCatalog.collections.releaseVersions.push({
-        track: catalog.complete.DEFAULT_TRACK,
-        version: releaseName,
-        orderKey: releaseName,
-        description: "test release " + releaseName,
-        recommended: !!config.recommended,
-        // XXX support multiple tools packages for springboard tests
-        tool: toolPackageName + "@" + toolPackage.version,
-        packages: {}
-      });
-    });
-
     fs.writeFileSync(
       path.join(self.warehouse, 'package-metadata', 'v1', 'data.json'),
       JSON.stringify(stubCatalog, null, 2));
@@ -718,6 +716,7 @@ var PhantomClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
+  self.name = "phantomjs";
   self.process = null;
 };
 
@@ -733,11 +732,7 @@ _.extend(PhantomClient.prototype, {
       '/bin/bash',
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "END\n")], function (err, stdout, stderr) {
-          if (stderr.match(/not found/)) {
-            console.log("ERROR: phantomjs not installed properly.");
-          }
-    });
+        phantomScript + "END\n")]);
   },
   stop: function() {
     var self = this;
@@ -753,6 +748,7 @@ var BrowserStackClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
+  self.name = "BrowserStack";
   self.tunnelProcess = null;
   self.driver = null;
 };
@@ -771,7 +767,7 @@ _.extend(BrowserStackClient.prototype, {
         "have installed your S3 credentials.");
 
     var capabilities = {
-      'browserName' : 'chrome',
+      'browserName' : 'firefox',
       'browserstack.user' : 'meteor',
       'browserstack.local' : 'true',
       'browserstack.key' : browserStackKey
