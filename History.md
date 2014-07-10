@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Fix performance issue where a large batch of oplog updates could block
+  the node event loop for long periods.  #2299.
+
 * Upgraded dependencies:
   - less: 1.7.1 (from 1.6.1)
 
