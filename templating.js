@@ -202,9 +202,9 @@ var instantiateBody = function () {
   if (Template.__body__.__isInstantiated)
     return;
   Template.__body__.__isInstantiated = true;
-  var view = Template.__body__.__makeView();
-  Template.__body__.__view = view;
-  Blaze.materializeView(view).attach(document.body);
+  var range = Blaze.render(Template.__body__);
+  Template.__body__.__view = range.view;
+  range.attach(document.body);
 };
 Template.__body__.__instantiate = instantiateBody;
 
