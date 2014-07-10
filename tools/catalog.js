@@ -411,7 +411,6 @@ _.extend(CompleteCatalog.prototype, {
     var packageSources = {}; // name to PackageSource
 
     var initVersionRecordFromSource =  function (packageDir, name) {
-      console.log("initVersionRecordFromSource", name);
       var packageSource = new PackageSource;
       var broken = false;
       buildmessage.enterJob({

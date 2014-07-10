@@ -1560,7 +1560,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
         path: path.join(paths[name], relControlFilePath)
       });
     });
-    console.log(json.cordovaDependencies);
+
     // Tell Galaxy what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied
     // or symlinked a node_modules, since that's probably enough for
@@ -1718,7 +1718,7 @@ exports.bundle = function (options) {
         minify: buildOptions.minify,
         addCacheBusters: true
       });
-      console.log(client.cordovaDependencies);
+
       return client;
     };
 

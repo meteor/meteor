@@ -100,8 +100,6 @@ var Unibuild = function (unipackage, options) {
   // resolve Npm.require() calls in this unibuild. null if this unibuild
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
-
-  self.cordovaDependencies = options.cordovaDependencies;
 };
 
 _.extend(Unibuild.prototype, {
@@ -763,10 +761,6 @@ _.extend(Unipackage.prototype, {
           }
         }
 
-        console.log(unibuild.name);
-        if (unibuild.name === 'cordova-camera')
-        throw new Error("SAVING");
-
         // Construct unibuild metadata
         var unibuildJson = {
           format: "unipackage-unibuild-pre1",
@@ -783,7 +777,6 @@ _.extend(Unipackage.prototype, {
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
           node_modules: nodeModulesPath,
-          cordovaDependencies: unibuild.cordovaDependencies,
           resources: []
         };
 

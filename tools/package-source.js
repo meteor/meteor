@@ -359,7 +359,6 @@ _.extend(PackageSource.prototype, {
     self.npmCacheDirectory = options.npmDir;
 
     ensureOnlyExactVersions(options.cordovaDependencies);
-    console.log("packageSource.initFromOptions", self.cordovaDependencies);
     self.cordovaDependencies = options.cordovaDependencies;
 
     var sources = _.map(options.sources, function (source) {
@@ -644,7 +643,6 @@ _.extend(PackageSource.prototype, {
     // == 'Cordova' object visible in package.js ==
     var Cordova = {
       depends: function (_cordovaDependencies) {
-        console.log("ADDING DEPENDS: " + _cordovaDependencies);
         // XXX make cordovaDependencies be separate between use and test, so that
         // production doesn't have to ship all of the npm modules used by test
         // code
@@ -986,8 +984,6 @@ _.extend(PackageSource.prototype, {
     self.npmCacheDirectory =
       path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
     self.npmDependencies = npmDependencies;
-
-    console.log("initFromPackageDir", cordovaDependencies);
 
     self.cordovaDependencies = cordovaDependencies;
 
