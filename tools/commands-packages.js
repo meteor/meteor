@@ -1147,7 +1147,7 @@ main.registerCommand({
 
     process.stdout.write(path.basename(options.appDir) + ": updated to " +
                 utils.displayRelease(releaseTrack, solutionReleaseVersion) +
-                ". \n");
+                ".\n");
 
     // Now run the upgraders.
     // XXX should we also run upgraders on other random commands, in case there
