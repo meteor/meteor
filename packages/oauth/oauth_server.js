@@ -223,7 +223,7 @@ OAuth._endOfLoginResponse = function(res, details) {
   var content = function (setCredentialSecret) {
     return '<html><head><script>' +
       setCredentialSecret +
-      'window.close()</script></head></html>';
+      'window.close();</script></head></html>';
   };
 
   if (details.error) {
