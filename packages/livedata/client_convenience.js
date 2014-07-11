@@ -24,7 +24,6 @@ if (Meteor.isClient) {
     if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
       ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
   }
-
   var retry = new Retry();
 
   var onDDPVersionNegotiationFailure = function (description) {

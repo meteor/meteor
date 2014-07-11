@@ -546,7 +546,7 @@ _.extend(Connection.prototype, {
       stop: function () {
         if (!_.has(self._subscriptions, id))
           return;
-        
+
         self._subscriptions[id].stop();
       },
       ready: function () {
@@ -1536,6 +1536,7 @@ LivedataTest.Connection = Connection;
 DDP.connect = function (url, options) {
   var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
+
   return ret;
 };
 

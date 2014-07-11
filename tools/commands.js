@@ -1521,7 +1521,7 @@ main.registerCommand({
   var localDir = path.join(options.appDir, '.meteor', 'local');
   var cordovaPath = path.join(localDir, 'client.cordova');
 
-  if (options.args[0] === 'build') {
+  if (options.args[0] === 'create') {
     files.rm_recursive(cordovaPath);
     var buildDir = path.join(localDir, 'build_tar');
     var outputPath = path.join(buildDir, 'bundle');
@@ -1540,7 +1540,7 @@ main.registerCommand({
         clientArchs: clientArchs
       }
     });
-    console.log(bundleResult.starManifest.cordovaDependencies);
+
     if (bundleResult.errors) {
       process.stdout.write("Errors prevented bundling:\n");
       process.stdout.write(bundleResult.errors.formatMessages());
@@ -1548,7 +1548,10 @@ main.registerCommand({
     }
 
     var programPath = path.join(outputPath, 'programs');
-    execFileSync('cordova', ['create', 'client.cordova'], { cwd: localDir });
+    var appName = path.basename(options.appDir);
+    execFileSync('cordova', ['create', 'client.cordova',
+                             'com.meteor.' + appName,
+                             appName.replace(/\s/g, '')], { cwd: localDir });
 
     var wwwPath = path.join(cordovaPath, "www");
 
@@ -1571,9 +1574,17 @@ main.registerCommand({
     _.each(options.args.slice(1), function (arch) {
       execFileSync('cordova', ['platform', 'add', arch], { cwd: cordovaPath });
     });
+
+    _.each(bundleResult.starManifest.cordovaDependencies,
+        function (version, name) {
+      execFileSync('cordova', ['plugin', 'add', name + '@' + version],
+        { cwd: cordovaPath });
+    });
+
     execFileSync('cordova', ['build'], { cwd: cordovaPath });
-    // files.rm_recursive(fromPath);
-    // files.rm_recursive(buildDir);
+
+    files.rm_recursive(fromPath);
+    files.rm_recursive(buildDir);
   } else {
     // XXX error if not a Cordova project
     execFileSync('cordova', options.args, { cwd: cordovaPath });
