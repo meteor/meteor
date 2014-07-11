@@ -65,7 +65,7 @@
 * Blaze now tracks individual CSS rules in `style` attributes and won't
   overwrite changes to them made by other JavaScript libraries.
 
-* Add {{> UI.dynamic}} to make it easier to dynamically render a
+* Add `{{> UI.dynamic}}` to make it easier to dynamically render a
   template with a data context.
 
 * Add `UI._templateInstance()` for accessing the current template
