@@ -61,6 +61,8 @@ Blaze.View = function (kind, render) {
   this.isInRender = false;
   this.parentView = null;
   this.domrange = null;
+
+  this.renderCount = 0;
 };
 
 Blaze.View.prototype.render = function () { return null; };
@@ -187,6 +189,7 @@ Blaze.materializeView = function (view, parentView) {
       // `view.autorun` sets the current view.
       // Any dependencies that should invalidate this Computation come
       // from this line:
+      view.renderCount++;
       view.isInRender = true;
       var htmljs = view.render();
       view.isInRender = false;
