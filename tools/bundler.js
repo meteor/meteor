@@ -1777,9 +1777,9 @@ exports.bundle = function (options) {
       // Server
       var browserClient = targets["client.browser"];
       if (browserClient) {
-        var server = makeServerTarget(app, browserClient);
-        var server = options.cachedServerTarget || makeServerTarget(app, client);
-        server.clientTarget = client;
+        var server = options.cachedServerTarget ||
+                     makeServerTarget(app, browserClient);
+        server.clientTarget = browserClient;
         targets.server = server;
       }
     }

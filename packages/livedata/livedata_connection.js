@@ -1536,7 +1536,7 @@ LivedataTest.Connection = Connection;
 DDP.connect = function (url, options) {
   var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
-
+  debugger;
   return ret;
 };
 
