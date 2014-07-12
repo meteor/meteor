@@ -113,6 +113,34 @@ selftest.define("springboard", ['checkout'], function () {
 });
 
 
+selftest.define("--release and the .meteor/versions", ['checkout'], function () {
+  var s = new Sandbox({
+    warehouse: {
+      v1: { },
+      v2: { recommended: true }
+    }
+  });
+  var run;
+
+  var toolsPackage = selftest.getToolsPackage();
+  var toolsVersion = toolsPackage.name + '@' +
+        toolsPackage.version;
+
+  // Create an app with the latest release.
+  run = s.run("create", "myapp");
+  run.waitSecs(5);
+  run.expectExit(0);
+  s.cd('myapp', function () {
+    run = s.run("--long-version");
+    run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
+    run.expectExit(0);
+  });
+
+  // Remove the versions file.
+
+});
+
+
 selftest.define("checkout", ['checkout'], function () {
   var s = new Sandbox;
   var run;
