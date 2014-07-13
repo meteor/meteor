@@ -49,10 +49,15 @@ Blaze.DOMMaterializer.def({
 
     var rawAttrs = tag.attrs;
     var children = tag.children;
-    if (tagName === 'textarea' && ! ('value' in rawAttrs)) {
-      // turn TEXTAREA contents into a value attribute
-      rawAttrs = (rawAttrs || {});
-      rawAttrs.value = children;
+    if (tagName === 'textarea' && ! (rawAttrs && ('value' in rawAttrs))) {
+      // turn TEXTAREA contents into a value attribute.
+      // Reactivity in the form of nested Views won't work here
+      // because the Views have already been instantiated.  To
+      // get Views in a textarea they need to be wrapped in a
+      // function and provided as the "value" attribute by the
+      // compiler.
+      rawAttrs = _.extend({}, rawAttrs || null);
+      rawAttrs.value = Blaze._expand(children, self.parentView);
       children = [];
     }
 
