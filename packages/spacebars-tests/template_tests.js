@@ -723,6 +723,26 @@ Tinytest.add('spacebars-tests - template_tests - textarea 2', function (test) {
 
 });
 
+Tinytest.add('spacebars-tests - template_tests - textarea 3', function (test) {
+  var tmpl = Template.spacebars_template_test_textarea3;
+
+  var R = ReactiveVar('hello');
+
+  tmpl.foo = function () {
+    return R.get();
+  };
+
+  var div = renderToDiv(tmpl);
+  var textarea = div.querySelector('textarea');
+  test.equal(textarea.id, 'myTextarea');
+  test.equal(textarea.value, 'hello');
+
+  R.set('world');
+  Deps.flush();
+  test.equal(textarea.value, 'world');
+
+});
+
 Tinytest.add('spacebars-tests - template_tests - textarea each', function (test) {
   var tmpl = Template.spacebars_template_test_textarea_each;
 

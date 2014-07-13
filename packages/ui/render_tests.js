@@ -177,6 +177,39 @@ Tinytest.add("ui - render - textarea", function (test) {
   },
       'abc',
       '<textarea>abc</textarea>');
+
+  // test that reactivity of textarea "value" attribute works...
+  (function () {
+    var R = ReactiveVar('one');
+    var div = document.createElement("DIV");
+    var node = TEXTAREA({value: function () {
+      return Blaze.View(function () {
+        return R.get();
+      });
+    }});
+    materialize(node, div);
+    var textarea = div.querySelector('textarea');
+    test.equal(textarea.value, 'one');
+    R.set('two');
+    Deps.flush();
+    test.equal(textarea.value, 'two');
+  })();
+
+  // ... while "content" reactivity simply doesn't update
+  // (but doesn't throw either)
+  (function () {
+    var R = ReactiveVar('one');
+    var div = document.createElement("DIV");
+    var node = TEXTAREA([Blaze.View(function () {
+      return R.get();
+    })]);
+    materialize(node, div);
+    var textarea = div.querySelector('textarea');
+    test.equal(textarea.value, 'one');
+    R.set('two');
+    Deps.flush({_throwFirstError: true});
+    test.equal(textarea.value, 'one');
+  })();
 });
 
 Tinytest.add("ui - render - view isolation", function (test) {
