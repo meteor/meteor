@@ -781,6 +781,7 @@ testAsyncMulti('spacebars-tests - template_tests - defer in rendered callbacks',
 
   // not defined on the server, but it's fine since the stub does
   // the relevant work
+  Meteor._suppress_log(1);
   Meteor.call("spacebarsTestInsertEmptyObject");
 }]);
 
