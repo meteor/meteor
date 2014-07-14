@@ -1459,7 +1459,11 @@ main.registerCommand({
 // cordova
 ///////////////////////////////////////////////////////////////////////////////
 
-var generateCordovaBoilerplate = function (clientDir, clientJson, boilerplateTemplateSource) {
+var generateCordovaBoilerplate = function (clientDir) {
+  var clientJsonPath = path.join(clientDir, 'program.json');
+  var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
+  var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
+  var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
   var boilerplateData = {
     css: [],
     js: [],
@@ -1509,6 +1513,82 @@ var generateCordovaBoilerplate = function (clientDir, clientJson, boilerplateTem
         HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
 };
 
+// Creates a Cordova project if necessary and makes sure added Cordova
+// platforms and Cordova plugins are up to date with the project's
+// definition.
+var ensureCordovaProject = function (appName, projectPath, bundlePath) {
+  // XXX temp hack as the easiest way to ensure right now is to destroy and
+  // recreate
+  files.rm_recursive(projectPath);
+
+  var bundler = require(path.join(__dirname, 'bundler.js'));
+  var loader = project.getPackageLoader();
+
+  var clientArchName = 'client.cordova';
+
+  var bundleResult = bundler.bundle({
+    outputPath: bundlePath,
+    buildOptions: {
+      minify: false, // XXX ! options.debug,
+      arch: archinfo.host(),
+      clientArchs: [clientArchName]
+    }
+  });
+
+  if (bundleResult.errors) {
+    throw new Error("Errors prevented bundling:\n" +
+                    bundleResult.errors.formatMessages());
+  }
+
+  var programPath = path.join(bundlePath, 'programs');
+
+  // XXX check if Cordova folder exists, don't run `cordova create`
+
+  execFileSync('cordova', ['create', path.basename(projectPath),
+                           'com.meteor.' + appName,
+                           appName.replace(/\s/g, '')],
+               { cwd: path.dirname(projectPath) });
+
+  var wwwPath = path.join(projectPath, "www");
+
+  var cordovaProgramPath = path.join(programPath, clientArchName);
+  var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
+
+  // XXX hack, copy files from app folder one level up
+  files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
+  files.rm_recursive(cordovaProgramAppPath);
+
+  // rewrite the www folder
+  files.rm_recursive(wwwPath);
+  files.cp_r(cordovaProgramPath, wwwPath);
+
+  // clean up the temporary bundle directory
+  files.rm_recursive(bundlePath);
+
+  // generate index.html
+  var indexHtml = generateCordovaBoilerplate(wwwPath);
+  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
+
+  // XXX get the output of `cordova plugins` and compare to the project
+  // dependencies; add/remove plugins if different.
+  // XXX compare the latest used sha's with the currently required sha's for
+  // plugins fetched from a github/tarball url.
+
+  // XXX get platforms from project file
+//  _.each(platforms, function (platform) {
+//    execFileSync('cordova', ['platform', 'add', platform], { cwd: projectPath });
+//  });
+
+  _.each(bundleResult.starManifest.cordovaDependencies,
+      function (version, name) {
+    // XXX do something different for plugins fetched from a url.
+    execFileSync('cordova', ['plugin', 'add', name + '@' + version],
+      { cwd: projectPath });
+  });
+
+  execFileSync('cordova', ['build'], { cwd: projectPath });
+};
+
 main.registerCommand({
   name: 'cordova',
   minArgs: 1,
@@ -1519,75 +1599,22 @@ main.registerCommand({
   },
 }, function (options) {
   var localDir = path.join(options.appDir, '.meteor', 'local');
-  var cordovaPath = path.join(localDir, 'client.cordova');
+  var cordovaPath = path.join(localDir, 'cordova-build');
+  var bundleDir = path.join(localDir, 'bundle-tar');
+  var appName = path.basename(options.appDir);
 
-  if (options.args[0] === 'create') {
-    files.rm_recursive(cordovaPath);
-    var buildDir = path.join(localDir, 'build_tar');
-    var outputPath = path.join(buildDir, 'bundle');
+  var cordovaCommand = options.args[0];
+  var cordovaArgs = options.args.slice(1);
 
-    var bundler = require(path.join(__dirname, 'bundler.js'));
-    var loader = project.getPackageLoader();
-    stats.recordPackages(options.appDir);
-
-    var clientArchs = ['client.cordova'];
-
-    var bundleResult = bundler.bundle({
-      outputPath: outputPath,
-      buildOptions: {
-        minify: false, // XXX ! options.debug,
-        arch: archinfo.host(),
-        clientArchs: clientArchs
-      }
-    });
-
-    if (bundleResult.errors) {
-      process.stdout.write("Errors prevented bundling:\n");
-      process.stdout.write(bundleResult.errors.formatMessages());
-      return 1;
-    }
-
-    var programPath = path.join(outputPath, 'programs');
-    var appName = path.basename(options.appDir);
-    execFileSync('cordova', ['create', 'client.cordova',
-                             'com.meteor.' + appName,
-                             appName.replace(/\s/g, '')], { cwd: localDir });
-
-    var wwwPath = path.join(cordovaPath, "www");
-
-    var fromPath = path.join(programPath, 'client.cordova');
-    var appPath = path.join(fromPath, 'app');
-
-    files.cp_r(appPath, fromPath);
-    files.rm_recursive(appPath);
-
-    files.rm_recursive(wwwPath);
-    files.cp_r(fromPath, wwwPath);
-
-    var clientJsonPath = path.join(wwwPath, 'program.json');
-    var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
-    var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
-    var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
-    var indexHtml = generateCordovaBoilerplate(wwwPath, clientJson, boilerplateTemplateSource);
-    fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
-
-    _.each(options.args.slice(1), function (arch) {
-      execFileSync('cordova', ['platform', 'add', arch], { cwd: cordovaPath });
-    });
-
-    _.each(bundleResult.starManifest.cordovaDependencies,
-        function (version, name) {
-      execFileSync('cordova', ['plugin', 'add', name + '@' + version],
-        { cwd: cordovaPath });
-    });
-
-    execFileSync('cordova', ['build'], { cwd: cordovaPath });
-
-    files.rm_recursive(fromPath);
-    files.rm_recursive(buildDir);
-  } else {
-    // XXX error if not a Cordova project
-    execFileSync('cordova', options.args, { cwd: cordovaPath });
+  try {
+    ensureCordovaProject(appName, cordovaPath, bundleDir);
+  } catch (e) {
+    process.stderr.write('Errors preventing the Cordova project from build:\n');
+    process.stderr.write(e.stack);
+    return 1;
   }
+
+  // XXX error if not a Cordova project
+  execFileSync('cordova', options.args, { cwd: cordovaPath });
 });
 
