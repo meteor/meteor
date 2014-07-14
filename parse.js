@@ -140,8 +140,12 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
           scanner.fatal('Only certain elements like BR, HR, IMG, etc. (and foreign elements like SVG) are allowed to self-close');
       }
 
-      // may be null
+      // result of parseAttrs may be null
       var attrs = parseAttrs(token.attrs);
+      // arrays need to be wrapped in HTML.Attrs(...)
+      // when used to construct tags
+      if (HTML.isArray(attrs))
+        attrs = HTML.Attrs.apply(null, attrs);
 
       var tagFunc = HTML.getTag(tagName);
       if (isVoid || token.isSelfClosing) {
@@ -156,12 +160,15 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
         if (token.n === 'textarea') {
           if (scanner.peek() === '\n')
             scanner.pos++;
-          attrs = (attrs || {});
           var textareaValue = getRCData(scanner, token.n, shouldStopFunc);
-          if (HTML.isArray(attrs)) {
-            attrs.push({value: textareaValue});
-          } else {
-            attrs.value = textareaValue;
+          if (textareaValue) {
+            if (attrs instanceof HTML.Attrs) {
+              attrs = HTML.Attrs.apply(
+                null, attrs.value.concat([{value: textareaValue}]));
+            } else {
+              attrs = (attrs || {});
+              attrs.value = textareaValue;
+            }
           }
         } else {
           content = getContent(scanner, shouldStopFunc);
@@ -319,7 +326,7 @@ var parseAttrs = function (attrs) {
       result = (result || []);
       result.push(token.v);
     }
-    return HTML.Attrs.apply(null, result);
+    return result;
   }
 
   for (var k in attrs) {
