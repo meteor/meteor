@@ -151,6 +151,7 @@
 
 var path = require('path');
 var util = require('util');
+var semver = require('semver');
 var files = require(path.join(__dirname, 'files.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
@@ -584,7 +585,12 @@ _.extend(Target.prototype, {
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
       _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
-        // XXX fix conflicting versions eventually
+        // XXX if the plugin dependency conflicts with an existing dependency,
+        // use the newer version
+        if (_.has(self.cordovaDependencies, name)) {
+          var existingVersion = self.cordovaDependencies[name];
+          version = semver.lt(existingVersion, version) ? version : existingVersion;
+        }
         self.cordovaDependencies[name] = version;
       });
 
