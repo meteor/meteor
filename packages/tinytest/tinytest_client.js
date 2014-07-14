@@ -43,7 +43,7 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
       });
       // Now that we've processed all the other messages,
       // check if we have the 'complete' message
-      if (_.has(msg.fields, 'complete')) {
+      if (msg.fields && _.has(msg.fields, 'complete')) {
         remoteComplete = true;
         handle.stop();
         Meteor.call('tinytest/clearResults', runId);
