@@ -63,6 +63,17 @@ Meteor.startup(function () {
 var reportResults = function(results) {
   var test = _findTestForResults(results);
 
+  // Tolerate repeated reports: first undo the effect of any previous report
+  var status = _testStatus(test);
+  if (status === "failed") {
+    failedCount--;
+    countDep.changed();
+  } else if (status === "succeeded") {
+    passedCount--;
+    countDep.changed();
+  }
+
+  // Now process the current report
   if (_.isArray(results.events)) {
     // append events, if present
     Array.prototype.push.apply((test.events || (test.events = [])),
@@ -78,7 +89,7 @@ var reportResults = function(results) {
     });
     test.events = out;
   }
-  var status = _testStatus(test);
+  status = _testStatus(test);
   if (status === "failed") {
     failedCount++;
     // Expand a failed test (but only set this if the user hasn't clicked on the
