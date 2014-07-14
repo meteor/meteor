@@ -185,6 +185,33 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
   }
 };
 
+// This "template" (not a real Spacebars template, just an HTML file
+// with some ##PLACEHOLDER##s) communicates the credential secret back
+// to the main window and then closes the popup.
+OAuth._endOfLoginResponseTemplate = Assets.getText(
+  "end_of_login_response.html");
+
+// Renders `endOfLoginResponseTemplate` into some HTML and JavaScript
+// that closes the popup at the end of the OAuth flow.
+OAuth._renderEndOfLoginResponse = function (setCredentialToken, token, secret) {
+  // It would be nice to use Blaze here, but it's a little tricky
+  // because our mustaches would be inside a <script> tag, and Blaze
+  // would treat the <script> tag contents as text (e.g. encode '&' as
+  // '&amp;'). So we just do a simple replace.
+  var result = OAuth._endOfLoginResponseTemplate.replace(
+      /##SET_CREDENTIAL_TOKEN##/, JSON.stringify(setCredentialToken));
+
+  result = result.replace(
+    /##TOKEN##/, JSON.stringify(token));
+  result = result.replace(
+    /##SECRET##/, JSON.stringify(secret));
+  result = result.replace(
+    /##LOCAL_STORAGE_PREFIX##/,
+    JSON.stringify(OAuth._localStorageTokenPrefix));
+
+  return "<!DOCTYPE html>\n" + result;
+};
+
 // Writes an HTTP response to the popup window at the end of an OAuth
 // login flow. At this point, if the user has successfully authenticated
 // to the OAuth server and authorized this app, we communicate the
@@ -216,21 +243,15 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 //        so shouldn't be trusted for security decisions or included in
 //        the response without sanitizing it first. Only one of `error`
 //        or `credentials` should be set.
-OAuth._endOfLoginResponse = function(res, details) {
+OAuth._endOfLoginResponse = function (res, details) {
 
   res.writeHead(200, {'Content-Type': 'text/html'});
-
-  var content = function (setCredentialSecret) {
-    return '<html><head><script>' +
-      setCredentialSecret +
-      'window.close();</script></head></html>';
-  };
 
   if (details.error) {
     Log.warn("Error in OAuth Server: " +
              (details.error instanceof Error ?
               details.error.message : details.error));
-    res.end(content(""), 'utf-8');
+    res.end(OAuth._renderEndOfLoginResponse(false), "utf-8");
     return;
   }
 
@@ -238,17 +259,10 @@ OAuth._endOfLoginResponse = function(res, details) {
     // If we have a credentialSecret, report it back to the parent
     // window, with the corresponding credentialToken. The parent window
     // uses the credentialToken and credentialSecret to log in over DDP.
-    var setCredentialSecret = '';
-    if (details.credentials.token && details.credentials.secret) {
-      setCredentialSecret = 'var credentialToken = ' +
-        JSON.stringify(details.credentials.token) + ';' +
-        'var credentialSecret = ' +
-        JSON.stringify(details.credentials.secret) + ';' +
-        'window.opener && ' +
-        'window.opener.Package.oauth.OAuth._handleCredentialSecret(' +
-        'credentialToken, credentialSecret);';
-    }
-    res.end(content(setCredentialSecret), "utf-8");
+    res.end(OAuth._renderEndOfLoginResponse(true,
+                                            details.credentials.token,
+                                            details.credentials.secret),
+            "utf-8");
   } else {
     res.end("", "utf-8");
   }
