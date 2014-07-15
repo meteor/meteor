@@ -39,17 +39,40 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
   tmpl.foo = 3;
   test.throws(function () {
     renderToDiv(tmpl);
-  });
+  }, /Can't call non-function/);
 
   delete tmpl.foo;
   test.throws(function () {
     renderToDiv(tmpl);
-  });
+  }, /No such function/);
 
   tmpl.foo = function () {};
   // doesn't throw
-  var div = renderToDiv(tmpl);
+  div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), '');
+
+  // now "foo" is a function in the data context
+  delete tmpl.foo;
+  R.set(1);
+  div = renderToDiv(tmpl, { foo: function (x) {
+    return x + R.get();
+  } });
+  test.equal(canonicalizeHtml(div.innerHTML), "124");
+  R.set(2);
+  Deps.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "125");
+
+  test.throws(function () {
+    renderToDiv(tmpl, {foo: 3});
+  }, /Can't call non-function/);
+
+  test.throws(function () {
+    renderToDiv(tmpl, {foo: null});
+  }, /No such function/);
+
+  test.throws(function () {
+    renderToDiv(tmpl, {});
+  }, /No such function/);
 });
 
 Tinytest.add("spacebars-tests - template_tests - dynamic template", function (test) {
