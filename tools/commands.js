@@ -79,16 +79,11 @@ var getLocalPackages = function () {
 };
 
 var execFileSync = function (file, args, opts) {
-  console.log('cd ' + opts.cwd + ' && ' + file + ' ' +
-                     args.join(' ') + ' ...\n');
   var future = new Future;
 
   var child_process = require('child_process');
   child_process.execFile(file, args, opts, function (err, stdout, stderr) {
-    console.log(err ? 'failed\n' : 'done\n');
-    console.log(stderr);
-    // console.log(stdout);
-    // console.log(err);
+    process.stderr.write(err ? 'failed\n' + err + '\n' : '');
     future.return({
       success: ! err,
       stdout: stdout,
@@ -1517,10 +1512,6 @@ var generateCordovaBoilerplate = function (clientDir) {
 // platforms and Cordova plugins are up to date with the project's
 // definition.
 var ensureCordovaProject = function (appName, projectPath, bundlePath) {
-  // XXX temp hack as the easiest way to ensure right now is to destroy and
-  // recreate
-  files.rm_recursive(projectPath);
-
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.getPackageLoader();
 
@@ -1542,12 +1533,15 @@ var ensureCordovaProject = function (appName, projectPath, bundlePath) {
 
   var programPath = path.join(bundlePath, 'programs');
 
-  // XXX check if Cordova folder exists, don't run `cordova create`
+  if (! fs.existsSync(projectPath)) {
+    execFileSync('cordova', ['create', path.basename(projectPath),
+                             'com.meteor.' + appName,
+                             appName.replace(/\s/g, '')],
+                 { cwd: path.dirname(projectPath) });
 
-  execFileSync('cordova', ['create', path.basename(projectPath),
-                           'com.meteor.' + appName,
-                           appName.replace(/\s/g, '')],
-               { cwd: path.dirname(projectPath) });
+    // XXX a hack as platforms management is not implemented yet
+    execFileSync('cordova', ['platforms', 'add', 'ios'], { cwd: projectPath });
+  }
 
   var wwwPath = path.join(projectPath, "www");
 
@@ -1569,22 +1563,46 @@ var ensureCordovaProject = function (appName, projectPath, bundlePath) {
   var indexHtml = generateCordovaBoilerplate(wwwPath);
   fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
 
-  // Compare the state of plugins in the Cordova project and the required by the
-  // Meteor project.
-  // XXX compare the latest used sha's with the currently required sha's for
-  // plugins fetched from a github/tarball url.
-  console.log(project.getCordovaPlugins());
-
   // XXX get platforms from project file
 //  _.each(platforms, function (platform) {
 //    execFileSync('cordova', ['platform', 'add', platform], { cwd: projectPath });
 //  });
 
-  _.each(bundleResult.starManifest.cordovaDependencies,
-      function (version, name) {
+  // Compare the state of plugins in the Cordova project and the required by the
+  // Meteor project.
+  // XXX compare the latest used sha's with the currently required sha's for
+  // plugins fetched from a github/tarball url.
+  var pluginsOutput = execFileSync('cordova', ['plugin', 'list'],
+                                   { cwd: projectPath }).stdout;
+
+  var installedPlugins = {};
+  // Check if there are any plugins
+  if (! pluginsOutput.match(/No plugins added/)) {
+    _.each(pluginsOutput.split('\n'), function (line) {
+      line = line.trim();
+      if (line === '')
+        return;
+      var plugin = line.split(' ')[0];
+      var version = line.split(' ')[1];
+      installedPlugins[plugin] = version;
+    });
+  }
+
+  var requiredPlugins = bundleResult.starManifest.cordovaDependencies;
+  _.each(requiredPlugins, function (version, name) {
+    // no-op if this plugin is already installed
+    if (_.has(installedPlugins, name) && installedPlugins[name] === version)
+      return;
+
+    console.log("> Installing Cordova plugin", name);
     // XXX do something different for plugins fetched from a url.
     execFileSync('cordova', ['plugin', 'add', name + '@' + version],
       { cwd: projectPath });
+  });
+
+  _.each(installedPlugins, function (version, name) {
+    if (! _.has(requiredPlugins, name))
+      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
   });
 
   execFileSync('cordova', ['build'], { cwd: projectPath });
