@@ -56,7 +56,7 @@ selftest.define("publish-and-search", ["slow"], function () {
   run.match(githubUrl);
 });
 
-selftest.define("publish-one-arch", ["slow"], function () {
+selftest.define("publish-one-arch", ["slow", "online"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -78,4 +78,76 @@ selftest.define("publish-one-arch", ["slow"], function () {
   run.expectExit(0);
   run.match("Done");
   run.forbidAll("WARNING");
+
+  packageName = utils.randomToken();
+  fullPackageName = username + ":" + packageName;
+
+  s.createPackage(fullPackageName, "package-with-npm");
+  s.cd(fullPackageName);
+
+  run = s.run("publish", "--create");
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match("Done");
+  run.match("WARNING");
+
+});
+
+
+selftest.define("list-with-a-new-version", ["slow", "online"], function () {
+  var s = new Sandbox;
+
+  var username = "test";
+  var password = "testtest";
+
+  testUtils.login(s, username, password);
+  var packageName = utils.randomToken();
+  var fullPackageName = username + ":" + packageName;
+  var run;
+
+  // Create a package.
+  s.createPackage(fullPackageName, "package-of-two-versions");
+  // Publish the first version.
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Create an app. Add the package to it. Check that list shows the package and
+  // does not show the new versions available message.
+  run = s.run('create', 'mapp');
+  run.waitSecs(15);
+  run.expectExit(0);
+  s.cd('mapp', function () {
+    run = s.run("add", fullPackageName);
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.0");
+    run.forbidAll("versions available");
+    run.expectExit(0);
+  });
+
+  // Change the package to increment version and publish the new package.
+  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // cd into the app and run list again. We should get some sort of message.
+  s.cd('mapp', function () {
+    run = s.run("list");
+    run.match(fullPackageName);
+    run.match("1.0.0");
+    run.match("versions available");
+    run.expectExit(0);
+  });
+
 });

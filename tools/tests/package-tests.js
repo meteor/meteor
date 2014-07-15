@@ -3,20 +3,6 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var _= require('underscore');
 
-// Copy the contents of one file to another.  In these series of tests, we often
-// want to switch contents of package.js files. It is more legible to copy in
-// the backup file rather than trying to write into it manually.
-//
-// XXX: Surely there is a function for this in fs?
-// XXX: In which case, perhaps move this to sandbox.
-var copyFile = function(from, to, sand) {
-  var contents = sand.read(from);
-  if (!contents) {
-    throw new Error("File " + from + " does not exist.");
-  };
-  sand.write(to, contents);
-};
-
 // Given a sandbox, that has the app as its currend cwd, read the packages file
 // and check that it contains exactly the packages specified, in order.
 //
@@ -141,8 +127,8 @@ selftest.define("change packages", function () {
   // In a local package, add a dependency on a different package.  In this case,
   // package2.js contains an onUse call that tells it to use accounts-base (a
   // core package that is not already included in the app)
-  copyFile('packages/contains-plugin/package2.js',
-           'packages/contains-plugin/package.js', s);
+  s.cp('packages/contains-plugin/package2.js',
+         'packages/contains-plugin/package.js');
   run.waitSecs(2);
   run.match("edit");
   run.match("foobar!");
@@ -150,7 +136,7 @@ selftest.define("change packages", function () {
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
-  copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
+  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
 
   run.waitSecs(2);
   run.match("restarted");

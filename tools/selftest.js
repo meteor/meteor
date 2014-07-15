@@ -442,16 +442,11 @@ _.extend(Sandbox.prototype, {
     }
   },
 
-  // Copy an app from a template into the current directory in the
-  // sandbox. 'to' is the subdirectory to put the app in, and
-  // 'template' is a subdirectory of tools/tests/apps to copy.
-  //
-  // Note that the arguments are the opposite order from 'cp'. That
-  // seems more intuitive to me -- if you disagree, my apologies.
+  // Same as createApp, but with a package.
   //
   // For example:
-  //   s.createApp('myapp', 'empty');
-  //   s.cd('myapp');
+  //   s.createPackage('mypack', 'empty');
+  //   s.cd('mypack');
   createPackage: function (to, template) {
     var self = this;
     files.cp_r(path.join(__dirname, 'tests', 'packages', template),
@@ -510,6 +505,18 @@ _.extend(Sandbox.prototype, {
       return null;
     else
       return fs.readFileSync(path.join(self.cwd, filename), 'utf8');
+  },
+
+  // Copy the contents of one file to another.  In these series of tests, we often
+  // want to switch contents of package.js files. It is more legible to copy in
+  // the backup file rather than trying to write into it manually.
+  cp: function(from, to) {
+    var self = this;
+    var contents = self.read(from);
+    if (!contents) {
+      throw new Error("File " + from + " does not exist.");
+    };
+    self.write(to, contents);
   },
 
   // Delete a file in the sandbox. 'filename' is as in write().
