@@ -156,7 +156,7 @@ getContent = HTMLTools.Parse.getContent = function (scanner, shouldStopFunc) {
         // HTML treats a final `/` in a tag as part of an attribute, as in `<a href=/foo/>`, but the template author who writes `<circle r={{r}}/>`, say, may not be thinking about that, so generate a good error message in the "looks like self-close" case.
         var looksLikeSelfClose = (scanner.input.substr(scanner.pos - 2, 2) === '/>');
 
-        var content;
+        var content = null;
         if (token.n === 'textarea') {
           if (scanner.peek() === '\n')
             scanner.pos++;
