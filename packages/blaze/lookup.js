@@ -52,14 +52,23 @@ Blaze.View.prototype.lookup = function (name, _options) {
     return wrapHelper(bindToCurrentDataIfIsFunction(UI._globalHelpers[name]));
   } else {
     return function () {
+      var isCalledAsFunction = (arguments.length > 0);
       var data = Blaze.getCurrentData();
-      if (lookupTemplate && ! (data && data[name]))
+      if (lookupTemplate && ! (data && data[name])) {
         throw new Error("No such template: " + name);
+      }
+      if (isCalledAsFunction && ! (data && data[name])) {
+        throw new Error("No such function: " + name);
+      }
       if (! data)
         return null;
       var x = data[name];
-      if (typeof x !== 'function')
+      if (typeof x !== 'function') {
+        if (isCalledAsFunction) {
+          throw new Error("Can't call non-function: " + x);
+        }
         return x;
+      }
       return x.apply(data, arguments);
     };
   }
