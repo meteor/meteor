@@ -850,7 +850,7 @@ _.extend(Project.prototype, {
     self.cordovaPlugins = _.extend(self.cordovaPlugins, newPlugins);
 
     var plugins = self._getCordovaPluginsFile();
-    var lines = files.getLinesOrEmpty(plugins);
+    var lines = [];
     _.each(self.cordovaPlugins, function (versionString, plugin) {
       if (versionString)
         lines.push(plugin + '@' + versionString);
@@ -870,7 +870,8 @@ _.extend(Project.prototype, {
       _.omit.apply(null, [self.cordovaPlugins].concat(pluginsToRemove));
 
     var plugins = self._getCordovaPluginsFile();
-    var lines = files.getLinesOrEmpty(plugins);
+    var lines = [];
+
     _.each(self.cordovaPlugins, function (versionString, plugin) {
       if (versionString)
         lines.push(plugin + '@' + versionString);

@@ -1569,10 +1569,11 @@ var ensureCordovaProject = function (appName, projectPath, bundlePath) {
   var indexHtml = generateCordovaBoilerplate(wwwPath);
   fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
 
-  // XXX get the output of `cordova plugins` and compare to the project
-  // dependencies; add/remove plugins if different.
+  // Compare the state of plugins in the Cordova project and the required by the
+  // Meteor project.
   // XXX compare the latest used sha's with the currently required sha's for
   // plugins fetched from a github/tarball url.
+  console.log(project.getCordovaPlugins());
 
   // XXX get platforms from project file
 //  _.each(platforms, function (platform) {
@@ -1605,6 +1606,21 @@ main.registerCommand({
 
   var cordovaCommand = options.args[0];
   var cordovaArgs = options.args.slice(1);
+
+  if (cordovaCommand === 'plugin' || cordovaCommand === 'plugins') {
+    var pluginsCommand = cordovaArgs[0];
+    var pluginsArgs = cordovaArgs.slice(1);
+
+    if (pluginsCommand === 'add') {
+      project.addCordovaPlugins(_.object(_.map(pluginsArgs, function (str) {
+        return str.split('@');
+      })));
+      return 0;
+    } else if (pluginsCommand === 'remove' || pluginsCommand === 'rm') {
+      project.removeCordovaPlugins(pluginsArgs);
+      return 0;
+    }
+  }
 
   try {
     ensureCordovaProject(appName, cordovaPath, bundleDir);
