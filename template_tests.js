@@ -53,7 +53,8 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
 
   // now "foo" is a function in the data context
   delete tmpl.foo;
-  R.set(1);
+
+  R = ReactiveVar(1);
   div = renderToDiv(tmpl, { foo: function (x) {
     return x + R.get();
   } });
