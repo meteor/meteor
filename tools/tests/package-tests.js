@@ -138,12 +138,23 @@ selftest.define("change packages", function () {
   run.match("foobar!");
   run.match("restarted");
 
+  // In a local package, add a dependency on a different package.  In this case,
+  // package2.js contains an onUse call that tells it to use accounts-base (a
+  // core package that is not already included in the app)
+  copyFile('packages/contains-plugin/package2.js',
+           'packages/contains-plugin/package.js', s);
+  run.waitSecs(2);
+  run.match("edit");
+  run.match("foobar!");
+  run.match("restarted");
+
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
 
   run.waitSecs(2);
   run.match("restarted");
+
 });
 
 
@@ -157,7 +168,7 @@ selftest.define("add packages", function () {
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
-//  s.set("METEOR_OFFLINE_CATALOG", "t");
+  s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add", "accounts-base");
 
