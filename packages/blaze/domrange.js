@@ -315,11 +315,15 @@ DOMRange.prototype.containsElement = function (elem) {
   // parentElement), and this element is one of our members or
   // is a member of a descendant Range.
 
+  // First check that elem is a descendant of this.parentElement,
+  // according to the DOM.
   if (! Blaze._elementContains(this.parentElement, elem))
     return false;
 
+  // If elem is not an immediate child of this.parentElement,
+  // walk up to its ancestor that is.
   while (elem.parentNode !== this.parentElement)
-    elem = elem.parentElement;
+    elem = elem.parentNode;
 
   var range = elem.$blaze_range;
   while (range && range !== this)
