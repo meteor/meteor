@@ -8,6 +8,19 @@ TEST_STATUS = {
   FAILURES: null
 };
 
+var XML_CHAR_MAP = {
+  '<': '&lt;',
+  '>': '&gt;',
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&apos;'
+};
+
+var escapeXml = function (s) {
+  return s.replace(/[<>&"']/g, function (c) {
+    return XML_CHAR_MAP[c];
+  });
+}
 
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
@@ -20,6 +33,11 @@ var log = function (/*arguments*/) {
   }
 };
 
+var xunit = function (s) {
+  if (xunit_enabled) {
+    log('XUNIT ' + s);
+  }
+};
 
 var passed = 0;
 var failed = 0;
@@ -31,6 +49,7 @@ var hrefPath = document.location.href.split("/");
 var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
 if (!platform)
   platform = "local";
+var xunit_enabled = (platform == 'xunit');
 var doReport = Meteor &&
       Meteor.settings &&
       Meteor.settings.public &&
@@ -82,7 +101,8 @@ Meteor.startup(function () {
           status: "PENDING",
           events: [],
           server: !!results.server,
-          testPath: testPath
+          testPath: testPath,
+          test: results.test
         };
         report(name, false);
       }
@@ -153,6 +173,48 @@ Meteor.startup(function () {
           TEST_STATUS.DONE = DONE = true;
         }
       });
+      xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
+      _.each(resultSet, function (result, name) {
+        var classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
+        var name = result.test.replace(/ /g, '-') + (result.server ? "-server" : "-client");
+        var time = "";
+        var error = "";
+        _.each(result.events, function (event) {
+          switch (event.type) {
+            case "finish":
+              var timeMs = event.timeMs;
+              if (timeMs !== undefined) {
+                time = (timeMs / 1000) + "";
+              }
+              break;
+            case "fail":
+              var details = event.details || {};
+              error = (details.message || '?') + " filename=" + (details.filename || '?') + " line=" + (details.line || '?');
+          }
+        });
+        switch (event.status) {
+          case "FAIL":
+            error = error || '?';
+            break;
+          case "EXPECTED":
+            error = "Expected failure";
+            break;
+        }
+
+        xunit('<testcase classname="' + escapeXml(classname) + '" name="' + escapeXml(name) + '" time="' + time + '">');
+        if (error) {
+          xunit('  <failure message="test failure">' + escapeXml(error) + '</failure>');
+        }
+        xunit('</testcase>');
+
+        //log("server: " + result.server);
+        //log("testPath: " + result.testPath);
+        //log("test: " + result.test);
+        //log("status: " + result.status);
+        //log("info: " + result.info);
+        //log("json: " + JSON.stringify(result));
+      });
+      xunit('</testsuite>');
     },
     ["tinytest"]);
 });
