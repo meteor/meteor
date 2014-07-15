@@ -2,7 +2,7 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 
-selftest.define("selftest-from-warehouse", [], function () {
+selftest.define("selftest-from-warehouse", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true},
