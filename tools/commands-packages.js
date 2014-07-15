@@ -1133,7 +1133,8 @@ main.registerCommand({
     var upgradersToRun = upgraders.upgradersToRun();
 
     // Write the new versions to .meteor/packages and .meteor/versions.
-    var setV = project.setVersions(solutionPackageVersions);
+    var setV = project.setVersions(solutionPackageVersions,
+      { alwaysRecord : true });
     project.showPackageChanges(previousVersions, solutionPackageVersions, {
       ondiskPackages: setV.downloaded
     });

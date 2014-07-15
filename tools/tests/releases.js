@@ -113,7 +113,7 @@ selftest.define("springboard", ['checkout'], function () {
 });
 
 
-selftest.define("--release and the .meteor/versions", ['checkout'], function () {
+selftest.define("writing versions file", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { },
@@ -128,15 +128,46 @@ selftest.define("--release and the .meteor/versions", ['checkout'], function () 
 
   // Create an app with the latest release.
   run = s.run("create", "myapp");
-  run.waitSecs(5);
+  run.waitSecs(15);
   run.expectExit(0);
-  s.cd('myapp', function () {
-    run = s.run("--long-version");
-    run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
-    run.expectExit(0);
-  });
+  s.cd('myapp');
+  run = s.run("--long-version");
+  run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
+  run.expectExit(0);
+
+  // Check the contents of the versions file.
+  var versions = s.read('.meteor/versions');
+  if (!versions) {
+    selftest.expectEqual(
+        "Versions file NOT written in new app.",
+        "Versions file written in new app.");
+  }
 
   // Remove the versions file.
+  s.unlink('.meteor/versions');
+
+  // Run with --release, do not change versions file.
+  run = s.run("list", "--release", "v1");
+  run.expectExit(0);
+  versions = s.read('.meteor/versions');
+  if (versions) {
+    selftest.expectEqual(
+        "Versions file written with --release.",
+        "Versions file NOT written with --release.");
+  }
+
+  // Update with --release.
+  run = s.run("update", "--release", "v1");
+//  run.match("OPTINS");
+  run.expectExit(0);
+
+  // version file should exist.
+  versions = s.read('.meteor/versions');
+  if (!versions) {
+    selftest.expectEqual(
+        "Versions file NOT written after update",
+        "Versions file written after update.");
+  }
 
 });
 

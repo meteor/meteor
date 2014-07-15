@@ -582,6 +582,8 @@ _.extend(Project.prototype, {
   //   downloaded: package:version of packages that we have downloaded
   setVersions: function (newVersions, options) {
     var self = this;
+    options = options || {};
+
     var downloaded = self._ensurePackagesExistOnDisk(newVersions);
     var ret = {
       success: true,
@@ -594,8 +596,9 @@ _.extend(Project.prototype, {
       return ret;
     }
 
-    // Skip the disk IO if the versions haven't changed.
-    if (!_.isEqual(newVersions, self.dependencies)) {
+    // Skip the disk IO if the versions haven't changed, unless we have asked to
+    // always record. (For example, update will always record versions)
+    if (options.alwaysRecord || !_.isEqual(newVersions, self.dependencies)) {
       self.dependencies = newVersions;
       self._recordVersions(options);
     }
