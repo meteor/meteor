@@ -157,7 +157,7 @@ selftest.define("add packages", function () {
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
-  s.set("METEOR_OFFLINE_CATALOG", "t");
+//  s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add", "accounts-base");
 

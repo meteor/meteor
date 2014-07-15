@@ -116,7 +116,7 @@ selftest.define("springboard", ['checkout'], function () {
 selftest.define("writing versions file", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { },
+      v1: { recommended: true},
       v2: { recommended: true }
     }
   });
@@ -158,7 +158,6 @@ selftest.define("writing versions file", ['checkout'], function () {
 
   // Update with --release.
   run = s.run("update", "--release", "v1");
-//  run.match("OPTINS");
   run.expectExit(0);
 
   // version file should exist.

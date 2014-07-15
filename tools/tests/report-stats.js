@@ -15,9 +15,9 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
 
-var toolsPackage = selftest.getToolsPackage();
-
 var checkMeta = function (appPackages, sessionId, useFakeRelease) {
+  var toolsPackage = selftest.getToolsPackage();
+
   if (! clientAddress) {
     clientAddress = getClientAddress();
   }
