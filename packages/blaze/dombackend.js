@@ -135,7 +135,13 @@ DOMBackend.Teardown = {
   // Recursively call all teardown hooks, in the backend and registered
   // through DOMBackend.onElementTeardown.
   tearDownElement: function (elem) {
-    var elems = Array.prototype.slice.call(elem.getElementsByTagName('*'));
+    var elems = [];
+    // Array.prototype.slice.call doesn't work when given a NodeList in
+    // IE8 ("JScript object expected").
+    var nodeList = elem.getElementsByTagName('*');
+    for (var i = 0; i < nodeList.length; i++) {
+      elems.push(nodeList[i]);
+    }
     elems.push(elem);
     $jq.cleanData(elems);
   }
