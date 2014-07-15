@@ -391,7 +391,13 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (onListen) {
     var self = this;
 
+    // We need to reset our workspace for hotcodepush. Specifically, we need to
+    // tell the catalog to reload local package sources (since their
+    // dependencies may have changed), and then we should recompute the project
+    // constraints.
+    catalog.complete.refresh({ forceRefresh: true });
     project.reload();
+
     runLog.clearLog();
     self.proxy.setMode("hold");
 

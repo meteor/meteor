@@ -306,12 +306,20 @@ _.extend(CompleteCatalog.prototype, {
   //
   // Reread server data from data.json on disk, then load local overrides on top
   // of that information. Sets initialized to true.
-  refresh: function () {
+  // options:
+  // - forceRefresh: even if there is a future in progress, refresh the catalog
+  //   anyway. When we are using hot code push, we may be restarting the app
+  //   because of a local package change that impacts that catalog. Don't wait
+  //   on the official catalog to refresh data.json, in this case.
+  refresh: function (options) {
     var self = this;
+    options = options || {};
 
     // We need to limit the rate of refresh, or, at least, prevent any sort of
     // loops.
-    if (self.refreshing || catalog.official._refreshFutures) {
+    if (self.refreshing ||
+        (catalog.official._refreshFutures &&
+         !options.forceRefresh)) {
       return;
     }
     self.refreshing = true;

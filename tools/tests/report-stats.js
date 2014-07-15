@@ -194,10 +194,9 @@ var bundle = function (s, sandboxProject) {
   var run = s.run("bundle", "foo.tar.gz");
   run.waitSecs(30);
   run.expectExit(0);
-  // pick up new app identifier and/or packages added/removed
-  // XXX not sure why this is necessary (i.e. why project can't detect
-  // that .meteor/identifier or .meteor/packages has changed and figure
-  // out that it needs to reload itself)
+  // pick up new app identifier and/or packages added/removed Usually the
+  // changes to .meteor/packages and .meteor/identifier would be handled by the
+  // code that handles the hotcodepush, so the project does not cache them.
   sandboxProject.reload();
 };
 
