@@ -87,10 +87,18 @@ var srpUpgradePath = function (options, callback) {
 
 // Attempt to log in as a new user.
 Accounts.createUser = function (options, callback) {
-  options = _.clone(options); // we'll be modifying options
 
-  if (!options.password)
-    throw new Error("Must set options.password");
+  if (!options.password){
+    var error = new Error("Must set options.password");
+    if (callback){
+      callback(error);
+      return;
+    }
+    else
+      throw error;
+  }
+
+  options = _.clone(options); // we'll be modifying options
 
   // Replace password with the hashed password.
   options.password = hashPassword(options.password);
@@ -159,8 +167,17 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 //   - email: (email)
 // @param callback (optional) {Function(error|undefined)}
 Accounts.forgotPassword = function(options, callback) {
-  if (!options.email)
-    throw new Error("Must pass options.email");
+
+  if (!options.email){
+    var error = Error("Must pass options.email");
+    if (callback){
+      callback(error);
+      return;
+    }
+    else
+      throw error;
+  }
+
   Accounts.connection.call("forgotPassword", options, callback);
 };
 
@@ -171,10 +188,21 @@ Accounts.forgotPassword = function(options, callback) {
 // @param newPassword {String}
 // @param callback (optional) {Function(error|undefined)}
 Accounts.resetPassword = function(token, newPassword, callback) {
+
+  var error;
   if (!token)
-    throw new Error("Need to pass token");
+    error = new Error("Need to pass token");
   if (!newPassword)
-    throw new Error("Need to pass newPassword");
+    error = new Error("Need to pass newPassword");
+
+  if (error){
+    if (callback){
+      callback(error);
+      return;
+    }
+    else
+      throw error;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
@@ -188,8 +216,16 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 // @param token {String}
 // @param callback (optional) {Function(error|undefined)}
 Accounts.verifyEmail = function(token, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
+
+  if (!token){
+    var error = Error("Need to pass token");
+    if (callback){
+      callback(error);
+      return;
+    }
+    else
+      throw error;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'verifyEmail',
