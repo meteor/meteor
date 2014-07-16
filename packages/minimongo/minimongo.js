@@ -13,7 +13,7 @@ LocalCollection = function (name) {
   // _id -> document (also containing id)
   self._docs = new LocalCollection._IdMap;
 
-  self._observeQueue = new Meteor._SynchronousQueue();
+  self._observeQueues = [];
 
   self.next_qid = 1; // live query id generator
 
@@ -82,6 +82,27 @@ LocalCollection.prototype.find = function (selector, options) {
     selector = {};
 
   return new LocalCollection.Cursor(this, selector, options);
+};
+
+// This function runs 'f' and then waits to return until all observe callbacks
+// that were queued during f's execution are invoked.  It then returns whatever
+// f returns.
+//
+// We do this instead of having just one _observeQueue per collection (which was
+// how it worked before we fixed #2275) because that would lead to re-entrancy
+// issues where we'd call _observeQueue.drain() inside a task already running on
+// _observeQueue, which is impossible to correctly fulfil.
+LocalCollection.prototype._runAndDrainObserveQueue = function (f) {
+  var self = this;
+  var queue = new Meteor._SynchronousQueue;
+  self._observeQueues.push(queue);
+  try {
+    var ret = f();
+  } finally {
+    self._observeQueues.pop();
+  }
+  queue.drain();
+  return ret;
 };
 
 // don't call this ctor directly.  use LocalCollection.find().
@@ -314,116 +335,126 @@ _.extend(LocalCollection.Cursor.prototype, {
   observeChanges: function (options) {
     var self = this;
 
-    var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
+    return self.collection._runAndDrainObserveQueue(function () {
+      var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
-    // there are several places that assume you aren't combining skip/limit with
-    // unordered observe.  eg, update's EJSON.clone, and the "there are several"
-    // comment in _modifyAndNotify
-    // XXX allow skip/limit with unordered observe
-    if (!ordered && (self.skip || self.limit))
-      throw new Error("must use ordered observe with skip or limit");
+      // there are several places that assume you aren't combining skip/limit
+      // with unordered observe.  eg, update's EJSON.clone, and the "there are
+      // several" comment in _modifyAndNotify
+      // XXX allow skip/limit with unordered observe
+      if (!ordered && (self.skip || self.limit))
+        throw new Error("must use ordered observe with skip or limit");
 
-    if (self.fields && (self.fields._id === 0 || self.fields._id === false))
-      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+      if (self.fields && (self.fields._id === 0 || self.fields._id === false))
+        throw Error("You may not observe a cursor with {fields: {_id: 0}}");
 
-    var query = {
-      matcher: self.matcher, // not fast pathed
-      sorter: ordered && self.sorter,
-      distances: (
-        self.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
-      resultsSnapshot: null,
-      ordered: ordered,
-      cursor: self,
-      projectionFn: self.projectionFn
-    };
-    var qid;
-
-    // Non-reactive queries call added[Before] and then never call anything
-    // else.
-    if (self.reactive) {
-      qid = self.collection.next_qid++;
-      self.collection.queries[qid] = query;
-    }
-    query.results = self._getRawObjects({
-      ordered: ordered, distances: query.distances});
-    if (self.collection.paused)
-      query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
-
-    // wrap callbacks we were passed. callbacks only fire when not paused and
-    // are never undefined
-    // Filters out blacklisted fields according to cursor's projection.
-    // XXX wrong place for this?
-
-    // furthermore, callbacks enqueue until the operation we're working on is
-    // done.
-    var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
-      if (!f)
-        return function () {};
-      return function (/*args*/) {
-        var context = this;
-        var args = arguments;
-
-        if (self.collection.paused)
-          return;
-
-        if (fieldsIndex !== undefined && self.projectionFn) {
-          args[fieldsIndex] = self.projectionFn(args[fieldsIndex]);
-          if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
-            return;
-        }
-
-        self.collection._observeQueue.queueTask(function () {
-          f.apply(context, args);
-        });
+      var query = {
+        matcher: self.matcher, // not fast pathed
+        sorter: ordered && self.sorter,
+        distances: (
+          self.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
+        resultsSnapshot: null,
+        ordered: ordered,
+        cursor: self,
+        projectionFn: self.projectionFn
       };
-    };
-    query.added = wrapCallback(options.added, 1);
-    query.changed = wrapCallback(options.changed, 1, true);
-    query.removed = wrapCallback(options.removed);
-    if (ordered) {
-      query.addedBefore = wrapCallback(options.addedBefore, 1);
-      query.movedBefore = wrapCallback(options.movedBefore);
-    }
+      var qid;
 
-    if (!options._suppress_initial && !self.collection.paused) {
-      // XXX unify ordered and unordered interface
-      var each = ordered
-            ? _.bind(_.each, null, query.results)
-            : _.bind(query.results.forEach, query.results);
-      each(function (doc) {
-        var fields = EJSON.clone(doc);
-
-        delete fields._id;
-        if (ordered)
-          query.addedBefore(doc._id, fields, null);
-        query.added(doc._id, fields);
-      });
-    }
-
-    var handle = new LocalCollection.ObserveHandle;
-    _.extend(handle, {
-      collection: self.collection,
-      stop: function () {
-        if (self.reactive)
-          delete self.collection.queries[qid];
+      // Non-reactive queries call added[Before] and then never call anything
+      // else.
+      if (self.reactive) {
+        qid = self.collection.next_qid++;
+        self.collection.queries[qid] = query;
       }
-    });
+      query.results = self._getRawObjects({
+        ordered: ordered, distances: query.distances});
+      if (self.collection.paused)
+        query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
 
-    if (self.reactive && Deps.active) {
-      // XXX in many cases, the same observe will be recreated when
-      // the current autorun is rerun.  we could save work by
-      // letting it linger across rerun and potentially get
-      // repurposed if the same observe is performed, using logic
-      // similar to that of Meteor.subscribe.
-      Deps.onInvalidate(function () {
-        handle.stop();
+      // In addition to the whole-collection _observeQueues queue (which is
+      // mostly used so that observeChanges and insert/update/remove can call
+      // 'drain' to block until its effects have been called), we also have this
+      // queue to ensure that for each individual observe, callbacks do not
+      // interleave even if they yield.  (_observeQueues is not good enough
+      // because different calls to insert (etc) will have a different top
+      // _observeQueues.)
+      var perObserveQueue = new Meteor._SynchronousQueue;
+
+      // wrap callbacks we were passed. callbacks only fire when not paused and
+      // are never undefined
+      // Filters out blacklisted fields according to cursor's projection.
+      // XXX wrong place for this?
+
+      // furthermore, callbacks enqueue until the operation we're working on is
+      // done.
+      var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
+        if (!f)
+          return function () {};
+        return function (/*args*/) {
+          var context = this;
+          var args = arguments;
+
+          if (self.collection.paused)
+            return;
+
+          if (fieldsIndex !== undefined && self.projectionFn) {
+            args[fieldsIndex] = self.projectionFn(args[fieldsIndex]);
+            if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
+              return;
+          }
+
+          _.last(self.collection._observeQueues).queueTask(function () {
+            perObserveQueue.runTask(function () {
+              f.apply(context, args);
+            });
+          });
+        };
+      };
+      query.added = wrapCallback(options.added, 1);
+      query.changed = wrapCallback(options.changed, 1, true);
+      query.removed = wrapCallback(options.removed);
+      if (ordered) {
+        query.addedBefore = wrapCallback(options.addedBefore, 1);
+        query.movedBefore = wrapCallback(options.movedBefore);
+      }
+
+      if (!options._suppress_initial && !self.collection.paused) {
+        // XXX unify ordered and unordered interface
+        var each = ordered
+              ? _.bind(_.each, null, query.results)
+              : _.bind(query.results.forEach, query.results);
+        each(function (doc) {
+          var fields = EJSON.clone(doc);
+
+          delete fields._id;
+          if (ordered)
+            query.addedBefore(doc._id, fields, null);
+          query.added(doc._id, fields);
+        });
+      }
+
+      var handle = new LocalCollection.ObserveHandle;
+      _.extend(handle, {
+        collection: self.collection,
+        stop: function () {
+          if (self.reactive)
+            delete self.collection.queries[qid];
+        }
       });
-    }
-    // run the observe callbacks resulting from the initial contents
-    // before we leave the observe.
-    self.collection._observeQueue.drain();
 
-    return handle;
+      if (self.reactive && Deps.active) {
+        // XXX in many cases, the same observe will be recreated when
+        // the current autorun is rerun.  we could save work by
+        // letting it linger across rerun and potentially get
+        // repurposed if the same observe is performed, using logic
+        // similar to that of Meteor.subscribe.
+        Deps.onInvalidate(function () {
+          handle.stop();
+        });
+      }
+
+      return handle;
+    });
   }
 });
 
@@ -521,42 +552,44 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
 // this in our handling of null and $exists)
 LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
-  doc = EJSON.clone(doc);
+  var id;
+  self._runAndDrainObserveQueue(function () {
+    doc = EJSON.clone(doc);
 
-  if (!_.has(doc, '_id')) {
-    // if you really want to use ObjectIDs, set this global.
-    // Meteor.Collection specifies its own ids and does not use this code.
-    doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
-                                      : Random.id();
-  }
-  var id = doc._id;
-
-  if (self._docs.has(id))
-    throw MinimongoError("Duplicate _id '" + id + "'");
-
-  self._saveOriginal(id, undefined);
-  self._docs.set(id, doc);
-
-  var queriesToRecompute = [];
-  // trigger live queries that match
-  for (var qid in self.queries) {
-    var query = self.queries[qid];
-    var matchResult = query.matcher.documentMatches(doc);
-    if (matchResult.result) {
-      if (query.distances && matchResult.distance !== undefined)
-        query.distances.set(id, matchResult.distance);
-      if (query.cursor.skip || query.cursor.limit)
-        queriesToRecompute.push(qid);
-      else
-        LocalCollection._insertInResults(query, doc);
+    if (!_.has(doc, '_id')) {
+      // if you really want to use ObjectIDs, set this global.
+      // Meteor.Collection specifies its own ids and does not use this code.
+      doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
+        : Random.id();
     }
-  }
+    id = doc._id;
 
-  _.each(queriesToRecompute, function (qid) {
-    if (self.queries[qid])
-      LocalCollection._recomputeResults(self.queries[qid]);
+    if (self._docs.has(id))
+      throw MinimongoError("Duplicate _id '" + id + "'");
+
+    self._saveOriginal(id, undefined);
+    self._docs.set(id, doc);
+
+    var queriesToRecompute = [];
+    // trigger live queries that match
+    for (var qid in self.queries) {
+      var query = self.queries[qid];
+      var matchResult = query.matcher.documentMatches(doc);
+      if (matchResult.result) {
+        if (query.distances && matchResult.distance !== undefined)
+          query.distances.set(id, matchResult.distance);
+        if (query.cursor.skip || query.cursor.limit)
+          queriesToRecompute.push(qid);
+        else
+          LocalCollection._insertInResults(query, doc);
+      }
+    }
+
+    _.each(queriesToRecompute, function (qid) {
+      if (self.queries[qid])
+        LocalCollection._recomputeResults(self.queries[qid]);
+    });
   });
-  self._observeQueue.drain();
 
   // Defer because the caller likely doesn't expect the callback to be run
   // immediately.
@@ -613,44 +646,46 @@ LocalCollection.prototype.remove = function (selector, callback) {
     return result;
   }
 
-  var matcher = new Minimongo.Matcher(selector, self);
   var remove = [];
-  self._eachPossiblyMatchingDoc(selector, function (doc, id) {
-    if (matcher.documentMatches(doc).result)
-      remove.push(id);
-  });
+  self._runAndDrainObserveQueue(function () {
+    var matcher = new Minimongo.Matcher(selector, self);
+    self._eachPossiblyMatchingDoc(selector, function (doc, id) {
+      if (matcher.documentMatches(doc).result)
+        remove.push(id);
+    });
 
-  var queriesToRecompute = [];
-  var queryRemove = [];
-  for (var i = 0; i < remove.length; i++) {
-    var removeId = remove[i];
-    var removeDoc = self._docs.get(removeId);
-    _.each(self.queries, function (query, qid) {
-      if (query.matcher.documentMatches(removeDoc).result) {
-        if (query.cursor.skip || query.cursor.limit)
-          queriesToRecompute.push(qid);
-        else
-          queryRemove.push({qid: qid, doc: removeDoc});
+    var queriesToRecompute = [];
+    var queryRemove = [];
+    for (var i = 0; i < remove.length; i++) {
+      var removeId = remove[i];
+      var removeDoc = self._docs.get(removeId);
+      _.each(self.queries, function (query, qid) {
+        if (query.matcher.documentMatches(removeDoc).result) {
+          if (query.cursor.skip || query.cursor.limit)
+            queriesToRecompute.push(qid);
+          else
+            queryRemove.push({qid: qid, doc: removeDoc});
+        }
+      });
+      self._saveOriginal(removeId, removeDoc);
+      self._docs.remove(removeId);
+    }
+
+    // run live query callbacks _after_ we've removed the documents.
+    _.each(queryRemove, function (remove) {
+      var query = self.queries[remove.qid];
+      if (query) {
+        query.distances && query.distances.remove(remove.doc._id);
+        LocalCollection._removeFromResults(query, remove.doc);
       }
     });
-    self._saveOriginal(removeId, removeDoc);
-    self._docs.remove(removeId);
-  }
+    _.each(queriesToRecompute, function (qid) {
+      var query = self.queries[qid];
+      if (query)
+        LocalCollection._recomputeResults(query);
+    });
+  });
 
-  // run live query callbacks _after_ we've removed the documents.
-  _.each(queryRemove, function (remove) {
-    var query = self.queries[remove.qid];
-    if (query) {
-      query.distances && query.distances.remove(remove.doc._id);
-      LocalCollection._removeFromResults(query, remove.doc);
-    }
-  });
-  _.each(queriesToRecompute, function (qid) {
-    var query = self.queries[qid];
-    if (query)
-      LocalCollection._recomputeResults(query);
-  });
-  self._observeQueue.drain();
   result = remove.length;
   if (callback)
     Meteor.defer(function () {
@@ -669,44 +704,45 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var matcher = new Minimongo.Matcher(selector, self);
-
-  // Save the original results of any query that we might need to
-  // _recomputeResults on, because _modifyAndNotify will mutate the objects in
-  // it. (We don't need to save the original results of paused queries because
-  // they already have a resultsSnapshot and we won't be diffing in
-  // _recomputeResults.)
-  var qidToOriginalResults = {};
-  _.each(self.queries, function (query, qid) {
-    // XXX for now, skip/limit implies ordered observe, so query.results is
-    // always an array
-    if ((query.cursor.skip || query.cursor.limit) && !query.paused)
-      qidToOriginalResults[qid] = EJSON.clone(query.results);
-  });
-  var recomputeQids = {};
-
   var updateCount = 0;
+  self._runAndDrainObserveQueue(function () {
+    var matcher = new Minimongo.Matcher(selector, self);
 
-  self._eachPossiblyMatchingDoc(selector, function (doc, id) {
-    var queryResult = matcher.documentMatches(doc);
-    if (queryResult.result) {
-      // XXX Should we save the original even if mod ends up being a no-op?
-      self._saveOriginal(id, doc);
-      self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndices);
-      ++updateCount;
-      if (!options.multi)
-        return false;  // break
-    }
-    return true;
-  });
+    // Save the original results of any query that we might need to
+    // _recomputeResults on, because _modifyAndNotify will mutate the objects in
+    // it. (We don't need to save the original results of paused queries because
+    // they already have a resultsSnapshot and we won't be diffing in
+    // _recomputeResults.)
+    var qidToOriginalResults = {};
+    _.each(self.queries, function (query, qid) {
+      // XXX for now, skip/limit implies ordered observe, so query.results is
+      // always an array
+      if ((query.cursor.skip || query.cursor.limit) && !query.paused)
+        qidToOriginalResults[qid] = EJSON.clone(query.results);
+    });
+    var recomputeQids = {};
 
-  _.each(recomputeQids, function (dummy, qid) {
-    var query = self.queries[qid];
-    if (query)
-      LocalCollection._recomputeResults(query,
-                                        qidToOriginalResults[qid]);
+    self._eachPossiblyMatchingDoc(selector, function (doc, id) {
+      var queryResult = matcher.documentMatches(doc);
+      if (queryResult.result) {
+        // XXX Should we save the original even if mod ends up being a no-op?
+        self._saveOriginal(id, doc);
+        self._modifyAndNotify(doc, mod, recomputeQids,
+                              queryResult.arrayIndices);
+        ++updateCount;
+        if (!options.multi)
+          return false;  // break
+      }
+      return true;
+    });
+
+    _.each(recomputeQids, function (dummy, qid) {
+      var query = self.queries[qid];
+      if (query)
+        LocalCollection._recomputeResults(query,
+                                          qidToOriginalResults[qid]);
+    });
   });
-  self._observeQueue.drain();
 
   // If we are doing an upsert, and we didn't modify any documents yet, then
   // it's time to do an insert. Figure out what document we are inserting, and
@@ -1004,22 +1040,22 @@ LocalCollection.prototype.pauseObservers = function () {
 LocalCollection.prototype.resumeObservers = function () {
   var self = this;
   // No-op if not paused.
-  if (!this.paused)
+  if (!self.paused)
     return;
 
   // Unset the 'paused' flag. Make sure to do this first, otherwise
   // observer methods won't actually fire when we trigger them.
   this.paused = false;
 
-  for (var qid in this.queries) {
-    var query = self.queries[qid];
-    // Diff the current results against the snapshot and send to observers.
-    // pass the query object for its observer callbacks.
-    LocalCollection._diffQueryChanges(
-      query.ordered, query.resultsSnapshot, query.results, query);
-    query.resultsSnapshot = null;
-  }
-  self._observeQueue.drain();
+  self._runAndDrainObserveQueue(function () {
+    _.each(self.queries, function (query) {
+      // Diff the current results against the snapshot and send to observers.
+      // pass the query object for its observer callbacks.
+      LocalCollection._diffQueryChanges(
+        query.ordered, query.resultsSnapshot, query.results, query);
+      query.resultsSnapshot = null;
+    });
+  });
 };
 
 

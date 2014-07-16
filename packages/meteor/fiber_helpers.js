@@ -107,8 +107,9 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     var self = this;
     if (self._draining)
       return;
-    if (!self.safeToRunTask())
-      return;
+    if (!self.safeToRunTask()) {
+      throw new Error("Can't drain from another task in the same fiber");
+    }
     self._draining = true;
     while (!_.isEmpty(self._taskHandles)) {
       self.flush();

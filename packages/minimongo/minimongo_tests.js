@@ -3086,3 +3086,74 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   handle.stop();
 });
 
+Tinytest.add("minimongo - fetch in observe", function (test) {
+  var coll = new LocalCollection;
+  var callbackInvoked = false;
+  var observe = coll.find().observeChanges({
+    added: function (id, fields) {
+      callbackInvoked = true;
+      test.equal(fields, {foo: 1});
+      var doc = coll.findOne({foo: 1});
+      test.isTrue(doc);
+      test.equal(doc.foo, 1);
+    }
+  });
+  test.isFalse(callbackInvoked);
+  var computation = Deps.autorun(function (computation) {
+    if (computation.firstRun) {
+      coll.insert({foo: 1});
+    }
+  });
+  test.isTrue(callbackInvoked);
+  observe.stop();
+  computation.stop();
+});
+
+Tinytest.add("minimongo - observe in observe", function (test) {
+  var coll = new LocalCollection;
+  coll.insert({foo: 2});
+
+  var observe1AddedCalled = false;
+  var observe1 = coll.find({foo: 1}).observeChanges({
+    added: function (id, fields) {
+      observe1AddedCalled = true;
+      test.equal(fields, {foo: 1});
+
+      var observe2AddedCalled = false;
+      var observe2 = coll.find({foo: 2}).observeChanges({
+        added: function () {
+          observe2AddedCalled = true;
+        }
+      });
+      test.isTrue(observe2AddedCalled, "observe2AddedCalled");
+      observe2.stop();
+    }
+  });
+  test.isFalse(observe1AddedCalled);
+  coll.insert({foo: 1});
+  test.isTrue(observe1AddedCalled);
+  observe1.stop();
+});
+
+Tinytest.add("minimongo - insert in observe", function (test) {
+  var coll = new LocalCollection;
+
+  var observeAddedCalledTimes = 0;
+  var observe = coll.find().observeChanges({
+    added: function (id, fields) {
+      ++observeAddedCalledTimes;
+      if (observeAddedCalledTimes === 1) {
+        test.equal(fields, {foo: 1});
+        coll.insert({foo: 2});
+      } else if (observeAddedCalledTimes === 2) {
+        test.equal(fields, {foo: 2});
+      } else {
+        test.fail("too many calls");
+      }
+    }
+  });
+  test.equal(observeAddedCalledTimes, 0);
+  coll.insert({foo: 1});
+  test.equal(observeAddedCalledTimes, 2);
+  observe.stop();
+});

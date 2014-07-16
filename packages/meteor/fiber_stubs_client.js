@@ -62,8 +62,9 @@ _.extend(Meteor._SynchronousQueue.prototype, {
 
   drain: function () {
     var self = this;
-    if (!self.safeToRunTask())
-      return;
+    if (!self.safeToRunTask()) {
+      throw Error("Can't drain a queue from a running task");
+    }
     while (!_.isEmpty(self._tasks)) {
       self.flush();
     }
