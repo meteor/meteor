@@ -128,7 +128,7 @@ selftest.define("list-with-a-new-version", ["slow", "online"], function () {
     run.waitSecs(10);
     run.match(fullPackageName);
     run.match("1.0.0");
-    run.forbidAll("versions available");
+    run.forbidAll("New versions");
     run.expectExit(0);
   });
 
@@ -145,8 +145,9 @@ selftest.define("list-with-a-new-version", ["slow", "online"], function () {
   s.cd('mapp', function () {
     run = s.run("list");
     run.match(fullPackageName);
-    run.match("1.0.0");
-    run.match("versions available");
+    run.match("1.0.0*:");
+    run.match("New versions");
+    run.match("meteor update");
     run.expectExit(0);
   });
 

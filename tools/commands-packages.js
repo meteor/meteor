@@ -870,6 +870,7 @@ main.registerCommand({
   // Versions of the packages. We need this to get the right description for the
   // user, in case it changed between versions.
   var versions = project.getVersions();
+  var newVersionsAvailable = false;
 
   var messages = buildmessage.capture(function () {
     _.each(packages, function (version, name) {
@@ -883,7 +884,18 @@ main.registerCommand({
                            " at version " + version + "\n");
         return;
       }
-      var description = versionInfo.version +
+
+      var versionAddendum = "" ;
+      var latest = catalog.complete.getLatestVersion(name, version);
+      if (version !== latest.version &&
+          !catalog.complete.isLocalPackage(name)) {
+        versionAddendum = "*";
+        newVersionsAvailable = true;
+      } else {
+        versionAddendum = " ";
+      }
+
+      var description = version + versionAddendum +
             (versionInfo.description ?
              (": " + versionInfo.description) :
              "");
@@ -895,7 +907,15 @@ main.registerCommand({
     process.stdout.write("\n" + messages.formatMessages());
     return 1;
   }
+
   process.stdout.write(formatList(items));
+
+  if (newVersionsAvailable) {
+    process.stdout.write(
+      "\n * New versions of these packages are available! " +
+        "Run 'meteor update' to update.  \n");
+  }
+  return 0;
 });
 
 
