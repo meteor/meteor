@@ -2601,10 +2601,6 @@ _.each([1, 2, 3], function (n) {
       Deps.flush();
       test.equal(canonicalizeHtml(div.innerHTML), 'bbb--x');
       test.equal(buf, 'C');
-      R.set(null);
-      Deps.flush({_throwFirstError:true});
-      test.equal(canonicalizeHtml(div.innerHTML), '--x');
-      test.equal(buf, 'C');
     }
   );
 });
