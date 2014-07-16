@@ -1454,7 +1454,7 @@ main.registerCommand({
 // cordova
 ///////////////////////////////////////////////////////////////////////////////
 
-var generateCordovaBoilerplate = function (clientDir) {
+var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
   var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
@@ -1464,6 +1464,8 @@ var generateCordovaBoilerplate = function (clientDir) {
     js: [],
     head: '',
     body: '',
+    host: options.host,
+    port: options.port
   };
 
   _.each(clientJson.manifest, function (item) {
@@ -1511,7 +1513,7 @@ var generateCordovaBoilerplate = function (clientDir) {
 // Creates a Cordova project if necessary and makes sure added Cordova
 // platforms and Cordova plugins are up to date with the project's
 // definition.
-var ensureCordovaProject = function (appName, projectPath, bundlePath) {
+var ensureCordovaProject = function (options, projectPath, bundlePath) {
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.getPackageLoader();
 
@@ -1535,8 +1537,8 @@ var ensureCordovaProject = function (appName, projectPath, bundlePath) {
 
   if (! fs.existsSync(projectPath)) {
     execFileSync('cordova', ['create', path.basename(projectPath),
-                             'com.meteor.' + appName,
-                             appName.replace(/\s/g, '')],
+                             'com.meteor.' + options.appName,
+                             options.appName.replace(/\s/g, '')],
                  { cwd: path.dirname(projectPath) });
 
     // XXX a hack as platforms management is not implemented yet
@@ -1560,7 +1562,7 @@ var ensureCordovaProject = function (appName, projectPath, bundlePath) {
   files.rm_recursive(bundlePath);
 
   // generate index.html
-  var indexHtml = generateCordovaBoilerplate(wwwPath);
+  var indexHtml = generateCordovaBoilerplate(wwwPath, options);
   fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
 
   // XXX get platforms from project file
@@ -1614,7 +1616,8 @@ main.registerCommand({
   maxArgs: 10,
   requiresApp: true,
   options: {
-    changed: { type: Boolean }
+    port: { type: String, short: 'p', default: '3000' },
+    host: { type: String, short: 'h', default: 'localhost' }
   },
 }, function (options) {
   var localDir = path.join(options.appDir, '.meteor', 'local');
@@ -1631,8 +1634,11 @@ main.registerCommand({
     return 1;
   }
 
+  var projectOptions = _.pick(options, 'port', 'host');
+  projectOptions.appName = appName;
+
   try {
-    ensureCordovaProject(appName, cordovaPath, bundleDir);
+    ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
   } catch (e) {
     process.stderr.write('Errors preventing the Cordova project from build:\n');
     process.stderr.write(e.stack);
