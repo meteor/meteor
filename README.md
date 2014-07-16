@@ -61,12 +61,13 @@ View the ```meteor-router``` example app online @  <a href="http://roles.meteor.
   
 Run locally:
   1. install [Meteorite][1]
-  2. ```git clone https://github.com/alanning/meteor-roles.git```
+  2. `git clone https://github.com/alanning/meteor-roles.git`
   3. either
-    * ```cd meteor-roles/examples/router``` or
-    * ```cd meteor-roles/examples/mini-pages```
-  4. ```meteor```
-  5. point browser to ```http://localhost:3000```
+    * `cd meteor-roles/examples/router` or
+    * `cd meteor-roles/examples/mini-pages`
+  4. `mrt update`
+  5. `meteor`
+  6. point browser to `http://localhost:3000`
 
 <br />
 
