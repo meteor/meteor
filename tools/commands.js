@@ -318,12 +318,43 @@ main.registerCommand({
     }
 
     if (fs.existsSync(packageName)) {
-      process.stderr.write(appPath + ": Already exists\n");
+      process.stderr.write(packageName + ": Already exists\n");
       return 1;
     }
 
-    // XXX: Make this cooler.
-    files.cp_r(path.join(__dirname, 'skel-pack'), packageName);
+    var transform = function (x) {
+      var xn = x.replace(/~name~/g, packageName);
+
+      // If we are running from checkout, comment out the line sourcing packages
+      // from a release, with the latest release filled in (in case they do want
+      // to publish later). If we are NOT running from checkout, fill it out
+      // with the current release.
+      var relString;
+      if (release.current.isCheckout()) {
+        xn = xn.replace(/~cc~/g, "//");
+        var rel = catalog.official.getDefaultReleaseVersion();
+        var relString = rel.track + "@" + rel.version;
+      } else {
+        xn = xn.replace(/~cc~/g, "");
+        relString = release.current.name;
+      }
+
+      // If we are not in checkout, write the current release here.
+      return xn.replace(/~release~/g, relString);
+    };
+
+    files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+      transformFilename: function (f) {
+        return transform(f);
+      },
+      transformContents: function (contents, f) {
+        if ((/(\.html|\.js|\.css)/).test(f))
+          return new Buffer(transform(contents.toString()));
+        else
+          return contents;
+      },
+      ignore: [/^local$/]
+    });
 
     process.stdout.write(packageName + ": created \n");
     return 0;

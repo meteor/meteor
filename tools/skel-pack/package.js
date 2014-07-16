@@ -4,6 +4,13 @@ Package.describe({
   git: " \* Fill me in! *\ "
 });
 
-Package.on_use(function(api) {
-  api.add_files('hello.js');
+Package.onUse(function(api) {
+~cc~  api.versionsFrom('~release~');
+  api.addFiles('~name~.js');
+});
+
+Package.onTest(function(api) {
+  api.use('tinytest');
+  api.use('~name~');
+  api.addFiles('~name~-tests.js');
 });
