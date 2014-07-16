@@ -216,8 +216,8 @@ var Connection = function (url, options) {
 
     if (msg.msg === 'connected') {
       self._version = self._versionSuggestion;
-      options.onConnected();
       self._livedata_connected(msg);
+      options.onConnected();
     }
     else if (msg.msg == 'failed') {
       if (_.contains(self._supportedDDPVersions, msg.version)) {
@@ -310,7 +310,7 @@ var Connection = function (url, options) {
 
   var onDisconnect = function () {
     if (self._heartbeat) {
-      self._heartbeat.stop()
+      self._heartbeat.stop();
       self._heartbeat = null;
     }
   };
@@ -543,7 +543,7 @@ _.extend(Connection.prototype, {
       stop: function () {
         if (!_.has(self._subscriptions, id))
           return;
-        
+
         self._subscriptions[id].stop();
       },
       ready: function () {
@@ -987,7 +987,7 @@ _.extend(Connection.prototype, {
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
         onTimeout: function () {
-          if (Meteor.isClient) {
+          if (Meteor.isClient && ! self._stream._isStub) {
             // only print on the client. this message is useful on the
             // browser console to see that we've lost connection. on the
             // server (eg when doing server-to-server DDP), it gets
