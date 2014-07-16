@@ -492,7 +492,8 @@ main.registerCommand({
     directory: { type: Boolean },
     architecture: { type: String },
     // Undocumented
-    'for-deploy': { type: Boolean }
+    'for-deploy': { type: Boolean },
+    'client-arch': { type: String }
   }
 }, function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
@@ -537,7 +538,9 @@ main.registerCommand({
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      arch: bundleArch
+      arch: bundleArch,
+      clientArchs: options['client-arch'] ? [options['client-arch']]
+                                          : ['client.browser']
     }
   });
   if (bundleResult.errors) {

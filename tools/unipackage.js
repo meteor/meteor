@@ -156,7 +156,7 @@ _.extend(Unibuild.prototype, {
       importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
       packageVariables: self.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.arch, "browser"),
+      includeSourceMapInstructions: archinfo.matches(self.arch, "client"),
       name: self.pkg.name || null
     });
 
@@ -305,7 +305,7 @@ _.extend(Unipackage.prototype, {
       _.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())
     ).sort();
     // Ensure that our buildArchitectures string does not look like
-    //    browser+os+os.osx.x86_64
+    //    client+os+os.osx.x86_64
     // This would happen if there is an 'os' unibuild but a platform-specific
     // tool (eg, in meteor-tool).  This would confuse catalog.getBuildsForArches
     // into thinking that it would work for Linux, since the 'os' means
@@ -336,7 +336,7 @@ _.extend(Unipackage.prototype, {
   },
 
   // Return the unibuild of the package to use for a given target architecture
-  // (eg, 'os.linux.x86_64' or 'browser'), or throw an exception if that
+  // (eg, 'os.linux.x86_64' or 'client'), or throw an exception if that
   // packages can't be loaded under these circumstances.
   getUnibuildAtArch: function (arch) {
     var self = this;
@@ -622,6 +622,9 @@ _.extend(Unipackage.prototype, {
           throw new Error("bad resource type in unipackage: " +
                           JSON.stringify(resource.type));
       });
+
+      if (unibuildMeta.arch === 'browser')
+        unibuildMeta.arch = 'client'; // XXX hack, figure out how to get this work
 
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,

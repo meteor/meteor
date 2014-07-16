@@ -67,6 +67,7 @@ compiler.eachUsedUnibuild = function (
     callback = options;
     options = {};
   }
+
   var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
   var processedBuildId = {};
@@ -81,6 +82,7 @@ compiler.eachUsedUnibuild = function (
 
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
+    console.log(use);
 
     var unibuild = packageLoader.getUnibuild(use.package, arch);
     if (!unibuild) {
@@ -448,11 +450,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   information.
     // - pathForSourceMap: If this file is to be included in a source map,
     //   this is the name you should use for it in the map.
-    // - rootOutputPath: on browser targets, for resources such as
+    // - rootOutputPath: on client targets, for resources such as
     //   stylesheet and static assets, this is the root URL that
     //   will get prepended to the paths you pick for your output
     //   files so that you get your own namespace, for example
-    //   '/packages/foo'. null on non-browser targets
+    //   '/packages/foo'. null on non-client targets
     // - fileOptions: any options passed to "api.add_files"; for
     //   use by the plugin. The built-in "js" plugin uses the "bare"
     //   option for files that shouldn't be wrapped in a closure.
@@ -464,11 +466,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   file as a Buffer. If n is omitted you get the rest of the
     //   file.
     // - appendDocument({ section: "head", data: "my markup" })
-    //   Browser targets only. Add markup to the "head" or "body"
+    //   Client targets only. Add markup to the "head" or "body"
     //   section of the document.
     // - addStylesheet({ path: "my/stylesheet.css", data: "my css",
     //                   sourceMap: "stringified json sourcemap"})
-    //   Browser targets only. Add a stylesheet to the
+    //   Client targets only. Add a stylesheet to the
     //   document. 'path' is a requested URL for the stylesheet that
     //   may or may not ultimately be honored. (Meteor will add
     //   appropriate tags to cause the stylesheet to be loaded. It
@@ -563,9 +565,9 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         return ret;
       },
       appendDocument: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "client"))
           throw new Error("Document sections can only be emitted to " +
-                          "browser targets");
+                          "client targets");
         if (options.section !== "head" && options.section !== "body")
           throw new Error("'section' must be 'head' or 'body'");
         if (typeof options.data !== "string")
@@ -577,9 +579,9 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         });
       },
       addStylesheet: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "client"))
           throw new Error("Stylesheets can only be emitted to " +
-                          "browser targets");
+                          "client targets");
         if (typeof options.data !== "string")
           throw new Error("'data' option to addStylesheet must be a string");
         sourceIsWatched = true;
@@ -596,8 +598,8 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "browser"))
-          throw new Error("'bare' option may only be used for browser targets");
+        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "client"))
+          throw new Error("'bare' option may only be used for client targets");
         sourceIsWatched = true;
         js.push({
           source: options.data,
