@@ -339,21 +339,6 @@ _.extend(LocalCollection.Cursor.prototype, {
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
-    if (!options._suppress_initial && !self.collection.paused) {
-      // XXX unify ordered and unordered interface
-      var each = ordered
-            ? _.bind(_.each, null, query.results)
-            : _.bind(query.results.forEach, query.results);
-      each(function (doc) {
-        var fields = EJSON.clone(doc);
-
-        delete fields._id;
-        if (ordered)
-          query.addedBefore(doc._id, fields, null);
-        query.added(doc._id, fields);
-      });
-    }
-
     var handle = new LocalCollection.ObserveHandle;
     _.extend(handle, {
       collection: self.collection,
@@ -373,9 +358,30 @@ _.extend(LocalCollection.Cursor.prototype, {
         handle.stop();
       });
     }
-    // run the observe callbacks resulting from the initial contents
-    // before we leave the observe.
-    self.collection._observeQueue.drain();
+
+    if (!options._suppress_initial && !self.collection.paused) {
+      // XXX unify ordered and unordered interface
+      var each = ordered
+            ? _.bind(_.each, null, query.results)
+            : _.bind(query.results.forEach, query.results);
+      each(function (doc) {
+        var fields = EJSON.clone(doc);
+
+        delete fields._id;
+        if (ordered)
+          query.addedBefore(doc._id, fields, null);
+        query.added(doc._id, fields);
+      });
+
+      // run the observe callbacks resulting from the initial contents
+      // before we leave the observe.
+      if (self.collection._observeQueue.safeToRunTask()) {
+        self.collection._observeQueue.drain();
+      } else if (options.added || options.addedBefore) {
+        // See #2315.
+        throw Error("observeChanges called from an observe callback on the same collection cannot differentiate between initial and later adds");
+      }
+    }
 
     return handle;
   }

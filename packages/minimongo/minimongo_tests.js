@@ -3086,3 +3086,51 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   handle.stop();
 });
 
+// See #2275.
+Tinytest.add("minimongo - fetch in observe", function (test) {
+  var coll = new LocalCollection;
+  var callbackInvoked = false;
+  var observe = coll.find().observeChanges({
+    added: function (id, fields) {
+      callbackInvoked = true;
+      test.equal(fields, {foo: 1});
+      var doc = coll.findOne({foo: 1});
+      test.isTrue(doc);
+      test.equal(doc.foo, 1);
+    }
+  });
+  test.isFalse(callbackInvoked);
+  var computation = Deps.autorun(function (computation) {
+    if (computation.firstRun) {
+      coll.insert({foo: 1});
+    }
+  });
+  test.isTrue(callbackInvoked);
+  observe.stop();
+  computation.stop();
+});
+
+Tinytest.add("minimongo - observe in observe", function (test) {
+  var coll = new LocalCollection;
+  coll.insert({foo: 2});
+
+  var observe1AddedCalled = false;
+  var observe1 = coll.find({foo: 1}).observeChanges({
+    added: function (id, fields) {
+      observe1AddedCalled = true;
+      test.equal(fields, {foo: 1});
+
+      // It would be even better if this didn't throw; see #2315.
+      test.throws(function () {
+        coll.find({foo: 2}).observeChanges({
+          added: function () {
+          }
+        });
+      });
+    }
+  });
+  test.isFalse(observe1AddedCalled);
+  coll.insert({foo: 1});
+  test.isTrue(observe1AddedCalled);
+  observe1.stop();
+});
