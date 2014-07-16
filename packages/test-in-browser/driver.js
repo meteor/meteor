@@ -339,6 +339,19 @@ Template.groupNav.events({
   }
 });
 
+Template.groupNav.rendered = function () {
+  Tinytest._onCurrentClientTest = function (name) {
+    name = (name ? 'C: '+name : '');
+    // Set the DOM directly so that it's immediate and we
+    // don't wait for Deps to flush.
+    var span = document.getElementById('current-client-test');
+    if (span) {
+      span.innerHTML = '';
+      span.appendChild(document.createTextNode(name));
+    }
+  };
+};
+
 
 //// Template - failedTests
 
