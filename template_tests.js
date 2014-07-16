@@ -2572,3 +2572,39 @@ Tinytest.add(
 
     document.body.removeChild(div);
   });
+
+_.each([1, 2, 3], function (n) {
+  Tinytest.add(
+    "spacebars-tests - template_tests - lookup is isolated " + n,
+    function (test) {
+      var buf = "";
+      var inclusion = Template.spacebars_test_isolated_lookup_inclusion;
+      inclusion.created = function () { buf += 'C'; };
+      inclusion.destroyed = function () { buf += 'D'; };
+
+      var tmpl = Template['spacebars_test_isolated_lookup' + n];
+      var R = ReactiveVar(Template.spacebars_template_test_aaa);
+
+      tmpl.bar = function () {
+        return R.get();
+      };
+
+      var div = renderToDiv(
+        tmpl,
+        function () {
+          return { foo: R.get() };
+        });
+
+      test.equal(canonicalizeHtml(div.innerHTML), 'aaa--x');
+      test.equal(buf, 'C');
+      R.set(Template.spacebars_template_test_bbb);
+      Deps.flush();
+      test.equal(canonicalizeHtml(div.innerHTML), 'bbb--x');
+      test.equal(buf, 'C');
+      R.set(null);
+      Deps.flush({_throwFirstError:true});
+      test.equal(canonicalizeHtml(div.innerHTML), '--x');
+      test.equal(buf, 'C');
+    }
+  );
+});

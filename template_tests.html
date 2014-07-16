@@ -902,3 +902,23 @@ Hi there!
 <template name="spacebars_test_event_cleanup_on_destroyed_inner">
   <span>foo</span>
 </template>
+
+<template name="spacebars_test_isolated_lookup_inclusion">
+  x
+</template>
+
+<template name="spacebars_test_isolated_lookup1">
+  {{> foo}}--{{> spacebars_test_isolated_lookup_inclusion}}
+</template>
+
+<template name="spacebars_test_isolated_lookup2">
+  {{#with foo}}
+    {{#with z=1}}
+      {{> ..}}--{{> spacebars_test_isolated_lookup_inclusion}}
+    {{/with}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_isolated_lookup3">
+  {{> bar}}--{{> spacebars_test_isolated_lookup_inclusion}}
+</template>
