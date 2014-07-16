@@ -129,6 +129,9 @@ Tinytest.add("html-tools - parser getContent", function (test) {
   succeed('<textarea>&</textarea>', TEXTAREA({value: "&"}));
   succeed('<textarea></textarea  \n<</textarea  \n>asdf',
           [TEXTAREA({value: "</textarea  \n<"}), "asdf"]);
+  // regression test for a bug that happened with textarea content
+  // handling after an element with content
+  succeed('<div>x</div><textarea></textarea>', [DIV("x"), TEXTAREA()]);
 
   // CR/LF behavior
   succeed('<br\r\n x>', BR({x:''}));
@@ -358,4 +361,9 @@ Tinytest.add("html-tools - getTemplateTag", function (test) {
 
   succeed('', null);
   succeed('{{!foo}}', null);
+
+  succeed('<textarea {{a}} x=1 {{b}}></textarea>',
+          TEXTAREA(Attrs({x:"1"}, TemplateTag({stuff: 'a'}),
+                         TemplateTag({stuff: 'b'}))));
+
 });
