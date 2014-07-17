@@ -44,6 +44,13 @@ Meteor.Collection = function (name, options) {
       return new Meteor.Collection.ObjectID(src.hexString(24));
     };
     break;
+  case 'TIMESTAMP':
+    self._makeNewID = function () {
+      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      var timestamp = Math.floor(new Date().getTime() / 1000).toString(16);
+      return new Meteor.Collection.ObjectID(timestamp.toString() + src.hexString(16));
+    };
+    break;
   case 'STRING':
   default:
     self._makeNewID = function () {

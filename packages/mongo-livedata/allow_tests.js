@@ -218,7 +218,7 @@ if (Meteor.isServer) {
 }
 
 if (Meteor.isClient) {
-  _.each(['STRING', 'MONGO'], function (idGeneration) {
+  _.each(['STRING', 'MONGO', 'TIMESTAMP'], function (idGeneration) {
     // Set up a bunch of test collections... on the client! They match the ones
     // created by setUpAllowTestsCollections.
 

@@ -194,7 +194,7 @@ EJSON.addType("dog", function (o) { return new Dog(o.name, o.color, o.actions);}
 
 
 // Parameterize tests.
-_.each( ['STRING', 'MONGO'], function(idGeneration) {
+_.each( ['STRING', 'MONGO', 'TIMESTAMP'], function(idGeneration) {
 
 var collectionOptions = { idGeneration: idGeneration};
 
