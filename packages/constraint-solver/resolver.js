@@ -313,42 +313,44 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
 
   queue.push(uv);
   hasBeenEnqueued[uv.name] = true;
-
   while (queue.length > 0) {
     uv = queue[0];
     queue.shift();
 
+    // Choose uv itself.
     choices = _.clone(choices);
-    choices.push(uv);
+    if (!_.contains(choices, uv)) {
+      choices.push(uv);
+    }
 
-    var exactTransitiveDepsVersions =
-      uv.exactTransitiveDependenciesVersions(self);
-    var inexactTransitiveDeps = uv.inexactTransitiveDependencies(self);
-    var transitiveConstraints = new ConstraintSolver.ConstraintsList();
-    _.each(_.union(exactTransitiveDepsVersions, [uv]), function (uv) {
-      transitiveConstraints = transitiveConstraints.union(uv.constraints);
+    // Add the constraints from uv to the list of constraints we are tracking.
+    constraints = constraints.union(uv.constraints);
+
+    // Add the dependencies from uv to the list of remaining dependencies.
+    uv.dependencies.each(function (dep) {
+      dependencies = dependencies.push(dep);
     });
 
-    var newChoices = exactTransitiveDepsVersions;
-
-    dependencies = dependencies.union(inexactTransitiveDeps);
-    constraints = constraints.union(transitiveConstraints);
-    choices = _.union(choices, newChoices);
-
-    // Since exact transitive deps are put into choices, there is no need to
-    // keep them in dependencies.
+    // 'dependencies' tracks units that we still need to choose a version for,
+    // so there is no need to keep anything that we've already chosen.
+    // XXX use a better data structure for 'choices' that makes this easier
     _.each(choices, function (uv) {
       dependencies = dependencies.remove(uv.name);
     });
 
-    // There could be new combination of exact constraint/dependency outgoing
-    // from existing state and the new node.
-    // We don't need to look for all previously considered combinations.
-    // Looking for newNode.dependencies+exact constraints and
-    // newNode.exactConstraints+dependencies is enough.
+    // Which nodes to process now? You'd think it would be
+    // immediatelyImpliedVersions, sure. But that's too limited: that only
+    // includes things where 'uv' both contains the exact constraint and the
+    // dependency. If we already had a dependency but 'uv' adds an exact
+    // constraint, or vice versa, we should go there too!
+    // XXX Strangely, changing some of these calls between
+    //     exactDependenciesIntersection and exactConstraintsIntersection
+    //     (eg, changing the last one to exactConstraintsIntersection) has
+    //     a big impact on correctness or performance... eg, it totally
+    //     breaks the benchmark tests.
     var newExactConstraintsList = uv.dependencies
       .exactConstraintsIntersection(constraints)
-      .union(uv.constraints.exactDependenciesIntersection(uv.dependencies));
+      .union(uv.constraints.exactDependenciesIntersection(dependencies));
 
     newExactConstraintsList.each(function (c) {
       var dep = c.getSatisfyingUnitVersion(self);
@@ -474,64 +476,6 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     }
 
     self.constraints = self.constraints.push(constraint);
-  },
-
-  // Returns a list of transitive exact constraints, those could be found as
-  // transitive dependencies.
-  _exactTransitiveConstraints: function (resolver) {
-    var self = this;
-
-    var exactTransitiveConstraints =
-      self.dependencies.exactConstraintsIntersection(self.constraints);
-
-    exactTransitiveConstraints.each(function (c) {
-      var unitVersion = c.getSatisfyingUnitVersion(resolver);
-      if (! unitVersion)
-        throw new Error("No unit version was found for the constraint -- " + c.toString());
-
-      // Collect the transitive dependencies of the direct exact dependencies.
-      // XXX how does this not lead to infinite recursion?
-      exactTransitiveConstraints = exactTransitiveConstraints.union(
-                unitVersion._exactTransitiveConstraints(resolver));
-    });
-
-    return exactTransitiveConstraints;
-  },
-
-  // XXX weirdly returns an array as opposed to some UVCollection
-  exactTransitiveDependenciesVersions: function (resolver) {
-    var self = this;
-    var uvs = [];
-    self._exactTransitiveConstraints(resolver).each(function (c) {
-      var unitVersion = c.getSatisfyingUnitVersion(resolver);
-      if (! unitVersion)
-        throw new Error("No unit version was found for the constraint -- " + c.toString());
-
-      uvs.push(unitVersion);
-    });
-
-    return uvs;
-  },
-
-  inexactTransitiveDependencies: function (resolver) {
-    var self = this;
-    var exactTransitiveConstraints = self._exactTransitiveConstraints(resolver);
-    var deps = self.dependencies;
-
-    exactTransitiveConstraints.each(function (c) {
-      var unitVersion = c.getSatisfyingUnitVersion(resolver);
-      if (! unitVersion)
-        throw new Error("No unit version was found for the constraint -- " + c.toString());
-
-      deps = deps.union(unitVersion.dependencies);
-    });
-
-    // remove the the exact constraints
-    exactTransitiveConstraints.each(function (c) {
-      deps = deps.remove(c.name);
-    });
-
-    return deps;
   },
 
   toString: function () {
