@@ -33,7 +33,8 @@ selftest.define("autoupdate", ['checkout'], function () {
     warehouse: {
       v1: { recommended: true},
       v2: { recommended: true },
-      v3: { }
+      v3: { },
+      v4: { }
     }
   });
   var run;
@@ -74,6 +75,19 @@ selftest.define("autoupdate", ['checkout'], function () {
     // If we are not at the latest version of Meteor, at startup, we get a
     // boring prompt to update (not a banner since we didn't set one for v1).
     s.write('.meteor/release', 'METEOR-CORE@v1');
+
+    // We don't see any information if we run a simple command like list.
+    run = s.run("list");
+    run.forbidAll("New hotness v2 being downloaded");
+    run.expectExit(0);
+    run.stop();
+
+    run = s.run("--version");
+    run.read("Meteor v1\n");
+    run.expectEnd();
+    run.expectExit(0);
+
+    // We do see a boring prompt though.
     run = s.run("--port", "22000");
     run.waitSecs(5);
     run.match("v2");
@@ -171,4 +185,12 @@ selftest.define("autoupdate", ['checkout'], function () {
   run.read("Meteor v3\n");
   run.expectEnd();
   run.expectExit(0);
+
+  // Recommend v4 and make sure there are no outputs.
+  recommend(s, "v4");
+  run = s.run("--version");
+  run.read("Meteor v3\n");
+  run.expectEnd();
+  run.expectExit(0);
+
 });
