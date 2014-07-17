@@ -106,8 +106,8 @@ if (Meteor.isServer) {
     Meteor.setInterval(function () {
       var when = +(new Date) - PARAMS.maxAgeSeconds*1000;
       _.each(Collections, function (C) {
-        preCall('remove');
-        C.remove({when: {$lt: when}}, postCall('remove'));
+        preCall('removeMaxAge');
+        C.remove({when: {$lt: when}}, postCall('removeMaxAge'));
       });
       // Clear out 5% of the DB each time, steady state. XXX parameterize?
     }, 1000*PARAMS.maxAgeSeconds / 20);
