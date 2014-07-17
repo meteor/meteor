@@ -202,7 +202,7 @@ selftest.define("add packages", function () {
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
-  copyFile('programs/empty/package2.js', 'programs/empty/package.js', s);
+  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
 
   // Don't add the file to packages.
   run = s.run("list");

@@ -324,7 +324,7 @@ var springboard = function (rel, releaseOverride) {
     process.stderr.write(
       "Could not springboard to release: " + rel.name +
       ": could not download tool in " +
-      rel.getToolsPackageAtVersion());
+      rel.getToolsPackageAtVersion() + "\n");
     process.exit(1);
   }
 
@@ -812,6 +812,12 @@ Fiber(function () {
       }
 
       throw e;
+    }
+
+    // Let's keep track of whether this is an explicit release, due to different
+    // update behavior.
+    if (releaseOverride) {
+      releaseForced = true;
     }
 
     release.setCurrent(rel, releaseForced, releaseExplicit);

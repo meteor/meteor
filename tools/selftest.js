@@ -862,7 +862,7 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  self.baseTimeout = 2;
+  self.baseTimeout = 20;
   self.extraTime = 0;
   self.client = options.client;
 

@@ -22,5 +22,5 @@ selftest.define("selftest-from-warehouse", ['checkout'], function () {
 });
 
 selftest.define("do-nothing", function () {
-  selftest.expectTrue(true);
+  selftest.expectEqual(true, true);
 });
