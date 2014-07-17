@@ -6,10 +6,11 @@ var VALID_KEYS = [
   'inForgotPasswordFlow',
   'inChangePasswordFlow',
   'inMessageOnlyFlow',
+  'inProfileFlow',
+  'sholdVerifiedEmail',
 
   'errorMessage',
   'infoMessage',
-
   // dialogs with messages (info and error)
   'resetPasswordToken',
   'enrollAccountToken',
@@ -23,7 +24,7 @@ var VALID_KEYS = [
 
 var validateKey = function (key) {
   if (!_.contains(VALID_KEYS, key))
-    throw new Error("Invalid key in loginButtonsSession: " + key);
+    throw new Error( _$("Invalid key in loginButtonsSession: {0}" , key) );
 };
 
 var KEY_PREFIX = "Meteor.loginButtons.";
@@ -36,7 +37,7 @@ Accounts._loginButtonsSession = {
   set: function(key, value) {
     validateKey(key);
     if (_.contains(['errorMessage', 'infoMessage'], key))
-      throw new Error("Don't set errorMessage or infoMessage directly. Instead, use errorMessage() or infoMessage().");
+      throw new Error( _$("Don't set errorMessage or infoMessage directly. Instead, use errorMessage() or infoMessage().") );
 
     this._set(key, value);
   },
@@ -54,6 +55,7 @@ Accounts._loginButtonsSession = {
     this.set('inSignupFlow', false);
     this.set('inForgotPasswordFlow', false);
     this.set('inChangePasswordFlow', false);
+    this.set('inProfileFlow', false);
     this.set('inMessageOnlyFlow', false);
     this.set('dropdownVisible', false);
     this.resetMessages();
@@ -62,14 +64,22 @@ Accounts._loginButtonsSession = {
   infoMessage: function(message) {
     this._set("errorMessage", null);
     this._set("infoMessage", message);
+    this._set("sholdVerifiedEmail", null);
     this.ensureMessageVisible();
   },
-
   errorMessage: function(message) {
     this._set("errorMessage", message);
     this._set("infoMessage", null);
+    this._set("sholdVerifiedEmail", null);
     this.ensureMessageVisible();
   },
+  sholdVerifiedEmail: function(error) {
+    this._set("sholdVerifiedEmail", error);
+    this._set("infoMessage", null);
+    this._set("errorMessage", null);
+    this.ensureMessageVisible();
+  },
+  
 
   // is there a visible dialog that shows messages (info and error)
   isMessageDialogVisible: function () {
@@ -102,3 +112,5 @@ Accounts._loginButtonsSession = {
     this.set('configureLoginServiceDialogSaveDisabled', true);
   }
 };
+
+

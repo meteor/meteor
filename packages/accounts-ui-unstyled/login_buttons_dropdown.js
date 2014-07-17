@@ -23,6 +23,10 @@ Template._loginButtonsLoggedInDropdown.events({
   'click #login-buttons-open-change-password': function() {
     loginButtonsSession.resetMessages();
     loginButtonsSession.set('inChangePasswordFlow', true);
+  },
+  'click #login-buttons-open-profile':function(){
+    loginButtonsSession.resetMessages();
+    loginButtonsSession.set('inProfileFlow', true);
   }
 });
 
@@ -36,6 +40,9 @@ Template._loginButtonsLoggedInDropdown.inMessageOnlyFlow = function () {
   return loginButtonsSession.get('inMessageOnlyFlow');
 };
 
+Template._loginButtonsLoggedInDropdown.inProfileFlow = function () {
+  return loginButtonsSession.get('inProfileFlow');
+};
 Template._loginButtonsLoggedInDropdown.dropdownVisible = function () {
   return loginButtonsSession.get('dropdownVisible');
 };
@@ -198,48 +205,51 @@ Template._loginButtonsLoggedOutAllServices.hasPasswordService =
 
 Template._loginButtonsLoggedOutPasswordService.fields = function () {
   var loginFields = [
-    {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
+    {fieldName: 'username-or-email', fieldLabel: _$('Username or Email'),
      visible: function () {
        return _.contains(
          ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL"],
          passwordSignupFields());
      }},
-    {fieldName: 'username', fieldLabel: 'Username',
+    {fieldName: 'username', fieldLabel: _$('Username'),
      visible: function () {
        return passwordSignupFields() === "USERNAME_ONLY";
      }},
-    {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
+    {fieldName: 'email', fieldLabel: _$('Email'), inputType: 'email',
      visible: function () {
        return passwordSignupFields() === "EMAIL_ONLY";
      }},
-    {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
+    {fieldName: 'password', fieldLabel: _$('Password'), inputType: 'password',
      visible: function () {
        return true;
      }}
   ];
 
   var signupFields = [
-    {fieldName: 'username', fieldLabel: 'Username',
+    {fieldName:"name", fieldLabel:_$('Name'), visible:function(){
+    	return true;
+    }},
+    {fieldName: 'username', fieldLabel: _$('Username'),
      visible: function () {
        return _.contains(
          ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
          passwordSignupFields());
      }},
-    {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
+    {fieldName: 'email', fieldLabel: _$('Email'), inputType: 'email',
      visible: function () {
        return _.contains(
          ["USERNAME_AND_EMAIL", "EMAIL_ONLY"],
          passwordSignupFields());
      }},
-    {fieldName: 'email', fieldLabel: 'Email (optional)', inputType: 'email',
+    {fieldName: 'email', fieldLabel: _$('Email (optional)'), inputType: 'email',
      visible: function () {
        return passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL";
      }},
-    {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
+    {fieldName: 'password', fieldLabel: _$('Password'), inputType: 'password',
      visible: function () {
        return true;
      }},
-    {fieldName: 'password-again', fieldLabel: 'Password (again)',
+    {fieldName: 'password-again', fieldLabel: _$('Password (again)'),
      inputType: 'password',
      visible: function () {
        // No need to make users double-enter their password if
@@ -282,6 +292,26 @@ Template._loginButtonsFormField.inputType = function () {
 
 
 //
+// loginButtonsChangeProfile template
+//
+
+Template._loginButtonsChangeProfile.events({
+  'click #login-buttons-do-change-profile': function () {
+    changeProfile();
+  }
+    
+})
+Template._loginButtonsChangeProfile.fields = function () {
+  var user = Meteor.user();
+  return [
+    {fieldName: 'gender', fieldLabel: _$('gender'), fieldValue:user.profile.gender,
+     visible: function () {
+       return true;
+     }}]
+}
+
+
+//
 // loginButtonsChangePassword template
 //
 
@@ -297,15 +327,15 @@ Template._loginButtonsChangePassword.events({
 
 Template._loginButtonsChangePassword.fields = function () {
   return [
-    {fieldName: 'old-password', fieldLabel: 'Current Password', inputType: 'password',
+    {fieldName: 'old-password', fieldLabel: _$('Current Password'), inputType: 'password',
      visible: function () {
        return true;
      }},
-    {fieldName: 'password', fieldLabel: 'New Password', inputType: 'password',
+    {fieldName: 'password', fieldLabel: _$('New Password'), inputType: 'password',
      visible: function () {
        return true;
      }},
-    {fieldName: 'password-again', fieldLabel: 'New Password (again)',
+    {fieldName: 'password-again', fieldLabel: _$('New Password (again)'),
      inputType: 'password',
      visible: function () {
        // No need to make users double-enter their password if
@@ -374,12 +404,14 @@ var login = function () {
     else
       loginSelector = usernameOrEmail;
   } else {
-    throw new Error("Unexpected -- no element to use as a login user selector");
+    throw new Error( _$("Unexpected -- no element to use as a login user selector") );
   }
 
   Meteor.loginWithPassword(loginSelector, password, function (error, result) {
-    if (error) {
-      loginButtonsSession.errorMessage(error.reason || "Unknown error");
+    if(error && error.error === 100002){
+      loginButtonsSession.sholdVerifiedEmail(error );
+    } else if(error){
+      loginButtonsSession.errorMessage(error.reason || _$("Unknown error") );
     } else {
       loginButtonsSession.closeDropdown();
     }
@@ -417,9 +449,15 @@ var signup = function () {
   if (!matchPasswordAgainIfPresent())
     return;
 
+  // name nickname
+  var name = elementValueById('login-name');
+  if(!validateName(name))
+    return;
+  else
+    options.profile = {name:name};
   Accounts.createUser(options, function (error) {
     if (error) {
-      loginButtonsSession.errorMessage(error.reason || "Unknown error");
+      loginButtonsSession.errorMessage(error.reason || _$("Unknown error"));
     } else {
       loginButtonsSession.closeDropdown();
     }
@@ -433,12 +471,12 @@ var forgotPassword = function () {
   if (email.indexOf('@') !== -1) {
     Accounts.forgotPassword({email: email}, function (error) {
       if (error)
-        loginButtonsSession.errorMessage(error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason ||  _$("Unknown error"));
       else
-        loginButtonsSession.infoMessage("Email sent");
+        loginButtonsSession.infoMessage( _$("Email sent") );
     });
   } else {
-    loginButtonsSession.errorMessage("Invalid email");
+    loginButtonsSession.errorMessage( _$("Invalid email") );
   }
 };
 
@@ -458,14 +496,31 @@ var changePassword = function () {
 
   Accounts.changePassword(oldPassword, password, function (error) {
     if (error) {
-      loginButtonsSession.errorMessage(error.reason || "Unknown error");
+      loginButtonsSession.errorMessage(error.reason ||  _$("Unknown error"));
     } else {
       loginButtonsSession.set('inChangePasswordFlow', false);
       loginButtonsSession.set('inMessageOnlyFlow', true);
-      loginButtonsSession.infoMessage("Password changed");
+      loginButtonsSession.infoMessage( _$("Password changed") );
     }
   });
 };
+
+
+var changeProfile = function(){
+    loginButtonsSession.resetMessages();
+    var profile = Meteor.user().profile;
+    profile.gender =  elementValueById('login-gender')
+    Accounts.changeProfile(profile, function(error){
+    
+    if (error) {
+      loginButtonsSession.errorMessage(error.reason ||  _$("Unknown error"));
+    } else {
+      loginButtonsSession.set('inProfileFlow', false);
+      loginButtonsSession.set('inMessageOnlyFlow', true);
+      loginButtonsSession.infoMessage( _$("profile changed") );
+    }
+    });
+}
 
 var matchPasswordAgainIfPresent = function () {
   // notably not trimmed. a password could (?) start or end with a space
@@ -474,7 +529,7 @@ var matchPasswordAgainIfPresent = function () {
     // notably not trimmed. a password could (?) start or end with a space
     var password = elementValueById('login-password');
     if (password !== passwordAgain) {
-      loginButtonsSession.errorMessage("Passwords don't match");
+      loginButtonsSession.errorMessage(_$("Passwords don't match"));
       return false;
     }
   }
@@ -497,3 +552,10 @@ var correctDropdownZIndexes = function () {
     if (n.style.zIndex === 0)
       n.style.zIndex = 1;
 };
+
+
+
+
+
+
+

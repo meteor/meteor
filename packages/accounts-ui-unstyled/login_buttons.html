@@ -62,6 +62,12 @@
   {{#if infoMessage}}
     <div class="message info-message">{{infoMessage}}</div>
   {{/if}}
+  {{#if sholdVerifiedEmail}}
+    <div class="message info-message">
+        {{sholdVerifiedEmail.reason }}
+        <a id="re-send-verified-email">{{ _ "resend"  }}</a>
+    </div>
+  {{/if}}
 </template>
 
 <template name="_loginButtonsLoggingIn">
@@ -83,3 +89,5 @@
     <div class="login-buttons-padding"></div>
   {{/unless}}
 </template>
+
+

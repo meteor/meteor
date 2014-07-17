@@ -8,6 +8,7 @@ Package.on_use(function(api) {
   api.imply('accounts-base', ['client', 'server']);
   api.use('srp', ['client', 'server']);
   api.use('sha', ['client', 'server']);
+  api.use('i18n', ['client', 'server']);
   api.use('email', ['server']);
   api.use('random', ['server']);
   api.use('check', ['server']);
@@ -17,6 +18,8 @@ Package.on_use(function(api) {
   api.add_files('email_templates.js', 'server');
   api.add_files('password_server.js', 'server');
   api.add_files('password_client.js', 'client');
+  api.add_files('profile_server.js', 'server');
+  api.add_files('profile_client.js', 'client');
 });
 
 Package.on_test(function(api) {
@@ -28,3 +31,5 @@ Package.on_test(function(api) {
   api.add_files('email_tests_setup.js', 'server');
   api.add_files('email_tests.js', 'client');
 });
+
+

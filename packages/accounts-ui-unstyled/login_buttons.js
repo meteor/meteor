@@ -79,7 +79,7 @@ validateUsername = function (username) {
   if (username.length >= 3) {
     return true;
   } else {
-    loginButtonsSession.errorMessage("Username must be at least 3 characters long");
+    loginButtonsSession.errorMessage( _$("Username must be at least 3 characters long") );
     return false;
   }
 };
@@ -90,7 +90,7 @@ validateEmail = function (email) {
   if (email.indexOf('@') !== -1) {
     return true;
   } else {
-    loginButtonsSession.errorMessage("Invalid email");
+    loginButtonsSession.errorMessage( _$("Invalid email") );
     return false;
   }
 };
@@ -98,11 +98,18 @@ validatePassword = function (password) {
   if (password.length >= 6) {
     return true;
   } else {
-    loginButtonsSession.errorMessage("Password must be at least 6 characters long");
+    loginButtonsSession.errorMessage(_$("Password must be at least 6 characters long") );
     return false;
   }
 };
-
+validateName = function(name){
+  if (name.length >= 2 && name.length<=8) {
+    return true;
+  } else {
+    loginButtonsSession.errorMessage(_$("name must be at 2-8 characters long") );
+    return false;
+  }
+}
 //
 // loginButtonLoggedOut template
 //
@@ -115,7 +122,7 @@ Template._loginButtonsLoggedOut.singleService = function () {
   var services = getLoginServices();
   if (services.length !== 1)
     throw new Error(
-      "Shouldn't be rendering this template with more than one configured service");
+      _$("Shouldn't be rendering this template with more than one configured service") );
   return services[0];
 };
 
@@ -149,15 +156,27 @@ Template._loginButtonsLoggedInSingleLogoutButton.displayName = displayName;
 Template._loginButtonsMessages.errorMessage = function () {
   return loginButtonsSession.get('errorMessage');
 };
+Template._loginButtonsMessages.sholdVerifiedEmail = function () {
+  return loginButtonsSession.get('sholdVerifiedEmail');
+};
 
 Template._loginButtonsMessages.infoMessage = function () {
   return loginButtonsSession.get('infoMessage');
 };
-
+Template._loginButtonsMessages.events({
+  'click #re-send-verified-email': function() {
+    var result =Meteor.call("sendVerificationEmail", Template._loginButtonsMessages.sholdVerifiedEmail().details );
+    loginButtonsSession.infoMessage(_$("已经发送,请查收!") );
+  }
+});
 
 //
 // loginButtonsLoggingInPadding template
 //
 
 Template._loginButtonsLoggingInPadding.dropdown = dropdown;
+
+
+
+
 

@@ -60,7 +60,7 @@ var resetPassword = function () {
     loginButtonsSession.get('resetPasswordToken'), newPassword,
     function (error) {
       if (error) {
-        loginButtonsSession.errorMessage(error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason || _$("Unknown error"));
       } else {
         loginButtonsSession.set('resetPasswordToken', null);
         loginButtonsSession.set('justResetPassword', true);
@@ -119,7 +119,7 @@ var enrollAccount = function () {
     loginButtonsSession.get('enrollAccountToken'), password,
     function (error) {
       if (error) {
-        loginButtonsSession.errorMessage(error.reason || "Unknown error");
+        loginButtonsSession.errorMessage(error.reason || _$("Unknown error") );
       } else {
         loginButtonsSession.set('enrollAccountToken', null);
         Accounts._enableAutoLogin();
@@ -263,3 +263,4 @@ var capitalize = function(str){
   str = str == null ? '' : String(str);
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
+

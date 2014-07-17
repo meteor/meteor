@@ -10,7 +10,7 @@ Package.on_use(function (api) {
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');
   api.use('callback-hook', 'server');
-
+  api.use('i18n', ['client', 'server']);
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
   api.use('service-configuration', ['client', 'server'], { unordered: true });
@@ -55,3 +55,4 @@ Package.on_test(function (api) {
   api.use('oauth-encryption');
   api.add_files('accounts_tests.js', 'server');
 });
+

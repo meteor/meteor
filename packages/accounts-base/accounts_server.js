@@ -16,7 +16,7 @@ Meteor.userId = function () {
   // record changes.
   var currentInvocation = DDP._CurrentInvocation.get();
   if (!currentInvocation)
-    throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
+    throw new Error( _$("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions."));
   return currentInvocation.userId;
 };
 
@@ -85,7 +85,7 @@ var validateLogin = function (connection, attempt) {
       // don't override a specific error provided by a previous
       // validator or the initial attempt (eg "incorrect password").
       if (!attempt.error)
-        attempt.error = new Meteor.Error(403, "Login forbidden");
+        attempt.error = new Meteor.Error(403, _$("Login forbidden") );
     }
     return true;
   });
@@ -238,7 +238,7 @@ var attemptLogin = function (methodInvocation, methodName, methodArgs, result) {
   // then we don't call onLogin or onLoginFailure callbacks. Should
   // tryLoginMethod catch this case and turn it into an error?
   if (!result.userId && !result.error)
-    throw new Error("A login method must specify a userId or an error");
+    throw new Error(_$("A login method must specify a userId or an error"));
 
   var user;
   if (result.userId)
@@ -483,7 +483,7 @@ Meteor.methods({
         tokenExpires: Accounts._tokenExpiration(newToken.when)
       };
     } else {
-      throw new Meteor.Error("You are not logged in.");
+      throw new Meteor.Error(_$("You are not logged in."));
     }
   },
 
@@ -501,7 +501,7 @@ Meteor.methods({
       fields: { "services.resume.loginTokens": 1 }
     });
     if (! self.userId || ! user) {
-      throw new Meteor.Error("You are not logged in.");
+      throw new Meteor.Error(_$("You are not logged in."));
     }
     // Be careful not to generate a new token that has a later
     // expiration than the curren token. Otherwise, a bad guy with a
@@ -515,7 +515,7 @@ Meteor.methods({
       }
     );
     if (! currentStampedToken) { // safety belt: this should never happen
-      throw new Meteor.Error("Invalid login token");
+      throw new Meteor.Error(_$("Invalid login token"));
     }
     var newStampedToken = Accounts._generateStampedLoginToken();
     newStampedToken.when = currentStampedToken.when;
@@ -529,7 +529,7 @@ Meteor.methods({
   removeOtherTokens: function () {
     var self = this;
     if (! self.userId) {
-      throw new Meteor.Error("You are not logged in.");
+      throw new Meteor.Error(_$("You are not logged in."));
     }
     var currentToken = Accounts._getLoginToken(self.connection.id);
     Meteor.users.update(self.userId, {
@@ -663,6 +663,7 @@ Accounts._getLoginToken = function (connectionId) {
   return Accounts._getAccountData(connectionId, 'loginToken');
 };
 
+
 // newToken is a hashed token.
 Accounts._setLoginToken = function (userId, connection, newToken) {
   removeTokenFromConnection(connection.id);
@@ -717,8 +718,7 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
       }
 
       if (userObservesForConnections[connection.id] !== null) {
-        throw new Error("Non-null user observe for connection " +
-                        connection.id + " while observe was being set up?");
+        throw new Error(_$("Non-null user observe for connection {0} while observe was being set up?", connection.id));
       }
 
       userObservesForConnections[connection.id] = observe;
@@ -734,6 +734,7 @@ Accounts._setLoginToken = function (userId, connection, newToken) {
     });
   }
 };
+
 
 // Login handler for resume tokens.
 Accounts.registerLoginHandler("resume", function(options) {
@@ -766,7 +767,7 @@ Accounts.registerLoginHandler("resume", function(options) {
 
   if (! user)
     return {
-      error: new Meteor.Error(403, "You've been logged out by the server. Please log in again.")
+      error: new Meteor.Error(403, _$("You've been logged out by the server. Please log in again.") )
     };
 
   // Find the token, which will either be an object with fields
@@ -789,7 +790,7 @@ Accounts.registerLoginHandler("resume", function(options) {
   if (new Date() >= tokenExpires)
     return {
       userId: user._id,
-      error: new Meteor.Error(403, "Your session has expired. Please log in again.")
+      error: new Meteor.Error(403, _$("Your session has expired. Please log in again.") )
     };
 
   // Update to a hashed token when an unhashed token is encountered.
@@ -855,7 +856,7 @@ var expireTokens = Accounts._expireTokens = function (oldestValidDate, userId) {
 
   // when calling from a test with extra arguments, you must specify both!
   if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
-    throw new Error("Bad test. Must specify both oldestValidDate and userId.");
+    throw new Error( _$("Bad test. Must specify both oldestValidDate and userId.") );
   }
 
   oldestValidDate = oldestValidDate ||
@@ -964,7 +965,7 @@ Meteor.startup(function () {
 var onCreateUserHook = null;
 Accounts.onCreateUser = function (func) {
   if (onCreateUserHook)
-    throw new Error("Can only call onCreateUser once");
+    throw new Error( _$("Can only call onCreateUser once") );
   else
     onCreateUserHook = func;
 };
@@ -1013,7 +1014,7 @@ Accounts.insertUserDoc = function (options, user) {
 
   _.each(validateNewUserHooks, function (hook) {
     if (!hook(fullUser))
-      throw new Meteor.Error(403, "User validation failed");
+      throw new Meteor.Error(403, _$("User validation failed"));
   });
 
   var userId;
@@ -1023,12 +1024,12 @@ Accounts.insertUserDoc = function (options, user) {
     // XXX string parsing sucks, maybe
     // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
     if (e.name !== 'MongoError') throw e;
-    var match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/);
+    var match = e.err.match(/^E11000 duplicate key error index: ([^ ]+)/);
     if (!match) throw e;
     if (match[1].indexOf('$emails.address') !== -1)
-      throw new Meteor.Error(403, "Email already exists.");
+      throw new Meteor.Error(403, _$("Email already exists."));
     if (match[1].indexOf('username') !== -1)
-      throw new Meteor.Error(403, "Username already exists.");
+      throw new Meteor.Error(403, _$("Username already exists.") );
     // XXX better error reporting for services.facebook.id duplicate, etc
     throw e;
   }
@@ -1079,9 +1080,9 @@ Accounts.validateNewUser(function (user) {
     return true;
 
   if (_.isString(domain))
-    throw new Meteor.Error(403, "@" + domain + " email required");
+    throw new Meteor.Error(403, _$("@{0} email required", domain) );
   else
-    throw new Meteor.Error(403, "Email doesn't match the criteria.");
+    throw new Meteor.Error(403, _$("Email doesn't match the criteria.") );
 });
 
 ///
@@ -1105,11 +1106,10 @@ Accounts.updateOrCreateUserFromExternalService = function(
 
   if (serviceName === "password" || serviceName === "resume")
     throw new Error(
-      "Can't use updateOrCreateUserFromExternalService with internal service "
-        + serviceName);
+      _$("Can't use updateOrCreateUserFromExternalService with internal service {0}"
+        ,serviceName) );
   if (!_.has(serviceData, 'id'))
-    throw new Error(
-      "Service data for service " + serviceName + " must include id");
+    throw new Error(_$("Service data for service {0} must include id", serviceName));
 
   // Look for a user with the appropriate service user id.
   var selector = {};
@@ -1270,7 +1270,7 @@ Meteor.methods({
     var ServiceConfiguration =
       Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
-      throw new Meteor.Error(403, "Service " + options.service + " already configured");
+      throw new Meteor.Error(403, _$("Service {0} already configured", options.service));
 
     if (_.has(options, "secret") && usingOAuthEncryption())
       options.secret = OAuthEncryption.seal(options.secret);
@@ -1351,3 +1351,6 @@ Meteor.startup(function () {
     deleteSavedTokens(user._id, user.services.resume.loginTokensToDelete);
   });
 });
+
+
+
