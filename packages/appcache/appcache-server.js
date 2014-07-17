@@ -6,7 +6,10 @@ Meteor.AppCache = {
   config: function(options) {
     _.each(options, function (value, option) {
       if (option === 'browsers') {
-        throw new Error('Deprecated AppCache config option: browsers');
+        disabledBrowsers = {};
+        _.each(value, function (browser) {
+          disabledBrowsers[browser] = false;
+        });
       }
       else if (option === 'onlineOnly') {
         _.each(value, function (urlPrefix) {
