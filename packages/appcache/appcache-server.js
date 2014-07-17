@@ -5,6 +5,7 @@ var path = Npm.require('path');
 var knownBrowsers = [
   'android',
   'chrome',
+  'opera',
   'chromium',
   'chromeMobileIOS',
   'firefox',
@@ -16,6 +17,7 @@ var knownBrowsers = [
 var browsersEnabledByDefault = [
   'android',
   'chrome',
+  'opera',
   'chromium',
   'chromeMobileIOS',
   'ie',
@@ -114,47 +116,16 @@ WebApp.connectHandlers.use(function(req, res, next) {
   _.each(WebApp.clientProgram.manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
-      manifest += resource.url;
-      // If the resource is not already cacheable (has a query
-      // parameter, presumably with a hash or version of some sort),
-      // put a version with a hash in the cache.
-      //
-      // Avoid putting a non-cacheable asset into the cache, otherwise
-      // the user can't modify the asset until the cache headers
-      // expire.
-      if (!resource.cacheable)
-        manifest += "?" + resource.hash;
-
-      manifest += "\n";
+      manifest += resource.url + "\n";
     }
   });
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
   manifest += "/ /" + "\n";
-  // Add a fallback entry for each uncacheable asset we added above.
-  //
-  // This means requests for the bare url (/image.png instead of
-  // /image.png?hash) will work offline. Online, however, the browser
-  // will send a request to the server. Users can remove this extra
-  // request to the server and have the asset served from cache by
-  // specifying the full URL with hash in their code (manually, with
-  // some sort of URL rewriting helper)
-  _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
-        !resource.cacheable) {
-      manifest += resource.url + " " + resource.url +
-        "?" + resource.hash + "\n";
-    }
-  });
-
   manifest += "\n";
 
   manifest += "NETWORK:\n";
-  // TODO adding the manifest file to NETWORK should be unnecessary?
-  // Want more testing to be sure.
-  manifest += "/app.manifest" + "\n";
   _.each(
     [].concat(
       RoutePolicy.urlPrefixesFor('network'),
