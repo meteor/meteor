@@ -221,6 +221,7 @@ main.registerCommand({
     'raw-logs': { type: Boolean },
     settings: { type: String },
     program: { type: String },
+    test: { type: Boolean },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
     // undocumented: intended for automated testing (eg, cli-test.sh),
@@ -277,7 +278,8 @@ main.registerCommand({
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
-      minify: options.production
+      minify: options.production,
+      test: options.test
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -493,7 +495,7 @@ main.registerCommand({
     architecture: { type: String },
     // Undocumented
     'for-deploy': { type: Boolean },
-    'client-arch': { type: String }
+    client: { type: String }
   }
 }, function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add

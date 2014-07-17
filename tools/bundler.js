@@ -576,7 +576,7 @@ _.extend(Target.prototype, {
   _emitResources: function () {
     var self = this;
 
-    var isBrowser = archinfo.matches(self.arch, "browser");
+    var isBrowser = archinfo.matches(self.arch, "client");
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
@@ -631,9 +631,10 @@ _.extend(Target.prototype, {
           var f = new File({data: resource.data, cacheable: false});
 
           var relPath = stripLeadingSlash(resource.servePath);
+
           f.setTargetPathFromRelPath(relPath);
 
-          if (isBrowser) {
+          if (isBrowser) { // XXX change to isClient
             f.setUrlFromRelPath(resource.servePath);
           }
 
@@ -757,8 +758,8 @@ var ClientTarget = function (options) {
   self.head = [];
   self.body = [];
 
-  if (! archinfo.matches(self.arch, "browser"))
-    throw new Error("ClientTarget targeting something that isn't a browser?");
+  if (! archinfo.matches(self.arch, "client"))
+    throw new Error("ClientTarget targeting something that isn't a client?");
 };
 
 util.inherits(ClientTarget, Target);
@@ -954,7 +955,15 @@ _.extend(ClientTarget.prototype, {
       manifest: manifest
     });
     return "program.json";
-  }
+  },
+
+  // For ClientTargets with override this function to return the most
+  // specific arch. For example, a 'client.browser' unibuild should target
+  // a 'client.browser' arch.
+  // mostCompatibleArch: function () {
+  //   var self = this;
+  //   return archinfo.mostSpecificMatch(_.pluck(self.unibuilds, 'arch'));
+  // }
 });
 
 
@@ -1627,6 +1636,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
  *   - arch: the server architecture to target (defaults to archinfo.host())
+ *   - clientTargetTypes: an array of client target types to build
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -1656,6 +1666,7 @@ exports.bundle = function (options) {
     throw new Error("running wrong release for app?");
 
   var arch = buildOptions.arch || archinfo.host();
+  var clientTargetTypes = buildOptions.clientTargetTypes || ["client.browser"];
 
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();
@@ -1685,10 +1696,10 @@ exports.bundle = function (options) {
   }, function () {
     var controlProgram = null;
 
-    var makeClientTarget = function (app) {
+    var makeClientTarget = function (app, arch) {
       var client = new ClientTarget({
         packageLoader: packageLoader,
-        arch: "browser"
+        arch: arch
       });
 
       client.make({
@@ -1701,6 +1712,7 @@ exports.bundle = function (options) {
     };
 
     var makeBlankClientTarget = function () {
+      // XXX
       var client = new ClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
@@ -1746,13 +1758,19 @@ exports.bundle = function (options) {
         appDir, exports.ignoreFiles);
 
       // Client
-      var client = makeClientTarget(app);
-      targets.client = client;
+      _.each(clientTargetTypes, function (arch) {
+        var client = makeClientTarget(app, arch);
+        targets[arch] = client;
+      });
 
       // Server
-      var server = options.cachedServerTarget || makeServerTarget(app, client);
-      server.clientTarget = client;
-      targets.server = server;
+      var browserClient = targets["client.browser"];
+      if (browserClient) {
+        var server = options.cachedServerTarget ||
+                     makeServerTarget(app, browserClient);
+        server.clientTarget = browserClient;
+        targets.server = server;
+      }
     }
 
     // Pick up any additional targets in /programs
@@ -1983,7 +2001,6 @@ exports.buildJsImage = function (options) {
   });
 
   var unipackage = compiler.compile(packageSource).unipackage;
-
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does

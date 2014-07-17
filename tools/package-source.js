@@ -667,23 +667,26 @@ _.extend(PackageSource.prototype, {
       buildmessage.error("Package name invalid: " + self.name);
     }
 
-    var allWheres = ['server', 'client'];
-    var allWhereObj = {};
-    _.each(allWheres, function (where) {
-      allWhereObj[where] = [];
-    });
+    var allWheres = ['server', 'client', 'client.browser', 'client.test'];
 
     // source files used
-    var sources = _.clone(allWhereObj);
+    var sources = {};
 
     // symbols exported
-    var exports = _.clone(allWhereObj);
+    var exports = {};
 
     // packages used and implied (keys are 'package', 'unordered', and
     // 'weak').  an "implied" package is a package that will be used by a unibuild
     // which uses us.
-    var uses =  _.clone(allWhereObj);
-    var implies = _.clone(allWhereObj);
+    var uses = {};
+    var implies = {};
+
+    _.each(allWheres, function (where) {
+      sources[where] = [];
+      exports[where] = [];
+      uses[where] = [];
+      implies[where] = [];
+    });
 
     // For this old-style, on_use/on_test/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
@@ -889,7 +892,11 @@ _.extend(PackageSource.prototype, {
         // packages and any remaining handlers. It violates the
         // principle of least surprise to half-run a handler
         // and then continue.
-        sources = _.clone(allWhereObj);
+        sources = {};
+        _.each(allWheres, function (where) {
+          sources[where] = [];
+        });
+
         fileAndDepLoader = null;
         self.pluginInfo = {};
         npmDependencies = null;
@@ -954,48 +961,47 @@ _.extend(PackageSource.prototype, {
       files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
     });
 
-    // Create source architectures, one for the server and one for the client.
-    _.each(["client", "os"], function (arch) {
-      var sourceWhere = (arch === "client") ? "client" : "server";
-      _.each(allWheres, function (where) {
-        if (archinfo.matches(where, sourceWhere)) {
-          // Everything depends on the package 'meteor', which sets up
-          // the basic environment) (except 'meteor' itself, and js-analyze
-          // which needs to be loaded by the linker).
-          // XXX add a better API for js-analyze to declare itself here
-          if (name !== "meteor" && name !== "js-analyze" &&
-              !process.env.NO_METEOR_PACKAGE) {
-            // Don't add the dependency if one already exists. This allows the
-            // package to create an unordered dependency and override the one that
-            // we'd add here. This is necessary to resolve the circular dependency
-            // between meteor and underscore (underscore has an unordered
-            // dependency on meteor dating from when the .js extension handler was
-            // in the "meteor" package).
-            var alreadyDependsOnMeteor =
-                  !! _.find(uses[where], function (u) {
-                    return u.package === "meteor";
-                  });
-            if (! alreadyDependsOnMeteor)
-              uses[where].unshift({ package: "meteor" });
-          }
+    // Create source architectures, one for the server and one for each client.
+    _.each(allWheres, function (where) {
+      var innerWhere = where;
+      var arch = (where === 'server') ? 'os' : where;
 
-          // Each unibuild has its own separate WatchSet. This is so that, eg, a test
-          // unibuild's dependencies doesn't end up getting merged into the
-          // pluginWatchSet of a package that uses it: only the use unibuild's
-          // dependencies need to go there!
-          var watchSet = new watch.WatchSet();
-          watchSet.addFile(packageJsPath, packageJsHash);
-          self.architectures.push(new SourceArch(self, {
-            name: "main",
-            arch: arch,
-            uses: uses[where],
-            implies: implies[where],
-            getSourcesFunc: function () { return sources[where]; },
-            declaredExports: exports[where],
-            watchSet: watchSet
-          }));
-        }
-      });
+      // Everything depends on the package 'meteor', which sets up
+      // the basic environment) (except 'meteor' itself, and js-analyze
+      // which needs to be loaded by the linker).
+      // XXX add a better API for js-analyze to declare itself here
+      if (name !== "meteor" && name !== "js-analyze" &&
+          !process.env.NO_METEOR_PACKAGE) {
+        // Don't add the dependency if one already exists. This allows the
+        // package to create an unordered dependency and override the one that
+        // we'd add here. This is necessary to resolve the circular dependency
+        // between meteor and underscore (underscore has an unordered
+        // dependency on meteor dating from when the .js extension handler was
+        // in the "meteor" package).
+        var alreadyDependsOnMeteor =
+              !! _.find(uses[where], function (u) {
+                return u.package === "meteor";
+              });
+        if (! alreadyDependsOnMeteor)
+          uses[where].unshift({ package: "meteor" });
+      }
+
+      // Each unibuild has its own separate WatchSet. This is so that, eg, a test
+      // unibuild's dependencies doesn't end up getting merged into the
+      // pluginWatchSet of a package that uses it: only the use unibuild's
+      // dependencies need to go there!
+      var watchSet = new watch.WatchSet();
+      watchSet.addFile(packageJsPath, packageJsHash);
+
+      self.architectures.push(new SourceArch(self, {
+        name: "main",
+        arch: arch,
+        uses: uses[where],
+        implies: implies[where],
+        getSourcesFunc: function () { return sources[where]; },
+        declaredExports: exports[where],
+        watchSet: watchSet
+      }));
     });
 
     // If we have built this before, read the versions that we ended up using.

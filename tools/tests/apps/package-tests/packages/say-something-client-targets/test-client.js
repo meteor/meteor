@@ -1,0 +1,1 @@
+Meteor.call('log', 'test client');
