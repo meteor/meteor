@@ -1637,6 +1637,12 @@ main.registerCommand({
   var projectOptions = _.pick(options, 'port', 'host');
   projectOptions.appName = appName;
 
+  // XXX in Android simulators you can't access localhost and the correct way is
+  // to use "10.0.2.2" instead.
+  if (cordovaCommand === 'emulate' && cordovaArgs[0] === 'android' &&
+      options.host === 'localhost')
+    projectOptions.host = '10.0.2.2';
+
   try {
     ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
   } catch (e) {
