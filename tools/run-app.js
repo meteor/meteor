@@ -330,7 +330,7 @@ var AppRunner = function (appDir, options) {
   self.rootUrl = options.rootUrl;
   self.settingsFile = options.settingsFile;
   self.program = options.program;
-  self.clientTargetTypes = options.test ? ['client.test'] : ['client'];
+  self.clientTargetTypes = options.test ? ['client.test'] : ['client.browser'];
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;

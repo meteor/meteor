@@ -955,15 +955,7 @@ _.extend(ClientTarget.prototype, {
       manifest: manifest
     });
     return "program.json";
-  },
-
-  // For ClientTargets with override this function to return the most
-  // specific arch. For example, a 'client.browser' unibuild should target
-  // a 'client.browser' arch.
-  // mostCompatibleArch: function () {
-  //   var self = this;
-  //   return archinfo.mostSpecificMatch(_.pluck(self.unibuilds, 'arch'));
-  // }
+  }
 });
 
 
@@ -1712,7 +1704,9 @@ exports.bundle = function (options) {
     };
 
     var makeBlankClientTarget = function () {
-      // XXX
+      // XXX only used in galaxy? There were changes related to ClientTarget
+      // arches that might affect this, and this code path was not tested with
+      // Galaxy.
       var client = new ClientTarget({
         packageLoader: packageLoader,
         arch: "browser"
@@ -1766,6 +1760,8 @@ exports.bundle = function (options) {
       // Server
       var browserClient = targets["client.browser"];
       if (browserClient) {
+        // XXX you should be able to have a ServerTarget that doesn't require a
+        // client target. ie. Cordova might only connect over DDP to the server.
         var server = options.cachedServerTarget ||
                      makeServerTarget(app, browserClient);
         server.clientTarget = browserClient;

@@ -314,8 +314,6 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   allHandlers['js'] = function (compileStep) {
     // This is a hardcoded handler for *.js files. Since plugins
     // are written in JavaScript we have to start somewhere.
-
-    console.log("ading javascript", compileStep.arch);
     compileStep.addJavaScript({
       data: compileStep.read().toString('utf8'),
       path: compileStep.inputPath,

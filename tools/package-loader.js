@@ -114,7 +114,6 @@ _.extend(exports.PackageLoader.prototype, {
   // that package at the right architecture.
   getUnibuild: function (packageName, arch) {
     var self = this;
-
     var pkg = self.getPackage(packageName, { throwOnError: true });
     return pkg.getUnibuildAtArch(arch);
   }

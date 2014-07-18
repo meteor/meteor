@@ -292,6 +292,8 @@ var PackageSource = function () {
   // overall package versions file (if one exists). In the future, we can make
   // this option transparent to the user in package.js.
   self.noVersionFile = false;
+
+  self.allWheres = ['server', 'client.browser', 'client.test'];
 };
 
 
@@ -626,6 +628,8 @@ _.extend(PackageSource.prototype, {
         symbols: { Package: Package, Npm: Npm }
       });
     } catch (e) {
+      console.log(e.stack); // XXX should we keep this here -- or do we want broken
+                            // packages to fail silently?
       buildmessage.exception(e);
 
       // Could be a syntax error or an exception. Recover by
@@ -667,8 +671,6 @@ _.extend(PackageSource.prototype, {
       buildmessage.error("Package name invalid: " + self.name);
     }
 
-    var allWheres = ['server', 'client', 'client.browser', 'client.test'];
-
     // source files used
     var sources = {};
 
@@ -681,12 +683,24 @@ _.extend(PackageSource.prototype, {
     var uses = {};
     var implies = {};
 
-    _.each(allWheres, function (where) {
+    _.each(self.allWheres, function (where) {
       sources[where] = [];
       exports[where] = [];
       uses[where] = [];
       implies[where] = [];
     });
+
+    // @param wheres an array of 'wheres' to include
+    // @param f which takes a matching arch as an argument
+    var forAllMatchingWheres = function (wheres, f) {
+      _.each(wheres, function (where) {
+        _.each(self.allWheres, function (matchWhere) {
+          if (archinfo.matches(matchWhere, where)) {
+            f(matchWhere);
+          }
+        });
+      });
+    }
 
     // For this old-style, on_use/on_test/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
@@ -714,16 +728,16 @@ _.extend(PackageSource.prototype, {
 
       var toWhereArray = function (where) {
         if (!(where instanceof Array)) {
-          where = where ? [where] : allWheres;
+          where = where ? [where] : self.allWheres;
         }
         where = _.uniq(where);
         _.each(where, function (inputWhere) {
-          var isMatch = _.any(_.map(allWheres, function (actualWhere) {
-            return archinfo.matches(inputWhere, actualWhere);
+          var isMatch = _.any(_.map(self.allWheres, function (actualWhere) {
+            return archinfo.matches(actualWhere, inputWhere);
           }));
           if (! isMatch) {
             buildmessage.error(
-              "Invalid 'where' argument: '" + indivWhere + "'",
+              "Invalid 'where' argument: '" + inputWhere + "'",
               // skip toWhereArray in addition to the actual API function
               {useMyCaller: 1});
           }
@@ -786,7 +800,7 @@ _.extend(PackageSource.prototype, {
           }
 
           _.each(names, function (name) {
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               uses[w].push(_.extend(utils.splitConstraint(name), {
                 unordered: options.unordered || false,
                 weak: options.weak || false
@@ -803,7 +817,7 @@ _.extend(PackageSource.prototype, {
           where = toWhereArray(where);
 
           _.each(names, function (name) {
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
               implies[w].push(utils.splitConstraint(name));
@@ -819,7 +833,7 @@ _.extend(PackageSource.prototype, {
           where = toWhereArray(where);
 
           _.each(paths, function (path) {
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               var source = {relPath: path};
               if (fileOptions)
                 source.fileOptions = fileOptions;
@@ -874,7 +888,7 @@ _.extend(PackageSource.prototype, {
               // recover by ignoring
               return;
             }
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               exports[w].push({name: symbol, testOnly: !!options.testOnly});
             });
           });
@@ -887,13 +901,15 @@ _.extend(PackageSource.prototype, {
       try {
         fileAndDepLoader(api);
       } catch (e) {
+        console.log(e.stack); // XXX should we keep this here -- or do we want broken
+                              // packages to fail silently?
         buildmessage.exception(e);
         // Recover by ignoring all of the source files in the
         // packages and any remaining handlers. It violates the
         // principle of least surprise to half-run a handler
         // and then continue.
         sources = {};
-        _.each(allWheres, function (where) {
+        _.each(self.allWheres, function (where) {
           sources[where] = [];
         });
 
@@ -922,7 +938,7 @@ _.extend(PackageSource.prototype, {
 
       // For all implies and uses, fill in the unspecified dependencies from the
       // release.
-      _.each(allWheres, function (label) {
+      _.each(self.allWheres, function (label) {
         uses[label] = _.map(uses[label], setFromRel);
         implies[label] = _.map(implies[label], setFromRel);
       });
@@ -962,8 +978,7 @@ _.extend(PackageSource.prototype, {
     });
 
     // Create source architectures, one for the server and one for each client.
-    _.each(allWheres, function (where) {
-      var innerWhere = where;
+    _.each(self.allWheres, function (where) {
       var arch = (where === 'server') ? 'os' : where;
 
       // Everything depends on the package 'meteor', which sets up
@@ -985,14 +1000,12 @@ _.extend(PackageSource.prototype, {
         if (! alreadyDependsOnMeteor)
           uses[where].unshift({ package: "meteor" });
       }
-
       // Each unibuild has its own separate WatchSet. This is so that, eg, a test
       // unibuild's dependencies doesn't end up getting merged into the
       // pluginWatchSet of a package that uses it: only the use unibuild's
       // dependencies need to go there!
       var watchSet = new watch.WatchSet();
       watchSet.addFile(packageJsPath, packageJsHash);
-
       self.architectures.push(new SourceArch(self, {
         name: "main",
         arch: arch,
@@ -1044,15 +1057,16 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    _.each(["client", "server"], function (archName) {
+    _.each(self.allWheres, function (where) {
       // Determine used packages
       var project = require('./project.js').project;
       var names = project.getConstraints();
-      var arch = archName === "server" ? "os" : "client";
+      var arch = where === "server" ? "os" : where;
+      // XXX what about /client.browser/* etc
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {
-        name: archName,
+        name: where,
         arch: arch,
         uses: _.map(names, utils.dealConstraint)
       });
@@ -1097,7 +1111,7 @@ _.extend(PackageSource.prototype, {
         });
 
         var otherUnibuildRegExp =
-              (archName === "server" ? /^client\/$/ : /^server\/$/);
+              (where === "server" ? /^client\/$/ : /^server\/$/);
 
         // The paths that we've called checkForInfiniteRecursion on.
         var seenPaths = {};
@@ -1167,7 +1181,7 @@ _.extend(PackageSource.prototype, {
 
           // Special case: on the client, JavaScript files in a
           // `client/compatibility` directory don't get wrapped in a closure.
-          if (archName === "client" && relPath.match(/\.js$/)) {
+          if (archinfo.matches(arch, "client") && relPath.match(/\.js$/)) {
             var clientCompatSubstr =
                   path.sep + 'client' + path.sep + 'compatibility' + path.sep;
             if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
@@ -1177,7 +1191,7 @@ _.extend(PackageSource.prototype, {
         });
 
         // Now look for assets for this unibuild.
-        var assetDir = archName === "client" ? "public" : "private";
+        var assetDir = archinfo.matches(arch, "client") ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
         });

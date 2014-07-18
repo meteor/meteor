@@ -39,7 +39,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
     // XXX in theory there might be different archs but in practice they are
     // always "os" and "client". Fix this once we actually have different
     // archs used.
-    _.each(["os", "client", "client.browser", "client.test"], function (arch) {
+    _.each(["os", "client.browser", "client.test"], function (arch) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
@@ -128,10 +128,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   }
 
   // split every package name to one or more archs belonging to that package
-  // (["foobar"] => ["foobar#os", "foobar#client"])
-  // XXX for now just put #os and #client
+  // (["foobar"] => ["foobar#os", "foobar#client.browser", ...])
+  // XXX for now just hardcode in all of the known architectures
   options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (packageName) {
-    return [packageName + "#os", packageName + "#client"];
+    return [packageName + "#os", packageName + "#client.browser",
+            packageName + "#client.test"];
   })), _.identity);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
@@ -198,7 +199,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 };
 
 // takes dependencies and constraints and rewrites the names from "foo" to
-// "foo#os" and "foo#client"
+// "foo#os" and "foo#client.browser" and "foo#client.test"
 // XXX right now creates a dependency for every unibuild it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
@@ -233,8 +234,9 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
   var self = this;
   var unibuildPrefix = packageName + "#";
   var unibuilds = [];
-  // XXX hardcode os and client
-  _.each(["os", "client", "client.browser", "client.test"], function (arch) {
+  // XXX hardcode all common architectures assuming that every package has the
+  // same set of architectures.
+  _.each(["os", "client.browser", "client.test"], function (arch) {
     if (self.resolver.unitsVersions[unibuildPrefix + arch])
       unibuilds.push(unibuildPrefix + arch);
   });
