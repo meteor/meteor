@@ -10,7 +10,7 @@ Package.on_use(function(api) {
   api.use('sha', ['client', 'server']);
   api.use('email', ['server']);
   api.use('random', ['server']);
-  api.use('check', ['server']);
+  api.use('check');
   api.use('underscore');
   api.use('livedata', ['client', 'server']);
 
