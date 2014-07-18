@@ -337,6 +337,9 @@ _.extend(OutputLog.prototype, {
 //   'fake-mongod' stub process to be started instead of 'mongod'. The
 //   tellMongo method then becomes available on Runs for controlling
 //   the stub.
+// - clients
+//   - browserstack: true if browserstack clients should be used
+//   - port: the port that the clients should run on
 
 var Sandbox = function (options) {
   var self = this;
@@ -359,13 +362,13 @@ var Sandbox = function (options) {
 
   self.clients = [ new PhantomClient({
     host: 'localhost',
-    port: 3000
+    port: options.clients.port || 3000
   })];
 
   if (options.clients && options.clients.browserstack) {
     self.clients.push(new BrowserStackClient({
       host: 'localhost',
-      port: 3000
+      port: options.clients.port || 3000
     }));
   }
 
@@ -400,6 +403,7 @@ _.extend(Sandbox.prototype, {
   // });
   testWithAllClients: function (f) {
     var self = this;
+    var argsArray = _.compact(_.toArray(arguments).slice(1));
 
     if (self.clients.length) {
       console.log("running test with " + self.clients.length + " client(s).");
@@ -411,7 +415,7 @@ _.extend(Sandbox.prototype, {
       console.log("testing with " + client.name + "...");
       f(new Run(self.execPath, {
         sandbox: self,
-        args: [],
+        args: argsArray,
         cwd: self.cwd,
         env: self._makeEnv(),
         fakeMongo: self.fakeMongo,

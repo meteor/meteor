@@ -199,7 +199,7 @@ var PackageSource = function () {
 
   // Path that will be prepended to the URLs of all resources emitted
   // by this package (assuming they don't end up getting
-  // concatenated). For non-browser targets, the only effect this will
+  // concatenated). For non-client targets, the only effect this will
   // have is to change the actual on-disk paths of the files in the
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right).
@@ -293,7 +293,9 @@ var PackageSource = function () {
   // this option transparent to the user in package.js.
   self.noVersionFile = false;
 
-  self.allWheres = ['server', 'client.browser', 'client.test'];
+  // The list of archs that we can build for. Doesn't include 'client' because
+  // it is expanded into 'client.*'.
+  self.allWheres = ['server', 'client.browser', 'client.cordova'];
 };
 
 
@@ -690,8 +692,8 @@ _.extend(PackageSource.prototype, {
       implies[where] = [];
     });
 
-    // @param wheres an array of 'wheres' to include
-    // @param f which takes a matching arch as an argument
+    // Iterates over the list of target archs and calls f(arch) for all archs
+    // that match an element of 'wheres'.
     var forAllMatchingWheres = function (wheres, f) {
       _.each(wheres, function (where) {
         _.each(self.allWheres, function (matchWhere) {
@@ -700,24 +702,20 @@ _.extend(PackageSource.prototype, {
           }
         });
       });
-    }
+    };
 
     // For this old-style, on_use/on_test/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
     // what it does.
     //
-    // XXX fix this comment
     // We have a simple strategy. Call its on_xxx handler with no
     // 'where', which is what happens when the package is added
     // directly to an app, and see what files it adds to the client
-    // and the server. Call the former the client version of the
-    // package, and the latter the server version. Then, when a
-    // package is used, include it in both the client and the server
-    // by default. This simple strategy doesn't capture even 10% of
-    // the complexity possible with on_use, on_test, and where, but
+    // and the server. When a package is used, include it in both the client
+    // and the server by default. This simple strategy doesn't capture even
+    // 10% of the complexity possible with on_use, on_test, and where, but
     // probably is sufficient for virtually all packages that actually
-    // exist in the field, if not every single
-    // one. #OldStylePackageSupport
+    // exist in the field, if not every single one. #OldStylePackageSupport
 
     if (fileAndDepLoader) {
       var toArray = function (x) {
@@ -750,7 +748,7 @@ _.extend(PackageSource.prototype, {
         // used. Can also take literal package objects, if you have
         // anonymous packages you want to use (eg, app packages)
         //
-        // @param where 'client', 'client.browser', 'client.test', 'server',
+        // @param where 'client', 'client.browser', 'client.cordova', 'server',
         // or an array of those.
         // The default is ['client', 'server'].
         //
@@ -865,8 +863,9 @@ _.extend(PackageSource.prototype, {
         // Export symbols from this package.
         //
         // @param symbols String (eg "Foo") or array of String
-        // @param where 'client', 'server', or an array of those.
-        // The default is ['client', 'client.test', 'client.browser', 'server'].
+        // @param where 'client', 'server', 'client.browser', 'client.cordova'
+        // or an array of those.
+        // The default is ['client', 'server'].
         // @param options 'testOnly', boolean.
         export: function (symbols, where, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
@@ -1000,12 +999,14 @@ _.extend(PackageSource.prototype, {
         if (! alreadyDependsOnMeteor)
           uses[where].unshift({ package: "meteor" });
       }
+
       // Each unibuild has its own separate WatchSet. This is so that, eg, a test
       // unibuild's dependencies doesn't end up getting merged into the
       // pluginWatchSet of a package that uses it: only the use unibuild's
       // dependencies need to go there!
       var watchSet = new watch.WatchSet();
       watchSet.addFile(packageJsPath, packageJsHash);
+
       self.architectures.push(new SourceArch(self, {
         name: "main",
         arch: arch,
@@ -1213,7 +1214,6 @@ _.extend(PackageSource.prototype, {
               include: [/.?/],
               // we DO look under dot directories here
               exclude: ignoreFiles
-
             });
 
             _.each(assetsAndSubdirs, function (item) {

@@ -1,5 +1,11 @@
 var semver = Npm.require('semver');
 
+var archMatches = function (arch, baseArch) {
+  return arch.substr(0, baseArch.length) === baseArch &&
+    (arch.length === baseArch.length ||
+     arch.substr(baseArch.length, 1) === ".");
+};
+
 ConstraintSolver = {};
 
 // catalog is a catalog.Catalog object. We have to pass this in because
@@ -39,7 +45,8 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
     // XXX in theory there might be different archs but in practice they are
     // always "os" and "client". Fix this once we actually have different
     // archs used.
-    _.each(["os", "client.browser", "client.test"], function (arch) {
+    var allArchs = ["os", "client.browser", "client.test"];
+    _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
@@ -49,24 +56,28 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 
     _.each(versionDef.dependencies, function (dep, depName) {
       _.each(dep.references, function (ref) {
-        var unitName = packageName + "#" + ref.arch;
-        var unitVersion = unibuilds[unitName];
+        _.each(allArchs, function (arch) {
+          if (archMatches(arch, ref.arch)) {
+            var unitName = packageName + "#" + arch;
+            var unitVersion = unibuilds[unitName];
 
-        if (! unitVersion)
-          throw new Error("A non-standard arch " + ref.arch + " for package " + packageName);
+            if (! unitVersion)
+              throw new Error("A non-standard arch " + arch + " for package " + packageName);
 
-        var targetUnitName = depName + "#" + ref.arch;
+            var targetUnitName = depName + "#" + arch;
 
-        // Add the dependency if needed
-        if (! ref.weak)
-          unitVersion.addDependency(targetUnitName);
+            // Add the dependency if needed
+            if (! ref.weak)
+              unitVersion.addDependency(targetUnitName);
 
-        // Add a constraint if such exists
-        if (dep.constraint && dep.constraint !== "none") {
-          var constraint =
-            self.resolver.getConstraint(targetUnitName, dep.constraint);
-          unitVersion.addConstraint(constraint);
-        }
+            // Add a constraint if such exists
+            if (dep.constraint && dep.constraint !== "none") {
+              var constraint =
+                self.resolver.getConstraint(targetUnitName, dep.constraint);
+              unitVersion.addConstraint(constraint);
+            }
+          }
+        });
       });
     });
 

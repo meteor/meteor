@@ -279,7 +279,7 @@ main.registerCommand({
     program: options.program || undefined,
     buildOptions: {
       minify: options.production,
-      test: options.test
+      clientTargetTypes: options.test ? ["client.test"] : ["client.browser"]
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,

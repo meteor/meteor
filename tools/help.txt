@@ -40,6 +40,7 @@ Options:
   --settings    Set optional data for Meteor.settings on the server
   --release     Specify the release of Meteor to use
   --program     The program in the app to run (Advanced)
+  --test        XXX still to be determined
 
 
 >>> create
