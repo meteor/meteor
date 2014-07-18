@@ -8,13 +8,15 @@
 * Refactor Blaze to simplify internals while preserving the public
   API. `UI.Component` has been replaced with `Blaze.View.`
 
+* Fix performance issues and memory leaks concerning event handlers.
+  
+* Add `UI.remove` to complement `UI.render`.
+  
 * Create `<a>` tags as SVG elements when they have `xlink:href`
   attributes. (Previously, `<a>` tags inside SVGs were never created as
   SVG elements.)  #2178
 
 * Throw an error in `{{foo bar}}` if `foo` is missing or not a function.
-
-* Check that arguments to `UI.insert` have the right types.
 
 * XXX 3c6c8e5
 
@@ -56,9 +58,6 @@
 
 * On the server, `Meteor.startup(c)` now calls `c` immediately if the
   server has already started up, matching the client behavior.  #2239
-
-* Fix `Meteor._inherits` to copy static properties of the parent
-  function to the child function.
 
 * Make the `tinytest/run` method return immediately, so that `wait`
   method calls from client tests don't block on server tests completing.
