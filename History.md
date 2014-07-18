@@ -1,7 +1,69 @@
 ## v.NEXT
 
+
+## v0.8.3
+
+#### XXX blaze-refactor
+
+* Create `<a>` tags as SVG elements when they have `xlink:href`
+  attributes. (Previously, `<a>` tags inside SVGs were never created as
+  SVG elements.)  #2178
+
+* Throw an error in `{{foo bar}}` if `foo` is missing or not a function.
+
+* Check that arguments to `UI.insert` have the right types.
+
+* XXX 3c6c8e5
+
+
+#### Meteor Accounts
+
+* Fix OAuth popup flow in mobile apps that don't support `window.opener`
+  (such as iOS Chrome).  #2302
+
+* Fix regression in 0.8.2 where an exception would be thrown if
+  `Meteor.loginWithPassword` didn't have a callback. Callbacks to
+  `Meteor.loginWithPassword` are now optional again.  #2255
+
+* Fix "Email already exists" error with MongoDB 2.6.  #2238
+
+
+#### mongo-livedata and minimongo
+
 * Fix performance issue where a large batch of oplog updates could block
   the node event loop for long periods.  #2299.
+
+* Fix oplog bug resulting in error message "Buffer inexplicably empty".  #2274
+
+* Fix regression from 0.8.2 that caused collections to appear empty in
+  reactive `findOne()` or `fetch` queries that run before a mutator
+  returns.  #2275
+
+
+#### Miscellaneous
+
+* Stop including code by default that automatically refreshes the page
+  if JavaScript and CSS don't load correctly. While this code is useful
+  in some multi-server deployments, it can cause infinite refresh loops
+  if there are errors on the page. Add the `reload-safetybelt` package
+  to your app if you want to include this code.
+
+* Add `WebAppInternals.addStaticJs()` for adding static JavaScript code
+  to be served in the app, inline if allowed by `browser-policy`.
+
+* On the server, `Meteor.startup(c)` now calls `c` immediately if the
+  server has already started up, matching the client behavior.  #2239
+
+* Fix `Meteor._inherits` to copy static properties of the parent
+  function to the child function.
+
+* Make the `tinytest/run` method return immediately, so that `wait`
+  method calls from client tests don't block on server tests completing.
+
+* Add support for source maps for server-side code.
+
+* Log errors from method invocations on the client if there is no
+  callback provided.
 
 * Upgraded dependencies:
   - less: 1.7.1 (from 1.6.1)
