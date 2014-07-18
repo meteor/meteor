@@ -3,7 +3,10 @@
 
 ## v0.8.3
 
-#### XXX blaze-refactor
+#### Blaze
+
+* Refactor Blaze to simplify internals while preserving the public
+  API. `UI.Component` has been replaced with `Blaze.View.`
 
 * Create `<a>` tags as SVG elements when they have `xlink:href`
   attributes. (Previously, `<a>` tags inside SVGs were never created as
