@@ -1629,9 +1629,18 @@ main.registerCommand({
   var cordovaArgs = options.args.slice(1);
 
   if (cordovaCommand === 'plugin' || cordovaCommand === 'plugins') {
-    process.stderr.write('Avoid adding Cordova plugins directly,' +
-                         ' instead depend on them from unipackages.\n');
-    return 1;
+    var pluginsCommand = cordovaArgs[0];
+    var pluginsArgs = cordovaArgs.slice(1);
+
+    if (pluginsCommand === 'add') {
+      project.addCordovaPlugins(_.object(_.map(pluginsArgs, function (str) {
+        return str.split('@');
+      })));
+      return 0;
+    } else if (pluginsCommand === 'remove' || pluginsCommand === 'rm') {
+      project.removeCordovaPlugins(pluginsArgs);
+      return 0;
+    }
   }
 
   var projectOptions = _.pick(options, 'port', 'host');

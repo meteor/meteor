@@ -66,6 +66,15 @@ var Project = function () {
   // and recorded in the .meteor/versions file.
   self.dependencies = null;
 
+  // Plugins & versions of all Cordova plugins dependencies.
+  // A mapping from the Cordova plugin identifier to a semver string or a
+  // tarball url with sha.
+  // XXX Ignores the transitive dependencies.
+  self.cordovaPlugins = null;
+
+  // Platfroms & versions used by the Cordova project.
+  self.cordovaPlatforms = null
+
   // The package loader for this project, with the project's dependencies as its
   // version file. (See package-loader.js for more information about package
   // loaders). Derived from self.dependencies.
@@ -127,6 +136,12 @@ _.extend(Project.prototype, {
       files.getLinesOrEmpty(self._getVersionsFile()));
     // Also, make sure we have an app identifier for this app.
     self.ensureAppIdentifier();
+
+    self.cordovaPlugins = processPerConstraintLines(
+      files.getLinesOrEmpty(self._getCordovaPluginsFile()));
+
+    self.cordovaPlatforms = processPerConstraintLines(
+      files.getLinesOrEmpty(self._getCordovaPlatformsFile()));
 
     // Lastly, invalidate everything that we have computed -- obviously the
     // dependencies that we counted with the previous rootPath are wrong and we
@@ -440,6 +455,30 @@ _.extend(Project.prototype, {
   _getVersionsFile : function () {
     var self = this;
     return path.join(self.rootDir, '.meteor', 'versions');
+  },
+
+  getCordovaPlugins: function () {
+    var self = this;
+    return self.cordovaPlugins;
+  },
+
+  getCordovaPlatforms: function () {
+    var self = this;
+    return self.cordovaPlatforms;
+  },
+
+  // Returns the file path to the .meteor/cordova-plugins file, containing the
+  // Cordova plugins dependencies for this specific project.
+  _getCordovaPluginsFile: function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'cordova-plugins');
+  },
+
+  // Returns the file path to the .meteor/cordova-platforms file, containing the
+  // targetted Cordova platforms for this specific project.
+  _getCordovaPlatformsFile: function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'cordova-platforms');
   },
 
   // Give the package loader attached to this project to the caller.
@@ -800,7 +839,50 @@ _.extend(Project.prototype, {
     appendText += upgrader + '\n';
 
     fs.appendFileSync(self._finishedUpgradersFile(), appendText);
+  },
+
+  // Adds the passed plugins to the cordovaPlugins list. If the plugin was
+  // already in the list, just updates it in-place.
+  // newPlugins is an object with a mapping from the Cordova plugin identifier
+  // to an semver string or a tarball url with a sha.
+  addCordovaPlugins: function (newPlugins) {
+    var self = this;
+    self.cordovaPlugins = _.extend(self.cordovaPlugins, newPlugins);
+
+    var plugins = self._getCordovaPluginsFile();
+    var lines = [];
+    _.each(self.cordovaPlugins, function (versionString, plugin) {
+      if (versionString)
+        lines.push(plugin + '@' + versionString);
+      else
+        lines.push(plugin);
+    });
+    lines.push('\n');
+    fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
+  },
+
+  // Removes the plugins from the cordova-plugins file if they existed.
+  // pluginsToRemove - array of Cordova plugin identifiers
+  removeCordovaPlugins: function (pluginsToRemove) {
+    var self = this;
+
+    self.cordovaPlugins =
+      _.omit.apply(null, [self.cordovaPlugins].concat(pluginsToRemove));
+
+    var plugins = self._getCordovaPluginsFile();
+    var lines = [];
+
+    _.each(self.cordovaPlugins, function (versionString, plugin) {
+      if (versionString)
+        lines.push(plugin + '@' + versionString);
+      else
+        lines.push(plugin);
+    });
+    lines.push('\n');
+    fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
   }
+
+  // XXX addCordovaPlatforms, removeCordovaPlatforms
 });
 
 // The project is currently a singleton, but there is no universal reason for
