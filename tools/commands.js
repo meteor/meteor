@@ -1660,6 +1660,7 @@ main.registerCommand({
     return 1;
   }
 
+  // XXX if it is cordova serve, print the output
   // XXX error if not a Cordova project
   execFileSync('cordova', options.args, { cwd: cordovaPath });
 });
