@@ -18,6 +18,10 @@
 
 * Throw an error in `{{foo bar}}` if `foo` is missing or not a function.
 
+* Cursors returned from template helpers for #each should implement
+  `observeChanges` method and don't have to be Minimongo cursors
+  (allows new custom data stores for Blaze like Miniredis)
+
 * XXX 3c6c8e5
 
 
