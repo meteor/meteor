@@ -294,7 +294,8 @@ main.registerCommand({
     return 1;
   }
 
-  var appName = isCurrentDir ? 'helloApp' : path.basename(appPath);
+  var appName = isCurrentDir ? path.basename(process.env.PWD)
+                             : path.basename(appPath);
 
   var transform = function (x) {
     return x.replace(/~name~/g, appName);
