@@ -1394,6 +1394,10 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
       transform: justId,
       transformName: "justId"
     };
+    // Try not passing the transform function
+    if (Meteor.isClient) {
+      collectionOptions.transform = null;
+    }
     this.collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
