@@ -49,9 +49,6 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
     var allArchs = ["os", "client.browser", "client.cordova"];
     _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
-      if (packageName === 'npm-node-aes-gcm') {
-        console.log(unitName);
-      }
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
       var unitVersion = unibuilds[unitName];
