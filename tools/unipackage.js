@@ -623,9 +623,6 @@ _.extend(Unipackage.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      if (unibuildMeta.arch === 'browser')
-        unibuildMeta.arch = 'client'; // XXX hack, figure out how to get this work
-
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
         arch: unibuildMeta.arch,

@@ -40,7 +40,6 @@ _.extend(exports.PackageLoader.prototype, {
     if (options.throwOnError === undefined) {
       options.throwOnError = true;
     }
-
     var loadPath = self.getLoadPathForPackage(name);
     if (! loadPath) {
       if (options.throwOnError === false)
@@ -114,6 +113,7 @@ _.extend(exports.PackageLoader.prototype, {
   // that package at the right architecture.
   getUnibuild: function (packageName, arch) {
     var self = this;
+
     var pkg = self.getPackage(packageName, { throwOnError: true });
     return pkg.getUnibuildAtArch(arch);
   }

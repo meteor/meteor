@@ -26,6 +26,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // XXX for now we convert unibuilds to unit versions as "deps#os"
 
   var allPackageNames = catalog.getAllPackageNames();
+
   var sortedVersionsForPackage = {};
   var forEveryVersion = function (iter) {
     _.each(allPackageNames, function (packageName) {
@@ -43,11 +44,14 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   forEveryVersion(function (packageName, version, versionDef) {
     var unibuilds = {};
     // XXX in theory there might be different archs but in practice they are
-    // always "os" and "client". Fix this once we actually have different
-    // archs used.
-    var allArchs = ["os", "client.browser", "client.test"];
+    // always "os", "client.browser" and "client.cordova". Fix this once we
+    // actually have different archs used.
+    var allArchs = ["os", "client.browser", "client.cordova"];
     _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
+      if (packageName === 'npm-node-aes-gcm') {
+        console.log(unitName);
+      }
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
       var unitVersion = unibuilds[unitName];
@@ -143,7 +147,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
   // XXX for now just hardcode in all of the known architectures
   options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (packageName) {
     return [packageName + "#os", packageName + "#client.browser",
-            packageName + "#client.test"];
+            packageName + "#client.cordova"];
   })), _.identity);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
@@ -210,7 +214,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 };
 
 // takes dependencies and constraints and rewrites the names from "foo" to
-// "foo#os" and "foo#client.browser" and "foo#client.test"
+// "foo#os" and "foo#client.browser" and "foo#client.cordova"
 // XXX right now creates a dependency for every unibuild it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
@@ -247,7 +251,7 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
   var unibuilds = [];
   // XXX hardcode all common architectures assuming that every package has the
   // same set of architectures.
-  _.each(["os", "client.browser", "client.test"], function (arch) {
+  _.each(["os", "client.browser", "client.cordova"], function (arch) {
     if (self.resolver.unitsVersions[unibuildPrefix + arch])
       unibuilds.push(unibuildPrefix + arch);
   });

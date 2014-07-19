@@ -67,7 +67,6 @@ compiler.eachUsedUnibuild = function (
     callback = options;
     options = {};
   }
-
   var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
   var processedBuildId = {};
@@ -490,10 +489,10 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   a closure, so that its vars are shared with other files
     //   in the module.
     // - addAsset({ path: "my/image.png", data: Buffer })
-    //   Add a file to serve as-is over HTTP (browser targets) or
+    //   Add a file to serve as-is over HTTP (client targets) or
     //   to include as-is in the bundle (os targets).
     //   This time `data` is a Buffer rather than a string. For
-    //   browser targets, it will be served at the exact path you
+    //   client targets, it will be served at the exact path you
     //   request (concatenated with rootOutputPath). For server
     //   targets, the file can be retrieved by passing path to
     //   Assets.getText or Assets.getBinary.
@@ -506,7 +505,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   line, column, and func are all optional.
     //
     // XXX for now, these handlers must only generate portable code
-    // (code that isn't dependent on the arch, other than 'browser'
+    // (code that isn't dependent on the arch, other than 'client'
     // vs 'os') -- they can look at the arch that is provided
     // but they can't rely on the running on that particular arch
     // (in the end, an arch-specific unibuild will be emitted only if

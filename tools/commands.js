@@ -221,7 +221,6 @@ main.registerCommand({
     'raw-logs': { type: Boolean },
     settings: { type: String },
     program: { type: String },
-    test: { type: Boolean },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
     // undocumented: intended for automated testing (eg, cli-test.sh),
@@ -278,8 +277,7 @@ main.registerCommand({
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
-      minify: options.production,
-      clientTargetTypes: options.test ? ["client.test"] : ["client.browser"]
+      minify: options.production
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -494,8 +492,7 @@ main.registerCommand({
     directory: { type: Boolean },
     architecture: { type: String },
     // Undocumented
-    'for-deploy': { type: Boolean },
-    client: { type: String }
+    'for-deploy': { type: Boolean }
   }
 }, function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
@@ -540,9 +537,7 @@ main.registerCommand({
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      arch: bundleArch,
-      clientArchs: options['client-arch'] ? [options['client-arch']]
-                                          : ['client.browser']
+      arch: bundleArch
     }
   });
   if (bundleResult.errors) {

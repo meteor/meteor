@@ -275,7 +275,7 @@ _.extend(AppProcess.prototype, {
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
-//   proxy, recordPackageUsage, clientTargetTypes
+//   proxy, recordPackageUsage
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -330,7 +330,6 @@ var AppRunner = function (appDir, options) {
   self.rootUrl = options.rootUrl;
   self.settingsFile = options.settingsFile;
   self.program = options.program;
-  self.clientTargetTypes = options.test ? ['client.test'] : ['client.browser'];
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
@@ -433,8 +432,7 @@ _.extend(AppRunner.prototype, {
         outputPath: bundlePath,
         includeNodeModulesSymlink: true,
         buildOptions: self.buildOptions,
-        cachedServerTarget: cachedServerTarget,
-        clientTargetTypes: self.clientTargetTypes
+        cachedServerTarget: cachedServerTarget
       });
 
       cachedServerTarget = bundle.serverTarget;
