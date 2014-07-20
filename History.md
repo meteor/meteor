@@ -9,9 +9,9 @@
   API. `UI.Component` has been replaced with `Blaze.View.`
 
 * Fix performance issues and memory leaks concerning event handlers.
-  
+
 * Add `UI.remove` to complement `UI.render`.
-  
+
 * Create `<a>` tags as SVG elements when they have `xlink:href`
   attributes. (Previously, `<a>` tags inside SVGs were never created as
   SVG elements.)  #2178
@@ -47,6 +47,10 @@
 * Fix regression from 0.8.2 that caused collections to appear empty in
   reactive `findOne()` or `fetch` queries that run before a mutator
   returns.  #2275
+
+* Throw an exception when `observeChanges` is called from within an
+  observe callback on the same collection. This is a temporary measure
+  to address #2315.
 
 
 #### Miscellaneous
