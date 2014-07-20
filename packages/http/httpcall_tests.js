@@ -339,7 +339,11 @@ testAsyncMulti("httpcall - http auth", [
         var data = result.data;
         test.equal(data.url, "/login?"+password);
       }));
+  }
+]);
 
+testAsyncMulti("httpcall - http auth - malformed password", [
+  function(test, expect) {
     // test fail on malformed username:password
     test.throws(function() {
       HTTP.call(
