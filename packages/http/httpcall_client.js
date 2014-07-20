@@ -37,6 +37,8 @@ HTTP.call = function(method, url, options, callback) {
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
 
+  _.extend(headers, options.headers || {});
+
   var username, password;
   if (options.auth) {
     var colonLoc = options.auth.indexOf(':');
@@ -44,13 +46,25 @@ HTTP.call = function(method, url, options, callback) {
       throw new Error('auth option should be of the form "username:password"');
     username = options.auth.substring(0, colonLoc);
     password = options.auth.substring(colonLoc+1);
+
+    // Auth simply doesn't work on Android.  Send a header instead.
+
+    // XXX: Cope with non-BASIC auth?
+
+    // XXX: Should we just detect broken browsers / versions?
+    var isAndroid = /Android/i.test(navigator.userAgent);
+
+    // XXX: Use unicode-safe base64 code (base64 from EJSON, utf8 from SHA256)
+    if (isAndroid && window.btoa) {
+      headers['Authorization'] = "Basic " + window.btoa(options.auth);
+      username = undefined;
+      password = undefined;
+    }
   }
 
   if (params_for_body) {
     content = encodeParams(params_for_body);
   }
-
-  _.extend(headers, options.headers || {});
 
   ////////// Callback wrapping //////////
 
