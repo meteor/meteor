@@ -1396,7 +1396,7 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
     };
     // Try not passing the transform function
     if (Meteor.isClient) {
-      collectionOptions.transform = null;
+      delete collectionOptions['transform'];
     }
     this.collectionName = Random.id();
     if (Meteor.isClient) {
