@@ -342,7 +342,7 @@ testAsyncMulti("httpcall - http auth", [
   }
 ]);
 
-testAsyncMulti("httpcall - http auth - malformed password", [
+testAsyncMulti("httpcall - http auth with malformed password", [
   function(test, expect) {
     // test fail on malformed username:password
     test.throws(function() {
