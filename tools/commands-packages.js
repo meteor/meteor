@@ -157,6 +157,10 @@ main.registerCommand({
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
 
+      var directDeps =
+            compiler.determineBuildTimeDependencies(packageSource).directDependencies;
+      project._ensurePackagesExistOnDisk(directDeps);
+
       compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
 
@@ -681,7 +685,6 @@ main.registerCommand({
 
   // Get it back.
   catalog.official.refresh();
-
   process.stdout.write("Done creating " + relConf.track  + "@" +
                        relConf.version + "!\n");
   return 0;

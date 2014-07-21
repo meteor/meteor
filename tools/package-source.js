@@ -827,7 +827,7 @@ _.extend(PackageSource.prototype, {
           // XXX: Error handling
           if (relInf.length !== 2)
             throw new Error("Incorrect release spec");
-          var catalog = require('./catalog.js').complete;
+          var catalog = require('./catalog.js').official;
           // XXX: We pass in true to override the fact that we know that teh
           // catalog may not be initialized, but we are pretty sure that the
           // releases are there anyway. This is not the right way to do this
@@ -835,7 +835,7 @@ _.extend(PackageSource.prototype, {
           releaseRecord = catalog.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
-            throw new Error("Unknown release", release);
+            throw new Error("Unknown release "+ release);
            }
         },
 

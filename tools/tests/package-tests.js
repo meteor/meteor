@@ -1,7 +1,17 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
+var testUtils = require('../test-utils.js');
+var utils = require('../utils.js');
 var _= require('underscore');
+var fs = require("fs");
+
+var testPackagesServer = "https://test-packages.meteor.com";
+process.env.METEOR_PACKAGE_SERVER_URL = testPackagesServer;
+
+var username = "test";
+var password = "testtest";
+
 
 // Given a sandbox, that has the app as its currend cwd, read the packages file
 // and check that it contains exactly the packages specified, in order.
@@ -222,4 +232,121 @@ selftest.define("add packages", function () {
   run.read("no-description\n");
   run.expectEnd();
   run.expectExit(0);
+});
+
+// Removes the local data.json file from disk.
+var cleanLocalCache = function () {
+  var config = require("../config.js");
+  var storage =  config.getPackageStorage();
+  fs.unlinkSync(storage);
+};
+
+// Add packages through the command line, and make sure that the correct set of
+// changes is reflected in .meteor/packages, .meteor/versions and list
+selftest.define("sync",  function () {
+  var s = new Sandbox();
+  var run;
+
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  testUtils.login(s, username, password);
+  var packageName = utils.randomToken();
+  var fullPackageName = username + ":" + packageName;
+  var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
+  var run;
+
+  // First test -- pretend that the user has downloaded meteor for the purpose
+  // of running a package or an app. Create a package and an app. Clean out the
+  // data.json, then try to do things with them.
+
+  // Publish the most basic package.
+  run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match(fullPackageName);
+
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Publish a release.  This release is super-fake: the tool is a package that
+  // is not actually a tool, for example. That's OK for our purposes for now.
+  var packages = {};
+  packages[fullPackageName] = "1.0.0";
+  var relConf = { track: releaseTrack, version:"0.9",
+    recommended: "true",
+    description: "a test release",
+    tool: fullPackageName + "@1.0.0",
+    packages: packages
+  };
+  s.write("release.json", JSON.stringify(relConf, null, 2));
+  run = s.run("publish-release", "release.json", "--create-track");
+  run.waitSecs(15);
+  run.match("Done");
+
+  // XXX: DO NOT DO THIS.
+  run = s.run("search", releaseTrack);
+  run.waitSecs(20);
+  run.match(releaseTrack);
+
+  // Create a package that has a versionsFrom for the just-published release.
+  var newPack = fullPackageName + "2";
+  s.createPackage(newPack, "package-of-two-versions");
+  s.cd(newPack, function() {
+    var packOpen = s.read("package.js");
+    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
+      "api.versionsFrom(\"" + releaseTrack + "@0.9\");\n" +
+      "api.use(\"" + fullPackageName + "\"); });";
+    s.write("package.js", packOpen);
+  });
+
+  // Clear the local data cache.
+ // cleanLocalCache();
+
+  // XXX: DO NOT DO THIS.
+  run = s.run("search", releaseTrack);
+  run.waitSecs(20);
+  run.match(releaseTrack);
+
+  // Try to publish the package.
+  s.cd(newPack, function() {
+    run = s.run("publish", "--create");
+    run.waitSecs(15);
+    run.match("Done");
+  });
+
+  // Make an app.
+  //cleanLocalCache();
+  run = s.run("create", "testApp");
+  run.waitSecs(10);
+  run.expectExit(0);
+
+  // Add one of our packages to it, then run it.
+ // cleanLocalCache();
+  s.cd("testApp", function () {
+    run = s.run("add", newPack);
+    run.waitSecs(5);
+    run.match("Successfully added");
+    run.expectExit(0);
+
+    // Run the app!
+    run = s.run();
+    run.waitSecs(15);
+    run.match("running at");
+    run.match("localhost");
+    run.stop();
+
+     // Clear cache; run again!
+  //  cleanLocalCache();
+    run = s.run();
+    run.waitSecs(15);
+    run.match("running at");
+    run.match("localhost");
+    run.stop();
+  });
+
+
+
 });
