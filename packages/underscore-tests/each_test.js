@@ -1,4 +1,4 @@
-Tinytest.add("underscore - each", function (test) {
+Tinytest.add("underscore-tests - each", function (test) {
   // arrays
   _.each([42], function (val, index) {
     test.equal(index, 0);

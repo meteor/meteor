@@ -22,7 +22,7 @@ Package.on_use(function (api) {
   // XXX would like to do the following only when the first html file
   // is encountered
 
-  api.add_files('global_template_object.js', 'client');
+  api.add_files('templating.js', 'client');
   api.export('Template', 'client');
 
   // html_scanner.js emits client code that calls Meteor.startup and
@@ -41,10 +41,6 @@ Package.on_test(function (api) {
            'minimongo'], 'client');
   api.use('spacebars-compiler');
 
-  api.add_files([
-    'templating_tests.js',
-    'templating_tests.html'
-  ], 'client');
   api.add_files([
     'plugin/html_scanner.js',
     'scanner_tests.js'

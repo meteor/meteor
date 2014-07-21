@@ -41,9 +41,9 @@ Meteor.loginWithPassword = function (selector, password, callback) {
         }, callback);
       }
       else if (error) {
-        callback(error);
+        callback && callback(error);
       } else {
-        callback();
+        callback && callback();
       }
     }
   });
@@ -69,9 +69,9 @@ var srpUpgradePath = function (options, callback) {
     details = EJSON.parse(options.upgradeError.details);
   } catch (e) {}
   if (!(details && details.format === 'srp')) {
-    callback(new Meteor.Error(400,
-                              "Password is old. Please reset your " +
-                              "password."));
+    callback && callback(
+      new Meteor.Error(400, "Password is old. Please reset your " +
+                       "password."));
   } else {
     Accounts.callLoginMethod({
       methodArguments: [{
@@ -89,8 +89,12 @@ var srpUpgradePath = function (options, callback) {
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
-  if (!options.password)
+  if (typeof options.password !== 'string')
     throw new Error("Must set options.password");
+  if (!options.password) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
 
   // Replace password with the hashed password.
   options.password = hashPassword(options.password);
@@ -117,6 +121,12 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
     return;
   }
 
+  check(newPassword, String);
+  if (!newPassword) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
+
   Accounts.connection.apply(
     'changePassword',
     [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
@@ -133,7 +143,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
             plaintextPassword: oldPassword
           }, function (err) {
             if (err) {
-              callback(err);
+              callback && callback(err);
             } else {
               // Now that we've successfully migrated from srp to
               // bcrypt, try changing the password again.
@@ -171,10 +181,13 @@ Accounts.forgotPassword = function(options, callback) {
 // @param newPassword {String}
 // @param callback (optional) {Function(error|undefined)}
 Accounts.resetPassword = function(token, newPassword, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
-  if (!newPassword)
-    throw new Error("Need to pass newPassword");
+  check(token, String);
+  check(newPassword, String);
+
+  if (!newPassword) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',

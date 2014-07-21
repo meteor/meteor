@@ -22,13 +22,13 @@ if (process.env.APP_CONFIG) {
      Meteor.settings = appConfig.settings;
    }
   } catch (e) {
-    throw new Error("Settings from app config are not valid JSON");
+    throw new Error("Settings from APP_CONFIG are not valid JSON: " + process.env.APP_CONFIG);
   }
 } else if (process.env.METEOR_SETTINGS) {
   try {
     Meteor.settings = JSON.parse(process.env.METEOR_SETTINGS);
   } catch (e) {
-    throw new Error("Settings are not valid JSON");
+    throw new Error("METEOR_SETTINGS are not valid JSON: " + process.env.METEOR_SETTINGS);
   }
 }
 
