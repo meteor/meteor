@@ -525,6 +525,12 @@ _.extend(Sandbox.prototype, {
     fs.unlinkSync(path.join(self.cwd, filename));
   },
 
+  // Make a directory in the sandbox. 'filename' is as in write().
+  mkdir: function (dirname) {
+    var self = this;
+    fs.mkdirSync(path.join(self.cwd, dirname));
+  },
+
   // Return the current contents of .meteorsession in the sandbox.
   readSessionFile: function () {
     var self = this;
