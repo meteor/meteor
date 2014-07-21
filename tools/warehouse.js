@@ -312,7 +312,7 @@ _.extend(warehouse, {
         } catch (e) {
           if (showInstalling)
             console.error("Failed to load packages for release " +
-                          releaseVersion);
+                          releaseVersion + "\n" + JSON.stringify(e));
           throw e;
         }
       }
