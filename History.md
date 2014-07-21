@@ -48,10 +48,6 @@
   reactive `findOne()` or `fetch` queries that run before a mutator
   returns.  #2275
 
-* Throw an exception when `observeChanges` is called from within an
-  observe callback on the same collection. This is a temporary measure
-  to address #2315.
-
 
 #### Miscellaneous
 
