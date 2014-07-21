@@ -1,6 +1,8 @@
 application-configuration@1.0.0
 autoupdate@1.0.0
 binary-heap@1.0.0
+blaze-tools@1.0.0
+blaze@1.0.0
 callback-hook@1.0.0
 check@1.0.0
 ctl-helper@1.0.0
@@ -28,7 +30,6 @@ reload@1.0.0
 retry@1.0.0
 routepolicy@1.0.0
 session@1.0.0
-spacebars-common@1.0.0
 spacebars-compiler@1.0.0
 spacebars@1.0.0
 standard-app-packages@1.0.0
