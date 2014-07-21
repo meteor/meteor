@@ -14,6 +14,7 @@ OAuth = {};
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
 OAuth.showPopup = function (url, callback, dimensions) {
+  console.log("I'm a trivial change");
   // default dimensions that worked well for facebook and google
   var popup = openCenteredPopup(
     url,
