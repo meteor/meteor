@@ -114,18 +114,7 @@ selftest.define("change plugins", function () {
   run.match("restarted");
 
   // Change something in the plugin.
-  s.cd("packages/contains-cordova-plugin", function () {
-    s.write("package.js", "Package.describe({" +
-      "summary: 'contains a cordova plugin'," +
-      "version: '1.1.0'" +
-    "});" +
-    "Package.on_use(function(api) {" +
-      "Cordova.depends({" +
-        "'org.apache.cordova.camera': '0.3.0'," +
-        "'https://github.com/shazron/phonegap-facebook-plugin.git': 'git'" + // XXX fix this line
-      "});" +
-    "});");
-  });
+  s.cp('package2.js', 'package.js');
   run.waitSecs(2);
   run.match("restarted");
 });
