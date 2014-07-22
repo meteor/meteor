@@ -94,7 +94,7 @@ var loadOrderSort = function (templateExtensions) {
 
 var ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
-    if (!semver.valid(version) && ! isUrlWithSha(version))
+    if (!semver.valid(version) && ! utils.isUrlWithSha(version))
       buildmessage.error(
           "Must declare exact version of package dependency: " +
             name + '@' + version, { useMyCaller: true, downcase: true });
