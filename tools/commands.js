@@ -526,7 +526,6 @@ main.registerCommand({
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.getPackageLoader();
-  stats.recordPackages(options.appDir);
 
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,

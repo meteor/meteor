@@ -59,6 +59,10 @@ var recordPackages = function () {
   // opt-out package is there; if present, we don't record any stats.
   var packages = packageList();
   if (_.contains(_.pluck(packages, "name"), optOutPackageName)) {
+    // Print some output for the 'report-stats' self-test.
+    if (process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
+      process.stdout.write("PACKAGE STATS NOT SENT\n");
+    }
     return;
   }
 
@@ -108,6 +112,11 @@ var recordPackages = function () {
                 project.project.getAppIdentifier(),
                 packages,
                 userAgentInfo);
+
+      if (process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
+        // Print some output for the 'report-stats' self-test.
+        process.stdout.write("PACKAGE STATS SENT\n");
+      }
     } catch (err) {
       logErrorIfInCheckout(err);
       // Do nothing. A failure to record package stats shouldn't be
