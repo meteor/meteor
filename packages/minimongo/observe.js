@@ -159,7 +159,8 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
           var oldDoc = self.docs.get(id);
           var doc = EJSON.clone(oldDoc);
           LocalCollection._applyChanges(doc, fields);
-          observeCallbacks.changed(transform(doc), transform(oldDoc));
+          observeCallbacks.changed(transform(doc),
+                                   transform(EJSON.clone(oldDoc)));
         }
       },
       removed: function (id) {
