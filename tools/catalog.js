@@ -211,10 +211,6 @@ _.extend(CompleteCatalog.prototype, {
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
     self.refresh();
-
-    // Finally, initialize the constraint solver for this catalog. We have to do
-    // this at the end, after we have loaded enough stuff to load packages.
-    self._initializeResolver();
   },
 
   // Given a set of constraints, returns a det of dependencies that satisfy the
