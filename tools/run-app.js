@@ -482,7 +482,7 @@ _.extend(AppRunner.prototype, {
       return { outcome: 'stopped', bundleResult: bundleResult };
     if (self.runFuture)
       throw new Error("already have future?");
-    self.runFuture = new Future;
+    var runFuture = self.runFuture = new Future;
 
     // Run the program
     var appProcess = new AppProcess({
@@ -552,7 +552,7 @@ _.extend(AppRunner.prototype, {
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var ret = self.runFuture.wait();
+    var ret = runFuture.wait();
 
     while (ret.outcome === 'changed-refreshable') {
       // We stay in this loop as long as only refreshable assets have changed.
