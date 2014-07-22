@@ -1627,7 +1627,6 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
     if (_.has(installedPlugins, name) && installedPlugins[name] === version)
       return;
 
-    console.log("> Installing Cordova plugin", name);
     // XXX do something different for plugins fetched from a url.
     execFileSync('cordova', ['plugin', 'add', name + '@' + version],
       { cwd: projectPath });
@@ -1648,7 +1647,8 @@ main.registerCommand({
   requiresApp: true,
   options: {
     port: { type: String, short: 'p', default: '3000' },
-    host: { type: String, short: 'h', default: 'localhost' }
+    host: { type: String, short: 'h', default: 'localhost' },
+    verbose: { type: Boolean, short: 'v', default: false }
   },
 }, function (options) {
   var localDir = path.join(options.appDir, '.meteor', 'local');
@@ -1662,14 +1662,17 @@ main.registerCommand({
   if (cordovaCommand === 'plugin' || cordovaCommand === 'plugins') {
     var pluginsCommand = cordovaArgs[0];
     var pluginsArgs = cordovaArgs.slice(1);
+    var plugins = _.map(pluginsArgs, function (str) { return str.split('@')[0]; });
 
     if (pluginsCommand === 'add') {
       project.addCordovaPlugins(_.object(_.map(pluginsArgs, function (str) {
         return str.split('@');
       })));
+      console.log("=> Added", plugins.join(' '));
       return 0;
     } else if (pluginsCommand === 'remove' || pluginsCommand === 'rm') {
       project.removeCordovaPlugins(pluginsArgs);
+      console.log("=> Removed", plugins.join(' '));
       return 0;
     }
   }
@@ -1682,7 +1685,6 @@ main.registerCommand({
   if (cordovaCommand === 'emulate' && cordovaArgs[0] === 'android' &&
       options.host === 'localhost')
     projectOptions.host = '10.0.2.2';
-
   try {
     ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
   } catch (e) {
@@ -1691,8 +1693,15 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX if it is cordova serve, print the output
   // XXX error if not a Cordova project
-  execFileSync('cordova', options.args, { cwd: cordovaPath });
+  var cordovaProcess = execFileSync('cordova', options.args, { cwd: cordovaPath });
+  if (cordovaProcess.success) {
+    if (options.verbose)
+      console.log(cordovaProcess.stdout);
+    return 0;
+  } else {
+    process.stderr.write(cordovaProcess.stderr);
+    return 1;
+  }
 });
 

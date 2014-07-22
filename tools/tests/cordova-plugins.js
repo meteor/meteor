@@ -1,7 +1,8 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
-var _= require('underscore');
+var _ = require('underscore');
+var utils = require('../utils.js');
 
 // Copy the contents of one file to another.  In these series of tests, we often
 // want to switch contents of package.js files. It is more legible to copy in
@@ -26,25 +27,18 @@ var copyFile = function(from, to, sand) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
 var checkCordovaPlugins = function(sand, plugins) {
-  var lines = sand.read(".meteor/local/cordova.client/cordova-all-plugins")
-                  .split("\n");
+  var lines = selftest.execFileSync(sand.execPath, ['cordova', 'plugins'], { cwd: sand.cwd }).split("\n");
   var i = 0;
   _.each(lines, function(line) {
-    if (!line) return;
-    // If the specified package contains an @ sign, then it has a version
-    // number, so we should match everything.
-    if (plugins[i].split('@').length > 1) {
-      selftest.expectEqual(line, plugins[i]);
-    } else {
-      var pack = line.split('@')[0];
-      selftest.expectEqual(pack, plugins[i]);
-    }
+    if (!line || line === '') return;
+    // XXX should check for the version as well?
+    selftest.expectEqual(line.split(' ')[0], plugins[i]);
     i++;
   });
   selftest.expectEqual(plugins.length, i);
 };
 
-// Given a sandbox, that has the app as its currend cwd, read the cordova plugins
+// Given a sandbox, that has the app as its cwd, read the cordova plugins
 // file and check that it contains exactly the plugins specified, in order.
 //
 // sand: a sandbox, that has the main app directory as its cwd.
@@ -114,9 +108,9 @@ selftest.define("change plugins", function () {
 });
 
 
-// Add packages through the command line, and make sure that the correct set of
+// Add plugins through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add packages", function () {
+selftest.define("add plugins", function () {
   var s = new Sandbox();
   var run;
 
@@ -127,25 +121,25 @@ selftest.define("add packages", function () {
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("cordova", "plugin", "add", "org.apache.cordova.camera");
+  run.match("Added org.apache.cordova.camera");
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
   run.match("Successfully added");
   // XXX message about a plugin?
-  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+  checkUserPlugins(s, ["org.apache.cordova.camera"]); // XXX should really have the facebookconnect plugin as well
 
-  run = s.run("cordova", "create", "ios"); // XXX remove ios
+  run = s.run("cordova", "build");
+  run.waitSecs(10);
+  run.expectExit(0);
 
-  checkCordovaPlugins(s,
-    ["org.apache.cordova.camera@0.3.0",
-     "https://github.com/shazron/phonegap-facebook-plugin.git"]);// XXX fix this
-
-  run = s.run("remove", "contains-cordova-plugin");
-  // XXX message here?
-
-  run = s.run("cordova", "build"); // XXX remove ios
   checkCordovaPlugins(s,
     ["org.apache.cordova.camera",
-     "https://github.com/shazron/phonegap-facebook-plugin.git"]);
+     "com.phonegap.plugins.facebookconnect"]);
+
+  run = s.run("remove", "contains-cordova-plugin");
+
+  run.match("removed");
+  checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
 });
