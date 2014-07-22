@@ -343,7 +343,9 @@ _.extend(OutputLog.prototype, {
 
 var Sandbox = function (options) {
   var self = this;
-  options = options || {};
+  // default options
+  options = _.extend({ clients: {} }, options);
+
   self.root = files.mkdtemp();
   self.warehouse = null;
 
@@ -521,6 +523,11 @@ _.extend(Sandbox.prototype, {
       throw new Error("File " + from + " does not exist.");
     };
     self.write(to, contents);
+  },
+
+  mkdir: function (dirPath) {
+    var self = this;
+    return fs.mkdirSync(path.join(self.cwd, dirPath));
   },
 
   // Delete a file in the sandbox. 'filename' is as in write().

@@ -93,6 +93,7 @@ selftest.define("javascript hot code push", function (options) {
 
     // Only the client should refresh if a client js file is added. Thus,
     // "client connected" variable will be incremented.
+    s.mkdir("client");
     s.write("client/test.js", "jsVar = 'bar'");
     run.match("client connected: 1");
     run.match("jsVar: bar");
@@ -104,6 +105,7 @@ selftest.define("javascript hot code push", function (options) {
     // When we change a server file the client should not refresh. We observe
     // this by changing a server file and then a client file and verifying
     // that the client has only connected once.
+    s.mkdir("server");
     s.write("server/test.js", "jsVar = 'bar'");
     run.match("server restarted");
     s.write("client/empty.js", "");
