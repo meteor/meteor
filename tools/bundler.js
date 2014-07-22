@@ -1782,14 +1782,17 @@ exports.bundle = function (options) {
       });
 
       // Server
-      var browserClient = targets["client.browser"] ||
-                          makeBlankClientTarget(app);
-      if (browserClient) {
-        var server = options.cachedServerTarget ||
-                     makeServerTarget(app, browserClient);
-        server.clientTarget = browserClient;
-        targets.server = server;
+      var browserClient = targets["client.browser"];
+
+      if (! browserClient) {
+        browserClient = makeBlankClientTarget(app);
+        targets["client.browser"] = browserClient;
       }
+
+      var server = options.cachedServerTarget ||
+                   makeServerTarget(app, browserClient);
+      server.clientTarget = browserClient;
+      targets.server = server;
     }
 
     // Pick up any additional targets in /programs
