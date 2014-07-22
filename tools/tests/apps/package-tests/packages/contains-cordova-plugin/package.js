@@ -6,6 +6,7 @@ Package.describe({
 Package.on_use(function(api) {
   Cordova.depends({
     'org.apache.cordova.camera': '0.3.0',
-    'https://github.com/shazron/phonegap-facebook-plugin.git': 'git'
+    'com.phonegap.plugins.facebookconnect':
+      'https://github.com/Wizcorp/phonegap-facebook-plugin/tarball/bd0092a01b6171a2239aee9d77d3d3fd2f90129d'
   });
 });

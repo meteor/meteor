@@ -102,19 +102,13 @@ selftest.define("change plugins", function () {
   run.match("running at");
   run.match("localhost");
 
-  // Add the local plugin 'say-something'. It should print a message.
-  s.write(".meteor/cordova-plugins", "say-something");
-  run.waitSecs(3);
-  run.match("initial");
-  run.match("restarted");
-
   // Add a local package contains-cordova-plugin.
   s.write(".meteor/packages", "standard-app-packages \n contains-cordova-plugin");
   run.waitSecs(2);
   run.match("restarted");
 
   // Change something in the plugin.
-  s.cp('package2.js', 'package.js');
+  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
   run.match("restarted");
 });
