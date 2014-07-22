@@ -36,7 +36,7 @@ var setAppDir = function (appDir) {
 var runTest = function () {
   var readManifest = function (tmpOutputDir) {
     return JSON.parse(fs.readFileSync(
-      path.join(tmpOutputDir, "programs", "client", "program.json"),
+      path.join(tmpOutputDir, "programs", "client.browser", "program.json"),
       "utf8")).manifest;
   };
 

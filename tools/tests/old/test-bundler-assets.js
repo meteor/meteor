@@ -48,7 +48,7 @@ var runTest = function () {
     });
     var clientManifest = JSON.parse(
       fs.readFileSync(
-        path.join(tmpOutputDir, "programs", "client", "program.json")
+        path.join(tmpOutputDir, "programs", "client.browser", "program.json")
       )
     );
 
@@ -59,7 +59,7 @@ var runTest = function () {
         return m.url === file[0];
       });
       assert(manifestItem);
-      var diskPath = path.join(tmpOutputDir, "programs", "client",
+      var diskPath = path.join(tmpOutputDir, "programs", "client.browser",
                                manifestItem.path);
       assert(fs.existsSync(diskPath));
       assert.strictEqual(fs.readFileSync(diskPath, "utf8"), file[1]);
