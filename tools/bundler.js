@@ -151,6 +151,7 @@
 
 var path = require('path');
 var util = require('util');
+var semver = require('semver');
 var files = require(path.join(__dirname, 'files.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
@@ -413,6 +414,8 @@ var Target = function (options) {
   // Static assets to include in the bundle. List of File.
   // For client targets, these are served over HTTP.
   self.asset = [];
+
+  self.cordovaDependencies = {};
 };
 
 _.extend(Target.prototype, {
@@ -581,6 +584,16 @@ _.extend(Target.prototype, {
 
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
+      _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+        // XXX if the plugin dependency conflicts with an existing dependency,
+        // use the newer version
+        if (_.has(self.cordovaDependencies, name)) {
+          var existingVersion = self.cordovaDependencies[name];
+          version = semver.lt(existingVersion, version) ? version : existingVersion;
+        }
+        self.cordovaDependencies[name] = version;
+      });
+
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
@@ -631,6 +644,15 @@ _.extend(Target.prototype, {
           var f = new File({data: resource.data, cacheable: false});
 
           var relPath = stripLeadingSlash(resource.servePath);
+
+          if (archinfo.matches(self.arch, "client.cordova")) {
+            relPath = path.join(resource.type, relPath);
+
+            if (resource.type === "css") {
+              f.targetPath = relPath;
+            }
+          }
+
           f.setTargetPathFromRelPath(relPath);
 
           if (isClient) {
@@ -1492,7 +1514,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builtBy: options.builtBy,
       programs: [],
       control: options.controlProgram || undefined,
-      meteorRelease: options.releaseName
+      meteorRelease: options.releaseName,
+      cordovaDependencies: {}
     };
 
     // Pick a path in the bundle for each target
@@ -1532,6 +1555,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
         target.write(builder.enter(paths[name]), {
           includeNodeModulesSymlink: options.includeNodeModulesSymlink,
           getRelativeTargetPath: getRelativeTargetPath });
+
+      _.each(target.cordovaDependencies, function (version, name) {
+        json.cordovaDependencies[name] = version;
+      });
 
       json.programs.push({
         name: name,
@@ -1962,6 +1989,7 @@ exports.bundle = function (options) {
 //   interpreted. please set it to something reasonable so that any error
 //   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
+// - cordovaDependencies: map from cordova plugin name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
 //
@@ -1987,13 +2015,13 @@ exports.buildJsImage = function (options) {
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
+    cordovaDependencies: options.cordovaDependencies,
     npmDir: options.npmDir,
     dependencyVersions: options.dependencyVersions,
     noVersionFile: true
   });
 
   var unipackage = compiler.compile(packageSource).unipackage;
-
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does

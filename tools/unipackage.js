@@ -215,6 +215,8 @@ var Unipackage = function () {
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
   self.plugins = {};
 
+  self.cordovaDependencies = {};
+
   // -- Information for up-to-date checks --
 
   // Version number of the tool that built this unipackage
@@ -283,6 +285,7 @@ _.extend(Unipackage.prototype, {
     self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
+    self.cordovaDependencies = options.cordovaDependencies;
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
@@ -343,7 +346,6 @@ _.extend(Unipackage.prototype, {
 
     var chosenArch = archinfo.mostSpecificMatch(
       arch, _.pluck(self.unibuilds, 'arch'));
-
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
@@ -498,6 +500,8 @@ _.extend(Unipackage.prototype, {
       buildInfoJson.buildTimeDirectDependencies || null;
     self.buildTimePluginDependencies =
       buildInfoJson.buildTimePluginDependencies || null;
+    self.cordovaDependencies =
+      buildInfoJson.cordovaDependencies || null;
 
     if (options.buildOfPath &&
         (buildInfoJson.source !== options.buildOfPath)) {
@@ -549,7 +553,6 @@ _.extend(Unipackage.prototype, {
       }
     });
     self.pluginsBuilt = true;
-
     _.each(mainJson.unibuilds, function (unibuildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
@@ -581,7 +584,6 @@ _.extend(Unipackage.prototype, {
 
       _.each(unibuildJson.resources, function (resource) {
         rejectBadPath(resource.file);
-
         var data = new Buffer(resource.length);
         // Read the data from disk, if it is non-empty. Avoid doing IO for empty
         // files, because (a) unnecessary and (b) fs.readSync with length 0
@@ -622,6 +624,8 @@ _.extend(Unipackage.prototype, {
           throw new Error("bad resource type in unipackage: " +
                           JSON.stringify(resource.type));
       });
+      if (unibuildMeta.arch === 'browser')
+        unibuildMeta.arch = 'client';
 
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
@@ -632,7 +636,8 @@ _.extend(Unipackage.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources
+        resources: resources,
+        cordovaDependencies: unibuildJson.cordovaDependencies
       }));
     });
 
@@ -657,7 +662,6 @@ _.extend(Unipackage.prototype, {
     options = options || {};
 
     var builder = new Builder({ outputPath: outputPath });
-
     try {
       var mainJson = {
         format: "unipackage-pre2",
@@ -690,7 +694,8 @@ _.extend(Unipackage.prototype, {
         pluginProviderPackages: self.pluginProviderPackageDirs,
         source: options.buildOfPath || undefined,
         buildTimeDirectDependencies: buildTimeDirectDeps,
-        buildTimePluginDependencies: buildTimePluginDeps
+        buildTimePluginDependencies: buildTimePluginDeps,
+        cordovaDependencies: self.cordovaDependencies
       };
 
       builder.reserve("unipackage.json");
@@ -730,7 +735,6 @@ _.extend(Unipackage.prototype, {
           builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
-
         mainJson.unibuilds.push({
           arch: unibuild.arch,
           path: unibuildJsonFile
@@ -894,7 +898,6 @@ _.extend(Unipackage.prototype, {
         }
         mainJson.tools.push(toolMeta);
       });
-
       builder.writeJson("unipackage.json", mainJson);
       builder.writeJson("buildinfo.json", buildInfoJson);
       builder.complete();

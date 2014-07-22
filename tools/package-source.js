@@ -12,6 +12,7 @@ var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
+var semver = require('semver');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -89,6 +90,15 @@ var loadOrderSort = function (templateExtensions) {
     // otherwise alphabetical
     return (a < b ? -1 : 1);
   };
+};
+
+var ensureOnlyExactVersions = function (dependencies) {
+  _.each(dependencies, function (version, name) {
+    if (!semver.valid(version) && ! isUrlWithSha(version))
+      buildmessage.error(
+          "Must declare exact version of package dependency: " +
+            name + '@' + version, { useMyCaller: true, downcase: true });
+  });
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -243,6 +253,11 @@ var PackageSource = function () {
   // ever could have had them in the past.
   self.npmCacheDirectory = null;
 
+  // cordova plugins used by this package (on os.* architectures only).
+  // Map from cordova plugin name to the required version of the package
+  // as a string.
+  self.cordovaDependencies = {};
+
   // Dependency versions that we used last time that we built this package. If
   // the constraint solver thinks that they are still a valid set of
   // dependencies, we will use them again to build this package. This makes
@@ -328,6 +343,7 @@ _.extend(PackageSource.prototype, {
   // - use
   // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
+  // - cordovaDependencies
   // - npmDir
   // - dependencyVersions
   initFromOptions: function (name, options) {
@@ -345,6 +361,9 @@ _.extend(PackageSource.prototype, {
     meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
+
+    ensureOnlyExactVersions(options.cordovaDependencies);
+    self.cordovaDependencies = options.cordovaDependencies;
 
     var sources = _.map(options.sources, function (source) {
       if (typeof source === "string")
@@ -415,6 +434,7 @@ _.extend(PackageSource.prototype, {
 
     var fileAndDepLoader = null;
     var npmDependencies = null;
+    var cordovaDependencies = null;
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
@@ -624,10 +644,37 @@ _.extend(PackageSource.prototype, {
       }
     };
 
+    // == 'Cordova' object visible in package.js ==
+    var Cordova = {
+      depends: function (_cordovaDependencies) {
+        // XXX make cordovaDependencies be separate between use and test, so that
+        // production doesn't have to ship all of the npm modules used by test
+        // code
+        if (cordovaDependencies) {
+          buildmessage.error("Cordova.depends may only be called once per package",
+                             { useMyCaller: true });
+          // recover by ignoring the Cordova.depends line
+          return;
+        }
+        if (typeof _cordovaDependencies !== 'object') {
+          buildmessage.error("the argument to Cordova.depends should be an " +
+                             "object, like this: {gcd: '0.0.0'}",
+                             { useMyCaller: true });
+          // recover by ignoring the Cordova.depends line
+          return;
+        }
+
+        // don't allow cordova fuzzy versions so that there is complete
+        // consistency when deploying a meteor app
+        ensureOnlyExactVersions(_cordovaDependencies);
+        cordovaDependencies = _cordovaDependencies;
+      },
+    };
+
     try {
       files.runJavaScript(code.toString('utf8'), {
         filename: 'package.js',
-        symbols: { Package: Package, Npm: Npm }
+        symbols: { Package: Package, Npm: Npm, Cordova: Cordova }
       });
     } catch (e) {
       console.log(e.stack); // XXX should we keep this here -- or do we want broken
@@ -643,6 +690,7 @@ _.extend(PackageSource.prototype, {
       fileAndDepLoader = null;
       self.pluginInfo = {};
       npmDependencies = null;
+      cordovaDependencies = null;
     }
 
     if (! self.version && options.requireVersion) {
@@ -915,6 +963,7 @@ _.extend(PackageSource.prototype, {
         fileAndDepLoader = null;
         self.pluginInfo = {};
         npmDependencies = null;
+        cordovaDependencies = null;
       }
     }
 
@@ -963,6 +1012,8 @@ _.extend(PackageSource.prototype, {
     self.npmCacheDirectory =
       path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
     self.npmDependencies = npmDependencies;
+
+    self.cordovaDependencies = cordovaDependencies;
 
     // If this package was previously built with pre-linker versions,
     // it may have files directly inside `.npm` instead of nested

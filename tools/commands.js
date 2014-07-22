@@ -2,10 +2,10 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require("fs");
+var child_process = require("child_process");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var uniload = require('./uniload.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
@@ -25,6 +25,13 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+
+var getLoadedPackages = _.once(function () {
+  var uniload = require('./uniload.js');
+  return uniload.load({
+    packages: [ 'spacebars', 'spacebars-compiler', 'htmljs', 'deps' ]
+  });
+});
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -69,6 +76,22 @@ var getLocalPackages = function () {
   });
 
   return ret;
+};
+
+var execFileSync = function (file, args, opts) {
+  var future = new Future;
+
+  var child_process = require('child_process');
+  child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+    process.stderr.write(err ? 'failed\n' + err + '\n' : '');
+    future.return({
+      success: ! err,
+      stdout: stdout,
+      stderr: stderr
+    });
+  });
+
+  return future.wait();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1456,3 +1479,220 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// cordova
+///////////////////////////////////////////////////////////////////////////////
+
+var generateCordovaBoilerplate = function (clientDir, options) {
+  var clientJsonPath = path.join(clientDir, 'program.json');
+  var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
+  var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
+  var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
+  var boilerplateData = {
+    css: [],
+    js: [],
+    head: '',
+    body: '',
+    host: options.host,
+    port: options.port
+  };
+
+  _.each(clientJson.manifest, function (item) {
+    if (item.type === 'css' && item.where === 'client') {
+      boilerplateData.css.push({url: item.url});
+    }
+    if (item.type === 'js' && item.where === 'client') {
+      boilerplateData.js.push({url: item.url});
+    }
+    if (item.type === 'head') {
+      boilerplateData.head = fs.readFileSync(
+        path.join(clientDir, item.path), 'utf8');
+    }
+    if (item.type === 'body') {
+      boilerplateData.body = fs.readFileSync(
+        path.join(clientDir, item.path), 'utf8');
+    }
+  });
+
+  var Spacebars = getLoadedPackages()['spacebars-common'].Spacebars;
+  var boilerplateRenderCode = Spacebars.compile(
+    boilerplateTemplateSource, { isBody: true });
+
+
+  // Note that we are actually depending on eval's local environment capture
+  // so that UI and HTML are visible to the eval'd code.
+  var boilerplateRender = eval(boilerplateRenderCode);
+
+  var UI = getLoadedPackages()['ui'].UI;
+  var HTML = getLoadedPackages()['htmljs'].HTML;
+
+  var boilerplateTemplate = UI.Component.extend({
+    kind: "MainPage",
+    render: boilerplateRender
+  });
+
+  var boilerplateInstance = boilerplateTemplate.extend({
+    data: boilerplateData
+  });
+  var boilerplateHtmlJs = boilerplateInstance.render();
+  return "<!DOCTYPE html>\n" +
+        HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+};
+
+// Creates a Cordova project if necessary and makes sure added Cordova
+// platforms and Cordova plugins are up to date with the project's
+// definition.
+var ensureCordovaProject = function (options, projectPath, bundlePath) {
+  var bundler = require(path.join(__dirname, 'bundler.js'));
+  var loader = project.getPackageLoader();
+
+  var clientArchName = 'client.cordova';
+
+  var bundleResult = bundler.bundle({
+    outputPath: bundlePath,
+    buildOptions: {
+      minify: false, // XXX ! options.debug,
+      arch: archinfo.host(),
+      clientArchs: [clientArchName]
+    }
+  });
+
+  if (bundleResult.errors) {
+    throw new Error("Errors prevented bundling:\n" +
+                    bundleResult.errors.formatMessages());
+  }
+
+  var programPath = path.join(bundlePath, 'programs');
+
+  if (! fs.existsSync(projectPath)) {
+    execFileSync('cordova', ['create', path.basename(projectPath),
+                             'com.meteor.' + options.appName,
+                             options.appName.replace(/\s/g, '')],
+                 { cwd: path.dirname(projectPath) });
+
+    // XXX a hack as platforms management is not implemented yet
+    execFileSync('cordova', ['platforms', 'add', 'ios'], { cwd: projectPath });
+  }
+
+  var wwwPath = path.join(projectPath, "www");
+
+  var cordovaProgramPath = path.join(programPath, clientArchName);
+  var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
+
+  // XXX hack, copy files from app folder one level up
+  files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
+  files.rm_recursive(cordovaProgramAppPath);
+
+  // rewrite the www folder
+  files.rm_recursive(wwwPath);
+  files.cp_r(cordovaProgramPath, wwwPath);
+
+  // clean up the temporary bundle directory
+  files.rm_recursive(bundlePath);
+
+  // generate index.html
+  var indexHtml = generateCordovaBoilerplate(wwwPath, options);
+  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
+
+  // XXX get platforms from project file
+//  _.each(platforms, function (platform) {
+//    execFileSync('cordova', ['platform', 'add', platform], { cwd: projectPath });
+//  });
+
+  // Compare the state of plugins in the Cordova project and the required by the
+  // Meteor project.
+  // XXX compare the latest used sha's with the currently required sha's for
+  // plugins fetched from a github/tarball url.
+  var pluginsOutput = execFileSync('cordova', ['plugin', 'list'],
+                                   { cwd: projectPath }).stdout;
+
+  var installedPlugins = {};
+  // Check if there are any plugins
+  if (! pluginsOutput.match(/No plugins added/)) {
+    _.each(pluginsOutput.split('\n'), function (line) {
+      line = line.trim();
+      if (line === '')
+        return;
+      var plugin = line.split(' ')[0];
+      var version = line.split(' ')[1];
+      installedPlugins[plugin] = version;
+    });
+  }
+
+  var requiredPlugins = bundleResult.starManifest.cordovaDependencies;
+  _.each(requiredPlugins, function (version, name) {
+    // no-op if this plugin is already installed
+    if (_.has(installedPlugins, name) && installedPlugins[name] === version)
+      return;
+
+    console.log("> Installing Cordova plugin", name);
+    // XXX do something different for plugins fetched from a url.
+    execFileSync('cordova', ['plugin', 'add', name + '@' + version],
+      { cwd: projectPath });
+  });
+
+  _.each(installedPlugins, function (version, name) {
+    if (! _.has(requiredPlugins, name))
+      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
+  });
+
+  execFileSync('cordova', ['build'], { cwd: projectPath });
+};
+
+main.registerCommand({
+  name: 'cordova',
+  minArgs: 1,
+  maxArgs: 10,
+  requiresApp: true,
+  options: {
+    port: { type: String, short: 'p', default: '3000' },
+    host: { type: String, short: 'h', default: 'localhost' }
+  },
+}, function (options) {
+  var localDir = path.join(options.appDir, '.meteor', 'local');
+  var cordovaPath = path.join(localDir, 'cordova-build');
+  var bundleDir = path.join(localDir, 'bundle-tar');
+  var appName = path.basename(options.appDir);
+
+  var cordovaCommand = options.args[0];
+  var cordovaArgs = options.args.slice(1);
+
+  if (cordovaCommand === 'plugin' || cordovaCommand === 'plugins') {
+    var pluginsCommand = cordovaArgs[0];
+    var pluginsArgs = cordovaArgs.slice(1);
+
+    if (pluginsCommand === 'add') {
+      project.addCordovaPlugins(_.object(_.map(pluginsArgs, function (str) {
+        return str.split('@');
+      })));
+      return 0;
+    } else if (pluginsCommand === 'remove' || pluginsCommand === 'rm') {
+      project.removeCordovaPlugins(pluginsArgs);
+      return 0;
+    }
+  }
+
+  var projectOptions = _.pick(options, 'port', 'host');
+  projectOptions.appName = appName;
+
+  // XXX in Android simulators you can't access localhost and the correct way is
+  // to use "10.0.2.2" instead.
+  if (cordovaCommand === 'emulate' && cordovaArgs[0] === 'android' &&
+      options.host === 'localhost')
+    projectOptions.host = '10.0.2.2';
+
+  try {
+    ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
+  } catch (e) {
+    process.stderr.write('Errors preventing the Cordova project from build:\n');
+    process.stderr.write(e.stack);
+    return 1;
+  }
+
+  // XXX if it is cordova serve, print the output
+  // XXX error if not a Cordova project
+  execFileSync('cordova', options.args, { cwd: cordovaPath });
+});
+
