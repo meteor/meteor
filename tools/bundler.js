@@ -917,6 +917,12 @@ _.extend(ClientTarget.prototype, {
 
         // Use a SHA to make this cacheable.
         var sourceMapBaseName = file.hash() + ".map";
+        var sourceMapRow = "# sourceMappingURL=" + sourceMapBaseName;
+        if (type === "css") {
+          sourceMapRow = "\n/*" + sourceMapRow + " */\n";
+        } else {
+          sourceMapRow = "\n//" + sourceMapRow + "\n";
+        }
         // XXX When we can, drop all of this and just use the SourceMap
         //     header. FF doesn't support that yet, though:
         //         https://bugzilla.mozilla.org/show_bug.cgi?id=765993
@@ -926,7 +932,7 @@ _.extend(ClientTarget.prototype, {
         // in webapp_server.
         file.setContents(Buffer.concat([
           file.contents(),
-          new Buffer("\n//# sourceMappingURL=" + sourceMapBaseName + "\n")
+          new Buffer(sourceMapRow)
         ]));
         manifestItem.sourceMapUrl = require('url').resolve(
           file.url, sourceMapBaseName);
