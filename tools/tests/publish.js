@@ -27,7 +27,7 @@ selftest.define("publish-and-search", ["slow"], function () {
   s.cd(noPack, function() {
     var packOpen = s.read("package.js");
     packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
-      "api.versionsFrom(\"lowercases-are-totes-invalid@0.9\");\n" +
+      "api.versionsFrom(\"THIS-RELEASE-DOES-NOT-EXIST@0.9\");\n" +
       " });";
     s.write("package.js", packOpen);
     run = s.run("publish", "--create");
