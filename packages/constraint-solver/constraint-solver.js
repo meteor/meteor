@@ -17,25 +17,52 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // The main resolver
   self.resolver = new ConstraintSolver.Resolver();
 
-  // XXX for now we convert unibuilds to unit versions as "deps#os"
+  self._packageInfoLoadQueue = [];
+  self._packagesEverEnqueued = {};
+  self._loadingPackageInfo = false;
 
-  var allPackageNames = catalog.getAllPackageNames();
-  var sortedVersionsForPackage = {};
-  var forEveryVersion = function (iter) {
-    _.each(allPackageNames, function (packageName) {
-      if (! sortedVersionsForPackage[packageName])
-        sortedVersionsForPackage[packageName] = catalog.getSortedVersions(packageName);
-      _.each(sortedVersionsForPackage[packageName], function (version) {
-        var versionDef = catalog.getVersion(packageName, version);
-        iter(packageName, version, versionDef);
-      });
-    });
-  };
+  _.each(catalog.getAllPackageNames(), function (packageName) {
+    self._ensurePackageInfoLoaded(packageName);
+  });
+};
 
-  // Create a unit version for every package
-  // Set constraints and dependencies between units
-  forEveryVersion(function (packageName, version, versionDef) {
+ConstraintSolver.PackagesResolver.prototype._ensurePackageInfoLoaded = function (
+    packageName) {
+  var self = this;
+  if (_.has(self._packagesEverEnqueued, packageName))
+    return;
+  self._packagesEverEnqueued[packageName] = true;
+  self._packageInfoLoadQueue.push(packageName);
+
+  // Is there already an instance of _ensurePackageInfoLoaded up the stack?
+  // Great, it'll get this.
+  // XXX does this work correctly with multiple fibers?
+  if (self._loadingPackageInfo)
+    return;
+
+  self._loadingPackageInfo = true;
+  try {
+    while (self._packageInfoLoadQueue.length) {
+      var nextPackageName = self._packageInfoLoadQueue.shift();
+      self._loadPackageInfo(nextPackageName);
+    }
+  } finally {
+    self._loadingPackageInfo = false;
+  }
+};
+
+ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
+    packageName) {
+  var self = this;
+  // XXX is sortedness actually relevant? is there a minor optimization here
+  //     where we can only talk to self.catalog once?
+  var sortedVersions = self.catalog.getSortedVersions(packageName);
+  // XXX throw error if the package doesn't exist?
+  _.each(sortedVersions, function (version) {
+    var versionDef = self.catalog.getVersion(packageName, version);
+
     var unibuilds = {};
+
     // XXX in theory there might be different archs but in practice they are
     // always "os" and "browser". Fix this once we actually have different
     // archs used.
@@ -43,11 +70,12 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
-      var unitVersion = unibuilds[unitName];
-      self.resolver.addUnitVersion(unitVersion);
+      self.resolver.addUnitVersion(unibuilds[unitName]);
     });
 
     _.each(versionDef.dependencies, function (dep, depName) {
+      self._ensurePackageInfoLoaded(depName);
+
       _.each(dep.references, function (ref) {
         var unitName = packageName + "#" + ref.arch;
         var unitVersion = unibuilds[unitName];
