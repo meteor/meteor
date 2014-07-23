@@ -44,6 +44,7 @@ compiler.BUILT_BY = 'meteor/11';
 //  - acceptableWeakPackages: if set, include direct weak dependencies
 //    that are on one of these packages (it's an object mapping
 //    package name -> true). Otherwise skip all weak dependencies.
+//  - constraintSolverOpts
 //
 // (Why does we need to list acceptable weak packages here rather than just
 // implement a skipWeak flag and allow the caller to filter the ones they care
@@ -132,8 +133,10 @@ compiler.eachUsedUnibuild = function (
 // PackgeSource), or we could have some kind of cache (the ideal place
 // for such a cache might be inside the constraint solver, since it
 // will know how/when to invalidate it).
-var determineBuildTimeDependencies = function (packageSource) {
+var determineBuildTimeDependencies = function
+    (packageSource,  constraintSolverOpts) {
   var ret = {};
+  constraintSolverOpts =  constraintSolverOpts || {};
 
   // There are some special cases where we know that the package has no source
   // files, which means it can't have any interesting build-time
@@ -183,8 +186,11 @@ var determineBuildTimeDependencies = function (packageSource) {
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
-  ret.packageDependencies = catalog.complete.resolveConstraints(constraints_array,
-                                              { previousSolution: versions });
+  ret.packageDependencies =
+        catalog.complete.resolveConstraints(
+             constraints_array,
+             { previousSolution: versions },
+             constraintSolverOpts);
 
   // We care about differentiating between all dependencies (which we save in
   // the version lock file) and the direct dependencies (which are packages that
@@ -221,7 +227,9 @@ var determineBuildTimeDependencies = function (packageSource) {
     var pluginVersion = pluginVersions[info.name] || {};
     ret.pluginDependencies[info.name] =
       catalog.complete.resolveConstraints(
-         constraints_array, { previousSolution: pluginVersion  });
+         constraints_array,
+         { previousSolution: pluginVersion },
+         constraintSolverOpts );
   });
 
   // Every time we run the constraint solver, we record the results. This has
@@ -901,7 +909,8 @@ var getPluginProviders = function (versions) {
 // objects with keys 'name', 'version' (the latter a version
 // string). Yes, it is possible that multiple versions of some other
 // package might be build-time dependencies (because of plugins).
-compiler.getBuildOrderConstraints = function (packageSource) {
+compiler.getBuildOrderConstraints = function (
+    packageSource,  constraintSolverOpts) {
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {
     if (name !== packageSource.name) {
@@ -911,7 +920,8 @@ compiler.getBuildOrderConstraints = function (packageSource) {
     }
   };
 
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  var buildTimeDeps = determineBuildTimeDependencies(
+      packageSource, constraintSolverOpts);
 
   // Direct dependencies only impose a build-order constraint if they
   // contain plugins.
@@ -937,7 +947,9 @@ compiler.getBuildOrderConstraints = function (packageSource) {
 // identical code). True if we have dependency info and it
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
-compiler.checkUpToDate = function (packageSource, unipackage) {
+compiler.checkUpToDate = function (
+    packageSource, unipackage, constraintSolverOpts) {
+
   if (unipackage.forceNotUpToDate) {
     return false;
   }
@@ -952,7 +964,9 @@ compiler.checkUpToDate = function (packageSource, unipackage) {
   // `buildTimeDeps`, by comparing versions (including build
   // identifiers). For direct dependencies, we only care if the set of
   // direct dependencies that provide plugins has changed.
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  var buildTimeDeps = determineBuildTimeDependencies(
+      packageSource, constraintSolverOpts);
+
   var sourcePluginProviders = getPluginProviders(
     buildTimeDeps.directDependencies
   );

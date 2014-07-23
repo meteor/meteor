@@ -74,7 +74,8 @@ var load = function (options) {
     // it gets around to it.
     var loader = new packageLoader.PackageLoader({
       versions: null,
-      uniloadDir: files.getUniloadDir()
+      uniloadDir: files.getUniloadDir(),
+      constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
     // Build the bundler image.

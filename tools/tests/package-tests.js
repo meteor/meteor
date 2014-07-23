@@ -238,12 +238,14 @@ selftest.define("add packages", function () {
 var cleanLocalCache = function () {
   var config = require("../config.js");
   var storage =  config.getPackageStorage();
-  fs.unlinkSync(storage);
+  if (fs.existsSync(storage)) {
+    fs.unlinkSync(storage);
+  }
 };
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync",  function () {
+selftest.define("sync local catalog",  function () {
   var s = new Sandbox();
   var run;
 
@@ -255,7 +257,7 @@ selftest.define("sync",  function () {
   var run;
 
   // First test -- pretend that the user has downloaded meteor for the purpose
-  // of running a package or an app. Create a package and an app. Clean out the
+  // of running a package or an app. Create a package. Clean out the
   // data.json, then try to do things with them.
 
   // Publish the most basic package.
@@ -272,9 +274,11 @@ selftest.define("sync",  function () {
   });
 
   // Publish a release.  This release is super-fake: the tool is a package that
-  // is not actually a tool, for example. That's OK for our purposes for now.
+  // is not actually a tool, for example. That's OK for our purposes for now,
+  // because we only care about the tool version if we run an app from it.
+
   var packages = {};
-  packages[fullPackageName] = "1.0.0";
+  packages[fullPackageName] ="1.0.0";
   var relConf = { track: releaseTrack, version:"0.9",
     recommended: "true",
     description: "a test release",
@@ -285,11 +289,6 @@ selftest.define("sync",  function () {
   run = s.run("publish-release", "release.json", "--create-track");
   run.waitSecs(15);
   run.match("Done");
-
-  // XXX: DO NOT DO THIS.
-  run = s.run("search", releaseTrack);
-  run.waitSecs(20);
-  run.match(releaseTrack);
 
   // Create a package that has a versionsFrom for the just-published release.
   var newPack = fullPackageName + "2";
@@ -302,29 +301,33 @@ selftest.define("sync",  function () {
     s.write("package.js", packOpen);
   });
 
-  // Clear the local data cache.
- // cleanLocalCache();
+  // Clear the local data cache by deleting the data.json file that we are
+  // reading our package data from. We now have no data about server contents,
+  // including the release that we just published, so we have to sync to the
+  // server to get that information.
+  cleanLocalCache();
 
-  // XXX: DO NOT DO THIS.
-  run = s.run("search", releaseTrack);
-  run.waitSecs(20);
-  run.match(releaseTrack);
-
-  // Try to publish the package.
+  // Try to publish the package. Since the package references the release that
+  // we just published, it needs to resync with the server in order to be able
+  // to compile itself.
   s.cd(newPack, function() {
     run = s.run("publish", "--create");
-    run.waitSecs(15);
+    run.waitSecs(20);
     run.match("Done");
   });
 
-  // Make an app.
-  //cleanLocalCache();
+  // Part 2.
+  // Make an app. It is basically an app.
+  cleanLocalCache();
   run = s.run("create", "testApp");
   run.waitSecs(10);
   run.expectExit(0);
 
-  // Add one of our packages to it, then run it.
- // cleanLocalCache();
+  // Remove data.json again.
+  cleanLocalCache();
+
+  // Add our newly-created package to the app. That package only exists on the
+  // server, so we need to sync to get it.
   s.cd("testApp", function () {
     run = s.run("add", newPack);
     run.waitSecs(5);
@@ -338,15 +341,16 @@ selftest.define("sync",  function () {
     run.match("localhost");
     run.stop();
 
-     // Clear cache; run again!
-  //  cleanLocalCache();
+    // Remove data.json; run again! Make sure that we sync, because we are using
+    // a package that we don't know about. This is a pretty good imitation of
+    // the following workflow: you check out your friend's app from github, then
+    // run your newly installed meteor. So, clearly, it should not fail.
+    cleanLocalCache();
     run = s.run();
     run.waitSecs(15);
     run.match("running at");
     run.match("localhost");
     run.stop();
   });
-
-
 
 });

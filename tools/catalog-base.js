@@ -106,7 +106,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var record = recordFinder();
     // If we cannot find it maybe refresh.
     if (!record) {
-      self.refresh();
+      self.refresh({ unknownItem: recordFinder.toString() });
       record = recordFinder();
     }
     // If we still cannot find it, give the user a null.

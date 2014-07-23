@@ -102,6 +102,9 @@ _.extend(ServerCatalog.prototype, {
 
     if (thrownError)
       throw thrownError;
+
+    // Then refresh the non-server catalog here.
+    catalog.complete.refresh({ forceRefresh: true });
   },
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
@@ -131,8 +134,6 @@ _.extend(ServerCatalog.prototype, {
     if (allPackageData && allPackageData.collections) {
       self._insertServerPackages(allPackageData);
     }
-
-    // XXX: Then refresh the non-server catalog here.
   }
 });
 
@@ -171,6 +172,12 @@ var CompleteCatalog = function () {
   // a boolean.
   // XXX: use a future in the future maybe
   self.refreshing = false;
+
+  // A small (size 1) cache of items that we couldn't find. When we can't find
+  // an item, we try to contact the server, and then, if we still can't find it,
+  // stop. Possibly, we should actually use a better way of rate-limiting
+  // refreshes, but this will avoid infinite loops for now.
+  self._unknownItem = null;
 
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
@@ -307,33 +314,46 @@ _.extend(CompleteCatalog.prototype, {
   //   anyway. When we are using hot code push, we may be restarting the app
   //   because of a local package change that impacts that catalog. Don't wait
   //   on the official catalog to refresh data.json, in this case.
+  // - unknownItem: we are refreshing because we couldn't find an item, not just
+  //   because we are restarting or whatever. So, we probably actually meant to
+  //   refresh the official catalog, but, also, save the item that we couldn't
+  //   find. If we can't find it again after we refresh, then we should quit.
   refresh: function (options) {
     var self = this;
     options = options || {};
 
+    // We are a local catalog, but we meant to refresh the other one. Return,
+    // because it is going to make a call to refresh us when done.
+    if (options.unknownItem && self._unknownItem !== options.unknownItem) {
+      self._unknownItem = options.unknownItem;
+      catalog.official.refresh();
+    }
+
     // We need to limit the rate of refresh, or, at least, prevent any sort of
-    // loops.
-    if (self.refreshing ||
-        (catalog.official._refreshFutures &&
-         !options.forceRefresh)) {
+    // loops. ForceRefresh will override either one.
+    if (!options.forceRefresh &&
+        (catalog.official._refreshFutures || self.refreshing)) {
+
       return;
     }
+
     self.refreshing = true;
 
     try {
       self.reset();
       var localData = packageClient.loadCachedServerData();
       self._insertServerPackages(localData);
+
       self._recomputeEffectiveLocalPackages();
       self._addLocalPackageOverrides();
-
       self.initialized = true;
-
       // Rebuild the resolver, since packages may have changed.
       self._initializeResolver();
     } finally {
+
       self.refreshing = false;
     }
+
   },
 
   _initializeResolver: function () {
@@ -486,8 +506,13 @@ _.extend(CompleteCatalog.prototype, {
         throw new Error("version already has a buildid?");
       version = version + "+local";
 
-      if (_.has(self.versions, name))
-        throw Error("should have deleted " + name + " above?");
+      // Maybe we were refreshing within a refresh, as part of a hack. Clear and
+      // reload. (Actually we could probably just return and trust that the
+      // previous record is correct.)
+      if (_.has(self.versions, name)) {
+        delete self.versions[name];
+      }
+
       self.versions[name] = {};
       self.versions[name][version] = {
         _id: versionId,
@@ -536,7 +561,7 @@ _.extend(CompleteCatalog.prototype, {
 
   // Returns the latest unipackage build if the package has already been
   // compiled and built in the directory, and null otherwise.
-  _maybeGetUpToDateBuild : function (name) {
+  _maybeGetUpToDateBuild : function (name, constraintSolverOpts) {
     var self = this;
     var sourcePath = self.effectiveLocalPackages[name];
     var buildDir = path.join(sourcePath, '.build.' + name);
@@ -550,7 +575,8 @@ _.extend(CompleteCatalog.prototype, {
         // Ignore unipackage-pre1 builds
         return null;
       }
-      if (compiler.checkUpToDate(self.packageSources[name], unip)) {
+      if (compiler.checkUpToDate(
+          self.packageSources[name], unip, constraintSolverOpts)) {
         return unip;
       }
     }
@@ -574,9 +600,8 @@ _.extend(CompleteCatalog.prototype, {
   // catalog. If we build in catalog, we need to send the package over to
   // package cache. It could go either way, but since a lot of the information
   // that we use is in the catalog already, we build it here.
-  _build : function (name, onStack) {
+  _build : function (name, onStack,  constraintSolverOpts) {
     var self = this;
-
     var unip = null;
 
     if (! _.has(self.unbuilt, name)) {
@@ -585,11 +610,13 @@ _.extend(CompleteCatalog.prototype, {
 
     delete self.unbuilt[name];
 
-
     // Go through the build-time constraints. Make sure that they are built,
     // either because we have built them already, or because we are about to
     // build them.
-    var deps = compiler.getBuildOrderConstraints(self.packageSources[name]);
+    var deps = compiler.getBuildOrderConstraints(
+      self.packageSources[name],
+      constraintSolverOpts);
+
     _.each(deps, function (dep) {
 
       // We don't need to build non-local packages. It has been built. Return.
@@ -616,7 +643,7 @@ _.extend(CompleteCatalog.prototype, {
       if (_.has(onStack, dep.name)) {
         // Allow a circular dependency if the other thing is already
         // built and doesn't need to be rebuilt.
-        unip = self._maybeGetUpToDateBuild(dep.name);
+        unip = self._maybeGetUpToDateBuild(dep.name, constraintSolverOpts);
         if (unip) {
           return;
         } else {
@@ -629,13 +656,13 @@ _.extend(CompleteCatalog.prototype, {
 
       // Put this on the stack and send recursively into the builder.
       onStack[dep.name] = true;
-      self._build(dep.name, onStack);
+      self._build(dep.name, onStack, constraintSolverOpts);
       delete onStack[dep.name];
     });
 
     // Now build this package if it needs building
     var sourcePath = self.effectiveLocalPackages[name];
-    unip = self._maybeGetUpToDateBuild(name);
+    unip = self._maybeGetUpToDateBuild(name, constraintSolverOpts);
 
     if (! unip) {
       // Didn't have a build or it wasn't up to date. Build it.
@@ -823,16 +850,17 @@ _.extend(CompleteCatalog.prototype, {
   // required and we should confirm that the version on disk is the version that
   // we asked for. This is to support unipackage loader not having a version
   // manifest.
-  getLoadPathForPackage: function (name, version) {
+  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;
     self._requireInitialized();
+    constraintSolverOpts =  constraintSolverOpts || {};
 
     // Check local packages first.
     if (_.has(self.effectiveLocalPackages, name)) {
 
       // If we don't have a build of this package, we need to rebuild it.
       if (_.has(self.unbuilt, name)) {
-        self._build(name, {});
+        self._build(name, {}, constraintSolverOpts);
       };
 
       // Return the path.
