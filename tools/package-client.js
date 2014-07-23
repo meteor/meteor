@@ -62,7 +62,7 @@ exports.loadCachedServerData = function (packageStorageFile) {
     var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
   } catch (e) {
     if (e.code == 'ENOENT') {
-      console.log("No cached server data found on disk.");
+//      process.stderr.write("No cached server data found on disk.\n");
       return noDataToken;
     }
     // XXX we should probably return an error to the caller here to

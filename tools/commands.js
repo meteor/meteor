@@ -228,6 +228,16 @@ main.registerCommand({
     once: { type: Boolean }
   }
 }, function (options) {
+
+  // Calculate project versions. (XXX: Theoretically, we should not be doing it
+  // here. We should do it lazily, if the command calls for it. However, we do
+  // end up recalculating them for stats, for example, and, more importantly, we
+  // have noticed some issues if we just leave this in the air. We think that
+  // those issues are concurrency-related, or possibly some weird
+  // order-of-execution of interaction that we are failing to understand. This
+  // seems to fix it in a clear and understandable fashion.)
+  project.getVersions();
+
   // XXX factor this out into a {type: host/port}?
   var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
   if (!portMatch) {
@@ -713,6 +723,16 @@ main.registerCommand({
       return deploy.deleteApp(site);
     }
   }
+
+  // We are actually going to end up compiling an app at this point, so figure
+  // out its versions. . (XXX: Theoretically, we should not be doing it here. We
+  // should do it lazily, if the command calls for it. However, we do end up
+  // recalculating them for stats, for example, and, more importantly, we have
+  // noticed some issues if we just leave this in the air. We think that those
+  // issues are concurrency-related, or possibly some weird order-of-execution
+  // of interaction that we are failing to understand. This seems to fix it in a
+  // clear and understandable fashion.)
+  project.getVersions();
 
   if (options.password) {
     if (useGalaxy) {

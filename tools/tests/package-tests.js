@@ -247,7 +247,7 @@ var cleanLocalCache = function () {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync local catalog",  function () {
+selftest.define("sync local catalog", ["slow"],  function () {
   var s = new Sandbox();
   var run;
 
