@@ -20,10 +20,6 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   self._packageInfoLoadQueue = [];
   self._packagesEverEnqueued = {};
   self._loadingPackageInfo = false;
-
-  _.each(catalog.getAllPackageNames(), function (packageName) {
-    self._ensurePackageInfoLoaded(packageName);
-  });
 };
 
 ConstraintSolver.PackagesResolver.prototype._ensurePackageInfoLoaded = function (
@@ -125,8 +121,8 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 //  than keeping the old version
 //  - previousSolution - mapping from package name to a version that was used in
 //  the previous constraint solver run
-ConstraintSolver.PackagesResolver.prototype.resolve =
-  function (dependencies, constraints, options) {
+ConstraintSolver.PackagesResolver.prototype.resolve = function (
+    dependencies, constraints, options) {
   var self = this;
 
   options = _.defaults(options || {}, {
@@ -142,6 +138,16 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
     breaking: Match.Optional(Boolean),
     upgrade: [String],
     previousSolution: Match.Optional(Object)
+  });
+
+  _.each(dependencies, function (packageName) {
+    self._ensurePackageInfoLoaded(packageName);
+  });
+  _.each(constraints, function (constraint) {
+    self._ensurePackageInfoLoaded(constraint.packageName);
+  });
+  _.each(options.previousSolution, function (version, packageName) {
+    self._ensurePackageInfoLoaded(packageName);
   });
 
   // XXX glasser and ekate added this filter to strip some undefineds that
@@ -209,6 +215,13 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 
   check(dependencies, [String]);
   check(constraints, [{ packageName: String, version: String, type: String }]);
+
+  _.each(dependencies, function (packageName) {
+    self._ensurePackageInfoLoaded(packageName);
+  });
+  _.each(constraints, function (constraint) {
+    self._ensurePackageInfoLoaded(constraint.packageName);
+  });
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
