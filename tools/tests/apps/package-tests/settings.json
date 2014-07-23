@@ -1,0 +1,8 @@
+{
+  "cordova": {
+    "com.apache.cordova.facebookconnect": {
+      "APP_ID": "123",
+      "APP_NAME": "foo"
+    }
+  }
+}
