@@ -5,6 +5,8 @@ var testUtils = require('../test-utils.js');
 var utils = require('../utils.js');
 var _= require('underscore');
 var fs = require("fs");
+var path = require("path");
+var packageClient = require("../package-client.js");
 
 var testPackagesServer = "https://test-packages.meteor.com";
 process.env.METEOR_PACKAGE_SERVER_URL = testPackagesServer;
@@ -355,4 +357,91 @@ selftest.define("sync local catalog",  function () {
     run.stop();
   });
 
+});
+
+// `packageName` should be a full package name (i.e. <username>:<package
+// name>), and the sandbox should be logged in as that username.
+var createAndPublishPackage = function (s, packageName) {
+  var run = s.run("create", "--package", packageName);
+  run.waitSecs(10);
+  run.expectExit(0);
+  s.cd(packageName);
+
+  run = s.run("publish", "--create");
+  run.waitSecs(25);
+  run.expectExit(0);
+
+  s.cd("..");
+};
+
+
+selftest.define("update server package data unit test", ["net"], function () {
+  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
+  var packageStorageFile = path.join(packageStorageFileDir, "data.json");
+  var opts = {
+    packageStorageFile: packageStorageFile,
+    useShortPages: true
+  };
+
+  var s = new Sandbox();
+  var run;
+
+  testUtils.login(s, username, password);
+
+  // Get the current data from the server. Once we publish new packages,
+  // we'll check that all this data still appears on disk and hasn't
+  // been overwritten.
+  var data = packageClient.updateServerPackageData({ syncToken: {} });
+
+  var packageNames = [];
+
+  // Publish more than a page worth of packages. When we pass the
+  // `useShortPages` options, the server will send 3 records at a time
+  // instead of 100.
+  _.times(5, function (i) {
+    var packageName = username + ":" + utils.randomToken();
+    createAndPublishPackage(s, packageName);
+    packageNames.push(packageName);
+  });
+
+  var newData = packageClient.updateServerPackageData(data);
+  var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
+
+  // Check that we didn't lose any data.
+  _.each(data.collections, function (collectionData, name) {
+    _.each(collectionData, function (record, i) {
+      selftest.expectEqual(newData.collections[name][i], record);
+
+      var onDisk = newOnDiskData.collections[name][i];
+
+      // XXX Probably because we're using JSON.parse/stringify instead
+      // of EJSON to serialize/deserialize to disk, we can't compare
+      // records with date fields using `selftest.expectEqual`.
+      _.each(
+        ["lastUpdated", "published", "buildPublished"],
+        function (dateFieldName) {
+          if (record[dateFieldName]) {
+            selftest.expectEqual(new Date(onDisk[dateFieldName]),
+                                 new Date(record[dateFieldName]));
+          } else {
+            selftest.expectEqual(onDisk[dateFieldName], record[dateFieldName]);
+          }
+
+          delete onDisk[dateFieldName];
+          delete record[dateFieldName];
+        }
+      );
+
+      selftest.expectEqual(onDisk, record);
+    });
+  });
+
+  // Check that our newly published packages appear in newData and on disk.
+  _.each(packageNames, function (name) {
+    var found = _.findWhere(newData.collections.packages, { name: name });
+    selftest.expectEqual(!! found, true);
+    var foundOnDisk = _.findWhere(newOnDiskData.collections.packages,
+                                  { name: name });
+    selftest.expectEqual(!! foundOnDisk, true);
+  });
 });
