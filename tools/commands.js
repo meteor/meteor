@@ -1747,6 +1747,8 @@ main.registerCommand({
       console.log("=> Removed", plugins.join(' '));
       return 0;
     }
+
+    options.verbose = true;
   }
 
   var projectOptions = _.pick(options, 'port', 'host', 'platform');
@@ -1758,12 +1760,15 @@ main.registerCommand({
   if (cordovaCommand === 'emulate' && cordovaArgs[0] === 'android' &&
       options.host === 'localhost')
     projectOptions.host = '10.0.2.2';
-  try {
-    ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
-  } catch (e) {
-    process.stderr.write('Errors preventing the Cordova project from build:\n');
-    process.stderr.write(e.stack);
-    return 1;
+
+  if (_.contains(['emulate', 'build', 'prepare', 'compile', 'serve', 'create'], cordovaCommand)) {
+    try {
+      ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
+    } catch (e) {
+      process.stderr.write('Errors preventing the Cordova project from build:\n');
+      process.stderr.write(e.stack);
+      return 1;
+    }
   }
 
   // XXX error if not a Cordova project

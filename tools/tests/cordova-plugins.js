@@ -4,6 +4,7 @@ var files = require('../files.js');
 var _ = require('underscore');
 var utils = require('../utils.js');
 var fs = require('fs');
+var path = require('path');
 
 // Copy the contents of one file to another.  In these series of tests, we often
 // want to switch contents of package.js files. It is more legible to copy in
@@ -28,7 +29,12 @@ var copyFile = function(from, to, sand) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
 var checkCordovaPlugins = function(sand, plugins) {
-  var lines = selftest.execFileSync(sand.execPath, ['cordova', 'plugins'], { cwd: sand.cwd }).split("\n");
+  var lines = selftest.execFileSync('cordova', ['plugins'],
+    { cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build') }).split("\n");
+
+  lines.sort();
+  plugins = _.clone(plugins).sort();
+
   var i = 0;
   _.each(lines, function(line) {
     if (!line || line === '') return;
@@ -121,17 +127,22 @@ selftest.define("add plugins", function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  run = s.run("cordova", "--platform", "firefoxos", "plugin", "add", "org.apache.cordova.camera");
+  run = s.run("cordova", "create", "firefoxos");
+  run.waitSecs(10);
+  run.expectExit(0);
+
+  run = s.run("cordova", "plugin", "add", "org.apache.cordova.camera");
   run.match("Added org.apache.cordova.camera");
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
   run.match("Successfully added");
-  // XXX message about a plugin?
-  checkUserPlugins(s, ["org.apache.cordova.camera"]); // XXX should really have the facebookconnect plugin as well
 
-  run = s.run("cordova", "build");
+  // XXX message about a plugin?
+  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+
+  run = s.run("cordova", "build", "--settings", "settings.json");
   run.waitSecs(20);
   run.expectExit(0);
 
@@ -140,7 +151,10 @@ selftest.define("add plugins", function () {
      "com.phonegap.plugins.facebookconnect"]);
 
   run = s.run("remove", "contains-cordova-plugin");
-
   run.match("removed");
+
+  run = s.run("cordova", "build");
+  run.waitSecs(10);
+  run.expectExit(0);
   checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
 });
