@@ -1,5 +1,15 @@
 var semver = Npm.require('semver');
 
+// The mori library is an awesome persistent data library. But it's also giant,
+// so we don't load it until we actually want to create a mori data structure.
+// Call ensureMoriLoaded before any code which creates a mori data structure.
+mori = null;
+ensureMoriLoaded = function () {
+  if (!mori) {
+    mori = Npm.require('mori');
+  }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Resolver
 ////////////////////////////////////////////////////////////////////////////////
