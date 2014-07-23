@@ -316,17 +316,6 @@ main.registerCommand({
   // Fill in the order key and any other generated release.json fields.
   process.stdout.write("Double-checking release schema ");
 
-  // If you didn't specify an orderKey and it's compatible with our conventional
-  // orderKey generation algorithm, use the algorithm. If you explicitly specify
-  // orderKey: null, don't include one.
-  if (!_.has(relConf, 'orderKey')) {
-    relConf.orderKey = utils.defaultOrderKeyForReleaseVersion(relConf.version);
-  }
-  // This covers both the case of "explicitly specified {orderKey: null}" and
-  // "defaultOrderKeyForReleaseVersion returned null".
-  if (relConf.orderKey === null) {
-    delete relConf.orderKey;
-  }
   process.stdout.write(".");
 
   // Check that the schema is valid -- release.json contains all the required
@@ -370,6 +359,19 @@ main.registerCommand({
       badSchema = true;
     }
   }
+
+  // If you didn't specify an orderKey and it's compatible with our conventional
+  // orderKey generation algorithm, use the algorithm. If you explicitly specify
+  // orderKey: null, don't include one.
+  if (!_.has(relConf, 'orderKey')) {
+    relConf.orderKey = utils.defaultOrderKeyForReleaseVersion(relConf.version);
+  }
+  // This covers both the case of "explicitly specified {orderKey: null}" and
+  // "defaultOrderKeyForReleaseVersion returned null".
+  if (relConf.orderKey === null) {
+    delete relConf.orderKey;
+  }
+
   if (!_.has(relConf, 'orderKey') && relConf['recommended']) {
     if (!badSchema) process.stderr.write("\n");
     process.stderr.write(
