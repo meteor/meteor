@@ -1541,6 +1541,28 @@ var generateCordovaBoilerplate = function (clientDir, options) {
         HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
 };
 
+
+var fetchCordovaPluginFromShaUrl =
+  function (urlWithSha, localPluginsDir, pluginName) {
+  var pluginPath = path.join(localPluginsDir, pluginName);
+  var pluginTarballPath = pluginPath + '.tgz';
+  var curlProcess =
+    execFileSync('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
+
+  if (! curlProcess.success)
+    throw new Error("Failed to fetch the tarball from " + urlWithSha + ": " +
+                    curlProcess.stderr);
+
+  files.mkdir_p(pluginPath);
+  var tarProcess = execFileSync('tar',
+    ['xf', pluginTarballPath, '-C', pluginPath, '--strip-components=1']);
+  if (! tarProcess.success)
+    throw new Error("Failed to untar the tarball from " + urlWithSha + ": " +
+                    tarProcess.stderr);
+  files.rm_recursive(pluginTarballPath);
+  return pluginPath;
+};
+
 // Creates a Cordova project if necessary and makes sure added Cordova
 // platforms and Cordova plugins are up to date with the project's
 // definition.
@@ -1565,6 +1587,7 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
   }
 
   var programPath = path.join(bundlePath, 'programs');
+  var localPluginsPath = path.join(projectPath, 'local-plugins');
 
   if (! fs.existsSync(projectPath)) {
     execFileSync('cordova', ['create', path.basename(projectPath),
@@ -1573,7 +1596,13 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
                  { cwd: path.dirname(projectPath) });
 
     // XXX a hack as platforms management is not implemented yet
-    execFileSync('cordova', ['platforms', 'add', 'ios'], { cwd: projectPath });
+    var platform = options.platform || "firefoxos";
+    execFileSync('cordova', ['platforms', 'add', platform], { cwd: projectPath });
+
+
+    // create a folder for storing local plugins
+    // XXX cache them there
+    files.mkdir_p(localPluginsPath);
   }
 
   var wwwPath = path.join(projectPath, "www");
@@ -1622,14 +1651,26 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
   }
 
   var requiredPlugins = bundleResult.starManifest.cordovaDependencies;
+  // XXX the project-level cordova plugins deps override the package-level ones
+  _.extend(requiredPlugins, project.cordovaPlugins);
+
   _.each(requiredPlugins, function (version, name) {
     // no-op if this plugin is already installed
     if (_.has(installedPlugins, name) && installedPlugins[name] === version)
       return;
 
     // XXX do something different for plugins fetched from a url.
-    execFileSync('cordova', ['plugin', 'add', name + '@' + version],
-      { cwd: projectPath });
+    var pluginInstallCommand = version ? name + '@' + version : name;
+
+    if (version && utils.isUrlWithSha(version)) {
+      pluginInstallCommand =
+        fetchCordovaPluginFromShaUrl(version, localPluginsPath, name);
+    }
+
+    var execRes = execFileSync('cordova',
+       ['plugin', 'add', pluginInstallCommand], { cwd: projectPath });
+    if (! execRes.success)
+      throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
   });
 
   _.each(installedPlugins, function (version, name) {
@@ -1648,6 +1689,7 @@ main.registerCommand({
   options: {
     port: { type: String, short: 'p', default: '3000' },
     host: { type: String, short: 'h', default: 'localhost' },
+    platform: { type: String, default: 'firefoxos' },
     verbose: { type: Boolean, short: 'v', default: false }
   },
 }, function (options) {
@@ -1677,7 +1719,7 @@ main.registerCommand({
     }
   }
 
-  var projectOptions = _.pick(options, 'port', 'host');
+  var projectOptions = _.pick(options, 'port', 'host', 'platform');
   projectOptions.appName = appName;
 
   // XXX in Android simulators you can't access localhost and the correct way is

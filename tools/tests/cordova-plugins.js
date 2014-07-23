@@ -3,6 +3,7 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var _ = require('underscore');
 var utils = require('../utils.js');
+var fs = require('fs');
 
 // Copy the contents of one file to another.  In these series of tests, we often
 // want to switch contents of package.js files. It is more legible to copy in
@@ -120,7 +121,7 @@ selftest.define("add plugins", function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  run = s.run("cordova", "plugin", "add", "org.apache.cordova.camera");
+  run = s.run("cordova", "--platform", "firefoxos", "plugin", "add", "org.apache.cordova.camera");
   run.match("Added org.apache.cordova.camera");
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
@@ -131,7 +132,7 @@ selftest.define("add plugins", function () {
   checkUserPlugins(s, ["org.apache.cordova.camera"]); // XXX should really have the facebookconnect plugin as well
 
   run = s.run("cordova", "build");
-  run.waitSecs(10);
+  run.waitSecs(20);
   run.expectExit(0);
 
   checkCordovaPlugins(s,

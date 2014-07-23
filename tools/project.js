@@ -73,7 +73,7 @@ var Project = function () {
   self.cordovaPlugins = null;
 
   // Platfroms & versions used by the Cordova project.
-  self.cordovaPlatforms = null
+  self.cordovaPlatforms = null;
 
   // The package loader for this project, with the project's dependencies as its
   // version file. (See package-loader.js for more information about package
