@@ -184,7 +184,7 @@ exports.updateServerPackageData = function (cachedServerData) {
 
   // If we are not done, keep trying!
   if (!remoteData.upToDate) {
-    this.updateServerPackageData(data);
+    data = this.updateServerPackageData(data);
   }
 
   return data;
