@@ -1737,9 +1737,15 @@ main.registerCommand({
     var plugins = _.map(pluginsArgs, function (str) { return str.split('@')[0]; });
 
     if (pluginsCommand === 'add') {
-      project.addCordovaPlugins(_.object(_.map(pluginsArgs, function (str) {
+      var pluginsHash = _.object(_.map(pluginsArgs, function (str) {
         return str.split('@');
-      })));
+      }));
+
+      // check that every plugin is specifying either an exact constraint or a
+      // tarball url with sha
+      utils.ensureOnlyExactVersions(pluginsHash);
+
+      project.addCordovaPlugins(pluginsHash);
       console.log("=> Added", plugins.join(' '));
       return 0;
     } else if (pluginsCommand === 'remove' || pluginsCommand === 'rm') {
