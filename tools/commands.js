@@ -954,12 +954,60 @@ main.registerCommand({
     // doesn't do oplog tailing.)
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
-    'driver-package': { type: String }
+    'driver-package': { type: String },
+    // If set also compiles a cordova client target and serves it on
+    // localhost:8000
+    cordova: { type: Boolean }
   }
 }, function (options) {
+  var testPackages = null;
+  try {
+    testPackages = getPackagesForTest(options.args);
+  } catch (err) {
+    process.stderr.write('\n' + err.message);
+    return 1;
+  }
+
+  // Make a temporary app dir (based on the test runner app). This will be
+  // cleaned up on process exit. Using a temporary app dir means that we can
+  // run multiple "test-packages" commands in parallel without them stomping
+  // on each other.
+  //
+  // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
+  // package search path baked into release.current.catalog: we are
+  // bundling the test runner app, but finding app packages from the
+  // current app (if any).
+  var testRunnerAppDir = files.mkdtemp('meteor-test-run');
+  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+
+
+  if (options.cordova) {
+    var spawn = require('child_process').spawn;
+    var eachline = require('eachline');
+    var meteorCommand = process.argv.slice(0, 2);
+
+    var additionalArgs = options.port ? ['--port', options.port] : [];
+    var testPackagesProcess = spawn(meteorCommand[0],
+      [meteorCommand[1], 'cordova', 'serve'].concat(additionalArgs),
+      { cwd: testRunnerAppDir });
+
+    eachline(testPackagesProcess.stdout, 'utf8', function (line) {
+      process.stdout.write('cordova serve: ' + line + '\n');
+    });
+
+    eachline(testPackagesProcess.stdout, 'utf8', function (line) {
+      process.stdout.write('cordova serve (stderr): ' + line + '\n');
+    });
+  }
+
+  return runTestAppForPackages(testPackages, testRunnerAppDir, options);
+});
+
+// Ensures that packages are prepared and built for testing
+var getPackagesForTest = function (packages) {
   var testPackages;
   var localPackageNames = [];
-  if (options.args.length === 0) {
+  if (packages.length === 0) {
     // Only test local packages if no package is specified.
     // XXX should this use the new getLocalPackageNames?
     var packageList = getLocalPackages();
@@ -967,15 +1015,15 @@ main.registerCommand({
       // Couldn't load the package list, probably because some package
       // has a parse error. Bail out -- this kind of sucks; we would
       // like to find a way to get reloading.
-      return 1;
+      throw new Error("No packages to test");
     }
     testPackages = _.keys(packageList);
   } else {
     var messages = buildmessage.capture(function () {
-      testPackages = _.map(options.args, function (p) {
+      testPackages = _.map(packages, function (p) {
         return buildmessage.enterJob({
           title: "trying to test package `" + p + "`"
-        },  function () {
+        }, function () {
 
           // If it's a package name, just pass it through.
           if (p.indexOf('/') === -1) {
@@ -1023,23 +1071,14 @@ main.registerCommand({
     });
 
     if (messages.hasMessages()) {
-      process.stdout.write("\n" + messages.formatMessages());
-      return 1;
+      throw new Error(messages.formatMessages());
     }
   }
 
-  // Make a temporary app dir (based on the test runner app). This will be
-  // cleaned up on process exit. Using a temporary app dir means that we can
-  // run multiple "test-packages" commands in parallel without them stomping
-  // on each other.
-  //
-  // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
-  // package search path baked into release.current.catalog: we are
-  // bundling the test runner app, but finding app packages from the
-  // current app (if any).
-  var testRunnerAppDir = files.mkdtemp('meteor-test-run');
-  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+  return testPackages;
+};
 
+var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
   // We are going to operate in the special test project, so let's remap our
   // main project to the test directory.
   project.setRootDir(testRunnerAppDir);
@@ -1102,7 +1141,7 @@ main.registerCommand({
   });
 
   return ret;
-});
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // rebuild
@@ -1501,7 +1540,9 @@ var generateCordovaBoilerplate = function (clientDir, options) {
 
   _.each(clientJson.manifest, function (item) {
     if (item.type === 'css' && item.where === 'client') {
-      boilerplateData.css.push({url: item.url});
+      // XXX HACK: strip the leading slash ('/') so the stylesheet is not
+      // referenced on the root but rather on a relative path
+      boilerplateData.css.push({url: item.url.substr(1) });
     }
     if (item.type === 'js' && item.where === 'client') {
       boilerplateData.js.push({url: item.url});
