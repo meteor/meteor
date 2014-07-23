@@ -289,6 +289,7 @@ selftest.define("sync local catalog",  function () {
   run = s.run("publish-release", "release.json", "--create-track");
   run.waitSecs(15);
   run.match("Done");
+  run.expectExit(0);
 
   // Create a package that has a versionsFrom for the just-published release.
   var newPack = fullPackageName + "2";
@@ -314,6 +315,7 @@ selftest.define("sync local catalog",  function () {
     run = s.run("publish", "--create");
     run.waitSecs(20);
     run.match("Done");
+    run.expectExit(0);
   });
 
   // Part 2.
