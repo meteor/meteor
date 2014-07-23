@@ -12,13 +12,7 @@ var randomString = function (charsCount) {
   return str;
 };
 
-var timeoutScaleFactor = 1.0;
-if (process.env.TIMEOUT_SCALE_FACTOR) {
-  timeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
-  console.log("Using TIMEOUT_SCALE_FACTOR=" + timeoutScaleFactor);
-}
-exports.timeoutScaleFactor = timeoutScaleFactor;
-exports.accountsCommandTimeoutSecs = 15 * timeoutScaleFactor;
+exports.accountsCommandTimeoutSecs = 15 * exports.timeoutScaleFactor;
 
 exports.randomString = randomString;
 

@@ -584,7 +584,7 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  self.baseTimeout = 1;
+  self.baseTimeout = 1 * utils.timeoutScaleFactor;
   self.extraTime = 0;
 
   self.stdoutMatcher = new Matcher(self);
