@@ -83,7 +83,7 @@ selftest.define("old cli tests", ["slow", "net"], function () {
 selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { tools: 'tools1', latest: true }
+      v1: { recommended: true }
     }
   });
 

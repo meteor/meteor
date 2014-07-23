@@ -575,7 +575,7 @@ _.extend(Sandbox.prototype, {
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
 
     var stubCatalog = {
-      syncToken: "NOPE",
+      syncToken: {},
       formatVersion: "1.0",
       collections: {
         packages: [],
