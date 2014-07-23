@@ -1588,6 +1588,7 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
 
   var programPath = path.join(bundlePath, 'programs');
   var localPluginsPath = path.join(projectPath, 'local-plugins');
+  var newSettings = options.cordovaSettings;
 
   if (! fs.existsSync(projectPath)) {
     execFileSync('cordova', ['create', path.basename(projectPath),
@@ -1603,6 +1604,14 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
     // create a folder for storing local plugins
     // XXX cache them there
     files.mkdir_p(localPluginsPath);
+  }
+
+  var oldSettings = {};
+  try {
+    fs.readFileSync(path.join(projectPath, 'cordova-settings.json'), "utf8");
+  } catch(err) {
+    if (err.code !== "ENOENT")
+      throw err;
   }
 
   var wwwPath = path.join(projectPath, "www");
@@ -1656,8 +1665,13 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
 
   _.each(requiredPlugins, function (version, name) {
     // no-op if this plugin is already installed
-    if (_.has(installedPlugins, name) && installedPlugins[name] === version)
+    if (_.has(installedPlugins, name)
+        && installedPlugins[name] === version
+        && _.isEqual(oldSettings[name], newSettings[name]))
       return;
+
+    if (_.has(installedPlugins, name))
+      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
 
     // XXX do something different for plugins fetched from a url.
     var pluginInstallCommand = version ? name + '@' + version : name;
@@ -1667,8 +1681,18 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
         fetchCordovaPluginFromShaUrl(version, localPluginsPath, name);
     }
 
+    var additionalArgs = [];
+    if (newSettings[name]) {
+      if (! _.isObject(newSettings[name]))
+        throw new Error("Meteor.settings.cordova." + name + " is expected to be an object");
+      _.each(newSettings[name], function (value, variable) {
+        additionalArgs.push("--variable");
+        additionalArgs.push(variable + "=" + JSON.stringify(value));
+      });
+    }
+
     var execRes = execFileSync('cordova',
-       ['plugin', 'add', pluginInstallCommand], { cwd: projectPath });
+       ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: projectPath });
     if (! execRes.success)
       throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
   });
@@ -1687,6 +1711,7 @@ main.registerCommand({
   maxArgs: 10,
   requiresApp: true,
   options: {
+    settings: { type: String },
     port: { type: String, short: 'p', default: '3000' },
     host: { type: String, short: 'h', default: 'localhost' },
     platform: { type: String, default: 'firefoxos' },
@@ -1700,6 +1725,11 @@ main.registerCommand({
 
   var cordovaCommand = options.args[0];
   var cordovaArgs = options.args.slice(1);
+  var cordovaSettings = {};
+
+  if (options.settings) {
+    cordovaSettings = JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
+  }
 
   if (cordovaCommand === 'plugin' || cordovaCommand === 'plugins') {
     var pluginsCommand = cordovaArgs[0];
@@ -1721,6 +1751,7 @@ main.registerCommand({
 
   var projectOptions = _.pick(options, 'port', 'host', 'platform');
   projectOptions.appName = appName;
+  projectOptions.cordovaSettings = cordovaSettings;
 
   // XXX in Android simulators you can't access localhost and the correct way is
   // to use "10.0.2.2" instead.
