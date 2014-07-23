@@ -112,6 +112,10 @@ selftest.define("change plugins", function () {
   s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
   run.match("restarted");
+
+  s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
+  run.waitSecs(2);
+  run.matchErr("exact version");
 });
 
 

@@ -92,15 +92,6 @@ var loadOrderSort = function (templateExtensions) {
   };
 };
 
-var ensureOnlyExactVersions = function (dependencies) {
-  _.each(dependencies, function (version, name) {
-    if (!semver.valid(version) && ! utils.isUrlWithSha(version))
-      buildmessage.error(
-          "Must declare exact version of package dependency: " +
-            name + '@' + version, { useMyCaller: true, downcase: true });
-  });
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 // SourceArch
 ///////////////////////////////////////////////////////////////////////////////
@@ -358,11 +349,11 @@ _.extend(PackageSource.prototype, {
     self.serveRoot = options.serveRoot || path.sep;
 
     var nodeModulesPath = null;
-    meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
+    utils.ensureOnlyExactVersions(options.npmDependencies);
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
 
-    ensureOnlyExactVersions(options.cordovaDependencies);
+    utils.ensureOnlyExactVersions(options.cordovaDependencies);
     self.cordovaDependencies = options.cordovaDependencies;
 
     var sources = _.map(options.sources, function (source) {
@@ -614,7 +605,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          meteorNpm.ensureOnlyExactVersions(_npmDependencies);
+          utils.ensureOnlyExactVersions(_npmDependencies);
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line
@@ -666,7 +657,17 @@ _.extend(PackageSource.prototype, {
 
         // don't allow cordova fuzzy versions so that there is complete
         // consistency when deploying a meteor app
-        ensureOnlyExactVersions(_cordovaDependencies);
+        //
+        // XXX use something like seal or lockdown to have *complete*
+        // confidence we're running the same code?
+        try {
+          utils.ensureOnlyExactVersions(_cordovaDependencies);
+        } catch (e) {
+          buildmessage.error(e.message, { useMyCaller: true, downcase: true });
+          // recover by ignoring the Npm.depends line
+          return;
+        }
+
         cordovaDependencies = _cordovaDependencies;
       },
     };

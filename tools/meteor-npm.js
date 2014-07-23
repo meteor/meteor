@@ -32,22 +32,6 @@ cleanup.onExit(function () {
 // something goes wrong
 var NpmFailure = function () {};
 
-// If there is a version that isn't exact, throws an Error with a
-// human-readable message that is suitable for showing to the user.
-// npmDependencies may be falsey or empty.
-meteorNpm.ensureOnlyExactVersions = function (npmDependencies) {
-  _.each(npmDependencies, function (version, name) {
-    // We want a given version of a smart package (package.js +
-    // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
-    // don't want anything too vague. For now, we support semvers and urls that
-    // name a specific commit by SHA.
-    if (!semver.valid(version) && ! utils.isUrlWithSha(version))
-      throw new Error(
-        "Must declare exact version of npm package dependency: " +
-          name + '@' + version);
-  });
-};
-
 // Creates a temporary directory in which the new contents of the
 // package's .npm directory will be assembled. If all is successful,
 // renames that directory back to .npm. Returns true if there are NPM

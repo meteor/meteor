@@ -341,3 +341,19 @@ exports.isUrlWithSha = function (x) {
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 };
 
+// If there is a version that isn't exact, throws an Error with a
+// human-readable message that is suitable for showing to the user.
+// dependencies may be falsey or empty.
+exports.ensureOnlyExactVersions = function (dependencies) {
+  _.each(dependencies, function (version, name) {
+    // We want a given version of a smart package (package.js +
+    // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
+    // don't want anything too vague. For now, we support semvers and urls that
+    // name a specific commit by SHA.
+    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+      throw new Error(
+        "Must declare exact version of dependency: " +
+          name + '@' + version);
+  });
+};
+

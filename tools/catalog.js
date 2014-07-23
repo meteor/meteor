@@ -421,19 +421,26 @@ _.extend(CompleteCatalog.prototype, {
     var initVersionRecordFromSource =  function (packageDir, name) {
       var packageSource = new PackageSource;
       var broken = false;
-      buildmessage.enterJob({
-        title: "reading package `" + name + "`",
-        rootPath: packageDir
-      }, function () {
-        // All packages in the catalog must have versions.
-        packageSource.initFromPackageDir(name, packageDir, {
-          requireVersion: true
+      var messages = buildmessage.capture({
+          title: "reading package `" + name + "`",
+          rootPath: packageDir
+        }, function () {
+          // All packages in the catalog must have versions.
+          packageSource.initFromPackageDir(name, packageDir, {
+            requireVersion: true
+          });
+          if (buildmessage.jobHasMessages())
+            broken = true;
+        }
+      );
+      if (broken) {
+        _.each(messages.jobs, function (job) {
+          _.each(job.messages, function (message) {
+            process.stderr.write(message.message + "\n");
+          });
         });
-        if (buildmessage.jobHasMessages())
-          broken = true;
-      });
-      if (broken)
         return;  // recover by ignoring
+      }
 
       packageSources[name] = packageSource;
 
