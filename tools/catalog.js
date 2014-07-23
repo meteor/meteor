@@ -57,10 +57,10 @@ _.extend(ServerCatalog.prototype, {
     // The server catalog is always initialized.
     self.initialized = true;
 
-    // This is set to an array while refresh() is running; if another refresh()
-    // call happens during a yield, instead of doing a second refresh it just
-    // waits for the first to finish.
-    self._refreshFutures = null;
+    // This is set while refresh() is running to prevent it from being
+    // run re-entrantly; if another refresh() call happens, it will
+    // simply return immediately.
+    self._refreshing = false;
 
   },
 
@@ -73,38 +73,18 @@ _.extend(ServerCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    if (self._refreshFutures) {
-      var f = new Future;
-      self._refreshFutures.push(f);
-      f.wait();
+    if (self._refreshing) {
       return;
     }
 
-    self._refreshFutures = [];
+    self._refreshing = true;
 
-    var thrownError = null;
     try {
       self._refresh();
-    } catch (e) {
-      thrownError = e;
+      catalog.complete.refresh({ forceRefresh: true });
+    } finally {
+      self._refreshing = false;
     }
-
-    while (self._refreshFutures.length) {
-      var fut = self._refreshFutures.pop();
-      if (thrownError) {
-        // XXX is it really right to throw the same error multiple times?
-        fut.throw(thrownError);
-      } else {
-        fut.return();
-      }
-    }
-    self._refreshFutures = null;
-
-    if (thrownError)
-      throw thrownError;
-
-    // Then refresh the non-server catalog here.
-    catalog.complete.refresh();
   },
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
