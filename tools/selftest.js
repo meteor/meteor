@@ -584,7 +584,7 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  self.baseTimeout = 1 * utils.timeoutScaleFactor;
+  self.baseTimeout = 1;
   self.extraTime = 0;
 
   self.stdoutMatcher = new Matcher(self);
@@ -698,6 +698,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stdoutMatcher.match(pattern, timeout, _strict);
   }),
@@ -708,6 +709,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stderrMatcher.match(pattern, timeout, _strict);
   }),
@@ -753,6 +755,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     self.expectExit();
 
@@ -770,6 +773,7 @@ _.extend(Run.prototype, {
 
     if (self.exitStatus === undefined) {
       var timeout = self.baseTimeout + self.extraTime;
+      timeout *= utils.timeoutScaleFactor;
       self.extraTime = 0;
 
       var fut = new Future;
