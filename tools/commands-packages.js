@@ -1298,7 +1298,7 @@ main.registerCommand({
         }
         if (constraint.constraintString) {
           process.stdout.write("The version constraint will be changed to " +
-                               constraint.constraintString + "\n");
+                               constraint.constraintString + ".\n");
         } else {
           process.stdout.write("The version constraint will be removed.\n");
         }
@@ -1358,7 +1358,7 @@ main.registerCommand({
   if (ret !== 0) return ret;
 
   // Show the user the messageLog of the packages that they installed.
-  process.stdout.write("Successfully added the following packages.\n");
+  process.stdout.write("\n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
     var versionRecord = catalog.complete.getVersion(constraint.name, version);
