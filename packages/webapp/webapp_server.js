@@ -375,6 +375,17 @@ var runWebAppServer = function () {
       return;
     }
 
+    // XXX think of a better name
+    if (pathname === "/cordova_manifest.json") {
+      res.writeHead(200, {
+        'Content-type': 'application/json; charset=UTF-8',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.write(JSON.stringify(WebApp.clientProgram.manifest));
+      res.end();
+      return;
+    }
+
     var serveStaticJs = function (s) {
       res.writeHead(200, {
         'Content-type': 'application/javascript; charset=UTF-8'
