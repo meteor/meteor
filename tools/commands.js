@@ -342,7 +342,7 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = catalog.official.getDefaultReleaseVersion();
+        var rel = catalog.complete.getDefaultReleaseVersion();
         var relString = rel.track + "@" + rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");

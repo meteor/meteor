@@ -202,7 +202,7 @@ release.latestDownloaded = function (track) {
     return process.env.METEOR_TEST_LATEST_RELEASE;
 
 
-  var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
+  var defaultRelease = catalog.complete.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
     if (!track || track === catalog.official.DEFAULT_TRACK) {
@@ -253,7 +253,7 @@ release.load = function (name, options) {
     name = track + '@' + version;
   }
 
-  var releaseVersion = catalog.official.getReleaseVersion(track, version);
+  var releaseVersion = catalog.complete.getReleaseVersion(track, version);
   if (releaseVersion === null) {
     if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline") {
       throw new files.OfflineError(new Error("scripted failure for tests"));
