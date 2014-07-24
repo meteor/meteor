@@ -1344,7 +1344,6 @@ main.registerCommand({
   var downloaded = project.addPackages(constraints, newVersions);
 
   var ret = project.showPackageChanges(versions, newVersions, {
-    skipPackages: _.pluck(constraints, 'name'),
     onDiskPackages: downloaded});
   if (ret !== 0) return ret;
 
@@ -1411,11 +1410,6 @@ main.registerCommand({
   // Retrieve the new dependency versions that we have chosen for this project
   // and do some pretty output reporting.
   var newVersions = project.getVersions();
-
-  // Show what we did. (We removed some things)
-  var ret = project.showPackageChanges(versions, newVersions, {
-    skipPackages: options.args });
-  if (ret !== 0) return ret;
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,

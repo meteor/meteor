@@ -287,7 +287,6 @@ _.extend(Project.prototype, {
   // return 0 if everything went well, or 1 if we failed in some way.
   showPackageChanges : function (versions, newVersions, options) {
     var self = this;
-    // options.skipPackages
     // options.onDiskPackages
 
     // Don't tell the user what all the operations were until we finish -- we
@@ -299,8 +298,7 @@ _.extend(Project.prototype, {
     // Remove the versions that don't exist
     var removed = _.difference(_.keys(versions), _.keys(newVersions));
     _.each(removed, function(packageName) {
-      if (!_.contains(options.skipPackages, packageName))
-        messageLog.push("removed dependency on " + packageName);
+      messageLog.push("  removed dependency on " + packageName);
     });
 
     _.each(newVersions, function(version, packageName) {
@@ -322,12 +320,6 @@ _.extend(Project.prototype, {
                              " has no compatible build for version " +
                              version + "\n");
         failed = true;
-        return;
-      }
-
-      // Add a message to the update logs to show the user what we have done.
-      if ( _.contains(options.skipPackages, packageName)) {
-        // If we asked for this, we will log it later in more detail.
         return;
       }
 
