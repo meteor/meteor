@@ -132,7 +132,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   });
 
   check(dependencies, [String]);
-  check(constraints, [{ packageName: String, version: String, type: String }]);
+
+  check(constraints, [{
+    packageName: String, version: String, type: String,
+    constraintString: Match.Optional(Match.OneOf(String, null))
+  }]);
   check(options, {
     _testing: Match.Optional(Boolean),
     breaking: Match.Optional(Boolean),

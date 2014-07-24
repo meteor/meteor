@@ -1250,60 +1250,60 @@ main.registerCommand({
   // we don't specify these constraints until we get them back from the
   // constraint solver.
   var constraints = _.map(options.args, function (packageReq) {
-    return utils.splitConstraint(packageReq);
+    return utils.parseConstraint(packageReq);
   });
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    if (! catalog.complete.getPackage(constraint.package)) {
-      process.stderr.write(constraint.package + ": no such package\n");
+    if (! catalog.complete.getPackage(constraint.name)) {
+      process.stderr.write(constraint.name + ": no such package\n");
       failed = true;
       return;
     }
 
     // If the version was specified, check that the version exists.
-    if ( constraint.constraint !== null) {
-      var version = _.clone(constraint.constraint);
-      if (version[0] === '=')
-        version = version.split('=')[1];
+    if (constraint.version !== null) {
       var versionInfo = catalog.complete.getVersion(
-        constraint.package,
-        version);
+        constraint.name,
+        constraint.version);
       if (! versionInfo) {
         process.stderr.write(
-          constraint.package + "@" + version  + ": no such version\n");
+          constraint.name + "@" + constraint.version  + ": no such version\n");
         failed = true;
         return;
       }
     }
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function.
-    if (_.has(packages, constraint.package)) {
-      if  (packages[constraint.package] === constraint.constraint) {
-      process.stderr.write(constraint.package + " with version constraint " +
-                           constraint.constraint + " has already been added.\n");
-      failed = true;
+    if (_.has(packages, constraint.name)) {
+      if  (packages[constraint.name] === constraint.constraintString) {
+      process.stderr.write(
+        constraint.name + " with version constraint " +
+          constraint.constraintString + " has already been added.\n");
+        failed = true;
       } else {
-        if (packages[constraint.package]) {
-          process.stdout.write("Currently using "+  constraint.package +
-                               " with version constraint " + packages[constraint.package]
-                              +"\n");
+        if (packages[constraint.name]) {
+          process.stdout.write(
+            "Currently using " + constraint.name +
+              " with version constraint " + packages[constraint.name]
+              +"\n");
         } else {
-          process.stdout.write("Currently using "+  constraint.package +
+          process.stdout.write("Currently using "+  constraint.name +
                                " without any version constraint\n");
         }
         process.stdout.write("Constraint will be changed to " +
-                              constraint.constraint + "\n");
+                              constraint.constraintString + "\n");
       }
     }
 
     // Add the package to our direct dependency constraints that we get
     // from .meteor/packages.
-    packages[constraint.package] = constraint.constraint;
+    packages[constraint.name] = constraint.constraintString;
 
     // Also, add it to all of our combined dependencies.
-    allPackages.push(
-      _.extend({ packageName: constraint.package },
-                 utils.parseVersionConstraint(constraint.constraint)));
+    var constraintForResolver = _.clone(constraint);
+    constraintForResolver.packageName = constraintForResolver.name;
+    delete constraintForResolver.name;
+    allPackages.push(constraintForResolver);
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -1344,21 +1344,21 @@ main.registerCommand({
   var downloaded = project.addPackages(constraints, newVersions);
 
   var ret = project.showPackageChanges(versions, newVersions, {
-    skipPackages: constraints,
+    skipPackages: _.pluck(constraints, 'name'),
     ondiskPackages: downloaded});
   if (ret !== 0) return ret;
 
   // Show the user the messageLog of the packages that they installed.
   process.stdout.write("Successfully added the following packages.\n");
   _.each(constraints, function (constraint) {
-    var version = newVersions[constraint.package];
-    var versionRecord = catalog.complete.getVersion(constraint.package, version);
-    if (constraint.constraint !== null &&
-        version !== constraint.constraint) {
-      process.stdout.write("Added " + constraint.package + " at version " + version +
+    var version = newVersions[constraint.name];
+    var versionRecord = catalog.complete.getVersion(constraint.name, version);
+    if (constraint.constraintString !== null &&
+        version !== constraint.version) {
+      process.stdout.write("Added " + constraint.name + " at version " + version +
                            " to avoid conflicting dependencies.\n");
     }
-    process.stdout.write(constraint.package +
+    process.stdout.write(constraint.name +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :
                           "") + "\n");

@@ -13,7 +13,8 @@ PackageVersion = {};
 // 3. "at-least" - A@>=x.y.z - constraints package A to version x.y.z or higher.
 //    "pick A at least at x.y.z"
 PackageVersion.parseVersionConstraint = function (versionString) {
-  var versionDesc = { version: null, type: "compatible-with" };
+  var versionDesc = { version: null, type: "compatible-with",
+                      constraintString: versionString };
 
   // XXX #noconstraint #geoff #changed
   // XXX remove none when it is no longer used
@@ -47,7 +48,8 @@ PackageVersion.parseConstraint = function (constraintString) {
 
   var splitted = constraintString.split('@');
 
-  var constraint = { name: "", version: null, type: "compatible-with" };
+  var constraint = { name: "", version: null,
+                     type: "compatible-with", constraintString: null };
   var name = splitted[0];
   var versionString = splitted[1];
 

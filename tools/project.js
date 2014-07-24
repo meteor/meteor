@@ -693,12 +693,14 @@ _.extend(Project.prototype, {
     }
 
     // We can continue normally, so set our own internal variables.
-    self.constraints = _.extend(self.constraints, moreDeps);
+    _.each(moreDeps, function (constraint) {
+      self.constraints[constraint.name] = constraint.constraintString;
+    });
     self.dependencies = newVersions;
 
     // Remove the old constraints on the same constraints, since we are going to
     // overwrite them.
-    self._removePackageRecords(_.pluck(moreDeps, 'package'));
+    self._removePackageRecords(_.pluck(moreDeps, 'name'));
 
     // Add to the packages file. Do this first, since the versions file is
     // derived from this one and can always be reconstructed later. We read the
@@ -706,10 +708,10 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = files.getLinesOrEmpty(packages);
     _.each(moreDeps, function (constraint) {
-      if (constraint.constraint) {
-        lines.push(constraint.package + '@' + constraint.constraint);
+      if (constraint.constraintString) {
+        lines.push(constraint.name + '@' + constraint.constraintString);
       } else {
-        lines.push(constraint.package);
+        lines.push(constraint.name);
       }
     });
     lines.push('\n');
