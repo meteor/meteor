@@ -255,7 +255,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   };
 
   if (_.isEmpty(candidateVersions)) {
-    var uv = self.unitsVersions[candidateName][0];
+    var uv = self.unitsVersions[candidateName] &&
+          self.unitsVersions[candidateName][0];
 
     if (! uv)
       return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName, conflictingUnit: candidateName };
