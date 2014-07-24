@@ -407,6 +407,12 @@ Options:
 
 
 >>> publish-for-arch
+Publishes a bla bla bla.
+
+Usage: fry the eggs, then
+
+Publishes a
+
 XXX: WRITE
 
 

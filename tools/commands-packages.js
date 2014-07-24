@@ -95,7 +95,6 @@ main.registerCommand({
   maxArgs: 0,
   options: {
     create: { type: Boolean },
-    name: { type: String },
     // This is similar to publish-for-arch, but uses the source code you have
     // locally (and other local packages you may have) instead of downloading
     // the source bundle. It does verify that the source is the same, though.
@@ -136,14 +135,6 @@ main.registerCommand({
     { title: "building the package" },
     function () {
       var packageName = path.basename(options.packageDir);
-
-      // XXX: This override is kind of gross because it requires you to set name
-      // in package.js as well. We should just read out of that. On the other
-      // hand, this is mostly used for forks, which are not quite a real thing in
-      // 0.90.
-      if (options.name && packageName !== options.name) {
-        packageName = options.name;
-      }
 
       if (! utils.validPackageName(packageName)) {
         buildmessage.error("Invalid package name:", packageName);
@@ -205,6 +196,7 @@ main.registerCommand({
   if (all.length !== 2) {
     process.stderr.write(
       'Incorrect argument. Please use the form of <packageName>@<version> \n');
+    process.stderr.write(main.longHelp('publish-for-arch'));
     return 1;
   }
   var name = all[0];
@@ -214,20 +206,26 @@ main.registerCommand({
   catalog.official.refresh(true);
 
   if (! catalog.complete.getPackage(name)) {
-    process.stderr.write('No package named ' + name + "\n");
+    process.stderr.write(
+"You can't call `meteor publish-for-arch` on package '" + name + "' without\n" +
+"publishing it first.\n\n" +
+"To publish the package, run `meteor publish --create` from the package directory.\n\n");
+
     return 1;
   }
   var pkgVersion = catalog.official.getVersion(name, versionString);
   if (! pkgVersion) {
-    process.stderr.write('There is no version ' +
-                         versionString + ' for package ' +
-                         name + "\n");
+    process.stderr.write(
+"You can't call `meteor publish-for-arch` on version " + versionString + " of\n" +
+"package '" + name + "' without publishing it first.\n\n" +
+"To publish the version, run `meteor publish` from the package directory.\n\n");
+
     return 1;
   }
 
   if (! pkgVersion.source || ! pkgVersion.source.url) {
     process.stderr.write('There is no source uploaded for ' +
-                         name + ' ' + versionString + "\n");
+                         name + '@' + versionString + "\n");
     return 1;
   }
 
@@ -245,7 +243,7 @@ main.registerCommand({
   var packageDir = path.join(sourcePath, name);
 
   if (! fs.existsSync(packageDir)) {
-    process.stderr.write('Malformed source tarball \n');
+    process.stderr.write('Malformed source tarball\n');
     return 1;
   }
 

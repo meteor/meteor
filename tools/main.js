@@ -1156,3 +1156,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
     throw new Error("command returned non-number?");
   process.exit(ret);
 }).run();
+
+// exports
+main.longHelp = longHelp;
+
