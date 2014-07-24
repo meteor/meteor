@@ -41,12 +41,11 @@
   // <METEOR> Commented these lines out; we have _ via api.use.
   // var _ = root._;
   // if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
+  // </METEOR>
 
   // For Backbone's purposes, jQuery, Zepto, Ender, or My Library (kidding) owns
   // the `$` variable.
-  // This package uses jQuery
-  Backbone.$ = root.jQuery;
-  // </METEOR>
+  Backbone.$ = root.jQuery || root.Zepto || root.ender || root.$;
 
   // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
   // to its previous owner. Returns a reference to this Backbone object.
