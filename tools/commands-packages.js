@@ -122,7 +122,7 @@ main.registerCommand({
     return 1;
   }
   if (! conn) {
-    process.stderr.write('No connection: Publish failed. \n');
+    process.stderr.write('No connection: Publish failed.\n');
     return 1;
   }
 
@@ -171,8 +171,8 @@ main.registerCommand({
   if (compileResult.unipackage.buildArchitectures() !== "browser+os") {
     process.stdout.write(
       "\nWARNING: Your package contains binary code and is only compatible with " +
-       archinfo.host() + " architecture. \n" +
-       "Please use publish-for-arch to publish new builds of the package. \n\n");
+       archinfo.host() + " architecture.\n" +
+       "Please use publish-for-arch to publish new builds of the package.\n\n");
   };
 
   // We are only publishing one package, so we should close the connection, and
@@ -195,7 +195,7 @@ main.registerCommand({
   var all = options.args[0].split('@');
   if (all.length !== 2) {
     process.stderr.write(
-      'Incorrect argument. Please use the form of <packageName>@<version> \n');
+      'Incorrect argument. Please use the form of <packageName>@<version>\n');
     throw new main.ShowUsage;
   }
   var name = all[0];
@@ -311,49 +311,36 @@ main.registerCommand({
   }
 
   // Fill in the order key and any other generated release.json fields.
-  process.stdout.write("Double-checking release schema ");
-
-  process.stdout.write(".");
+  process.stdout.write("Double-checking release schema .");
 
   // Check that the schema is valid -- release.json contains all the required
   // fields, does not contain contradicting information, etc. Output all
   // messages, so the user can fix all errors at once.
   // XXX: Check for unknown keys.
   var badSchema = false;
-  if (!_.has(relConf, 'track')) {
-   process.stderr.write(
-      "Configuration file must specify release track. (track). \n");
+  var bad = function (message) {
+    if (!badSchema)
+      process.stderr.write("\n");
+    process.stderr.write(message + "\n");
     badSchema = true;
+  };
+  if (!_.has(relConf, 'track')) {
+    bad("Configuration file must specify release track. (track).");
   }
   if (!_.has(relConf, 'version')) {
-    if (!badSchema) process.stderr.write("\n");
-    process.stderr.write(
-      "Configuration file must specify release version. (version). \n");
-    badSchema = true;
+    bad("Configuration file must specify release version. (version).");
   }
   if (!_.has(relConf, 'description')) {
-    if (!badSchema) process.stderr.write("\n");
-    process.stderr.write(
-      "Configuration file must contain a description (description). \n");
-    badSchema = true;
+    bad("Configuration file must contain a description (description).");
   } else if (relConf['description'].length > 100) {
-    if (!badSchema) process.stderr.write("\n");
-    process.stderr.write(
-      "Description must be under 100 characters");
-    badSchema = true;
+    bad("Description must be under 100 characters.");
   }
   if (!options['from-checkout']) {
     if (!_.has(relConf, 'tool')) {
-      if (!badSchema) process.stderr.write("\n");
-      process.stderr.write(
-        "Configuration file must specify a tool version (tool). \n");
-      badSchema = true;
+      bad("Configuration file must specify a tool version (tool) unless in --from-checkout mode.");
     }
     if (!_.has(relConf, 'packages')) {
-      if (!badSchema) process.stderr.write("\n");
-      process.stderr.write(
-        "Configuration file must specify package versions (packages). \n");
-      badSchema = true;
+      bad("Configuration file must specify package versions (packages) unless in --from-checkout mode.");
     }
   }
 
@@ -370,10 +357,7 @@ main.registerCommand({
   }
 
   if (!_.has(relConf, 'orderKey') && relConf['recommended']) {
-    if (!badSchema) process.stderr.write("\n");
-    process.stderr.write(
-      "Reccommended releases must have order keys. \n");
-    badSchema = true;
+    bad("Recommended releases must have order keys.");
   }
   // On the main release track, we can't name the release anything beginning
   // with 0.8 and below, because those are taken for pre-troposphere releases.
@@ -381,13 +365,10 @@ main.registerCommand({
     var start = relConf.version.slice(0,4);
     if (start === "0.8." || start === "0.7." ||
         start === "0.6." || start === "0.5.") {
-      if (!badSchema) process.stderr.write("\n");
-      process.stderr.write(
-        "It looks like you are trying to publish a pre-package-server meteor release. \n");
-      process.stderr.write(
-        "Doing this through the package server is going to cause a lot of confusion. \n" +
-        "Please use the old release process. \n");
-      badSchema = true;
+      bad(
+        "It looks like you are trying to publish a pre-package-server meteor release.\n" +
+          "Doing this through the package server is going to cause a lot of confusion.\n" +
+          "Please use the old release process.");
     }
   }
   if (badSchema) {
@@ -402,7 +383,7 @@ main.registerCommand({
     var trackRecord = catalog.official.getReleaseTrack(relConf.track);
     if (!trackRecord) {
       process.stderr.write('\n There is no release track named ' + relConf.track +
-                           '. If you are creating a new track, use the --create-track flag. \n');
+                           '. If you are creating a new track, use the --create-track flag.\n');
       return 1;
     }
     var auth = require("./auth.js");
@@ -410,11 +391,11 @@ main.registerCommand({
       _.pluck(trackRecord.maintainers, 'username'), auth.loggedInUsername());
     if (authorized == -1) {
       process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
-      process.stderr.write('Only authorized maintainers may publish new versions. \n');
+      process.stderr.write('Only authorized maintainers may publish new versions.\n');
       return 1;
     }
   }
-  process.stdout.write(". OK! \n");
+  process.stdout.write(". OK!\n");
 
   // This is sort of a hidden option to just take your entire meteor checkout
   // and make a release out of it. That's what we do now (that's what releases
@@ -432,7 +413,7 @@ main.registerCommand({
   if (options['from-checkout']) {
     // You must be running from checkout to bundle up your checkout as a release.
     if (!files.inCheckout()) {
-      process.stderr.write("Must run from checkout to make release from checkout. \n");
+      process.stderr.write("Must run from checkout to make release from checkout.\n");
       return 1;
     };
 
@@ -443,7 +424,7 @@ main.registerCommand({
     if (options.appDir) {
       process.stderr.write("Trying to publish from checkout while in an application " +
                            "directory is a bad idea." +
-                           " Please try again from somewhere else. \n");
+                           " Please try again from somewhere else.\n");
       return 1;
     }
 
@@ -453,9 +434,9 @@ main.registerCommand({
     // these by accident. So, we will disallow it for now.
     if (relConf.packages || relConf.tool) {
       process.stderr.write(
-        "Setting the --from-checkout option will use the tool & packages in your meteor " +
-        "checkout. \n" +
-        "Your release configuration file should not contain that information. \n");
+        "Setting the --from-checkout option will use the tool and packages in your meteor " +
+        "checkout.\n" +
+        "Your release configuration file should not contain that information.\n");
       return 1;
     }
 
@@ -473,7 +454,7 @@ main.registerCommand({
     var messages = buildmessage.capture(
       {title: "rebuilding local packages"},
       function () {
-        process.stdout.write("Rebuilding local packages... \n");
+        process.stdout.write("Rebuilding local packages...\n");
         _.each(contents, function (item) {
           // We expect the meteor/packages directory to only contain a lot of
           // directories, each of which is a package. This may one day be false,
@@ -568,7 +549,7 @@ main.registerCommand({
                   // the errors will change the hashes as well). Don't even
                   // bother checking until that happens.
                   if (!canBuild) {
-                    process.stdout.write("hash comparison skipped \n");
+                    process.stdout.write("hash comparison skipped\n");
                     return;
                   }
 
@@ -618,53 +599,56 @@ main.registerCommand({
         });
       });
 
-   if (messages.hasMessages()) {
-     process.stdout.write("\n" + messages.formatMessages());
-     return 1;
-   };
+    if (messages.hasMessages()) {
+      process.stdout.write("\n" + messages.formatMessages());
+      return 1;
+    };
 
-   // We now have an object of packages that have new versions on disk that
-   // don't exist in the server catalog. Publish them.
-  _.each(toPublish,
-   function(prebuilt, name) {
-     var opts = {
-       new: !catalog.official.getPackage(name)
-     };
-     process.stdout.write("Publishing package: " + name + "\n");
+    // We now have an object of packages that have new versions on disk that
+    // don't exist in the server catalog. Publish them.
+    for (var name in toPublish) {  // don't use _.each so we can return
+      if (!_.has(toPublish, name))
+        continue;
+      var prebuilt = toPublish[name];
 
-     // If we are creating a new package, dsPS will document this for us, so we
-     // don't need to do this here. Though, in the future, once we are done
-     // bootstrapping package servers, we should consider having some extra
-     // checks around this.
-     var pub = packageClient.publishPackage(
-       prebuilt.source,
-       prebuilt.compileResult,
-       conn,
-       opts);
+      var opts = {
+        new: !catalog.official.getPackage(name)
+      };
+      process.stdout.write("Publishing package: " + name + "\n");
 
-     // If we fail to publish, just exit outright, something has gone wrong.
-     if (pub > 0) {
-       process.stderr.write("Failed to publish: " + name + "\n");
-       return 1;;
-     }
-   });
+      // If we are creating a new package, dsPS will document this for us, so we
+      // don't need to do this here. Though, in the future, once we are done
+      // bootstrapping package servers, we should consider having some extra
+      // checks around this.
+      var pub = packageClient.publishPackage(
+        prebuilt.source,
+        prebuilt.compileResult,
+        conn,
+        opts);
 
-   // Set the remaining release information. For now, when we publish from
-   // checkout, we always set the meteor tool as the tool. We don't include the
-   // tool in the packages list.
-   relConf.tool="meteor-tool@" + myPackages["meteor-tool"];
-   delete myPackages["meteor-tool"];
-   relConf.packages=myPackages;
+      // If we fail to publish, just exit outright, something has gone wrong.
+      if (pub > 0) {
+        process.stderr.write("Failed to publish: " + name + "\n");
+        return 1;
+      }
+    }
+
+    // Set the remaining release information. For now, when we publish from
+    // checkout, we always set the meteor tool as the tool. We don't include the
+    // tool in the packages list.
+    relConf.tool="meteor-tool@" + myPackages["meteor-tool"];
+    delete myPackages["meteor-tool"];
+    relConf.packages=myPackages;
   }
 
   // Create the new track, if we have been told to.
   if (options['create-track']) {
-    process.stdout.write("Creating a new release track... \n");
+    process.stdout.write("Creating a new release track...\n");
     var track = conn.call('createReleaseTrack',
                          { name: relConf.track } );
   }
 
-  process.stdout.write("Creating a new release version... \n");
+  process.stdout.write("Creating a new release version...\n");
   // Send it over!
   var record = {
     track: relConf.track,
@@ -757,9 +741,9 @@ main.registerCommand({
     if (_.isEqual(versionRecords, [])) {
       if (allRecord.release) {
         process.stderr.write(
-          "No recommended versions of release " + name + " exist. \n");
+          "No recommended versions of release " + name + " exist.\n");
       } else {
-        process.stderr.write("No versions of package" + name + " exist. \n");
+        process.stderr.write("No versions of package" + name + " exist.\n");
       }
     } else {
       var lastVersion = versionRecords[versionRecords.length - 1];
@@ -781,7 +765,7 @@ main.registerCommand({
           process.stdout.write("      tool: " + v.tool + "\n");
           process.stdout.write("      packages:" + "\n");
 
-          versionDesc = versionDesc + " \n      packages: \n";
+          versionDesc = versionDesc + "\n      packages:\n";
           _.each(v.packages, function(pv, pn) {
              process.stdout.write("          " + pn + ":" + pv + "\n");
           });
@@ -846,10 +830,10 @@ main.registerCommand({
     if (!output) {
       process.stderr.write(
         "Neither packages nor releases containing the string \'" +
-        search + "\' could be found. \n");
+        search + "\' could be found.\n");
     } else {
       process.stdout.write(
-"To get more information on a specific item, use meteor search --details. \n");
+"To get more information on a specific item, use meteor search --details.\n");
     }
 
   }
@@ -915,7 +899,7 @@ main.registerCommand({
   if (newVersionsAvailable) {
     process.stdout.write(
       "\n * New versions of these packages are available! " +
-        "Run 'meteor update' to update.  \n");
+        "Run 'meteor update' to update.\n");
   }
   return 0;
 });
@@ -1030,7 +1014,7 @@ main.registerCommand({
         process.stdout.write(
           "Installed. Run 'meteor update' inside of a particular project\n" +
             "directory to update that project to Meteor " +
-            release.current.name + ". \n");
+            release.current.name + ".\n");
       } else {
         // We get here if the user ran 'meteor update' and we didn't
         // find a new version.
@@ -1078,7 +1062,7 @@ main.registerCommand({
       // XXX: something something something current release
       if (appRelease == null) {
         process.stderr.write(
-          "Cannot patch update unless a release is set. \n");
+          "Cannot patch update unless a release is set.\n");
         return 1;;
       }
       var r = appRelease.split('@');
@@ -1086,7 +1070,7 @@ main.registerCommand({
       var updateTo = record.patchReleaseVersion;
       if (!updateTo) {
         process.stderr.write(
-          "You are at the latest patch version. \n");
+          "You are at the latest patch version.\n");
         return 1;
       }
       releaseVersionsToTry = [updateTo];
@@ -1161,7 +1145,7 @@ main.registerCommand({
       ondiskPackages: setV.downloaded
     });
     if (!setV.success) {
-      process.stderr.write("Could not install all the requested packages. \n");
+      process.stderr.write("Could not install all the requested packages.\n");
       return 1;
     }
 
@@ -1305,7 +1289,7 @@ main.registerCommand({
                               +"\n");
         } else {
           process.stdout.write("Currently using "+  constraint.package +
-                               " without any version constraint \n");
+                               " without any version constraint\n");
         }
         process.stdout.write("Constraint will be changed to " +
                               constraint.constraint + "\n");
@@ -1345,7 +1329,7 @@ main.registerCommand({
                                                { ignoreProjectDeps: true });
   if ( ! newVersions) {
     // XXX: Better error handling.
-    process.stderr.write("Cannot resolve package dependencies. \n");
+    process.stderr.write("Cannot resolve package dependencies.\n");
   }
 
   // Don't tell the user what all the operations were until we finish -- we
@@ -1372,7 +1356,7 @@ main.registerCommand({
     if (constraint.constraint !== null &&
         version !== constraint.constraint) {
       process.stdout.write("Added " + constraint.package + " at version " + version +
-                           " to avoid conflicting dependencies. \n");
+                           " to avoid conflicting dependencies.\n");
     }
     process.stdout.write(constraint.package +
                          (versionRecord.description ?
@@ -1410,7 +1394,7 @@ main.registerCommand({
     // Check that we are using the package. We don't check if the package
     // exists. You should be able to remove non-existent packages.
     if (! _.has(packages, packageName)) {
-      process.stderr.write( packageName  + " is not in this project \n");
+      process.stderr.write( packageName  + " is not in this project\n");
     }
   });
 
@@ -1437,7 +1421,7 @@ main.registerCommand({
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
   _.each(options.args, function (packageName) {
-      process.stdout.write("Removed constraint " + packageName + " from project \n");
+      process.stdout.write("Removed constraint " + packageName + " from project\n");
   });
 
   return 0;
@@ -1496,20 +1480,20 @@ main.registerCommand({
 
     try {
       if (options.add) {
-        process.stdout.write("Adding a maintainer to " + name + "... \n");
+        process.stdout.write("Adding a maintainer to " + name + "...\n");
         if (fullRecord.release) {
           conn.call('addReleaseMaintainer', name, options.add);
         } else {
           conn.call('addMaintainer', name, options.add);
         }
       } else if (options.remove) {
-        process.stdout.write("Removing a maintainer from " + name + "... \n");
+        process.stdout.write("Removing a maintainer from " + name + "...\n");
         if (fullRecord.release) {
           conn.call('removeReleaseMaintainer', name, options.remove);
         } else {
           conn.call('removeMaintainer', name, options.remove);
         }
-        process.stdout.write(" Done! \n");
+        process.stdout.write(" Done!\n");
       }
     } catch (err) {
       process.stdout.write("\n" + err + "\n");
@@ -1518,7 +1502,7 @@ main.registerCommand({
     catalog.official.refresh();
   }
 
-  process.stdout.write("\n The maintainers for " + name + " are: \n");
+  process.stdout.write("\n The maintainers for " + name + " are:\n");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
       process.stdout.write("<unknown>" + "\n");
@@ -1543,7 +1527,7 @@ main.registerCommand({
   var name = release[0];
   var version = release[1];
   if (!version) {
-      process.stderr.write('\n Must specify release version (track@version) \n');
+      process.stderr.write('\n Must specify release version (track@version)\n');
       return 1;
   }
 
@@ -1567,13 +1551,13 @@ main.registerCommand({
     if (options.unrecommend) {
       process.stdout.write("Unrecommending " + options.args[0] + "...\n");
       conn.call('unrecommendVersion', name, version);
-      process.stdout.write("Done! \n " + options[0] +
-                           " is no longer a recommended release \n");
+      process.stdout.write("Done!\n " + options[0] +
+                           " is no longer a recommended release\n");
     } else {
       process.stdout.write("Recommending " + options.args[0] + "...\n");
       conn.call('recommendVersion', name, version);
-      process.stdout.write("Done! \n " + options[0] +
-                           " is now  a recommended release \n");
+      process.stdout.write("Done!\n " + options[0] +
+                           " is now  a recommended release\n");
     }
   } catch (err) {
     process.stdout.write("\n" + err + "\n");
@@ -1597,7 +1581,7 @@ main.registerCommand({
   var name = package[0];
   var version = package[1];
   if (!version) {
-      process.stderr.write('\n Must specify release version (track@version) \n');
+      process.stderr.write('\n Must specify release version (track@version)\n');
       return 1;
   }
   var ecv = options.args[1];
@@ -1621,11 +1605,11 @@ main.registerCommand({
   try {
       process.stdout.write(
         "Setting earliest compatible version on "
-          + options.args[0] + " to " + ecv + "... \n");
+          + options.args[0] + " to " + ecv + "...\n");
       var versionInfo = { name : name,
                           version : version };
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
-      process.stdout.write("Done! \n");
+      process.stdout.write("Done!\n");
   } catch (err) {
     process.stdout.write("\n" + err + "\n");
   }
@@ -1666,9 +1650,9 @@ main.registerCommand({
   try {
       process.stdout.write(
         "Changing homepage on  "
-          + name + " to " + url + "... \n");
+          + name + " to " + url + "...\n");
       conn.call('_changePackageHomepage', name, url);
-      process.stdout.write("Done! \n");
+      process.stdout.write("Done!\n");
   } catch (err) {
     process.stdout.write("\n" + err + "\n");
   }
