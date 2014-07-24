@@ -196,8 +196,7 @@ main.registerCommand({
   if (all.length !== 2) {
     process.stderr.write(
       'Incorrect argument. Please use the form of <packageName>@<version> \n');
-    process.stderr.write(main.longHelp('publish-for-arch'));
-    return 1;
+    throw new main.ShowUsage;
   }
   var name = all[0];
   var versionString = all[1];
