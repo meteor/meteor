@@ -9,7 +9,7 @@ var Sandbox = selftest.Sandbox;
 var testPackagesServer = "https://test-packages.meteor.com";
 process.env.METEOR_PACKAGE_SERVER_URL = testPackagesServer;
 
-selftest.define("publish-and-search", ["slow"], function () {
+selftest.define("publish-and-search", ["slow", "online"], function () {
   var s = new Sandbox;
 
   var username = "test";

@@ -277,7 +277,7 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync local catalog", ["slow"],  function () {
+selftest.define("sync local catalog", ["slow", "online"],  function () {
   var s = new Sandbox();
   var run;
 

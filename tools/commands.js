@@ -1414,7 +1414,7 @@ main.registerCommand({
     browserstack: options.browserstack
   };
 
-  return selftest.runTests({
+  var retValue = selftest.runTests({
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
@@ -1422,6 +1422,17 @@ main.registerCommand({
     clients: clients,
     testRegexp: testRegexp
   });
+
+  if (!offline) {
+    var config = require("./config.js");
+    var storage =  config.getPackageStorage();
+    if (fs.existsSync(storage)) {
+      fs.unlinkSync(storage);
+    }
+    catalog.official.refresh();
+  }
+
+  return retValue;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
