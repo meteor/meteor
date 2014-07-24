@@ -153,6 +153,31 @@ selftest.define("change packages", function () {
   run.waitSecs(2);
   run.match("restarted");
 
+  // Switch back to say-something for a moment.
+  s.write(".meteor/packages", "standard-app-packages \n say-something");
+  run.waitSecs(3);
+  run.match("another");
+  run.match("restarted");
+  run.stop();
+
+  s.rename('packages/say-something', 'packages/shout-something');
+  s.write(".meteor/packages", "standard-app-packages \n shout-something");
+  s.cd("packages/shout-something", function () {
+    s.write("foo.js", "console.log(\"louder\");");
+  });
+
+  run = s.run();
+  run.waitSecs(5);
+  run.match("myapp");
+  run.match("proxy");
+  run.match("MongoDB");
+  run.waitSecs(5);
+  run.match("louder");  // the package actually loaded
+  run.match("your app");
+  run.waitSecs(5);
+  run.match("running at");
+  run.match("localhost");
+  run.stop();
 });
 
 

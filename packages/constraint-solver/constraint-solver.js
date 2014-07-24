@@ -155,7 +155,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // have been undefineds?
   if (options.previousSolution) {
     options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
-      return _.map(self._unibuildsForPackage(packageName), function (unitName) {
+      return _.map(self._unibuildsForPackage(packageName, true), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     })), _.identity);
@@ -270,7 +270,7 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
 };
 
 ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
-  function (packageName) {
+  function (packageName, unknownOk) {
   var self = this;
   var unibuildPrefix = packageName + "#";
   var unibuilds = [];
@@ -280,7 +280,7 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
       unibuilds.push(unibuildPrefix + arch);
   });
 
-  if (_.isEmpty(unibuilds))
+  if (_.isEmpty(unibuilds) && !unknownOk)
     throw new Error("Cannot find anything about package -- " + packageName);
 
   return unibuilds;

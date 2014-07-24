@@ -531,6 +531,13 @@ _.extend(Sandbox.prototype, {
     fs.mkdirSync(path.join(self.cwd, dirname));
   },
 
+  // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
+  rename: function (oldName, newName) {
+    var self = this;
+    fs.renameSync(path.join(self.cwd, oldName),
+                  path.join(self.cwd, newName));
+  },
+
   // Return the current contents of .meteorsession in the sandbox.
   readSessionFile: function () {
     var self = this;
