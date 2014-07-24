@@ -122,7 +122,7 @@ main.registerCommand({
     return 1;
   }
   if (! conn) {
-    process.stderr.write('No connection: Publish failed\n');
+    process.stderr.write('No connection: Publish failed. \n');
     return 1;
   }
 
@@ -1269,7 +1269,6 @@ main.registerCommand({
   var constraints = _.map(options.args, function (packageReq) {
     return utils.splitConstraint(packageReq);
   });
-
   _.each(constraints, function (constraint) {
     // Check that the package exists.
     if (! catalog.complete.getPackage(constraint.package)) {
@@ -1280,12 +1279,15 @@ main.registerCommand({
 
     // If the version was specified, check that the version exists.
     if ( constraint.constraint !== null) {
+      var version = _.clone(constraint.constraint);
+      if (version[0] === '=')
+        version = version.split('=')[1];
       var versionInfo = catalog.complete.getVersion(
         constraint.package,
-        constraint.constraint);
+        version);
       if (! versionInfo) {
         process.stderr.write(
-          constraint.package + "@" + constraint.constraint  + ": no such version\n");
+          constraint.package + "@" + version  + ": no such version\n");
         failed = true;
         return;
       }
