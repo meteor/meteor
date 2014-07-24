@@ -245,6 +245,36 @@ var cleanLocalCache = function () {
   }
 };
 
+var publishMostBasicPackage = function (s, fullPackageName) {
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match(fullPackageName);
+
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+};
+
+var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
+  var relConf = {
+    track: releaseTrack,
+    version: "0.9",
+    recommended: "true",
+    description: "a test release",
+    tool: tool + "@1.0.0",
+    packages: packages
+  };
+  s.write("release.json", JSON.stringify(relConf, null, 2));
+  run = s.run("publish-release", "release.json", "--create-track");
+  run.waitSecs(15);
+  run.match("Done");
+  run.expectExit(0);
+};
+
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
 selftest.define("sync local catalog", ["slow"],  function () {
@@ -256,42 +286,19 @@ selftest.define("sync local catalog", ["slow"],  function () {
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
   var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
-  var run;
 
   // First test -- pretend that the user has downloaded meteor for the purpose
   // of running a package or an app. Create a package. Clean out the
   // data.json, then try to do things with them.
 
-  // Publish the most basic package.
-  run = s.run("create", "--package", fullPackageName);
-  run.waitSecs(15);
-  run.expectExit(0);
-  run.match(fullPackageName);
-
-  s.cd(fullPackageName, function () {
-    run = s.run("publish", "--create");
-    run.waitSecs(15);
-    run.expectExit(0);
-    run.match("Done");
-  });
+  publishMostBasicPackage(s, fullPackageName);
 
   // Publish a release.  This release is super-fake: the tool is a package that
   // is not actually a tool, for example. That's OK for our purposes for now,
   // because we only care about the tool version if we run an app from it.
-
   var packages = {};
-  packages[fullPackageName] ="1.0.0";
-  var relConf = { track: releaseTrack, version:"0.9",
-    recommended: "true",
-    description: "a test release",
-    tool: fullPackageName + "@1.0.0",
-    packages: packages
-  };
-  s.write("release.json", JSON.stringify(relConf, null, 2));
-  run = s.run("publish-release", "release.json", "--create-track");
-  run.waitSecs(15);
-  run.match("Done");
-  run.expectExit(0);
+  packages[fullPackageName] = "1.0.0";
+  publishReleaseInNewTrack(s, releaseTrack, fullPackageName /*tool*/, packages);
 
   // Create a package that has a versionsFrom for the just-published release.
   var newPack = fullPackageName + "2";
@@ -373,6 +380,39 @@ var createAndPublishPackage = function (s, packageName) {
 
   s.cd("..");
 };
+
+selftest.define("release track defaults to METEOR-CORE", ["net"], function () {
+  var s = new Sandbox();
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  testUtils.login(s, username, password);
+  var packageName = utils.randomToken();
+  var fullPackageName = username + ":" + packageName;
+  var releaseVersion = utils.randomToken();
+
+  // Create a package that has a versionsFrom for the just-published
+  // release, but without the release track present in the call to
+  // `versionsFrom`. This implies that it should be prefixed
+  // by "METEOR-CORE@"
+  var newPack = fullPackageName;
+  s.createPackage(newPack, "package-of-two-versions");
+  s.cd(newPack, function() {
+    var packOpen = s.read("package.js");
+    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
+      "api.versionsFrom(\"" + releaseVersion + "\");\n" +
+      "api.use(\"" + fullPackageName + "\"); });";
+    s.write("package.js", packOpen);
+  });
+
+  // Try to publish the package. Since the package references the release that
+  // we just published, it needs to resync with the server in order to be able
+  // to compile itself.
+  s.cd(newPack, function() {
+    var run = s.run("publish", "--create");
+    run.waitSecs(20);
+    run.matchErr("Unknown release METEOR-CORE@" + releaseVersion);
+    run.expectExit(8);
+  });
+});
 
 
 selftest.define("update server package data unit test", ["net"], function () {
