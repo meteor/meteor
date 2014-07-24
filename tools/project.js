@@ -298,7 +298,7 @@ _.extend(Project.prototype, {
     // Remove the versions that don't exist
     var removed = _.difference(_.keys(versions), _.keys(newVersions));
     _.each(removed, function(packageName) {
-      messageLog.push("  removed dependency on " + packageName);
+      messageLog.push("  removed " + packageName + " from project");
     });
 
     _.each(newVersions, function(version, packageName) {

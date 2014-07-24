@@ -1399,11 +1399,16 @@ main.registerCommand({
   // user. Because removing each package is a completely atomic operation that
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
+  var packagesToRemove = [];
   _.each(options.args, function (packageName) {
-    // Check that we are using the package. We don't check if the package
-    // exists. You should be able to remove non-existent packages.
-    if (! _.has(packages, packageName)) {
-      process.stderr.write( packageName  + " is not in this project\n");
+    if (/@/.test(packageName)) {
+      process.stderr.write(packageName + ": do not specify version constraints.\n");
+    } else if (! _.has(packages, packageName)) {
+      // Check that we are using the package. We don't check if the package
+      // exists. You should be able to remove non-existent packages.
+      process.stderr.write(packageName  + " is not in this project.\n");
+    } else {
+      packagesToRemove.push(packageName);
     }
   });
 
@@ -1415,7 +1420,7 @@ main.registerCommand({
   // Remove the packages from the project! There is really no way for this to
   // fail, unless something has gone horribly wrong, so we don't need to check
   // for it.
-  project.removePackages(options.args);
+  project.removePackages(packagesToRemove);
 
   // Retrieve the new dependency versions that we have chosen for this project
   // and do some pretty output reporting.
@@ -1424,8 +1429,8 @@ main.registerCommand({
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
-  _.each(options.args, function (packageName) {
-      process.stdout.write("Removed constraint " + packageName + " from project\n");
+  _.each(packagesToRemove, function (packageName) {
+      process.stdout.write("Removed top-level dependency on " + packageName + ".\n");
   });
 
   return 0;
