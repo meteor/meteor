@@ -316,14 +316,9 @@ main.registerCommand({
   if (options.package) {
     var packageName = options.args[0];
 
-    // Cannot create a package from example yet!
-    if (options.example) {
-      process.stderr.write("Cannot create a package from example. \n\n");
-      throw new main.ShowUsage;
-    }
     // No package examples exist yet.
-    if (options.list) {
-      process.stderr.write("No package examples exist at this time. \n\n");
+    if (options.list && options.example) {
+      process.stderr.write("No package examples exist at this time.\n\n");
       throw new main.ShowUsage;
     }
 
@@ -366,7 +361,7 @@ main.registerCommand({
       ignore: [/^local$/]
     });
 
-    process.stdout.write(packageName + ": created \n");
+    process.stdout.write(packageName + ": created\n");
     return 0;
   }
 
@@ -770,9 +765,9 @@ main.registerCommand({
   var buildArch = DEPLOY_ARCH;
   if (options['override-architecture-with-local']) {
     process.stdout.write(
-      "\n => WARNING: OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE \n");
+      "\n => WARNING: OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE\n");
     process.stdout.write(
-      " => If your app contains binary code, it may break terribly and you will be sad. \n\n");
+      " => If your app contains binary code, it may break terribly and you will be sad.\n\n");
     buildArch = archinfo.host();
   }
 
