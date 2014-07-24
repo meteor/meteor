@@ -1275,23 +1275,33 @@ main.registerCommand({
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function.
     if (_.has(packages, constraint.name)) {
-      if  (packages[constraint.name] === constraint.constraintString) {
-      process.stderr.write(
-        constraint.name + " with version constraint " +
-          constraint.constraintString + " has already been added.\n");
+      if (packages[constraint.name] === constraint.constraintString) {
+        if (constraint.constraintString) {
+          process.stderr.write(
+            constraint.name + " with version constraint " +
+              constraint.constraintString + " has already been added.\n");
+        } else {
+          process.stderr.write(
+            constraint.name +
+              " without a version constraint has already been added.\n");
+        }
         failed = true;
       } else {
         if (packages[constraint.name]) {
           process.stdout.write(
             "Currently using " + constraint.name +
               " with version constraint " + packages[constraint.name]
-              +"\n");
+              + ".\n");
         } else {
           process.stdout.write("Currently using "+  constraint.name +
-                               " without any version constraint\n");
+                               " without any version constraint.\n");
         }
-        process.stdout.write("Constraint will be changed to " +
-                              constraint.constraintString + "\n");
+        if (constraint.constraintString) {
+          process.stdout.write("The version constraint will be changed to " +
+                               constraint.constraintString + "\n");
+        } else {
+          process.stdout.write("The version constraint will be removed.\n");
+        }
       }
     }
 
