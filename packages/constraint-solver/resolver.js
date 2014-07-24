@@ -235,7 +235,9 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       return semver.lte(edgeVersions.earliest.version, uv.version) && semver.lte(uv.version, edgeVersions.latest.version);
     });
 
-  var generateError = function (uv, violatedConstraints) {
+  var generateError = function (name, constraints) {
+    var violatedConstraints = constraints.constraintsForPackage(name);
+
     var directDepsString = "";
 
     _.each(violatedConstraints, function (c) {
@@ -249,19 +251,21 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       success: false,
       // XXX We really want to say "directDep1 depends on X@1.0 and
       // directDep2 depends on X@2.0"
-      failureMsg: "Direct dependencies " + directDepsString + " conflict on " + uv.name,
+      failureMsg: "Direct dependencies of " + directDepsString + " conflict on " + name,
       conflictingUnit: candidateName
     };
   };
 
   if (_.isEmpty(candidateVersions)) {
-    var uv = self.unitsVersions[candidateName] &&
-          self.unitsVersions[candidateName][0];
+    // var uv = self.unitsVersions[candidateName] &&
+    //       self.unitsVersions[candidateName][0];
 
-    if (! uv)
-      return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName, conflictingUnit: candidateName };
+    // if (! uv) {
+    //   var violatedConstraints = constraints.constraintsForPackage(candidateName);
+    //   return { success: false, failureMsg: "Cannot find anything about package -- " + candidateName, conflictingUnit: candidateName };
+    // }
 
-    return generateError(uv, constraints.constraintsForPackage(uv.name));
+    return generateError(candidateName, constraints);
   }
 
   var firstError = null;
@@ -280,7 +284,7 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
       return true;
 
     if (! firstError) {
-      firstError = generateError(vcfc.choice, constraints.constraintsForPackage(vcfc.choice.name));
+      firstError = generateError(vcfc.choice.name, constraints);
     }
     return false;
   }).value();
