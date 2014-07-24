@@ -108,7 +108,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var record = recordFinder();
     // If we cannot find it maybe refresh.
     if (!record) {
-      catalog.official.refresh();
+      if (! catalog.official.refreshInProgress()) {
+        catalog.official.refresh();
+      }
       record = recordFinder();
     }
     // If we still cannot find it, give the user a null.

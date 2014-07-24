@@ -17,6 +17,7 @@ var utils = require('./utils.js');
 var BaseCatalog = require('./catalog-base.js').BaseCatalog;
 var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var Future = require('fibers/future');
 
 var catalog = exports;
 
@@ -57,11 +58,15 @@ _.extend(ServerCatalog.prototype, {
     // The server catalog is always initialized.
     self.initialized = true;
 
-    // This is set while refresh() is running to prevent it from being
-    // run re-entrantly; if another refresh() call happens, it will
-    // simply return immediately.
-    self._refreshing = false;
+    // This is set to an array while refresh() is running; if another refresh()
+    // call happens during a yield, instead of doing a second refresh it just
+    // waits for the first to finish.
+    self._refreshFutures = null;
+  },
 
+  refreshInProgress: function () {
+    var self = this;
+    return !! self._refreshFutures;
   },
 
   // Refresh the packages in the catalog. Print a warning if we cannot connect
@@ -73,18 +78,37 @@ _.extend(ServerCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    if (self._refreshing) {
+    if (self._refreshFutures) {
+      var f = new Future;
+      self._refreshFutures.push(f);
+      f.wait();
       return;
     }
 
-    self._refreshing = true;
+    self._refreshFutures = [];
 
+    var thrownError = null;
     try {
       self._refresh();
       catalog.complete.refresh({ forceRefresh: true });
-    } finally {
-      self._refreshing = false;
+    } catch (e) {
+      thrownError = e;
     }
+
+    while (self._refreshFutures.length) {
+      var fut = self._refreshFutures.pop();
+      if (thrownError) {
+        // XXX is it really right to throw the same error multiple times?
+        fut.throw(thrownError);
+      } else {
+        fut.return();
+      }
+    }
+
+    self._refreshFutures = null;
+
+    if (thrownError)
+      throw thrownError;
   },
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
