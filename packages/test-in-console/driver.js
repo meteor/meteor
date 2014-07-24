@@ -206,13 +206,6 @@ Meteor.startup(function () {
           xunit('  <failure message="test failure">' + escapeXml(error) + '</failure>');
         }
         xunit('</testcase>');
-
-        //log("server: " + result.server);
-        //log("testPath: " + result.testPath);
-        //log("test: " + result.test);
-        //log("status: " + result.status);
-        //log("info: " + result.info);
-        //log("json: " + JSON.stringify(result));
       });
       xunit('</testsuite>');
     },
