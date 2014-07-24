@@ -17,6 +17,7 @@ var utils = require('./utils.js');
 var BaseCatalog = require('./catalog-base.js').BaseCatalog;
 var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var Future = require('fibers/future');
 
 var catalog = exports;
 
@@ -61,7 +62,11 @@ _.extend(ServerCatalog.prototype, {
     // call happens during a yield, instead of doing a second refresh it just
     // waits for the first to finish.
     self._refreshFutures = null;
+  },
 
+  refreshInProgress: function () {
+    var self = this;
+    return !! self._refreshFutures;
   },
 
   // Refresh the packages in the catalog. Print a warning if we cannot connect
@@ -85,6 +90,7 @@ _.extend(ServerCatalog.prototype, {
     var thrownError = null;
     try {
       self._refresh();
+      catalog.complete.refresh({ forceRefresh: true });
     } catch (e) {
       thrownError = e;
     }
@@ -98,13 +104,11 @@ _.extend(ServerCatalog.prototype, {
         fut.return();
       }
     }
+
     self._refreshFutures = null;
 
     if (thrownError)
       throw thrownError;
-
-    // Then refresh the non-server catalog here.
-    catalog.complete.refresh({ forceRefresh: true });
   },
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
@@ -172,12 +176,6 @@ var CompleteCatalog = function () {
   // a boolean.
   // XXX: use a future in the future maybe
   self.refreshing = false;
-
-  // A small (size 1) cache of items that we couldn't find. When we can't find
-  // an item, we try to contact the server, and then, if we still can't find it,
-  // stop. Possibly, we should actually use a better way of rate-limiting
-  // refreshes, but this will avoid infinite loops for now.
-  self._unknownItem = null;
 
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
@@ -314,20 +312,9 @@ _.extend(CompleteCatalog.prototype, {
   //   anyway. When we are using hot code push, we may be restarting the app
   //   because of a local package change that impacts that catalog. Don't wait
   //   on the official catalog to refresh data.json, in this case.
-  // - unknownItem: we are refreshing because we couldn't find an item, not just
-  //   because we are restarting or whatever. So, we probably actually meant to
-  //   refresh the official catalog, but, also, save the item that we couldn't
-  //   find. If we can't find it again after we refresh, then we should quit.
   refresh: function (options) {
     var self = this;
     options = options || {};
-
-    // We are a local catalog, but we meant to refresh the other one. Return,
-    // because it is going to make a call to refresh us when done.
-    if (options.unknownItem && self._unknownItem !== options.unknownItem) {
-      self._unknownItem = options.unknownItem;
-      catalog.official.refresh();
-    }
 
     // We need to limit the rate of refresh, or, at least, prevent any sort of
     // loops. ForceRefresh will override either one.
@@ -505,13 +492,6 @@ _.extend(CompleteCatalog.prototype, {
       if (version.indexOf('+') !== -1)
         throw new Error("version already has a buildid?");
       version = version + "+local";
-
-      // Maybe we were refreshing within a refresh, as part of a hack. Clear and
-      // reload. (Actually we could probably just return and trust that the
-      // previous record is correct.)
-      if (_.has(self.versions, name)) {
-        delete self.versions[name];
-      }
 
       self.versions[name] = {};
       self.versions[name][version] = {
