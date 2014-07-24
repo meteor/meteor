@@ -1142,7 +1142,7 @@ main.registerCommand({
     var setV = project.setVersions(solutionPackageVersions,
       { alwaysRecord : true });
     project.showPackageChanges(previousVersions, solutionPackageVersions, {
-      ondiskPackages: setV.downloaded
+      onDiskPackages: setV.downloaded
     });
     if (!setV.success) {
       process.stderr.write("Could not install all the requested packages.\n");
@@ -1208,7 +1208,7 @@ main.registerCommand({
 
     // Display changes: what we have added/removed/upgraded.
     return project.showPackageChanges(versions, newVersions, {
-       ondiskPackages: setV.downloaded});
+       onDiskPackages: setV.downloaded});
   }
   return 0;
 });
@@ -1345,7 +1345,7 @@ main.registerCommand({
 
   var ret = project.showPackageChanges(versions, newVersions, {
     skipPackages: _.pluck(constraints, 'name'),
-    ondiskPackages: downloaded});
+    onDiskPackages: downloaded});
   if (ret !== 0) return ret;
 
   // Show the user the messageLog of the packages that they installed.

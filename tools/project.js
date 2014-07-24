@@ -194,7 +194,7 @@ _.extend(Project.prototype, {
       var oldVersions = self.dependencies;
       var setV = self.setVersions(newVersions);
       self.showPackageChanges(oldVersions, newVersions, {
-        ondiskPackages: setV.downloaded
+        onDiskPackages: setV.downloaded
       });
 
       if (!setV.success) {
@@ -288,7 +288,7 @@ _.extend(Project.prototype, {
   showPackageChanges : function (versions, newVersions, options) {
     var self = this;
     // options.skipPackages
-    // options.ondiskPackages
+    // options.onDiskPackages
 
     // Don't tell the user what all the operations were until we finish -- we
     // don't want to give a false sense of completeness until everything is
