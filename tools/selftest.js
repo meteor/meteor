@@ -662,7 +662,13 @@ _.extend(Sandbox.prototype, {
       function (name) {
         var versionRec = catalog.official.getLatestVersion(name);
         if (!versionRec) {
-          throw new Error(" hack fails for " + name);
+          catalog.official.offline = false;
+          catalog.official.refresh();
+          catalog.official.offline = true;
+          versionRec = catalog.official.getLatestVersion(name);
+          if (!versionRec) {
+            throw new Error(" hack fails for " + name);
+          }
         }
         var buildRec = catalog.official.getAllBuilds(
           name, versionRec.version)[0];
