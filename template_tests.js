@@ -2707,13 +2707,16 @@ Tinytest.add(
     // autorun each time it runs.
     var autorunTemplateInstances = [];
     var actualTemplateInstance;
+    var returnedComputation;
+    var computationArg;
 
     var show = new ReactiveVar(true);
     var rv = new ReactiveVar("foo");
 
     tmplInner.created = function () {
       actualTemplateInstance = this;
-      this.autorun(function () {
+      returnedComputation = this.autorun(function (c) {
+        computationArg = c;
         rv.get();
         autorunTemplateInstances.push(UI._templateInstance());
       });
@@ -2728,6 +2731,11 @@ Tinytest.add(
     var div = renderToDiv(tmpl);
     test.equal(autorunTemplateInstances.length, 1);
     test.equal(autorunTemplateInstances[0], actualTemplateInstance);
+
+    // Test that the autorun returned a computation and received a
+    // computation as an argument.
+    test.isTrue(returnedComputation instanceof Deps.Computation);
+    test.equal(returnedComputation, computationArg);
 
     // Make sure the autorun re-runs when `rv` changes, and that it has
     // the correct current view.
