@@ -321,7 +321,8 @@ var runWebAppServer = function () {
           throw new Error("Client config file not parsed.");
 
         return clientJson.manifest;
-      }
+      };
+
       try {
         _.each(__meteor_bootstrap__.configJson.clientPaths, function (clientPath, arch) {
           archPath[arch] = path.dirname(clientPath);
@@ -520,18 +521,12 @@ var runWebAppServer = function () {
   });
 
   // Will be updated by main before we listen.
-  var boilerplateTemplate = null;
-  var boilerplateBaseData = null;
-  var boilerplateByAttributes = {};
+  // Map from client arch to boilerplate object.
+  var boilerplateByArch = {};
+
   app.use(function (req, res, next) {
     if (! appUrl(req.url))
       return next();
-
-    if (!boilerplateTemplate)
-      throw new Error("boilerplateTemplate should be set before listening!");
-    if (!boilerplateBaseData)
-      throw new Error("boilerplateBaseData should be set before listening!");
-
 
     var headers = {
       'Content-Type':  'text/html; charset=utf-8'
@@ -556,6 +551,24 @@ var runWebAppServer = function () {
     // HTML attributes (used by, eg, appcache), so we can memoize based on that.
     var htmlAttributes = getHtmlAttributes(request);
     var attributeKey = JSON.stringify(htmlAttributes);
+
+    // /packages/asdfsad ... /cordova/dafsdf.js
+    var url = request.url;
+    var archKey = 'client.' + url.split('/')[1];
+    if (!_.has(archPath, archKey)) {
+      archKey = 'client.browser';
+    }
+
+    var boilerplateObject = boilerplateByArch[archKey];
+    var boilerplateTemplate = boilerplateObject.template;
+    var boilerplateBaseData = boilerplateObject.baseData;
+    var boilerplateByAttributes = boilerplateObject.byAttributes;
+
+    if (!boilerplateTemplate)
+      throw new Error("boilerplateTemplate should be set before listening!");
+    if (!boilerplateBaseData)
+      throw new Error("boilerplateBaseData should be set before listening!");
+
     if (!_.has(boilerplateByAttributes, attributeKey)) {
       try {
         var boilerplateData = _.extend({htmlAttributes: htmlAttributes},
@@ -667,14 +680,14 @@ var runWebAppServer = function () {
     // '--keepalive' is a use of the option.
     var expectKeepalives = _.contains(argv, '--keepalive');
 
-    var boilerplateTemplateSource = Assets.getText("boilerplate.html");
-
     // Exported to allow client-side only changes to rebuild the boilerplate
     // without requiring a full server restart.
-    WebAppInternals.generateBoilerplate = function (archName) {
-      archName = archName || WebApp.defaultArch;
-      syncQueue.runTask(function() {
-        boilerplateBaseData = {
+
+
+    // XXX
+    WebAppInternals.generateBoilerplateFromManifestAndSource =
+      function (manifest, boilerplateSource, itemPath) {
+        var boilerplateBaseData = {
           css: [],
           js: [],
           head: '',
@@ -687,7 +700,7 @@ var runWebAppServer = function () {
             __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
         };
 
-        _.each(WebApp.clientPrograms[archName], function (item) {
+        _.each(manifest, function (item) {
           if (item.type === 'css' && item.where === 'client') {
             boilerplateBaseData.css.push({url: item.url});
           }
@@ -696,31 +709,60 @@ var runWebAppServer = function () {
           }
           if (item.type === 'head') {
             boilerplateBaseData.head =
-              readUtf8FileSync(path.join(archPath[archName], item.path));
+              readUtf8FileSync(path.join(itemPath, item.path));
           }
           if (item.type === 'body') {
             boilerplateBaseData.body =
-              readUtf8FileSync(path.join(archPath[archName], item.path));
+              readUtf8FileSync(path.join(itemPath, item.path));
           }
         });
 
         var boilerplateRenderCode = Spacebars.compile(
-          boilerplateTemplateSource, { isBody: true });
+          boilerplateSource, { isBody: true });
 
         // Note that we are actually depending on eval's local environment capture
         // so that UI and HTML are visible to the eval'd code.
         var boilerplateRender = eval(boilerplateRenderCode);
-        boilerplateTemplate = UI.Component.extend({
+        var boilerplateTemplate = UI.Component.extend({
           kind: "MainPage",
           render: boilerplateRender
         });
 
-        // Clear the memoized boilerplate cache.
-        boilerplateByAttributes = {};
+        return {
+          baseData: boilerplateBaseData,
+          byAttributes: boilerplateByAttributes
+        };
+    };
 
-        WebAppInternals.refreshableAssets = { allCss: boilerplateBaseData.css };
+    var boilerplateSourceByArch = {};
+
+    WebAppInternals.generateBoilerplate = function () {
+      syncQueue.runTask(function() {
+        _.each(WebApp.clientPrograms, function (manifest, archName) {
+          if (! boilerplateSourceByArch[archName]) {
+            try {
+              boilerplateSourceByArch[archName] =
+                Assets.getText('boilerplate_' + archName + '.html');
+            } catch (err) {
+              // By deafult, just read the default 'boilerplate.html'
+              boilerplateSourceByArch[archName] =
+                Assets.getText('boilerplate.html');
+            }
+          }
+
+          boilerplateObject =
+            WebAppInternals.generateBoilerplateFromManifestAndSource(
+              WebApp.clientPrograms[archName],
+              boilerplateSourceByArch[archName],
+              archPath[archName]
+            );
+        });
+
+        // XCXC, make this into a map
+        // WebAppInternals.refreshableAssets = { allCss: boilerplateBaseData.css };
       });
     };
+
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
