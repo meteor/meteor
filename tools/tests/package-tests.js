@@ -195,21 +195,26 @@ selftest.define("add packages", function () {
 
   run = s.run("add", "accounts-base");
 
-  run.match("Successfully added");
+  run.match("accounts-base: A user account system");
+  run.expectExit(0);
+
   checkPackages(s,
                 ["standard-app-packages", "accounts-base"]);
 
   run = s.run("--once");
 
   run = s.run("add", "say-something@1.0.0");
-  run.match("Successfully added");
   run.match("say-something: print to console");
+  run.expectExit(0);
 
   checkPackages(s,
                 ["standard-app-packages", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
-  run.match("Successfully added");
+  run.match(" added");
+  run.match("depends-on-plugin");
+  run.expectExit(0);
+
   checkPackages(s,
                 ["standard-app-packages", "accounts-base",
                  "say-something@1.0.0", "depends-on-plugin"]);
@@ -220,15 +225,16 @@ selftest.define("add packages", function () {
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
-  run.match("Removed constraint say-something");
+  run.match("Removed top-level dependency on say-something.");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "standard-app-packages",
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
-  run.match("removed dependency on contains-plugin");
-  run.match("Removed constraint depends-on-plugin");
+  run.match("removed contains-plugin");
+  run.match("removed depends-on-plugin");
+  run.match("Removed top-level dependency on depends-on-plugin.");
 
   checkVersions(s,
                 ["accounts-base",
@@ -255,8 +261,7 @@ selftest.define("add packages", function () {
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
   run = s.run("add", "no-description");
-  run.match("Successfully added the following packages.\n");
-  run.read("no-description\n");
+  run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
 });
