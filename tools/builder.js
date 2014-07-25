@@ -50,6 +50,7 @@ var Builder = function (options) {
   self.buildPath = path.join(path.dirname(self.outputPath),
                              '.build' + nonce + "." +
                              path.basename(self.outputPath));
+  console.log(self.buildPath);
   files.rm_recursive(self.buildPath);
   files.mkdir_p(self.buildPath, 0755);
 
