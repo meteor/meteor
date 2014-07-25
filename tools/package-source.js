@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
+var semver = require('semver');
 var sourcemap = require('source-map');
 
 var files = require('./files.js');
@@ -33,10 +34,10 @@ var earliestCompatible = function (version) {
   // This is not the place to check to see if version parses as
   // semver. That should have been done when we first received it from
   // the user.
-  var m = version.match(/^(\d)+\./);
-  if (! m)
+  var parsed = semver.parse(version);
+  if (! parsed)
     throw new Error("not a valid version: " + version);
-  return m[1] + ".0.0";
+  return parsed.major + ".0.0";
 };
 
 // Returns a sort comparator to order files into load order.
@@ -405,6 +406,10 @@ _.extend(PackageSource.prototype, {
       }
     }
 
+    if (!utils.validPackageName(self.name)) {
+      buildmessage.error("Package name invalid: " + self.name);
+      return;
+    }
 
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
@@ -639,7 +644,7 @@ _.extend(PackageSource.prototype, {
       npmDependencies = null;
     }
 
-    if (! self.version && options.requireVersion) {
+    if (self.version === null && options.requireVersion) {
       if (! buildmessage.jobHasMessages()) {
         // Only write the error if there have been no errors so
         // far. (Otherwise if there is a parse error we'll always get
@@ -658,13 +663,39 @@ _.extend(PackageSource.prototype, {
       // not like we didn't already have to think about this case.
     }
 
-    if (self.version && ! self.earliestCompatibleVersion) {
-      self.earliestCompatibleVersion =
-        earliestCompatible(self.version);
+    if (self.version !== null && typeof(self.version) !== "string") {
+      if (!buildmessage.jobHasMessages()) {
+        buildmessage.error("The package version (specified with "
+                           + "Package.describe) must be a string.");
+      }
+      // Recover by pretending there was no version (see above).
+      self.version = null;
     }
 
-    if (!utils.validPackageName(self.name)) {
-      buildmessage.error("Package name invalid: " + self.name);
+    if (self.version !== null) {
+      var parsedVersion = semver.parse(self.version);
+      if (!parsedVersion) {
+        if (!buildmessage.jobHasMessages()) {
+          buildmessage.error(
+            "The package version (specified with Package.describe) must be "
+              + "valid semver (see http://semver.org/).");
+        }
+        // Recover by pretending there was no version (see above).
+        self.version = null;
+      } else if (parsedVersion.build.length) {
+        if (!buildmessage.jobHasMessages()) {
+          buildmessage.error(
+            "The package version (specified with Package.describe) may not "
+            + "contain a plus-separated build ID.");
+        }
+        // Recover by pretending there was no version (see above).
+        self.version = null;
+      }
+    }
+
+    if (self.version !== null && ! self.earliestCompatibleVersion) {
+      self.earliestCompatibleVersion =
+        earliestCompatible(self.version);
     }
 
     // source files used
