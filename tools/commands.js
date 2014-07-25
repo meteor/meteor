@@ -1409,7 +1409,7 @@ main.registerCommand({
     browserstack: options.browserstack
   };
 
- return selftest.runTests({
+  return selftest.runTests({
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,

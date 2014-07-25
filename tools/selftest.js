@@ -578,9 +578,9 @@ _.extend(Sandbox.prototype, {
   // releases containing that tool only (and no packages).
   //
   // packageServerUrl indicates which package server we think we are using. Use
-  // the default, if we do not pass this in -- which means that if you
-  // initialize a warehouse w/o specifying the packageServerUrl and *then* set a
-  // new PACKAGE_SERVER_URL environment variable, you will be sad.
+  // the default, if we do not pass this in; you should pass it in any case that
+  // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
+  // command you are running in this sandbox.
   _makeWarehouse: function (releases, packageServerUrl) {
     var self = this;
     files.mkdir_p(path.join(self.warehouse, 'packages'), 0755);

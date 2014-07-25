@@ -161,22 +161,24 @@ _.extend(exports, {
     if (!serverUrl) serverUrl = self.getPackageServerUrl();
     var serLen = serverUrl.length;
 
-    // Chop off http:// and https://.
-    serverUrl = serverUrl.replace(/^\https:/, '');
-    serverUrl = serverUrl.replace(/^\http:/, '');
-    serverUrl = serverUrl.slice(2, serLen);
+    // Chop off http:// and https:// and trailing slashes.
+    serverUrl = serverUrl.replace(/^\https:\/\//, '');
+    serverUrl = serverUrl.replace(/^\http:\/\//, '');
+    serverUrl = serverUrl.replace(/\/+$/, '');
 
     // Chop off meteor.com.
-    serverUrl = serverUrl.replace(/meteor\.com/, '');
+    serverUrl = serverUrl.replace(/\.meteor\.com$/, '');
+
+    // Replace other weird stuff with X.
+    serverUrl = serverUrl.replace(/[^a-zA-Z0-9.:-]/g, 'X');
 
     // Should look like 'packages.data.json' in the default case
     // (test-packages.data.json before 0.9.0).
-    return serverUrl + "data.json";
+    return serverUrl + ".data.json";
   },
 
   getPackageStorage: function() {
     var self = this;
-    var serverFile = self.getPackageServerUrl() + ".data.json";
     return path.join(tropohouse.default.root,
                      "package-metadata", "v1",
                      self.getLocalPackageCacheFilename());
