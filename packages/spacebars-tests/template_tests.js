@@ -2604,3 +2604,26 @@ _.each([1, 2, 3], function (n) {
     }
   );
 });
+
+Tinytest.add('spacebars-tests - template_tests - current view in event handler', function (test) {
+  var tmpl = Template.spacebars_test_current_view_in_event;
+
+  var currentView;
+  var currentData;
+
+  tmpl.events({
+    'click span': function () {
+      currentView = Blaze.getCurrentView();
+      currentData = Blaze.getCurrentData();
+    }
+  });
+
+  var div = renderToDiv(tmpl, 'blah');
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>blah</span>');
+  document.body.appendChild(div);
+  clickElement(div.querySelector('span'));
+  $(div).remove();
+
+  test.isTrue(currentView);
+  test.equal(currentData, 'blah');
+});

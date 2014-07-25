@@ -529,7 +529,11 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
           function (evt) {
             if (! range.containsElement(evt.currentTarget))
               return null;
-            return handler.apply(thisInHandler || this, arguments);
+            var handlerThis = thisInHandler || this;
+            var handlerArgs = arguments;
+            return Blaze.withCurrentView(view, function () {
+              return handler.apply(handlerThis, handlerArgs);
+            });
           },
           range, function (r) {
             return r.parentRange;
