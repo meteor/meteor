@@ -1572,29 +1572,23 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     }
   });
 
-  var Spacebars = getLoadedPackages()['spacebars-common'].Spacebars;
-  var boilerplateRenderCode = Spacebars.compile(
+  var Spacebars = getLoadedPackages()['spacebars'].Spacebars;
+  var SpacebarsCompiler =
+    getLoadedPackages()['spacebars-compiler'].SpacebarsCompiler;
+  var Blaze = getLoadedPackages()['blaze'].Blaze;
+  var boilerplateRenderCode = SpacebarsCompiler.compile(
     boilerplateTemplateSource, { isBody: true });
 
+  UI = getLoadedPackages()['ui'].UI;
+  var HTML = getLoadedPackages()['htmljs'].HTML;
 
   // Note that we are actually depending on eval's local environment capture
   // so that UI and HTML are visible to the eval'd code.
   var boilerplateRender = eval(boilerplateRenderCode);
 
-  var UI = getLoadedPackages()['ui'].UI;
-  var HTML = getLoadedPackages()['htmljs'].HTML;
 
-  var boilerplateTemplate = UI.Component.extend({
-    kind: "MainPage",
-    render: boilerplateRender
-  });
-
-  var boilerplateInstance = boilerplateTemplate.extend({
-    data: boilerplateData
-  });
-  var boilerplateHtmlJs = boilerplateInstance.render();
   return "<!DOCTYPE html>\n" +
-        HTML.toHTML(boilerplateHtmlJs, boilerplateInstance);
+        Blaze.toHTML(Blaze.With(boilerplateData, boilerplateRender));
 };
 
 
