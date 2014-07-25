@@ -19,6 +19,8 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 WebApp = {};
 WebAppInternals = {};
 
+WebApp.defaultArch = 'client.browser';
+
 var bundledJsCssPrefix;
 
 // The reload safetybelt is some js that will be loaded after everything else in
@@ -185,13 +187,14 @@ var appUrl = function (url) {
 // (but the second is a performance enhancement, not a hard
 // requirement).
 
-var calculateClientHash = function (includeFilter) {
+var calculateClientHash = function (archName, includeFilter) {
+  archName = archName || WebApp.defaultArch;
   var hash = crypto.createHash('sha1');
   // Omit the old hashed client values in the new hash. These may be
   // modified in the new boilerplate.
   hash.update(JSON.stringify(_.omit(__meteor_runtime_config__,
                ['autoupdateVersion', 'autoupdateVersionRefreshable']), 'utf8'));
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[archName], function (resource) {
       if ((! includeFilter || includeFilter(resource.type)) &&
           (resource.where === 'client' || resource.where === 'internal')) {
       hash.update(resource.path);
@@ -221,13 +224,13 @@ var calculateClientHash = function (includeFilter) {
 
 Meteor.startup(function () {
   WebApp.clientHash = calculateClientHash();
-  WebApp.calculateClientHashRefreshable = function () {
-    return calculateClientHash(function (name) {
+  WebApp.calculateClientHashRefreshable = function (archName) {
+    return calculateClientHash(archName, function (name) {
       return name === "css";
     });
   };
-  WebApp.calculateClientHashNonRefreshable = function () {
-    return calculateClientHash(function (name) {
+  WebApp.calculateClientHashNonRefreshable = function (archName) {
+    return calculateClientHash(archName, function (name) {
       return name !== "css";
     });
   };
@@ -264,28 +267,38 @@ var runWebAppServer = function () {
   };
 
   var staticFiles;
+  // XXX maps archs to manifests
+  WebApp.clientPrograms = {};
+  // XXX maps archs to program path on filesystem
+  var archPath = {};
 
-  var clientJsonPath;
-  var clientDir;
-  var clientJson;
-
-  WebAppInternals.reloadClientProgram = function () {
+  WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      try {
+      staticFiles = {};
+      var getClientManifest = function (clientPath, arch) {
+        var clientJsonPath;
+        var clientDir;
+        var clientJson;
+
         // read the control for the client we'll be serving up
         clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
-                                   __meteor_bootstrap__.configJson.client);
+                                   clientPath);
         clientDir = path.dirname(clientJsonPath);
         clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
         if (clientJson.format !== "client-program-pre1")
           throw new Error("Unsupported format for client assets: " +
                           JSON.stringify(clientJson.format));
 
-        staticFiles = {};
+        // XXX we rely on the fact that arch names don't contain slashes
+        // in that case we would need to uri escape it
+        var urlPrefix =
+          arch === WebApp.defaultArch ? '' : '/' + arch.replace(/^client\./, '');
+
         _.each(clientJson.manifest, function (item) {
           if (item.url && item.where === "client") {
-            staticFiles[getItemPathname(item.url)] = {
+            staticFiles[urlPrefix + getItemPathname(item.url)] = {
               path: item.path,
+              absolutePath: path.join(clientDir, item.path),
               cacheable: item.cacheable,
               // Link from source to its map
               sourceMapUrl: item.sourceMapUrl,
@@ -295,18 +308,25 @@ var runWebAppServer = function () {
             if (item.sourceMap) {
               // Serve the source map too, under the specified URL. We assume all
               // source maps are cacheable.
-              staticFiles[getItemPathname(item.sourceMapUrl)] = {
+              staticFiles[urlPrefix + getItemPathname(item.sourceMapUrl)] = {
                 path: item.sourceMap,
+                absolutePath: path.join(clientDir, item.sourceMap),
                 cacheable: true
               };
             }
           }
         });
-        WebApp.clientProgram = {
-          manifest: clientJson.manifest
-          // XXX do we need a "root: clientDir" field here? it used to be here but
-          // was unused.
-        };
+
+        if (! clientJsonPath || ! clientDir || ! clientJson)
+          throw new Error("Client config file not parsed.");
+
+        return clientJson.manifest;
+      }
+      try {
+        _.each(__meteor_bootstrap__.configJson.clientPaths, function (clientPath, arch) {
+          archPath[arch] = path.dirname(clientPath);
+          WebApp.clientPrograms[arch] = getClientManifest(clientPath, arch);
+        });
 
         // Exported for tests.
         WebAppInternals.staticFiles = staticFiles;
@@ -316,10 +336,7 @@ var runWebAppServer = function () {
       }
     });
   };
-  WebAppInternals.reloadClientProgram();
-
-  if (! clientJsonPath || ! clientDir || ! clientJson)
-    throw new Error("Client config file not parsed.");
+  WebAppInternals.reloadClientPrograms();
 
   // webserver
   var app = connect();
@@ -376,12 +393,12 @@ var runWebAppServer = function () {
     }
 
     // XXX think of a better name
-    if (pathname === "/cordova_manifest.json") {
+    if (pathname === "/cordova/manifest.json") {
       res.writeHead(200, {
         'Content-type': 'application/json; charset=UTF-8',
         'Access-Control-Allow-Origin': '*'
       });
-      res.write(JSON.stringify(WebApp.clientProgram.manifest));
+      res.write(JSON.stringify(WebApp.clientPrograms['client.cordova']));
       res.end();
       return;
     }
@@ -468,7 +485,7 @@ var runWebAppServer = function () {
       res.setHeader("Content-Type", "text/css; charset=UTF-8");
     }
 
-    send(req, path.join(clientDir, info.path))
+    send(req, info.absolutePath)
       .maxage(maxAge)
       .hidden(true)  // if we specified a dotfile in the manifest, serve it
       .on('error', function (err) {
@@ -477,7 +494,7 @@ var runWebAppServer = function () {
         res.end();
       })
       .on('directory', function () {
-        Log.error("Unexpected directory " + info.path);
+        Log.error("Unexpected directory " + info.absolutePath);
         res.writeHead(500);
         res.end();
       })
@@ -654,7 +671,8 @@ var runWebAppServer = function () {
 
     // Exported to allow client-side only changes to rebuild the boilerplate
     // without requiring a full server restart.
-    WebAppInternals.generateBoilerplate = function () {
+    WebAppInternals.generateBoilerplate = function (archName) {
+      archName = archName || WebApp.defaultArch;
       syncQueue.runTask(function() {
         boilerplateBaseData = {
           css: [],
@@ -669,7 +687,7 @@ var runWebAppServer = function () {
             __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
         };
 
-        _.each(WebApp.clientProgram.manifest, function (item) {
+        _.each(WebApp.clientPrograms[archName], function (item) {
           if (item.type === 'css' && item.where === 'client') {
             boilerplateBaseData.css.push({url: item.url});
           }
@@ -678,11 +696,11 @@ var runWebAppServer = function () {
           }
           if (item.type === 'head') {
             boilerplateBaseData.head =
-              readUtf8FileSync(path.join(clientDir, item.path));
+              readUtf8FileSync(path.join(archPath[archName], item.path));
           }
           if (item.type === 'body') {
             boilerplateBaseData.body =
-              readUtf8FileSync(path.join(clientDir, item.path));
+              readUtf8FileSync(path.join(archPath[archName], item.path));
           }
         });
 

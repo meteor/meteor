@@ -1355,7 +1355,7 @@ var ServerTarget = function (options) {
   var self = this;
   JsImageTarget.apply(this, arguments);
 
-  self.clientTarget = options.clientTarget;
+  self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
   self.packageLoader = options.packageLoader;
 
@@ -1387,19 +1387,21 @@ _.extend(ServerTarget.prototype, {
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
-    // Relative path to our client, if we have one (hack)
-    var clientTargetPath;
-    if (self.clientTarget) {
-      clientTargetPath = path.join(options.getRelativeTargetPath({
-        forTarget: self.clientTarget, relativeTo: self}),
-                                   'program.json');
+    // Mapping from arch to relative path to the client program, if we have any
+    // (hack). Ex.: { 'client.browser': '../client.browser/program.json', ... }
+    var clientTargetPaths = {};
+    if (self.clientTargets) {
+      _.each(self.clientTargets, function (target) {
+        clientTargetPaths[target.arch] = path.join(options.getRelativeTargetPath({
+          forTarget: target, relativeTo: self}), 'program.json');
+      });
     }
 
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
-      client: clientTargetPath || undefined
+      clientPaths: clientTargetPaths
     });
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
@@ -1685,7 +1687,7 @@ exports.bundle = function (options) {
     throw new Error("running wrong release for app?");
 
   var serverArch = buildOptions.serverArch || archinfo.host();
-  var clientArchs = buildOptions.clientArchs || [ "client.browser" ];
+  var clientArchs = buildOptions.clientArchs || [ "client.browser", "client.cordova" ];
 
   var appDir = project.project.rootDir;
   var packageLoader = project.project.getPackageLoader();
@@ -1743,14 +1745,14 @@ exports.bundle = function (options) {
       return client;
     };
 
-    var makeServerTarget = function (app, clientTarget) {
+    var makeServerTarget = function (app, clientTargets) {
       var targetOptions = {
         packageLoader: packageLoader,
         arch: serverArch,
         releaseName: releaseName
       };
-      if (clientTarget)
-        targetOptions.clientTarget = clientTarget;
+      if (clientTargets)
+        targetOptions.clientTargets = clientTargets;
 
       var server = new ServerTarget(targetOptions);
 
@@ -1775,23 +1777,18 @@ exports.bundle = function (options) {
       var app = packageCache.packageCache.loadAppAtPath(
         appDir, exports.ignoreFiles);
 
+      var clientTargets = [];
       // Client
       _.each(clientArchs, function (arch) {
         var client = makeClientTarget(app, arch);
         targets[arch] = client;
+        clientTargets.push(client);
       });
 
       // Server
-      var browserClient = targets["client.browser"];
-
-      if (! browserClient) {
-        browserClient = makeBlankClientTarget(app);
-        targets["client.browser"] = browserClient;
-      }
 
       var server = options.cachedServerTarget ||
-                   makeServerTarget(app, browserClient);
-      server.clientTarget = browserClient;
+                   makeServerTarget(app, clientTargets);
       targets.server = server;
     }
 
@@ -1922,7 +1919,9 @@ exports.bundle = function (options) {
         // We don't check whether targets[p.client] is actually a
         // ClientTarget. If you want to be clever, go ahead.
 
-        target = makeServerTarget(pkg, clientTarget);
+        // XXX doesn't pass the cordova target, but right now Galaxy doesn't
+        // serve any Cordova supportted apps
+        target = makeServerTarget(pkg, [clientTarget]);
         break;
       case "client":
         target = makeClientTarget(pkg);
