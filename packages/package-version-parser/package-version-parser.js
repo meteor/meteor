@@ -53,8 +53,8 @@ PackageVersion.parseConstraint = function (constraintString) {
   var name = splitted[0];
   var versionString = splitted[1];
 
-  if (! /^[a-z0-9-]+$/.test(name) || splitted.length > 2)
-    throw new Error("Package name must contain lowercase latin letters, digits or dashes");
+  if (! /^[a-z0-9:-]+$/.test(name) || splitted.length > 2)
+    throw new Error("Package name must contain only lowercase latin letters, digits, colons, or dashes");
 
   constraint.name = name;
 

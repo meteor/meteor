@@ -125,11 +125,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
 
-  options = _.defaults(options || {}, {
+  // clone because we mutate options
+  options = _.extend({
     _testing: false,
     breaking: false,
     upgrade: []
-  });
+  }, options || {});
 
   check(dependencies, [String]);
 
@@ -137,6 +138,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     packageName: String, version: String, type: String,
     constraintString: Match.Optional(Match.OneOf(String, null))
   }]);
+
   check(options, {
     _testing: Match.Optional(Boolean),
     breaking: Match.Optional(Boolean),

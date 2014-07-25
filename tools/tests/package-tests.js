@@ -367,7 +367,9 @@ selftest.define("sync local catalog", ["slow", "online"],  function () {
   s.cd("testApp", function () {
     run = s.run("add", newPack);
     run.waitSecs(5);
-    run.match("Successfully added");
+    run.match(/  added .*2 at version 1.0.0/);
+    run.match(/  added .* at version 1.0.0/);
+    run.match("Test package");
     run.expectExit(0);
 
     // Run the app!

@@ -297,7 +297,17 @@ _.extend(CompleteCatalog.prototype, {
     // those versions to record for our solution. (We don't just return the
     // original version lock because we want to record the correct transitive
     // dependencies)
-    return self.resolver.resolve(deps, constr, resolverOpts);
+    try {
+      return self.resolver.resolve(deps, constr, resolverOpts);
+    } catch (e) {
+      // Maybe we only failed because we need to refresh. Try to refresh (unless
+      // we already are) and retry.
+      if (catalog.official.refreshInProgress()) {
+        throw e;
+      }
+      catalog.official.refresh();
+      return self.resolver.resolve(deps, constr, resolverOpts);
+    }
   },
   // Refresh the packages in the catalog.
   //
