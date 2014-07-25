@@ -2696,3 +2696,53 @@ Tinytest.add(
       });
 
   });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - this.autorun",
+  function (test) {
+    var tmpl = Template.spacebars_test_autorun;
+    var tmplInner = Template.spacebars_test_autorun_inner;
+
+    // Keep track of the value of `UI._templateInstance()` inside the
+    // autorun each time it runs.
+    var autorunTemplateInstances = [];
+    var actualTemplateInstance;
+
+    var show = new ReactiveVar(true);
+    var rv = new ReactiveVar("foo");
+
+    tmplInner.created = function () {
+      actualTemplateInstance = this;
+      this.autorun(function () {
+        rv.get();
+        autorunTemplateInstances.push(UI._templateInstance());
+      });
+    };
+
+    tmpl.helpers({
+      show: function () {
+        return show.get();
+      }
+    });
+
+    var div = renderToDiv(tmpl);
+    test.equal(autorunTemplateInstances.length, 1);
+    test.equal(autorunTemplateInstances[0], actualTemplateInstance);
+
+    // Make sure the autorun re-runs when `rv` changes, and that it has
+    // the correct current view.
+    rv.set("bar");
+    Deps.flush();
+    test.equal(autorunTemplateInstances.length, 2);
+    test.equal(autorunTemplateInstances[1], actualTemplateInstance);
+
+    // If the inner template is destroyed, the autorun should be stopped.
+    show.set(false);
+    Deps.flush();
+    rv.set("baz");
+    Deps.flush();
+
+    test.equal(autorunTemplateInstances.length, 2);
+    test.equal(rv.numListeners(), 0);
+  }
+);

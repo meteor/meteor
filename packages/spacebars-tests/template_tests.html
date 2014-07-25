@@ -938,3 +938,13 @@ Hi there!
 <template name="spacebars_test_textarea_attrs_array_contents">
   <textarea {{attrs}} class="bar">Hello {{name}}</textarea>
 </template>
+
+<template name="spacebars_test_autorun">
+  {{#if show}}
+    {{>spacebars_test_autorun_inner}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_autorun_inner">
+  Hello
+</template>
