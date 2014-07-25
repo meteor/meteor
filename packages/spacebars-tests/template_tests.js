@@ -2627,3 +2627,72 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
   test.isTrue(currentView);
   test.equal(currentData, 'blah');
 });
+
+
+Tinytest.add(
+  "spacebars-tests - template_tests - textarea attrs", function (test) {
+    var tmplNoContents = {
+      tmpl: Template.spacebars_test_textarea_attrs,
+      hasTextAreaContents: false
+    };
+    var tmplWithContents = {
+      tmpl: Template.spacebars_test_textarea_attrs_contents,
+      hasTextAreaContents: true
+    };
+    var tmplWithContentsAndMoreAttrs = {
+      tmpl: Template.spacebars_test_textarea_attrs_array_contents,
+      hasTextAreaContents: true
+    };
+
+    _.each(
+      [tmplNoContents, tmplWithContents,
+       tmplWithContentsAndMoreAttrs],
+      function (tmplInfo) {
+
+        var id = new ReactiveVar("textarea-" + Random.id());
+        var name = new ReactiveVar("one");
+        var attrs = new ReactiveVar({
+          id: "textarea-" + Random.id()
+        });
+
+        var div = renderToDiv(tmplInfo.tmpl, {
+          attrs: function () {
+            return attrs.get();
+          },
+          name: function () {
+            return name.get();
+          }
+        });
+
+        // Check that the id and value attribute are as we expect.
+        // We can't check div.innerHTML because Chrome at least doesn't
+        // appear to put textarea value attributes in innerHTML.
+        var textarea = div.querySelector("textarea");
+        test.equal(textarea.id, attrs.get().id);
+        test.equal(
+          textarea.value, tmplInfo.hasTextAreaContents ? "Hello one" : "");
+        // One of the templates has a separate attribute in addition to
+        // an attributes dictionary.
+        if (tmplInfo === tmplWithContentsAndMoreAttrs) {
+          test.equal($(textarea).attr("class"), "bar");
+        }
+
+        // Change the id, check that the attribute updates reactively.
+        attrs.set({ id: "textarea-" + Random.id() });
+        Deps.flush();
+        test.equal(textarea.id, attrs.get().id);
+
+        // Change the name variable, check that the textarea value
+        // updates reactively.
+        name.set("two");
+        Deps.flush();
+        test.equal(
+          textarea.value, tmplInfo.hasTextAreaContents ? "Hello two" : "");
+
+        if (tmplInfo === tmplWithContentsAndMoreAttrs) {
+          test.equal($(textarea).attr("class"), "bar");
+        }
+
+      });
+
+  });
