@@ -37,8 +37,10 @@ var openPackageServerConnection = function () {
 };
 
 
-// Load the package data that was saved in the local data.json collection from
-// the last time we did a sync to the server. This return object consists of
+// Load the package data that was saved in the local data.json
+// collection from the last time we did a sync to the server. Takes an
+// optional `packageStorageFile` argument (defaults to
+// `config.getPackageStorage()`). This return object consists of
 //
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
@@ -48,17 +50,19 @@ var openPackageServerConnection = function () {
 // If there is no data.json file, or the file cannot be parsed, return null for
 // the collections and a default syncToken to ask the server for all the data
 // from the beginning of time.
-exports.loadCachedServerData = function () {
+exports.loadCachedServerData = function (packageStorageFile) {
   var noDataToken =  {
     syncToken: {},
     collections: null
-  };;
+  };
+
+  packageStorageFile = packageStorageFile || config.getPackageStorage();
 
   try {
     var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
   } catch (e) {
     if (e.code == 'ENOENT') {
-      console.log("No cached server data found on disk.");
+//      process.stderr.write("No cached server data found on disk.\n");
       return noDataToken;
     }
     // XXX we should probably return an error to the caller here to
@@ -82,6 +86,9 @@ exports.loadCachedServerData = function () {
 // Takes in:
 // - syncToken: a syncToken object to be sent to the server that
 //   represents the last time that we talked to the server.
+// - _optionsForTest:
+//    - useShortPages (Boolean). Ask the server for pages of ~3 records
+//      instead of ~100, for testing pagination.
 //
 // Returns an object, containing the following fields:
 //  - syncToken: a new syncToken object, that we can pass to the server in the future.
@@ -90,10 +97,23 @@ exports.loadCachedServerData = function () {
 //
 // Throws a ServiceConnection.ConnectionTimeoutError if the method call
 // times out.
-var loadRemotePackageData = function (syncToken) {
+var loadRemotePackageData = function (syncToken, _optionsForTest) {
+  _optionsForTest = _optionsForTest || {};
+
   var conn = openPackageServerConnection();
+  var syncOpts;
+  if (_optionsForTest && _optionsForTest.useShortPages) {
+    syncOpts = { shortPagesForTest: _optionsForTest.useShortPages };
+  }
   try {
-    var collectionData = conn.call('syncNewPackageData', syncToken);
+    var collectionData;
+    if (syncOpts) {
+      collectionData = conn.call(
+        'syncNewPackageData', syncToken, syncOpts);
+    } else {
+      collectionData = conn.call(
+        'syncNewPackageData', syncToken);
+    }
   } finally {
     conn.close();
   }
@@ -133,8 +153,13 @@ var mergeCollections = function (sources) {
 //
 // Returns nothing, but
 // XXXX: Does what on errors?
-var writePackageDataToDisk = function (syncToken, data) {
-  var filename = config.getPackageStorage();
+//
+// options include:
+//   - packageStorageFile: String. A file to write the data to instead of
+//     `config.getPackageStorage()`.
+var writePackageDataToDisk = function (syncToken, data, options) {
+  var filename = (options && options.packageStorageFile) ||
+        config.getPackageStorage();
   // XXX think about permissions?
   files.mkdir_p(path.dirname(filename));
   files.writeFileAtomically(filename, JSON.stringify(data, null, 2));
@@ -148,8 +173,17 @@ var writePackageDataToDisk = function (syncToken, data) {
 // the server to the in-memory version of the on-disk data, then writes the new
 // file to disk as the new data.json.
 //
-// Returns null if contacting the server times out.
-exports.updateServerPackageData = function (cachedServerData) {
+// Returns null if contacting the server times out. Otherwise, returns
+// all the data.
+//
+// _optionsForTest can include:
+//   - packageStorageFile: String. The file to write the data to (overrides
+//     `config.getPackageStorage()`)
+//  - useShortPages: Boolean. Request short pages of ~3 records from the
+//    server, instead of ~100 that it would send otherwise
+exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
+  _optionsForTest = _optionsForTest || {};
+
   var sources = [];
   if (cachedServerData.collections) {
     sources.push(cachedServerData.collections);
@@ -157,9 +191,11 @@ exports.updateServerPackageData = function (cachedServerData) {
   var syncToken = cachedServerData.syncToken;
   var remoteData;
   try {
-    remoteData = loadRemotePackageData(syncToken);
+    remoteData = loadRemotePackageData(syncToken, {
+      useShortPages: _optionsForTest.useShortPages
+    });
   } catch (err) {
-  console.log(err);
+    console.log(err);
     if (err instanceof ServiceConnection.ConnectionTimeoutError) {
       return null;
     } else {
@@ -180,11 +216,13 @@ exports.updateServerPackageData = function (cachedServerData) {
     formatVersion: "1.0",
     collections: allCollections
   };
-  writePackageDataToDisk(remoteData.syncToken, data);
+  writePackageDataToDisk(remoteData.syncToken, data, {
+    packageStorageFile: _optionsForTest.packageStorageFile
+  });
 
   // If we are not done, keep trying!
   if (!remoteData.upToDate) {
-    this.updateServerPackageData(data);
+    data = this.updateServerPackageData(data, _optionsForTest);
   }
 
   return data;

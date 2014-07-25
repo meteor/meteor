@@ -9,6 +9,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.export('PackageVersion');
+  api.use('underscore');
   api.add_files([ 'package-version-parser.js' ], ['server']);
 });
 

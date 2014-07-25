@@ -17,6 +17,7 @@ exports.PackageLoader = function (options) {
   var self = this;
   self.versions = options.versions || null;
   self.uniloadDir = options.uniloadDir;
+  self.constraintSolverOpts= options.constraintSolverOpts;
 };
 
 _.extend(exports.PackageLoader.prototype, {
@@ -106,7 +107,9 @@ _.extend(exports.PackageLoader.prototype, {
       version = null;
     }
 
-    return catalog.complete.getLoadPathForPackage(name, version);
+    return catalog.complete.getLoadPathForPackage(name,
+      version,
+      self.constraintSolverOpts);
   },
 
   // Given a package name like "ddp" and an architecture, get the unibuild of

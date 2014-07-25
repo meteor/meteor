@@ -9,7 +9,7 @@ var Sandbox = selftest.Sandbox;
 var testPackagesServer = "https://test-packages.meteor.com";
 process.env.METEOR_PACKAGE_SERVER_URL = testPackagesServer;
 
-selftest.define("publish-and-search", ["slow"], function () {
+selftest.define("publish-and-search", ["slow", "online"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -20,6 +20,22 @@ selftest.define("publish-and-search", ["slow"], function () {
   var fullPackageName = username + ":" + packageName;
   var githubUrl = "http://github.com/foo/bar";
 
+  // Create a package that has a versionsFrom for a nonexistent release and see
+  // that we throw on it.
+  var noPack = fullPackageName + "2";
+  s.createPackage(noPack, "package-of-two-versions");
+  s.cd(noPack, function() {
+    var packOpen = s.read("package.js");
+    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
+      "api.versionsFrom(\"THIS-RELEASE-DOES-NOT-EXIST@0.9\");\n" +
+      " });";
+    s.write("package.js", packOpen);
+    run = s.run("publish", "--create");
+    run.waitSecs(20);
+    run.matchErr("Unknown release");
+  });
+
+  // Now create a real package.
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
   run.expectExit(0);
@@ -105,7 +121,7 @@ selftest.define("list-with-a-new-version", ["slow", "online"], function () {
   var fullPackageName = username + ":" + packageName;
   var run;
 
-  // Create a package.
+  // Now, create a package.
   s.createPackage(fullPackageName, "package-of-two-versions");
   // Publish the first version.
   s.cd(fullPackageName, function () {

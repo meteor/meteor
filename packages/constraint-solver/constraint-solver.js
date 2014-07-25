@@ -23,26 +23,48 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   // The main resolver
   self.resolver = new ConstraintSolver.Resolver();
 
-  // XXX for now we convert unibuilds to unit versions as "deps#os"
+  self._packageInfoLoadQueue = [];
+  self._packagesEverEnqueued = {};
+  self._loadingPackageInfo = false;
+};
 
-  var allPackageNames = catalog.getAllPackageNames();
+ConstraintSolver.PackagesResolver.prototype._ensurePackageInfoLoaded = function (
+    packageName) {
+  var self = this;
+  if (_.has(self._packagesEverEnqueued, packageName))
+    return;
+  self._packagesEverEnqueued[packageName] = true;
+  self._packageInfoLoadQueue.push(packageName);
 
-  var sortedVersionsForPackage = {};
-  var forEveryVersion = function (iter) {
-    _.each(allPackageNames, function (packageName) {
-      if (! sortedVersionsForPackage[packageName])
-        sortedVersionsForPackage[packageName] = catalog.getSortedVersions(packageName);
-      _.each(sortedVersionsForPackage[packageName], function (version) {
-        var versionDef = catalog.getVersion(packageName, version);
-        iter(packageName, version, versionDef);
-      });
-    });
-  };
+  // Is there already an instance of _ensurePackageInfoLoaded up the stack?
+  // Great, it'll get this.
+  // XXX does this work correctly with multiple fibers?
+  if (self._loadingPackageInfo)
+    return;
 
-  // Create a unit version for every package
-  // Set constraints and dependencies between units
-  forEveryVersion(function (packageName, version, versionDef) {
+  self._loadingPackageInfo = true;
+  try {
+    while (self._packageInfoLoadQueue.length) {
+      var nextPackageName = self._packageInfoLoadQueue.shift();
+      self._loadPackageInfo(nextPackageName);
+    }
+  } finally {
+    self._loadingPackageInfo = false;
+  }
+};
+
+ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
+    packageName) {
+  var self = this;
+  // XXX is sortedness actually relevant? is there a minor optimization here
+  //     where we can only talk to self.catalog once?
+  var sortedVersions = self.catalog.getSortedVersions(packageName);
+  // XXX throw error if the package doesn't exist?
+  _.each(sortedVersions, function (version) {
+    var versionDef = self.catalog.getVersion(packageName, version);
+
     var unibuilds = {};
+
     // XXX in theory there might be different archs but in practice they are
     // always "os", "client.browser" and "client.cordova". Fix this once we
     // actually have different archs used.
@@ -51,11 +73,12 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
-      var unitVersion = unibuilds[unitName];
-      self.resolver.addUnitVersion(unitVersion);
+      self.resolver.addUnitVersion(unibuilds[unitName]);
     });
 
     _.each(versionDef.dependencies, function (dep, depName) {
+      self._ensurePackageInfoLoaded(depName);
+
       _.each(dep.references, function (ref) {
         _.each(allArchs, function (arch) {
           if (archMatches(arch, ref.arch)) {
@@ -109,18 +132,24 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 //  than keeping the old version
 //  - previousSolution - mapping from package name to a version that was used in
 //  the previous constraint solver run
-ConstraintSolver.PackagesResolver.prototype.resolve =
-  function (dependencies, constraints, options) {
+ConstraintSolver.PackagesResolver.prototype.resolve = function (
+    dependencies, constraints, options) {
   var self = this;
 
-  options = _.defaults(options || {}, {
+  // clone because we mutate options
+  options = _.extend({
     _testing: false,
     breaking: false,
     upgrade: []
-  });
+  }, options || {});
 
   check(dependencies, [String]);
-  check(constraints, [{ packageName: String, version: String, type: String }]);
+
+  check(constraints, [{
+    packageName: String, version: String, type: String,
+    constraintString: Match.Optional(Match.OneOf(String, null))
+  }]);
+
   check(options, {
     _testing: Match.Optional(Boolean),
     breaking: Match.Optional(Boolean),
@@ -128,12 +157,22 @@ ConstraintSolver.PackagesResolver.prototype.resolve =
     previousSolution: Match.Optional(Object)
   });
 
+  _.each(dependencies, function (packageName) {
+    self._ensurePackageInfoLoaded(packageName);
+  });
+  _.each(constraints, function (constraint) {
+    self._ensurePackageInfoLoaded(constraint.packageName);
+  });
+  _.each(options.previousSolution, function (version, packageName) {
+    self._ensurePackageInfoLoaded(packageName);
+  });
+
   // XXX glasser and ekate added this filter to strip some undefineds that
   // were causing crashes, but maybe the real answer is that there shouldn't
   // have been undefineds?
   if (options.previousSolution) {
     options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
-      return _.map(self._unibuildsForPackage(packageName), function (unitName) {
+      return _.map(self._unibuildsForPackage(packageName, true), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     })), _.identity);
@@ -195,6 +234,13 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
   check(dependencies, [String]);
   check(constraints, [{ packageName: String, version: String, type: String }]);
 
+  _.each(dependencies, function (packageName) {
+    self._ensurePackageInfoLoaded(packageName);
+  });
+  _.each(constraints, function (constraint) {
+    self._ensurePackageInfoLoaded(constraint.packageName);
+  });
+
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
   // XXX resolver.resolve can throw an error, should have error handling with
@@ -242,7 +288,7 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
 };
 
 ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
-  function (packageName) {
+  function (packageName, unknownOk) {
   var self = this;
   var unibuildPrefix = packageName + "#";
   var unibuilds = [];
@@ -253,7 +299,7 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
       unibuilds.push(unibuildPrefix + arch);
   });
 
-  if (_.isEmpty(unibuilds))
+  if (_.isEmpty(unibuilds) && !unknownOk)
     throw new Error("Cannot find anything about package -- " + packageName);
 
   return unibuilds;

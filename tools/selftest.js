@@ -536,6 +536,19 @@ _.extend(Sandbox.prototype, {
     fs.unlinkSync(path.join(self.cwd, filename));
   },
 
+  // Make a directory in the sandbox. 'filename' is as in write().
+  mkdir: function (dirname) {
+    var self = this;
+    fs.mkdirSync(path.join(self.cwd, dirname));
+  },
+
+  // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
+  rename: function (oldName, newName) {
+    var self = this;
+    fs.renameSync(path.join(self.cwd, oldName),
+                  path.join(self.cwd, newName));
+  },
+
   // Return the current contents of .meteorsession in the sandbox.
   readSessionFile: function () {
     var self = this;
@@ -574,13 +587,18 @@ _.extend(Sandbox.prototype, {
   // Writes a stub warehouse (really a tropohouse) to the directory
   // self.warehouse. This warehouse only contains a meteor-tool package and some
   // releases containing that tool only (and no packages).
-  _makeWarehouse: function (releases) {
+  //
+  // packageServerUrl indicates which package server we think we are using. Use
+  // the default, if we do not pass this in -- which means that if you
+  // initialize a warehouse w/o specifying the packageServerUrl and *then* set a
+  // new PACKAGE_SERVER_URL environment variable, you will be sad.
+  _makeWarehouse: function (releases, packageServerUrl) {
     var self = this;
     files.mkdir_p(path.join(self.warehouse, 'packages'), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
 
     var stubCatalog = {
-      syncToken: "NOPE",
+      syncToken: {},
       formatVersion: "1.0",
       collections: {
         packages: [],
@@ -667,7 +685,13 @@ _.extend(Sandbox.prototype, {
       function (name) {
         var versionRec = catalog.official.getLatestVersion(name);
         if (!versionRec) {
-          throw new Error(" hack fails for " + name);
+          catalog.official.offline = false;
+          catalog.official.refresh();
+          catalog.official.offline = true;
+          versionRec = catalog.official.getLatestVersion(name);
+          if (!versionRec) {
+            throw new Error(" hack fails for " + name);
+          }
         }
         var buildRec = catalog.official.getAllBuilds(
           name, versionRec.version)[0];
@@ -702,8 +726,10 @@ _.extend(Sandbox.prototype, {
     });
     catalog.official.offline = oldOffline;
 
+    var config = require("./config.js");
+    var dataFile = config. getLocalPackageCacheFilename(packageServerUrl);
     fs.writeFileSync(
-      path.join(self.warehouse, 'package-metadata', 'v1', 'data.json'),
+      path.join(self.warehouse, 'package-metadata', 'v1', dataFile),
       JSON.stringify(stubCatalog, null, 2));
 
     // And a cherry on top
@@ -873,7 +899,7 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  self.baseTimeout = 2;
+  self.baseTimeout = 20;
   self.extraTime = 0;
   self.client = options.client;
 

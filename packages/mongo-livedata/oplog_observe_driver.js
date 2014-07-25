@@ -389,8 +389,10 @@ _.extend(OplogObserveDriver.prototype, {
         }
       } else if (bufferedBefore) {
         oldDoc = self._unpublishedBuffer.get(id);
-        // remove the old version manually so we don't trigger the querying
-        // immediately
+        // remove the old version manually instead of using _removeBuffered so
+        // we don't trigger the querying immediately.  if we end this block with
+        // the buffer empty, we will need to trigger the query poll manually
+        // too.
         self._unpublishedBuffer.remove(id);
 
         var maxPublished = self._published.get(self._published.maxElementId());
@@ -411,6 +413,11 @@ _.extend(OplogObserveDriver.prototype, {
         } else {
           // Throw away from both published set and buffer
           self._safeAppendToBuffer = false;
+          // Normally this check would have been done in _removeBuffered but we
+          // didn't use it, so we need to do it ourself now.
+          if (! self._unpublishedBuffer.size()) {
+            self._needToPollQuery();
+          }
         }
       } else {
         throw new Error("cachedBefore implies either of publishedBefore or bufferedBefore is true.");

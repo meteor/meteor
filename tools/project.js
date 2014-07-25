@@ -209,7 +209,7 @@ _.extend(Project.prototype, {
       var oldVersions = self.dependencies;
       var setV = self.setVersions(newVersions);
       self.showPackageChanges(oldVersions, newVersions, {
-        ondiskPackages: setV.downloaded
+        onDiskPackages: setV.downloaded
       });
 
       if (!setV.success) {
@@ -302,8 +302,7 @@ _.extend(Project.prototype, {
   // return 0 if everything went well, or 1 if we failed in some way.
   showPackageChanges : function (versions, newVersions, options) {
     var self = this;
-    // options.skipPackages
-    // options.ondiskPackages
+    // options.onDiskPackages
 
     // Don't tell the user what all the operations were until we finish -- we
     // don't want to give a false sense of completeness until everything is
@@ -314,7 +313,7 @@ _.extend(Project.prototype, {
     // Remove the versions that don't exist
     var removed = _.difference(_.keys(versions), _.keys(newVersions));
     _.each(removed, function(packageName) {
-      messageLog.push("removed dependency on " + packageName);
+      messageLog.push("  removed " + packageName + " from project");
     });
 
     _.each(newVersions, function(version, packageName) {
@@ -336,12 +335,6 @@ _.extend(Project.prototype, {
                              " has no compatible build for version " +
                              version + "\n");
         failed = true;
-        return;
-      }
-
-      // Add a message to the update logs to show the user what we have done.
-      if ( _.contains(options.skipPackages, packageName)) {
-        // If we asked for this, we will log it later in more detail.
         return;
       }
 
@@ -732,12 +725,14 @@ _.extend(Project.prototype, {
     }
 
     // We can continue normally, so set our own internal variables.
-    self.constraints = _.extend(self.constraints, moreDeps);
+    _.each(moreDeps, function (constraint) {
+      self.constraints[constraint.name] = constraint.constraintString;
+    });
     self.dependencies = newVersions;
 
     // Remove the old constraints on the same constraints, since we are going to
     // overwrite them.
-    self._removePackageRecords(_.pluck(moreDeps, 'package'));
+    self._removePackageRecords(_.pluck(moreDeps, 'name'));
 
     // Add to the packages file. Do this first, since the versions file is
     // derived from this one and can always be reconstructed later. We read the
@@ -745,10 +740,10 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = files.getLinesOrEmpty(packages);
     _.each(moreDeps, function (constraint) {
-      if (constraint.constraint) {
-        lines.push(constraint.package + '@' + constraint.constraint);
+      if (constraint.constraintString) {
+        lines.push(constraint.name + '@' + constraint.constraintString);
       } else {
-        lines.push(constraint.package);
+        lines.push(constraint.name);
       }
     });
     lines.push('\n');

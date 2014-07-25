@@ -156,9 +156,30 @@ _.extend(exports, {
     }
   },
 
+  getLocalPackageCacheFilename: function (serverUrl) {
+    var self = this;
+    if (!serverUrl) serverUrl = self.getPackageServerUrl();
+    var serLen = serverUrl.length;
+
+    // Chop off http:// and https://.
+    serverUrl = serverUrl.replace(/^\https:/, '');
+    serverUrl = serverUrl.replace(/^\http:/, '');
+    serverUrl = serverUrl.slice(2, serLen);
+
+    // Chop off meteor.com.
+    serverUrl = serverUrl.replace(/meteor\.com/, '');
+
+    // Should look like 'packages.data.json' in the default case
+    // (test-packages.data.json before 0.9.0).
+    return serverUrl + "data.json";
+  },
+
   getPackageStorage: function() {
+    var self = this;
+    var serverFile = self.getPackageServerUrl() + ".data.json";
     return path.join(tropohouse.default.root,
-                     "package-metadata", "v1", "data.json");
+                     "package-metadata", "v1",
+                     self.getLocalPackageCacheFilename());
   },
 
   getPackageStorageVersion: function() {

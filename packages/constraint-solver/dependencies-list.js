@@ -1,5 +1,3 @@
-var mori = Npm.require('mori');
-
 ////////////////////////////////////////////////////////////////////////////////
 // DependenciesList
 ////////////////////////////////////////////////////////////////////////////////
@@ -7,6 +5,8 @@ var mori = Npm.require('mori');
 
 ConstraintSolver.DependenciesList = function (prev) {
   var self = this;
+
+  ensureMoriLoaded();
 
   if (prev) {
     self._mapping = prev._mapping;

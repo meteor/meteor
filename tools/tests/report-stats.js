@@ -70,6 +70,8 @@ selftest.define("report-stats", ["slow"], function () {
         };
       }
       var s = new Sandbox(sandboxOpts);
+      s.env.METEOR_PACKAGE_STATS_TEST_OUTPUT = "t";
+
       var run;
 
       if (useFakeRelease) {
@@ -96,15 +98,15 @@ selftest.define("report-stats", ["slow"], function () {
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
-      // verify that identifier file when running 'meteor bundle' on apps
+      // verify that identifier file when running 'meteor run' on apps
       // with no identifier file (eg pre-0.9.0 apps)
-      bundleWithFreshIdentifier(s, sandboxProject);
+      runWithFreshIdentifier(s, sandboxProject);
 
       identifier = s.read(".meteor/identifier");
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
-      // we just ran 'meteor bundle' so let's test that we actually sent
+      // we just ran 'meteor run' so let's test that we actually sent
       // package usage stats
       var usage = fetchPackageUsageForApp(identifier);
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
@@ -132,7 +134,7 @@ selftest.define("report-stats", ["slow"], function () {
       sessionId = auth.getSessionId(config.getAccountsDomain(),
                                     JSON.parse(s.readSessionFile()));
 
-      bundleWithFreshIdentifier(s, sandboxProject);
+      runWithFreshIdentifier(s, sandboxProject);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
       checkMeta(appPackages, sessionId, useFakeRelease);
@@ -163,7 +165,7 @@ selftest.define("report-stats", ["slow"], function () {
       run = s.run("add", "package-stats-opt-out");
       run.waitSecs(15);
       run.expectExit(0);
-      bundleWithFreshIdentifier(s, sandboxProject);
+      runWithFreshIdentifier(s, sandboxProject, false /* don't expect stats */);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages, undefined);
 
@@ -171,7 +173,7 @@ selftest.define("report-stats", ["slow"], function () {
       run = s.run("remove", "package-stats-opt-out");
       run.waitSecs(15);
       run.expectExit(0);
-      bundle(s, sandboxProject);
+      runApp(s, sandboxProject);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
@@ -180,21 +182,34 @@ selftest.define("report-stats", ["slow"], function () {
   );
 });
 
-// Bundle the app in the current working directory after deleting its
+// Run the app in the current working directory after deleting its
 // identifier file (meaning a new one will be created).
 // @param s {Sandbox}
-var bundleWithFreshIdentifier = function (s, sandboxProject) {
+// @param sandboxProject {Project}
+// @param expectStats {Boolean} (defaults to true)
+var runWithFreshIdentifier = function (s, sandboxProject, expectStats) {
   s.unlink(".meteor/identifier");
-  bundle(s, sandboxProject);
+  runApp(s, sandboxProject, expectStats);
 };
 
 // Bundle the app in the current working directory.
 // @param s {Sandbox}
-var bundle = function (s, sandboxProject) {
-  var run = s.run("bundle", "foo.tar.gz");
+// @param sandboxProject {Project}
+// @param expectStats {Boolean} (defaults to true)
+var runApp = function (s, sandboxProject, expectStats) {
+  if (expectStats === undefined) {
+    expectStats = true;
+  }
+
+  var run = s.run();
   run.waitSecs(30);
-  run.expectExit(0);
-  // pick up new app identifier and/or packages added/removed Usually the
+  if (expectStats) {
+    run.match("PACKAGE STATS SENT");
+  } else {
+    run.match("PACKAGE STATS NOT SENT");
+  }
+  run.stop();
+  // Pick up new app identifier and/or packages added/removed. Usually the
   // changes to .meteor/packages and .meteor/identifier would be handled by the
   // code that handles the hotcodepush, so the project does not cache them.
   sandboxProject.reload();

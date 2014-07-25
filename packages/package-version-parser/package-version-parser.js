@@ -13,7 +13,8 @@ PackageVersion = {};
 // 3. "at-least" - A@>=x.y.z - constraints package A to version x.y.z or higher.
 //    "pick A at least at x.y.z"
 PackageVersion.parseVersionConstraint = function (versionString) {
-  var versionDesc = { version: null, type: "compatible-with" };
+  var versionDesc = { version: null, type: "compatible-with",
+                      constraintString: versionString };
 
   // XXX #noconstraint #geoff #changed
   // XXX remove none when it is no longer used
@@ -47,12 +48,13 @@ PackageVersion.parseConstraint = function (constraintString) {
 
   var splitted = constraintString.split('@');
 
-  var constraint = { name: "", version: null, type: "compatible-with" };
+  var constraint = { name: "", version: null,
+                     type: "compatible-with", constraintString: null };
   var name = splitted[0];
   var versionString = splitted[1];
 
-  if (! /^[a-z0-9-]+$/.test(name) || splitted.length > 2)
-    throw new Error("Package name must contain lowercase latin letters, digits or dashes");
+  if (! /^[a-z0-9:-]+$/.test(name) || splitted.length > 2)
+    throw new Error("Package name must contain only lowercase latin letters, digits, colons, or dashes");
 
   constraint.name = name;
 

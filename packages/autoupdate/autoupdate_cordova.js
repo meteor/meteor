@@ -51,10 +51,10 @@ Autoupdate._retrySubscription = function () {
             handle.stop();
           }
 
-          HTTP.get(Meteor.absoluteUrl() + 'cordova_manifest.json', function (err, res) {
-            console.log(res);
-            //Package.reload.Reload._reload();
-          });
+          // HTTP.get(Meteor.absoluteUrl() + 'cordova_manifest.json', function (err, res) {
+          //   console.log(res);
+          //   //Package.reload.Reload._reload();
+          // });
         }
       }
     }

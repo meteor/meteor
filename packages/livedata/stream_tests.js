@@ -37,24 +37,34 @@ testAsyncMulti("stream - basic disconnect", [
   function (test, expect) {
     var history = [];
     var stream = new LivedataTest.ClientStream("/");
-    var onTestPass = expect();
+    var onTestComplete = expect(function (unexpectedHistory) {
+      stream.disconnect();
+      if (unexpectedHistory) {
+        test.fail("Unexpected status history: " +
+                  JSON.stringify(unexpectedHistory));
+      }
+    });
 
     Deps.autorun(function() {
       var status = stream.status();
 
-      if (_.last(history) != status.status) {
+      if (_.last(history) !== status.status) {
         history.push(status.status);
 
-        if (_.isEqual(history, ["connecting", "connected"]))
+        if (_.isEqual(history, ["connecting"])) {
+          // do nothing; wait for the next state
+        } else if (_.isEqual(history, ["connecting", "connected"])) {
           stream.disconnect();
-
-        if (_.isEqual(history, ["connecting", "connected", "offline"]))
+        } else if (_.isEqual(history, ["connecting", "connected", "offline"])) {
           stream.reconnect();
-
-        if (_.isEqual(history, ["connecting", "connected", "offline",
+        } else if (_.isEqual(history, ["connecting", "connected", "offline",
+                                       "connecting"])) {
+          // do nothing; wait for the next state
+        } else if (_.isEqual(history, ["connecting", "connected", "offline",
                                 "connecting", "connected"])) {
-          stream.disconnect();
-          onTestPass();
+          onTestComplete();
+        } else {
+          onTestComplete(history);
         }
       }
     });
@@ -66,21 +76,30 @@ testAsyncMulti("stream - disconnect remains offline", [
   function (test, expect) {
     var history = [];
     var stream = new LivedataTest.ClientStream("/");
-    var onTestComplete = expect();
+    var onTestComplete = expect(function (unexpectedHistory) {
+      stream.disconnect();
+      if (unexpectedHistory) {
+        test.fail("Unexpected status history: " +
+                  JSON.stringify(unexpectedHistory));
+      }
+    });
 
     Deps.autorun(function() {
       var status = stream.status();
 
-      if (_.last(history) != status.status) {
+      if (_.last(history) !== status.status) {
         history.push(status.status);
 
-        if (_.isEqual(history, ["connecting", "connected"]))
+        if (_.isEqual(history, ["connecting"])) {
+          // do nothing; wait for the next status
+        } else if (_.isEqual(history, ["connecting", "connected"])) {
           stream.disconnect();
-
-        if (_.isEqual(history, ["connecting", "connected", "offline"])) {
+        } else if (_.isEqual(history, ["connecting", "connected", "offline"])) {
           stream._online();
-          test.isTrue(status.status == "offline");
+          test.isTrue(status.status === "offline");
           onTestComplete();
+        } else {
+          onTestComplete(history);
         }
       }
     });

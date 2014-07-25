@@ -69,12 +69,14 @@ var load = function (options) {
   var messages = buildmessage.capture({
     title: "loading unipackage"
   }, function () {
-    // Load the code. The uniloader does not call the constraint solver. But
-    // keep in mind, that it does use the catalog to build these packages when
-    // it gets around to it.
+
+    // Load the code. The uniloader does not call the constraint solver, unless
+    // it is running from checkout, in which case it will use the constraint
+    // solver to build its packages in the catalog.
     var loader = new packageLoader.PackageLoader({
       versions: null,
-      uniloadDir: files.getUniloadDir()
+      uniloadDir: files.getUniloadDir(),
+      constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
     // Build the bundler image.

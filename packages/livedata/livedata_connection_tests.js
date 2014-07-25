@@ -169,7 +169,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
     completerHandle = conn.subscribe("completer", onReady("completer"));
     stopperHandle = conn.subscribe("stopper", onReady("stopper"));
   });
-  
+
   var completerReady;
   var readyAutorunHandle = Deps.autorun(function() {
     completerReady = completerHandle.ready();
@@ -350,7 +350,7 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   Deps.flush();
   test.isTrue(fooHandle.ready());
   test.isTrue(fooReady);
-  
+
   autorunHandle.stop();
 });
 

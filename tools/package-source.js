@@ -893,19 +893,23 @@ _.extend(PackageSource.prototype, {
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
         versionsFrom: function (release) {
+          // If you don't specify a track, use our default.
+          if (release.indexOf('@') === -1) {
+            release = catalog.complete.DEFAULT_TRACK + "@" + release;
+          }
+
           var relInf = release.split('@');
           // XXX: Error handling
           if (relInf.length !== 2)
             throw new Error("Incorrect release spec");
-          var catalog = require('./catalog.js').complete;
           // XXX: We pass in true to override the fact that we know that teh
           // catalog may not be initialized, but we are pretty sure that the
           // releases are there anyway. This is not the right way to do this
           // long term.
-          releaseRecord = catalog.getReleaseVersion(
+          releaseRecord = catalog.official.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
-            throw new Error("Unknown release", release);
+            throw new Error("Unknown release "+ release);
            }
         },
 

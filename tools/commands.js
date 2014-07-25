@@ -251,6 +251,16 @@ main.registerCommand({
     once: { type: Boolean }
   }
 }, function (options) {
+
+  // Calculate project versions. (XXX: Theoretically, we should not be doing it
+  // here. We should do it lazily, if the command calls for it. However, we do
+  // end up recalculating them for stats, for example, and, more importantly, we
+  // have noticed some issues if we just leave this in the air. We think that
+  // those issues are concurrency-related, or possibly some weird
+  // order-of-execution of interaction that we are failing to understand. This
+  // seems to fix it in a clear and understandable fashion.)
+  project.getVersions();
+
   // XXX factor this out into a {type: host/port}?
   var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
   if (!portMatch) {
@@ -329,14 +339,9 @@ main.registerCommand({
   if (options.package) {
     var packageName = options.args[0];
 
-    // Cannot create a package from example yet!
-    if (options.example) {
-      process.stderr.write("Cannot create a package from example. \n\n");
-      throw new main.ShowUsage;
-    }
     // No package examples exist yet.
-    if (options.list) {
-      process.stderr.write("No package examples exist at this time. \n\n");
+    if (options.list && options.example) {
+      process.stderr.write("No package examples exist at this time.\n\n");
       throw new main.ShowUsage;
     }
 
@@ -355,7 +360,7 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = catalog.official.getDefaultReleaseVersion();
+        var rel = catalog.complete.getDefaultReleaseVersion();
         var relString = rel.track + "@" + rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
@@ -379,7 +384,7 @@ main.registerCommand({
       ignore: [/^local$/]
     });
 
-    process.stdout.write(packageName + ": created \n");
+    process.stdout.write(packageName + ": created\n");
     return 0;
   }
 
@@ -549,7 +554,6 @@ main.registerCommand({
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var loader = project.getPackageLoader();
-  stats.recordPackages(options.appDir);
 
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,
@@ -738,6 +742,16 @@ main.registerCommand({
     }
   }
 
+  // We are actually going to end up compiling an app at this point, so figure
+  // out its versions. . (XXX: Theoretically, we should not be doing it here. We
+  // should do it lazily, if the command calls for it. However, we do end up
+  // recalculating them for stats, for example, and, more importantly, we have
+  // noticed some issues if we just leave this in the air. We think that those
+  // issues are concurrency-related, or possibly some weird order-of-execution
+  // of interaction that we are failing to understand. This seems to fix it in a
+  // clear and understandable fashion.)
+  project.getVersions();
+
   if (options.password) {
     if (useGalaxy) {
       process.stderr.write("Galaxy does not support --password.\n");
@@ -774,9 +788,9 @@ main.registerCommand({
   var buildArch = DEPLOY_ARCH;
   if (options['override-architecture-with-local']) {
     process.stdout.write(
-      "\n => WARNING: OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE \n");
+      "\n => WARNING: OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE\n");
     process.stdout.write(
-      " => If your app contains binary code, it may break terribly and you will be sad. \n\n");
+      " => If your app contains binary code, it may break terribly and you will be sad.\n\n");
     buildArch = archinfo.host();
   }
 
@@ -1457,7 +1471,7 @@ main.registerCommand({
     browserstack: options.browserstack
   };
 
-  return selftest.runTests({
+ return selftest.runTests({
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
@@ -1465,6 +1479,7 @@ main.registerCommand({
     clients: clients,
     testRegexp: testRegexp
   });
+
 });
 
 ///////////////////////////////////////////////////////////////////////////////

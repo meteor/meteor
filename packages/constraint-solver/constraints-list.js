@@ -1,4 +1,3 @@
-var mori = Npm.require('mori');
 var semver = Npm.require('semver');
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -17,6 +16,8 @@ var semver = Npm.require('semver');
 //       - versionString <=> inexactConstraintInstance
 ConstraintSolver.ConstraintsList = function (prev) {
   var self = this;
+
+  ensureMoriLoaded();
 
   if (prev) {
     self.byName = prev.byName;

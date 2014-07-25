@@ -92,15 +92,17 @@ different collections. We hope to lift this restriction in a future release.
       ];
     });
 
-Alternatively, a publish function can directly control its published
-record set by calling the functions [`added`](#publish_added) (to add a
-new document to the published record set), [`changed`](#publish_changed)
-(to change or clear some fields on a document already in the published
-record set), and [`removed`](#publish_removed) (to remove documents from
-the published record set).  Publish functions that use these functions
-should also call [`ready`](#publish_ready) once the initial record set
-is complete.  These methods are provided by `this` in your publish
-function.
+Alternatively, a publish function can directly control its published record set
+by calling the functions [`added`](#publish_added) (to add a new document to the
+published record set), [`changed`](#publish_changed) (to change or clear some
+fields on a document already in the published record set), and
+[`removed`](#publish_removed) (to remove documents from the published record
+set).  These methods are provided by `this` in your publish function.
+
+If a publish function does not return a cursor or array of cursors, it is
+assumed to be using the low-level `added`/`changed`/`removed` interface, and it
+**must also call [`ready`](#publish_ready) once the initial record set is
+complete**.
 
 Example:
 
@@ -155,6 +157,19 @@ Example:
     console.log("Current room has " +
                 Counts.findOne(Session.get("roomId")).count +
                 " messages.");
+
+    // server: sometimes publish a query, sometimes publish nothing
+    Meteor.publish("secretData", function () {
+      if (this.userId === 'superuser') {
+        return SecretData.find();
+      } else {
+        // Declare that no data is being published. If you leave this line
+        // out, Meteor will never consider the subscription ready because
+        // it thinks you're using the added/changed/removed interface where
+        // you have to explicitly call this.ready().
+        return [];
+      }
+    });
 
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
@@ -1886,12 +1901,10 @@ authentication. In addition to the basic username and password-based
 sign-in process, it also supports email-based sign-in including
 address verification and password recovery emails.
 
-Unlike most web applications, the Meteor client does not send the user's
-password directly to the server. It uses the [Secure Remote Password
-protocol](http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol)
-to ensure the server never sees the user's plain-text password. This
-helps protect against embarrassing password leaks if the server's
-database is compromised.
+The Meteor server stores passwords using the
+[bcrypt](http://en.wikipedia.org/wiki/Bcrypt) algorithm. This helps
+protect against embarrassing password leaks if the server's database is
+compromised.
 
 To add password support to your application, run `$ meteor add
 accounts-password`. You can construct your own user interface using the
@@ -2023,14 +2036,7 @@ Example:
 
 When you write a template as `<{{! }}template name="foo"> ... <{{!
 }}/template>` in an HTML file in your app, Meteor generates a
-"component object" named `Template.foo`.
-
-{{#note}}
-   Meteor's component API is currently in flux. This section documents a few
-   features of the component object that are useful for writing apps; a future
-   release will elaborate more about how components work and about how to build
-   components that aren't just template.
-{{/note}}
+"template object" named `Template.foo`.
 
 The same template may occur many times on a page, and these
 occurrences are called template instances.  Template instances have a
@@ -2201,29 +2207,34 @@ You can define helpers and event maps on `UI.body` just like on any
 
 {{> api_box ui_render}}
 
-This returns an "instantiated component" object, which can be passed to
-[`UI.insert`](#ui_insert). The template's [`created`](#template_created) callback
-will be invoked.  The component will continue to be updated reactively as the
-data used changes.
+This returns an "rendered template" object, which can be passed to
+[`UI.insert`](#ui_insert). The template's
+[`created`](#template_created) callback will be invoked.  The rendered
+template will continue to be updated reactively as the data used
+changes.
 
 {{#warning}}
-  Future releases will provide a richer API for "instantiated components"
-  (probably unifying them with "template instances"). For now, all you can
-  do with them is pass them to `UI.insert`.
+  Future releases will provide a richer API for working with rendered
+  templates, for example unifying them "template instances."  For now, all you
+  can do with them is pass them to `UI.insert`.
+{{/warning}}
 
-  Most users will not need to manually render components or manually insert them
-  into the DOM at all.  As of 0.8.0, if you call `UI.render` and never insert
-  the result into the DOM, the logic to keep the instantiated component updated
+{{#warning}}
+  Most users will not need to manually render templates or manually insert them
+  into the DOM at all.  As of 0.8.x, if you call `UI.render` and never insert
+  the result into the DOM, the logic to keep the rendered template updated
   will continue running in your browser forever. Additionally, if you remove any
-  part of your DOM using any mechanism other than jQuery, the logic to keep that
-  part of the the DOM updated will continue running.  To avoid these issues,
-  either avoid directly updating the DOM or ensure that any removals go through
-  jQuery.
+  part of your DOM using any mechanism other than Meteor or jQuery, the logic
+  to keep that  part of the the DOM updated will continue running.  To avoid these
+  issues, either avoid directly updating the DOM or ensure that any removals go
+  through Meteor or jQuery.
 {{/warning}}
 
 {{> api_box ui_renderwithdata}}
 
 {{> api_box ui_insert}}
+
+{{> api_box ui_remove}}
 
 {{> api_box ui_getelementdata}}
 
@@ -2560,7 +2571,7 @@ advanced facilities such as `Deps.Dependency` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
-To learn more about how Deps works and to explore advanced features of Deps,
+To learn more about how Deps works and to explore advanced ways to use it,
 visit the <a href="http://manual.meteor.com/#deps"> Deps</a> chapter in the
 <a href="http://manual.meteor.com/">Meteor Manual</a>, which describes it in
 complete detail.

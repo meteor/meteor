@@ -23,18 +23,6 @@ static.html:
 </body>
 ````
 
-If you're testing with Firefox, enable it:
-
-static.js:
-
-````
-if (Meteor.isServer) {
-  Meteor.AppCache.config({
-    firefox: true
-  });
-}
-````
-
 
 ## App is cached offline
 

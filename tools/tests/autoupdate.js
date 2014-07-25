@@ -2,11 +2,13 @@ var selftest = require('../selftest.js');
 var path = require('path');
 var fs = require('fs');
 var _ = require('underscore');
+var config = require("../config.js");
 var Sandbox = selftest.Sandbox;
 
 var editPackageMetadata = function (sandbox, f) {
   var dataFile = path.join(sandbox.warehouse,
-                           'package-metadata', 'v1', 'data.json');
+                           'package-metadata', 'v1',
+                           config.getLocalPackageCacheFilename());
   var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
   f(data);
   fs.writeFileSync(dataFile, JSON.stringify(data));
@@ -33,7 +35,8 @@ selftest.define("autoupdate", ['checkout'], function () {
     warehouse: {
       v1: { recommended: true},
       v2: { recommended: true },
-      v3: { }
+      v3: { },
+      v4: { }
     }
   });
   var run;
@@ -74,6 +77,19 @@ selftest.define("autoupdate", ['checkout'], function () {
     // If we are not at the latest version of Meteor, at startup, we get a
     // boring prompt to update (not a banner since we didn't set one for v1).
     s.write('.meteor/release', 'METEOR-CORE@v1');
+
+    // We don't see any information if we run a simple command like list.
+    run = s.run("list");
+    run.forbidAll("New hotness v2 being downloaded");
+    run.expectExit(0);
+    run.stop();
+
+    run = s.run("--version");
+    run.read("Meteor v1\n");
+    run.expectEnd();
+    run.expectExit(0);
+
+    // We do see a boring prompt though.
     run = s.run("--port", "22000");
     run.waitSecs(5);
     run.match("v2");
@@ -171,4 +187,13 @@ selftest.define("autoupdate", ['checkout'], function () {
   run.read("Meteor v3\n");
   run.expectEnd();
   run.expectExit(0);
+
+  // Recommend v4 and watch --version update.
+  // XXX: Not sure if this is desired behavior.
+  recommend(s, "v4");
+  run = s.run("--version");
+  run.match("Meteor v4\n");
+  run.expectEnd();
+  run.expectExit(0);
+
 });

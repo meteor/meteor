@@ -16,6 +16,8 @@ var utils = require('./utils.js');
 
 var baseCatalog = exports;
 
+var catalog = require('./catalog.js');
+
 // This is a basic catalog class. It accesses basic catalog data by looking
 // through the catalog's collections.
 //
@@ -106,7 +108,9 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     var record = recordFinder();
     // If we cannot find it maybe refresh.
     if (!record) {
-      self.refresh();
+      if (! catalog.official.refreshInProgress()) {
+        catalog.official.refresh();
+      }
       record = recordFinder();
     }
     // If we still cannot find it, give the user a null.

@@ -27,7 +27,8 @@ Package.on_use(function (api) {
   // compiler rather than letting the 'templating' package (which isn't fully
   // supported on the server yet) handle it. That also means that it doesn't
   // contain the outer "<template>" tag.
-  api.add_files('boilerplate.html', 'server', {isAsset: true});
+  api.add_files(['boilerplate.html', 'boilerplate_client.cordova.html'],
+                 'server', {isAsset: true});
   api.add_files('webapp_client.js', 'client');
 });
 
