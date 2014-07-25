@@ -183,7 +183,7 @@ selftest.define("change packages", function () {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add packages", function () {
+selftest.define("add packages", ["net"], function () {
   var s = new Sandbox();
   var run;
 

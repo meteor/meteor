@@ -51,7 +51,7 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
-selftest.define("report-stats", ["slow"], function () {
+selftest.define("report-stats", ["slow", "net"], function () {
   _.each(
     // If we are currently running from a checkout, then we run this
     // test twice (once in which the sandbox uses the current checkout,
