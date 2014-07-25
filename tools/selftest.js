@@ -576,7 +576,12 @@ _.extend(Sandbox.prototype, {
   // Writes a stub warehouse (really a tropohouse) to the directory
   // self.warehouse. This warehouse only contains a meteor-tool package and some
   // releases containing that tool only (and no packages).
-  _makeWarehouse: function (releases) {
+  //
+  // packageServerUrl indicates which package server we think we are using. Use
+  // the default, if we do not pass this in -- which means that if you
+  // initialize a warehouse w/o specifying the packageServerUrl and *then* set a
+  // new PACKAGE_SERVER_URL environment variable, you will be sad.
+  _makeWarehouse: function (releases, packageServerUrl) {
     var self = this;
     files.mkdir_p(path.join(self.warehouse, 'packages'), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
@@ -710,8 +715,10 @@ _.extend(Sandbox.prototype, {
     });
     catalog.official.offline = oldOffline;
 
+    var config = require("./config.js");
+    var dataFile = config. getLocalPackageCacheFilename(packageServerUrl);
     fs.writeFileSync(
-      path.join(self.warehouse, 'package-metadata', 'v1', 'data.json'),
+      path.join(self.warehouse, 'package-metadata', 'v1', dataFile),
       JSON.stringify(stubCatalog, null, 2));
 
     // And a cherry on top
