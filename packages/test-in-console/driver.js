@@ -8,6 +8,7 @@ TEST_STATUS = {
   FAILURES: null
 };
 
+// xUnit format uses XML output
 var XML_CHAR_MAP = {
   '<': '&lt;',
   '>': '&gt;',
@@ -16,25 +17,31 @@ var XML_CHAR_MAP = {
   "'": '&apos;'
 };
 
+// Escapes a string for insertion into XML
 var escapeXml = function (s) {
   return s.replace(/[<>&"']/g, function (c) {
     return XML_CHAR_MAP[c];
   });
 }
 
+// Returns a human name for a test
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
     result.groupPath.join(" - ") + " - " + result.test;
 };
 
+// Calls console.log, but returns silently if console.log is not available
 var log = function (/*arguments*/) {
   if (typeof console !== 'undefined') {
     console.log.apply(console, arguments);
   }
 };
 
+// Logs xUnit output, if xunit output is enabled
+// Output is sent to console.log, prefixed with a magic string 'XUNIT '
+// By grepping for that prefix, the xUnit output can be extracted
 var xunit = function (s) {
-  if (xunit_enabled) {
+  if (xunitEnabled) {
     log('XUNIT ' + s);
   }
 };
@@ -49,7 +56,10 @@ var hrefPath = document.location.href.split("/");
 var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
 if (!platform)
   platform = "local";
-var xunit_enabled = (platform == 'xunit');
+
+// We enable xUnit output when platform is xunit
+var xunitEnabled = (platform == 'xunit');
+
 var doReport = Meteor &&
       Meteor.settings &&
       Meteor.settings.public &&
@@ -106,6 +116,8 @@ Meteor.startup(function () {
         };
         report(name, false);
       }
+      // Loop through events, and record status for each test
+      // Also log result if test has finished
       _.each(results.events, function (event) {
         resultSet[name].events.push(event);
         switch (event.type) {
@@ -156,6 +168,7 @@ Meteor.startup(function () {
       });
     },
 
+    // After test completion, log a quick summary
     function () {
       if (failed > 0) {
         log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
@@ -173,6 +186,8 @@ Meteor.startup(function () {
           TEST_STATUS.DONE = DONE = true;
         }
       });
+
+      // Also log xUnit output
       xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
       _.each(resultSet, function (result, name) {
         var classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
