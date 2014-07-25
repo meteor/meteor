@@ -43,3 +43,13 @@
 <template name="ui_dynamic_test_falsey_context_sub">
   {{foo}}
 </template>
+
+<template name="ui_dynamic_test_dotdot">
+  {{#with foo="bar"}}
+    {{> UI.dynamic template="ui_dynamic_test_dotdot_sub" data=context}}
+  {{/with}}
+</template>
+
+<template name="ui_dynamic_test_dotdot_sub">
+  {{../foo}} {{foo}}
+</template>

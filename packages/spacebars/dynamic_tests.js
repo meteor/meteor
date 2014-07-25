@@ -145,3 +145,15 @@ Tinytest.add(
     test.equal(subtmplContext, {});
   }
 );
+
+Tinytest.add(
+  "spacebars - ui-dynamic-template - render template " +
+    "dynamically, dot-dot",
+  function (test, expect) {
+    var tmpl = Template.ui_dynamic_test_dotdot;
+    tmpl.context = {foo: 'baz'};
+
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), 'bar baz');
+  }
+);
