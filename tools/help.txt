@@ -407,13 +407,24 @@ Options:
 
 
 >>> publish-for-arch
-Publishes a bla bla bla.
+Builds an already-published package for a new platform
 
-Usage: fry the eggs, then
+Usage: meteor publish-for-arch packageName@version
 
-Publishes a
+When you publish a package with 'meteor publish' for a package which has
+platform-specific components (eg, npm modules with native code), the package
+will only be usable on machines of the same architecture that you are currently
+on. To make your package's version usable on other architectures, you can use
+the publish-for-arch command.  (The architectures currently supported by Meteor
+are 32-bit Linux, 64-bit Linux, and 64-bit OS X; the 'meteor deploy' servers use
+64-bit Linux.)
 
-XXX: WRITE
+On a machine of the appropriate architecture, install Meteor and run
+  $ meteor publish-for-arch packageName@version
+
+You don't need to have a copy of your package's source to do this: Meteor will
+automatically download your package's source and dependencies from the package
+server.
 
 
 >>> rebuild
