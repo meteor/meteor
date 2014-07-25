@@ -24,8 +24,8 @@
   `observeChanges` method and don't have to be Minimongo cursors
   (allows new custom data stores for Blaze like Miniredis)
 
-* XXX 3c6c8e5
-
+* Remove warnings when {{#each}} iterates over a list of strings,
+  numbers, or other items that contains duplicates.  #1980
 
 #### Meteor Accounts
 
@@ -68,7 +68,8 @@
 * Make the `tinytest/run` method return immediately, so that `wait`
   method calls from client tests don't block on server tests completing.
 
-* Add support for source maps for server-side code.
+* Add support for server-side source maps when debugging with
+  `node-inspector`.
 
 * Log errors from method invocations on the client if there is no
   callback provided.
