@@ -435,9 +435,9 @@ selftest.define("release track defaults to METEOR-CORE", ["net"], function () {
     s.write("package.js", packOpen);
   });
 
-  // Try to publish the package. Since the package references the release that
-  // we just published, it needs to resync with the server in order to be able
-  // to compile itself.
+  // Try to publish the package. The error message should demonstrate
+  // that we indeed default to the METEOR-CORE release track when not
+  // specified.
   s.cd(newPack, function() {
     var run = s.run("publish", "--create");
     run.waitSecs(20);
