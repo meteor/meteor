@@ -3,14 +3,20 @@ Package.describe({
   version: '1.0.0'
 });
 
+Cordova.depends({
+  'org.apache.cordova.file': '1.2.0'
+});
+
 Package.on_use(function (api) {
   api.use('webapp', 'server');
   api.use(['deps', 'retry'], 'client');
   api.use(['livedata', 'mongo-livedata'], ['client', 'server']);
   api.use('deps', 'client');
   api.use('reload', 'client', {weak: true});
+  api.use('http', 'client.cordova');
 
   api.export('Autoupdate');
   api.add_files('autoupdate_server.js', 'server');
   api.add_files('autoupdate_client.js', 'client.browser');
+  api.add_files('autoupdate_cordova.js', 'client.cordova');
 });

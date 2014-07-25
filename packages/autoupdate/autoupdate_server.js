@@ -64,7 +64,7 @@ var updateVersions = function (shouldReloadClientProgram) {
     // Step 1: load the current client program on the server and update the
     // hash values in __meteor_runtime_config__.
     if (shouldReloadClientProgram) {
-      WebAppInternals.reloadClientProgram();
+      WebAppInternals.reloadClientPrograms();
     }
 
     if (startupVersion === null) {
