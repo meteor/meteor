@@ -183,11 +183,18 @@ _.extend(Project.prototype, {
       // Call the constraint solver, using the previous dependencies as the last
       // solution. It is useful to set ignoreProjectDeps, but not nessessary,
       // since self.viableDepSource is false.
-      var newVersions = catalog.complete.resolveConstraints(
-        self.combinedConstraints,
-        { previousSolution: self.dependencies },
-        { ignoreProjectDeps: true }
-      );
+      try {
+        var newVersions = catalog.complete.resolveConstraints(
+          self.combinedConstraints,
+          { previousSolution: self.dependencies },
+          { ignoreProjectDeps: true }
+        );
+      } catch (err) {
+        process.stdout.write(
+          "Could not resolve the specified constraints for this project:\n"
+           + err +"\n");
+        process.exit(1);
+      }
 
       // Download packages to disk, and rewrite .meteor/versions if it has
       // changed.
@@ -198,7 +205,9 @@ _.extend(Project.prototype, {
       });
 
       if (!setV.success) {
-        throw new Error ("Could not install all the requested packages.");
+        process.stdout.write(
+          "Could not install all the requested packages. \n");
+        process.exit(1);
       }
 
       // Finally, initialize the package loader.
