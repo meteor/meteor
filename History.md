@@ -10,7 +10,9 @@
 
 * Fix performance issues and memory leaks concerning event handlers.
 
-* Add `UI.remove` to complement `UI.render`.
+* Add `UI.remove`.
+
+* Add `this.autorun` to the template instance.
 
 * Create `<a>` tags as SVG elements when they have `xlink:href`
   attributes. (Previously, `<a>` tags inside SVGs were never created as
