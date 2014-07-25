@@ -37,6 +37,9 @@ Template.__updateTemplateInstance = function (view) {
       data: null,
       firstNode: null,
       lastNode: null,
+      autorun: function (f) {
+        return view.autorun(f);
+      },
       __view__: view
     };
   }
