@@ -1786,8 +1786,9 @@ exports.bundle = function (options) {
       });
 
       // Server
-      var server = options.cachedServerTarget || makeServerTarget(app, client);
-      server.clientTarget = client;
+
+      var server = options.cachedServerTarget ||
+                   makeServerTarget(app, clientTargets);
       targets.server = server;
     }
 
