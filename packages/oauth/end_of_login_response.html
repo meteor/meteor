@@ -1,21 +1,46 @@
 <html>
 <head>
 <script type="text/javascript">
+  // Figure out whether we should use localStorage or window.opener to
+  // communicate information back to the main window.
+  var localStorageEnabled = false;
+  var mainWindowOAuth = null;
+  try {
+    var k = Math.random();
+    localStorage[k] = true;
+    delete localStorage[k];
+    localStorageEnabled = true;
+  } catch (err) {
+    mainWindowOAuth = window.opener &&
+      window.opener.Package &&
+      window.opener.Package.oauth &&
+      window.opener.Package.oauth.OAuth;
+  }
+
   if (##SET_CREDENTIAL_TOKEN##) {
     var credentialToken = ##TOKEN##;
     var credentialSecret = ##SECRET##;
-    try {
+    if (localStorageEnabled) {
       localStorage[##LOCAL_STORAGE_PREFIX## + credentialToken] = credentialSecret;
-    } catch (err) {
+    } else if (mainWindowOAuth) {
       // localStorage didn't work; try window.opener.
-      window.opener &&
-        window.opener.Package.oauth.OAuth._handleCredentialSecret(
-          credentialToken, credentialSecret);
-      // If window.opener isn't set, we can't do much else, but at least
-      // close the popup instead of having it hang around on a blank page.
+      mainWindowOAuth._handleCredentialSecret(
+        credentialToken, credentialSecret);
     }
   }
+
+  // Attempt to close the popup ourselves. If this fails (e.g. iOS
+  // Chrome), the main window will try to close the popup.
   window.close();
+
+  // We couldn't close ourselves. Tell the main window that we're done
+  // so that it'll close this popup window.
+  var myUrl = document.location.href;
+  if (localStorageEnabled) {
+    localStorage[##LOCAL_STORAGE_WINDOW_PREFIX## + myUrl] = true;
+  } else if (mainWindowOAuth) {
+    mainWindowOAuth._handlePopupDone(myUrl);
+  }
 </script>
 </head>
 <body></body>

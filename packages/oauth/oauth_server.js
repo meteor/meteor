@@ -207,6 +207,10 @@ OAuth._renderEndOfLoginResponse = function (setCredentialToken, token, secret) {
   result = result.replace(
     /##LOCAL_STORAGE_PREFIX##/,
     JSON.stringify(OAuth._localStorageTokenPrefix));
+  result = result.replace(
+    /##LOCAL_STORAGE_WINDOW_PREFIX##/,
+    JSON.stringify(OAuth._localStorageWindowDonePrefix));
+
 
   return "<!DOCTYPE html>\n" + result;
 };

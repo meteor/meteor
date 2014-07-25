@@ -21,22 +21,10 @@ OAuth.showPopup = function (url, callback, dimensions) {
     (dimensions && dimensions.height) || 331
   );
 
-  var checkPopupOpen = setInterval(function() {
-    try {
-      // Fix for #328 - added a second test criteria (popup.closed === undefined)
-      // to humour this Android quirk:
-      // http://code.google.com/p/android/issues/detail?id=21061
-      var popupClosed = popup.closed || popup.closed === undefined;
-    } catch (e) {
-      // For some unknown reason, IE9 (and others?) sometimes (when
-      // the popup closes too quickly?) throws "SCRIPT16386: No such
-      // interface supported" when trying to read 'popup.closed'. Try
-      // again in 100ms.
-      return;
-    }
-
-    if (popupClosed) {
-      clearInterval(checkPopupOpen);
+  var checkPopupDoneInterval = setInterval(function() {
+    var popupDone = checkPopupDone(popup);
+    if (popupDone) {
+      clearInterval(checkPopupDoneInterval);
       callback();
     }
   }, 100);
@@ -65,6 +53,74 @@ var openCenteredPopup = function(url, width, height) {
   if (newwindow.focus)
     newwindow.focus();
   return newwindow;
+};
+
+var popupsDone = {};
+OAuth._handlePopupDone = function (windowName) {
+  if (! _.has(popupsDone, windowName)) {
+    popupsDone[windowName] = true;
+  } else {
+    throw new Error("An OAuth popup completed twice?");
+  }
+};
+
+var checkPopupDone = function (popup) {
+  // Our strategy is to first check if the popup has closed itself, and
+  // if not, then check if the popup communicated to us (via
+  // localStorage or window.opener) that it's done with its work. We
+  // need to check for both these conditions because each of them works
+  // in different environments: in iOS Chrome, `window.close()` doesn't
+  // work in the popup, so we have to poll for when the popup says it's
+  // done, and in iOS Safari, JavaScript from the main app doesn't run
+  // while the tab is inactive and the popup is open, so we have to rely
+  // on the popup closing itself.
+
+  // Did the popup close itself?
+  try {
+    // Fix for #328 - added a second test criteria (popup.closed === undefined)
+    // to humour this Android quirk:
+    // http://code.google.com/p/android/issues/detail?id=21061
+    if (popup.closed || popup.closed === undefined) {
+      return true;
+    }
+  } catch (e) {
+    // For some unknown reason, IE9 (and others?) sometimes (when
+    // the popup closes too quickly?) throws "SCRIPT16386: No such
+    // interface supported" when trying to read 'popup.closed'. Try
+    // again in 100ms.
+  }
+
+  // Did the popup signal that its done its job, but failed to close
+  // itself? `window.close` doesn't work in some mobile apps, like iOS
+  // Chrome, so we have to close the popup ourselves.
+
+  var popupUrl;
+  try {
+    popupUrl = popup.document.location.href;
+  } catch (err) {
+    // We might get an error trying to access the URL because the popup
+    // could be on a different origin if the OAuth flow isn't done
+    // yet. Try again later.
+  }
+
+  var done = false;
+  if (popupUrl) {
+    var localStorageKey = OAuth._localStorageWindowDonePrefix + popupUrl;
+    done = Meteor._localStorage.getItem(localStorageKey);
+
+    if (done) {
+      Meteor._localStorage.removeItem(localStorageKey);
+    } else {
+      done = popupsDone[popupUrl];
+      delete popupsDone[popupUrl];
+    }
+
+    if (done) {
+      popup.close();
+    }
+  }
+
+  return done;
 };
 
 // XXX COMPAT WITH 0.7.0.1
