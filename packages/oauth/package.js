@@ -12,12 +12,18 @@ Package.on_use(function (api) {
 
   api.use('oauth-encryption', 'server', {weak: true});
 
+  api.use('localstorage');
+
   api.export('OAuth');
   api.export('OAuthTest', 'server', {testOnly: true});
 
   api.add_files('oauth_client.js', 'client');
   api.add_files('oauth_server.js', 'server');
   api.add_files('pending_credentials.js', 'server');
+
+  api.add_files('end_of_login_response.html', 'server', { isAsset: true });
+
+  api.add_files('oauth_common.js');
 
   // XXX COMPAT WITH 0.8.0
   api.export('Oauth');

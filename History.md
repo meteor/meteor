@@ -1,4 +1,17 @@
+## v.NEXT.NEXT
+
+* The `appcache` package now defaults to functioning on all browsers that
+  support the AppCache API, rather than a whitelist of browsers. You can still
+  disable individual browsers with `AppCache.config`. The main effect of this
+  change is that `appcache` is now enabled by default on Firefox, because
+  Firefox no longer makes a confusing popup.  #2241
+
+
+
 ## v.NEXT
+
+* Fix performance issue where a large batch of oplog updates could block
+  the node event loop for long periods.  #2299.
 
 * Upgraded dependencies:
   - less: 1.7.1 (from 1.6.1)
@@ -52,7 +65,7 @@
 * Blaze now tracks individual CSS rules in `style` attributes and won't
   overwrite changes to them made by other JavaScript libraries.
 
-* Add {{> UI.dynamic}} to make it easier to dynamically render a
+* Add `{{> UI.dynamic}}` to make it easier to dynamically render a
   template with a data context.
 
 * Add `UI._templateInstance()` for accessing the current template

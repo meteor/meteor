@@ -5,7 +5,7 @@ object representation.  Special hooks allow the syntax to be extended
 to parse an HTML-like template language like Spacebars.
 
 ```
-HTML.parseFragment("<div class=greeting>Hello<br>World</div>")
+HTMLTools.parseFragment("<div class=greeting>Hello<br>World</div>")
 
 => HTML.DIV({'class':'greeting'}, "Hello", HTML.BR(), "World"))
 ```
@@ -16,36 +16,36 @@ server.
 
 ## Invoking the Parser
 
-`HTML.parseFragment(input, options)` - Takes an input string or Scanner object and returns HTMLjs.
+`HTMLTools.parseFragment(input, options)` - Takes an input string or Scanner object and returns HTMLjs.
 
 In the basic case, where no options are passed, `parseFragment` will consume the entire input (the full string or the rest of the Scanner).
 
 The options are as follows:
 
-#### getSpecialTag
+#### getTemplateTag
 
 This option extends the HTML parser to parse template tags such as `{{foo}}`.
 
-`getSpecialTag: function (scanner, templateTagPosition) { ... }` - A function for the parser to call after every HTML token and at various positions within tags.  If the function returns a non-null value, that value is wrapped in an `HTML.Special` node which is inserted into the HTMLjs tree at the appropriate location.  The function is expected to advance the scanner if it succeeds at parsing a template tag (see the section on `HTML.Scanner`).
+`getTemplateTag: function (scanner, templateTagPosition) { ... }` - A function for the parser to call after every HTML token and at various positions within tags.  If the function returns an instanceof `HTMLTools.TemplateTag`, it is inserted into the HTMLjs tree at the appropriate location.  The constructor is `HTMLTools.TemplateTag(props)`, where props is an object whose properties are copied to the `TemplateTag` instance.  You can also call the constructor with no arguments and assign whatever properties you want, or you can subclass `TemplateTag`.
 
-There are four possible outcomes when `getSpecialTag` is called:
+There are four possible outcomes when `getTemplateTag` is called:
 
 * Not a template tag - Leave the scanner as is, and return `null`.  A quick peek at the next character should bail to this case if the start of a template tag is not seen.
-* Bad template tag - Call `scanner.fatal`, which aborts parsing completely.  Once the beginning of a template tag is seen, `getSpecialTag` will generally want to commit, and either succeed or fail trying).
-* Good template tag - Advance the scanner to the end of the template tag and return an object.
+* Bad template tag - Call `scanner.fatal`, which aborts parsing completely.  Once the beginning of a template tag is seen, `getTemplateTag` will generally want to commit, and either succeed or fail trying).
+* Good template tag - Advance the scanner to the end of the template tag and return an `HTMLTools.TemplateTag` object.
 * Comment tag - Advance the scanner and return `null`.  For example, a Spacebars comment is `{{! foo}}`.
 
-The `templateTagPosition` argument to `getSpecialTag` is one of:
+The `templateTagPosition` argument to `getTemplateTag` is one of:
 
-* `HTML.TEMPLATE_TAG_POSITION.ELEMENT` - At "element level," meaning somewhere an HTML tag could be.
-* `HTML.TEMPLATE_TAG_POSITION.IN_START_TAG` - Inside a start tag, as in `<div {{foo}}>`, where you might otherwise find `name=value`.
-* `HTML.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE` - Inside the value of an HTML attribute, as in `<div class={{foo}}>`.
-* `HTML.TEMPLATE_TAG_POSITION.IN_RCDATA` - Inside a TEXTAREA or a block helper inside an attribute, where character references are allowed ("replaced character data") but not tags.
-* `HTML.TEMPLATE_TAG_POSITION.IN_RAWTEXT` - In a context where character references are not parsed, such as a script tag, style tag, or markdown helper.
+* `HTMLTools.TEMPLATE_TAG_POSITION.ELEMENT` - At "element level," meaning somewhere an HTML tag could be.
+* `HTMLTools.TEMPLATE_TAG_POSITION.IN_START_TAG` - Inside a start tag, as in `<div {{foo}}>`, where you might otherwise find `name=value`.
+* `HTMLTools.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE` - Inside the value of an HTML attribute, as in `<div class={{foo}}>`.
+* `HTMLTools.TEMPLATE_TAG_POSITION.IN_RCDATA` - Inside a TEXTAREA or a block helper inside an attribute, where character references are allowed ("replaced character data") but not tags.
+* `HTMLTools.TEMPLATE_TAG_POSITION.IN_RAWTEXT` - In a context where character references are not parsed, such as a script tag, style tag, or markdown helper.
 
-It's completely normal for `getSpecialTag` to invoke `HTML.parseFragment` recursively on the same scanner (see `shouldStop`).  If it does so, the same value of `getSpecialTag` must be passed to the second invocation.
+It's completely normal for `getTemplateTag` to invoke `HTMLTools.parseFragment` recursively on the same scanner (see `shouldStop`).  If it does so, the same value of `getTemplateTag` must be passed to the second invocation.
 
-At the moment, template tags must begin with `{`.  The parser does not try calling `getSpecialTag` for every character of an HTML document, only at token boundaries, and it knows to always end a token at `{`.
+At the moment, template tags must begin with `{`.  The parser does not try calling `getTemplateTag` for every character of an HTML document, only at token boundaries, and it knows to always end a token at `{`.
 
 **XXX Better error message for `<div {{k}}={{v}}>`.**
 
@@ -68,14 +68,14 @@ The value of `textMode` must be one of:
 
 `shouldStop: function (scanner) { ... }` - A function that the parser invokes between tokens to check whether it should stop parsing.  The function should return a boolean value.
 
-The `shouldStop` function provides a way to put a "wall" in the input stream for the purpose of parsing HTML content embedded in a template tag.  For example, take the template `{{#if happy}}yay{{/if}}`.  The scanner will be advanced to the start of the word `yay` before `parseFragment` is called to parse the contents of the tag.  (Note that the caller happens to be the `getSpecialTag` function of an enclosing `parseFragment`.)  When parsing from `yay`, the `shouldStop` function is used to end the fragment at `{{/if}}`, which, like `{{/blah}}` or `{{else}}`, couldn't possibly be actual content that belongs in the fragment.  Even if HTML tags are not closed, as in the malformed template `{{#if foo}}<div>{{else}}`, the fragment stops at the `{{else}}`, and the error is an unclosed `<div>` (before the parser notices the unclosed `{{#if}}`).
+The `shouldStop` function provides a way to put a "wall" in the input stream for the purpose of parsing HTML content embedded in a template tag.  For example, take the template `{{#if happy}}yay{{/if}}`.  The scanner will be advanced to the start of the word `yay` before `parseFragment` is called to parse the contents of the tag.  (Note that the caller happens to be the `getTemplateTag` function of an enclosing `parseFragment`.)  When parsing from `yay`, the `shouldStop` function is used to end the fragment at `{{/if}}`, which, like `{{/blah}}` or `{{else}}`, couldn't possibly be actual content that belongs in the fragment.  Even if HTML tags are not closed, as in the malformed template `{{#if foo}}<div>{{else}}`, the fragment stops at the `{{else}}`, and the error is an unclosed `<div>` (before the parser notices the unclosed `{{#if}}`).
 
 **XXX This option doesn't seem very elegant, or at least the way it's passed around internally isn't.**
 
-## HTML.Scanner class
+## HTMLTools.Scanner class
 
-To write `getSpecialTag` and `shouldStop` functions, you have to
-interface with the `HTML.Scanner` class used by html-tools.  It's a
+To write `getTemplateTag` and `shouldStop` functions, you have to
+interface with the `HTMLTools.Scanner` class used by html-tools.  It's a
 general class that could be used by any parser/lexer/tokenizer.
 
 A Scanner has an immutable source document and a mutable pointer into

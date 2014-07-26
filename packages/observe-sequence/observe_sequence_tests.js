@@ -93,7 +93,7 @@ runOneObserveSequenceTestCase = function (test, sequenceFunc,
              compress(EJSON.stringify(expectedCallbacks, {canonical: true, indent: true})));
 };
 
-Tinytest.add('observe sequence - initial data for all sequence types', function (test) {
+Tinytest.add('observe-sequence - initial data for all sequence types', function (test) {
   runOneObserveSequenceTestCase(test, function () {
     return null;
   }, function () {}, []);
@@ -140,7 +140,7 @@ Tinytest.add('observe sequence - initial data for all sequence types', function 
   ], /*numExpectedWarnings = */1);
 });
 
-Tinytest.add('observe sequence - array to other array', function (test) {
+Tinytest.add('observe-sequence - array to other array', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
@@ -159,7 +159,7 @@ Tinytest.add('observe sequence - array to other array', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, strings', function (test) {
+Tinytest.add('observe-sequence - array to other array, strings', function (test) {
   var dep = new Deps.Dependency;
   var seq = ["A", "B"];
 
@@ -177,7 +177,7 @@ Tinytest.add('observe sequence - array to other array, strings', function (test)
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, objects without ids', function (test) {
+Tinytest.add('observe-sequence - array to other array, objects without ids', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{foo: 1}, {bar: 2}];
 
@@ -195,7 +195,7 @@ Tinytest.add('observe sequence - array to other array, objects without ids', fun
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, changes', function (test) {
+Tinytest.add('observe-sequence - array to other array, changes', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
 
@@ -218,7 +218,7 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, movedTo', function (test) {
+Tinytest.add('observe-sequence - array to other array, movedTo', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}, {_id: "43", baz: 43}];
 
@@ -244,7 +244,7 @@ Tinytest.add('observe sequence - array to other array, movedTo', function (test)
   ]);
 });
 
-Tinytest.add('observe sequence - array to null', function (test) {
+Tinytest.add('observe-sequence - array to null', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
@@ -262,7 +262,7 @@ Tinytest.add('observe sequence - array to null', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - array to cursor', function (test) {
+Tinytest.add('observe-sequence - array to cursor', function (test) {
   var dep = new Deps.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
@@ -286,7 +286,7 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
 });
 
 
-Tinytest.add('observe sequence - cursor to null', function (test) {
+Tinytest.add('observe-sequence - cursor to null', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
@@ -308,7 +308,7 @@ Tinytest.add('observe sequence - cursor to null', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to array', function (test) {
+Tinytest.add('observe-sequence - cursor to array', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
@@ -331,7 +331,7 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor', function (test) {
+Tinytest.add('observe-sequence - cursor', function (test) {
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
@@ -361,7 +361,7 @@ Tinytest.add('observe sequence - cursor', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor', function (test) {
+Tinytest.add('observe-sequence - cursor to other cursor', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
@@ -389,7 +389,7 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor with transform', function (test) {
+Tinytest.add('observe-sequence - cursor to other cursor with transform', function (test) {
   var dep = new Deps.Dependency;
   var transform = function(doc) {
     return _.extend({idCopy: doc._id}, doc);
@@ -421,7 +421,7 @@ Tinytest.add('observe sequence - cursor to other cursor with transform', functio
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to same cursor', function (test) {
+Tinytest.add('observe-sequence - cursor to same cursor', function (test) {
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
@@ -448,7 +448,7 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - string arrays', function (test) {
+Tinytest.add('observe-sequence - string arrays', function (test) {
   var seq = ['A', 'B'];
   var dep = new Deps.Dependency;
 
@@ -466,7 +466,7 @@ Tinytest.add('observe sequence - string arrays', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - number arrays', function (test) {
+Tinytest.add('observe-sequence - number arrays', function (test) {
   var seq = [1, 1, 2];
   var dep = new Deps.Dependency;
 
@@ -486,7 +486,7 @@ Tinytest.add('observe sequence - number arrays', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor, same collection', function (test) {
+Tinytest.add('observe-sequence - cursor to other cursor, same collection', function (test) {
   var dep = new Deps.Dependency;
   var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});

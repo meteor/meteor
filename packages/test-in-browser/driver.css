@@ -147,3 +147,8 @@ body {
   color: #d00;
   background: #fcc;
 }
+
+#current-client-test {
+  color: #ccc;
+  margin-right: 15px;
+}

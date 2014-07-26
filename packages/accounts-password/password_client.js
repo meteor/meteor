@@ -89,8 +89,12 @@ var srpUpgradePath = function (options, callback) {
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
-  if (!options.password)
+  if (typeof options.password !== 'string')
     throw new Error("Must set options.password");
+  if (!options.password) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
 
   // Replace password with the hashed password.
   options.password = hashPassword(options.password);
@@ -114,6 +118,12 @@ Accounts.createUser = function (options, callback) {
 Accounts.changePassword = function (oldPassword, newPassword, callback) {
   if (!Meteor.user()) {
     callback && callback(new Error("Must be logged in to change password."));
+    return;
+  }
+
+  check(newPassword, String);
+  if (!newPassword) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
     return;
   }
 
@@ -171,10 +181,13 @@ Accounts.forgotPassword = function(options, callback) {
 // @param newPassword {String}
 // @param callback (optional) {Function(error|undefined)}
 Accounts.resetPassword = function(token, newPassword, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
-  if (!newPassword)
-    throw new Error("Need to pass newPassword");
+  check(token, String);
+  check(newPassword, String);
+
+  if (!newPassword) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',

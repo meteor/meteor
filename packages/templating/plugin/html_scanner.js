@@ -152,10 +152,10 @@ html_scanner = {
         if (! name)
           throwParseError("Template has no 'name' attribute");
 
-        if (Spacebars.isReservedName(name))
+        if (SpacebarsCompiler.isReservedName(name))
           throwParseError("Template can't be named \"" + name + "\"");
 
-        var renderFuncCode = Spacebars.compile(
+        var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isTemplate: true,
             sourceName: 'Template "' + name + '"'
@@ -168,14 +168,14 @@ html_scanner = {
         if (hasAttribs)
           throwParseError("Attributes on <body> not supported");
 
-        var renderFuncCode = Spacebars.compile(
+        var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isBody: true,
             sourceName: "<body>"
           });
 
         // We may be one of many `<body>` tags.
-        results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });\n";
+        results.js += "\nTemplate.__body__.__contentParts.push(Blaze.View('body_content_'+Template.__body__.__contentParts.length, " + renderFuncCode + "));\nMeteor.startup(Template.__body__.__instantiate);\n";
       }
     } catch (e) {
       if (e.scanner) {
