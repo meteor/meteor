@@ -51,10 +51,20 @@ Autoupdate._retrySubscription = function () {
             handle.stop();
           }
 
-          // HTTP.get(Meteor.absoluteUrl() + 'cordova_manifest.json', function (err, res) {
-          //   console.log(res);
-          //   //Package.reload.Reload._reload();
-          // });
+          var urlPrefix = Meteor.absoluteUrl() + 'cordova';
+          HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
+            var ft = new FileTransfer();
+            _.each(res.data, function (item) {
+              var uri = encodeURI(urlPrefix + item.url);
+              ft.download(uri, item.path, function (entry) {
+                console.log('success: ', entry);
+              }, function (error) {
+                console.log('fail source: ', error.source);
+                console.log('fail target: ', error.target);
+              });
+            });
+            //Package.reload.Reload._reload();
+          });
         }
       }
     }
