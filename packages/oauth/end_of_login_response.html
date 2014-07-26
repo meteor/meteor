@@ -4,15 +4,17 @@
   if (##SET_CREDENTIAL_TOKEN##) {
     var credentialToken = ##TOKEN##;
     var credentialSecret = ##SECRET##;
-    try {
-      localStorage[##LOCAL_STORAGE_PREFIX## + credentialToken] = credentialSecret;
-    } catch (err) {
-      // localStorage didn't work; try window.opener.
-      window.opener &&
-        window.opener.Package.oauth.OAuth._handleCredentialSecret(
-          credentialToken, credentialSecret);
-      // If window.opener isn't set, we can't do much else, but at least
-      // close the popup instead of having it hang around on a blank page.
+    if (window.opener && window.opener.Package &&
+          window.opener.Package.oauth) {
+      window.opener.Package.oauth.OAuth._handleCredentialSecret(
+        credentialToken, credentialSecret);
+    } else {
+      try {
+        localStorage[##LOCAL_STORAGE_PREFIX## + credentialToken] = credentialSecret;
+      } catch (err) {
+        // We can't do much else, but at least close the popup instead
+        // of having it hang around on a blank page.
+      }
     }
   }
   window.close();
