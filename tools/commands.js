@@ -29,7 +29,7 @@ var unipackage = require('./unipackage.js');
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'webapp' ]
+    packages: [ 'boilerplate-generator' ]
   });
 });
 
@@ -1549,9 +1549,9 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     return item;
   });
 
-  var WebAppInternals = getLoadedPackages()['webapp'].WebAppInternals;
-  var boilerplateSource = WebAppInternals.getBoilerplateTemplate('client.cordova');
-  return WebAppInternals.generateBoilerplateFromManifestAndSource(
+  var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
+  var boilerplateSource = Boilerplate.getBoilerplateTemplate('client.cordova');
+  return Boilerplate.generateBoilerplateFromManifestAndSource(
     manifest,
     boilerplateSource,
     function (url) {

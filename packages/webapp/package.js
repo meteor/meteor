@@ -8,8 +8,7 @@ Npm.depends({connect: "2.9.0",
              useragent: "2.0.7"});
 
 Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'routepolicy', 'spacebars-compiler',
-           'spacebars', 'htmljs', 'ui'],
+  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator' ],
           'server');
   api.use(['underscore'], 'client');
   api.use(['application-configuration', 'follower-livedata'], {
@@ -23,12 +22,6 @@ Package.on_use(function (api) {
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.export(['WebApp'], 'client');
   api.add_files('webapp_server.js', 'server');
-  // This is a spacebars template, but we process it manually with the spacebars
-  // compiler rather than letting the 'templating' package (which isn't fully
-  // supported on the server yet) handle it. That also means that it doesn't
-  // contain the outer "<template>" tag.
-  api.add_files(['boilerplate.html', 'boilerplate_client.cordova.html'],
-                 'server', {isAsset: true});
   api.add_files('webapp_client.js', 'client');
 });
 

@@ -250,44 +250,18 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 // boilerplate HTML to serve for that request. Memoizes on HTML
 // attributes (used by, eg, appcache) and whether inline scripts are
 // currently allowed.
-var getBoilerplate = function (request, boilerplateObject) {
+var getBoilerplate = _.memoize(function (request, boilerplateObject) {
+  return boilerplateObject.toHTML();
+}, function (request) {
   var htmlAttributes = getHtmlAttributes(request);
-  var memoizedBoilerplate = boilerplateObject.memoizedBoilerplate || {};
-
-  var boilerplateBaseData = boilerplateObject.baseData;
-  var boilerplateFunc = boilerplateObject.func;
-
-  if (!boilerplateFunc)
-    throw new Error("boilerplateFunc should be set before listening!");
-  if (!boilerplateBaseData)
-    throw new Error("boilerplateBaseData should be set before listening!");
-
   // The only thing that changes from request to request (for now) are
   // the HTML attributes (used by, eg, appcache) and whether inline
   // scripts are allowed, so we can memoize based on that.
-  var boilerplateKey = JSON.stringify({
+  return JSON.stringify({
     inlineScriptsAllowed: inlineScriptsAllowed,
     htmlAttributes: htmlAttributes
   });
-
-  if (! _.has(memoizedBoilerplate, boilerplateKey)) {
-    var boilerplateData = _.extend({
-      htmlAttributes: htmlAttributes,
-      inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
-    }, boilerplateBaseData);
-
-    memoizedBoilerplate[boilerplateKey] = "<!DOCTYPE html>\n" +
-      Blaze.toHTML(Blaze.With(boilerplateData, boilerplateFunc));
-  }
-  return memoizedBoilerplate[boilerplateKey];
-};
-
-WebAppInternals.getBoilerplateTemplate = function (arch) {
-  var filename = 'boilerplate'
-    + (arch === WebApp.defaultArch ? '' : '_' + arch)
-    + '.html';
-  return Assets.getText(filename);
-};
+});
 
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
@@ -434,6 +408,13 @@ var runWebAppServer = function () {
   // XXX maps archs to program path on filesystem
   var archPath = {};
 
+  // Will be updated by main before we listen.
+  // Map from client arch to boilerplate object.
+  // Boilerplate object has:
+  //   - func: XXX
+  //   - baseData: XXX
+  var boilerplateByArch = {};
+
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
       staticFiles = {};
@@ -496,6 +477,42 @@ var runWebAppServer = function () {
       }
     });
   };
+
+  WebAppInternals.generateBoilerplate = function () {
+    syncQueue.runTask(function() {
+      _.each(WebApp.clientPrograms, function (manifest, archName) {
+        boilerplateByArch[archName] =
+          new Boilerplate(archName, WebApp.clientPrograms[archName], {
+            urlMapper:
+              function (url) { return getUrlPrefixForArch(archName) + url; },
+            pathMapper: function (itemPath) {
+              return path.join(archPath[archName], itemPath); },
+            baseDataExtension: {
+              additionalStaticJs: _.map(
+                additionalStaticJs || [],
+                function (contents, pathname) {
+                  return {
+                    pathname: pathname,
+                    contents: contents
+                  };
+                }
+              ),
+              meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
+              rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+              bundledJsCssPrefix: bundledJsCssPrefix ||
+                __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
+            }
+          });
+      });
+
+      // Configure CSS injection for the default arch
+      // XXX implement the CSS injection for all archs?
+      WebAppInternals.refreshableAssets = {
+        allCss: boilerplateByArch[WebApp.defaultArch].baseData.css
+      };
+    });
+  };
+
   WebAppInternals.reloadClientPrograms();
 
   // webserver
@@ -560,13 +577,6 @@ var runWebAppServer = function () {
     res.end("An error message");
   });
 
-  // Will be updated by main before we listen.
-  // Map from client arch to boilerplate object.
-  // Boilerplate object has:
-  //   - func: XXX
-  //   - baseData: XXX
-  var boilerplateByArch = {};
-
   app.use(function (req, res, next) {
     if (! appUrl(req.url))
       return next();
@@ -592,10 +602,9 @@ var runWebAppServer = function () {
 
     // /packages/asdfsad ... /cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
-    console.log(pathname);
     var archKey = 'client.' + pathname.split('/')[1];
     if (!_.has(archPath, archKey)) {
-      archKey = 'client.browser';
+      archKey = WebApp.defaultArch;
     }
 
     var boilerplate;
@@ -700,109 +709,6 @@ var runWebAppServer = function () {
     // overkill (and no longer in the dev bundle). Just assume any instance of
     // '--keepalive' is a use of the option.
     var expectKeepalives = _.contains(argv, '--keepalive');
-
-    // XXX Exported to allow client-side only changes to rebuild the boilerplate
-    // without requiring a full server restart.
-    // Produces an HTML string with given manifest and boilerplateSource.
-    // Optionally takes urlMapper in case urls from manifest need to be prefixed
-    // or rewritten.
-    // Optionally takes pathMapper for resolving relative file system paths.
-    // Optionally allows to override fields of the data context.
-    WebAppInternals.generateBoilerplateFromManifestAndSource =
-      function (manifest, boilerplateSource, urlMapper, pathMapper, baseDataExtension) {
-        // map to the identity by default
-        urlMapper = urlMapper || _.identity;
-        pathMapper = pathMapper || _.identity;
-
-        var boilerplateBaseData = {
-          css: [],
-          js: [],
-          head: '',
-          body: '',
-          additionalStaticJs: _.map(
-            additionalStaticJs,
-            function (contents, pathname) {
-              return {
-                pathname: pathname,
-                contents: contents
-              };
-            }
-          ),
-          meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
-          rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-          bundledJsCssPrefix: bundledJsCssPrefix ||
-            __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
-        };
-
-        // allow the caller to extend the default base data
-        _.extend(boilerplateBaseData, baseDataExtension);
-
-        _.each(manifest, function (item) {
-          var urlPath = urlMapper(item.url);
-          if (item.type === 'css' && item.where === 'client') {
-            boilerplateBaseData.css.push({url: urlPath});
-          }
-          if (item.type === 'js' && item.where === 'client') {
-            boilerplateBaseData.js.push({url: urlPath});
-          }
-          if (item.type === 'head') {
-            boilerplateBaseData.head =
-              readUtf8FileSync(pathMapper(item.path));
-          }
-          if (item.type === 'body') {
-            boilerplateBaseData.body =
-              readUtf8FileSync(pathMapper(item.path));
-          }
-        });
-        var boilerplateRenderCode = SpacebarsCompiler.compile(
-          boilerplateSource, { isBody: true });
-
-        // Note that we are actually depending on eval's local environment capture
-        // so that UI and HTML are visible to the eval'd code.
-        var boilerplateFunc = eval(boilerplateRenderCode);
-
-        return {
-          baseData: boilerplateBaseData,
-          func: boilerplateFunc
-        };
-    };
-
-    var boilerplateSourceByArch = {};
-
-    WebAppInternals.generateBoilerplate = function () {
-      syncQueue.runTask(function() {
-        _.each(WebApp.clientPrograms, function (manifest, archName) {
-          // Memoized
-          if (! _.has(boilerplateSourceByArch, archName)) {
-            try {
-              boilerplateSourceByArch[archName] =
-                WebAppInternals.getBoilerplateTemplate(archName);
-            } catch (err) {
-              // By deafult, just read the default 'boilerplate.html'
-              console.log("falling to back to default boilerplate for arch " + archName);
-              boilerplateSourceByArch[archName] =
-                WebAppInternals.getBoilerplateTemplate(WebApp.defaultArch);
-            }
-          }
-
-          boilerplateByArch[archName] =
-            WebAppInternals.generateBoilerplateFromManifestAndSource(
-              WebApp.clientPrograms[archName],
-              boilerplateSourceByArch[archName],
-              function (url) { return getUrlPrefixForArch(archName) + url; },
-              function (itemPath) {
-                return path.join(archPath[archName], itemPath);
-              }
-            );
-        });
-
-        // XCXC, make this into a mapseet
-        WebAppInternals.refreshableAssets = {
-          allCss: boilerplateByArch['client.browser'].baseData.css
-        };
-      });
-    };
-
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
