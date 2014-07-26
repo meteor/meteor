@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'routepolicy', 'spacebars-compiler',
+  api.use(['underscore',  'spacebars-compiler',
            'spacebars', 'htmljs', 'ui'], 'server');
   api.add_files(['boilerplate-generator.js'], 'server');
   api.export(['Boilerplate'], 'server');

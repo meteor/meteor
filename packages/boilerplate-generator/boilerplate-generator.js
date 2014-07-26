@@ -72,6 +72,9 @@ Boilerplate.prototype._generateBoilerplateFromManifestAndSource =
 
     // Note that we are actually depending on eval's local environment capture
     // so that UI and HTML are visible to the eval'd code.
+    // XXX the template we are evaluating relies on the fact that UI is globally
+      // available.
+    global.UI = UI;
     self.func = eval(boilerplateRenderCode);
     self.baseData = boilerplateBaseData;
 };

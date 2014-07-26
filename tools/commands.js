@@ -1549,20 +1549,23 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     return item;
   });
 
+  var meteorRelease = project.getMeteorReleaseVersion();
   var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
-  var boilerplateSource = Boilerplate.getBoilerplateTemplate('client.cordova');
-  return Boilerplate.generateBoilerplateFromManifestAndSource(
-    manifest,
-    boilerplateSource,
-    function (url) {
-      // set relative urls, not absolute
-      return url.substr(1);
-    },
-    function (itemPath) {
-      return path.join(clientDir, itemPath);
-    }, {
-      includeCordova: true
-    });
+  var boilerplate = new Boilerplate('client.cordova', manifest, {
+    urlMapper: function (url) { return url ? url.substr(1) : ''; },
+    pathMapper: function (p) { return path.join(clientDir, p); },
+    baseDataExtension: {
+      includeCordova: true,
+      meteorRuntimeConfig: JSON.stringify({
+        meteorRelease: meteorRelease,
+        ROOT_URL: 'http://' + options.host + ':' + options.port + '/',
+        // XXX propagate it from options?
+        ROOT_URL_PATH_PREFIX: '',
+        DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port
+      })
+    }
+  });
+  return boilerplate.toHTML();
 };
 
 
