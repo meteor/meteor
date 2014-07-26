@@ -1608,6 +1608,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   - minify: minify the CSS and JS assets (boolean, default false)
  *   - arch: the server architecture to target (defaults to archinfo.host())
  *
+ * - hasCachedBundle: true if we already have a cached bundle stored in
+ *   /build. When true, we only build the new client targets in the bundle.
+ *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - watchSet: Information about files and paths that were
