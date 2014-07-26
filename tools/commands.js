@@ -29,7 +29,7 @@ var unipackage = require('./unipackage.js');
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'spacebars', 'spacebars-compiler', 'htmljs', 'deps' ]
+    packages: [ 'webapp' ]
   });
 });
 
@@ -1542,53 +1542,27 @@ main.registerCommand({
 var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
-  var boilerplatePath = path.join(__dirname, 'client', 'cordova-boilerplate.html');
-  var boilerplateTemplateSource = fs.readFileSync(boilerplatePath, 'utf8');
-  var boilerplateData = {
-    css: [],
-    js: [],
-    head: '',
-    body: '',
-    host: options.host,
-    port: options.port
-  };
 
-  _.each(clientJson.manifest, function (item) {
-    if (item.type === 'css' && item.where === 'client') {
-      // XXX HACK: strip the leading slash ('/') so the stylesheet is not
-      // referenced on the root but rather on a relative path
-      boilerplateData.css.push({url: item.url.substr(1) });
-    }
-    if (item.type === 'js' && item.where === 'client') {
-      boilerplateData.js.push({url: item.url});
-    }
-    if (item.type === 'head') {
-      boilerplateData.head = fs.readFileSync(
-        path.join(clientDir, item.path), 'utf8');
-    }
-    if (item.type === 'body') {
-      boilerplateData.body = fs.readFileSync(
-        path.join(clientDir, item.path), 'utf8');
-    }
+  var manifest = _.map(clientJson.manifest, function (item) {
+    if (item.type === 'js')
+      return _.extend(item, { url: ('/js' + item.url) });
+    return item;
   });
 
-  var Spacebars = getLoadedPackages()['spacebars'].Spacebars;
-  var SpacebarsCompiler =
-    getLoadedPackages()['spacebars-compiler'].SpacebarsCompiler;
-  var Blaze = getLoadedPackages()['blaze'].Blaze;
-  var boilerplateRenderCode = SpacebarsCompiler.compile(
-    boilerplateTemplateSource, { isBody: true });
-
-  UI = getLoadedPackages()['ui'].UI;
-  var HTML = getLoadedPackages()['htmljs'].HTML;
-
-  // Note that we are actually depending on eval's local environment capture
-  // so that UI and HTML are visible to the eval'd code.
-  var boilerplateRender = eval(boilerplateRenderCode);
-
-
-  return "<!DOCTYPE html>\n" +
-        Blaze.toHTML(Blaze.With(boilerplateData, boilerplateRender));
+  var WebAppInternals = getLoadedPackages()['webapp'].WebAppInternals;
+  var boilerplateSource = WebAppInternals.getBoilerplateTemplate('client.cordova');
+  return WebAppInternals.generateBoilerplateFromManifestAndSource(
+    manifest,
+    boilerplateSource,
+    function (url) {
+      // set relative urls, not absolute
+      return url.substr(1);
+    },
+    function (itemPath) {
+      return path.join(clientDir, itemPath);
+    }, {
+      includeCordova: true
+    });
 };
 
 

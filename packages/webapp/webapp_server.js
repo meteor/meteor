@@ -282,6 +282,13 @@ var getBoilerplate = function (request, boilerplateObject) {
   return memoizedBoilerplate[boilerplateKey];
 };
 
+WebAppInternals.getBoilerplateTemplate = function (arch) {
+  var filename = 'boilerplate'
+    + (arch === WebApp.defaultArch ? '' : '_' + arch)
+    + '.html';
+  return Assets.getText(filename);
+};
+
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
@@ -696,9 +703,17 @@ var runWebAppServer = function () {
 
     // XXX Exported to allow client-side only changes to rebuild the boilerplate
     // without requiring a full server restart.
-    // XXX
+    // Produces an HTML string with given manifest and boilerplateSource.
+    // Optionally takes urlMapper in case urls from manifest need to be prefixed
+    // or rewritten.
+    // Optionally takes pathMapper for resolving relative file system paths.
+    // Optionally allows to override fields of the data context.
     WebAppInternals.generateBoilerplateFromManifestAndSource =
-      function (manifest, boilerplateSource, archName) {
+      function (manifest, boilerplateSource, urlMapper, pathMapper, baseDataExtension) {
+        // map to the identity by default
+        urlMapper = urlMapper || _.identity;
+        pathMapper = pathMapper || _.identity;
+
         var boilerplateBaseData = {
           css: [],
           js: [],
@@ -719,9 +734,11 @@ var runWebAppServer = function () {
             __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
         };
 
-        var urlPrefix = getUrlPrefixForArch(archName);
+        // allow the caller to extend the default base data
+        _.extend(boilerplateBaseData, baseDataExtension);
+
         _.each(manifest, function (item) {
-          var urlPath = urlPrefix + item.url;
+          var urlPath = urlMapper(item.url);
           if (item.type === 'css' && item.where === 'client') {
             boilerplateBaseData.css.push({url: urlPath});
           }
@@ -730,11 +747,11 @@ var runWebAppServer = function () {
           }
           if (item.type === 'head') {
             boilerplateBaseData.head =
-              readUtf8FileSync(path.join(archPath[archName], item.path));
+              readUtf8FileSync(pathMapper(item.path));
           }
           if (item.type === 'body') {
             boilerplateBaseData.body =
-              readUtf8FileSync(path.join(archPath[archName], item.path));
+              readUtf8FileSync(pathMapper(item.path));
           }
         });
         var boilerplateRenderCode = SpacebarsCompiler.compile(
@@ -759,12 +776,12 @@ var runWebAppServer = function () {
           if (! _.has(boilerplateSourceByArch, archName)) {
             try {
               boilerplateSourceByArch[archName] =
-                Assets.getText('boilerplate_' + archName + '.html');
+                WebAppInternals.getBoilerplateTemplate(archName);
             } catch (err) {
               // By deafult, just read the default 'boilerplate.html'
               console.log("falling to back to default boilerplate for arch " + archName);
               boilerplateSourceByArch[archName] =
-                Assets.getText('boilerplate.html');
+                WebAppInternals.getBoilerplateTemplate(WebApp.defaultArch);
             }
           }
 
@@ -772,7 +789,10 @@ var runWebAppServer = function () {
             WebAppInternals.generateBoilerplateFromManifestAndSource(
               WebApp.clientPrograms[archName],
               boilerplateSourceByArch[archName],
-              archName
+              function (url) { return getUrlPrefixForArch(archName) + url; },
+              function (itemPath) {
+                return path.join(archPath[archName], itemPath);
+              }
             );
         });
 
