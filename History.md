@@ -10,9 +10,10 @@
 
 * Fix performance issues and memory leaks concerning event handlers.
 
-* Add `UI.remove`.
+* Add `UI.remove`, which removes a template after `UI.render`/`UI.insert`.
 
-* Add `this.autorun` to the template instance.
+* Add `this.autorun` to the template instance, which is like `Deps.autorun`
+  but is automatically stopped when the template is destroyed.
 
 * Create `<a>` tags as SVG elements when they have `xlink:href`
   attributes. (Previously, `<a>` tags inside SVGs were never created as
