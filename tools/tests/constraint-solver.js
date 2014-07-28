@@ -3,9 +3,10 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var _= require('underscore');
 
-// Add packages to an app. Change the contents of the packages and their
-// dependencies, make sure that the app still refreshes.
-selftest.define('constraint solver benchmark', ['slow'], function () {
+// Runs all of the constraint-solver tests, including ones that tie up the CPU
+// for too long to safely run in the normal test-packages run.
+// Only run from checkouts, because test-packages only works on local packages.
+selftest.define('constraint solver benchmark', ['slow', 'checkout'], function () {
   var s = new Sandbox();
   s.set('CONSTRAINT_SOLVER_BENCHMARK', 't');
   var run = s.run("test-packages",
