@@ -16,8 +16,6 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 var clientAddress;
 
 var checkMeta = function (appPackages, sessionId, useFakeRelease) {
-  var toolsPackage = selftest.getToolsPackage();
-
   if (! clientAddress) {
     clientAddress = getClientAddress();
   }
@@ -36,12 +34,20 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
   }
 
   if (useFakeRelease) {
+    var toolsPackage = selftest.getToolsPackage();
     expectedUserAgentInfo.meteorReleaseTrack =
       "METEOR-CORE";
     expectedUserAgentInfo.meteorReleaseVersion =
       "v1";
     expectedUserAgentInfo.meteorToolsPackageWithVersion =
       toolsPackage.name + "@" + toolsPackage.version;
+  } else {
+    expectedUserAgentInfo.meteorReleaseTrack =
+      release.current.getReleaseTrack();
+    expectedUserAgentInfo.meteorReleaseVersion =
+      release.current.getReleaseVersion();
+    expectedUserAgentInfo.meteorToolsPackageWithVersion =
+      release.current.getToolsPackageAtVersion();
   }
 
   selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
