@@ -1584,6 +1584,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
         arch: target.mostCompatibleArch(),
         path: path.join(paths[name], relControlFilePath)
       });
+
+      _.each(target.cordovaDependencies, function (version, name) {
+        json.cordovaDependencies[name] = version;
+      });
     });
 
     // Tell Galaxy what version of the dependency kit we're using, so
@@ -1811,8 +1815,8 @@ exports.bundle = function (options) {
 
       // Server
       if (! options.hasCachedBundle) {
-        var server = makeServerTarget(app, client);
-        server.clientTarget = client;
+        var server = makeServerTarget(app, clientTargets);
+        server.clientTargets = clientTargets;
         targets.server = server;
       }
     }

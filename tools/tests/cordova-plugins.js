@@ -135,6 +135,9 @@ selftest.define("add plugins", function () {
   run.waitSecs(10);
   run.expectExit(0);
 
+  run = s.run("remove", "standard-app-packages");
+  run.match("removed");
+
   run = s.run("cordova", "plugin", "add", "org.apache.cordova.camera@0.3.0");
   run.match("Added org.apache.cordova.camera");
 
@@ -155,7 +158,8 @@ selftest.define("add plugins", function () {
 
   checkCordovaPlugins(s,
     ["org.apache.cordova.camera",
-     "com.phonegap.plugins.facebookconnect"]);
+     "com.phonegap.plugins.facebookconnect",
+     "org.apache.cordova.file"]);
 
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");

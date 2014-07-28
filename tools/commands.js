@@ -1647,8 +1647,10 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
   // XXX hack, copy files from app folder one level up
-  files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
-  files.rm_recursive(cordovaProgramAppPath);
+  if (fs.existsSync(cordovaProgramAppPath)) {
+    files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
+    files.rm_recursive(cordovaProgramAppPath);
+  }
 
   // rewrite the www folder
   files.rm_recursive(wwwPath);
