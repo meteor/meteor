@@ -69,14 +69,38 @@ Options:
 
 
 >>> update
-Upgrade this project to the latest version of Meteor
-Usage: meteor update [--release <release>]
+Upgrade this project's dependencies to their latest versions.
+Usage: meteor update
+       meteor update --patch
+       meteor update --release <release>
+       meteor update --packages-only
+       meteor update [packageName packageName2 ...]
 
-Sets the version of Meteor to use with the current project. If a
-release is specified with --release, set the project to use that
-version. Otherwise download and use the latest release of Meteor.
+Updates the meteor release, and then, if applicable, updates the packages
+used by the app to the latest versions that don't cause dependency
+conflicts with other packages in the app.
 
-XXX: change to new world order
+Passing the --patch argument will update to the latest patch, if such exists.
+Patch releases contain very minor changes, usually bug fixes. Updating to
+the latest patch is always recommended. This will try to not update non-core
+packages unless strictly nessessary.
+
+Passing the --release argument will force update to a specific release of meteor.
+This will not update non-core packages unless strictly nessessary. It is also
+possible that some packages cannot be updated to be compatible with the new
+release. If that happens, the app will not build until dependencies on those
+packages are removed.
+
+Passing --packages-only will try to update non-core packages to their latest
+versions. It will not update the version of meteor. To update individual packages
+(for example: 'foo:awesome') pass in their names instead, with no options. ('meteor
+update foo:awesome').
+
+Options:
+  --packages-only  Update the package versions only. Do not update the release.
+  --patch  Update the release to a patch release only.
+  --release  Update to a specific release of meteor.
+
 
 >>> run-upgrader
 Execute a specific upgrader by name. Intended for testing.
