@@ -2754,3 +2754,13 @@ Tinytest.add(
     test.equal(rv.numListeners(), 0);
   }
 );
+
+// Test that argument in {{> UI.contentBlock arg}} is evaluated in
+// the proper data context.
+Tinytest.add(
+  "spacebars-tests - template_tests - contentBlock argument",
+  function (test) {
+    var tmpl = Template.spacebars_test_contentBlock_arg;
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), 'AAA BBB');
+  });
