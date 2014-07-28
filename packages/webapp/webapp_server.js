@@ -246,12 +246,20 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
   _.each(finishListeners, function (l) { res.on('finish', l); });
 };
 
+
+// Will be updated by main before we listen.
+// Map from client arch to boilerplate object.
+// Boilerplate object has:
+//   - func: XXX
+//   - baseData: XXX
+var boilerplateByArch = {};
+
 // Given a request (as returned from `categorizeRequest`), return the
 // boilerplate HTML to serve for that request. Memoizes on HTML
 // attributes (used by, eg, appcache) and whether inline scripts are
 // currently allowed.
-var getBoilerplate = _.memoize(function (request, boilerplateObject) {
-  return boilerplateObject.toHTML();
+var getBoilerplate = _.memoize(function (request, arch) {
+  return boilerplateByArch[arch].toHTML();
 }, function (request) {
   var htmlAttributes = getHtmlAttributes(request);
   // The only thing that changes from request to request (for now) are
@@ -271,7 +279,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     return;
   }
   var pathname = connect.utils.parseUrl(req).pathname;
-
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -303,9 +310,9 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     serveStaticJs("__meteor_runtime_config__ = " +
                   JSON.stringify(__meteor_runtime_config__) + ";");
     return;
-  } else if (pathname === "/meteor_reload_safetybelt.js" &&
-             ! WebAppInternals.inlineScriptsAllowed()) {
-    serveStaticJs(RELOAD_SAFETYBELT);
+  } else if (_.has(additionalStaticJs, pathname) &&
+              ! WebAppInternals.inlineScriptsAllowed()) {
+    serveStaticJs(additionalStaticJs[pathname]);
     return;
   }
 
@@ -408,13 +415,6 @@ var runWebAppServer = function () {
   // XXX maps archs to program path on filesystem
   var archPath = {};
 
-  // Will be updated by main before we listen.
-  // Map from client arch to boilerplate object.
-  // Boilerplate object has:
-  //   - func: XXX
-  //   - baseData: XXX
-  var boilerplateByArch = {};
-
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
       staticFiles = {};
@@ -500,7 +500,8 @@ var runWebAppServer = function () {
               meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
               rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
               bundledJsCssPrefix: bundledJsCssPrefix ||
-                __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
+                __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+              inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
             }
           });
       });
@@ -609,7 +610,7 @@ var runWebAppServer = function () {
 
     var boilerplate;
     try {
-      boilerplate = getBoilerplate(request, boilerplateByArch[archKey]);
+      boilerplate = getBoilerplate(request, archKey);
     } catch (e) {
       Log.error("Error running template: " + e);
       res.writeHead(500, headers);
