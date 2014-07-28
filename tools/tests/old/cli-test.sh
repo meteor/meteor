@@ -45,7 +45,7 @@ $METEOR --help | grep "List the packages explicitly used" >> $OUTPUT
 $METEOR run --help | grep "Port to listen" >> $OUTPUT
 $METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
 $METEOR create --help | grep "Make a subdirectory" >> $OUTPUT
-$METEOR update --help | grep "Sets the version" >> $OUTPUT
+$METEOR update --help | grep "Updates the meteor release" >> $OUTPUT
 $METEOR add --help | grep "Adds packages" >> $OUTPUT
 $METEOR remove --help | grep "Removes a package" >> $OUTPUT
 $METEOR list --help | grep "This will not list transitive dependencies" >> $OUTPUT
