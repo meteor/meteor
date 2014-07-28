@@ -1476,6 +1476,27 @@ var writeFile = function (file, builder) {
   builder.write(file.targetPath, { data: file.contents() });
 };
 
+// Writes a target a path in 'programs'
+var writeTargetToPath = function (name, target, outputPath, options) {
+  var builder = new Builder({
+    outputPath: path.join(outputPath, 'programs', name),
+    symlink: options.includeNodeModulesSymlink
+  });
+
+  var relControlFilePath =
+    target.write(builder, {
+      includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      getRelativeTargetPath: options.getRelativeTargetPath });
+
+  builder.complete();
+
+  return {
+    name: name,
+    arch: target.mostCompatibleArch(),
+    path: path.join('programs', name, relControlFilePath)
+  };
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
 ///////////////////////////////////////////////////////////////////////////////
@@ -1558,10 +1579,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
           includeNodeModulesSymlink: options.includeNodeModulesSymlink,
           getRelativeTargetPath: getRelativeTargetPath });
 
-      _.each(target.cordovaDependencies, function (version, name) {
-        json.cordovaDependencies[name] = version;
-      });
-
       json.programs.push({
         name: name,
         arch: target.mostCompatibleArch(),
@@ -1618,6 +1635,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
       }
     });
 
+    _.each(targets, function (target, name) {
+      json.programs.push(writeTargetToPath(name, target, builder.buildPath, options));
+    });
+
     // We did it!
     builder.complete();
 
@@ -1658,6 +1679,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   - serverArch: the server architecture to target
  *                   (defaults to archinfo.host())
  *   - clientArchs: an array of client archs to target
+ *
+ * - hasCachedBundle: true if we already have a cached bundle stored in
+ *   /build. When true, we only build the new client targets in the bundle.
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -1786,10 +1810,11 @@ exports.bundle = function (options) {
       });
 
       // Server
-
-      var server = options.cachedServerTarget ||
-                   makeServerTarget(app, clientTargets);
-      targets.server = server;
+      if (! options.hasCachedBundle) {
+        var server = makeServerTarget(app, client);
+        server.clientTarget = client;
+        targets.server = server;
+      }
     }
 
     // Pick up any additional targets in /programs
@@ -1941,15 +1966,47 @@ exports.bundle = function (options) {
     if (! (controlProgram in targets))
       controlProgram = undefined;
 
+
+    // Hack to let servers find relative paths to clients. Should find
+    // another solution eventually (probably some kind of mount
+    // directive that mounts the client bundle in the server at runtime)
+    var getRelativeTargetPath = function (options) {
+      var pathForTarget = function (target) {
+        var name;
+        _.each(targets, function (t, n) {
+          if (t === target)
+            name = n;
+        });
+        if (! name)
+          throw new Error("missing target?");
+        return path.join('programs', name);
+      };
+
+      return path.relative(pathForTarget(options.relativeTo),
+                           pathForTarget(options.forTarget));
+    };
+
     // Write to disk
-    starResult = writeSiteArchive(targets, outputPath, {
+    var writeOptions = {
       includeNodeModulesSymlink: includeNodeModulesSymlink,
       builtBy: builtBy,
       controlProgram: controlProgram,
-      releaseName: releaseName
-    });
-    serverWatchSet.merge(starResult.serverWatchSet);
-    clientWatchSet.merge(starResult.clientWatchSet);
+      releaseName: releaseName,
+      getRelativeTargetPath: getRelativeTargetPath
+    };
+
+    if (options.hasCachedBundle) {
+      // XXX If we already have a cached bundle, just recreate the new targets.
+      // This might make the contents of "star.json" out of date.
+      _.each(targets, function (target, name) {
+        writeTargetToPath(name, target, outputPath, options);
+        clientWatchSet.merge(target.getWatchSet());
+      });
+    } else {
+      starResult = writeSiteArchive(targets, outputPath, writeOptions);
+      serverWatchSet.merge(starResult.serverWatchSet);
+      clientWatchSet.merge(starResult.clientWatchSet);
+    }
 
     success = true;
   });
@@ -1961,8 +2018,7 @@ exports.bundle = function (options) {
     errors: success ? false : messages,
     serverWatchSet: serverWatchSet,
     clientWatchSet: clientWatchSet,
-    starManifest: starResult && starResult.starManifest,
-    serverTarget: targets.server
+    starManifest: starResult && starResult.starManifest
   };
 };
 
