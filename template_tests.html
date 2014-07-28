@@ -948,3 +948,15 @@ Hi there!
 <template name="spacebars_test_autorun_inner">
   Hello
 </template>
+
+<template name="spacebars_test_contentBlock_arg">
+  {{#spacebars_test_contentBlock_arg_inner}}
+    {{this.bar}}
+  {{/spacebars_test_contentBlock_arg_inner}}
+</template>
+
+<template name="spacebars_test_contentBlock_arg_inner">
+  {{#with foo="AAA" bar="BBB"}}
+    {{this.foo}} {{> UI.contentBlock this}}
+  {{/with}}
+</template>
