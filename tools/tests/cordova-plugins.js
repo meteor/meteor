@@ -144,7 +144,7 @@ selftest.define("add plugins", function () {
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
-  run.match("Successfully added");
+  run.match("added");
 
   // XXX message about a plugin?
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
