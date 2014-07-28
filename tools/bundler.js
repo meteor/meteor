@@ -1566,7 +1566,13 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, options));
+      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+        builtBy: options.builtBy,
+        controlProgram: options.controlProgram,
+        releaseName: options.releaseName,
+        getRelativeTargetPath: options.getRelativeTargetPath
+      }));
     });
 
     // We did it!
@@ -1917,10 +1923,10 @@ exports.bundle = function (options) {
     };
 
     if (options.hasCachedBundle) {
-      // XXX If we already have a cached bundle, just recreate the new targets.
-      // This might make the contents of "star.json" out of date.
+      // If we already have a cached bundle, just recreate the new targets.
+      // XXX This might make the contents of "star.json" out of date.
       _.each(targets, function (target, name) {
-        writeTargetToPath(name, target, outputPath, options);
+        writeTargetToPath(name, target, outputPath, writeOptions);
         clientWatchSet.merge(target.getWatchSet());
       });
     } else {
