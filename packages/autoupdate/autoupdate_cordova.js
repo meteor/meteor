@@ -51,18 +51,23 @@ Autoupdate._retrySubscription = function () {
             handle.stop();
           }
 
+          console.log("getting a new version");
           var urlPrefix = Meteor.absoluteUrl() + 'cordova';
           HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
+            console.log("FETCHED JSON", JSON.stringify(res.data));
+            try {
             var ft = new FileTransfer();
             _.each(res.data, function (item) {
               var uri = encodeURI(urlPrefix + item.url);
-              ft.download(uri, item.path, function (entry) {
+              ft.download(uri, "cdvfile://localhost/persistent/" + item.url, function (entry) {
                 console.log('success: ', entry);
               }, function (error) {
                 console.log('fail source: ', error.source);
                 console.log('fail target: ', error.target);
               });
             });
+            } catch (err) { console.log("failedFT", err.message); }
+            console.log("Finished fetching");
             //Package.reload.Reload._reload();
           });
         }
