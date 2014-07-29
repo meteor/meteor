@@ -151,3 +151,10 @@ exports.validEmail = function (address) {
 exports.quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
+
+// Allow a simple way to scale up all timeouts from the command line
+var timeoutScaleFactor = 1.0;
+if (process.env.TIMEOUT_SCALE_FACTOR) {
+  timeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
+}
+exports.timeoutScaleFactor = timeoutScaleFactor;
