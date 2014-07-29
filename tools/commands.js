@@ -1663,6 +1663,10 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
   var indexHtml = generateCordovaBoilerplate(wwwPath, options);
   fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
 
+  var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
+  var loaderCode = fs.readFileSync(loaderPath);
+  fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
+
   // XXX get platforms from project file
 //  _.each(platforms, function (platform) {
 //    execFileSync('cordova', ['platform', 'add', platform], { cwd: projectPath });
