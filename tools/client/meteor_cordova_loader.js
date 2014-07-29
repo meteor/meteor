@@ -12,40 +12,45 @@
       iter(array[i], i);
   };
 
-  each(__jsUrlsToLoad, function (js) {
-    console.log('to load: ' + js)
-  });
-
   var ajax = function (url, cb) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState < 4)
-        return;
-
-      if (xhr.status >= 300)
-        cb(xhr.status, null);
-      else
-        cb(null, xhr);
-    };
-    xhr.open('GET', url, true);
-    xhr.send();
+    try {
+      var reader = new FileReader();
+      console.log("reader created");
+      reader.onloadend = function (evt) {
+        console.log("read success");
+        console.log(evt.target.result);
+        cb(null, evt);
+      };
+      reader.error = function (evt) {
+        console.log("error", JSON.stringify(evt));
+      };
+      reader.readAsDataURL(url);
+    } catch (e) {
+      console.log("ERROR READING", e.message);
+    }
   };
 
   // fall-back
   var loadFromApp = function () {
     each(__jsUrlsToLoad, function (url) {
+      var xhrObj =  new XMLHttpRequest();
+      xhrObj.open('GET', url, false);
+      xhrObj.send('');
       var script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = url;
-
-      document.getElementsByTagName('head')[0].appendChild(script);
+      script.text = xhrObj.responseText;
+      try {
+        document.getElementsByTagName('head')[0].appendChild(script);
+      } catch (err) {
+        console.log(err.message);
+      }
     });
   };
 
-  ajax('cdvfile://localhost/persistent/manifest.json', function (err, res) {
-    console.log('ajax manifest', err)
-    if (err) { loadFromApp(); return; }
-    console.log(res.content);
-  });
+  // ajax('cdvfile://localhost/persistent/manifest.json', function (err, res) {
+  //   console.log('ajax manifest', err);
+  //   if (err) { loadFromApp(); return; }
+  //   console.log(res.content);
+  // });
+  loadFromApp();
 })();
 

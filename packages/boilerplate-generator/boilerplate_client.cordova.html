@@ -8,26 +8,30 @@
 
 <script type='text/javascript'>__meteor_runtime_config__ = {{meteorRuntimeConfig}};</script>
 
-{{#if includeCordova}}
   <script type="text/javascript" src="cordova.js"></script>
-  <script type="text/javascript">
-    var __jsUrlsToLoad = [];
+  {{#if includeCordova}}
+    <script type="text/javascript">
+      var __jsUrlsToLoad = [];
+      {{#each js}}
+      __jsUrlsToLoad.push("{{url}}");
+      {{/each}}
+    </script>
+    <script type="text/javascript" src="meteor_cordova_loader.js"></script>
+  {{else}}
     {{#each js}}
-    __jsUrlsToLoad.push("{{url}}");
+      <script type="text/javascript" src="{{url}}"></script>
     {{/each}}
-  </script>
-  <script type="text/javascript" src="meteor_cordova_loader.js"></script>
-{{else}}
-  {{#each js}}
-    <script type="text/javascript" src="{{url}}"></script>
-  {{/each}}
-{{/if}}
+  {{/if}}
 
-{{{head}}}
+
+  {{{head}}}
 </head>
 
 <body>
+
+
   {{{body}}}
+
   <div id="meteor-app-container"></div><div id="meteor-app-container"></div>
 </body>
 </html>

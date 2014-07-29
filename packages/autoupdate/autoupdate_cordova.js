@@ -22,6 +22,32 @@ var retry = new Retry({
 });
 var failures = 0;
 
+var readManifestToDisk = function (manifest) {
+  var ft = new FileTransfer();
+  var downloads = 0;
+  _.each(manifest, function (item) {
+    if (! item.url) return;
+    var uri = encodeURI(urlPrefix + item.url);
+    downloads++;
+    ft.download(uri, "cdvfile://localhost/persistent/" + item.url, function (entry) {
+      downloads--;
+
+      if (! downloads) {
+        // success! downloaded all sources
+        // save the manifest
+        uri = encodeURI(urlPrefix + '/manifest.json');
+        ft.download(uri, "cdvfile://localhost/persistent/manifest.json", function () {
+          console.log('done');
+          Package.reload.Reload._reload();
+        });
+      }
+    }, function (error) {
+      console.log('fail source: ', error.source);
+      console.log('fail target: ', error.target);
+    });
+  });
+};
+
 Autoupdate._retrySubscription = function () {
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
@@ -46,7 +72,7 @@ Autoupdate._retrySubscription = function () {
           }
         });
 
-        function onNewVersion () {
+        var onNewVersion = function () {
           if (handle) {
             handle.stop();
           }
@@ -54,32 +80,32 @@ Autoupdate._retrySubscription = function () {
           var urlPrefix = Meteor.absoluteUrl() + 'cordova';
           HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
             try {
-              var ft = new FileTransfer();
-              var downloads = 0;
-              _.each(res.data, function (item) {
-                if (! item.url) return;
-                var uri = encodeURI(urlPrefix + item.url);
-                downloads++;
-                ft.download(uri, "cdvfile://localhost/persistent/" + item.url, function (entry) {
-                  downloads--;
+              window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFS, fail);
 
-                  if (! downloads) {
-                    // success! downloaded all sources
-                    // save the manifest
-                    uri = encodeURI(urlPrefix + '/manifest.json');
-                    ft.download(uri, "cdvfile://localhost/persistent/manifest.json", function () {
-                      console.log('done');
-                      Package.reload.Reload._reload();
-                    });
-                  }
-                }, function (error) {
-                  console.log('fail source: ', error.source);
-                  console.log('fail target: ', error.target);
-                });
-              });
+              var gotFS = function (fileSystem) {
+                fileSystem.root.getFile("manifest.json",
+                  {create: true, exclusive: false}, gotFileEntry, fail);
+              };
+
+              var gotFileEntry = function  (fileEntry) {
+                fileEntry.createWriter(gotFileWriter, fail);
+              };
+
+              var gotFileWriter = function  (writer) {
+                writer.onwriteend = function(evt) {
+                  console.log("Done writing");
+                  readManifest(res.data);
+                };
+                writer.write(res.data);
+              };
+
+              var fail = function (error) {
+                throw new Error(error);
+              };
+
             } catch (err) { console.log("failedFT", err.message); }
           });
-        }
+        };
       }
     }
   });
