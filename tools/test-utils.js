@@ -12,7 +12,7 @@ var randomString = function (charsCount) {
   return str;
 };
 
-exports.accountsCommandTimeoutSecs = 15;
+exports.accountsCommandTimeoutSecs = 15 * exports.timeoutScaleFactor;
 
 exports.randomString = randomString;
 
