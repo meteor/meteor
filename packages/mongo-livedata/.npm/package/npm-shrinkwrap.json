@@ -4,7 +4,7 @@
       "version": "1.4.1",
       "dependencies": {
         "bson": {
-          "version": "https://github.com/meteor/js-bson/tarball/574c0ee",
+          "version": "0.2.7",
           "dependencies": {
             "nan": {
               "version": "0.8.0"
