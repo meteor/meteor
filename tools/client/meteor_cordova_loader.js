@@ -12,6 +12,10 @@
       iter(array[i], i);
   };
 
+  each(__jsUrlsToLoad, function (js) {
+    console.log('to load: ' + js)
+  });
+
   var ajax = function (url, cb) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
