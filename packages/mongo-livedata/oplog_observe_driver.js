@@ -431,6 +431,14 @@ _.extend(OplogObserveDriver.prototype, {
     // fetch() yields.
     Meteor.defer(finishIfNeedToPollQuery(function () {
       while (!self._stopped && !self._needToFetch.empty()) {
+        if (self._phase === PHASE.QUERYING) {
+          // While fetching, we decided to go into QUERYING mode, and then we
+          // saw another oplog entry, so _needToFetch is not empty. But we
+          // shouldn't fetch these documents until AFTER the query is done.
+          break;
+        }
+
+        // Being in steady phase here would be surprising.
         if (self._phase !== PHASE.FETCHING)
           throw new Error("phase in fetchModifiedDocuments: " + self._phase);
 
@@ -654,6 +662,9 @@ _.extend(OplogObserveDriver.prototype, {
       }
     }
 
+    if (self._stopped)
+      return;
+
     self._publishNewResults(newResults, newBuffer);
   },
 
@@ -789,6 +800,9 @@ _.extend(OplogObserveDriver.prototype, {
   // This stop function is invoked from the onStop of the ObserveMultiplexer, so
   // it shouldn't actually be possible to call it until the multiplexer is
   // ready.
+  //
+  // It's important to check self._stopped after every call in this file that
+  // can yield!
   stop: function () {
     var self = this;
     if (self._stopped)
