@@ -113,7 +113,7 @@ Blaze.DOMMaterializer.def({
     if (Blaze.isTemplate(x))
       x = Blaze.runTemplate(x);
     if (x instanceof Blaze.View) {
-      intoArray.push(Blaze.materializeView(x, this.parentView));
+      intoArray.push(Blaze._materializeView(x, this.parentView));
       return intoArray;
     }
 

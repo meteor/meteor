@@ -157,14 +157,20 @@ Blaze._fireCallbacks = function (view, which) {
   });
 };
 
-Blaze.materializeView = function (view, parentView) {
-  view.parentView = (parentView || null);
-
+Blaze._createView = function (view, parentView, forExpansion) {
   if (view.isCreated)
     throw new Error("Can't render the same View twice");
+
+  view.parentView = (parentView || null);
   view.isCreated = true;
+  if (forExpansion)
+    view.isCreatedForExpansion = true;
 
   Blaze._fireCallbacks(view, 'created');
+};
+
+Blaze._materializeView = function (view, parentView) {
+  Blaze._createView(view, parentView);
 
   var domrange;
 
@@ -253,14 +259,7 @@ Blaze.materializeView = function (view, parentView) {
 // if any changes are made to the view or subviews that might affect
 // the HTML.
 Blaze._expandView = function (view, parentView) {
-  view.parentView = (parentView || null);
-
-  if (view.isCreated)
-    throw new Error("Can't render the same View twice");
-  view.isCreated = true;
-  view.isCreatedForExpansion = true;
-
-  Blaze._fireCallbacks(view, 'created');
+  Blaze._createView(view, parentView, true /*forExpansion*/);
 
   view.isInRender = true;
   var htmljs = Blaze.withCurrentView(view, function () {
@@ -402,7 +401,7 @@ Blaze.render = function (content, parentView) {
       throw new Error("Expected a function, template, or View in Blaze.render");
     view = content;
   }
-  return Blaze.materializeView(view, parentView);
+  return Blaze._materializeView(view, parentView);
 };
 
 Blaze.toHTML = function (htmljs, parentView) {
