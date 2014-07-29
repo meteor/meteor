@@ -22,7 +22,7 @@ var retry = new Retry({
 });
 var failures = 0;
 
-var readManifestToDisk = function (manifest) {
+var writeManifestToDisk = function (manifest, urlPrefix) {
   var ft = new FileTransfer();
   var downloads = 0;
   _.each(manifest, function (item) {
@@ -34,12 +34,7 @@ var readManifestToDisk = function (manifest) {
 
       if (! downloads) {
         // success! downloaded all sources
-        // save the manifest
-        uri = encodeURI(urlPrefix + '/manifest.json');
-        ft.download(uri, "cdvfile://localhost/persistent/manifest.json", function () {
-          console.log('done');
-          Package.reload.Reload._reload();
-        });
+        Package.reload.Reload._reload();
       }
     }, function (error) {
       console.log('fail source: ', error.source);
@@ -61,6 +56,7 @@ Autoupdate._retrySubscription = function () {
       if (Package.reload) {
         var handle = ClientVersions.find().observeChanges({
           added: function (id, fields) {
+            console.log("FOUND A NEW VERSION!2");
             var self = this;
             if (fields.refreshable && id !== autoupdateVersionRefreshable) {
               autoupdateVersionRefreshable = id;
@@ -80,29 +76,12 @@ Autoupdate._retrySubscription = function () {
           var urlPrefix = Meteor.absoluteUrl() + 'cordova';
           HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
             try {
-              window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFS, fail);
-
-              var gotFS = function (fileSystem) {
-                fileSystem.root.getFile("manifest.json",
-                  {create: true, exclusive: false}, gotFileEntry, fail);
-              };
-
-              var gotFileEntry = function  (fileEntry) {
-                fileEntry.createWriter(gotFileWriter, fail);
-              };
-
-              var gotFileWriter = function  (writer) {
-                writer.onwriteend = function(evt) {
-                  console.log("Done writing");
-                  readManifest(res.data);
-                };
-                writer.write(res.data);
-              };
-
-              var fail = function (error) {
-                throw new Error(error);
-              };
-
+              // We also want to save the manifest. For simplicity,
+              // just download it again with the same process.
+              res.data.push({
+                url: '/manifest.json'
+              });
+              writeManifestToDisk(res.data, urlPrefix);
             } catch (err) { console.log("failedFT", err.message); }
           });
         };
