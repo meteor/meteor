@@ -1850,6 +1850,17 @@ Template.api.template_data = {
   descr: ["The data context of this instance's latest invocation."]
 };
 
+Template.api.template_autorun = {
+  id: "template_autorun",
+  name: "<em>this</em>.autorun(runFunc)",
+  locus: "Client",
+  descr: ["A version of [Deps.autorun](#deps_autorun) that is stopped when the template is destroyed."],
+  args: [
+    {name: "runFunc",
+     type: "Function",
+     descr: "The function to run. It receives one argument: a Deps.Computation object."}
+  ]
+};
 
 Template.api.ui_registerhelper = {
   id: "ui_registerhelper",
@@ -1864,6 +1875,22 @@ Template.api.ui_registerhelper = {
     {name: "function",
      type: "Function",
      descr: "The helper function itself."
+    }]
+};
+
+Template.api.ui_dynamic = {
+  id: "ui_dynamic",
+  name: "{{> UI.dynamic template=templateName [data=dataContext]}}",
+  locus: "Client",
+  descr: ["Choose a template to include dynamically, by name."],
+  args: [
+    {name: "templateName",
+     type: "String",
+     descr: "The name of the template to include."
+    },
+    {name: "dataContext",
+     type: "Object",
+     descr: "Optional.  The data context in which to include the template."
     }]
 };
 
