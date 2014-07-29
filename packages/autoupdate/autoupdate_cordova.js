@@ -24,6 +24,7 @@ var failures = 0;
 
 var writeManifestToDisk = function (manifest, urlPrefix) {
   var ft = new FileTransfer();
+  // XXX refactor to use _.after
   var downloads = 0;
   _.each(manifest, function (item) {
     if (! item.url) return;

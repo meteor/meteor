@@ -18,27 +18,26 @@
       iter(array[i], i);
   };
 
+  var addScriptWithText = function (text) {
+    var script = document.createElement('script');
+    script.text = text;
+    document.getElementsByTagName('head')[0].appendChild(script);
+  };
+
   var addScriptFromUrl = function (url) {
     var xhrObj =  new XMLHttpRequest();
     xhrObj.open('GET', url, false);
     xhrObj.send('');
-    var script = document.createElement('script');
-    script.text = xhrObj.responseText;
-    try {
-      document.getElementsByTagName('head')[0].appendChild(script);
-    } catch (err) {
-      LOG(err.message);
-    }
+    addScriptWithText(xhrObj.responseText);
   };
 
   var ajax = function (url, cb) {
-    window.resolveLocalFileSystemURI(url,
+    window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
         function win(file) {
           var reader = new FileReader();
           reader.onloadend = function (evt) {
             var result = evt.target.result;
-            console.log(result);
             cb(null, result);
           };
           reader.readAsText(file);
@@ -61,12 +60,37 @@
   };
 
   document.addEventListener("deviceready", function () {
+    // document.open();
+    // document.write("<html><body>HAHAHAHAHAHA</body></html>");
+    // console.log("MeteorRider replaceDom wrote: []");
+    // document.close();
     ajax('cdvfile://localhost/persistent/manifest.json', function (err, res) {
-      console.log('ajax manifest', err);
-      console.log(res.content);
+      var manifest = JSON.parse(res);
+      console.log("Manifest downloaded");
+      var allJs = {};
+      var downloads = 0;
+      each(manifest, function (item) {
+        if (! item.url)
+          return;
+
+        downloads++;
+        ajax('cdvfile://localhost/persistent' + item.url, function (err, res) {
+          if (err) { console.log("error", err); loadFromApp(); return; }
+          downloads--;
+          allJs[item.url] = res;
+          console.log(downloads);
+          if (! downloads) {
+            console.log("DONE DOWNLOADING");
+            each(manifest, function (item) {
+              console.log("ADDING", item.url);
+              addScriptWithText(allJs[item.url]);
+            });
+          }
+        });
+      });
       if (err) { loadFromApp(); return; }
-      console.log("logged messages", __LOGS);
     });
+    console.log("logged messages", __LOGS);
   }, false);
 
   LOG('loaded');
