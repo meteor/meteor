@@ -156,10 +156,12 @@ _.extend(exports, {
     }
   },
 
-  getLocalPackageCacheFilename: function (serverUrl) {
+  // Note: this is NOT guaranteed to return a distinct prefix for every
+  // conceivable URL.  But it sure ought to return a distinct prefix for every
+  // server we actually use.
+  getPackageServerFilePrefix: function (serverUrl) {
     var self = this;
     if (!serverUrl) serverUrl = self.getPackageServerUrl();
-    var serLen = serverUrl.length;
 
     // Chop off http:// and https:// and trailing slashes.
     serverUrl = serverUrl.replace(/^\https:\/\//, '');
@@ -172,9 +174,27 @@ _.extend(exports, {
     // Replace other weird stuff with X.
     serverUrl = serverUrl.replace(/[^a-zA-Z0-9.:-]/g, 'X');
 
+    return serverUrl;
+  },
+
+  getPackagesDirectoryName: function (serverUrl) {
+    var self = this;
+
+    var prefix = config.getPackageServerFilePrefix();
+    if (prefix !== 'packages') {
+      prefix = path.join('packages-from-server', prefix);
+    }
+
+    return prefix;
+  },
+
+  getLocalPackageCacheFilename: function (serverUrl) {
+    var self = this;
+    var prefix = self.getPackageServerFilePrefix();
+
     // Should look like 'packages.data.json' in the default case
     // (test-packages.data.json before 0.9.0).
-    return serverUrl + ".data.json";
+    return prefix + ".data.json";
   },
 
   getPackageStorage: function() {

@@ -446,7 +446,7 @@ main.registerCommand({
     // directory, though we really shouldn't be, or, if we ever restructure the
     // way that we store packages in the meteor directory, we should be sure to
     // reevaluate what this command actually does.
-    var localPackageDir = path.join(files.getCurrentToolsDir(),"packages");
+    var localPackageDir = path.join(files.getCurrentToolsDir(), "packages");
     var contents = fs.readdirSync(localPackageDir);
     var myPackages = {};
     var toPublish = {};

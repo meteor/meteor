@@ -8,9 +8,6 @@ var fs = require("fs");
 var path = require("path");
 var packageClient = require("../package-client.js");
 
-var testPackagesServer = "https://test-packages.meteor.com";
-process.env.METEOR_PACKAGE_SERVER_URL = testPackagesServer;
-
 var username = "test";
 var password = "testtest";
 
@@ -89,7 +86,7 @@ var checkVersions = function(sand, packages) {
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change packages", function () {
+selftest.define("change packages", ['test-package-server'], function () {
   var s = new Sandbox();
   var run;
 
@@ -183,7 +180,7 @@ selftest.define("change packages", function () {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add packages", ["net"], function () {
+selftest.define("add packages", ["net", "test-package-server"], function () {
   var s = new Sandbox();
   var run;
 
@@ -307,7 +304,7 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync local catalog", ["slow", "online"],  function () {
+selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
   var s = new Sandbox();
   var run;
 
@@ -413,7 +410,8 @@ var createAndPublishPackage = function (s, packageName) {
   s.cd("..");
 };
 
-selftest.define("release track defaults to METEOR-CORE", ["net"], function () {
+selftest.define("release track defaults to METEOR-CORE",
+                ["net", "test-package-server"], function () {
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
@@ -447,7 +445,8 @@ selftest.define("release track defaults to METEOR-CORE", ["net"], function () {
 });
 
 
-selftest.define("update server package data unit test", ["net"], function () {
+selftest.define("update server package data unit test",
+                ["net", "test-package-server"], function () {
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
   var packageStorageFile = path.join(packageStorageFileDir, "data.json");
   var opts = {

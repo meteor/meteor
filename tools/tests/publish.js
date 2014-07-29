@@ -6,10 +6,7 @@ var selftest = require('../selftest.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 
-var testPackagesServer = "https://test-packages.meteor.com";
-process.env.METEOR_PACKAGE_SERVER_URL = testPackagesServer;
-
-selftest.define("publish-and-search", ["slow", "net"], function () {
+selftest.define("publish-and-search", ["slow", "net", "test-package-server"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -72,7 +69,7 @@ selftest.define("publish-and-search", ["slow", "net"], function () {
   run.match(githubUrl);
 });
 
-selftest.define("publish-one-arch", ["slow", "net"], function () {
+selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -110,7 +107,8 @@ selftest.define("publish-one-arch", ["slow", "net"], function () {
 });
 
 
-selftest.define("list-with-a-new-version", ["slow", "net"], function () {
+selftest.define("list-with-a-new-version",
+                ["slow", "net", "test-package-server"], function () {
   var s = new Sandbox;
 
   var username = "test";

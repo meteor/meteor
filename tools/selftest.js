@@ -10,6 +10,7 @@ var archinfo = require('./archinfo.js');
 var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
 var uniload = require('./uniload.js');
+var config = require('./config.js');
 var util = require('util');
 var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
@@ -350,6 +351,14 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
+  // By default, tests use the package server that this meteor binary is built
+  // with. If a test is tagged 'test-package-server', it uses the test
+  // server. Tests that publish packages should have this flag; tests that
+  // assume that the release's packages can be found on the server should not.
+  if (runningTest.tags['test-package-server']) {
+    self.set('METEOR_PACKAGE_SERVER_URL', 'https://test-packages.meteor.com');
+  }
+
   if (_.has(options, 'warehouse')) {
     if (!files.inCheckout())
       throw Error("make only use a fake warehouse in a checkout");
@@ -581,9 +590,11 @@ _.extend(Sandbox.prototype, {
   // the default, if we do not pass this in; you should pass it in any case that
   // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
   // command you are running in this sandbox.
-  _makeWarehouse: function (releases, packageServerUrl) {
+  _makeWarehouse: function (releases) {
     var self = this;
-    files.mkdir_p(path.join(self.warehouse, 'packages'), 0755);
+    var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
+    var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
+    files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
 
     var stubCatalog = {
@@ -608,11 +619,11 @@ _.extend(Sandbox.prototype, {
     var toolPackageDirectory =
           '.' + toolPackage.version + '.XXX++'
           + toolPackage.buildArchitectures();
-    toolPackage.saveToPath(path.join(self.warehouse, 'packages',
+    toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
                                      toolPackageName, toolPackageDirectory));
     fs.symlinkSync(toolPackageDirectory,
-                   path.join(self.warehouse, 'packages', toolPackageName,
-                             toolPackage.version));
+                   path.join(self.warehouse, packagesDirectoryName,
+                             toolPackageName, toolPackage.version));
     stubCatalog.collections.packages.push({
       name: toolPackageName,
       _id: utils.randomToken()
@@ -642,14 +653,14 @@ _.extend(Sandbox.prototype, {
     });
 
     // Now create each requested release.
-    _.each(releases, function (config, releaseName) {
+    _.each(releases, function (configuration, releaseName) {
       // Release info
       stubCatalog.collections.releaseVersions.push({
         track: catalog.complete.DEFAULT_TRACK,
         version: releaseName,
         orderKey: releaseName,
         description: "test release " + releaseName,
-        recommended: !!config.recommended,
+        recommended: !!configuration.recommended,
         // XXX support multiple tools packages for springboard tests
         tool: toolPackageName + "@" + toolPackage.version,
         packages: {}
@@ -715,14 +726,14 @@ _.extend(Sandbox.prototype, {
     });
     catalog.official.offline = oldOffline;
 
-    var config = require("./config.js");
-    var dataFile = config. getLocalPackageCacheFilename(packageServerUrl);
+    var dataFile = config.getLocalPackageCacheFilename(serverUrl);
     fs.writeFileSync(
       path.join(self.warehouse, 'package-metadata', 'v1', dataFile),
       JSON.stringify(stubCatalog, null, 2));
 
     // And a cherry on top
-    fs.symlinkSync(path.join('packages', toolPackageName, toolPackage.version,
+    fs.symlinkSync(path.join(packagesDirectoryName,
+                             toolPackageName, toolPackage.version,
                              'meteor-tool-' + archinfo.host(), 'meteor'),
                    path.join(self.warehouse, 'meteor'));
   }

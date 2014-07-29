@@ -12,6 +12,7 @@ var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
 var Unipackage = require('./unipackage.js').Unipackage;
+var config = require('./config.js');
 
 exports.Tropohouse = function (root, catalog) {
   var self = this;
@@ -53,7 +54,8 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
-    var relativePath = path.join("packages", packageName, version);
+    var relativePath = path.join(config.getPackagesDirectoryName(),
+                                 packageName, version);
     return relative ? relativePath : path.join(self.root, relativePath);
   },
 
