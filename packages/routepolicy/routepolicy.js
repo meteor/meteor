@@ -65,7 +65,7 @@ _.extend(RoutePolicyConstructor.prototype, {
       return null;
     if (!Package.webapp || !Package.webapp.WebApp
         || !Package.webapp.WebApp.clientPrograms
-        || !Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch]) {
+        || !Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest) {
       // Hack: If we don't have a manifest, deal with it
       // gracefully. This lets us load livedata into a nodejs
       // environment that doesn't have a HTTP server (eg, a
@@ -73,7 +73,7 @@ _.extend(RoutePolicyConstructor.prototype, {
       return null;
     }
     var manifest = _testManifest ||
-      Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch];
+      Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest;
     var conflict = _.find(manifest, function (resource) {
       return (resource.type === 'static' &&
               resource.where === 'client' &&

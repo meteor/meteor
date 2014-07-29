@@ -10,13 +10,13 @@
 
   <script type="text/javascript" src="cordova.js"></script>
   {{#if includeCordova}}
-    <script type="text/javascript">
+    <script class="__meteor_dynamic__" type="text/javascript">
       var __jsUrlsToLoad = [];
       {{#each js}}
       __jsUrlsToLoad.push("{{url}}");
       {{/each}}
     </script>
-    <script type="text/javascript" src="meteor_cordova_loader.js"></script>
+    <script class="__meteor_dynamic__" type="text/javascript" src="meteor_cordova_loader.js"></script>
   {{else}}
     {{#each js}}
       <script type="text/javascript" src="{{url}}"></script>

@@ -22,11 +22,11 @@ var retry = new Retry({
 });
 var failures = 0;
 
-var writeManifestToDisk = function (manifest, urlPrefix) {
+var writeProgramToDisk = function (program, urlPrefix) {
   var ft = new FileTransfer();
   // XXX refactor to use _.after
   var downloads = 0;
-  _.each(manifest, function (item) {
+  _.each(program.manifest, function (item) {
     if (! item.url) return;
     var uri = encodeURI(urlPrefix + item.url);
     downloads++;
@@ -34,13 +34,32 @@ var writeManifestToDisk = function (manifest, urlPrefix) {
       downloads--;
 
       if (! downloads) {
+        // location.reload();
         // success! downloaded all sources
-        Package.reload.Reload._reload();
+        // Package.reload.Reload._reload();
       }
     }, function (error) {
       console.log('fail source: ', error.source);
       console.log('fail target: ', error.target);
     });
+  });
+};
+
+var onNewVersion = function (handle) {
+  if (handle) {
+    handle.stop();
+  }
+
+  var urlPrefix = Meteor.absoluteUrl() + 'cordova';
+  HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
+    try {
+      // We also want to save the manifest. For simplicity,
+      // just download it again with the same process.
+      res.data.manifest.push({
+        url: '/manifest.json'
+      });
+      writeProgramToDisk(res.data, urlPrefix);
+    } catch (err) { console.log("failedFT", err.message); }
   });
 };
 
@@ -57,38 +76,24 @@ Autoupdate._retrySubscription = function () {
       if (Package.reload) {
         var handle = ClientVersions.find().observeChanges({
           added: function (id, fields) {
-            console.log("FOUND A NEW VERSION!2");
             var self = this;
+            console.log("IDENTIFIER", id);
             if (fields.refreshable && id !== autoupdateVersionRefreshable) {
               autoupdateVersionRefreshable = id;
-              onNewVersion();
+              onNewVersion(handle);
             } else if (! fields.refreshable && id !== autoupdateVersion) {
               autoupdateVersion = id;
-              onNewVersion();
+              onNewVersion(handle);
             }
           }
         });
-
-        var onNewVersion = function () {
-          if (handle) {
-            handle.stop();
-          }
-
-          var urlPrefix = Meteor.absoluteUrl() + 'cordova';
-          HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
-            try {
-              // We also want to save the manifest. For simplicity,
-              // just download it again with the same process.
-              res.data.push({
-                url: '/manifest.json'
-              });
-              writeManifestToDisk(res.data, urlPrefix);
-            } catch (err) { console.log("failedFT", err.message); }
-          });
-        };
       }
     }
   });
 };
-Autoupdate._retrySubscription();
+
+
+document.addEventListener("deviceready", function () {
+  Autoupdate._retrySubscription();
+});
 

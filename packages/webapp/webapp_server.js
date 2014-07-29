@@ -175,14 +175,13 @@ var appUrl = function (url) {
 // (but the second is a performance enhancement, not a hard
 // requirement).
 
-var calculateClientHash = function (archName, includeFilter) {
-  archName = archName || WebApp.defaultArch;
+var calculateClientHash = function (manifest, includeFilter) {
   var hash = crypto.createHash('sha1');
   // Omit the old hashed client values in the new hash. These may be
   // modified in the new boilerplate.
   hash.update(JSON.stringify(_.omit(__meteor_runtime_config__,
                ['autoupdateVersion', 'autoupdateVersionRefreshable']), 'utf8'));
-  _.each(WebApp.clientPrograms[archName], function (resource) {
+  _.each(manifest, function (resource) {
       if ((! includeFilter || includeFilter(resource.type)) &&
           (resource.where === 'client' || resource.where === 'internal')) {
       hash.update(resource.path);
@@ -211,16 +210,24 @@ var calculateClientHash = function (archName, includeFilter) {
 // the right moment.
 
 Meteor.startup(function () {
-  WebApp.clientHash = calculateClientHash();
+  WebApp.clientHash = function (archName) {
+    archName = archName || WebApp.defaultArch;
+    return calculateClientHash(WebApp.clientPrograms[archName].manifest);
+  };
+
   WebApp.calculateClientHashRefreshable = function (archName) {
-    return calculateClientHash(archName, function (name) {
-      return name === "css";
-    });
+    archName = archName || WebApp.defaultArch;
+    return calculateClientHash(WebApp.clientPrograms[archName].manifest,
+      function (name) {
+        return name === "css";
+      });
   };
   WebApp.calculateClientHashNonRefreshable = function (archName) {
-    return calculateClientHash(archName, function (name) {
-      return name !== "css";
-    });
+    archName = archName || WebApp.defaultArch;
+    return calculateClientHash(WebApp.clientPrograms[archName].manifest,
+      function (name) {
+        return name !== "css";
+      });
   };
 });
 
@@ -466,7 +473,11 @@ var runWebAppServer = function () {
       try {
         _.each(__meteor_bootstrap__.configJson.clientPaths, function (clientPath, arch) {
           archPath[arch] = path.dirname(clientPath);
-          WebApp.clientPrograms[arch] = getClientManifest(clientPath, arch);
+          var manifest = getClientManifest(clientPath, arch);
+          WebApp.clientPrograms[arch] = {
+            manifest: manifest,
+            version: calculateClientHash(manifest)
+          };
         });
 
         // Exported for tests.
@@ -480,9 +491,9 @@ var runWebAppServer = function () {
 
   WebAppInternals.generateBoilerplate = function () {
     syncQueue.runTask(function() {
-      _.each(WebApp.clientPrograms, function (manifest, archName) {
+      _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
-          new Boilerplate(archName, WebApp.clientPrograms[archName], {
+          new Boilerplate(archName, program.manifest, {
             urlMapper:
               function (url) { return getUrlPrefixForArch(archName) + url; },
             pathMapper: function (itemPath) {
