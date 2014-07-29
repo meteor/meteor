@@ -2,6 +2,7 @@ canonicalizeHtml = function(html) {
   var h = html;
   // kill IE-specific comments inserted by DomRange
   h = h.replace(/<!--IE-->/g, '');
+  h = h.replace(/<!---->/g, '');
   // ignore exact text of comments
   h = h.replace(/<!--.*?-->/g, '<!---->');
   // make all tags lowercase

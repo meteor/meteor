@@ -11,7 +11,6 @@ var registeredServices = {};
 // Internal: Maps from service version to handler function. The
 // 'oauth1' and 'oauth2' packages manipulate this directly to register
 // for callbacks.
-//
 OAuth._requestHandlers = {};
 
 
