@@ -5,13 +5,7 @@
  * added to the page.
  * Otherwise a normal app code is loaded (shipped with the app initially).
  */
-(function () {
-  var __LOGS = [];
-  var LOG = function (msg) {
-    __LOGS.push(msg);
-  };
-
-
+window.onload = function () {
   var each = function (array, iter) {
     array = array || [];
     for (var i = 0; i < array.length; i++)
@@ -31,25 +25,44 @@
     addScriptWithText(xhrObj.responseText);
   };
 
+  // XXX refactor to share code with writeText
   var ajax = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
-        function win(file) {
+        var success = function (file) {
           var reader = new FileReader();
           reader.onloadend = function (evt) {
             var result = evt.target.result;
             cb(null, result);
           };
+          reader.onerror = function (evt) {
+
+            cb(new Error("Failed to load entry"), null);
+          };
           reader.readAsText(file);
-        }
-        var fail = function (evt) {
-          cb(new Error("Failed to load entry", evt));
         };
-        fileEntry.file(win, fail);
+        var fail = function (evt) {
+          cb(new Error("Failed to load entry"), null);
+        };
+        fileEntry.file(success, fail);
       },
       // error callback
-      function (err) { throw err; }
+      function (err) { cb(new Error("Failed to load entry"), null); }
     );
+  };
+
+  var writeText = function (name, text, cb) {
+    window.requestFileSystem(window.LocalFileSystem.PERSISTENT, 0, function(fileSystem) {
+    fileSystem.root.getFile(name,
+      {create: true }, function (fileEntry) {
+        fileEntry.createWriter(function (writer) {
+          writer.onwriteend = function (evt) { cb(null, evt.target.result); };
+          writer.onerror = function (evt) { cb(evt, null); };
+          writer.write(text);
+          writer.abort();
+        }, function (e) { cb(e, null); });
+      }, function (e) { cb(e, null); });
+    }, function (e) { cb(e, null); });
   };
 
   // fall-back
@@ -59,41 +72,66 @@
     });
   };
 
-  document.addEventListener("deviceready", function () {
-    // document.open();
-    // document.write("<html><body>HAHAHAHAHAHA</body></html>");
-    // console.log("MeteorRider replaceDom wrote: []");
-    // document.close();
+  var loadFromManifest = function () {
     ajax('cdvfile://localhost/persistent/manifest.json', function (err, res) {
+      if (err) {
+          console.log("error", err);
+        loadFromApp();
+        return;
+      }
+
       var manifest = JSON.parse(res);
-      console.log("Manifest downloaded");
       var allJs = {};
       var downloads = 0;
+
       each(manifest, function (item) {
         if (! item.url)
           return;
 
         downloads++;
         ajax('cdvfile://localhost/persistent' + item.url, function (err, res) {
-          if (err) { console.log("error", err); loadFromApp(); return; }
+          if (err) {
+            console.log("error", err);
+            loadFromApp();
+            return;
+          }
           downloads--;
           allJs[item.url] = res;
-          console.log(downloads);
           if (! downloads) {
-            console.log("DONE DOWNLOADING");
+            console.log('DONE DOWNLOADING');
             each(manifest, function (item) {
-              console.log("ADDING", item.url);
+              if (! item.url || item.type !== 'js') {
+                return;
+              }
               addScriptWithText(allJs[item.url]);
             });
+            console.log('BEFORE');
+
+            var newHtml = document.getElementsByTagName('html')[0].innerHTML;
+            newHtml = '<html>' + newHtml + '</html>';
+
+            writeText('new.html', newHtml, function (err, res) {
+              if (err) {
+                console.log('Error writing file', JSON.stringify(err));
+                loadFromApp();
+                return;
+              }
+              // location.reload();
+            });
+            console.log('after');
           }
         });
       });
-      if (err) { loadFromApp(); return; }
     });
-    console.log("logged messages", __LOGS);
+  };
+  document.addEventListener("deviceready", function () {
+    ajax('cdvfile://localhost/persistent/new.html', function (err, res) {
+      if (err) {
+        loadFromManifest();
+      }
+      document.open();
+      document.write(res);
+      document.close();
+    });
   }, false);
-
-  LOG('loaded');
-  loadFromApp();
-})();
-
+};
