@@ -1386,8 +1386,7 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
   function (test, expect) {
     var self = this;
     var justId = function (doc) {
-      delete doc._id;
-      return doc;
+      return _.omit(doc, '_id');
     };
     TRANSFORMS["justId"] = justId;
     var collectionOptions = {
@@ -1395,6 +1394,10 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
       transform: justId,
       transformName: "justId"
     };
+    // Don't pass the transform function - it seems to break Safari 4
+    if (Meteor.isClient) {
+      delete collectionOptions['transform'];
+    }
     this.collectionName = Random.id();
     if (Meteor.isClient) {
       Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
