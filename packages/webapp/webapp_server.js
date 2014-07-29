@@ -12,6 +12,7 @@ var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
 var Future = Npm.require('fibers/future');
+var Fiber = Npm.require('fibers');
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -20,6 +21,12 @@ WebApp = {};
 WebAppInternals = {};
 
 WebApp.defaultArch = 'client.browser';
+
+// XXX maps archs to manifests
+WebApp.clientPrograms = {};
+
+// XXX maps archs to program path on filesystem
+var archPath = {};
 
 var bundledJsCssPrefix;
 
@@ -278,10 +285,37 @@ var getBoilerplate = _.memoize(function (request, arch) {
   });
 });
 
+var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
+  return new Boilerplate(arch, manifest,
+    _.extend({
+      urlMapper:
+        function (url) { return getUrlPrefixForArch(arch) + url; },
+      pathMapper: function (itemPath) {
+        return path.join(archPath[arch], itemPath); },
+      baseDataExtension: {
+        additionalStaticJs: _.map(
+          additionalStaticJs || [],
+          function (contents, pathname) {
+            return {
+              pathname: pathname,
+              contents: contents
+            };
+          }
+        ),
+        meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
+        rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+        bundledJsCssPrefix: bundledJsCssPrefix ||
+          __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+        inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
+      }
+    }, additionalOptions)
+  );
+};
+
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
-   if ('GET' != req.method && 'HEAD' != req.method) {
+  if ('GET' != req.method && 'HEAD' != req.method) {
     next();
     return;
   }
@@ -294,12 +328,21 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 
   // XXX think of a better name
-  if (pathname === "/cordova/manifest.json") {
+  if (pathname === "/cordova/__cordova_program__.html") {
+    var cordovaArch = "client.cordova";
+    var program = WebApp.clientPrograms[cordovaArch];
+    if (! program.inlineManifest) {
+      program.inlineManifest =
+        generateBoilerplateInstance(cordovaArch, program.manifest, {
+          inline: true
+        }).toHTML().replace(/<html>|<\/html>/g, '');
+    }
     res.writeHead(200, {
-      'Content-type': 'application/json; charset=UTF-8',
+      'Content-type': 'text/html; charset=UTF-8',
       'Access-Control-Allow-Origin': '*'
     });
-    res.write(JSON.stringify(WebApp.clientPrograms['client.cordova']));
+    // Only send the inlineManifest
+    res.write(WebApp.clientPrograms[cordovaArch].inlineManifest);
     res.end();
     return;
   }
@@ -417,24 +460,16 @@ var runWebAppServer = function () {
   };
 
   var staticFiles;
-  // XXX maps archs to manifests
-  WebApp.clientPrograms = {};
-  // XXX maps archs to program path on filesystem
-  var archPath = {};
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
       staticFiles = {};
       var getClientManifest = function (clientPath, arch) {
-        var clientJsonPath;
-        var clientDir;
-        var clientJson;
-
         // read the control for the client we'll be serving up
-        clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
+        var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                    clientPath);
-        clientDir = path.dirname(clientJsonPath);
-        clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
+        var clientDir = path.dirname(clientJsonPath);
+        var clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
         if (clientJson.format !== "client-program-pre1")
           throw new Error("Unsupported format for client assets: " +
                           JSON.stringify(clientJson.format));
@@ -493,28 +528,7 @@ var runWebAppServer = function () {
     syncQueue.runTask(function() {
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
-          new Boilerplate(archName, program.manifest, {
-            urlMapper:
-              function (url) { return getUrlPrefixForArch(archName) + url; },
-            pathMapper: function (itemPath) {
-              return path.join(archPath[archName], itemPath); },
-            baseDataExtension: {
-              additionalStaticJs: _.map(
-                additionalStaticJs || [],
-                function (contents, pathname) {
-                  return {
-                    pathname: pathname,
-                    contents: contents
-                  };
-                }
-              ),
-              meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
-              rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-              bundledJsCssPrefix: bundledJsCssPrefix ||
-                __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-              inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
-            }
-          });
+          generateBoilerplateInstance(archName, program.manifest);
       });
 
       // Configure CSS injection for the default arch
@@ -568,7 +582,9 @@ var runWebAppServer = function () {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    return WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
+    Fiber(function () {
+     WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
+    }).run();
   });
 
   // Packages and apps can add handlers to this via WebApp.connectHandlers.

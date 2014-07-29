@@ -16,52 +16,28 @@ Autoupdate.newClientAvailable = function () {
   );
 };
 
+var onNewVersion = function (handle) {
+  handle && handle.stop();
+
+  var ft = new FileTransfer();
+  var uri = encodeURI(Meteor.absoluteUrl() + 'cordova' +
+                      '/__cordova_program__.html');
+
+  ft.download(uri, 'cdvfile://localhost/persistent/__cordova_program__.html',
+    function (entry) {
+      // XXX doesn't preserve session -- use reload package
+      location.reload();
+    }, function (error) {
+      console.log('fail source: ', error.source);
+      console.log('fail target: ', error.target);
+  });
+};
+
 var retry = new Retry({
   minCount: 0, // don't do any immediate retries
   baseTimeout: 30*1000 // start with 30s
 });
 var failures = 0;
-
-var writeProgramToDisk = function (program, urlPrefix) {
-  var ft = new FileTransfer();
-  // XXX refactor to use _.after
-  var downloads = 0;
-  _.each(program.manifest, function (item) {
-    if (! item.url) return;
-    var uri = encodeURI(urlPrefix + item.url);
-    downloads++;
-    ft.download(uri, "cdvfile://localhost/persistent/" + item.url, function (entry) {
-      downloads--;
-
-      if (! downloads) {
-        // location.reload();
-        // success! downloaded all sources
-        // Package.reload.Reload._reload();
-      }
-    }, function (error) {
-      console.log('fail source: ', error.source);
-      console.log('fail target: ', error.target);
-    });
-  });
-};
-
-var onNewVersion = function (handle) {
-  if (handle) {
-    handle.stop();
-  }
-
-  var urlPrefix = Meteor.absoluteUrl() + 'cordova';
-  HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
-    try {
-      // We also want to save the manifest. For simplicity,
-      // just download it again with the same process.
-      res.data.manifest.push({
-        url: '/manifest.json'
-      });
-      writeProgramToDisk(res.data, urlPrefix);
-    } catch (err) { console.log("failedFT", err.message); }
-  });
-};
 
 Autoupdate._retrySubscription = function () {
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
@@ -77,7 +53,8 @@ Autoupdate._retrySubscription = function () {
         var handle = ClientVersions.find().observeChanges({
           added: function (id, fields) {
             var self = this;
-            console.log("IDENTIFIER", id);
+            // XXX maybe a race condition? We shouldn't start looking for
+            // updates until we run meteor_cordova_loader.
             if (fields.refreshable && id !== autoupdateVersionRefreshable) {
               autoupdateVersionRefreshable = id;
               onNewVersion(handle);

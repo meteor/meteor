@@ -1,5 +1,11 @@
-var fs = Npm.require("fs");
+var fs = Npm.require('fs');
 var Future = Npm.require('fibers/future');
+var path = Npm.require('path');
+
+// Copied from webapp_server
+var readUtf8FileSync = function (filename) {
+  return Future.wrap(fs.readFile)(filename, 'utf8').wait();
+};
 
 Boilerplate = function (arch, manifest, options) {
   var self = this;
@@ -52,11 +58,19 @@ Boilerplate.prototype._generateBoilerplateFromManifestAndSource =
 
     _.each(manifest, function (item) {
       var urlPath = urlMapper(item.url);
+      var itemObj = { url: urlPath };
+
+      if (options.inline) {
+        itemObj.scriptContent = readUtf8FileSync(
+          pathMapper(item.path));
+        itemObj.inline = true;
+      }
+
       if (item.type === 'css' && item.where === 'client') {
-        boilerplateBaseData.css.push({url: urlPath});
+        boilerplateBaseData.css.push(itemObj);
       }
       if (item.type === 'js' && item.where === 'client') {
-        boilerplateBaseData.js.push({url: urlPath});
+        boilerplateBaseData.js.push(itemObj);
       }
       if (item.type === 'head') {
         boilerplateBaseData.head =
@@ -83,9 +97,5 @@ var _getTemplate = _.memoize(function (arch) {
   var filename = 'boilerplate_' + arch + '.html';
   return Assets.getText(filename);
 });
-
-var readUtf8FileSync = function (filename) {
-  return Future.wrap(fs.readFile)(filename, 'utf8').wait();
-};
 
 
