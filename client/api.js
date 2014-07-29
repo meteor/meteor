@@ -1845,6 +1845,17 @@ Template.api.template_data = {
   descr: ["The data context of this instance's latest invocation."]
 };
 
+Template.api.template_autorun = {
+  id: "template_autorun",
+  name: "<em>this</em>.autorun(runFunc)",
+  locus: "Client",
+  descr: ["A version of [Deps.autorun](#deps_autorun) that is stopped when the template is destroyed."],
+  args: [
+    {name: "runFunc",
+     type: "Function",
+     descr: "The function to run. It receives one argument: a Deps.Computation object."}
+  ]
+};
 
 Template.api.ui_registerhelper = {
   id: "ui_registerhelper",
@@ -1862,11 +1873,27 @@ Template.api.ui_registerhelper = {
     }]
 };
 
+Template.api.ui_dynamic = {
+  id: "ui_dynamic",
+  name: "{{> UI.dynamic template=templateName [data=dataContext]}}",
+  locus: "Client",
+  descr: ["Choose a template to include dynamically, by name."],
+  args: [
+    {name: "templateName",
+     type: "String",
+     descr: "The name of the template to include."
+    },
+    {name: "dataContext",
+     type: "Object",
+     descr: "Optional.  The data context in which to include the template."
+    }]
+};
+
 Template.api.ui_body = {
   id: "ui_body",
   name: "UI.body",
   locus: "Client",
-  descr: ["The [component object](#templates_api) representing your `<body>` tag."]
+  descr: ["The [template object](#templates_api) representing your `<body>` tag."]
 };
 
 Template.api.ui_render = {
@@ -1899,12 +1926,12 @@ Template.api.ui_renderwithdata = {
 
 Template.api.ui_insert = {
   id: "ui_insert",
-  name: "UI.insert(instantiatedComponent, parentNode[, nextNode])",
+  name: "UI.insert(renderedTemplate, parentNode[, nextNode])",
   locus: "Client",
-  descr: ["Inserts an instantiated component into the DOM and calls its [`rendered`](#template_rendered) callback."],
+  descr: ["Inserts a rendered template into the DOM and calls its [`rendered`](#template_rendered) callback."],
   args: [
-    {name: "instantiatedComponent",
-     type: "Instantiated component object",
+    {name: "renderedTemplate",
+     type: "Rendered template object",
      descr: "The return value from `UI.render` or `UI.renderWithData`."
     },
     {name: "parentNode",
@@ -1915,6 +1942,19 @@ Template.api.ui_insert = {
      type: "DOM Node",
      descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child."
     }]
+};
+
+Template.api.ui_remove = {
+  id: "ui_remove",
+  name: "UI.remove(renderedTemplate)",
+  locus: "Client",
+  descr: ["Removes a rendered template from the DOM and destroys it, calling the [`destroyed`](#template_destroyed) callback and stopping the logic that reactively updates the template."],
+  args: [
+    {name: "renderedTemplate",
+     type: "Rendered template object",
+     descr: "The return value from `UI.render` or `UI.renderWithData`."
+    }
+  ]
 };
 
 Template.api.ui_getelementdata = {
