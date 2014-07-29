@@ -2,6 +2,7 @@ canonicalizeHtml = function(html) {
   var h = html;
   // kill IE-specific comments inserted by DomRange
   h = h.replace(/<!--IE-->/g, '');
+  h = h.replace(/<!---->/g, '');
   // ignore exact text of comments
   h = h.replace(/<!--.*?-->/g, '<!---->');
   // make all tags lowercase
@@ -21,9 +22,11 @@ canonicalizeHtml = function(html) {
     attrs = attrs.replace(/sizcache[0-9]+="[^"]*"/g, ' ');
     // Similarly for expando properties used by jQuery to track data.
     attrs = attrs.replace(/jQuery[0-9]+="[0-9]+"/g, ' ');
-    // Similarly for expando properties used to DomBackend to keep
+    // Similarly for expando properties used to DOMBackend to keep
     // track of callbacks to fire when an element is removed
-    attrs = attrs.replace(/\$meteor_ui_removal_callbacks="[^"]*"/g, ' ');
+    attrs = attrs.replace(/\$blaze_teardown_callbacks="[^"]*"/g, ' ');
+    // And by DOMRange to keep track of the element's DOMRange
+    attrs = attrs.replace(/\$blaze_range="[^"]*"/g, ' ');
 
     attrs = attrs.replace(/\s*=\s*/g, '=');
     attrs = attrs.replace(/^\s+/g, '');

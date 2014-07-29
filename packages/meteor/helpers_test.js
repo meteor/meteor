@@ -74,4 +74,29 @@ Tinytest.add("environment - helpers", function (test) {
   x = {a: 12};
   Meteor._delete(x, "a");
   test.equal(x, {});
+
+  /*** inherits ***/
+  var Parent = function () {};
+  Parent.parentStaticProp = true;
+  Parent.prototype.parentProp = true;
+
+  var Child = function () {};
+  Meteor._inherits(Child, Parent);
+
+  Child.prototype.childProp = true;
+
+  test.isTrue(Child.parentStaticProp, 'copy parent static props');
+  test.equal(Child.__super__, Parent.prototype, '__super__ is set');
+
+  var c = new Child;
+  test.isTrue(c.parentProp, 'prototype chain hooked up correctly');
+});
+
+Tinytest.add("environment - startup", function (test) {
+  // After startup, Meteor.startup should call the callback immediately.
+  var called = false;
+  Meteor.startup(function () {
+    called = true;
+  });
+  test.isTrue(called);
 });

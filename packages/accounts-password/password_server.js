@@ -371,7 +371,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     "services.password.reset": tokenRecord
   }});
   // before passing to template, update user object with new token
-  user.services.password.reset = tokenRecord;
+  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
   var resetPasswordUrl = Accounts.urls.resetPassword(token);
 
@@ -423,8 +423,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   }});
 
   // before passing to template, update user object with new token
-  Meteor._ensure(user, "services", "password");
-  user.services.password.reset = tokenRecord;
+  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
   var enrollAccountUrl = Accounts.urls.enrollAccount(token);
 
@@ -550,8 +549,8 @@ Accounts.sendVerificationEmail = function (userId, address) {
     {$push: {'services.email.verificationTokens': tokenRecord}});
 
   // before passing to template, update user object with new token
-  Meteor._ensure(user, "services", "email");
-  if (! user.services.email.verificationTokens) {
+  Meteor._ensure(user, 'services', 'email');
+  if (!user.services.email.verificationTokens) {
     user.services.email.verificationTokens = [];
   }
   user.services.email.verificationTokens.push(tokenRecord);

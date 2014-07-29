@@ -526,16 +526,18 @@ if (Meteor.isClient) {
   ]);
 
   testAsyncMulti("livedata - publisher errors", (function () {
-    // Use a separate connection so that we can safely check to see if
-    // conn._subscriptions is empty.
-    var conn = new LivedataTest.Connection('/',
-                                            {reloadWithOutstanding: true});
-    var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {connection: conn});
+    var conn, collName, coll;
     var errorFromRerun;
     var gotErrorFromStopper = false;
     return [
       function (test, expect) {
+        // Use a separate connection so that we can safely check to see if
+        // conn._subscriptions is empty.
+        conn = new LivedataTest.Connection('/',
+                                           {reloadWithOutstanding: true});
+        collName = Random.id();
+        coll = new Meteor.Collection(collName, {connection: conn});
+
         var testSubError = function (options) {
           conn.subscribe("publisherErrors", collName, options, {
             onReady: expect(),

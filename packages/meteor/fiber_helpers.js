@@ -123,7 +123,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
       return;
 
     self._runningOrRunScheduled = true;
-    process.nextTick(function () {
+    setImmediate(function () {
       Fiber(function () {
         self._run();
       }).run();

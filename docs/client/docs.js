@@ -253,7 +253,8 @@ var toc = [
         {instance: "this", name: "find", id: "template_find"},
         {instance: "this", name: "firstNode", id: "template_firstNode"},
         {instance: "this", name: "lastNode", id: "template_lastNode"},
-        {instance: "this", name: "data", id: "template_data"}
+        {instance: "this", name: "data", id: "template_data"},
+        {instance: "this", name: "autorun", id: "template_autorun"}
       ],
       "UI", [
         "UI.registerHelper",
@@ -261,7 +262,9 @@ var toc = [
         "UI.render",
         "UI.renderWithData",
         "UI.insert",
-        "UI.getElementData"
+        "UI.remove",
+        "UI.getElementData",
+        {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
       ],
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}

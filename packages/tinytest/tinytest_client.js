@@ -20,6 +20,8 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
     maybeDone();
   }, pathPrefix);
 
+  var handle;
+
   Meteor.connection.registerStore(Meteor._ServerTestResultsCollection, {
     update: function (msg) {
       // We only should call _runTestsEverywhere once per client-page-load, so
@@ -28,25 +30,33 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix) {
         return;
       // This will only work for added & changed messages.
       // hope that is all you get.
-      _.each(msg.fields, function (report) {
+      _.each(msg.fields, function (report, key) {
+        // Skip the 'complete' report (deal with it last)
+        if (key === 'complete') {
+          return;
+        }
         _.each(report.events, function (event) {
           delete event.cookie; // can't debug a server test on the client..
         });
         report.server = true;
         onReport(report);
       });
+      // Now that we've processed all the other messages,
+      // check if we have the 'complete' message
+      if (msg.fields && _.has(msg.fields, 'complete')) {
+        remoteComplete = true;
+        handle.stop();
+        Meteor.call('tinytest/clearResults', runId);
+        maybeDone();
+      }
     }
   });
 
-  var handle = Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);
+  handle = Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);
 
   Meteor.call('tinytest/run', runId, pathPrefix, function (error, result) {
     if (error)
       // XXX better report error
       throw new Error("Test server returned an error");
-    remoteComplete = true;
-    handle.stop();
-    Meteor.call('tinytest/clearResults', runId);
-    maybeDone();
   });
 };

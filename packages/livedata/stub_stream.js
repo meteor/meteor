@@ -52,7 +52,9 @@ _.extend(StubStream.prototype, {
     _.each(self.callbacks['reset'], function (cb) {
       cb();
     });
-  }
+  },
 
-
+  // Provide a tag to detect stub streams.
+  // We don't log heartbeat failures on stub streams, for example.
+  _isStub: true
 });

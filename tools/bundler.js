@@ -1141,24 +1141,34 @@ _.extend(JsImage.prototype, {
       if (! item.targetPath)
         throw new Error("No targetPath?");
 
-      var loadPath = builder.writeToGeneratedFilename(
-        item.targetPath,
-        { data: new Buffer(item.source, 'utf8') });
       var loadItem = {
-        path: loadPath,
         node_modules: item.nodeModulesDirectory ?
           item.nodeModulesDirectory.preferredBundlePath : undefined
       };
 
       if (item.sourceMap) {
+        // Reference the source map in the source. Looked up later by
+        // node-inspector.
+        var sourceMapBaseName = item.targetPath + ".map";
+
         // Write the source map.
-        // XXX this code is very similar to saveAsUnipackage.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
-          item.targetPath + '.map',
+          sourceMapBaseName,
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
+
+        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        // Remove any existing sourceMappingURL line. (eg, if roundtripping
+        // through JsImage.readFromDisk, don't end up with two!)
+        item.source = item.source.replace(
+            /\n\/\/# sourceMappingURL=.+\n?$/, '');
+        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
+
+      loadItem.path = builder.writeToGeneratedFilename(
+        item.targetPath,
+        { data: new Buffer(item.source, 'utf8') });
 
       if (!_.isEmpty(item.assets)) {
         // For package code, static assets go inside a directory inside
@@ -1536,10 +1546,13 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one dependency:\n" +
-"Node.js 0.10.28 or newer, plus the 'fibers' module. To run the application:\n" +
+"Node.js 0.10.29 or newer, plus the 'fibers' and 'bcrypt' modules.\n" +
+"To run the application:\n" +
 "\n" +
 "  $ rm -r programs/server/node_modules/fibers\n" +
+"  $ rm -r programs/server/node_modules/bcrypt\n" +
 "  $ npm install fibers@1.0.1\n" +
+"  $ npm install bcrypt@0.7.7\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
 "  $ export ROOT_URL='http://example.com'\n" +
 "  $ export MAIL_URL='smtp://user:password@mailhost:port/'\n" +

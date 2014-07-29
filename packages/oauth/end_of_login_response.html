@@ -1,0 +1,31 @@
+<html>
+<head>
+<script type="text/javascript">
+  if (##SET_CREDENTIAL_TOKEN##) {
+    var credentialToken = ##TOKEN##;
+    var credentialSecret = ##SECRET##;
+    if (window.opener && window.opener.Package &&
+          window.opener.Package.oauth) {
+      window.opener.Package.oauth.OAuth._handleCredentialSecret(
+        credentialToken, credentialSecret);
+    } else {
+      try {
+        localStorage[##LOCAL_STORAGE_PREFIX## + credentialToken] = credentialSecret;
+      } catch (err) {
+        // We can't do much else, but at least close the popup instead
+        // of having it hang around on a blank page.
+      }
+    }
+  }
+  window.close();
+</script>
+</head>
+<body>
+  <p>
+    Login completed. <a href="#" onclick="window.close()">
+      Click here</a> to close this window.
+  </p>
+  <img src="not-a-real-image-for-oauth" style="width:1px;height:1px"
+       onerror="window.close();" />
+</body>
+</html>

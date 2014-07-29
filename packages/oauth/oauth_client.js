@@ -92,7 +92,17 @@ OAuth._handleCredentialSecret = function (credentialToken, secret) {
 // Used by accounts-oauth, which needs both a credentialToken and the
 // corresponding to credential secret to call the `login` method over DDP.
 OAuth._retrieveCredentialSecret = function (credentialToken) {
+  // First check the secrets collected by OAuth._handleCredentialSecret,
+  // then check localStorage. This matches what we do in
+  // end_of_login_response.html.
   var secret = credentialSecrets[credentialToken];
-  delete credentialSecrets[credentialToken];
+  if (! secret) {
+    var localStorageKey = OAuth._localStorageTokenPrefix +
+          credentialToken;
+    secret = Meteor._localStorage.getItem(localStorageKey);
+    Meteor._localStorage.removeItem(localStorageKey);
+  } else {
+    delete credentialSecrets[credentialToken];
+  }
   return secret;
 };
