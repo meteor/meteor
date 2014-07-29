@@ -1386,7 +1386,8 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
   function (test, expect) {
     var self = this;
     var justId = function (doc) {
-      return _.omit(doc, '_id');
+      delete doc._id;
+      return doc;
     };
     TRANSFORMS["justId"] = justId;
     var collectionOptions = {
