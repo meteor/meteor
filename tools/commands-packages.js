@@ -113,7 +113,17 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  catalog.official.refresh(true);
+  catalog.official.refresh();
+  var packageName = path.basename(options.packageDir);
+
+  // Fail early if the package already exists.
+  if (options.create) {
+    if (catalog.official.getPackage(packageName)) {
+      process.stderr.write("Package already exists. To create a new version of an existing "+
+                           "package, do not use the --create flag! \n");
+      return 2;
+    }
+  };
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -134,7 +144,6 @@ main.registerCommand({
   var messages = buildmessage.capture(
     { title: "building the package" },
     function () {
-      var packageName = path.basename(options.packageDir);
 
       if (! utils.validPackageName(packageName)) {
         buildmessage.error("Invalid package name:", packageName);
