@@ -370,6 +370,8 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
   });
 
   var bundleResult = bundleBuild(unipackage);
+  if (buildmessage.jobHasMessages())
+    return;
 
   process.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,

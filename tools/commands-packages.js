@@ -246,21 +246,34 @@ main.registerCommand({
     return 1;
   }
 
-  var packageSource = new PackageSource;
+  var unipkg;
+  var messages = buildmessage.capture({
+    title: "building package " + name
+  }, function () {
+    var packageSource = new PackageSource;
 
-  // This package source, although it is initialized from a directory is
-  // immutable. It should be built exactly as is. If we need to modify anything,
-  // such as the version lock file, something has gone terribly wrong and we
-  // should throw.
-  packageSource.initFromPackageDir(name, packageDir,  {
-        requireVersion: true,
-        immutable: true
+    // This package source, although it is initialized from a directory is
+    // immutable. It should be built exactly as is. If we need to modify
+    // anything, such as the version lock file, something has gone terribly
+    // wrong and we should throw.
+    packageSource.initFromPackageDir(name, packageDir,  {
+      requireVersion: true,
+      immutable: true
+    });
+    if (buildmessage.jobHasMessages())
+      return;
+
+    unipkg = compiler.compile(packageSource, {
+      officialBuild: true
+    }).unipackage;
+    if (buildmessage.jobHasMessages())
+      return;
   });
 
-  var unipkg = compiler.compile(packageSource, {
-    officialBuild: true
-  }).unipackage;
-  unipkg.saveToPath(path.join(packageDir, '.build.' + packageSource.name));
+  if (messages.hasMessages()) {
+    process.stderr.write("\n" + messages.formatMessages());
+    return 1;
+  }
 
   var conn;
   try {
@@ -269,10 +282,19 @@ main.registerCommand({
     packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
-  packageClient.createAndPublishBuiltPackage(conn, unipkg);
 
+  messages = buildmessage.capture({
+    title: "publishing package " + name
+  }, function () {
+    packageClient.createAndPublishBuiltPackage(conn, unipkg);
+  });
 
-  catalog.official.refresh();
+  if (messages.hasMessages()) {
+    process.stderr.write("\n" + messages.formatMessages());
+    return 1;
+  }
+
+  catalog.official.refresh();  // XXX buildmessage.capture?
   return 0;
 });
 
