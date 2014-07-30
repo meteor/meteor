@@ -107,8 +107,8 @@ var load = function (options) {
     // happen in a built release. In the future, the command line
     // tool will be a normal Meteor app and will be built ahead of
     // time like any other app and this case will disappear.
-    process.stdout.write("Errors prevented unipackage load:\n");
-    process.stdout.write(messages.formatMessages());
+    process.stderr.write("Errors prevented unipackage load:\n");
+    process.stderr.write(messages.formatMessages());
     throw new Error("unipackage load failed?");
   }
 

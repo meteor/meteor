@@ -200,7 +200,7 @@ main.registerCommand({
   });
 
   if (messages.hasMessages()) {
-    process.stdout.write("\n" + messages.formatMessages());
+    process.stderr.write("\n" + messages.formatMessages());
     return 1;
   };
 
@@ -546,8 +546,8 @@ main.registerCommand({
     }
   });
   if (bundleResult.errors) {
-    process.stdout.write("Errors prevented bundling:\n");
-    process.stdout.write(bundleResult.errors.formatMessages());
+    process.stderr.write("Errors prevented bundling:\n");
+    process.stderr.write(bundleResult.errors.formatMessages());
     return 1;
   }
 
@@ -1015,7 +1015,7 @@ main.registerCommand({
     });
 
     if (messages.hasMessages()) {
-      process.stdout.write("\n" + messages.formatMessages());
+      process.stderr.write("\n" + messages.formatMessages());
       return 1;
     }
   }
@@ -1134,7 +1134,7 @@ main.registerCommand({
   if (count)
     console.log("Built " + count + " packages.");
   if (messages.hasMessages()) {
-    process.stdout.write("\n" + messages.formatMessages());
+    process.stderr.write("\n" + messages.formatMessages());
     return 1;
   }
 });
@@ -1260,7 +1260,7 @@ main.registerCommand({
   });
 
   if (messages.hasMessages()) {
-    process.stdout.write("\n" + messages.formatMessages());
+    process.stderr.write("\n" + messages.formatMessages());
     return 1;
   };
 

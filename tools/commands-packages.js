@@ -165,7 +165,7 @@ main.registerCommand({
     });
 
   if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
+    process.stderr.write(messages.formatMessages());
     return 1;
   }
 
@@ -181,7 +181,7 @@ main.registerCommand({
       });
   });
   if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
+    process.stderr.write(messages.formatMessages());
     return ec || 1;
   }
 
@@ -640,7 +640,7 @@ main.registerCommand({
       });
 
     if (messages.hasMessages()) {
-      process.stdout.write("\n" + messages.formatMessages());
+      process.stderr.write("\n" + messages.formatMessages());
       return 1;
     };
 
@@ -939,7 +939,7 @@ main.registerCommand({
     });
   });
   if (messages.hasMessages()) {
-    process.stdout.write("\n" + messages.formatMessages());
+    process.stderr.write("\n" + messages.formatMessages());
     return 1;
   }
 
