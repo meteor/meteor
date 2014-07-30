@@ -698,8 +698,6 @@ main.registerCommand({
   }
 
   process.stdout.write("Creating a new release version...\n");
-  try {
-    // Send it over!
     var record = {
       track: relConf.track,
       version: relConf.version,
@@ -709,16 +707,17 @@ main.registerCommand({
       tool: relConf.tool,
       packages: relConf.packages
     };
+
+  var uploadInfo;
+  try {
+    if (!relConf.patchFrom) {
+      uploadInfo = conn.call('createReleaseVersion', record);
+    } else {
+      uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
+    }
   } catch (err) {
     process.stderr.write("ERROR: " + err + "\n");
     return 1;
-  }
-
-  var uploadInfo;
-  if (!relConf.patchFrom) {
-    uploadInfo = conn.call('createReleaseVersion', record);
-  } else {
-    uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
   }
 
   // Get it back.
