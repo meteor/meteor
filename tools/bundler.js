@@ -837,6 +837,9 @@ _.extend(ClientTarget.prototype, {
     // Overwrite the CSS files list with the new concatenated file
     var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
                                                { sourcemap: true });
+    if (! stringifiedCss.code)
+      return;
+
     self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
 
     // Add the contents of the input files to the source map of the new file
@@ -884,9 +887,10 @@ _.extend(ClientTarget.prototype, {
 
       minifiedCss = minifiers.CssTools.minifyCss(allCss);
     }
-
-    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
+    if (!! minifiedCss) {
+      self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
+      self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
+    }
   },
 
   // Output the finished target to disk
