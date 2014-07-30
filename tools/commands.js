@@ -171,8 +171,9 @@ main.registerCommand({
     });
   };
 
-
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({
+    title: 'getting packages ready'
+  }, function () {
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
     loadPackages(catalog.complete.getLocalPackageNames(),
