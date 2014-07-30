@@ -1550,9 +1550,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
       'utf8')});
     }
 
-    // Control file
-    builder.writeJson('star.json', json);
-
     // Merge the WatchSet of everything that went into the bundle.
     var clientWatchSet = new watch.WatchSet();
     var serverWatchSet = new watch.WatchSet();
@@ -1574,6 +1571,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
         getRelativeTargetPath: options.getRelativeTargetPath
       }));
     });
+
+    // Control file
+    builder.writeJson('star.json', json);
 
     // We did it!
     builder.complete();
