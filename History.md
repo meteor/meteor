@@ -6,6 +6,9 @@
   change is that `appcache` is now enabled by default on Firefox, because
   Firefox no longer makes a confusing popup.  #2241
 
+* When a call to `match` fails in a method or subscription, log the
+  failure on the server. (This matches the behavior described in our docs)
+
 
 ## v0.8.3
 
