@@ -283,7 +283,13 @@ files.fileHash = function (filename) {
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-files.treeHash = function (root) {
+files.treeHash = function (root, options) {
+  options = _.extend({
+    ignore: function (relativePath) {
+      return false;
+    }
+  }, options);
+
   var crypto = require('crypto');
   var hash = crypto.createHash('sha256');
 
@@ -296,6 +302,11 @@ files.treeHash = function (root) {
   };
 
   var traverse = function (relativePath) {
+    if (options.ignore(relativePath)) {
+      hashLog && hashLog.push('SKIP ' + JSON.stringify(relativePath) + '\n');
+      return;
+    }
+
     var absPath = path.join(root, relativePath);
     var stat = fs.lstatSync(absPath);
 

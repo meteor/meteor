@@ -354,7 +354,18 @@ var bundleBuild = function (unipackage) {
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
-  var treeHash = files.treeHash(tarInputDir);
+  var treeHash = files.treeHash(tarInputDir, {
+    // We don't include any package.json from an npm module in the tree hash,
+    // because npm isn't super consistent about what it puts in there (eg, does
+    // it include the "readme" field)? This ends up leading to spurious
+    // differences. The tree hash will still notice any actual CODE changes in
+    // the npm packages.
+    ignore: function (relativePath) {
+      var pieces = relativePath.split(path.sep);
+      return pieces.length && _.last(pieces) === 'package.json'
+        && _.contains(pieces, 'npm');
+    }
+  });
 
   return {
     buildTarball: buildTarball,
