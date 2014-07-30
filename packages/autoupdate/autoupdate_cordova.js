@@ -65,8 +65,12 @@ Autoupdate._retrySubscription = function () {
             if (! fields.refreshable && id !== autoupdateVersion) {
               console.log("Added new version", id);
               console.log("current version", autoupdateVersion);
+              var previousVersion = autoupdateVersion;
               autoupdateVersion = id;
-              onNewVersion(handle);
+              // XXX this will not reload the first time the app is loaded
+              if (previousVersion !== "unknown") {
+                onNewVersion(handle);
+              }
             }
           }
         });
@@ -75,8 +79,6 @@ Autoupdate._retrySubscription = function () {
   });
 };
 
-document.addEventListener("deviceready", function () {
-  document.addEventListener("meteor-cordova-loaded",
-    Autoupdate._retrySubscription, false);
-});
+document.addEventListener("meteor-cordova-loaded",
+  Autoupdate._retrySubscription, false);
 

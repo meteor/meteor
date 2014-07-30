@@ -286,6 +286,11 @@ var getBoilerplate = _.memoize(function (request, arch) {
 });
 
 var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
+  additionalOptions = additionalOptions || {};
+  var runtimeConfig = _.defaults(__meteor_runtime_config__,
+    additionalOptions.runtimeConfigDefaults || {}
+  );
+
   return new Boilerplate(arch, manifest,
     _.extend({
       urlMapper:
@@ -302,11 +307,12 @@ var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
             };
           }
         ),
-        meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
+        meteorRuntimeConfig: JSON.stringify(runtimeConfig),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
         bundledJsCssPrefix: bundledJsCssPrefix ||
           __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed()
+        inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
+        inline: additionalOptions.inline
       }
     }, additionalOptions)
   );
@@ -334,7 +340,10 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     if (! program.inlineManifest) {
       program.inlineManifest =
         generateBoilerplateInstance(cordovaArch, program.manifest, {
-          inline: true
+          inline: true,
+          runtimeConfigDefaults: {
+            DDP_DEFAULT_CONNECTION_URL: __meteor_runtime_config__.ROOT_URL
+          }
         }).toHTML().replace(/<html>|<\/html>/g, '');
     }
     res.writeHead(200, {
