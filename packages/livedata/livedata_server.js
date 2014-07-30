@@ -1460,8 +1460,10 @@ var wrapInternalException = function (exception, context) {
   // server log
   if (!exception.expected) {
     Meteor._debug("Exception " + context, exception.stack);
-    Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError.message);
-    Meteor._debug();
+    if (exception.sanitizedError) {
+      Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError.message);
+      Meteor._debug();
+    }
   }
 
   // Did the error contain more details that could have been useful if caught in
