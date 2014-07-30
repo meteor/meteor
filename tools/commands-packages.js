@@ -161,11 +161,20 @@ main.registerCommand({
   }
 
   // We have initialized everything, so perform the publish oepration.
-  var ec = packageClient.publishPackage(
-    packageSource, compileResult, conn, {
-      new: options.create,
-      existingVersion: options['existing-version']
-    });
+  var ec;  // XXX maybe combine with messages?
+  messages = buildmessage.capture({
+    title: "publishing the package"
+  }, function () {
+    ec = packageClient.publishPackage(
+      packageSource, compileResult, conn, {
+        new: options.create,
+        existingVersion: options['existing-version']
+      });
+  });
+  if (messages.hasMessages()) {
+    process.stdout.write(messages.formatMessages());
+    return ec || 1;
+  }
 
   // Warn the user if their package is not good for all architectures.
   if (compileResult.unipackage.buildArchitectures() !== "browser+os") {
@@ -638,20 +647,29 @@ main.registerCommand({
       };
       process.stdout.write("Publishing package: " + name + "\n");
 
-      // If we are creating a new package, dsPS will document this for us, so we
-      // don't need to do this here. Though, in the future, once we are done
-      // bootstrapping package servers, we should consider having some extra
-      // checks around this.
-      var pub = packageClient.publishPackage(
-        prebuilt.source,
-        prebuilt.compileResult,
-        conn,
-        opts);
+      var pubEC;  // XXX merge with messages?
+      messages = buildmessage.capture({
+        title: "publishing package " + name
+      }, function () {
+        // If we are creating a new package, dsPS will document this for us, so
+        // we don't need to do this here. Though, in the future, once we are
+        // done bootstrapping package servers, we should consider having some
+        // extra checks around this.
+        pubEC = packageClient.publishPackage(
+          prebuilt.source,
+          prebuilt.compileResult,
+          conn,
+          opts);
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write(messages.formatMessages());
+        return pubEC || 1;
+      }
 
       // If we fail to publish, just exit outright, something has gone wrong.
-      if (pub > 0) {
+      if (pubEC > 0) {
         process.stderr.write("Failed to publish: " + name + "\n");
-        return 1;
+        return pubEC;
       }
     }
 
