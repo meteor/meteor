@@ -17,8 +17,6 @@ Autoupdate.newClientAvailable = function () {
 };
 
 var onNewVersion = function (handle) {
-  handle && handle.stop();
-
   var ft = new FileTransfer();
   var uri = encodeURI(Meteor.absoluteUrl() + 'cordova' +
                       '/__cordova_program__.html');
@@ -40,6 +38,7 @@ var retry = new Retry({
 var failures = 0;
 
 Autoupdate._retrySubscription = function () {
+  console.log("hear event");
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
       Meteor._debug("autoupdate subscription failed:", error);
@@ -53,12 +52,19 @@ Autoupdate._retrySubscription = function () {
         var handle = ClientVersions.find().observeChanges({
           added: function (id, fields) {
             var self = this;
+            console.log("NEW VERSION FOUND!", id, fields);
+
+            // XXX fix for CSS changes
             // XXX maybe a race condition? We shouldn't start looking for
             // updates until we run meteor_cordova_loader.
-            if (fields.refreshable && id !== autoupdateVersionRefreshable) {
-              autoupdateVersionRefreshable = id;
-              onNewVersion(handle);
-            } else if (! fields.refreshable && id !== autoupdateVersion) {
+            // if (fields.refreshable && id !== autoupdateVersionRefreshable) {
+            //   autoupdateVersionRefreshable = id;
+            //   onNewVersion(handle);
+            // } else
+            //
+            if (! fields.refreshable && id !== autoupdateVersion) {
+              console.log("Added new version", id);
+              console.log("current version", autoupdateVersion);
               autoupdateVersion = id;
               onNewVersion(handle);
             }
@@ -69,8 +75,8 @@ Autoupdate._retrySubscription = function () {
   });
 };
 
-
 document.addEventListener("deviceready", function () {
-  Autoupdate._retrySubscription();
+  document.addEventListener("meteor-cordova-loaded",
+    Autoupdate._retrySubscription, false);
 });
 

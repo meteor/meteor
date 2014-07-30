@@ -73,6 +73,7 @@ var updateVersions = function (shouldReloadClientProgram) {
           process.env.AUTOUPDATE_VERSION ||
           process.env.SERVER_ID || // XXX COMPAT 0.6.6
           WebApp.calculateClientHashNonRefreshable();
+      console.log("Version", Autoupdate.autoupdateVersion);
     }
 
     Autoupdate.autoupdateVersionRefreshable =

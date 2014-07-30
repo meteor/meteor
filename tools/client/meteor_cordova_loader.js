@@ -8,6 +8,8 @@
 
 (function () {
 
+  var evt = new Event("meteor-cordova-loaded");
+
   // XXX refactor to share code with writeText
   var ajax = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
@@ -34,14 +36,15 @@
   document.addEventListener("deviceready", function () {
     ajax('cdvfile://localhost/persistent/__cordova_program__.html',
       function (err, res) {
-        if (err) {
+        if (! err) {
+          document.open('text/html', 'replace');
+          document.write(res);
+          document.close();
+        } else {
           // We don't have any new versions, default to the bundled assets.
-          return;
         }
-
-        document.open('text/html', 'replace');
-        document.write(res);
-        document.close();
+        console.log("Dispatched");
+        document.dispatchEvent(evt);
     });
   }, false);
 })();
