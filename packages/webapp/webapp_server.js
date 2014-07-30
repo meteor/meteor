@@ -290,6 +290,10 @@ WebAppInternals.staticFilesMiddleware = function (options, req, res, next) {
     serveStaticJs("__meteor_runtime_config__ = " +
                   JSON.stringify(__meteor_runtime_config__) + ";");
     return;
+  } else if (pathname === "/atmosphere_layers.js" &&
+      ! WebAppInternals.inlineScriptsAllowed()) {
+    serveStaticJs("__atmosphere_layers__ = " +
+                  JSON.stringify(boilerplateBaseData.layers) + ";");
   } else if (_.has(additionalStaticJs, pathname) &&
              ! WebAppInternals.inlineScriptsAllowed()) {
     serveStaticJs(additionalStaticJs[pathname]);
@@ -642,12 +646,18 @@ var runWebAppServer = function () {
         __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
     };
 
+    var layers = [];
+
     _.each(WebApp.clientProgram.manifest, function (item) {
       if (item.type === 'css' && item.where === 'client') {
         boilerplateBaseData.css.push({url: item.url});
       }
       if (item.type === 'js' && item.where === 'client') {
-        boilerplateBaseData.js.push({url: item.url});
+        if (!item.layer) {
+          boilerplateBaseData.js.push({url: item.url});
+        } else {
+          layers.push({ name: item.layer, path: item.url });
+        }
       }
       if (item.type === 'head') {
         boilerplateBaseData.head = fs.readFileSync(
@@ -658,6 +668,8 @@ var runWebAppServer = function () {
           path.join(clientDir, item.path), 'utf8');
       }
     });
+
+    boilerplateBaseData.atmosphereLayers = JSON.stringify(layers, undefined, 2);
 
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
     var boilerplateRenderCode = SpacebarsCompiler.compile(
