@@ -20,7 +20,7 @@ pkill -f "$PROJDIR/.meteor/local/db" || true
 ../../../meteor reset || true
 
 # start the benchmark app
-../../../meteor --production --settings "scenarios/${SCENARIO}.json" --port 9000 &
+../../../meteor --production --settings "scenarios/${SCENARIO}.json" --port ${PORT} &
 OUTER_PID=$!
 
 echo "Waiting for server to come up"
@@ -36,7 +36,7 @@ function wait_for_port {
         fi
     done
 }
-wait_for_port "http://localhost:9001" 60
+wait_for_port "http://localhost:${PORT}" 60
 
 
 echo "Starting phantoms"
