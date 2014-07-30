@@ -1,14 +1,10 @@
-## v.NEXT.NEXT
+## v.NEXT
 
 * The `appcache` package now defaults to functioning on all browsers that
   support the AppCache API, rather than a whitelist of browsers. You can still
   disable individual browsers with `AppCache.config`. The main effect of this
   change is that `appcache` is now enabled by default on Firefox, because
   Firefox no longer makes a confusing popup.  #2241
-
-
-
-## v.NEXT
 
 
 ## v0.8.3
