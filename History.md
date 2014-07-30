@@ -82,6 +82,7 @@
   callback provided.
 
 * Upgraded dependencies:
+  - node: 0.10.29 (from 0.10.28)
   - less: 1.7.1 (from 1.6.1)
 
 Patches contributed by GitHub users Cangit, cmather, duckspeaker, zol.
