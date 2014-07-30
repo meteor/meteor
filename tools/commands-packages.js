@@ -698,16 +698,22 @@ main.registerCommand({
   }
 
   process.stdout.write("Creating a new release version...\n");
-  // Send it over!
-  var record = {
-    track: relConf.track,
-    version: relConf.version,
-    orderKey: relConf.orderKey,
-    description: relConf.description,
-    recommended: !!relConf.recommended,
-    tool: relConf.tool,
-    packages: relConf.packages
-  };
+  try {
+    // Send it over!
+    var record = {
+      track: relConf.track,
+      version: relConf.version,
+      orderKey: relConf.orderKey,
+      description: relConf.description,
+      recommended: !!relConf.recommended,
+      tool: relConf.tool,
+      packages: relConf.packages
+    };
+  } catch (err) {
+    process.stderr.write("ERROR: " + err + "\n");
+    return 1;
+  }
+
   var uploadInfo;
   if (!relConf.patchFrom) {
     uploadInfo = conn.call('createReleaseVersion', record);
@@ -1554,7 +1560,7 @@ main.registerCommand({
         process.stdout.write(" Done!\n");
       }
     } catch (err) {
-      process.stdout.write("\n" + err + "\n");
+      process.stderr.write("\n" + err + "\n");
     }
     conn.close();
     catalog.official.refresh();
@@ -1618,7 +1624,7 @@ main.registerCommand({
                            " is now  a recommended release\n");
     }
   } catch (err) {
-    process.stdout.write("\n" + err + "\n");
+    process.stderr.write("\n" + err + "\n");
   }
   conn.close();
   catalog.official.refresh();
@@ -1669,7 +1675,7 @@ main.registerCommand({
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stdout.write("\n" + err + "\n");
+    process.stderr.write("\n" + err + "\n");
   }
   conn.close();
   catalog.official.refresh();
@@ -1712,7 +1718,7 @@ main.registerCommand({
       conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stdout.write("\n" + err + "\n");
+    process.stderr.write("\n" + err + "\n");
   }
   conn.close();
   catalog.official.refresh();
