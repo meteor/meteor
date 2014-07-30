@@ -1458,8 +1458,11 @@ var wrapInternalException = function (exception, context) {
 
   // tests can set the 'expected' flag on an exception so it won't go to the
   // server log
-  if (!exception.expected)
+  if (!exception.expected) {
     Meteor._debug("Exception " + context, exception.stack);
+    Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError.message);
+    Meteor._debug();
+  }
 
   // Did the error contain more details that could have been useful if caught in
   // server code (or if thrown from non-client-originated code), but also
