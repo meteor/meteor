@@ -43,8 +43,8 @@
         } else {
           // We don't have any new versions, default to the bundled assets.
         }
-        console.log("Dispatched");
         document.dispatchEvent(evt);
+        document.getElementsByTagName('body')[0].removeAttribute('style');
     });
   }, false);
 })();
