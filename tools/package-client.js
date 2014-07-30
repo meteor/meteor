@@ -500,7 +500,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     }
     var authorized = _.indexOf(
       _.pluck(packRecord.maintainers, 'username'), auth.loggedInUsername());
-    if (authorized == -1) {
+    if (authorized == -1 && name.indexOf(":") !== -1) {
       process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
