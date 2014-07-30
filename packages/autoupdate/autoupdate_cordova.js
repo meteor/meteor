@@ -38,7 +38,6 @@ var retry = new Retry({
 var failures = 0;
 
 Autoupdate._retrySubscription = function () {
-  console.log("hear event");
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
       Meteor._debug("autoupdate subscription failed:", error);
@@ -57,12 +56,16 @@ Autoupdate._retrySubscription = function () {
             // XXX fix for CSS changes
             // XXX maybe a race condition? We shouldn't start looking for
             // updates until we run meteor_cordova_loader.
-            // if (fields.refreshable && id !== autoupdateVersionRefreshable) {
-            //   autoupdateVersionRefreshable = id;
-            //   onNewVersion(handle);
-            // } else
-            //
-            if (! fields.refreshable && id !== autoupdateVersion) {
+
+            if (fields.refreshable && id !== autoupdateVersionRefreshable) {
+              var previousVersionRefreshable = autoupdateVersionRefreshable;
+              autoupdateVersionRefreshable = id;
+
+              // XXX this will not reload the first time the app is loaded
+              if (previousVersionRefreshable !== "unknown") {
+                onNewVersion(handle);
+              }
+            } else if (! fields.refreshable && id !== autoupdateVersion) {
               console.log("Added new version", id);
               console.log("current version", autoupdateVersion);
               var previousVersion = autoupdateVersion;
