@@ -365,6 +365,16 @@ var exception = function (error) {
   }
 };
 
+var assertInJob = function () {
+  if (! currentJob)
+    throw new Error("Expected to be in a buildmessage job");
+};
+
+var assertInCapture = function () {
+  if (! currentMessageSet)
+    throw new Error("Expected to be in a buildmessage capture");
+};
+
 var buildmessage = exports;
 _.extend(exports, {
   capture: capture,
@@ -372,5 +382,7 @@ _.extend(exports, {
   markBoundary: markBoundary,
   error: error,
   exception: exception,
-  jobHasMessages: jobHasMessages
+  jobHasMessages: jobHasMessages,
+  assertInJob: assertInJob,
+  assertInCapture: assertInCapture
 });

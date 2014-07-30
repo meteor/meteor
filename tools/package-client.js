@@ -334,6 +334,8 @@ var uploadTarball = function (putUrl, tarball) {
 exports.uploadTarball = uploadTarball;
 
 var bundleBuild = function (unipackage) {
+  buildmessage.assertInJob();
+
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = unipackage.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
@@ -362,6 +364,8 @@ var bundleBuild = function (unipackage) {
 exports.bundleBuild = bundleBuild;
 
 var createAndPublishBuiltPackage = function (conn, unipackage) {
+  buildmessage.assertInJob();
+
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
@@ -427,6 +431,8 @@ exports.handlePackageServerConnectionError = function (error) {
 //
 // Return true on success and an error code otherwise.
 exports.publishPackage = function (packageSource, compileResult, conn, options) {
+  buildmessage.assertInJob();
+
   options = options || {};
 
   if (options.new && options.existingVersion)
