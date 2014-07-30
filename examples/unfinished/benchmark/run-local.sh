@@ -1,8 +1,12 @@
 #!/bin/bash
 
 PORT=9000
-NUM_CLIENTS=10
-DURATION=120
+if [ -z "$NUM_CLIENTS" ]; then
+  NUM_CLIENTS=10
+fi
+if [ -z "$DURATION" ]; then
+  DURATION=120
+fi
 REPORT_INTERVAL=10
 
 set -e
