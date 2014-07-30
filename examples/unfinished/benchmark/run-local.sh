@@ -30,6 +30,7 @@ function wait_for_port {
         sleep 1
         N=$(($N+1))
         if [ $N -ge $2 ] ; then
+            curl -v "$1" || true
             echo "Timed out waiting for port $1"
             exit 2
         fi
