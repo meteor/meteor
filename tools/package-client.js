@@ -586,7 +586,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       });
     } catch (err) {
       process.stderr.write(err.message + "\n");
-      return 1;
+      return 3;
     }
 
   }
@@ -620,7 +620,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       var uploadInfo = conn.call('createPackageVersion', uploadRec);
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
-      return 1;
+      return 3;
     }
 
     // XXX If package version already exists, print a nice error message
@@ -638,7 +638,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
                   treeHash: sourceBundleResult.treeHash });
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
-      return 1;
+      return 3;
     }
 
   }
