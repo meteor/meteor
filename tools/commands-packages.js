@@ -48,6 +48,11 @@ var getReleaseOrPackageRecord = function(name) {
 //   record:  package or track record
 //   action:  string for error handling
 var checkAuthorizedPackageMaintainer = function (record, action) {
+  if (!record) {
+      process.stderr.write("This package does not exist.\n");
+      return 1;
+  }
+
   var authorized = _.indexOf(
       _.pluck(record.maintainers, 'username'), auth.loggedInUsername());
   if (authorized == -1) {
