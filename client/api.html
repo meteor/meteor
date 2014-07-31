@@ -2189,6 +2189,12 @@ This property provides access to the data context at the top level of
 the template.  It is updated each time the template is re-rendered.
 Access is read-only and non-reactive.
 
+{{> api_box template_autorun}}
+
+You can use `this.autorun` from a [`created`](#template_created) or
+[`rendered`](#template_rendered) callback to reactively update the DOM
+or the template instance.  The Computation is automatically stopped
+when the template is destroyed.
 
 <h2 id="ui"><span>Template utilities</span></h2>
 
@@ -2204,6 +2210,15 @@ any part of the DOM for finer control than just using template inclusions.
 
 You can define helpers and event maps on `UI.body` just like on any
 `Template.myTemplate` object.
+
+Helpers on `UI.body` are only available in the `<body>` tags of your
+app.  To register a global helper, use
+[UI.registerHelper](#ui_registerhelper).
+
+Event maps on `UI.body` don't apply to elements added to the body via
+`UI.insert`, jQuery, or the DOM API, or to the body element itself.
+To handle events on the body, window, or document, use jQuery or the
+DOM API.
 
 {{> api_box ui_render}}
 
@@ -2238,7 +2253,15 @@ changes.
 
 {{> api_box ui_getelementdata}}
 
+{{> api_box ui_dynamic}}
 
+`UI.dynamic` allows you to include a template by name, where the name
+may be calculated by a helper and may change reactively.  The `data`
+argument is optional, and if it is omitted, the current data context
+is used.
+
+For example, if there is a template named "foo", `{{dstache}}> UI.dynamic
+template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
 
 {{#api_box eventmaps}}
 
