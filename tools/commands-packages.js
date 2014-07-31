@@ -55,7 +55,7 @@ var checkAuthorizedPackageMaintainer = function (record, action) {
 
   var authorized = _.indexOf(
       _.pluck(record.maintainers, 'username'), auth.loggedInUsername());
-  if (authorized == -1) {
+  if (authorized == -1 &&  record.name.split(':').length > 1) {
       process.stderr.write('You are not an authorized maintainer of ' + record.name + ".\n");
       process.stderr.write('Only authorized maintainers may ' + action + ".\n");
       return 1;;
@@ -437,7 +437,10 @@ main.registerCommand({
     var auth = require("./auth.js");
     var authorized = _.indexOf(
       _.pluck(trackRecord.maintainers, 'username'), auth.loggedInUsername());
-    if (authorized == -1) {
+    // The split on ':' is a hack to postpone the auth checking for non-prefixed
+    // releases to the server, which will, in turn use a hack to let MDG members
+    // publish on non-prefixed releases until we implement organizations.
+    if (authorized == -1 &&  relConf.track.split(':').length > 1) {
       process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions.\n');
       return 1;
