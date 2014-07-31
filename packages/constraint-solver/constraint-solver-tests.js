@@ -17,7 +17,7 @@ var insertVersion = function (name, version, ecv, deps) {
       references: [
         { arch: "os", targetSlice: "main", weak: false,
           implied: false, unordered: false },
-        { arch: "browser", targetSlice: "main", weak: false,
+        { arch: "web", targetSlice: "main", weak: false,
           implied: false, unordered: false }]
     };
   });
@@ -25,7 +25,7 @@ var insertVersion = function (name, version, ecv, deps) {
                     earliestCompatibleVersion: ecv,
                     dependencies: constructedDeps });
   Builds.insert({ packageName: name, version: version,
-                  buildArchitectures: "browser+os" });
+                  buildArchitectures: "web+os" });
 };
 insertVersion("sparky-forms", "1.1.2", "1.0.0", {"forms": "=1.0.1", "sparkle": "=2.1.1"});
 insertVersion("sparky-forms", "1.0.0", "1.0.0", {"awesome-dropdown": "=1.4.0"});
@@ -505,7 +505,7 @@ function getCatalogStub (gems) {
         packageVersion.dependencies[name] = {
           constraint: convertConstraints(constraints)[0], // XXX pick first one only
           references: [{
-            "arch": "browser"
+            "arch": "web"
           }, {
             "arch": "os" }]
         };

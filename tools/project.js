@@ -649,7 +649,7 @@ _.extend(Project.prototype, {
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
-    var arch = options.arch || archinfo.host();
+    var serverArch = options.serverArch || archinfo.host();
     var verbose = options.verbose || !self.muted;
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
@@ -657,7 +657,7 @@ _.extend(Project.prototype, {
       try {
         var available = tropohouse.default.maybeDownloadPackageForArchitectures(
           packageVersionInfo,
-          ['browser', arch],
+          [serverArch],  // XXX 'web.browser' too?
           verbose /* print downloading message */
         );
         downloadedPackages[name] = version;

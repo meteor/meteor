@@ -43,6 +43,7 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
   run.waitSecs(commandTimeoutSecs);
 
   var expectSuccess = selftest.markStack(function () {
+    run.waitSecs(2);
     run.match(matchString);
     run.expectExit(0);
   });

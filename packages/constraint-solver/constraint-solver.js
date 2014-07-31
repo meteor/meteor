@@ -1,5 +1,12 @@
 var semver = Npm.require('semver');
 
+// Copied from archinfo.matches() in tools/
+var archMatches = function (arch, baseArch) {
+  return arch.substr(0, baseArch.length) === baseArch &&
+    (arch.length === baseArch.length ||
+     arch.substr(baseArch.length, 1) === ".");
+};
+
 ConstraintSolver = {};
 
 // catalog is a catalog.Catalog object. We have to pass this in because
@@ -60,9 +67,10 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
     var unibuilds = {};
 
     // XXX in theory there might be different archs but in practice they are
-    // always "os" and "browser". Fix this once we actually have different
-    // archs used.
-    _.each(["os", "browser"], function (arch) {
+    // always "os", "web.browser" and "web.cordova". Fix this once we
+    // actually have different archs used.
+    var allArchs = ["os", "web.browser", "web.cordova"];
+    _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
         unitName, version, versionDef.earliestCompatibleVersion);
@@ -73,24 +81,28 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
       self._ensurePackageInfoLoaded(depName);
 
       _.each(dep.references, function (ref) {
-        var unitName = packageName + "#" + ref.arch;
-        var unitVersion = unibuilds[unitName];
+        _.each(allArchs, function (arch) {
+          if (archMatches(arch, ref.arch)) {
+            var unitName = packageName + "#" + arch;
+            var unitVersion = unibuilds[unitName];
 
-        if (! unitVersion)
-          throw new Error("A non-standard arch " + ref.arch + " for package " + packageName);
+            if (! unitVersion)
+              throw new Error("A non-standard arch " + arch + " for package " + packageName);
 
-        var targetUnitName = depName + "#" + ref.arch;
+            var targetUnitName = depName + "#" + arch;
 
-        // Add the dependency if needed
-        if (! ref.weak)
-          unitVersion.addDependency(targetUnitName);
+            // Add the dependency if needed
+            if (! ref.weak)
+              unitVersion.addDependency(targetUnitName);
 
-        // Add a constraint if such exists
-        if (dep.constraint && dep.constraint !== "none") {
-          var constraint =
-            self.resolver.getConstraint(targetUnitName, dep.constraint);
-          unitVersion.addConstraint(constraint);
-        }
+            // Add a constraint if such exists
+            if (dep.constraint && dep.constraint !== "none") {
+              var constraint =
+                self.resolver.getConstraint(targetUnitName, dep.constraint);
+              unitVersion.addConstraint(constraint);
+            }
+          }
+        });
       });
     });
 
@@ -168,10 +180,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   }
 
   // split every package name to one or more archs belonging to that package
-  // (["foobar"] => ["foobar#os", "foobar#browser"])
-  // XXX for now just put #os and #browser
+  // (["foobar"] => ["foobar#os", "foobar#web.browser", ...])
+  // XXX for now just hardcode in all of the known architectures
   options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (packageName) {
-    return [packageName + "#os", packageName + "#browser"];
+    return [packageName + "#os", packageName + "#web.browser",
+            packageName + "#web.cordova"];
   })), _.identity);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
@@ -202,7 +215,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   var resultChoices = {};
   _.each(res, function (uv) {
     // Since we don't yet define the interface for a an app to depend only on
-    // certain unibuilds of the packages (like only browser unibuilds) and we know
+    // certain unibuilds of the packages (like only web unibuilds) and we know
     // that each unibuild weakly depends on other sibling unibuilds of the same
     // version, we can safely output the whole package for each unibuild in the
     // result.
@@ -245,7 +258,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 };
 
 // takes dependencies and constraints and rewrites the names from "foo" to
-// "foo#os" and "foo#browser"
+// "foo#os" and "foo#web.browser" and "foo#web.cordova"
 // XXX right now creates a dependency for every unibuild it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
@@ -280,8 +293,9 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
   var self = this;
   var unibuildPrefix = packageName + "#";
   var unibuilds = [];
-  // XXX hardcode os and browser
-  _.each(["os", "browser"], function (arch) {
+  // XXX hardcode all common architectures assuming that every package has the
+  // same set of architectures.
+  _.each(["os", "web.browser", "web.cordova"], function (arch) {
     if (self.resolver.unitsVersions[unibuildPrefix + arch])
       unibuilds.push(unibuildPrefix + arch);
   });

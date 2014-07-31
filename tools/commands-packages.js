@@ -191,12 +191,15 @@ main.registerCommand({
   }
 
   // Warn the user if their package is not good for all architectures.
-  if (compileResult.unipackage.buildArchitectures() !== "browser+os") {
+  var allArchs = compileResult.unipackage.buildArchitectures().split('+');
+  if (_.any(allArchs, function (arch) {
+    return arch.match(/^os\./);
+  })) {
     process.stdout.write(
       "\nWARNING: Your package contains binary code and is only compatible with " +
        archinfo.host() + " architecture.\n" +
        "Please use publish-for-arch to publish new builds of the package.\n\n");
-  };
+  }
 
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.
@@ -768,15 +771,18 @@ main.registerCommand({
         var myBuilds = _.pluck(
           catalog.official.getAllBuilds(name, version),
           'buildArchitectures');
-        // This package does not have different builds, so we don't care.
-        if (_.isEqual(myBuilds, ["browser+os"])) {
-          return versionRecord;
+        // Does this package only have a cross-platform build?
+        if (myBuilds.length === 1) {
+          var allArches = myBuilds[0].split('+');
+          if (!_.any(allArches, function (arch) {
+            return arch.match(/^os\./);
+          })) {
+            return versionRecord;
+          }
         }
         // This package is only available for some architectures.
-        var myStringBuilds = "";
-        _.each(myBuilds, function (build) {
-          myStringBuilds = myStringBuilds + build.split('+')[1] + " ";
-        });
+        // XXX show in a more human way?
+        var myStringBuilds = myBuilds.join(' ');
         return _.extend({ buildArchitectures: myStringBuilds },
                         versionRecord);
       };
