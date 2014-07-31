@@ -922,3 +922,41 @@ Hi there!
 <template name="spacebars_test_isolated_lookup3">
   {{> bar}}--{{> spacebars_test_isolated_lookup_inclusion}}
 </template>
+
+<template name="spacebars_test_current_view_in_event">
+  <span>{{.}}</span>
+</template>
+
+<template name="spacebars_test_textarea_attrs">
+  <textarea {{attrs}}></textarea>
+</template>
+
+<template name="spacebars_test_textarea_attrs_contents">
+  <textarea {{attrs}}>Hello {{name}}</textarea>
+</template>
+
+<template name="spacebars_test_textarea_attrs_array_contents">
+  <textarea {{attrs}} class="bar">Hello {{name}}</textarea>
+</template>
+
+<template name="spacebars_test_autorun">
+  {{#if show}}
+    {{>spacebars_test_autorun_inner}}
+  {{/if}}
+</template>
+
+<template name="spacebars_test_autorun_inner">
+  Hello
+</template>
+
+<template name="spacebars_test_contentBlock_arg">
+  {{#spacebars_test_contentBlock_arg_inner}}
+    {{this.bar}}
+  {{/spacebars_test_contentBlock_arg_inner}}
+</template>
+
+<template name="spacebars_test_contentBlock_arg_inner">
+  {{#with foo="AAA" bar="BBB"}}
+    {{this.foo}} {{> UI.contentBlock this}}
+  {{/with}}
+</template>
