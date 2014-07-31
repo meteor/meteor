@@ -169,6 +169,7 @@ Blaze.InOuterTemplateScope = function (templateView, contentFunc) {
     parentView = parentView.parentView;
 
   view.onCreated(function () {
+    this.originalParentView = this.parentView;
     this.parentView = parentView;
   });
   return view;

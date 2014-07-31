@@ -1026,6 +1026,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stdoutMatcher.match(pattern, timeout, _strict);
   }),
@@ -1036,6 +1037,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stderrMatcher.match(pattern, timeout, _strict);
   }),
@@ -1081,6 +1083,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     self.expectExit();
 
@@ -1098,6 +1101,7 @@ _.extend(Run.prototype, {
 
     if (self.exitStatus === undefined) {
       var timeout = self.baseTimeout + self.extraTime;
+      timeout *= utils.timeoutScaleFactor;
       self.extraTime = 0;
 
       var fut = new Future;
