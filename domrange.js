@@ -29,6 +29,28 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
 };
 var DOMRange = Blaze.DOMRange;
 
+// In IE 8, don't use empty text nodes as placeholders
+// in empty DOMRanges, use comment nodes instead.  Using
+// empty text nodes in modern browsers is great because
+// it doesn't clutter the web inspector.  In IE 8, however,
+// it seems to lead in some roundabout way to the OAuth
+// pop-up crashing the browser completely.  In the past,
+// we didn't use empty text nodes on IE 8 because they
+// don't accept JS properties, so just use the same logic
+// even though we don't need to set properties on the
+// placeholder anymore.
+DOMRange._USE_COMMENT_PLACEHOLDERS = (function () {
+  var result = false;
+  var textNode = document.createTextNode("");
+  try {
+    textNode.someProp = true;
+  } catch (e) {
+    // IE 8
+    result = true;
+  }
+  return result;
+})();
+
 // static methods
 DOMRange._insert = function (rangeOrNode, parentElement, nextNode, _isMove) {
   var m = rangeOrNode;
@@ -118,7 +140,10 @@ DOMRange.prototype.attach = function (parentElement, nextNode, _isMove) {
       DOMRange._insert(members[i], parentElement, nextNode, _isMove);
     }
   } else {
-    var placeholder = document.createTextNode("");
+    var placeholder = (
+      DOMRange._USE_COMMENT_PLACEHOLDERS ?
+        document.createComment("") :
+        document.createTextNode(""));
     this.emptyRangePlaceholder = placeholder;
     parentElement.insertBefore(placeholder, nextNode || null);
   }
