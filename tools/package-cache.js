@@ -71,6 +71,7 @@ _.extend(PackageCache.prototype, {
   // loadPackageAtPath() is called for them, see refresh().
   loadPackageAtPath: function (name, loadPath) {
     var self = this;
+    buildmessage.assertInCapture();
 
     // We need to build and load both the test and normal package, which,
     // frequently means 2 packages per directory/loadPath. Rather than
@@ -206,6 +207,7 @@ _.extend(PackageCache.prototype, {
   // ignore when scanning for source files.)
   loadAppAtPath: function (appDir, ignoreFiles) {
     var self = this;
+    buildmessage.assertInCapture();
 
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(appDir, ignoreFiles);

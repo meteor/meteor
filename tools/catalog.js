@@ -245,6 +245,9 @@ _.extend(CompleteCatalog.prototype, {
     var self = this;
     opts = opts || {};
     self._requireInitialized();
+    // XXX for now, just doing the assertion if we have to call project
+    //     stuff.  but oh, this will be improved.
+    opts.ignoreProjectDeps || buildmessage.assertInCapture();
 
     // Kind of a hack, as per specification. We don't have a constraint solver
     // initialized yet. We are probably trying to build the constraint solver
@@ -549,6 +552,8 @@ _.extend(CompleteCatalog.prototype, {
   // compiled and built in the directory, and null otherwise.
   _maybeGetUpToDateBuild : function (name, constraintSolverOpts) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var sourcePath = self.effectiveLocalPackages[name];
     var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
@@ -588,6 +593,8 @@ _.extend(CompleteCatalog.prototype, {
   // that we use is in the catalog already, we build it here.
   _build : function (name, onStack,  constraintSolverOpts) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var unip = null;
 
     if (! _.has(self.unbuilt, name)) {
@@ -840,6 +847,7 @@ _.extend(CompleteCatalog.prototype, {
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
     constraintSolverOpts =  constraintSolverOpts || {};
 
     // Check local packages first.

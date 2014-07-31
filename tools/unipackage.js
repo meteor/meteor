@@ -186,6 +186,8 @@ _.extend(Unibuild.prototype, {
 // If the optional `filter` function is provided, then we will only load
 // packages for which `filter(packageName, version)` returns truthy.
 var getLoadedPackageVersions = function (versions, filter) {
+  buildmessage.assertInCapture();
+
   var result = {};
 
   var loader = new packageLoader.PackageLoader({ versions: versions });
@@ -655,6 +657,7 @@ _.extend(Unipackage.prototype, {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
+    buildmessage.assertInCapture();
 
     var builder = new Builder({ outputPath: outputPath });
 
@@ -906,6 +909,7 @@ _.extend(Unipackage.prototype, {
 
   _writeTool: function (builder) {
     var self = this;
+    buildmessage.assertInCapture();
 
     var pathsToCopy = files.runGitInCheckout(
       'ls-tree',
@@ -970,8 +974,8 @@ _.extend(Unipackage.prototype, {
   // Returns the build id as a hex string.
   getBuildIdentifier: function (options) {
     var self = this;
-
     options = options || {};
+    buildmessage.assertInCapture();
 
     // Gather all the direct dependencies (that provide plugins) and
     // plugin dependencies' versions and organize them into arrays. We
@@ -1068,6 +1072,7 @@ _.extend(Unipackage.prototype, {
   // `getBuildIdentifier`.
   addBuildIdentifierToVersion: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
     self.version = self.version + "+" +
       self.getBuildIdentifier(options);
   }

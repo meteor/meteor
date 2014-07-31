@@ -163,6 +163,7 @@ main.registerCommand({
   catalog.official.refresh();
 
   var loadPackages = function (packagesToLoad, loader) {
+    buildmessage.assertInCapture();
     _.each(packagesToLoad, function (name) {
       // Calling getPackage on the loader will return a unipackage object, which
       // means that the package will be compiled/downloaded. That we throw the
@@ -184,7 +185,7 @@ main.registerCommand({
     // of everything we need from versions have been downloaded. (Calling
     // buildPackages may be redundant, but can't hurt.)
     if (options.appDir) {
-      loadPackages(_.keys(project.getVersions), project.getPackageLoader());
+      loadPackages(_.keys(project.getVersions()), project.getPackageLoader());
     }
 
     // Using a release? Get all the packages in the release.
@@ -237,7 +238,13 @@ main.registerCommand({
   // those issues are concurrency-related, or possibly some weird
   // order-of-execution of interaction that we are failing to understand. This
   // seems to fix it in a clear and understandable fashion.)
-  project.getVersions();
+  var messages = buildmessage.capture(function () {
+    project.getVersions();  // #StructuredProjectInitialization
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   // XXX factor this out into a {type: host/port}?
   var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
@@ -452,7 +459,13 @@ main.registerCommand({
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
-  project._ensureDepsUpToDate();
+  var messages = buildmessage.capture(function () {
+    project._ensureDepsUpToDate();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   process.stdout.write(appPath + ": created");
   if (options.example && options.example !== appPath)
@@ -530,9 +543,17 @@ main.registerCommand({
   var bundlePath = options['directory'] ?
       outputPath : path.join(buildDir, 'bundle');
 
-  var bundler = require(path.join(__dirname, 'bundler.js'));
-  var loader = project.getPackageLoader();
+  var loader;
+  var messages = buildmessage.capture(function () {
+    loader = project.getPackageLoader();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write("Errors prevented bundling your app:\n");
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
+  var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,
     buildOptions: {
@@ -728,7 +749,13 @@ main.registerCommand({
   // issues are concurrency-related, or possibly some weird order-of-execution
   // of interaction that we are failing to understand. This seems to fix it in a
   // clear and understandable fashion.)
-  project.getVersions();
+  var messages = buildmessage.capture(function () {
+    project.getVersions();  // #StructuredProjectInitialization
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   if (options.password) {
     if (useGalaxy) {
@@ -1248,7 +1275,7 @@ main.registerCommand({
     _.each(osArches, function (osArch) {
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
+          title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
           if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
@@ -1274,20 +1301,30 @@ main.registerCommand({
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
       path.join(tmpdir, '.meteor0'), catalog.official);
-    try {
-      tmpTropo.maybeDownloadPackageForArchitectures(
-        {packageName: toolPkg.package, version: toolPkg.constraint},
-        [osArch],  // XXX 'browser' too?
-        true);
-      _.each(release.packages, function (pkgVersion, pkgName) {
+    var messages = buildmessage.capture(function () {
+      buildmessage.enterJob({
+        title: "downloading tool package " + toolPkg.package + "@" +
+          toolPkg.constraint
+      }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures(
-          {packageName: pkgName, version: pkgVersion},
+          {packageName: toolPkg.package, version: toolPkg.constraint},
           [osArch],  // XXX 'browser' too?
           true);
       });
-    } catch (err) {
-      console.log(err);
-      process.exit(1);
+      _.each(release.packages, function (pkgVersion, pkgName) {
+        buildmessage.enterJob({
+          title: "downloading package " + pkgName + "@" + pkgVersion
+        }, function () {
+          tmpTropo.maybeDownloadPackageForArchitectures(
+            {packageName: pkgName, version: pkgVersion},
+            [osArch],  // XXX 'browser' too?
+            true);
+        });
+      });
+    });
+    if (messages.hasMessage()) {
+      process.stderr.write("\n" + messages.formatMessages());
+      return 1;
     }
 
     // XXX should we include some sort of preliminary package-metadata as well?

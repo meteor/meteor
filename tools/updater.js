@@ -12,6 +12,7 @@ var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
 var unipackage = require('./unipackage.js');
 var utils = require('./utils.js');
+var buildmessage = require('./buildmessage.js');
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -147,21 +148,32 @@ var updateMeteorToolSymlink = function () {
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
     try {
-      tropohouse.default.maybeDownloadPackageForArchitectures(
-        {packageName: latestReleaseToolPackage,
-         version: latestReleaseToolVersion},
-        [archinfo.host()]);
-
-      _.each(latestRelease.packages, function (version, packageName) {
-        tropohouse.default.maybeDownloadPackageForArchitectures(
-          { packageName: packageName, version: version },
-          ['browser', archinfo.host()]);
+      var messages = buildmessage.capture(function () {
+        buildmessage.enterJob({
+          title: "downloading tool package " + latestRelease.tool
+        }, function () {
+          tropohouse.default.maybeDownloadPackageForArchitectures(
+            {packageName: latestReleaseToolPackage,
+             version: latestReleaseToolVersion},
+            [archinfo.host()],
+            true);
+        });
+        _.each(latestRelease.packages, function (pkgVersion, pkgName) {
+          buildmessage.enterJob({
+            title: "downloading package " + pkgName + "@" + pkgVersion
+          }, function () {
+            tropohouse.default.maybeDownloadPackageForArchitectures(
+              {packageName: pkgName, version: pkgVersion},
+              [archinfo.host()],
+              true);
+          });
+        });
       });
     } catch (err) {
-      console.log("Could not download latest release:",
-        latestRelease.track + "@" + latestRelease.version);
-      // Return, since we are running in the background.
-      return;
+      return;  // since we are running in the background.
+    }
+    if (messages.hasMessages()) {
+      return;  // since we are running in the background
     }
 
     var toolUnipackage = new unipackage.Unipackage;
@@ -176,9 +188,6 @@ var updateMeteorToolSymlink = function () {
     // counter: this is super weird and should never ever happen.
     if (!toolRecord)
       throw Error("latest release has no tool?");
-
-    console.log("XXX updating tool symlink for",
-                latestReleaseVersion.track + "@" + latestReleaseVersion.version);
 
     tropohouse.default.replaceLatestMeteorSymlink(
       path.join(relativeToolPath, toolRecord.path, 'meteor'));

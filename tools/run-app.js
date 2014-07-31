@@ -418,8 +418,16 @@ _.extend(AppRunner.prototype, {
 
     // Bundle up the app
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    if (self.recordPackageUsage)
-      stats.recordPackages(self.appDir);
+    if (self.recordPackageUsage) {
+      var statsMessages = buildmessage.capture(function () {
+        stats.recordPackages(self.appDir);
+      });
+      if (statsMessages.hasMessages()) {
+        process.stdout.write("Error talking to stats server:\n" +
+                             statsMessages.formatMessages());
+        // ... but continue;
+      }
+    }
 
     // Cache the server target because the server will not change inside
     // a single invocation of _runOnce().

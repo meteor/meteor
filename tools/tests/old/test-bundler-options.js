@@ -8,6 +8,7 @@ var files = require('../../files.js');
 var catalog = require('../../catalog.js');
 var project = require('../../project.js');
 var compiler = require('../../compiler.js');
+var buildmessage = require('../../buildmessage.js');
 
 // an empty app. notably this app has no .meteor/release file.
 var emptyAppDir = path.join(__dirname, 'empty-app');
@@ -41,7 +42,13 @@ var runTest = function () {
   };
 
   setAppDir(emptyAppDir);
-  var loader = project.project.getPackageLoader();
+  var loader;
+  var messages = buildmessage.capture(function () {
+    loader = project.project.getPackageLoader();
+  });
+  if (messages.hasMessages()) {
+    throw Error("failed to get package loader: " + messages.formatMessages());
+  }
 
   console.log("nodeModules: 'skip'");
   assert.doesNotThrow(function () {

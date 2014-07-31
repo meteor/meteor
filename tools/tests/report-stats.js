@@ -9,6 +9,7 @@ var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 var project = require('../project.js');
+var buildmessage = require('../buildmessage.js');
 
 var testStatsServer = "https://test-package-stats.meteor.com";
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
@@ -116,7 +117,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       // package usage stats
       var usage = fetchPackageUsageForApp(identifier);
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
-                           _.sortBy(stats.packageList(sandboxProject), "name"));
+                           _.sortBy(packageList(sandboxProject), "name"));
 
       // Check that the direct dependency was recorded as such.
       _.each(usage.packages, function (package) {
@@ -131,7 +132,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       selftest.expectEqual(appPackages.appId, identifier);
       selftest.expectEqual(appPackages.userId, null);
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                           _.sortBy(stats.packageList(sandboxProject), "name"));
+                           _.sortBy(packageList(sandboxProject), "name"));
       checkMeta(appPackages, sessionId, useFakeRelease);
 
       // now bundle again while logged in. verify that the stats server
@@ -183,7 +184,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                           _.sortBy(stats.packageList(sandboxProject), "name"));
+                           _.sortBy(packageList(sandboxProject), "name"));
     }
   );
 });
@@ -256,4 +257,15 @@ var fetchPackageUsageForApp = function (identifier) {
 var getClientAddress = function () {
   var stats = testUtils.ddpConnect(testStatsServer);
   return stats.call("getClientAddress");
+};
+
+var packageList = function (proj) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = stats.packageList(proj);
+  });
+  if (messages.hasMessages()) {
+    selftest.fail(messages.formatMessages());
+  }
+  return ret;
 };

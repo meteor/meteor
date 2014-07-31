@@ -158,6 +158,7 @@ _.extend(Project.prototype, {
   // the package loader for this project. This WILL REWRITE THE VERSIONS FILE.
   _ensureDepsUpToDate : function () {
     var self = this;
+    buildmessage.assertInCapture();
 
     // To calculate project dependencies, we need to know what release we are
     // on, but to do that, we need to have a rootDirectory. So, we initialize
@@ -415,6 +416,7 @@ _.extend(Project.prototype, {
   // null if the package is unconstrained.
   getCurrentCombinedConstraints : function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.combinedConstraints;
   },
@@ -433,6 +435,7 @@ _.extend(Project.prototype, {
   // Returns an object mapping package name to its string version.
   getVersions : function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.dependencies;
   },
@@ -450,6 +453,7 @@ _.extend(Project.prototype, {
   // transitive dependencies.
   getPackageLoader : function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.packageLoader;
   },
@@ -565,6 +569,7 @@ _.extend(Project.prototype, {
   // here because this really shouldn't fail (we are just removing things).
   removePackages : function (names) {
     var self = this;
+    buildmessage.assertInCapture();
     self._removePackageRecords(names);
 
     // Force a recalculation of all the dependencies, and record them to disk.
@@ -585,6 +590,7 @@ _.extend(Project.prototype, {
   setVersions: function (newVersions, options) {
     var self = this;
     options = options || {};
+    buildmessage.assertInCapture();
 
     var downloaded = self._ensurePackagesExistOnDisk(newVersions);
     var ret = {
@@ -641,6 +647,7 @@ _.extend(Project.prototype, {
   // that could lead to changes in the versions file.
   _ensurePackagesExistOnDisk : function (versions, options) {
     var self = this;
+    buildmessage.assertInCapture();
     options = options || {};
     var arch = options.arch || archinfo.host();
     var verbose = options.verbose || !self.muted;
@@ -681,6 +688,7 @@ _.extend(Project.prototype, {
   // disk and the operation has failed.
   addPackages : function (moreDeps, newVersions) {
     var self = this;
+    buildmessage.assertInCapture();
 
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to

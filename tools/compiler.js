@@ -133,10 +133,11 @@ compiler.eachUsedUnibuild = function (
 // PackgeSource), or we could have some kind of cache (the ideal place
 // for such a cache might be inside the constraint solver, since it
 // will know how/when to invalidate it).
-var determineBuildTimeDependencies = function
-    (packageSource,  constraintSolverOpts) {
+var determineBuildTimeDependencies = function (packageSource,
+                                               constraintSolverOpts) {
   var ret = {};
-  constraintSolverOpts =  constraintSolverOpts || {};
+  constraintSolverOpts = constraintSolverOpts || {};
+  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
 
   // There are some special cases where we know that the package has no source
   // files, which means it can't have any interesting build-time
@@ -745,6 +746,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
 //   disk) that were used by the compilation (the source files you'd have to
 //   ship to a different machine to replicate the build there)
 compiler.compile = function (packageSource, options) {
+  buildmessage.assertInCapture();
   var sources = [];
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
@@ -910,7 +912,10 @@ var getPluginProviders = function (versions) {
 // string). Yes, it is possible that multiple versions of some other
 // package might be build-time dependencies (because of plugins).
 compiler.getBuildOrderConstraints = function (
-    packageSource,  constraintSolverOpts) {
+    packageSource, constraintSolverOpts) {
+  constraintSolverOpts = constraintSolverOpts || {};
+  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
+
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {
     if (name !== packageSource.name) {
@@ -949,6 +954,7 @@ compiler.getBuildOrderConstraints = function (
 // build-time dependency has changed.
 compiler.checkUpToDate = function (
     packageSource, unipackage, constraintSolverOpts) {
+  buildmessage.assertInCapture();
 
   if (unipackage.forceNotUpToDate) {
     return false;

@@ -66,19 +66,14 @@ var expectThrows = markStack(function (f) {
 });
 
 var getToolsPackage = function () {
+  buildmessage.assertInCapture();
   // Rebuild the tool package --- necessary because we don't actually
   // rebuild the tool in the cached version every time.
-  var messages = buildmessage.capture(function () {
-    if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
-      throw Error("didn't rebuild meteor-tool?");
-    }
-  });
-  if (messages.hasMessages()) {
-    throw Error(messages.formatMessages());
-  };
+  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
+    throw Error("didn't rebuild meteor-tool?");
+  }
   var loader = new packageLoader.PackageLoader({versions: null});
-  var toolPackage = loader.getPackage(toolPackageName);
-  return toolPackage;
+  return loader.getPackage(toolPackageName);
 };
 
 // Execute a command synchronously, discarding stderr.
@@ -621,12 +616,18 @@ _.extend(Sandbox.prototype, {
     // be building some packages besides meteor-tool (so that we can
     // build apps that contain core packages).
 
-    var toolPackage = getToolsPackage();
-    var toolPackageDirectory =
-          '.' + toolPackage.version + '.XXX++'
-          + toolPackage.buildArchitectures();
-    toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                     toolPackageName, toolPackageDirectory));
+    var toolPackage, toolPackageDirectory;
+    var messages = buildmessage.capture(function () {
+      toolPackage = getToolsPackage();
+      toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
+        + toolPackage.buildArchitectures();
+      toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
+                                       toolPackageName, toolPackageDirectory));
+    });
+    if (messages.hasMessages()) {
+      throw Error(messages.formatMessages());
+    }
+
     fs.symlinkSync(toolPackageDirectory,
                    path.join(self.warehouse, packagesDirectoryName,
                              toolPackageName, toolPackage.version));

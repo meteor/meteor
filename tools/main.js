@@ -313,11 +313,15 @@ var springboard = function (rel, releaseOverride) {
 
   // XXX split better
   try {
-    tropohouse.default.maybeDownloadPackageForArchitectures(
-      {packageName: toolsPkg, version: toolsVersion},
-      [archinfo.host()],
-      true /* print downloading message */
-    );
+    var messages = buildmessage.capture({
+      title: "downloading tools package " + toolsPkg + "@" + toolsVersion
+    }, function () {
+      tropohouse.default.maybeDownloadPackageForArchitectures(
+        {packageName: toolsPkg, version: toolsVersion},
+        [archinfo.host()],
+        true /* print downloading message */
+      );
+    });
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
@@ -327,8 +331,12 @@ var springboard = function (rel, releaseOverride) {
       rel.getToolsPackageAtVersion() + "\n");
     process.exit(1);
   }
-
-  // XXX support warehouse too
+  if (messages.hasMessages()) {
+    process.stderr.write(
+      "Could not springboard to release: " + rel.name + ".\n" +
+        messages.formatMessages());
+    process.exit(1);
+  }
 
   var packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
   var toolUnipackage = new unipackage.Unipackage;

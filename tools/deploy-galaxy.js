@@ -206,7 +206,14 @@ exports.deploy = function (options) {
 
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-      stats.recordPackages();
+      var statsMessages = buildmessage.capture(function () {
+        stats.recordPackages();
+      });
+      if (statsMessages.hasMessages()) {
+        process.stdout.write("Error talking to stats server:\n" +
+                             statsMessages.formatMessages());
+        // ... but continue;
+      }
       var bundleResult = bundler.bundle({
         outputPath: bundlePath,
         buildOptions: options.buildOptions

@@ -9,6 +9,7 @@ var project = require("./project.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
 var release = require("./release.js");
+var buildmessage = require("./buildmessage.js");
 
 // The name of the package that you add to your app to opt out of
 // sending stats.
@@ -33,6 +34,7 @@ var optOutPackageName = "package-stats-opt-out";
 // that it is pointing to a root directory with an existing
 // .meteor/versions file.
 var packageList = function (_currentProjectForTest) {
+  buildmessage.assertInCapture();
   var directDeps = (_currentProjectForTest || project.project).getConstraints();
 
   var versions;
@@ -55,6 +57,7 @@ var packageList = function (_currentProjectForTest) {
 };
 
 var recordPackages = function () {
+  buildmessage.assertInCapture();
   // Before doing anything, look at the app's dependencies to see if the
   // opt-out package is there; if present, we don't record any stats.
   var packages = packageList();

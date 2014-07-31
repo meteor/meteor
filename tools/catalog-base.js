@@ -339,23 +339,6 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     return self._recordOrRefresh(getDef);
   },
 
-  // Given a name and a version of a package, return a path on disk
-  // from which we can load it. If we don't have it on disk (we
-  // haven't downloaded it, or it just plain doesn't exist in the
-  // catalog) return null.
-  //
-  // Doesn't download packages. Downloading should be done at the time
-  // that .meteor/versions is updated.
-  getLoadPathForPackage: function (name, version) {
-    var self = this;
-
-    var packageDir = tropohouse.default.packagePath(name, version);
-    if (fs.existsSync(packageDir)) {
-      return packageDir;
-    }
-    return null;
-  },
-
   // Reload catalog data to account for new information if needed.
   refresh: function () {
     throw new Error("no such thing as a base refresh");

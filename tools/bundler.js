@@ -431,6 +431,7 @@ _.extend(Target.prototype, {
   //   on server targets.
   make: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
 
     // Populate the list of unibuilds to load
     self._determineLoadOrder({
@@ -478,6 +479,8 @@ _.extend(Target.prototype, {
   //   package name as a string
   _determineLoadOrder: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var packageLoader = self.packageLoader;
 
     // Find the roots
@@ -1641,22 +1644,11 @@ exports.bundle = function (options) {
   var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
 
+  var appDir = project.project.rootDir;
   if (! release.usingRightReleaseForApp(appDir))
     throw new Error("running wrong release for app?");
 
   var arch = buildOptions.arch || archinfo.host();
-
-  var appDir = project.project.rootDir;
-  var packageLoader = project.project.getPackageLoader();
-  var downloaded = project.project._ensurePackagesExistOnDisk(
-    project.project.dependencies, { arch: arch, verbose: true });
-
-  if (_.keys(downloaded).length !==
-      _.keys(project.project.dependencies).length) {
-    buildmessage.error("Unable to download package builds for this architecture.");
-    // Recover by returning.
-    return;
-  }
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1672,6 +1664,17 @@ exports.bundle = function (options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
+    var packageLoader = project.project.getPackageLoader();
+    var downloaded = project.project._ensurePackagesExistOnDisk(
+      project.project.dependencies, { arch: arch, verbose: true });
+
+    if (_.keys(downloaded).length !==
+        _.keys(project.project.dependencies).length) {
+      buildmessage.error("Unable to download package builds for this architecture.");
+      // Recover by returning.
+      return;
+    }
+
     var controlProgram = null;
 
     var makeClientTarget = function (app) {
@@ -1843,8 +1846,7 @@ exports.bundle = function (options) {
     _.each(programs, function (p) {
       // Read this directory as a package and create a target from
       // it
-      var pkg = packageCache.packageCache.
-        loadPackageAtPath(p.name, p.path);
+      var pkg = packageCache.packageCache.loadPackageAtPath(p.name, p.path);
       var target;
       switch (p.type) {
       case "server":
@@ -1985,6 +1987,7 @@ exports.bundle = function (options) {
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
 exports.buildJsImage = function (options) {
+  buildmessage.assertInCapture();
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
   if (! options.name)
@@ -2036,6 +2039,7 @@ exports.readJsImage = function (controlFilePath) {
 // with a topological sort.
 exports.iterateOverAllUsedUnipackages = function (loader, arch,
                                                   packageNames, callback) {
+  buildmessage.assertInCapture();
   var target = new Target({packageLoader: loader,
                            arch: arch});
   target._determineLoadOrder({packages: packageNames});

@@ -905,14 +905,15 @@ main.registerCommand({
 }, function (options) {
   var items = [];
 
-  // Packages that are used by this app
-  var packages = project.getConstraints();
-  // Versions of the packages. We need this to get the right description for the
-  // user, in case it changed between versions.
-  var versions = project.getVersions();
   var newVersionsAvailable = false;
 
   var messages = buildmessage.capture(function () {
+    // Packages that are used by this app
+    var packages = project.getConstraints();
+    // Versions of the packages. We need this to get the right description for
+    // the user, in case it changed between versions.
+    var versions = project.getVersions();
+
     _.each(packages, function (version, name) {
       if (!version) {
         version = versions[name];
@@ -1152,7 +1153,14 @@ main.registerCommand({
 
     var solutionPackageVersions = null;
     var directDependencies = project.getConstraints();
-    var previousVersions = project.getVersions();
+    var previousVersions;
+    var messages = buildmessage.capture(function () {
+      previousVersions = project.getVersions();
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write(messages.formatMessages());
+      return 1;
+    }
     var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
       var releaseRecord = catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
       if (!releaseRecord)
@@ -1193,8 +1201,16 @@ main.registerCommand({
     var upgradersToRun = upgraders.upgradersToRun();
 
     // Write the new versions to .meteor/packages and .meteor/versions.
-    var setV = project.setVersions(solutionPackageVersions,
-      { alwaysRecord : true });
+    var setV;
+    messages = buildmessage.capture(function () {
+      setV = project.setVersions(solutionPackageVersions,
+                                 { alwaysRecord : true });
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write("Error while setting versions:\n" +
+                           messages.formatMessages());
+      return 1;
+    }
     project.showPackageChanges(previousVersions, solutionPackageVersions, {
       onDiskPackages: setV.downloaded
     });
@@ -1227,13 +1243,20 @@ main.registerCommand({
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 
-    var versions = project.getVersions();
-    var allPackages = project.getCurrentCombinedConstraints();
-    var upgradePackages;
+    var versions, allPackages;
+    messages = buildmessage.capture(function () {
+      versions = project.getVersions();
+      allPackages = project.getCurrentCombinedConstraints();
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write(messages.formatMessages());
+      return 1;
+    }
 
     // If no packages have been specified, then we will send in a request to
     // update all direct dependencies. If a specific list of packages has been
     // specified, then only upgrade those.
+    var upgradePackages;
     if (options.args.length === 0) {
       upgradePackages = _.pluck(allPackages, 'packageName');
     } else {
@@ -1257,12 +1280,22 @@ main.registerCommand({
     }
 
     // Set our versions and download the new packages.
-    setV = project.setVersions(newVersions, {
-      alwaysRecord : true });
-
-    // Display changes: what we have added/removed/upgraded.
-    return project.showPackageChanges(versions, newVersions, {
-       onDiskPackages: setV.downloaded});
+    messages = buildmessage.capture(function () {
+      setV = project.setVersions(newVersions, { alwaysRecord : true });
+    });
+    // XXX cleanup this madness of error handling
+    if (messages.hasMessages()) {
+      process.stderr.write("Error while setting package versions:\n" +
+                           messages.formatMessages());
+      return 1;
+    }
+    var showExitCode = project.showPackageChanges(
+      versions, newVersions, { onDiskPackages: setV.downloaded });
+    if (!setV.success) {
+      process.stderr.write("Could not install all the requested packages.\n");
+      return 1;
+    }
+    return showExitCode;
   }
   return 0;
 });
@@ -1293,9 +1326,16 @@ main.registerCommand({
   // Read in existing package dependencies.
   var packages = project.getConstraints();
 
-  // Combine into one object mapping package name to list of
-  // constraints, to pass in to the constraint solver.
-  var allPackages = project.getCurrentCombinedConstraints();
+  var allPackages;
+  var messages = buildmessage.capture(function () {
+    // Combine into one object mapping package name to list of constraints, to
+    // pass in to the constraint solver.
+    allPackages = project.getCurrentCombinedConstraints();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -1377,35 +1417,42 @@ main.registerCommand({
     return 1;
   }
 
-  // Get the contents of our versions file. We need to pass them to the
-  // constraint solver, because our contract with the user says that we will
-  // never downgrade a dependency.
-  var versions = project.getVersions();
+  var downloaded, versions, newVersions;
+  var messages = buildmessage.capture(function () {
+    // Get the contents of our versions file. We need to pass them to the
+    // constraint solver, because our contract with the user says that we will
+    // never downgrade a dependency.
+    versions = project.getVersions();
 
+    // Call the constraint solver.
+    var resolverOpts =  {
+      previousSolution: versions,
+      breaking: !!options.force
+    };
+    newVersions = catalog.complete.resolveConstraints(
+      allPackages,
+      resolverOpts,
+      { ignoreProjectDeps: true });
+    if ( ! newVersions) {
+      // XXX: Better error handling.
+      process.stderr.write("Cannot resolve package dependencies.\n");
+      return;
+    }
 
-  // Call the constraint solver.
-  var resolverOpts =  {
-    previousSolution: versions,
-    breaking: !!options.force
-  };
-  var newVersions = catalog.complete.resolveConstraints(allPackages,
-                                               resolverOpts,
-                                               { ignoreProjectDeps: true });
-  if ( ! newVersions) {
-    // XXX: Better error handling.
-    process.stderr.write("Cannot resolve package dependencies.\n");
+    // Don't tell the user what all the operations were until we finish -- we
+    // don't want to give a false sense of completeness until everything is
+    // written to disk.
+    var messageLog = [];
+
+    // Install the new versions. If all new versions were installed
+    // successfully, then change the .meteor/packages and .meteor/versions to
+    // match expected reality.
+    downloaded = project.addPackages(constraints, newVersions);
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
   }
-
-  // Don't tell the user what all the operations were until we finish -- we
-  // don't want to give a false sense of completeness until everything is
-  // written to disk.
-  var messageLog = [];
-
-
-  // Install the new versions. If all new versions were installed successfully,
-  // then change the .meteor/packages and .meteor/versions to match expected
-  // reality.
-  var downloaded = project.addPackages(constraints, newVersions);
 
   var ret = project.showPackageChanges(versions, newVersions, {
     onDiskPackages: downloaded});
@@ -1466,19 +1513,24 @@ main.registerCommand({
     }
   });
 
+  var messages = buildmessage.capture(function () {
+    // Get the contents of our versions file, we will want them in order to
+    // remove to the user what we removed.
+    var versions = project.getVersions();
 
-  // Get the contents of our versions file, we will want them in order to remove
-  // to the user what we removed.
-  var versions = project.getVersions();
+    // Remove the packages from the project! There is really no way for this to
+    // fail, unless something has gone horribly wrong, so we don't need to check
+    // for it.
+    project.removePackages(packagesToRemove);
 
-  // Remove the packages from the project! There is really no way for this to
-  // fail, unless something has gone horribly wrong, so we don't need to check
-  // for it.
-  project.removePackages(packagesToRemove);
-
-  // Retrieve the new dependency versions that we have chosen for this project
-  // and do some pretty output reporting.
-  var newVersions = project.getVersions();
+    // Retrieve the new dependency versions that we have chosen for this project
+    // and do some pretty output reporting.
+    var newVersions = project.getVersions();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
