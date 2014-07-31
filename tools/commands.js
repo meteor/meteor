@@ -1322,7 +1322,7 @@ main.registerCommand({
         });
       });
     });
-    if (messages.hasMessage()) {
+    if (messages.hasMessages()) {
       process.stderr.write("\n" + messages.formatMessages());
       return 1;
     }
