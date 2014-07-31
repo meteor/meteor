@@ -1,7 +1,11 @@
 var currentTest = null;
 
 var t = function (versionString, expected, descr) {
-  currentTest.equal(PackageVersion.parseConstraint(versionString), expected, descr);
+  currentTest.equal(
+    _.omit(PackageVersion.parseConstraint(versionString),
+           'constraintString'),
+    expected,
+    descr);
 };
 
 var FAIL = function (versionString) {
