@@ -1308,7 +1308,7 @@ main.registerCommand({
       }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures(
           {packageName: toolPkg.package, version: toolPkg.constraint},
-          [osArch],  // XXX 'browser' too?
+          [osArch],  // XXX 'web.browser' too?
           true);
       });
       _.each(release.packages, function (pkgVersion, pkgName) {
@@ -1317,7 +1317,7 @@ main.registerCommand({
         }, function () {
           tmpTropo.maybeDownloadPackageForArchitectures(
             {packageName: pkgName, version: pkgVersion},
-            [osArch],  // XXX 'browser' too?
+            [osArch],  // XXX 'web.browser' too?
             true);
         });
       });

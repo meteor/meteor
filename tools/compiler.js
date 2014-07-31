@@ -28,7 +28,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/11';
+compiler.BUILT_BY = 'meteor/12';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -457,11 +457,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   information.
     // - pathForSourceMap: If this file is to be included in a source map,
     //   this is the name you should use for it in the map.
-    // - rootOutputPath: on browser targets, for resources such as
+    // - rootOutputPath: on web targets, for resources such as
     //   stylesheet and static assets, this is the root URL that
     //   will get prepended to the paths you pick for your output
     //   files so that you get your own namespace, for example
-    //   '/packages/foo'. null on non-browser targets
+    //   '/packages/foo'. null on non-web targets
     // - fileOptions: any options passed to "api.add_files"; for
     //   use by the plugin. The built-in "js" plugin uses the "bare"
     //   option for files that shouldn't be wrapped in a closure.
@@ -473,11 +473,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   file as a Buffer. If n is omitted you get the rest of the
     //   file.
     // - appendDocument({ section: "head", data: "my markup" })
-    //   Browser targets only. Add markup to the "head" or "body"
+    //   Web targets only. Add markup to the "head" or "body"
     //   section of the document.
     // - addStylesheet({ path: "my/stylesheet.css", data: "my css",
     //                   sourceMap: "stringified json sourcemap"})
-    //   Browser targets only. Add a stylesheet to the
+    //   Web targets only. Add a stylesheet to the
     //   document. 'path' is a requested URL for the stylesheet that
     //   may or may not ultimately be honored. (Meteor will add
     //   appropriate tags to cause the stylesheet to be loaded. It
@@ -498,10 +498,10 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   a closure, so that its vars are shared with other files
     //   in the module.
     // - addAsset({ path: "my/image.png", data: Buffer })
-    //   Add a file to serve as-is over HTTP (browser targets) or
+    //   Add a file to serve as-is over HTTP (web targets) or
     //   to include as-is in the bundle (os targets).
     //   This time `data` is a Buffer rather than a string. For
-    //   browser targets, it will be served at the exact path you
+    //   web targets, it will be served at the exact path you
     //   request (concatenated with rootOutputPath). For server
     //   targets, the file can be retrieved by passing path to
     //   Assets.getText or Assets.getBinary.
@@ -514,7 +514,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   line, column, and func are all optional.
     //
     // XXX for now, these handlers must only generate portable code
-    // (code that isn't dependent on the arch, other than 'browser'
+    // (code that isn't dependent on the arch, other than 'web'
     // vs 'os') -- they can look at the arch that is provided
     // but they can't rely on the running on that particular arch
     // (in the end, an arch-specific unibuild will be emitted only if
@@ -572,9 +572,9 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         return ret;
       },
       appendDocument: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Document sections can only be emitted to " +
-                          "browser targets");
+                          "web targets");
         if (options.section !== "head" && options.section !== "body")
           throw new Error("'section' must be 'head' or 'body'");
         if (typeof options.data !== "string")
@@ -586,9 +586,9 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         });
       },
       addStylesheet: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "browser"))
+        if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Stylesheets can only be emitted to " +
-                          "browser targets");
+                          "web targets");
         if (typeof options.data !== "string")
           throw new Error("'data' option to addStylesheet must be a string");
         sourceIsWatched = true;
@@ -605,8 +605,8 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "browser"))
-          throw new Error("'bare' option may only be used for browser targets");
+        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "web"))
+          throw new Error("'bare' option may only be used for web targets");
         sourceIsWatched = true;
         js.push({
           source: options.data,

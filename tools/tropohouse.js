@@ -116,7 +116,7 @@ _.extend(exports.Tropohouse.prototype, {
         throw e;
     }
     if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++browser+os',
+      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
       // so this strips off the part before the '++'.
       // XXX maybe we should just read the unipackage.json instead of
       //     depending on the symlink?

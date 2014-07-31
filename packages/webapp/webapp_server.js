@@ -417,7 +417,7 @@ var runWebAppServer = function () {
                                    __meteor_bootstrap__.configJson.client);
         clientDir = path.dirname(clientJsonPath);
         clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
-        if (clientJson.format !== "browser-program-pre1")
+        if (clientJson.format !== "web-program-pre1")
           throw new Error("Unsupported format for client assets: " +
                           JSON.stringify(clientJson.format));
 

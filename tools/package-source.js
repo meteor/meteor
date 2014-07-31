@@ -92,6 +92,17 @@ var loadOrderSort = function (templateExtensions) {
   };
 };
 
+// XXX We currently have a 1 to 1 mapping between 'where' and 'arch'.
+// In the future, we may let people specify different 'where' and 'arch'.
+var mapWhereToArch = function (where) {
+  if (where === 'server') {
+    return 'os';
+  } else {
+    // Transform client.* into web.*
+    return 'web.' + where.split('.').slice(1).join('.');
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // SourceArch
 ///////////////////////////////////////////////////////////////////////////////
@@ -200,7 +211,7 @@ var PackageSource = function () {
 
   // Path that will be prepended to the URLs of all resources emitted
   // by this package (assuming they don't end up getting
-  // concatenated). For non-browser targets, the only effect this will
+  // concatenated). For non-web targets, the only effect this will
   // have is to change the actual on-disk paths of the files in the
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right).
@@ -293,6 +304,10 @@ var PackageSource = function () {
   // overall package versions file (if one exists). In the future, we can make
   // this option transparent to the user in package.js.
   self.noVersionFile = false;
+
+  // The list of where that we can target. Doesn't include 'client' because
+  // it is expanded into 'client.*'.
+  self.allWheres = ['server', 'client.browser', 'client.cordova'];
 };
 
 
@@ -699,16 +714,35 @@ _.extend(PackageSource.prototype, {
     }
 
     // source files used
-    var sources = {client: [], server: []};
+    var sources = {};
 
     // symbols exported
-    var exports = {client: [], server: []};
+    var exports = {};
 
     // packages used and implied (keys are 'package', 'unordered', and
     // 'weak').  an "implied" package is a package that will be used by a unibuild
     // which uses us.
-    var uses =  {client: [], server: []};
-    var implies = {client: [], server: []};
+    var uses = {};
+    var implies = {};
+
+    _.each(self.allWheres, function (where) {
+      sources[where] = [];
+      exports[where] = [];
+      uses[where] = [];
+      implies[where] = [];
+    });
+
+    // Iterates over the list of target archs and calls f(arch) for all archs
+    // that match an element of 'wheres'.
+    var forAllMatchingWheres = function (wheres, f) {
+      _.each(wheres, function (where) {
+        _.each(self.allWheres, function (matchWhere) {
+          if (archinfo.matches(matchWhere, where)) {
+            f(matchWhere);
+          }
+        });
+      });
+    };
 
     // For this old-style, on_use/on_test/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
@@ -717,14 +751,11 @@ _.extend(PackageSource.prototype, {
     // We have a simple strategy. Call its on_xxx handler with no
     // 'where', which is what happens when the package is added
     // directly to an app, and see what files it adds to the client
-    // and the server. Call the former the client version of the
-    // package, and the latter the server version. Then, when a
-    // package is used, include it in both the client and the server
-    // by default. This simple strategy doesn't capture even 10% of
-    // the complexity possible with on_use, on_test, and where, but
+    // and the server. When a package is used, include it in both the client
+    // and the server by default. This simple strategy doesn't capture even
+    // 10% of the complexity possible with on_use, on_test, and where, but
     // probably is sufficient for virtually all packages that actually
-    // exist in the field, if not every single
-    // one. #OldStylePackageSupport
+    // exist in the field, if not every single one. #OldStylePackageSupport
 
     if (fileAndDepLoader) {
       var toArray = function (x) {
@@ -733,25 +764,23 @@ _.extend(PackageSource.prototype, {
         return x ? [x] : [];
       };
 
-      var allWheres = ['client', 'server'];
       var toWhereArray = function (where) {
         if (!(where instanceof Array)) {
-          where = where ? [where] : allWheres;
+          where = where ? [where] : self.allWheres;
         }
         where = _.uniq(where);
-        var realWhere = _.intersection(where, allWheres);
-        if (realWhere.length !== where.length) {
-          var badWheres = _.difference(where, allWheres);
-          // avoid using _.each so as to not add more frames to skip
-          for (var i = 0; i < badWheres.length; ++i) {
+        _.each(where, function (inputWhere) {
+          var isMatch = _.any(_.map(self.allWheres, function (actualWhere) {
+            return archinfo.matches(actualWhere, inputWhere);
+          }));
+          if (! isMatch) {
             buildmessage.error(
-              "Invalid 'where' argument: '" + badWheres[i] + "'",
+              "Invalid 'where' argument: '" + inputWhere + "'",
               // skip toWhereArray in addition to the actual API function
-              {useMyCaller: 1});
-          };
-          // recover by using the real ones only
-        }
-        return realWhere;
+              {useMyCaller: 2});
+          }
+        });
+        return where;
       };
 
       var api = {
@@ -759,8 +788,9 @@ _.extend(PackageSource.prototype, {
         // used. Can also take literal package objects, if you have
         // anonymous packages you want to use (eg, app packages)
         //
-        // @param where 'client', 'server', or an array of those.
-        // The default is ['client', 'server'].
+        // @param where 'web', 'web.browser', 'web.cordova', 'server',
+        // or an array of those.
+        // The default is ['web', 'server'].
         //
         // options can include:
         //
@@ -808,7 +838,7 @@ _.extend(PackageSource.prototype, {
           }
 
           _.each(names, function (name) {
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               uses[w].push(_.extend(utils.splitConstraint(name), {
                 unordered: options.unordered || false,
                 weak: options.weak || false
@@ -825,7 +855,7 @@ _.extend(PackageSource.prototype, {
           where = toWhereArray(where);
 
           _.each(names, function (name) {
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
               implies[w].push(utils.splitConstraint(name));
@@ -841,7 +871,7 @@ _.extend(PackageSource.prototype, {
           where = toWhereArray(where);
 
           _.each(paths, function (path) {
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               var source = {relPath: path};
               if (fileOptions)
                 source.fileOptions = fileOptions;
@@ -877,8 +907,9 @@ _.extend(PackageSource.prototype, {
         // Export symbols from this package.
         //
         // @param symbols String (eg "Foo") or array of String
-        // @param where 'client', 'server', or an array of those.
-        // The default is ['client', 'server'].
+        // @param where 'web', 'server', 'web.browser', 'web.cordova'
+        // or an array of those.
+        // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
         export: function (symbols, where, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
@@ -900,7 +931,7 @@ _.extend(PackageSource.prototype, {
               // recover by ignoring
               return;
             }
-            _.each(where, function (w) {
+            forAllMatchingWheres(where, function (w) {
               exports[w].push({name: symbol, testOnly: !!options.testOnly});
             });
           });
@@ -918,7 +949,11 @@ _.extend(PackageSource.prototype, {
         // packages and any remaining handlers. It violates the
         // principle of least surprise to half-run a handler
         // and then continue.
-        sources = {client: [], server: []};
+        sources = {};
+        _.each(self.allWheres, function (where) {
+          sources[where] = [];
+        });
+
         fileAndDepLoader = null;
         self.pluginInfo = {};
         npmDependencies = null;
@@ -944,9 +979,9 @@ _.extend(PackageSource.prototype, {
 
       // For all implies and uses, fill in the unspecified dependencies from the
       // release.
-      _.each(['server', 'client'], function (label) {
-          uses[label] = _.map(uses[label], setFromRel);
-          implies[label] = _.map(implies[label], setFromRel);
+      _.each(self.allWheres, function (label) {
+        uses[label] = _.map(uses[label], setFromRel);
+        implies[label] = _.map(implies[label], setFromRel);
       });
      };
 
@@ -983,9 +1018,10 @@ _.extend(PackageSource.prototype, {
       files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
     });
 
-    // Create source architectures, one for the server and one for the client.
-    _.each(["browser", "os"], function (arch) {
-      var where = (arch === "browser") ? "client" : "server";
+    // Create source architectures, one for the server and one for each web
+    // arch.
+    _.each(self.allWheres, function (where) {
+      var arch = mapWhereToArch(where);
 
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
@@ -1065,15 +1101,17 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    _.each(["client", "server"], function (archName) {
+    _.each(self.allWheres, function (where) {
       // Determine used packages
       var project = require('./project.js').project;
       var names = project.getConstraints();
-      var arch = archName === "server" ? "os" : "browser";
+      var arch = mapWhereToArch(where);
+      // XXX what about /client.browser/* etc, these directories could also
+      // be for specific client targets.
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {
-        name: archName,
+        name: where,
         arch: arch,
         uses: _.map(names, utils.dealConstraint)
       });
@@ -1118,7 +1156,7 @@ _.extend(PackageSource.prototype, {
         });
 
         var otherUnibuildRegExp =
-              (archName === "server" ? /^client\/$/ : /^server\/$/);
+              (where === "server" ? /^client\/$/ : /^server\/$/);
 
         // The paths that we've called checkForInfiniteRecursion on.
         var seenPaths = {};
@@ -1188,7 +1226,7 @@ _.extend(PackageSource.prototype, {
 
           // Special case: on the client, JavaScript files in a
           // `client/compatibility` directory don't get wrapped in a closure.
-          if (archName === "client" && relPath.match(/\.js$/)) {
+          if (archinfo.matches(arch, "web") && relPath.match(/\.js$/)) {
             var clientCompatSubstr =
                   path.sep + 'client' + path.sep + 'compatibility' + path.sep;
             if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
@@ -1198,7 +1236,7 @@ _.extend(PackageSource.prototype, {
         });
 
         // Now look for assets for this unibuild.
-        var assetDir = archName === "client" ? "public" : "private";
+        var assetDir = archinfo.matches(arch, "web") ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
         });
