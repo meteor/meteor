@@ -11,6 +11,7 @@ var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
 var uniload = require('./uniload.js');
 var config = require('./config.js');
+var buildmessage = require('./buildmessage.js');
 var util = require('util');
 var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
@@ -67,9 +68,14 @@ var expectThrows = markStack(function (f) {
 var getToolsPackage = function () {
   // Rebuild the tool package --- necessary because we don't actually
   // rebuild the tool in the cached version every time.
-  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
-    throw Error("didn't rebuild meteor-tool?");
-  }
+  var messages = buildmessage.capture(function () {
+    if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
+      throw Error("didn't rebuild meteor-tool?");
+    }
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  };
   var loader = new packageLoader.PackageLoader({versions: null});
   var toolPackage = loader.getPackage(toolPackageName);
   return toolPackage;

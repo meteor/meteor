@@ -774,6 +774,7 @@ _.extend(CompleteCatalog.prototype, {
   rebuildLocalPackages: function (namedPackages) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
 
     // Clear any cached builds in the package cache.
     packageCache.packageCache.refresh();
