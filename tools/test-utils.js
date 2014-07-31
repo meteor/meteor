@@ -2,6 +2,7 @@ var _ = require('underscore');
 var release = require('./release.js');
 var uniload = require('./uniload.js');
 var config = require('./config.js');
+var utils = require('./utils.js');
 
 var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -12,7 +13,7 @@ var randomString = function (charsCount) {
   return str;
 };
 
-exports.accountsCommandTimeoutSecs = 15 * exports.timeoutScaleFactor;
+exports.accountsCommandTimeoutSecs = 15 * utils.timeoutScaleFactor;
 
 exports.randomString = randomString;
 
