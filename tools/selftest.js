@@ -550,7 +550,7 @@ _.extend(Sandbox.prototype, {
     };
     self.write(to, contents);
   },
-  
+
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink: function (filename) {
     var self = this;
