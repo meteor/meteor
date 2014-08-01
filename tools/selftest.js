@@ -84,6 +84,15 @@ var execFileSync = function (binary, args) {
   })().wait();
 };
 
+var captureAndThrow = function (f) {
+  var messages = buildmessage.capture(function () {
+    f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
 ///////////////////////////////////////////////////////////////////////////////
@@ -623,16 +632,13 @@ _.extend(Sandbox.prototype, {
     // build apps that contain core packages).
 
     var toolPackage, toolPackageDirectory;
-    var messages = buildmessage.capture(function () {
+    captureAndThrow(function () {
       toolPackage = getToolsPackage();
       toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
         + toolPackage.buildArchitectures();
       toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
                                        toolPackageName, toolPackageDirectory));
     });
-    if (messages.hasMessages()) {
-      throw Error(messages.formatMessages());
-    }
 
     fs.symlinkSync(toolPackageDirectory,
                    path.join(self.warehouse, packagesDirectoryName,
@@ -1573,5 +1579,6 @@ _.extend(exports, {
   expectEqual: expectEqual,
   expectThrows: expectThrows,
   getToolsPackage: getToolsPackage,
-  execFileSync: execFileSync
+  execFileSync: execFileSync,
+  captureAndThrow: captureAndThrow
 });

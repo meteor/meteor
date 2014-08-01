@@ -230,7 +230,7 @@ var loadHelp = function () {
   });
 };
 
-var longHelp = function (commandName) {
+var longHelp = exports.longHelp = function (commandName) {
   commandName = commandName.trim();
   var parts = commandName.length ? commandName.split(' ') : [];
   var node = commands;
@@ -1164,7 +1164,4 @@ commandName + ": You're not in a Meteor project directory.\n" +
     throw new Error("command returned non-number?");
   process.exit(ret);
 }).run();
-
-// exports
-main.longHelp = longHelp;
 

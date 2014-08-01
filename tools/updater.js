@@ -1,7 +1,6 @@
 var path = require('path');
 var fs = require('fs');
 var _ = require('underscore');
-var inFiber = require('./fiber-helpers.js').inFiber;
 var files = require('./files.js');
 var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');

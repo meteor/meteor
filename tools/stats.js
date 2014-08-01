@@ -72,6 +72,7 @@ var recordPackages = function () {
   // We do this inside a new fiber to avoid blocking anything on talking
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
+  // This also gives it its own buildmessage state.
   Fiber(function () {
 
     var userAgentInfo = {

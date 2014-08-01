@@ -5,7 +5,6 @@ var path = require('path');
 var fs = require('fs');
 var uniload = require('./uniload.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var Fiber = require('fibers');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
 var release = require('./release.js');

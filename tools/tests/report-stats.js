@@ -35,7 +35,10 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
   }
 
   if (useFakeRelease) {
-    var toolsPackage = selftest.getToolsPackage();
+    var toolsPackage;
+    selftest.captureAndThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+    });
     expectedUserAgentInfo.meteorReleaseTrack =
       "METEOR-CORE";
     expectedUserAgentInfo.meteorReleaseVersion =

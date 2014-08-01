@@ -19,7 +19,10 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   });
   var run;
 
-  var toolsPackage = selftest.getToolsPackage();
+  var toolsPackage;
+  selftest.captureAndThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+  });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;
 
@@ -132,7 +135,10 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   });
   var run;
 
-  var toolsPackage = selftest.getToolsPackage();
+  var toolsPackage;
+  selftest.captureAndThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+  });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;
 
