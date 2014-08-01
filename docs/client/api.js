@@ -545,7 +545,7 @@ Template.api.meteor_collection = {
 
 Template.api.find = {
   id: "find",
-  name: "<em>collection</em>.find(selector, [options])",
+  name: "<em>collection</em>.find([selector], [options])",
   locus: "Anywhere",
   descr: ["Find the documents in a collection that match the selector."],
   args: [
@@ -580,7 +580,7 @@ Template.api.find = {
 
 Template.api.findone = {
   id: "findone",
-  name: "<em>collection</em>.findOne(selector, [options])",
+  name: "<em>collection</em>.findOne([selector], [options])",
   locus: "Anywhere",
   descr: ["Finds the first document that matches the selector, as ordered by sort and skip options."],
   args: [
