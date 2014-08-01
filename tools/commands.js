@@ -1362,7 +1362,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin set-banners',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  hidden: true,
 }, function (options) {
   var bannersFile = options.args[0];
   try {

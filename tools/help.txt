@@ -531,13 +531,7 @@ Usage: meteor admin change-homepage <package name> <new url>
 Change the homepage containing package information.
 
 
->>> admin set-breaking
-Mark a given version as containing breaking changes.
-Usage: stuff
-
-Mark a given package version as containing breaking changes.
-
->>> admin set-banners <banner file config>
+>>> admin set-banners
 Set banners on published releases.
 Usage: meteor admin set-banners <path to banner configuration>
 

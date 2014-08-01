@@ -1,0 +1,6 @@
+{
+ "track": "METEOR-CORE",
+ "version": "0.9.0-rc0",
+ "recommended": false,
+ "description": "An experimental release of meteor."
+}
