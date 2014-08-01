@@ -1199,7 +1199,17 @@ main.registerCommand({
   }
 
   var conn = auth.loggedInAccountsConnection(token);
-  conn.call("createOrganization", options.args[0]);
+  try {
+    conn.call("createOrganization", options.args[0]);
+  } catch (err) {
+    // XXX If the organization already exists, we'll get "Username
+    // already exists" here. We should probably rewrite that to a nicer
+    // error ("Organization name already exists"), either here or on the
+    // server.
+    process.stderr.write("Error creating organization: " +
+                         err.reason + "\n");
+    return 1;
+  }
   process.stdout.write("Organization " + options.args[0] + " created.\n");
   return 0;
 });
@@ -1217,7 +1227,13 @@ main.registerCommand({
   }
 
   var conn = auth.loggedInAccountsConnection(token);
-  var result = conn.call("showOrganization", options.args[0]);
+  try {
+    var result = conn.call("showOrganization", options.args[0]);
+  } catch (err) {
+    process.stderr.write("Error showing organization: " +
+                         err.reason + "\n");
+    return 1;
+  }
   process.stdout.write(result.join("\n") + "\n");
   return 0;
 });
@@ -1244,13 +1260,12 @@ main.registerCommand({
     });
     var body = JSON.parse(result.body);
   } catch (err) {
-    console.log(err, result.body);
-    process.stderr.write("Could not list organizations.\n");
+    process.stderr.write("Error listing organizations.\n");
     return 1;
   }
 
   if (! body || ! body.organizations) {
-    process.stderr.write("Could not list organizations.\n");
+    process.stderr.write("Error listing organizations.\n");
     return 1;
   }
 
@@ -1297,7 +1312,13 @@ main.registerCommand({
   }
 
   var conn = auth.loggedInAccountsConnection(token);
-  conn.call("addOrganizationMember", options.args[0], options.args[1]);
+  try {
+    conn.call("addOrganizationMember", options.args[0], options.args[1]);
+  } catch (err) {
+    process.stderr.write("Error adding member: " +
+                         err.reason + "\n");
+    return 1;
+  }
   process.stdout.write(options.args[1] + " added to organization " +
                        options.args[0] + ".\n");
   return 0;
