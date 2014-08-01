@@ -900,7 +900,7 @@ _.extend(PackageSource.prototype, {
           releaseRecord = catalog.official.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
-            throw new Error("Unknown release "+ release);
+            buildmessage.error("Unknown release "+ release);
            }
         },
 
