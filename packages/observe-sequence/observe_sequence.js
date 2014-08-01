@@ -86,7 +86,7 @@ ObserveSequence = {
         // more up-to-date information (specifically, the state of the observe
         // before it was stopped, which may be older than the DB).
         if (activeObserveHandle) {
-          lastSeqArray = _.map(activeObserveHandle._fetch(), function (doc) {
+          lastSeqArray = _.map(lastSeq.fetch(), function (doc) {
             return {_id: doc._id, item: doc};
           });
           activeObserveHandle.stop();
