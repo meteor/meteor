@@ -1294,7 +1294,12 @@ main.registerCommand({
   }
 
   var conn = auth.loggedInAccountsConnection(token);
-  conn.call("deleteOrganization", options.args[0]);
+  try {
+    conn.call("deleteOrganization", options.args[0]);
+  } catch (err) {
+    process.stderr.write("Error deleting organization: " + err.reason + "\n");
+    return 1;
+  }
   process.stdout.write("Organization " + options.args[0] + " deleted.\n");
   return 0;
 });
