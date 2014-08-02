@@ -136,11 +136,156 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   run.read("test\n" + orgName + "\n");
   run.expectExit(0);
 
-  // Log in as a different user in the organization.
+  testUtils.logout(s);
+
+  // Log in as testtest and see that we are authorized.
+  testUtils.login(s, "testtest", "testtest");
+  run = s.run("list-sites");
+  run.waitSecs(commandTimeoutSecs);
+  run.match(appName);
+  run.expectExit(0);
+
+  run = s.run("logs", appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.expectExit(0);
+
+  run = s.run("admin", "list-organizations");
+  run.waitSecs(commandTimeoutSecs);
+  run.match(orgName);
+  run.expectExit(0);
+
+  testUtils.logout(s);
+  testUtils.login(s, "test", "testtest");
+
+  // Remove testtest from the organization.
+  run = s.run("admin", "remove-member", orgName, "testtest");
+  run.waitSecs(commandTimeoutSecs);
+  run.expectExit(0);
+
+  console.log("1");
+  run = s.run("admin", "show-organization", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll("testtest");
+  run.expectExit(0);
+
+  testUtils.logout(s);
+
+  console.log("2");
+  // Log in as testtest, see that we are no longer authorized.
+  testUtils.login(s, "testtest", "testtest");
+  run = s.run("list-sites");
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(appName);
+  run.expectExit(0);
+
+  run = s.run("logs", appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("belongs to a different user");
+  run.expectExit(1);
+
+  run = s.run("admin", "list-organizations");
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(orgName);
+  run.expectExit(0);
+
+  console.log("3");
+  run = s.run("admin", "show-organization", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("not a member of this organization");
+  run.expectExit(1);
+
+  // We shouldn't be allowed to delete an organization that we're not a
+  // member of.
+  run = s.run("admin", "delete-organization", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("you are not authorized");
+  run.expectExit(1);
+
+  testUtils.logout(s);
+
+  console.log("4");
+  // Add testtest back to the org, and then de-authorize the org for our
+  // app.
+  testUtils.login(s, "test", "testtest");
+  run = s.run("admin", "add-member", orgName, "testtest");
+  run.waitSecs(commandTimeoutSecs);
+  run.expectExit(0);
+
+  run = s.run("authorized", appName, "--remove", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.expectExit(0);
+
+  run = s.run("authorized", appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(appName);
+  run.expectExit(0);
+
+  console.log("5");
+  // As testtest, check that we are not still authorized.
   testUtils.logout(s);
   testUtils.login(s, "testtest", "testtest");
+  run = s.run("list-sites");
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(appName);
+  run.expectExit(0);
+
+  run = s.run("logs", appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("belongs to a different user");
+  run.expectExit(1);
+  console.log("6");
+
+  // As 'test', add the org back to the app, and then delete the organization.
+  testUtils.logout(s);
+  testUtils.login(s, "test", "testtest");
+  run = s.run("authorized", appName, "--add", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.expectExit(0);
+
+  run = s.run("admin", "delete-organization", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.match(orgName + " deleted");
+  run.expectExit(0);
+
+  console.log("7");
+  run = s.run("admin", "show-organization", orgName);
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("Organization does not exist");
+  run.expectExit(1);
+
   run = s.run("admin", "list-organizations");
-  run.match(orgName + "\n");
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(orgName);
+  run.expectExit(0);
+
+  run = s.run("authorized", appName);
+  run.waitSecs(commandTimeoutSecs);
+  run.read("test\n");
+  run.forbidAll(orgName);
+  run.expectExit(0);
+
+  // 'test' should still see our site in list-sites, because 'test' is
+  // explicitly authorized, not authorized by way of the organization.
+  run = s.run("list-sites");
+  run.waitSecs(commandTimeoutSecs);
+  run.match(appName);
+  run.expectExit(0);
+
+  testUtils.logout(s);
+
+  // Now that the organization has been deleted, 'testtest' shouldn't
+  // see it in list-organizations, and we shouldn't see our site in
+  // list-sites.
+  testUtils.login(s, "testtest", "testtest");
+
+  run = s.run("admin", "list-organizations");
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(orgName);
+  run.expectExit(0);
+
+  run = s.run("list-sites");
+  run.waitSecs(commandTimeoutSecs);
+  run.forbidAll(appName);
   run.expectExit(0);
 
   testUtils.logout(s);
