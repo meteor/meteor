@@ -162,7 +162,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   run.waitSecs(commandTimeoutSecs);
   run.expectExit(0);
 
-  console.log("1");
   run = s.run("admin", "show-organization", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.forbidAll("testtest");
@@ -170,7 +169,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
 
   testUtils.logout(s);
 
-  console.log("2");
   // Log in as testtest, see that we are no longer authorized.
   testUtils.login(s, "testtest", "testtest");
   run = s.run("list-sites");
@@ -188,7 +186,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   run.forbidAll(orgName);
   run.expectExit(0);
 
-  console.log("3");
   run = s.run("admin", "show-organization", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("not a member of this organization");
@@ -203,7 +200,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
 
   testUtils.logout(s);
 
-  console.log("4");
   // Add testtest back to the org, and then de-authorize the org for our
   // app.
   testUtils.login(s, "test", "testtest");
@@ -220,7 +216,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   run.forbidAll(appName);
   run.expectExit(0);
 
-  console.log("5");
   // As testtest, check that we are not still authorized.
   testUtils.logout(s);
   testUtils.login(s, "testtest", "testtest");
@@ -233,7 +228,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("belongs to a different user");
   run.expectExit(1);
-  console.log("6");
 
   // As 'test', add the org back to the app, and then delete the organization.
   testUtils.logout(s);
@@ -247,7 +241,6 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   run.match(orgName + " deleted");
   run.expectExit(0);
 
-  console.log("7");
   run = s.run("admin", "show-organization", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("Organization does not exist");
