@@ -498,9 +498,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       process.stderr.write("Publish failed. \n");
       return 1;
     }
-    var authorized = _.indexOf(
-      _.pluck(packRecord.maintainers, 'username'), auth.loggedInUsername());
-    if (authorized == -1 && name.indexOf(":") !== -1) {
+
+    if (!amIAuthorized(name, false)) {
       process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
@@ -646,4 +645,32 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
 
   return 0;
+};
+
+// Call the server to ask if we are authorized to update this release or
+// package. This is a way to save time before sending data to the server. It
+// will mostly ignore most errors (just in case we have a flaky network connection or
+// something) and let the method deal with those.
+//
+// If this returns FALSE, then we are NOT authorized.
+// Otherwise, return true.
+var amIAuthorized = function (name, isRelease) {
+  var conn = openPackageServerConnection();
+  var methodName = "amIAuthorized" +
+    (isRelease ? "Release" : "Package");
+
+  try {
+     conn.call(methodName, name);
+  } catch (err) {
+    conn.close();
+    if (err.error === 404) {
+      return false;
+    }
+
+    // We don't know what this error is. Probably we can't contact the server,
+    // or the like. It would be a pity to fail all operations with the server
+    // just because a preliminary check fails, so return true for now.
+    return true;
+  }
+  return true;
 };

@@ -38,28 +38,7 @@ var getReleaseOrPackageRecord = function(name) {
     if (rec)
       rel = true;
   }
-  return { record: rec, release: rel };
-};
-
-
-// Checks to see if you are an authorized maintainer for a given
-// release/package. If you are not, calls process.exit
-// explaining that you can't take that action.
-//   record:  package or track record
-//   action:  string for error handling
-var checkAuthorizedPackageMaintainer = function (record, action) {
-  if (!record) {
-      process.stderr.write("This package does not exist.\n");
-      return 1;
-  }
-
-  var authorized = _.indexOf(
-      _.pluck(record.maintainers, 'username'), auth.loggedInUsername());
-  if (authorized == -1 &&  record.name.split(':').length > 1) {
-      process.stderr.write('You are not an authorized maintainer of ' + record.name + ".\n");
-      process.stderr.write('Only authorized maintainers may ' + action + ".\n");
-      return 1;;
-  }
+  return { record: rec, isRelease: rel };
 };
 
 // Returns a pretty list suitable for showing to the user. Input is an
@@ -434,18 +413,17 @@ main.registerCommand({
                            '. If you are creating a new track, use the --create-track flag.\n');
       return 1;
     }
-    var auth = require("./auth.js");
-    var authorized = _.indexOf(
-      _.pluck(trackRecord.maintainers, 'username'), auth.loggedInUsername());
-    // The split on ':' is a hack to postpone the auth checking for non-prefixed
-    // releases to the server, which will, in turn use a hack to let MDG members
-    // publish on non-prefixed releases until we implement organizations.
-    if (authorized == -1 &&  relConf.track.split(':').length > 1) {
+
+    // We are going to call the server to check if we are authorized, so that when
+    // we implement things like organizations, we are not handicapped by the
+    // user's meteor version.
+    if (!packageClient.amIAuthorized(relConf.track, true)) {
       process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions.\n');
       return 1;
-    }
+    };
   }
+
   process.stdout.write(". OK!\n");
 
   // This is sort of a hidden option to just take your entire meteor checkout
@@ -766,7 +744,7 @@ main.registerCommand({
     }
     var versionRecords;
     var label;
-    if (!allRecord.release) {
+    if (!allRecord.isRelease) {
       label = "package";
       var getRelevantRecord = function (version) {
         var versionRecord =
@@ -1598,8 +1576,6 @@ main.registerCommand({
   var record = fullRecord.record;
   if (!options.list) {
 
-    checkAuthorizedPackageMaintainer(record, " add or remove maintainers");
-
     try {
       var conn = packageClient.loggedInPackagesConnection();
     } catch (err) {
@@ -1667,8 +1643,6 @@ main.registerCommand({
       return 1;
   }
 
-  checkAuthorizedPackageMaintainer(record, " recommend or unrecommend release");
-
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -1722,8 +1696,6 @@ main.registerCommand({
       return 1;
   }
 
-  checkAuthorizedPackageMaintainer(record, " set earliest recommended version");
-
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -1766,8 +1738,6 @@ main.registerCommand({
       process.stderr.write('\n There is no package named ' + name + '\n');
       return 1;
   }
-
-  checkAuthorizedPackageMaintainer(record, " change repository URL");
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
