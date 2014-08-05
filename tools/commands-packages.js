@@ -141,9 +141,9 @@ main.registerCommand({
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
 
-      var directDeps =
-            compiler.determineBuildTimeDependencies(packageSource).directDependencies;
-      project._ensurePackagesExistOnDisk(directDeps);
+      var deps =
+            compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+      project._ensurePackagesExistOnDisk(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
