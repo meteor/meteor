@@ -733,24 +733,18 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'search',
-  minArgs: 0,
+  minArgs: 1,
   maxArgs: 1,
   options: {
     details: { type: Boolean, required: false },
-    mine: {type: Boolean, required: false }
+    maintainer: {type: Boolean, required: false }
   },
 }, function (options) {
 
-  if (options.details && options.mine) {
-    process.stderr.write("You must select a specific package by name to view details. \n");
+  if (options.details && options.maintainer) {
+    process.stderr.write("You cannot pass both --details and --maintainer options. \n");
     return 1;
   }
-
-  if (!options.mine && options.args.length === 0) {
-    process.stderr.write("You must search for packages by name or substring. \n");
-    throw new main.ShowUsage;
-  }
-
 
   catalog.official.refresh();
 
@@ -861,15 +855,8 @@ main.registerCommand({
     var matchingReleases = [];
 
     var selector;
-    if (options.mine) {
-      var myUserName = auth.loggedInUsername();
-      if (!myUserName) {
-        // But couldn't you just grep the data.json for any maintainer? Yeah,
-        // but that's temporary, and won't work once organizations are around.
-        process.stderr.write("Please login so we know who you are. \n");
-        auth.doUsernamePasswordLogin({});
-        myUserName = auth.loggedInUsername();
-      }
+    if (options.maintainer) {
+      var username =  options.args[0];
       // In the future, we should consider checking this on the server, but I
       // suspect the main use of this command will be to deal with the automatic
       // migration and uncommon in everyday use. From that perspective, it makes
@@ -878,22 +865,25 @@ main.registerCommand({
       // you update to a new version of meteor is not that dire.
       selector = function (packageName, isRelease) {
         var record;
-        if (!isRelease) {
-           record = catalog.official.getPackage(packageName);
-        } else {
+        if (isRelease) {
            record = catalog.official.getReleaseTrack(packageName);
+        } else {
+           record = catalog.official.getPackage(packageName);
         }
-        if (_.indexOf(_.pluck(record.maintainers, 'username'), myUserName) !== -1) {
-          return true;
-        }
-        return false;
+        return !!_.findWhere(record.maintainers, {username: username});
        };
-     } else {
-       var search = options.args[0];
-       selector = function (packageName) {
-         return packageName.match(search);
-        };
-     }
+    } else {
+      var search;
+      try {
+        search = new RegExp(options.args[0]);
+      } catch (err) {
+        process.stderr.write(err + "\n");
+        process.exit(1);
+      }
+      selector = function (packageName) {
+        return packageName.match(search);
+      };
+    }
 
     _.each(allPackages, function (pack) {
       if (selector(pack, false)) {
