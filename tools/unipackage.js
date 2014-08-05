@@ -401,7 +401,8 @@ _.extend(Unipackage.prototype, {
 
         self.sourceHandlers[extension] = {
           handler: handler,
-          isTemplate: !!options.isTemplate
+          isTemplate: !!options.isTemplate,
+          archMatching: options.archMatching
         };
       }
     };

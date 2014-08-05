@@ -37,20 +37,20 @@ selftest.define("css hot code push", function (options) {
     // rgba(0, 0, 0, 0).
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
 
-    // The server restarts if a new css file is added.
+    // The server does NOT restart if a new css file is added.
     s.write("test.css", "body { background-color: red; }");
-    run.match("server restarted");
+    run.match("Client modified -- refreshing");
     run.match("numCssChanges: 1");
     run.match("background-color: rgb(255, 0, 0)");
 
     s.write("test.css", "body { background-color: blue; }");
-    run.match("refreshing");
+    run.match("Client modified -- refreshing");
     run.match("numCssChanges: 2");
     run.match("background-color: rgb(0, 0, 255)");
 
-    // The server restarts if a css file is removed.
+    // The server does NOT restart if a css file is removed.
     s.unlink("test.css");
-    run.match("server restarted");
+    run.match("Client modified -- refreshing");
     run.match("numCssChanges: 3");
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
     run.stop();
@@ -117,6 +117,24 @@ selftest.define("javascript hot code push", function (options) {
     run.match("server restarted");
     s.unlink("client/empty.js");
     run.match("client connected: 0");
+    run.match("jsVar: undefined");
+
+    // Break the HTML file. This should kill the server, and print errors.
+    // (It would be reasonable behavior for this to NOT kill the server, since
+    // it only affects the client. But this is a regression test for a bug where
+    // fixing the HTML file wouldn't actually restart the server; that's the
+    // important part of this test.)
+    s.write("hot-code-push-test.html", ">");
+    run.match("Errors prevented startup");
+    run.match("bad formatting in HTML template");
+    // Fix it. It should notice, and restart. The client will restart too.
+    s.write("hot-code-push-test.html", "");
+    run.match("server restarted");
+    run.match("client connected: 0");
+    // Write something else to it. The client should restart.
+    s.write("hot-code-push-test.html", "<head><title>foo</title></head>");
+    run.match("Client modified -- refreshing");
+    run.match("client connected: 1");
     run.match("jsVar: undefined");
 
     // Add appcache and ensure that the browser still reloads.
