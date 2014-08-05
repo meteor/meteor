@@ -449,10 +449,6 @@ selftest.define("update server package data unit test",
                 ["net", "test-package-server"], function () {
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
   var packageStorageFile = path.join(packageStorageFileDir, "data.json");
-  var opts = {
-    packageStorageFile: packageStorageFile,
-    useShortPages: true
-  };
 
   var s = new Sandbox();
   var run;
@@ -462,7 +458,9 @@ selftest.define("update server package data unit test",
   // Get the current data from the server. Once we publish new packages,
   // we'll check that all this data still appears on disk and hasn't
   // been overwritten.
-  var data = packageClient.updateServerPackageData({ syncToken: {} });
+  var data = packageClient.updateServerPackageData({ syncToken: {} }, {
+    packageStorageFile: packageStorageFile
+  });
 
   var packageNames = [];
 
@@ -475,7 +473,10 @@ selftest.define("update server package data unit test",
     packageNames.push(packageName);
   });
 
-  var newData = packageClient.updateServerPackageData(data);
+  var newData = packageClient.updateServerPackageData(data, {
+    packageStorageFile: packageStorageFile,
+    useShortPages: true
+  });
   var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
 
   // Check that we didn't lose any data.
