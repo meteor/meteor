@@ -571,34 +571,37 @@ _.extend(AppRunner.prototype, {
     // source file to change. Or, for stop() to be called.
     var ret = runFuture.wait();
 
-    while (ret.outcome === 'changed-refreshable') {
-      // We stay in this loop as long as only refreshable assets have changed.
-      // When ret.refreshable becomes false, we restart the server.
-      bundleResult = bundleApp();
-      if (bundleResult.errors) {
-        return {
-          outcome: 'bundle-fail',
-          bundleResult: bundleResult
-        };
+    try {
+      while (ret.outcome === 'changed-refreshable') {
+        // We stay in this loop as long as only refreshable assets have changed.
+        // When ret.refreshable becomes false, we restart the server.
+        bundleResult = bundleApp();
+        if (bundleResult.errors) {
+          return {
+            outcome: 'bundle-fail',
+            bundleResult: bundleResult
+          };
+        }
+
+        // Establish a watcher on the new files.
+        setupClientWatcher();
+
+        // Notify the server that new client assets have been added to the build.
+        process.kill(appProcess.proc.pid, 'SIGUSR2');
+        runLog.logClientRestart();
+
+        self.runFuture = new Future;
+        ret = self.runFuture.wait();
       }
+    } finally {
+      self.runFuture = null;
 
-      // Establish a watcher on the new files.
-      setupClientWatcher();
+      self.proxy.setMode("hold");
+      appProcess.stop();
 
-      // Notify the server that new client assets have been added to the build.
-      process.kill(appProcess.proc.pid, 'SIGUSR2');
-      runLog.logClientRestart();
-
-      self.runFuture = new Future;
-      ret = self.runFuture.wait();
+      serverWatcher && serverWatcher.stop();
+      clientWatcher && clientWatcher.stop();
     }
-    self.runFuture = null;
-
-    self.proxy.setMode("hold");
-    appProcess.stop();
-
-    serverWatcher && serverWatcher.stop();
-    clientWatcher && clientWatcher.stop();
 
     return ret;
   },
