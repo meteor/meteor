@@ -349,7 +349,7 @@ _.extend(Project.prototype, {
       return 1;
 
     // Show the user the messageLog of packages we added.
-    if (!self.muted) {
+    if (!self.muted && !_.isEmpty(versions)) {
       _.each(messageLog, function (msg) {
         process.stdout.write(msg + "\n");
       });
