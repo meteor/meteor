@@ -335,7 +335,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   _.each(activePluginPackages, function (otherPkg) {
     _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
       // XXX comparing function text here seems wrong.
-      if (ext in allHandlers &&
+      if (_.has(allHandlers, ext) &&
           allHandlers[ext].toString() !== sourceHandler.handler.toString()) {
         buildmessage.error(
           "conflict: two packages included in " +
@@ -344,10 +344,16 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
         // Recover by just going with the first handler we saw
-      } else {
-        allHandlers[ext] = sourceHandler.handler;
-        sourceExtensions[ext] = !!sourceHandler.isTemplate;
+        return;
       }
+      // Is this handler only registered for, say, "web", and we're building,
+      // say, "os"?
+      if (sourceHandler.archMatching &&
+          !archinfo.matches(inputSourceArch.arch, sourceHandler.archMatching)) {
+        return;
+      }
+      allHandlers[ext] = sourceHandler.handler;
+      sourceExtensions[ext] = !!sourceHandler.isTemplate;
     });
   });
 
