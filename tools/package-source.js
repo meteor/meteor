@@ -884,6 +884,13 @@ _.extend(PackageSource.prototype, {
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
         versionsFrom: function (release) {
+          if (releaseRecord) {
+            buildmessage.error("api.versionsFrom may only be specified once.",
+                               { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
+
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
             release = catalog.complete.DEFAULT_TRACK + "@" + release;
