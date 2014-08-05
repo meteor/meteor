@@ -541,7 +541,7 @@ var logInToGalaxy = function (galaxyName) {
   var authorizeResult;
 
   try {
-    sendAuthorizeRequest(
+    authorizeResult = sendAuthorizeRequest(
       galaxyClientId,
       galaxyRedirect,
       encodeURIComponent(JSON.stringify(stateInfo))
