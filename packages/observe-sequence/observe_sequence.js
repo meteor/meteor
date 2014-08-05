@@ -82,10 +82,9 @@ ObserveSequence = {
       Deps.nonreactive(function () {
         var seqArray; // same structure as `lastSeqArray` above.
 
-        // If we were previously observing a cursor, replace lastSeqArray with
-        // more up-to-date information (specifically, the state of the observe
-        // before it was stopped, which may be older than the DB).
         if (activeObserveHandle) {
+          // If we were previously observing a cursor, replace lastSeqArray with
+          // more up-to-date information.  Then stop the old observe.
           lastSeqArray = _.map(lastSeq.fetch(), function (doc) {
             return {_id: doc._id, item: doc};
           });
