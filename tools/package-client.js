@@ -82,10 +82,11 @@ exports.loadCachedServerData = function (packageStorageFile) {
   return ret;
 };
 
-// Opens a connection to the server, requests and returns new package data that
-// we haven't cached on disk. We assume that data is cached chronologically, so
-// essentially, we are asking for a diff from the last time that we did this.
+// Requests and returns one page of new package data that we haven't cached on
+// disk. We assume that data is cached chronologically, so essentially, we are
+// asking for a diff from the last time that we did this.
 // Takes in:
+// - conn: the connection to use (does not have to be logged in)
 // - syncToken: a syncToken object to be sent to the server that
 //   represents the last time that we talked to the server.
 // - _optionsForTest:
@@ -99,25 +100,20 @@ exports.loadCachedServerData = function (packageStorageFile) {
 //
 // Throws a ServiceConnection.ConnectionTimeoutError if the method call
 // times out.
-var loadRemotePackageData = function (syncToken, _optionsForTest) {
+var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   _optionsForTest = _optionsForTest || {};
 
-  var conn = openPackageServerConnection();
   var syncOpts;
   if (_optionsForTest && _optionsForTest.useShortPages) {
     syncOpts = { shortPagesForTest: _optionsForTest.useShortPages };
   }
-  try {
-    var collectionData;
-    if (syncOpts) {
-      collectionData = conn.call(
-        'syncNewPackageData', syncToken, syncOpts);
-    } else {
-      collectionData = conn.call(
-        'syncNewPackageData', syncToken);
-    }
-  } finally {
-    conn.close();
+  var collectionData;
+  if (syncOpts) {
+    collectionData = conn.call(
+      'syncNewPackageData', syncToken, syncOpts);
+  } else {
+    collectionData = conn.call(
+      'syncNewPackageData', syncToken);
   }
   return collectionData;
 };
@@ -184,50 +180,67 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
+  var self = this;
   _optionsForTest = _optionsForTest || {};
+  var done = false;
 
-  var sources = [];
-  if (cachedServerData.collections) {
-    sources.push(cachedServerData.collections);
-  }
-  var syncToken = cachedServerData.syncToken;
-  var remoteData;
-  try {
-    remoteData = loadRemotePackageData(syncToken, {
-      useShortPages: _optionsForTest.useShortPages
-    });
-  } catch (err) {
-    process.stderr.write("ERROR " + err.message + "\n");
-    if (err instanceof ServiceConnection.ConnectionTimeoutError) {
-      return null;
-    } else {
-      throw err;
+  var conn = openPackageServerConnection();
+
+  var getSomeData = function () {
+    var sources = [];
+    if (cachedServerData.collections) {
+      sources.push(cachedServerData.collections);
     }
-  }
+    var syncToken = cachedServerData.syncToken;
+    var remoteData;
+    try {
+      remoteData = loadRemotePackageData(conn, syncToken, {
+        useShortPages: _optionsForTest.useShortPages
+      });
+    } catch (err) {
+      process.stderr.write("ERROR " + err.message + "\n");
+      if (err instanceof ServiceConnection.ConnectionTimeoutError) {
+        cachedServerData = null;
+        done = true;
+        return;
+      } else {
+        throw err;
+      }
+    }
 
-  // If there is no new data from the server, don't bother writing things to
-  // disk.
-  if (_.isEqual(remoteData.collections, {})) {
-    return cachedServerData;
-  }
+    // If there is no new data from the server, don't bother writing things to
+    // disk.
+    // XXX fix for resetData?
+    if (_.isEqual(remoteData.collections, {})) {
+      done = true;
+      return;
+    }
 
-  sources.push(remoteData.collections);
-  var allCollections = mergeCollections(sources);
-  var data = {
-    syncToken: remoteData.syncToken,
-    formatVersion: "1.0",
-    collections: allCollections
+    sources.push(remoteData.collections);
+    var allCollections = mergeCollections(sources);
+    var data = {
+      syncToken: remoteData.syncToken,
+      formatVersion: "1.0",
+      collections: allCollections
+    };
+    writePackageDataToDisk(remoteData.syncToken, data, {
+      packageStorageFile: _optionsForTest.packageStorageFile
+    });
+
+    cachedServerData = data;
+    if (remoteData.upToDate)
+      done = true;
   };
-  writePackageDataToDisk(remoteData.syncToken, data, {
-    packageStorageFile: _optionsForTest.packageStorageFile
-  });
 
-  // If we are not done, keep trying!
-  if (!remoteData.upToDate) {
-    data = this.updateServerPackageData(data, _optionsForTest);
+  try {
+    while (!done) {
+      getSomeData();
+    }
+  } finally {
+    conn.close();
   }
 
-  return data;
+  return cachedServerData;
 };
 
 // Returns a logged-in DDP connection to the package server, or null if
