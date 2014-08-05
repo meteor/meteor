@@ -661,7 +661,6 @@ var amIAuthorized = function (name, conn, isRelease) {
   try {
      conn.call(methodName, name);
   } catch (err) {
-    conn.close();
     if (err.error === 401) {
       return false;
     }
