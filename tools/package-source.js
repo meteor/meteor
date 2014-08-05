@@ -904,7 +904,7 @@ _.extend(PackageSource.prototype, {
           // catalog may not be initialized, but we are pretty sure that the
           // releases are there anyway. This is not the right way to do this
           // long term.
-          releaseRecord = catalog.official.getReleaseVersion(
+          releaseRecord = catalog.complete.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
             buildmessage.error("Unknown release "+ release);
