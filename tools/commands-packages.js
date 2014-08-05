@@ -417,7 +417,7 @@ main.registerCommand({
     // We are going to call the server to check if we are authorized, so that when
     // we implement things like organizations, we are not handicapped by the
     // user's meteor version.
-    if (!packageClient.amIAuthorized(relConf.track, true)) {
+    if (!packageClient.amIAuthorized(relConf.track,conn,  true)) {
       process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions.\n');
       return 1;

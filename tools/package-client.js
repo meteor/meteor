@@ -499,7 +499,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       return 1;
     }
 
-    if (!amIAuthorized(name, false)) {
+    if (!amIAuthorized(name, conn, false)) {
       process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
@@ -654,8 +654,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 //
 // If this returns FALSE, then we are NOT authorized.
 // Otherwise, return true.
-var amIAuthorized = function (name, isRelease) {
-  var conn = openPackageServerConnection();
+var amIAuthorized = function (name, conn, isRelease) {
   var methodName = "amIAuthorized" +
     (isRelease ? "Release" : "Package");
 
@@ -663,7 +662,7 @@ var amIAuthorized = function (name, isRelease) {
      conn.call(methodName, name);
   } catch (err) {
     conn.close();
-    if (err.error === 404) {
+    if (err.error === 401) {
       return false;
     }
 
