@@ -473,6 +473,7 @@ debugging the Meteor packaging tools themselves.
 Search through the package server database.
 Usage: meteor search <string>
        meteor search --details <package or release name>
+       meteor search --mine
 
 Search through the meteor package&release database for names containing the
 specified substring.
@@ -481,9 +482,12 @@ Use --details to get detailed information on a specific package or release.
 Use --details <name>@<version> to get more information on a specific version
 of a package or release.
 
+Use --mine to get the list of packages on which you are one of the authorized
+maintainers.
+
 Options:
   --details  show detailed information on a specific package or release
-
+  --mine     list packages on which you are the maintainer
 
 >>> admin maintainers
 View or change authorized maintainers for a package

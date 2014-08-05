@@ -724,12 +724,24 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'search',
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: 1,
   options: {
-    details: { type: Boolean, required: false }
+    details: { type: Boolean, required: false },
+    mine: {type: Boolean, required: false }
   },
 }, function (options) {
+
+  if (options.details && options.mine) {
+    process.stderr.write("You must select a specific package by name to view details. \n");
+    return 1;
+  }
+
+  if (!options.mine && options.args.length === 0) {
+    process.stderr.write("You must search for packages by name or substring. \n");
+    throw new main.ShowUsage;
+  }
+
 
   catalog.official.refresh();
 
@@ -832,15 +844,50 @@ main.registerCommand({
     }
     process.stdout.write(maintain + "\n");
   } else {
-    var search = options.args[0];
+
 
     var allPackages = catalog.official.getAllPackageNames();
     var allReleases = catalog.official.getAllReleaseTracks();
     var matchingPackages = [];
     var matchingReleases = [];
 
+    var selector;
+    if (options.mine) {
+      var myUserName = auth.loggedInUsername();
+      if (!myUserName) {
+        // But couldn't you just grep the data.json for any maintainer? Yeah,
+        // but that's temporary, and won't work once organizations are around.
+        process.stderr.write("Please login so we know who you are. \n");
+        auth.doUsernamePasswordLogin({});
+        myUserName = auth.loggedInUsername();
+      }
+      // In the future, we should consider checking this on the server, but I
+      // suspect the main use of this command will be to deal with the automatic
+      // migration and uncommon in everyday use. From that perspective, it makes
+      // little sense to require you to be online to find out what packages you
+      // own; and the consequence of not mentioning your group packages until
+      // you update to a new version of meteor is not that dire.
+      selector = function (packageName, isRelease) {
+        var record;
+        if (!isRelease) {
+           record = catalog.official.getPackage(packageName);
+        } else {
+           record = catalog.official.getReleaseTrack(packageName);
+        }
+        if (_.indexOf(_.pluck(record.maintainers, 'username'), myUserName) !== -1) {
+          return true;
+        }
+        return false;
+       };
+     } else {
+       var search = options.args[0];
+       selector = function (packageName) {
+         return packageName.match(search);
+        };
+     }
+
     _.each(allPackages, function (pack) {
-      if (pack.match(search)) {
+      if (selector(pack, false)) {
         var vr = catalog.official.getLatestVersion(pack);
         if (vr) {
           matchingPackages.push(
@@ -849,7 +896,7 @@ main.registerCommand({
       }
     });
     _.each(allReleases, function (track) {
-      if (track.match(search)) {
+      if (selector(track, true)) {
         var vr = catalog.official.getDefaultReleaseVersion(track);
         if (vr) {
           var vrlong =
