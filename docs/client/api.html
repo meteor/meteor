@@ -2304,8 +2304,8 @@ Example:
       // Fires when any element with the 'accept' class is clicked
       'click .accept': function (event) { ... },
 
-      // Fires when 'accept' is clicked, or a key is pressed
-      'keydown, click .accept': function (event) { ... }
+      // Fires when 'accept' is clicked or focused, or a key is pressed
+      'click .accept, focus .accept, keypress': function (event) { ... }
     }
 
 Most events bubble up the document tree from their originating

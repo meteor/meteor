@@ -141,7 +141,7 @@ Couldn't write the launcher script. Please either:
 
   (1) Run the following as root:
         cp ~/.meteor/tools/latest/launch-meteor /usr/bin/meteor
-  (2) Add ~/.meteor to your path, or
+  (2) Add "$HOME/.meteor" to your path, or
   (3) Rerun this command to try again.
 
 Then to get started, take a look at 'meteor --help' or see the docs at
@@ -153,7 +153,7 @@ else
 
 Now you need to do one of the following:
 
-  (1) Add ~/.meteor to your path, or
+  (1) Add "$HOME/.meteor" to your path, or
   (2) Run this command as root:
         cp ~/.meteor/tools/latest/launch-meteor /usr/bin/meteor
 

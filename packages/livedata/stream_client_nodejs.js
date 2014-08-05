@@ -54,7 +54,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
       // But _launchConnection calls _cleanup which closes previous connections.
       // It's our belief that this stifles future 'open' events, but maybe
       // we are wrong?
-      throw new Error("Got open from inactive client");
+      throw new Error("Got open from inactive client " + !!self.client);
     }
 
     if (self._forcedToDisconnect) {

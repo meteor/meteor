@@ -439,9 +439,8 @@ Tinytest.add('observe-sequence - cursor to same cursor', function (test) {
   }, [
     {addedAt: ["13", {_id: "13", rank: 1}, 0, null]},
     {addedAt: ["24", {_id: "24", rank: 2}, 1, null]},
-    // even if the cursor changes to the same cursor, we diff to see if we
-    // missed anything during the invalidation, which leads to these
-    // 'changedAt' events.
+    // even if the cursor changes to the same cursor, we do a diff,
+    // which leads to these 'changedAt' events.
     {changedAt: ["13", {_id: "13", rank: 1}, {_id: "13", rank: 1}, 0]},
     {changedAt: ["24", {_id: "24", rank: 2}, {_id: "24", rank: 2}, 1]},
     {addedAt: ["78", {_id: "78", rank: 3}, 2, null]}
