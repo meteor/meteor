@@ -187,10 +187,6 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
   var conn = openPackageServerConnection();
 
   var getSomeData = function () {
-    var sources = [];
-    if (cachedServerData.collections) {
-      sources.push(cachedServerData.collections);
-    }
     var syncToken = cachedServerData.syncToken;
     var remoteData;
     try {
@@ -208,14 +204,24 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
       }
     }
 
+    // Is the remote server telling us to ignore everything we've heard before?
+    // OK, we can do that.
+    if (remoteData.resetData) {
+      cachedServerData.collections = null;
+      // XXX also get rid of any no longer existing packages
+    }
+
     // If there is no new data from the server, don't bother writing things to
-    // disk.
-    // XXX fix for resetData?
-    if (_.isEqual(remoteData.collections, {})) {
+    // disk (unless we were just told to reset everything).
+    if (!remoteData.resetData && _.isEqual(remoteData.collections, {})) {
       done = true;
       return;
     }
 
+    var sources = [];
+    if (cachedServerData.collections) {
+      sources.push(cachedServerData.collections);
+    }
     sources.push(remoteData.collections);
     var allCollections = mergeCollections(sources);
     var data = {
