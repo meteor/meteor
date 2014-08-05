@@ -268,6 +268,15 @@ main.registerCommand({
     if (buildmessage.jobHasMessages())
       return;
 
+
+    // Now compile it! Once again, everything should compile, and if
+    // it doesn't we should fail. Hopefully, of course, we have
+    // tested our stuff before deciding to publish it to the package
+    // server, but we need to be careful.
+    var deps =
+          compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+    project._ensurePackagesExistOnDisk(deps);
+
     unipkg = compiler.compile(packageSource, {
       officialBuild: true
     }).unipackage;
