@@ -92,7 +92,7 @@ _.extend(exports.Tropohouse.prototype, {
         var rest = latestMeteorSymlink.substr(packagesDirectoryName.length + path.sep.length);
         var pieces = rest.split(path.sep);
         latestToolPackage = pieces[0];
-        latestToolVersion = pieces[0];
+        latestToolVersion = pieces[1];
       }
     }
 
@@ -103,14 +103,22 @@ _.extend(exports.Tropohouse.prototype, {
         if (/^[a-f0-9]{3,}$/.test(version))
           return;
 
-        // Skip the currently-latest tool (ie, don't break symlink).
-        if (package === latestToolPackage && version === latestToolVersion)
+        // Skip the currently-latest tool (ie, don't break top-level meteor
+        // symlink). This includes both the symlink with its name and the thing
+        // it points to.
+        if (package === latestToolPackage &&
+            (version === latestToolVersion ||
+             utils.startsWith(version, '.' + latestToolVersion + '.'))) {
           return;
+        }
 
         // Skip the currently-executing tool (ie, don't break the current
         // operation).
-        if (package === currentToolPackage && version === currentToolVersion)
+        if (package === currentToolPackage &&
+            (version === currentToolVersion ||
+             utils.startsWith(version, '.' + currentToolVersion + '.'))) {
           return;
+        }
 
         files.rm_recursive(path.join(packageDir, version));
       });
@@ -226,7 +234,8 @@ _.extend(exports.Tropohouse.prototype, {
         buildTempDir,
         {firstUnipackage: i === 0});
     });
-    // XXX include the version in it too?
+    // Note: wipeAllPackages depends on this filename structure, as does the
+    // part above which readlinks.
     var newPackageLinkTarget = '.' + version + '.'
           + utils.randomToken() + '++' + unipackage.buildArchitectures();
     var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
