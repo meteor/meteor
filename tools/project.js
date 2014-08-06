@@ -895,9 +895,23 @@ _.extend(Project.prototype, {
     });
     lines.push('\n');
     fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
-  }
+  },
 
-  // XXX addCordovaPlatforms, removeCordovaPlatforms
+  // platforms - a list of strings
+  addCordovaPlatforms: function (platforms) {
+    var self = this;
+    self.cordovaPlatforms = _.uniq(platfroms.concat(self.cordovaPlatforms));
+    fs.writeFileSync(self._getCordovaPlatformsFile(),
+                     self.cordovaPlatforms.join('\n'), 'utf8');
+  },
+
+  // platforms - a list of strings
+  removeCordovaPlatforms: function (platforms) {
+    var self = this;
+    self.cordovaPlatforms = _.difference(platfroms, self.cordovaPlatforms);
+    fs.writeFileSync(self._getCordovaPlatformsFile(),
+                     self.cordovaPlatforms.join('\n'), 'utf8');
+  }
 });
 
 // The project is currently a singleton, but there is no universal reason for
