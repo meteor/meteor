@@ -727,6 +727,7 @@ main.registerCommand({
   // Only make a git tag if we're on the default branch.
   if (options['from-checkout'] &&
       config.getPackageServerFilePrefix() === 'packages') {
+    // XXX maybe should discourage publishing if git status says we're dirty?
     var gitTag = "release/" + relConf.track  + "@" + relConf.version;
     // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
     //     used to
