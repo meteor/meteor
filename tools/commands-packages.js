@@ -723,6 +723,21 @@ main.registerCommand({
   catalog.official.refresh();
   process.stdout.write("Done creating " + relConf.track  + "@" +
                        relConf.version + "!\n");
+
+  // Only make a git tag if we're on the default branch.
+  if (options['from-checkout'] &&
+      config.getPackageServerFilePrefix() === 'packages') {
+    var gitTag = "release/" + relConf.track  + "@" + relConf.version;
+    // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
+    //     used to
+    process.stdout.write("Creating git tag " + gitTag + "\n");
+    files.runGitInCheckout('tag', gitTag);
+    process.stdout.write(
+      "Pushing git tag (this should fail if you are not from MDG)\n");
+    files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+                           'refs/tags/' + gitTag);
+  }
+
   return 0;
 });
 
