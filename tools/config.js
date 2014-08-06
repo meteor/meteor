@@ -197,10 +197,10 @@ _.extend(exports, {
     return prefix + ".data.json";
   },
 
-  getPackageStorage: function() {
+  getPackageStorage: function (tropo) {
     var self = this;
-    return path.join(tropohouse.default.root,
-                     "package-metadata", "v1",
+    tropo = tropo || tropohouse.default;
+    return path.join(tropo.root, "package-metadata", "v1",
                      self.getLocalPackageCacheFilename());
   },
 

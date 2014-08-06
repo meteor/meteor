@@ -36,6 +36,12 @@ var openPackageServerConnection = function () {
      _dontPrintErrors: true});
 };
 
+var emptyCachedServerDataJson = function () {
+  return {
+    syncToken: {},
+    collections: null
+  };
+};
 
 // Load the package data that was saved in the local data.json
 // collection from the last time we did a sync to the server. Takes an
@@ -51,10 +57,7 @@ var openPackageServerConnection = function () {
 // the collections and a default syncToken to ask the server for all the data
 // from the beginning of time.
 exports.loadCachedServerData = function (packageStorageFile) {
-  var noDataToken =  {
-    syncToken: {},
-    collections: null
-  };
+  var noDataToken = emptyCachedServerDataJson();
 
   packageStorageFile = packageStorageFile || config.getPackageStorage();
 
@@ -174,14 +177,16 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 // Returns null if contacting the server times out. Otherwise, returns
 // all the data.
 //
-// _optionsForTest can include:
+// options can include:
 //   - packageStorageFile: String. The file to write the data to (overrides
 //     `config.getPackageStorage()`)
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
-exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
+exports.updateServerPackageData = function (cachedServerData, options) {
   var self = this;
-  _optionsForTest = _optionsForTest || {};
+  options = options || {};
+  cachedServerData = cachedServerData || emptyCachedServerDataJson();
+
   var done = false;
 
   var conn = openPackageServerConnection();
@@ -191,7 +196,7 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
     var remoteData;
     try {
       remoteData = loadRemotePackageData(conn, syncToken, {
-        useShortPages: _optionsForTest.useShortPages
+        useShortPages: options.useShortPages
       });
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
@@ -230,7 +235,7 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
       collections: allCollections
     };
     writePackageDataToDisk(remoteData.syncToken, data, {
-      packageStorageFile: _optionsForTest.packageStorageFile
+      packageStorageFile: options.packageStorageFile
     });
 
     cachedServerData = data;

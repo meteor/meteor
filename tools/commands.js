@@ -1293,6 +1293,18 @@ main.registerCommand({
 
   files.mkdir_p(outputDirectory);
 
+  // Get a copy of the data.json.
+  var dataTmpdir = files.mkdtemp();
+  var tmpDataJson = path.join(dataTmpdir, 'data.json');
+
+  var savedData = packageClient.updateServerPackageData(null, {
+    packageStorageFile: tmpDataJson
+  });
+  if (!savedData) {
+    // will have already printed an error
+    process.exit(2);
+  }
+
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     // We're going to build and tar up a tropohouse in a temporary directory; we
@@ -1327,8 +1339,8 @@ main.registerCommand({
       return 1;
     }
 
-    // XXX should we include some sort of preliminary package-metadata as well?
-    // maybe with release info about the release we are using?
+    // Install the data.json file we synced earlier.
+    files.copyFile(tmpDataJson, config.getPackageStorage(tmpTropo));
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
