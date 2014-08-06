@@ -960,7 +960,10 @@ _.extend(Unipackage.prototype, {
       localPackageLoader, archinfo.host(), self.includeTool,
       function (unipkg) {
         // XXX assert that each name shows up once
-        unipkg.saveToPath(path.join(unipath, unipkg.name));
+        unipkg.saveToPath(path.join(unipath, unipkg.name), {
+          // There's no mechanism to rebuild these packages.
+          elideBuildInfo: true
+        });
       });
 
     return [{
