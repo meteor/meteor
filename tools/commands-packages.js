@@ -737,7 +737,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     details: { type: Boolean, required: false },
-    maintainer: {type: Boolean, required: false }
+    maintainer: {type: String, required: false }
   },
 }, function (options) {
 
@@ -855,8 +855,17 @@ main.registerCommand({
     var matchingReleases = [];
 
     var selector;
+
+    var search;
+    try {
+      search = new RegExp(options.args[0]);
+    } catch (err) {
+      process.stderr.write(err + "\n");
+      process.exit(1);
+    }
+
     if (options.maintainer) {
-      var username =  options.args[0];
+      var username =  options.maintainer;
       // In the future, we should consider checking this on the server, but I
       // suspect the main use of this command will be to deal with the automatic
       // migration and uncommon in everyday use. From that perspective, it makes
@@ -870,16 +879,10 @@ main.registerCommand({
         } else {
            record = catalog.official.getPackage(packageName);
         }
-        return !!_.findWhere(record.maintainers, {username: username});
+        return packageName.match(search) &&
+          !!_.findWhere(record.maintainers, {username: username});
        };
     } else {
-      var search;
-      try {
-        search = new RegExp(options.args[0]);
-      } catch (err) {
-        process.stderr.write(err + "\n");
-        process.exit(1);
-      }
       selector = function (packageName) {
         return packageName.match(search);
       };
@@ -921,7 +924,7 @@ main.registerCommand({
 
     if (!output) {
       process.stderr.write(
-        "Neither packages nor releases containing the string \'" +
+        "Neither packages nor releases matching \'" +
         search + "\' could be found.\n");
     } else {
       process.stdout.write(
