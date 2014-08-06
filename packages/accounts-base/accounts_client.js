@@ -267,6 +267,46 @@ Accounts.loginServicesConfigured = function () {
   return loginServicesHandle.ready();
 };
 
+// Some login services such as the redirect login flow or the resume
+// login handler can log the user in at page load time.  The
+// Meteor.loginWithX functions have a callback argument, but the
+// callback function instance won't be in memory any longer if the
+// page was reloaded.  The `onPageLoadLogin` function allows a
+// callback to be registered for the case where the login was
+// initiated in a previous VM, and we now have the result of the login
+// attempt in a new VM.
+
+var pageLoadLoginCallbacks = [];
+var pageLoadLoginAttemptInfo = null;
+
+// Register a callback to be called if we have information about a
+// login attempt at page load time.  Call the callback immediately if
+// we already have the page load login attempt info, otherwise stash
+// the callback to be called if and when we do get the attempt info.
+//
+Accounts.onPageLoadLogin = function (f) {
+  if (pageLoadLoginAttemptInfo)
+    f(pageLoadLoginAttemptInfo);
+  else
+    pageLoadLoginCallbacks.push(f);
+};
+
+
+// Receive the information about the login attempt at page load time.
+// Call registered callbacks, and also record the info in case
+// someone's callback hasn't been registered yet.
+//
+Accounts._pageLoadLogin = function (attemptInfo) {
+  if (pageLoadLoginAttemptInfo) {
+    Meteor._debug("Ignoring unexpected duplicate page load login attempt info");
+    return;
+  }
+  _.each(pageLoadLoginCallbacks, function (callback) { callback(attemptInfo); });
+  pageLoadLoginCallbacks = [];
+  pageLoadLoginAttemptInfo = attemptInfo;
+};
+
+
 ///
 /// HANDLEBARS HELPERS
 ///

@@ -30,9 +30,7 @@ HTTP.call = function(method, url, options, callback) {
   else
     params_for_body = options.params;
 
-  var query_match = /^(.*?)(\?.*)?$/.exec(url);
-  url = buildUrl(query_match[1], query_match[2],
-                 options.query, params_for_url);
+  url = URL._constructUrl(url, options.query, params_for_url);
 
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
@@ -47,7 +45,7 @@ HTTP.call = function(method, url, options, callback) {
   }
 
   if (params_for_body) {
-    content = encodeParams(params_for_body);
+    content = URL._encodeParams(params_for_body);
   }
 
   _.extend(headers, options.headers || {});
