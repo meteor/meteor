@@ -4,8 +4,10 @@
 
 {{#if inlineScriptsAllowed}}
 <script type='text/javascript'>__meteor_runtime_config__ = {{meteorRuntimeConfig}};</script>
+<script type="text/javascript">__atmosphere_layers__ = {{atmosphereLayers}};</script>
 {{else}}
 <script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_runtime_config.js'></script>
+<script type="text/javascript" src='{{rootUrlPathPrefix}}/atmosphere_layers.js'></script>
 {{/if}}
 {{#each js}}  <script type="text/javascript" src="{{../bundledJsCssPrefix}}{{url}}"></script>
 {{/each}}

@@ -674,6 +674,10 @@ _.extend(Target.prototype, {
             f.setSourceMap(resource.sourceMap, path.dirname(relPath));
           }
 
+          if (resource.layer) {
+            f.layer = resource.layer;
+          }
+
           self[resource.type].push(f);
           return;
         }
@@ -701,18 +705,38 @@ _.extend(Target.prototype, {
   // Minify the JS in this target
   minifyJs: function (minifiers) {
     var self = this;
+    var jsByLayer = {};
 
-    var allJs = _.map(self.js, function (file) {
-      return file.contents('utf8');
-    }).join('\n;\n');
+    // first, arrange the files by layer name
+    _.each(self.js, function (file) {
+      var layer = file.layer || "";
+      if (!jsByLayer[layer]) {
+        jsByLayer[layer] = [];
+      }
+      jsByLayer[layer].push(file.contents('utf8'));
+    });
 
-    allJs = minifiers.UglifyJSMinify(allJs, {
-      fromString: true,
-      compress: {drop_debugger: false}
-    }).code;
+    self.js = [];
 
-    self.js = [new File({ data: new Buffer(allJs, 'utf8') })];
-    self.js[0].setUrlToHash(".js");
+    // then minify all the layers
+    _.each(jsByLayer, function (allJs, layer) {
+
+      allJs = minifiers.UglifyJSMinify(allJs.join("\n;\n"), {
+        fromString: true,
+        compress: {drop_debugger: false}
+      }).code;
+
+      var file = new File({ data: new Buffer(allJs, 'utf8') });
+
+      if (layer) {
+        file.setUrlToHash("/" + layer + ".js");
+        file.layer = layer;
+      } else {
+        file.setUrlToHash(".js");
+      }
+
+      self.js.push(file);
+    });
   },
 
   // For each resource of the given type, make it cacheable by adding
@@ -902,6 +926,10 @@ _.extend(ClientTarget.prototype, {
         cacheable: file.cacheable,
         url: file.url
       };
+
+      if (file.layer) {
+        manifestItem.layer = file.layer;
+      }
 
       if (file.sourceMap) {
         // Add anti-XSSI header to this file which will be served over
