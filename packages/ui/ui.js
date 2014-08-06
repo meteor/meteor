@@ -36,3 +36,5 @@ UI._javascriptUrlsAllowed = function () {
 UI._parentData = Blaze._parentData;
 
 UI.getElementData = Blaze.getElementData;
+
+UI.isTemplate = Blaze.isTemplate;

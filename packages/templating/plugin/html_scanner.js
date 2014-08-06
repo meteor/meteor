@@ -161,8 +161,9 @@ html_scanner = {
             sourceName: 'Template "' + name + '"'
           });
 
-        results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
-          ", " + renderFuncCode + ");\n";
+        results.js += "\nTemplate.__assign(" + JSON.stringify(name) +
+          ", new Template(" + JSON.stringify("Template." + name) + ", " +
+          renderFuncCode + "));\n";
       } else {
         // <body>
         if (hasAttribs)
@@ -175,7 +176,7 @@ html_scanner = {
           });
 
         // We may be one of many `<body>` tags.
-        results.js += "\nTemplate.__body__.__contentParts.push(Blaze.View('body_content_'+Template.__body__.__contentParts.length, " + renderFuncCode + "));\nMeteor.startup(Template.__body__.__instantiate);\n";
+        results.js += "\nTemplate._body_.addContent(" + renderFuncCode + ");\nMeteor.startup(Template._body_.renderToDocument);\n";
       }
     } catch (e) {
       if (e.scanner) {

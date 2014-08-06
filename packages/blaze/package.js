@@ -30,7 +30,8 @@ Package.on_use(function (api) {
     'reactivevar.js',
     'view.js',
     'builtins.js',
-    'lookup.js'
+    'lookup.js',
+    'template.js'
   ]);
 });
 

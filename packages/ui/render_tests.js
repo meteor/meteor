@@ -559,7 +559,7 @@ Tinytest.add("ui - render - findAll", function (test) {
   var found = null;
   var $found = null;
 
-  var myTemplate = Template.__create__(
+  var myTemplate = new Template(
     'findAllTest',
     function() {
       return DIV([P('first'), P('second')]);

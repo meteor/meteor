@@ -284,8 +284,8 @@ Blaze._expandView = function (view, parentView) {
 Blaze.HTMLJSExpander = HTML.TransformingVisitor.extend();
 Blaze.HTMLJSExpander.def({
   visitObject: function (x) {
-    if (Blaze.isTemplate(x))
-      x = Blaze.runTemplate(x);
+    if (x instanceof Blaze.Template)
+      x = x.constructView();
     if (x instanceof Blaze.View)
       return Blaze._expandView(x, this.parentView);
 
@@ -377,25 +377,14 @@ Blaze.withCurrentView = function (view, func) {
   }
 };
 
-Blaze.isTemplate = function (t) {
-  return t && (typeof t.__makeView === 'function');
-};
-
-Blaze.runTemplate = function (t/*, args*/) {
-  if (! Blaze.isTemplate(t))
-    throw new Error("Not a template: " + t);
-  var restArgs = Array.prototype.slice.call(arguments, 1);
-  return t.__makeView.apply(t, restArgs);
-};
-
 Blaze.render = function (content, parentView) {
   parentView = parentView || currentViewIfRendering();
 
   var view;
   if (typeof content === 'function') {
     view = Blaze.View('render', content);
-  } else if (Blaze.isTemplate(content)) {
-    view = Blaze.runTemplate(content);
+  } else if (content instanceof Blaze.Template) {
+    view = content.constructView();
   } else {
     if (! (content instanceof Blaze.View))
       throw new Error("Expected a function, template, or View in Blaze.render");
