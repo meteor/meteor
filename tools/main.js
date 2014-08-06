@@ -781,7 +781,8 @@ Fiber(function () {
     // release.load (which will refresh the catalog because the release
     // presumably doesn't exist on the new server, and this is a slow
     // operation).
-    if (warehouse.releaseExistsInWarehouse(releaseName)) {
+    if (releaseName !== null &&
+        warehouse.releaseExistsInWarehouse(releaseName)) {
       var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
         releaseName);
       oldSpringboard(manifest.tools);
