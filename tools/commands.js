@@ -25,13 +25,7 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
-
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
-  return uniload.load({
-    packages: [ 'boilerplate-generator' ]
-  });
-});
+var cordova = require('./commands-cordova.js');
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -237,6 +231,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'run',
   requiresApp: true,
+  maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: '3000' },
     'app-port': { type: String },
@@ -271,6 +266,49 @@ main.registerCommand({
   }
   var proxyHost = portMatch[1] || null;
   var proxyPort = parseInt(portMatch[2]);
+
+  // If additional args were specified, then also start a mobile build.
+  if (options.args) {
+    var supportedPlatforms = ['ios', 'android'];
+    var requestedPlatforms = [];
+
+    var localDir = path.join(options.appDir, '.meteor', 'local');
+    var cordovaPath = path.join(localDir, 'cordova-build');
+    var bundleDir = path.join(localDir, 'bundle-tar');
+
+    // Find the required platforms. ie. "ios android ios-device" will produce
+    // ["ios", "android"]
+    _.each(options.args, function (platformName) {
+      var platform = platformName.split('-')[0];
+      if (_.has(supportedPlatforms, platform) &&
+          ! _.has(requestedPlatforms, platform)) {
+        requestedPlatforms.push(platform);
+      }
+    });
+
+    cordova.ensureCordovaPlatforms(requestedPlatforms, cordovaPath);
+
+    var cordovaSettings = null;
+    if (options.settings) {
+      cordovaSettings =
+        JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
+    }
+
+    var cordovaOptions = {
+      platforms: requestedPlatforms,
+      host: proxyHost,
+      port: proxyPort,
+      appName: path.basename(options.appDir),
+      settings: cordovaSettings
+    };
+
+    cordova.ensureCordovaProject(cordovaOptions, cordovaPath, bundleDir);
+
+    _.each(options.args, function (platformName) {
+      // XXX check for repeats
+      execCordovaOnPlatform(platformName, cordovaPath);
+    });
+  }
 
   var appHost, appPort;
   if (options['app-port']) {
@@ -529,7 +567,7 @@ main.registerCommand({
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
-  // XXX name the root directory in the bundle based on the basename
+  // XXX name the root directory in t he bundle based on the basename
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
@@ -1533,292 +1571,3 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
-
-
-///////////////////////////////////////////////////////////////////////////////
-// cordova
-///////////////////////////////////////////////////////////////////////////////
-
-var generateCordovaBoilerplate = function (clientDir, options) {
-  var clientJsonPath = path.join(clientDir, 'program.json');
-  var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
-
-  var manifest = _.map(clientJson.manifest, function (item) {
-    if (item.type === 'js')
-      return _.extend(item, { url: ('/js' + item.url) });
-    return item;
-  });
-
-  var meteorRelease = project.getMeteorReleaseVersion();
-  var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
-  var boilerplate = new Boilerplate('client.cordova', manifest, {
-    urlMapper: function (url) { return url ? url.substr(1) : ''; },
-    pathMapper: function (p) { return path.join(clientDir, p); },
-    baseDataExtension: {
-      includeCordova: true,
-      meteorRuntimeConfig: JSON.stringify({
-        meteorRelease: meteorRelease,
-        ROOT_URL: 'http://' + options.host + ':' + options.port + '/',
-        // XXX propagate it from options?
-        ROOT_URL_PATH_PREFIX: '',
-        DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port
-      })
-    }
-  });
-  return boilerplate.toHTML();
-};
-
-
-var fetchCordovaPluginFromShaUrl =
-  function (urlWithSha, localPluginsDir, pluginName) {
-  var pluginPath = path.join(localPluginsDir, pluginName);
-  var pluginTarballPath = pluginPath + '.tgz';
-  var curlProcess =
-    execFileSync('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
-
-  if (! curlProcess.success)
-    throw new Error("Failed to fetch the tarball from " + urlWithSha + ": " +
-                    curlProcess.stderr);
-
-  files.mkdir_p(pluginPath);
-  var tarProcess = execFileSync('tar',
-    ['xf', pluginTarballPath, '-C', pluginPath, '--strip-components=1']);
-  if (! tarProcess.success)
-    throw new Error("Failed to untar the tarball from " + urlWithSha + ": " +
-                    tarProcess.stderr);
-  files.rm_recursive(pluginTarballPath);
-  return pluginPath;
-};
-
-// Creates a Cordova project if necessary and makes sure added Cordova
-// platforms and Cordova plugins are up to date with the project's
-// definition.
-var ensureCordovaProject = function (options, projectPath, bundlePath) {
-  var bundler = require(path.join(__dirname, 'bundler.js'));
-  var loader = project.getPackageLoader();
-
-  var clientArchName = 'client.cordova';
-
-  var bundleResult = bundler.bundle({
-    outputPath: bundlePath,
-    buildOptions: {
-      minify: false, // XXX ! options.debug,
-      arch: archinfo.host(),
-      clientArchs: [clientArchName]
-    }
-  });
-
-  if (bundleResult.errors) {
-    throw new Error("Errors prevented bundling:\n" +
-                    bundleResult.errors.formatMessages());
-  }
-
-  var programPath = path.join(bundlePath, 'programs');
-  var localPluginsPath = path.join(projectPath, 'local-plugins');
-  var newSettings = options.cordovaSettings;
-
-  if (! fs.existsSync(projectPath)) {
-    execFileSync('cordova', ['create', path.basename(projectPath),
-                             'com.meteor.' + options.appName,
-                             options.appName.replace(/\s/g, '')],
-                 { cwd: path.dirname(projectPath) });
-
-    // XXX a hack as platforms management is not implemented yet
-    var platform = options.platform || "firefoxos";
-    execFileSync('cordova', ['platforms', 'add', platform], { cwd: projectPath });
-
-
-    // create a folder for storing local plugins
-    // XXX cache them there
-    files.mkdir_p(localPluginsPath);
-  }
-
-  var oldSettings = {};
-  try {
-    fs.readFileSync(path.join(projectPath, 'cordova-settings.json'), "utf8");
-  } catch(err) {
-    if (err.code !== "ENOENT")
-      throw err;
-  }
-
-  var wwwPath = path.join(projectPath, "www");
-
-  var cordovaProgramPath = path.join(programPath, clientArchName);
-  var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
-
-  // XXX hack, copy files from app folder one level up
-  if (fs.existsSync(cordovaProgramAppPath)) {
-    files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
-    files.rm_recursive(cordovaProgramAppPath);
-  }
-
-  // rewrite the www folder
-  files.rm_recursive(wwwPath);
-  files.cp_r(cordovaProgramPath, wwwPath);
-
-  // clean up the temporary bundle directory
-  files.rm_recursive(bundlePath);
-
-  // generate index.html
-  var indexHtml = generateCordovaBoilerplate(wwwPath, options);
-  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
-
-  var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
-  var loaderCode = fs.readFileSync(loaderPath);
-  fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
-
-  // XXX get platforms from project file
-//  _.each(platforms, function (platform) {
-//    execFileSync('cordova', ['platform', 'add', platform], { cwd: projectPath });
-//  });
-
-  // Compare the state of plugins in the Cordova project and the required by the
-  // Meteor project.
-  // XXX compare the latest used sha's with the currently required sha's for
-  // plugins fetched from a github/tarball url.
-  var pluginsOutput = execFileSync('cordova', ['plugin', 'list'],
-                                   { cwd: projectPath }).stdout;
-
-  var installedPlugins = {};
-  // Check if there are any plugins
-  if (! pluginsOutput.match(/No plugins added/)) {
-    _.each(pluginsOutput.split('\n'), function (line) {
-      line = line.trim();
-      if (line === '')
-        return;
-      var plugin = line.split(' ')[0];
-      var version = line.split(' ')[1];
-      installedPlugins[plugin] = version;
-    });
-  }
-
-  var requiredPlugins = bundleResult.starManifest.cordovaDependencies;
-  // XXX the project-level cordova plugins deps override the package-level ones
-  _.extend(requiredPlugins, project.cordovaPlugins);
-
-  _.each(requiredPlugins, function (version, name) {
-    // no-op if this plugin is already installed
-    if (_.has(installedPlugins, name)
-        && installedPlugins[name] === version
-        && _.isEqual(oldSettings[name], newSettings[name]))
-      return;
-
-    if (_.has(installedPlugins, name))
-      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
-
-    // XXX do something different for plugins fetched from a url.
-    var pluginInstallCommand = version ? name + '@' + version : name;
-
-    if (version && utils.isUrlWithSha(version)) {
-      pluginInstallCommand =
-        fetchCordovaPluginFromShaUrl(version, localPluginsPath, name);
-    }
-
-    var additionalArgs = [];
-    if (newSettings[name]) {
-      if (! _.isObject(newSettings[name]))
-        throw new Error("Meteor.settings.cordova." + name + " is expected to be an object");
-      _.each(newSettings[name], function (value, variable) {
-        additionalArgs.push("--variable");
-        additionalArgs.push(variable + "=" + JSON.stringify(value));
-      });
-    }
-
-    var execRes = execFileSync('cordova',
-       ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: projectPath });
-    if (! execRes.success)
-      throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
-  });
-
-  _.each(installedPlugins, function (version, name) {
-    if (! _.has(requiredPlugins, name))
-      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
-  });
-
-  execFileSync('cordova', ['build'], { cwd: projectPath });
-};
-
-main.registerCommand({
-  name: 'cordova',
-  minArgs: 1,
-  maxArgs: 10,
-  requiresApp: true,
-  options: {
-    settings: { type: String },
-    port: { type: String, short: 'p', default: '3000' },
-    host: { type: String, short: 'h', default: 'localhost' },
-    platform: { type: String, default: 'firefoxos' },
-    verbose: { type: Boolean, short: 'v', default: false }
-  },
-}, function (options) {
-  var localDir = path.join(options.appDir, '.meteor', 'local');
-  var cordovaPath = path.join(localDir, 'cordova-build');
-  var bundleDir = path.join(localDir, 'bundle-tar');
-  var appName = path.basename(options.appDir);
-
-  var cordovaCommand = options.args[0];
-  var cordovaArgs = options.args.slice(1);
-  var cordovaSettings = {};
-
-  if (options.settings) {
-    cordovaSettings = JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
-  }
-
-  if (cordovaCommand === 'plugin' || cordovaCommand === 'plugins') {
-    var pluginsCommand = cordovaArgs[0];
-    var pluginsArgs = cordovaArgs.slice(1);
-    var plugins = _.map(pluginsArgs, function (str) { return str.split('@')[0]; });
-
-    if (pluginsCommand === 'add') {
-      var pluginsHash = _.object(_.map(pluginsArgs, function (str) {
-        return str.split('@');
-      }));
-
-      // check that every plugin is specifying either an exact constraint or a
-      // tarball url with sha
-      utils.ensureOnlyExactVersions(pluginsHash);
-
-      project.addCordovaPlugins(pluginsHash);
-      console.log("=> Added", plugins.join(' '));
-      return 0;
-    } else if (pluginsCommand === 'remove' || pluginsCommand === 'rm') {
-      project.removeCordovaPlugins(pluginsArgs);
-      console.log("=> Removed", plugins.join(' '));
-      return 0;
-    }
-
-    options.verbose = true;
-  }
-
-  var projectOptions = _.pick(options, 'port', 'host', 'platform');
-  projectOptions.appName = appName;
-  projectOptions.cordovaSettings = cordovaSettings;
-
-  // XXX in Android simulators you can't access localhost and the correct way is
-  // to use "10.0.2.2" instead.
-  if (cordovaCommand === 'emulate' && cordovaArgs[0] === 'android' &&
-      options.host === 'localhost')
-    projectOptions.host = '10.0.2.2';
-
-  if (_.contains(['emulate', 'build', 'prepare', 'compile', 'serve', 'create'], cordovaCommand)) {
-    try {
-      ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
-    } catch (e) {
-      process.stderr.write('Errors preventing the Cordova project from build:\n');
-      process.stderr.write(e.stack);
-      return 1;
-    }
-  }
-
-  // XXX error if not a Cordova project
-  var cordovaProcess = execFileSync('cordova', options.args, { cwd: cordovaPath });
-  if (cordovaProcess.success) {
-    if (options.verbose)
-      console.log(cordovaProcess.stdout);
-    return 0;
-  } else {
-    process.stderr.write(cordovaProcess.stderr);
-    return 1;
-  }
-});
-
