@@ -112,7 +112,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
-    }, "client.browser");
+    }, "web.browser");
 
     // The script contents itself should not be present; the pathname
     // where the script is served should be.
