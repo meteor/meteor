@@ -64,7 +64,10 @@ _.extend(exports.Tropohouse.prototype, {
   // the server in a way that our sync protocol doesn't understand well.
   wipeAllPackages: function () {
     var self = this;
-    var packageRootDir = path.join(self.root, config.getPackagesDirectoryName());
+
+    var packagesDirectoryName = config.getPackagesDirectoryName();
+
+    var packageRootDir = path.join(self.root, packagesDirectoryName);
     try {
       var packages = fs.readdirSync(packageRootDir);
     } catch (e) {
@@ -74,13 +77,41 @@ _.extend(exports.Tropohouse.prototype, {
       throw e;
     }
 
+    // We want to be careful not to break the 'meteor' symlink inside the
+    // tropohouse. Hopefully nobody deleted that package!
+    var latestToolPackage = null;
+    var latestToolVersion = null;
+    var currentToolPackage = null;
+    var currentToolVersion = null;
+    if (release.current.isProperRelease()) {
+      currentToolPackage = release.current.getToolsPackage();
+      currentToolVersion = release.current.getToolsVersion();
+      var latestMeteorSymlink = self.latestMeteorSymlink();
+      if (utils.startsWith(latestMeteorSymlink,
+                           packagesDirectoryName + path.sep)) {
+        var rest = latestMeteorSymlink.substr(packagesDirectoryName.length + path.sep.length);
+        var pieces = rest.split(path.sep);
+        latestToolPackage = pieces[0];
+        latestToolVersion = pieces[0];
+      }
+    }
+
     _.each(packages, function (package) {
       var packageDir = path.join(packageRootDir, package);
       _.each(fs.readdirSync(packageDir), function (version) {
         // Is this a pre-0.9.0 "warehouse" version with a hash name?
         if (/^[a-f0-9]{3,}$/.test(version))
           return;
-        // XXX don't be a fool, skip meteor-tool
+
+        // Skip the currently-latest tool (ie, don't break symlink).
+        if (package === latestToolPackage && version === latestToolVersion)
+          return;
+
+        // Skip the currently-executing tool (ie, don't break the current
+        // operation).
+        if (package === currentToolPackage && version === currentToolVersion)
+          return;
+
         files.rm_recursive(path.join(packageDir, version));
       });
     });
