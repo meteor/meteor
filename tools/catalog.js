@@ -129,6 +129,13 @@ _.extend(OfficialCatalog.prototype, {
         process.stderr.write("Warning: could not connect to package server\n");
       }
       if (updateResult.resetData) {
+        // Did we reset the data from scratch? Delete packages, which may be
+        // bogus.
+        //
+        // XXX We should actually mark "reset data please" in data.json and not
+        // remove it until the wipe step happens, and re-attempt the wipe on
+        // program startup, so that killing in the middle of a resync (a slow
+        // operation!!!) still wipes packages.
         tropohouse.default.wipeAllPackages();
       }
     } else {
