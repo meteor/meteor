@@ -82,6 +82,14 @@ _.extend(warehouse, {
     return path.join(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
   },
 
+  _latestReleaseSymlinkPath: function () {
+    return path.join(warehouse.getWarehouseDir(), 'releases', 'latest');
+  },
+
+  _latestToolsSymlinkPath: function () {
+    return path.join(warehouse.getWarehouseDir(), 'tools', 'latest');
+  },
+
   // Ensure the passed release version is stored in the local
   // warehouse and return its parsed manifest.
   //
@@ -240,6 +248,14 @@ _.extend(warehouse, {
             console.error("Failed to load tools for release " + releaseVersion);
           throw e;
         }
+
+        // If the 'tools/latest' symlink doesn't exist, this must be the first
+        // legacy tools we've downloaded into this warehouse. Add the symlink,
+        // so that the tools doesn't get confused when it tries to readlink it.
+        if (!fs.existsSync(warehouse._latestToolsSymlinkPath())) {
+          fs.symlinkSync(newPieces.tools.version,
+                         warehouse._latestToolsSymlinkPath());
+        }
       }
 
       var packagesToDownload = {};
@@ -278,6 +294,15 @@ _.extend(warehouse, {
       // Now that we have written all packages, it's safe to write the
       // release manifest.
       fs.writeFileSync(releaseManifestPath, releaseManifestText);
+
+      // If the 'releases/latest' symlink doesn't exist, this must be the first
+      // legacy release manifest we've downloaded into this warehouse. Add the
+      // symlink, so that the tools doesn't get confused when it tries to
+      // readlink it.
+      if (!fs.existsSync(warehouse._latestReleaseSymlinkPath())) {
+        fs.symlinkSync(releaseVersion + '.release.json',
+                       warehouse._latestReleaseSymlinkPath());
+      }
     }
 
     // Finally, clear the "fresh" files for all the things we just printed
