@@ -51,13 +51,13 @@
 // really the build tool can lay out the star however it wants.
 //
 //
-// == Format of a program when arch is "client.*" ==
+// == Format of a program when arch is "web.*" ==
 //
 // Standard:
 //
 // /program.json
 //
-//  - format: "client-program-pre1" for this version
+//  - format: "web-program-pre1" for this version
 //
 //  - manifest: array of resources to serve with HTTP, each an object:
 //    - path: path of file relative to program.json
@@ -388,7 +388,7 @@ var Target = function (options) {
   // PackageLoader to use for resolving package dependenices.
   self.packageLoader = options.packageLoader;
 
-  // Something like "client.w3c" or "os" or "os.osx.x86_64"
+  // Something like "web.browser" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
 
   // All of the Unibuilds that are to go into this target, in the order
@@ -434,6 +434,7 @@ _.extend(Target.prototype, {
   //   on server targets.
   make: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
 
     // Populate the list of unibuilds to load
     self._determineLoadOrder({
@@ -481,6 +482,8 @@ _.extend(Target.prototype, {
   //   package name as a string
   _determineLoadOrder: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var packageLoader = self.packageLoader;
 
     // Find the roots
@@ -579,7 +582,7 @@ _.extend(Target.prototype, {
   _emitResources: function () {
     var self = this;
 
-    var isClient = archinfo.matches(self.arch, "client");
+    var isWeb = archinfo.matches(self.arch, "web");
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
@@ -617,7 +620,7 @@ _.extend(Target.prototype, {
               : stripLeadingSlash(resource.servePath);
         f.setTargetPathFromRelPath(relPath);
 
-        if (isClient)
+        if (isWeb)
           f.setUrlFromRelPath(resource.servePath);
         else {
           unibuildAssets[resource.path] = resource.data;
@@ -632,7 +635,7 @@ _.extend(Target.prototype, {
           return;  // already handled
 
         if (_.contains(["js", "css"], resource.type)) {
-          if (resource.type === "css" && ! isClient)
+          if (resource.type === "css" && ! isWeb)
             // XXX might be nice to throw an error here, but then we'd
             // have to make it so that package.js ignores css files
             // that appear in the server directories in an app tree
@@ -655,7 +658,7 @@ _.extend(Target.prototype, {
 
           f.setTargetPathFromRelPath(relPath);
 
-          if (isClient) {
+          if (isWeb) {
             f.setUrlFromRelPath(resource.servePath);
           }
 
@@ -692,7 +695,7 @@ _.extend(Target.prototype, {
         }
 
         if (_.contains(["head", "body"], resource.type)) {
-          if (! isClient)
+          if (! isWeb)
             throw new Error("HTML segments can only go to the client");
           self[resource.type].push(resource.data);
           return;
@@ -779,7 +782,7 @@ var ClientTarget = function (options) {
   self.head = [];
   self.body = [];
 
-  if (! archinfo.matches(self.arch, "client"))
+  if (! archinfo.matches(self.arch, "web"))
     throw new Error("ClientTarget targeting something that isn't a client?");
 };
 
@@ -972,7 +975,7 @@ _.extend(ClientTarget.prototype, {
 
     // Control file
     builder.writeJson('program.json', {
-      format: "client-program-pre1",
+      format: "web-program-pre1",
       manifest: manifest
     });
     return "program.json";
@@ -1541,55 +1544,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
       cordovaDependencies: {}
     };
 
-    // Pick a path in the bundle for each target
-    var paths = {};
-    _.each(targets, function (target, name) {
-      var p = path.join('programs', name);
-      builder.reserve(p, { directory: true });
-      paths[name] = p;
-    });
-
-    // Hack to let servers find relative paths to clients. Should find
-    // another solution eventually (probably some kind of mount
-    // directive that mounts the client bundle in the server at runtime)
-    var getRelativeTargetPath = function (options) {
-      var pathForTarget = function (target) {
-        var name;
-        _.each(targets, function (t, n) {
-          if (t === target)
-            name = n;
-        });
-        if (! name)
-          throw new Error("missing target?");
-
-        if (! (name in paths))
-          throw new Error("missing target path?");
-
-        return paths[name];
-      };
-
-      return path.relative(pathForTarget(options.relativeTo),
-                           pathForTarget(options.forTarget));
-    };
-
-    // Write out each target
-    _.each(targets, function (target, name) {
-      var relControlFilePath =
-        target.write(builder.enter(paths[name]), {
-          includeNodeModulesSymlink: options.includeNodeModulesSymlink,
-          getRelativeTargetPath: getRelativeTargetPath });
-
-      json.programs.push({
-        name: name,
-        arch: target.mostCompatibleArch(),
-        path: path.join(paths[name], relControlFilePath)
-      });
-
-      _.each(target.cordovaDependencies, function (version, name) {
-        json.cordovaDependencies[name] = version;
-      });
-    });
-
     // Tell Galaxy what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied
     // or symlinked a node_modules, since that's probably enough for
@@ -1624,9 +1578,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
       'utf8')});
     }
 
-    // Control file
-    builder.writeJson('star.json', json);
-
     // Merge the WatchSet of everything that went into the bundle.
     var clientWatchSet = new watch.WatchSet();
     var serverWatchSet = new watch.WatchSet();
@@ -1640,8 +1591,17 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, options));
+      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+        builtBy: options.builtBy,
+        controlProgram: options.controlProgram,
+        releaseName: options.releaseName,
+        getRelativeTargetPath: options.getRelativeTargetPath
+      }));
     });
+
+    // Control file
+    builder.writeJson('star.json', json);
 
     // We did it!
     builder.complete();
@@ -1680,9 +1640,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
+ *   - arch: the server architecture to target (defaults to archinfo.host())
  *   - serverArch: the server architecture to target
  *                   (defaults to archinfo.host())
- *   - clientArchs: an array of client archs to target
+ *   - webArchs: an array of web archs to target
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
@@ -1711,23 +1672,12 @@ exports.bundle = function (options) {
   var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
 
+  var appDir = project.project.rootDir;
   if (! release.usingRightReleaseForApp(appDir))
     throw new Error("running wrong release for app?");
 
   var serverArch = buildOptions.serverArch || archinfo.host();
-  var clientArchs = buildOptions.clientArchs || [ "client.browser", "client.cordova" ];
-
-  var appDir = project.project.rootDir;
-  var packageLoader = project.project.getPackageLoader();
-  var downloaded = project.project._ensurePackagesExistOnDisk(
-    project.project.dependencies, { arch: serverArch, verbose: true });
-
-  if (_.keys(downloaded).length !==
-      _.keys(project.project.dependencies).length) {
-    buildmessage.error("Unable to download package builds for this architecture.");
-    // Recover by returning.
-    return;
-  }
+  var webArchs = buildOptions.webArchs || [ "web.browser" ];
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1743,12 +1693,23 @@ exports.bundle = function (options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
+    var packageLoader = project.project.getPackageLoader();
+    var downloaded = project.project._ensurePackagesExistOnDisk(
+      project.project.dependencies, { serverArch: serverArch, verbose: true });
+
+    if (_.keys(downloaded).length !==
+        _.keys(project.project.dependencies).length) {
+      buildmessage.error("Unable to download package builds for this architecture.");
+      // Recover by returning.
+      return;
+    }
+
     var controlProgram = null;
 
-    var makeClientTarget = function (app, clientArch) {
+    var makeClientTarget = function (app, webArch) {
       var client = new ClientTarget({
         packageLoader: packageLoader,
-        arch: clientArch
+        arch: webArch
       });
 
       client.make({
@@ -1763,7 +1724,7 @@ exports.bundle = function (options) {
     var makeBlankClientTarget = function () {
       var client = new ClientTarget({
         packageLoader: packageLoader,
-        arch: "client.browser"
+        arch: "web.browser"
       });
       client.make({
         minify: buildOptions.minify,
@@ -1807,16 +1768,15 @@ exports.bundle = function (options) {
 
       var clientTargets = [];
       // Client
-      _.each(clientArchs, function (arch) {
+      _.each(webArchs, function (arch) {
         var client = makeClientTarget(app, arch);
-        targets[arch] = client;
         clientTargets.push(client);
+        targets[arch] = client;
       });
 
       // Server
       if (! options.hasCachedBundle) {
         var server = makeServerTarget(app, clientTargets);
-        server.clientTargets = clientTargets;
         targets.server = server;
       }
     }
@@ -1918,8 +1878,7 @@ exports.bundle = function (options) {
     _.each(programs, function (p) {
       // Read this directory as a package and create a target from
       // it
-      var pkg = packageCache.packageCache.
-        loadPackageAtPath(p.name, p.path);
+      var pkg = packageCache.packageCache.loadPackageAtPath(p.name, p.path);
       var target;
       switch (p.type) {
       case "server":
@@ -2000,10 +1959,10 @@ exports.bundle = function (options) {
     };
 
     if (options.hasCachedBundle) {
-      // XXX If we already have a cached bundle, just recreate the new targets.
-      // This might make the contents of "star.json" out of date.
+      // If we already have a cached bundle, just recreate the new targets.
+      // XXX This might make the contents of "star.json" out of date.
       _.each(targets, function (target, name) {
-        writeTargetToPath(name, target, outputPath, options);
+        writeTargetToPath(name, target, outputPath, writeOptions);
         clientWatchSet.merge(target.getWatchSet());
       });
     } else {
@@ -2063,6 +2022,7 @@ exports.bundle = function (options) {
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
 exports.buildJsImage = function (options) {
+  buildmessage.assertInCapture();
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
   if (! options.name)
@@ -2114,6 +2074,7 @@ exports.readJsImage = function (controlFilePath) {
 // with a topological sort.
 exports.iterateOverAllUsedUnipackages = function (loader, arch,
                                                   packageNames, callback) {
+  buildmessage.assertInCapture();
   var target = new Target({packageLoader: loader,
                            arch: arch});
   target._determineLoadOrder({packages: packageNames});

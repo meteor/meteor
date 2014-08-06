@@ -38,23 +38,7 @@ var getReleaseOrPackageRecord = function(name) {
     if (rec)
       rel = true;
   }
-  return { record: rec, release: rel };
-};
-
-
-// Checks to see if you are an authorized maintainer for a given
-// release/package. If you are not, calls process.exit
-// explaining that you can't take that action.
-//   record:  package or track record
-//   action:  string for error handling
-var checkAuthorizedPackageMaintainer = function (record, action) {
-  var authorized = _.indexOf(
-      _.pluck(record.maintainers, 'username'), auth.loggedInUsername());
-  if (authorized == -1) {
-      process.stderr.write('You are not an authorized maintainer of ' + record.name + ".\n");
-      process.stderr.write('Only authorized maintainers may ' + action + ".\n");
-      return 1;;
-  }
+  return { record: rec, isRelease: rel };
 };
 
 // Returns a pretty list suitable for showing to the user. Input is an
@@ -113,7 +97,17 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  catalog.official.refresh(true);
+  catalog.official.refresh();
+  var packageName = path.basename(options.packageDir);
+
+  // Fail early if the package already exists.
+  if (options.create) {
+    if (catalog.official.getPackage(packageName)) {
+      process.stderr.write("Package already exists. To create a new version of an existing "+
+                           "package, do not use the --create flag! \n");
+      return 2;
+    }
+  };
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -134,7 +128,6 @@ main.registerCommand({
   var messages = buildmessage.capture(
     { title: "building the package" },
     function () {
-      var packageName = path.basename(options.packageDir);
 
       if (! utils.validPackageName(packageName)) {
         buildmessage.error("Invalid package name:", packageName);
@@ -148,32 +141,44 @@ main.registerCommand({
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
 
-      var directDeps =
-            compiler.determineBuildTimeDependencies(packageSource).directDependencies;
-      project._ensurePackagesExistOnDisk(directDeps);
+      var deps =
+            compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+      project._ensurePackagesExistOnDisk(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
 
   if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
+    process.stderr.write(messages.formatMessages());
     return 1;
   }
 
   // We have initialized everything, so perform the publish oepration.
-  var ec = packageClient.publishPackage(
-    packageSource, compileResult, conn, {
-      new: options.create,
-      existingVersion: options['existing-version']
-    });
+  var ec;  // XXX maybe combine with messages?
+  messages = buildmessage.capture({
+    title: "publishing the package"
+  }, function () {
+    ec = packageClient.publishPackage(
+      packageSource, compileResult, conn, {
+        new: options.create,
+        existingVersion: options['existing-version']
+      });
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return ec || 1;
+  }
 
   // Warn the user if their package is not good for all architectures.
-  if (compileResult.unipackage.buildArchitectures() !== "browser+os") {
+  var allArchs = compileResult.unipackage.buildArchitectures().split('+');
+  if (_.any(allArchs, function (arch) {
+    return arch.match(/^os\./);
+  })) {
     process.stdout.write(
       "\nWARNING: Your package contains binary code and is only compatible with " +
        archinfo.host() + " architecture.\n" +
        "Please use publish-for-arch to publish new builds of the package.\n\n");
-  };
+  }
 
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.
@@ -246,21 +251,43 @@ main.registerCommand({
     return 1;
   }
 
-  var packageSource = new PackageSource;
+  var unipkg;
+  var messages = buildmessage.capture({
+    title: "building package " + name
+  }, function () {
+    var packageSource = new PackageSource;
 
-  // This package source, although it is initialized from a directory is
-  // immutable. It should be built exactly as is. If we need to modify anything,
-  // such as the version lock file, something has gone terribly wrong and we
-  // should throw.
-  packageSource.initFromPackageDir(name, packageDir,  {
-        requireVersion: true,
-        immutable: true
+    // This package source, although it is initialized from a directory is
+    // immutable. It should be built exactly as is. If we need to modify
+    // anything, such as the version lock file, something has gone terribly
+    // wrong and we should throw.
+    packageSource.initFromPackageDir(name, packageDir,  {
+      requireVersion: true,
+      immutable: true
+    });
+    if (buildmessage.jobHasMessages())
+      return;
+
+
+    // Now compile it! Once again, everything should compile, and if
+    // it doesn't we should fail. Hopefully, of course, we have
+    // tested our stuff before deciding to publish it to the package
+    // server, but we need to be careful.
+    var deps =
+          compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+    project._ensurePackagesExistOnDisk(deps);
+
+    unipkg = compiler.compile(packageSource, {
+      officialBuild: true
+    }).unipackage;
+    if (buildmessage.jobHasMessages())
+      return;
   });
 
-  var unipkg = compiler.compile(packageSource, {
-    officialBuild: true
-  }).unipackage;
-  unipkg.saveToPath(path.join(packageDir, '.build.' + packageSource.name));
+  if (messages.hasMessages()) {
+    process.stderr.write("\n" + messages.formatMessages());
+    return 1;
+  }
 
   var conn;
   try {
@@ -269,10 +296,19 @@ main.registerCommand({
     packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
-  packageClient.createAndPublishBuiltPackage(conn, unipkg);
 
+  messages = buildmessage.capture({
+    title: "publishing package " + name
+  }, function () {
+    packageClient.createAndPublishBuiltPackage(conn, unipkg);
+  });
 
-  catalog.official.refresh();
+  if (messages.hasMessages()) {
+    process.stderr.write("\n" + messages.formatMessages());
+    return 1;
+  }
+
+  catalog.official.refresh();  // XXX buildmessage.capture?
   return 0;
 });
 
@@ -386,15 +422,17 @@ main.registerCommand({
                            '. If you are creating a new track, use the --create-track flag.\n');
       return 1;
     }
-    var auth = require("./auth.js");
-    var authorized = _.indexOf(
-      _.pluck(trackRecord.maintainers, 'username'), auth.loggedInUsername());
-    if (authorized == -1) {
+
+    // We are going to call the server to check if we are authorized, so that when
+    // we implement things like organizations, we are not handicapped by the
+    // user's meteor version.
+    if (!packageClient.amIAuthorized(relConf.track,conn,  true)) {
       process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions.\n');
       return 1;
-    }
+    };
   }
+
   process.stdout.write(". OK!\n");
 
   // This is sort of a hidden option to just take your entire meteor checkout
@@ -446,7 +484,7 @@ main.registerCommand({
     // directory, though we really shouldn't be, or, if we ever restructure the
     // way that we store packages in the meteor directory, we should be sure to
     // reevaluate what this command actually does.
-    var localPackageDir = path.join(files.getCurrentToolsDir(),"packages");
+    var localPackageDir = path.join(files.getCurrentToolsDir(), "packages");
     var contents = fs.readdirSync(localPackageDir);
     var myPackages = {};
     var toPublish = {};
@@ -600,7 +638,7 @@ main.registerCommand({
       });
 
     if (messages.hasMessages()) {
-      process.stdout.write("\n" + messages.formatMessages());
+      process.stderr.write("\n" + messages.formatMessages());
       return 1;
     };
 
@@ -616,20 +654,29 @@ main.registerCommand({
       };
       process.stdout.write("Publishing package: " + name + "\n");
 
-      // If we are creating a new package, dsPS will document this for us, so we
-      // don't need to do this here. Though, in the future, once we are done
-      // bootstrapping package servers, we should consider having some extra
-      // checks around this.
-      var pub = packageClient.publishPackage(
-        prebuilt.source,
-        prebuilt.compileResult,
-        conn,
-        opts);
+      var pubEC;  // XXX merge with messages?
+      messages = buildmessage.capture({
+        title: "publishing package " + name
+      }, function () {
+        // If we are creating a new package, dsPS will document this for us, so
+        // we don't need to do this here. Though, in the future, once we are
+        // done bootstrapping package servers, we should consider having some
+        // extra checks around this.
+        pubEC = packageClient.publishPackage(
+          prebuilt.source,
+          prebuilt.compileResult,
+          conn,
+          opts);
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write(messages.formatMessages());
+        return pubEC || 1;
+      }
 
       // If we fail to publish, just exit outright, something has gone wrong.
-      if (pub > 0) {
+      if (pubEC > 0) {
         process.stderr.write("Failed to publish: " + name + "\n");
-        return 1;
+        return pubEC;
       }
     }
 
@@ -649,21 +696,26 @@ main.registerCommand({
   }
 
   process.stdout.write("Creating a new release version...\n");
-  // Send it over!
-  var record = {
-    track: relConf.track,
-    version: relConf.version,
-    orderKey: relConf.orderKey,
-    description: relConf.description,
-    recommended: !!relConf.recommended,
-    tool: relConf.tool,
-    packages: relConf.packages
-  };
+    var record = {
+      track: relConf.track,
+      version: relConf.version,
+      orderKey: relConf.orderKey,
+      description: relConf.description,
+      recommended: !!relConf.recommended,
+      tool: relConf.tool,
+      packages: relConf.packages
+    };
+
   var uploadInfo;
-  if (!relConf.patchFrom) {
-    uploadInfo = conn.call('createReleaseVersion', record);
-  } else {
-    uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
+  try {
+    if (!relConf.patchFrom) {
+      uploadInfo = conn.call('createReleaseVersion', record);
+    } else {
+      uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
+    }
+  } catch (err) {
+    process.stderr.write("ERROR: " + err + "\n");
+    return 1;
   }
 
   // Get it back.
@@ -681,12 +733,24 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'search',
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: 1,
   options: {
-    details: { type: Boolean, required: false }
+    details: { type: Boolean, required: false },
+    mine: {type: Boolean, required: false }
   },
 }, function (options) {
+
+  if (options.details && options.mine) {
+    process.stderr.write("You must select a specific package by name to view details. \n");
+    return 1;
+  }
+
+  if (!options.mine && options.args.length === 0) {
+    process.stderr.write("You must search for packages by name or substring. \n");
+    throw new main.ShowUsage;
+  }
+
 
   catalog.official.refresh();
 
@@ -701,7 +765,7 @@ main.registerCommand({
     }
     var versionRecords;
     var label;
-    if (!allRecord.release) {
+    if (!allRecord.isRelease) {
       label = "package";
       var getRelevantRecord = function (version) {
         var versionRecord =
@@ -709,15 +773,18 @@ main.registerCommand({
         var myBuilds = _.pluck(
           catalog.official.getAllBuilds(name, version),
           'buildArchitectures');
-        // This package does not have different builds, so we don't care.
-        if (_.isEqual(myBuilds, ["browser+os"])) {
-          return versionRecord;
+        // Does this package only have a cross-platform build?
+        if (myBuilds.length === 1) {
+          var allArches = myBuilds[0].split('+');
+          if (!_.any(allArches, function (arch) {
+            return arch.match(/^os\./);
+          })) {
+            return versionRecord;
+          }
         }
         // This package is only available for some architectures.
-        var myStringBuilds = "";
-        _.each(myBuilds, function (build) {
-          myStringBuilds = myStringBuilds + build.split('+')[1] + " ";
-        });
+        // XXX show in a more human way?
+        var myStringBuilds = myBuilds.join(' ');
         return _.extend({ buildArchitectures: myStringBuilds },
                         versionRecord);
       };
@@ -786,15 +853,50 @@ main.registerCommand({
     }
     process.stdout.write(maintain + "\n");
   } else {
-    var search = options.args[0];
+
 
     var allPackages = catalog.official.getAllPackageNames();
     var allReleases = catalog.official.getAllReleaseTracks();
     var matchingPackages = [];
     var matchingReleases = [];
 
+    var selector;
+    if (options.mine) {
+      var myUserName = auth.loggedInUsername();
+      if (!myUserName) {
+        // But couldn't you just grep the data.json for any maintainer? Yeah,
+        // but that's temporary, and won't work once organizations are around.
+        process.stderr.write("Please login so we know who you are. \n");
+        auth.doUsernamePasswordLogin({});
+        myUserName = auth.loggedInUsername();
+      }
+      // In the future, we should consider checking this on the server, but I
+      // suspect the main use of this command will be to deal with the automatic
+      // migration and uncommon in everyday use. From that perspective, it makes
+      // little sense to require you to be online to find out what packages you
+      // own; and the consequence of not mentioning your group packages until
+      // you update to a new version of meteor is not that dire.
+      selector = function (packageName, isRelease) {
+        var record;
+        if (!isRelease) {
+           record = catalog.official.getPackage(packageName);
+        } else {
+           record = catalog.official.getReleaseTrack(packageName);
+        }
+        if (_.indexOf(_.pluck(record.maintainers, 'username'), myUserName) !== -1) {
+          return true;
+        }
+        return false;
+       };
+     } else {
+       var search = options.args[0];
+       selector = function (packageName) {
+         return packageName.match(search);
+        };
+     }
+
     _.each(allPackages, function (pack) {
-      if (pack.match(search)) {
+      if (selector(pack, false)) {
         var vr = catalog.official.getLatestVersion(pack);
         if (vr) {
           matchingPackages.push(
@@ -803,7 +905,7 @@ main.registerCommand({
       }
     });
     _.each(allReleases, function (track) {
-      if (track.match(search)) {
+      if (selector(track, true)) {
         var vr = catalog.official.getDefaultReleaseVersion(track);
         if (vr) {
           var vrlong =
@@ -851,14 +953,15 @@ main.registerCommand({
 }, function (options) {
   var items = [];
 
-  // Packages that are used by this app
-  var packages = project.getConstraints();
-  // Versions of the packages. We need this to get the right description for the
-  // user, in case it changed between versions.
-  var versions = project.getVersions();
   var newVersionsAvailable = false;
 
   var messages = buildmessage.capture(function () {
+    // Packages that are used by this app
+    var packages = project.getConstraints();
+    // Versions of the packages. We need this to get the right description for
+    // the user, in case it changed between versions.
+    var versions = project.getVersions();
+
     _.each(packages, function (version, name) {
       if (!version) {
         version = versions[name];
@@ -890,7 +993,7 @@ main.registerCommand({
     });
   });
   if (messages.hasMessages()) {
-    process.stdout.write("\n" + messages.formatMessages());
+    process.stderr.write("\n" + messages.formatMessages());
     return 1;
   }
 
@@ -1098,7 +1201,14 @@ main.registerCommand({
 
     var solutionPackageVersions = null;
     var directDependencies = project.getConstraints();
-    var previousVersions = project.getVersions();
+    var previousVersions;
+    var messages = buildmessage.capture(function () {
+      previousVersions = project.getVersions();
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write(messages.formatMessages());
+      return 1;
+    }
     var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
       var releaseRecord = catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
       if (!releaseRecord)
@@ -1139,8 +1249,16 @@ main.registerCommand({
     var upgradersToRun = upgraders.upgradersToRun();
 
     // Write the new versions to .meteor/packages and .meteor/versions.
-    var setV = project.setVersions(solutionPackageVersions,
-      { alwaysRecord : true });
+    var setV;
+    messages = buildmessage.capture(function () {
+      setV = project.setVersions(solutionPackageVersions,
+                                 { alwaysRecord : true });
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write("Error while setting versions:\n" +
+                           messages.formatMessages());
+      return 1;
+    }
     project.showPackageChanges(previousVersions, solutionPackageVersions, {
       onDiskPackages: setV.downloaded
     });
@@ -1173,13 +1291,20 @@ main.registerCommand({
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 
-    var versions = project.getVersions();
-    var allPackages = project.getCurrentCombinedConstraints();
-    var upgradePackages;
+    var versions, allPackages;
+    messages = buildmessage.capture(function () {
+      versions = project.getVersions();
+      allPackages = project.getCurrentCombinedConstraints();
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write(messages.formatMessages());
+      return 1;
+    }
 
     // If no packages have been specified, then we will send in a request to
     // update all direct dependencies. If a specific list of packages has been
     // specified, then only upgrade those.
+    var upgradePackages;
     if (options.args.length === 0) {
       upgradePackages = _.pluck(allPackages, 'packageName');
     } else {
@@ -1203,12 +1328,22 @@ main.registerCommand({
     }
 
     // Set our versions and download the new packages.
-    setV = project.setVersions(newVersions, {
-      alwaysRecord : true });
-
-    // Display changes: what we have added/removed/upgraded.
-    return project.showPackageChanges(versions, newVersions, {
-       onDiskPackages: setV.downloaded});
+    messages = buildmessage.capture(function () {
+      setV = project.setVersions(newVersions, { alwaysRecord : true });
+    });
+    // XXX cleanup this madness of error handling
+    if (messages.hasMessages()) {
+      process.stderr.write("Error while setting package versions:\n" +
+                           messages.formatMessages());
+      return 1;
+    }
+    var showExitCode = project.showPackageChanges(
+      versions, newVersions, { onDiskPackages: setV.downloaded });
+    if (!setV.success) {
+      process.stderr.write("Could not install all the requested packages.\n");
+      return 1;
+    }
+    return showExitCode;
   }
   return 0;
 });
@@ -1239,9 +1374,16 @@ main.registerCommand({
   // Read in existing package dependencies.
   var packages = project.getConstraints();
 
-  // Combine into one object mapping package name to list of
-  // constraints, to pass in to the constraint solver.
-  var allPackages = project.getCurrentCombinedConstraints();
+  var allPackages;
+  var messages = buildmessage.capture(function () {
+    // Combine into one object mapping package name to list of constraints, to
+    // pass in to the constraint solver.
+    allPackages = project.getCurrentCombinedConstraints();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -1323,35 +1465,42 @@ main.registerCommand({
     return 1;
   }
 
-  // Get the contents of our versions file. We need to pass them to the
-  // constraint solver, because our contract with the user says that we will
-  // never downgrade a dependency.
-  var versions = project.getVersions();
+  var downloaded, versions, newVersions;
+  var messages = buildmessage.capture(function () {
+    // Get the contents of our versions file. We need to pass them to the
+    // constraint solver, because our contract with the user says that we will
+    // never downgrade a dependency.
+    versions = project.getVersions();
 
+    // Call the constraint solver.
+    var resolverOpts =  {
+      previousSolution: versions,
+      breaking: !!options.force
+    };
+    newVersions = catalog.complete.resolveConstraints(
+      allPackages,
+      resolverOpts,
+      { ignoreProjectDeps: true });
+    if ( ! newVersions) {
+      // XXX: Better error handling.
+      process.stderr.write("Cannot resolve package dependencies.\n");
+      return;
+    }
 
-  // Call the constraint solver.
-  var resolverOpts =  {
-    previousSolution: versions,
-    breaking: !!options.force
-  };
-  var newVersions = catalog.complete.resolveConstraints(allPackages,
-                                               resolverOpts,
-                                               { ignoreProjectDeps: true });
-  if ( ! newVersions) {
-    // XXX: Better error handling.
-    process.stderr.write("Cannot resolve package dependencies.\n");
+    // Don't tell the user what all the operations were until we finish -- we
+    // don't want to give a false sense of completeness until everything is
+    // written to disk.
+    var messageLog = [];
+
+    // Install the new versions. If all new versions were installed
+    // successfully, then change the .meteor/packages and .meteor/versions to
+    // match expected reality.
+    downloaded = project.addPackages(constraints, newVersions);
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
   }
-
-  // Don't tell the user what all the operations were until we finish -- we
-  // don't want to give a false sense of completeness until everything is
-  // written to disk.
-  var messageLog = [];
-
-
-  // Install the new versions. If all new versions were installed successfully,
-  // then change the .meteor/packages and .meteor/versions to match expected
-  // reality.
-  var downloaded = project.addPackages(constraints, newVersions);
 
   var ret = project.showPackageChanges(versions, newVersions, {
     onDiskPackages: downloaded});
@@ -1412,19 +1561,24 @@ main.registerCommand({
     }
   });
 
+  var messages = buildmessage.capture(function () {
+    // Get the contents of our versions file, we will want them in order to
+    // remove to the user what we removed.
+    var versions = project.getVersions();
 
-  // Get the contents of our versions file, we will want them in order to remove
-  // to the user what we removed.
-  var versions = project.getVersions();
+    // Remove the packages from the project! There is really no way for this to
+    // fail, unless something has gone horribly wrong, so we don't need to check
+    // for it.
+    project.removePackages(packagesToRemove);
 
-  // Remove the packages from the project! There is really no way for this to
-  // fail, unless something has gone horribly wrong, so we don't need to check
-  // for it.
-  project.removePackages(packagesToRemove);
-
-  // Retrieve the new dependency versions that we have chosen for this project
-  // and do some pretty output reporting.
-  var newVersions = project.getVersions();
+    // Retrieve the new dependency versions that we have chosen for this project
+    // and do some pretty output reporting.
+    var newVersions = project.getVersions();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
@@ -1478,8 +1632,6 @@ main.registerCommand({
   var record = fullRecord.record;
   if (!options.list) {
 
-    checkAuthorizedPackageMaintainer(record, " add or remove maintainers");
-
     try {
       var conn = packageClient.loggedInPackagesConnection();
     } catch (err) {
@@ -1505,7 +1657,7 @@ main.registerCommand({
         process.stdout.write(" Done!\n");
       }
     } catch (err) {
-      process.stdout.write("\n" + err + "\n");
+      process.stderr.write("\n" + err + "\n");
     }
     conn.close();
     catalog.official.refresh();
@@ -1547,8 +1699,6 @@ main.registerCommand({
       return 1;
   }
 
-  checkAuthorizedPackageMaintainer(record, " recommend or unrecommend release");
-
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -1569,7 +1719,7 @@ main.registerCommand({
                            " is now  a recommended release\n");
     }
   } catch (err) {
-    process.stdout.write("\n" + err + "\n");
+    process.stderr.write("\n" + err + "\n");
   }
   conn.close();
   catalog.official.refresh();
@@ -1602,8 +1752,6 @@ main.registerCommand({
       return 1;
   }
 
-  checkAuthorizedPackageMaintainer(record, " set earliest recommended version");
-
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -1620,7 +1768,7 @@ main.registerCommand({
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stdout.write("\n" + err + "\n");
+    process.stderr.write("\n" + err + "\n");
   }
   conn.close();
   catalog.official.refresh();
@@ -1647,8 +1795,6 @@ main.registerCommand({
       return 1;
   }
 
-  checkAuthorizedPackageMaintainer(record, " change repository URL");
-
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -1663,7 +1809,7 @@ main.registerCommand({
       conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stdout.write("\n" + err + "\n");
+    process.stderr.write("\n" + err + "\n");
   }
   conn.close();
   catalog.official.refresh();

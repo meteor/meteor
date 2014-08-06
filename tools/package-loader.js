@@ -36,6 +36,7 @@ _.extend(exports.PackageLoader.prototype, {
   //    XXX rename to throwOnNotFound
   getPackage: function (name, options) {
     var self = this;
+    buildmessage.assertInCapture();
 
     options = options || {};
     if (options.throwOnError === undefined) {
@@ -87,6 +88,7 @@ _.extend(exports.PackageLoader.prototype, {
   // getPackageLoadPath / getPackageVersionLoadPath?
   getLoadPathForPackage: function (name) {
     var self = this;
+    buildmessage.assertInCapture();
 
     if (self.uniloadDir) {
       var packagePath = path.join(self.uniloadDir, name);
@@ -116,6 +118,7 @@ _.extend(exports.PackageLoader.prototype, {
   // that package at the right architecture.
   getUnibuild: function (packageName, arch) {
     var self = this;
+    buildmessage.assertInCapture();
 
     var pkg = self.getPackage(packageName, { throwOnError: true });
     return pkg.getUnibuildAtArch(arch);

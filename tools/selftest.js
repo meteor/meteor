@@ -10,6 +10,8 @@ var archinfo = require('./archinfo.js');
 var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
 var uniload = require('./uniload.js');
+var config = require('./config.js');
+var buildmessage = require('./buildmessage.js');
 var util = require('util');
 var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
@@ -64,14 +66,14 @@ var expectThrows = markStack(function (f) {
 });
 
 var getToolsPackage = function () {
+  buildmessage.assertInCapture();
   // Rebuild the tool package --- necessary because we don't actually
   // rebuild the tool in the cached version every time.
   if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
     throw Error("didn't rebuild meteor-tool?");
   }
   var loader = new packageLoader.PackageLoader({versions: null});
-  var toolPackage = loader.getPackage(toolPackageName);
-  return toolPackage;
+  return loader.getPackage(toolPackageName);
 };
 
 // Execute a command synchronously, discarding stderr.
@@ -80,6 +82,15 @@ var execFileSync = function (binary, args, opts) {
     var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
     child_process.execFile(binary, args, opts, cb2);
   })().wait();
+};
+
+var captureAndThrow = function (f) {
+  var messages = buildmessage.capture(function () {
+    f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -355,6 +366,14 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
+  // By default, tests use the package server that this meteor binary is built
+  // with. If a test is tagged 'test-package-server', it uses the test
+  // server. Tests that publish packages should have this flag; tests that
+  // assume that the release's packages can be found on the server should not.
+  if (runningTest.tags['test-package-server']) {
+    self.set('METEOR_PACKAGE_SERVER_URL', 'https://test-packages.meteor.com');
+  }
+
   if (_.has(options, 'warehouse')) {
     if (!files.inCheckout())
       throw Error("make only use a fake warehouse in a checkout");
@@ -525,11 +544,6 @@ _.extend(Sandbox.prototype, {
     self.write(to, contents);
   },
 
-  mkdir: function (dirPath) {
-    var self = this;
-    return fs.mkdirSync(path.join(self.cwd, dirPath));
-  },
-
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink: function (filename) {
     var self = this;
@@ -589,12 +603,14 @@ _.extend(Sandbox.prototype, {
   // releases containing that tool only (and no packages).
   //
   // packageServerUrl indicates which package server we think we are using. Use
-  // the default, if we do not pass this in -- which means that if you
-  // initialize a warehouse w/o specifying the packageServerUrl and *then* set a
-  // new PACKAGE_SERVER_URL environment variable, you will be sad.
-  _makeWarehouse: function (releases, packageServerUrl) {
+  // the default, if we do not pass this in; you should pass it in any case that
+  // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
+  // command you are running in this sandbox.
+  _makeWarehouse: function (releases) {
     var self = this;
-    files.mkdir_p(path.join(self.warehouse, 'packages'), 0755);
+    var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
+    var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
+    files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
 
     var stubCatalog = {
@@ -615,15 +631,18 @@ _.extend(Sandbox.prototype, {
     // be building some packages besides meteor-tool (so that we can
     // build apps that contain core packages).
 
-    var toolPackage = getToolsPackage();
-    var toolPackageDirectory =
-          '.' + toolPackage.version + '.XXX++'
-          + toolPackage.buildArchitectures();
-    toolPackage.saveToPath(path.join(self.warehouse, 'packages',
-                                     toolPackageName, toolPackageDirectory));
+    var toolPackage, toolPackageDirectory;
+    captureAndThrow(function () {
+      toolPackage = getToolsPackage();
+      toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
+        + toolPackage.buildArchitectures();
+      toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
+                                       toolPackageName, toolPackageDirectory));
+    });
+
     fs.symlinkSync(toolPackageDirectory,
-                   path.join(self.warehouse, 'packages', toolPackageName,
-                             toolPackage.version));
+                   path.join(self.warehouse, packagesDirectoryName,
+                             toolPackageName, toolPackage.version));
     stubCatalog.collections.packages.push({
       name: toolPackageName,
       _id: utils.randomToken()
@@ -653,14 +672,14 @@ _.extend(Sandbox.prototype, {
     });
 
     // Now create each requested release.
-    _.each(releases, function (config, releaseName) {
+    _.each(releases, function (configuration, releaseName) {
       // Release info
       stubCatalog.collections.releaseVersions.push({
         track: catalog.complete.DEFAULT_TRACK,
         version: releaseName,
         orderKey: releaseName,
         description: "test release " + releaseName,
-        recommended: !!config.recommended,
+        recommended: !!configuration.recommended,
         // XXX support multiple tools packages for springboard tests
         tool: toolPackageName + "@" + toolPackage.version,
         packages: {}
@@ -718,7 +737,7 @@ _.extend(Sandbox.prototype, {
         // Insert into builds. Assume the package is available for all
         // architectures.
         stubCatalog.collections.builds.push({
-          buildArchitectures: "browser+os",
+          buildArchitectures: "web.browser+os",
           versionId: versionRec._id,
           build: buildRec.build,
           _id: utils.randomToken()
@@ -726,14 +745,14 @@ _.extend(Sandbox.prototype, {
     });
     catalog.official.offline = oldOffline;
 
-    var config = require("./config.js");
-    var dataFile = config. getLocalPackageCacheFilename(packageServerUrl);
+    var dataFile = config.getLocalPackageCacheFilename(serverUrl);
     fs.writeFileSync(
       path.join(self.warehouse, 'package-metadata', 'v1', dataFile),
       JSON.stringify(stubCatalog, null, 2));
 
     // And a cherry on top
-    fs.symlinkSync(path.join('packages', toolPackageName, toolPackage.version,
+    fs.symlinkSync(path.join(packagesDirectoryName,
+                             toolPackageName, toolPackage.version,
                              'meteor-tool-' + archinfo.host(), 'meteor'),
                    path.join(self.warehouse, 'meteor'));
   }
@@ -1026,6 +1045,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stdoutMatcher.match(pattern, timeout, _strict);
   }),
@@ -1036,6 +1056,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stderrMatcher.match(pattern, timeout, _strict);
   }),
@@ -1081,6 +1102,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     self.expectExit();
 
@@ -1098,6 +1120,7 @@ _.extend(Run.prototype, {
 
     if (self.exitStatus === undefined) {
       var timeout = self.baseTimeout + self.extraTime;
+      timeout *= utils.timeoutScaleFactor;
       self.extraTime = 0;
 
       var fut = new Future;
@@ -1556,5 +1579,6 @@ _.extend(exports, {
   expectEqual: expectEqual,
   expectThrows: expectThrows,
   getToolsPackage: getToolsPackage,
-  execFileSync: execFileSync
+  execFileSync: execFileSync,
+  captureAndThrow: captureAndThrow
 });

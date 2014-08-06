@@ -12,6 +12,8 @@ var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
 var Unipackage = require('./unipackage.js').Unipackage;
+var config = require('./config.js');
+var buildmessage = require('./buildmessage.js');
 
 exports.Tropohouse = function (root, catalog) {
   var self = this;
@@ -53,7 +55,8 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
-    var relativePath = path.join("packages", packageName, version);
+    var relativePath = path.join(config.getPackagesDirectoryName(),
+                                 packageName, version);
     return relative ? relativePath : path.join(self.root, relativePath);
   },
 
@@ -85,6 +88,7 @@ _.extend(exports.Tropohouse.prototype, {
   // get around to implement cross-linking (which is the point)
   maybeDownloadPackageForArchitectures: function (versionInfo, requiredArches, verbose) {
     var self = this;
+    buildmessage.assertInCapture();
     var packageName = versionInfo.packageName;
     var version = versionInfo.version;
 
@@ -112,7 +116,7 @@ _.extend(exports.Tropohouse.prototype, {
         throw e;
     }
     if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++browser+os',
+      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
       // so this strips off the part before the '++'.
       // XXX maybe we should just read the unipackage.json instead of
       //     depending on the symlink?

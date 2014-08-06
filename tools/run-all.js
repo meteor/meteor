@@ -1,8 +1,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
-var Fiber = require('fibers');
 var files = require('./files.js');
-var inFiber = require('./fiber-helpers.js').inFiber;
 var release = require('./release.js');
 
 var runLog = require('./run-log.js');

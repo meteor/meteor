@@ -22,13 +22,13 @@ var Future = require('fibers/future');
 var catalog = exports;
 
 /////////////////////////////////////////////////////////////////////////////////////
-//  Server Catalog
+//  Official Catalog
 /////////////////////////////////////////////////////////////////////////////////////
 
-// The serverlog syncs up with the server. It doesn't care about local
-// packages. When the user wants information about the state of the package
-// world (ex: search), we should use this catalog first.
-var ServerCatalog = function () {
+// The official catalog syncs up with the package server. It doesn't care about
+// local packages. When the user wants information about the state of the
+// package world (ex: search), we should use this catalog first.
+var OfficialCatalog = function () {
   var self = this;
 
   // Set this to true if we are not going to connect to the remote package
@@ -41,9 +41,9 @@ var ServerCatalog = function () {
   BaseCatalog.call(self);
 };
 
-util.inherits(ServerCatalog, BaseCatalog);
+util.inherits(OfficialCatalog, BaseCatalog);
 
-_.extend(ServerCatalog.prototype, {
+_.extend(OfficialCatalog.prototype, {
   initialize : function (options) {
     var self = this;
     options = options || {};
@@ -245,6 +245,9 @@ _.extend(CompleteCatalog.prototype, {
     var self = this;
     opts = opts || {};
     self._requireInitialized();
+    // XXX for now, just doing the assertion if we have to call project
+    //     stuff.  but oh, this will be improved.
+    opts.ignoreProjectDeps || buildmessage.assertInCapture();
 
     // Kind of a hack, as per specification. We don't have a constraint solver
     // initialized yet. We are probably trying to build the constraint solver
@@ -556,6 +559,8 @@ _.extend(CompleteCatalog.prototype, {
   // compiled and built in the directory, and null otherwise.
   _maybeGetUpToDateBuild : function (name, constraintSolverOpts) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var sourcePath = self.effectiveLocalPackages[name];
     var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
@@ -595,6 +600,8 @@ _.extend(CompleteCatalog.prototype, {
   // that we use is in the catalog already, we build it here.
   _build : function (name, onStack,  constraintSolverOpts) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var unip = null;
 
     if (! _.has(self.unbuilt, name)) {
@@ -781,6 +788,7 @@ _.extend(CompleteCatalog.prototype, {
   rebuildLocalPackages: function (namedPackages) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
 
     // Clear any cached builds in the package cache.
     packageCache.packageCache.refresh();
@@ -846,6 +854,7 @@ _.extend(CompleteCatalog.prototype, {
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
     constraintSolverOpts =  constraintSolverOpts || {};
 
     // Check local packages first.
@@ -876,7 +885,7 @@ _.extend(CompleteCatalog.prototype, {
 // This is the catalog that's used to answer the specific question of "so what's
 // on the server?".  It does not contain any local catalogs.  Typically, we call
 // catalog.official.refresh() to update data.json.
-catalog.official = new ServerCatalog();
+catalog.official = new OfficialCatalog();
 
 // This is the catalog that's used to actually drive the constraint solver: it
 // contains local packages, and since local packages always beat server

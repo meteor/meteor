@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
+var semver = require('semver');
 var sourcemap = require('source-map');
 
 var files = require('./files.js');
@@ -34,10 +35,10 @@ var earliestCompatible = function (version) {
   // This is not the place to check to see if version parses as
   // semver. That should have been done when we first received it from
   // the user.
-  var m = version.match(/^(\d)+\./);
-  if (! m)
+  var parsed = semver.parse(version);
+  if (! parsed)
     throw new Error("not a valid version: " + version);
-  return m[1] + ".0.0";
+  return parsed.major + ".0.0";
 };
 
 // Returns a sort comparator to order files into load order.
@@ -90,6 +91,17 @@ var loadOrderSort = function (templateExtensions) {
     // otherwise alphabetical
     return (a < b ? -1 : 1);
   };
+};
+
+// XXX We currently have a 1 to 1 mapping between 'where' and 'arch'.
+// In the future, we may let people specify different 'where' and 'arch'.
+var mapWhereToArch = function (where) {
+  if (where === 'server') {
+    return 'os';
+  } else {
+    // Transform client.* into web.*
+    return 'web.' + where.split('.').slice(1).join('.');
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -200,7 +212,7 @@ var PackageSource = function () {
 
   // Path that will be prepended to the URLs of all resources emitted
   // by this package (assuming they don't end up getting
-  // concatenated). For non-client targets, the only effect this will
+  // concatenated). For non-web targets, the only effect this will
   // have is to change the actual on-disk paths of the files in the
   // bundle, for those that care to open up the bundle and look (but
   // it's still nice to get it right).
@@ -299,7 +311,7 @@ var PackageSource = function () {
   // this option transparent to the user in package.js.
   self.noVersionFile = false;
 
-  // The list of archs that we can build for. Doesn't include 'client' because
+  // The list of where that we can target. Doesn't include 'client' because
   // it is expanded into 'client.*'.
   self.allWheres = ['server', 'client.browser', 'client.cordova'];
 };
@@ -419,6 +431,10 @@ _.extend(PackageSource.prototype, {
       }
     }
 
+    if (!utils.validPackageName(self.name)) {
+      buildmessage.error("Package name invalid: " + self.name);
+      return;
+    }
 
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
@@ -694,7 +710,7 @@ _.extend(PackageSource.prototype, {
       cordovaDependencies = null;
     }
 
-    if (! self.version && options.requireVersion) {
+    if (self.version === null && options.requireVersion) {
       if (! buildmessage.jobHasMessages()) {
         // Only write the error if there have been no errors so
         // far. (Otherwise if there is a parse error we'll always get
@@ -713,13 +729,39 @@ _.extend(PackageSource.prototype, {
       // not like we didn't already have to think about this case.
     }
 
-    if (self.version && ! self.earliestCompatibleVersion) {
-      self.earliestCompatibleVersion =
-        earliestCompatible(self.version);
+    if (self.version !== null && typeof(self.version) !== "string") {
+      if (!buildmessage.jobHasMessages()) {
+        buildmessage.error("The package version (specified with "
+                           + "Package.describe) must be a string.");
+      }
+      // Recover by pretending there was no version (see above).
+      self.version = null;
     }
 
-    if (!utils.validPackageName(self.name)) {
-      buildmessage.error("Package name invalid: " + self.name);
+    if (self.version !== null) {
+      var parsedVersion = semver.parse(self.version);
+      if (!parsedVersion) {
+        if (!buildmessage.jobHasMessages()) {
+          buildmessage.error(
+            "The package version (specified with Package.describe) must be "
+              + "valid semver (see http://semver.org/).");
+        }
+        // Recover by pretending there was no version (see above).
+        self.version = null;
+      } else if (parsedVersion.build.length) {
+        if (!buildmessage.jobHasMessages()) {
+          buildmessage.error(
+            "The package version (specified with Package.describe) may not "
+            + "contain a plus-separated build ID.");
+        }
+        // Recover by pretending there was no version (see above).
+        self.version = null;
+      }
+    }
+
+    if (self.version !== null && ! self.earliestCompatibleVersion) {
+      self.earliestCompatibleVersion =
+        earliestCompatible(self.version);
     }
 
     // source files used
@@ -786,7 +828,7 @@ _.extend(PackageSource.prototype, {
             buildmessage.error(
               "Invalid 'where' argument: '" + inputWhere + "'",
               // skip toWhereArray in addition to the actual API function
-              {useMyCaller: 1});
+              {useMyCaller: 2});
           }
         });
         return where;
@@ -797,9 +839,9 @@ _.extend(PackageSource.prototype, {
         // used. Can also take literal package objects, if you have
         // anonymous packages you want to use (eg, app packages)
         //
-        // @param where 'client', 'client.browser', 'client.cordova', 'server',
+        // @param where 'web', 'web.browser', 'web.cordova', 'server',
         // or an array of those.
-        // The default is ['client', 'server'].
+        // The default is ['web', 'server'].
         //
         // options can include:
         //
@@ -893,6 +935,13 @@ _.extend(PackageSource.prototype, {
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
         versionsFrom: function (release) {
+          if (releaseRecord) {
+            buildmessage.error("api.versionsFrom may only be specified once.",
+                               { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
+
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
             release = catalog.complete.DEFAULT_TRACK + "@" + release;
@@ -906,19 +955,19 @@ _.extend(PackageSource.prototype, {
           // catalog may not be initialized, but we are pretty sure that the
           // releases are there anyway. This is not the right way to do this
           // long term.
-          releaseRecord = catalog.official.getReleaseVersion(
+          releaseRecord = catalog.complete.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
-            throw new Error("Unknown release "+ release);
+            buildmessage.error("Unknown release "+ release);
            }
         },
 
         // Export symbols from this package.
         //
         // @param symbols String (eg "Foo") or array of String
-        // @param where 'client', 'server', 'client.browser', 'client.cordova'
+        // @param where 'web', 'server', 'web.browser', 'web.cordova'
         // or an array of those.
-        // The default is ['client', 'server'].
+        // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
         export: function (symbols, where, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
@@ -1032,9 +1081,10 @@ _.extend(PackageSource.prototype, {
       files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
     });
 
-    // Create source architectures, one for the server and one for each client.
+    // Create source architectures, one for the server and one for each web
+    // arch.
     _.each(self.allWheres, function (where) {
-      var arch = (where === 'server') ? 'os' : where;
+      var arch = mapWhereToArch(where);
 
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
@@ -1118,8 +1168,9 @@ _.extend(PackageSource.prototype, {
       // Determine used packages
       var project = require('./project.js').project;
       var names = project.getConstraints();
-      var arch = where === "server" ? "os" : where;
-      // XXX what about /client.browser/* etc
+      var arch = mapWhereToArch(where);
+      // XXX what about /client.browser/* etc, these directories could also
+      // be for specific client targets.
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {
@@ -1238,7 +1289,7 @@ _.extend(PackageSource.prototype, {
 
           // Special case: on the client, JavaScript files in a
           // `client/compatibility` directory don't get wrapped in a closure.
-          if (archinfo.matches(arch, "client") && relPath.match(/\.js$/)) {
+          if (archinfo.matches(arch, "web") && relPath.match(/\.js$/)) {
             var clientCompatSubstr =
                   path.sep + 'client' + path.sep + 'compatibility' + path.sep;
             if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
@@ -1248,7 +1299,7 @@ _.extend(PackageSource.prototype, {
         });
 
         // Now look for assets for this unibuild.
-        var assetDir = archinfo.matches(arch, "client") ? "public" : "private";
+        var assetDir = archinfo.matches(arch, "web") ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
           include: [new RegExp('^' + assetDir + '/$')]
         });
@@ -1383,7 +1434,7 @@ _.extend(PackageSource.prototype, {
         });
     };
 
-    // Both plugins and direct dependencies are objects mapping package name to
+    // Both plugins and direct dependencies are objectsmapping package name to
     // version number. When we write them on disk, we will convert them to
     // arrays of <packageName, version> and alphabetized by packageName.
     versions["dependencies"] = alphabetize(versions["dependencies"]);

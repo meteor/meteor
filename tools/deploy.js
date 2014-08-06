@@ -13,7 +13,6 @@ var config = require('./config.js');
 var auth = require('./auth.js');
 var utils = require('./utils.js');
 var _ = require('underscore');
-var inFiber = require('./fiber-helpers.js').inFiber;
 var Future = require('fibers/future');
 var project = require('./project.js');
 var stats = require('./stats.js');
@@ -397,8 +396,16 @@ var bundleAndDeploy = function (options) {
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
 
-    if (options.recordPackageUsage)
-      stats.recordPackages(options.appDir);
+    if (options.recordPackageUsage) {
+      var statsMessages = buildmessage.capture(function () {
+        stats.recordPackages(options.appDir);
+      });
+      if (statsMessages.hasMessages()) {
+        process.stdout.write("Error talking to stats server:\n" +
+                             statsMessages.formatMessages());
+        // ... but continue;
+      }
+    }
 
     var bundleResult = bundler.bundle({
       outputPath: bundlePath,

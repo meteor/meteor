@@ -62,12 +62,11 @@ exports.loadCachedServerData = function (packageStorageFile) {
     var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
   } catch (e) {
     if (e.code == 'ENOENT') {
-//      process.stderr.write("No cached server data found on disk.\n");
       return noDataToken;
     }
     // XXX we should probably return an error to the caller here to
     // figure out how to handle it
-    console.log(e.message);
+    process.stderr.write("ERROR " + e.message + "\n");
     process.exit(1);
   }
   var ret = noDataToken;
@@ -75,15 +74,19 @@ exports.loadCachedServerData = function (packageStorageFile) {
     ret = JSON.parse(data);
   } catch (err) {
     // XXX error handling
-    console.log("Could not parse JSON in data.json.");
+    process.stderr.write(
+      "ERROR: Could not parse JSON for local package-metadata cache. \n");
+    // This should only happen if you decided to manually edit this or
+    // whatever. Regardless, go on and treat this as an empty file.
   }
   return ret;
 };
 
-// Opens a connection to the server, requests and returns new package data that
-// we haven't cached on disk. We assume that data is cached chronologically, so
-// essentially, we are asking for a diff from the last time that we did this.
+// Requests and returns one page of new package data that we haven't cached on
+// disk. We assume that data is cached chronologically, so essentially, we are
+// asking for a diff from the last time that we did this.
 // Takes in:
+// - conn: the connection to use (does not have to be logged in)
 // - syncToken: a syncToken object to be sent to the server that
 //   represents the last time that we talked to the server.
 // - _optionsForTest:
@@ -97,25 +100,20 @@ exports.loadCachedServerData = function (packageStorageFile) {
 //
 // Throws a ServiceConnection.ConnectionTimeoutError if the method call
 // times out.
-var loadRemotePackageData = function (syncToken, _optionsForTest) {
+var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   _optionsForTest = _optionsForTest || {};
 
-  var conn = openPackageServerConnection();
   var syncOpts;
   if (_optionsForTest && _optionsForTest.useShortPages) {
     syncOpts = { shortPagesForTest: _optionsForTest.useShortPages };
   }
-  try {
-    var collectionData;
-    if (syncOpts) {
-      collectionData = conn.call(
-        'syncNewPackageData', syncToken, syncOpts);
-    } else {
-      collectionData = conn.call(
-        'syncNewPackageData', syncToken);
-    }
-  } finally {
-    conn.close();
+  var collectionData;
+  if (syncOpts) {
+    collectionData = conn.call(
+      'syncNewPackageData', syncToken, syncOpts);
+  } else {
+    collectionData = conn.call(
+      'syncNewPackageData', syncToken);
   }
   return collectionData;
 };
@@ -182,50 +180,67 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
+  var self = this;
   _optionsForTest = _optionsForTest || {};
+  var done = false;
 
-  var sources = [];
-  if (cachedServerData.collections) {
-    sources.push(cachedServerData.collections);
-  }
-  var syncToken = cachedServerData.syncToken;
-  var remoteData;
-  try {
-    remoteData = loadRemotePackageData(syncToken, {
-      useShortPages: _optionsForTest.useShortPages
-    });
-  } catch (err) {
-    console.log(err);
-    if (err instanceof ServiceConnection.ConnectionTimeoutError) {
-      return null;
-    } else {
-      throw err;
+  var conn = openPackageServerConnection();
+
+  var getSomeData = function () {
+    var sources = [];
+    if (cachedServerData.collections) {
+      sources.push(cachedServerData.collections);
     }
-  }
+    var syncToken = cachedServerData.syncToken;
+    var remoteData;
+    try {
+      remoteData = loadRemotePackageData(conn, syncToken, {
+        useShortPages: _optionsForTest.useShortPages
+      });
+    } catch (err) {
+      process.stderr.write("ERROR " + err.message + "\n");
+      if (err instanceof ServiceConnection.ConnectionTimeoutError) {
+        cachedServerData = null;
+        done = true;
+        return;
+      } else {
+        throw err;
+      }
+    }
 
-  // If there is no new data from the server, don't bother writing things to
-  // disk.
-  if (_.isEqual(remoteData.collections, {})) {
-    return cachedServerData;
-  }
+    // If there is no new data from the server, don't bother writing things to
+    // disk.
+    // XXX fix for resetData?
+    if (_.isEqual(remoteData.collections, {})) {
+      done = true;
+      return;
+    }
 
-  sources.push(remoteData.collections);
-  var allCollections = mergeCollections(sources);
-  var data = {
-    syncToken: remoteData.syncToken,
-    formatVersion: "1.0",
-    collections: allCollections
+    sources.push(remoteData.collections);
+    var allCollections = mergeCollections(sources);
+    var data = {
+      syncToken: remoteData.syncToken,
+      formatVersion: "1.0",
+      collections: allCollections
+    };
+    writePackageDataToDisk(remoteData.syncToken, data, {
+      packageStorageFile: _optionsForTest.packageStorageFile
+    });
+
+    cachedServerData = data;
+    if (remoteData.upToDate)
+      done = true;
   };
-  writePackageDataToDisk(remoteData.syncToken, data, {
-    packageStorageFile: _optionsForTest.packageStorageFile
-  });
 
-  // If we are not done, keep trying!
-  if (!remoteData.upToDate) {
-    data = this.updateServerPackageData(data, _optionsForTest);
+  try {
+    while (!done) {
+      getSomeData();
+    }
+  } finally {
+    conn.close();
   }
 
-  return data;
+  return cachedServerData;
 };
 
 // Returns a logged-in DDP connection to the package server, or null if
@@ -334,6 +349,8 @@ var uploadTarball = function (putUrl, tarball) {
 exports.uploadTarball = uploadTarball;
 
 var bundleBuild = function (unipackage) {
+  buildmessage.assertInJob();
+
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = unipackage.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
@@ -350,7 +367,18 @@ var bundleBuild = function (unipackage) {
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
-  var treeHash = files.treeHash(tarInputDir);
+  var treeHash = files.treeHash(tarInputDir, {
+    // We don't include any package.json from an npm module in the tree hash,
+    // because npm isn't super consistent about what it puts in there (eg, does
+    // it include the "readme" field)? This ends up leading to spurious
+    // differences. The tree hash will still notice any actual CODE changes in
+    // the npm packages.
+    ignore: function (relativePath) {
+      var pieces = relativePath.split(path.sep);
+      return pieces.length && _.last(pieces) === 'package.json'
+        && _.contains(pieces, 'npm');
+    }
+  });
 
   return {
     buildTarball: buildTarball,
@@ -362,6 +390,8 @@ var bundleBuild = function (unipackage) {
 exports.bundleBuild = bundleBuild;
 
 var createAndPublishBuiltPackage = function (conn, unipackage) {
+  buildmessage.assertInJob();
+
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
@@ -370,6 +400,8 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
   });
 
   var bundleResult = bundleBuild(unipackage);
+  if (buildmessage.jobHasMessages())
+    return;
 
   process.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,
@@ -382,7 +414,7 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
       bundleResult.tarballHash,
       bundleResult.treeHash);
   } catch (err) {
-    console.log(err);
+    process.stderr.write("ERROR " + err.message + "\n");
     return;
   }
 
@@ -425,6 +457,8 @@ exports.handlePackageServerConnectionError = function (error) {
 //
 // Return true on success and an error code otherwise.
 exports.publishPackage = function (packageSource, compileResult, conn, options) {
+  buildmessage.assertInJob();
+
   options = options || {};
 
   if (options.new && options.existingVersion)
@@ -477,9 +511,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       process.stderr.write("Publish failed. \n");
       return 1;
     }
-    var authorized = _.indexOf(
-      _.pluck(packRecord.maintainers, 'username'), auth.loggedInUsername());
-    if (authorized == -1) {
+
+    if (!amIAuthorized(name, conn, false)) {
       process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
@@ -534,7 +567,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     });
 
   if (messages.hasMessages()) {
-    process.stdout.write(messages.formatMessages());
+    process.stderr.write(messages.formatMessages());
     return 1;
   }
 
@@ -564,8 +597,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
         name: packageSource.name
       });
     } catch (err) {
-      console.log(err.message);
-      return 1;
+      process.stderr.write(err.message + "\n");
+      return 3;
     }
 
   }
@@ -598,9 +631,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     try {
       var uploadInfo = conn.call('createPackageVersion', uploadRec);
     } catch (err) {
-      console.log("ERROR:", err.message);
-      console.log("Package could not be published.");
-      return 1;
+      process.stderr.write("ERROR " + err.message + "\n");
+      return 3;
     }
 
     // XXX If package version already exists, print a nice error message
@@ -617,8 +649,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
                 { tarballHash: sourceBundleResult.tarballHash,
                   treeHash: sourceBundleResult.treeHash });
     } catch (err) {
-      console.log(err.message);
-      return 1;
+      process.stderr.write("ERROR " + err.message + "\n");
+      return 3;
     }
 
   }
@@ -626,4 +658,30 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   createAndPublishBuiltPackage(conn, compileResult.unipackage);
 
   return 0;
+};
+
+// Call the server to ask if we are authorized to update this release or
+// package. This is a way to save time before sending data to the server. It
+// will mostly ignore most errors (just in case we have a flaky network connection or
+// something) and let the method deal with those.
+//
+// If this returns FALSE, then we are NOT authorized.
+// Otherwise, return true.
+var amIAuthorized = function (name, conn, isRelease) {
+  var methodName = "amIAuthorized" +
+    (isRelease ? "Release" : "Package");
+
+  try {
+     conn.call(methodName, name);
+  } catch (err) {
+    if (err.error === 401) {
+      return false;
+    }
+
+    // We don't know what this error is. Probably we can't contact the server,
+    // or the like. It would be a pity to fail all operations with the server
+    // just because a preliminary check fails, so return true for now.
+    return true;
+  }
+  return true;
 };

@@ -69,14 +69,38 @@ Options:
 
 
 >>> update
-Upgrade this project to the latest version of Meteor
-Usage: meteor update [--release <release>]
+Upgrade this project's dependencies to their latest versions.
+Usage: meteor update
+       meteor update --patch
+       meteor update --release <release>
+       meteor update --packages-only
+       meteor update [packageName packageName2 ...]
 
-Sets the version of Meteor to use with the current project. If a
-release is specified with --release, set the project to use that
-version. Otherwise download and use the latest release of Meteor.
+Updates the meteor release, and then, if applicable, updates the packages
+used by the app to the latest versions that don't cause dependency
+conflicts with other packages in the app.
 
-XXX: change to new world order
+Passing the --patch argument will update to the latest patch, if such exists.
+Patch releases contain very minor changes, usually bug fixes. Updating to
+the latest patch is always recommended. This will try to not update non-core
+packages unless strictly nessessary.
+
+Passing the --release argument will force update to a specific release of meteor.
+This will not update non-core packages unless strictly nessessary. It is also
+possible that some packages cannot be updated to be compatible with the new
+release. If that happens, the app will not build until dependencies on those
+packages are removed.
+
+Passing --packages-only will try to update non-core packages to their latest
+versions. It will not update the version of meteor. To update individual packages
+(for example: 'foo:awesome') pass in their names instead, with no options. ('meteor
+update foo:awesome').
+
+Options:
+  --packages-only  Update the package versions only. Do not update the release.
+  --patch  Update the release to a patch release only.
+  --release  Update to a specific release of meteor.
+
 
 >>> run-upgrader
 Execute a specific upgrader by name. Intended for testing.
@@ -412,13 +436,24 @@ Options:
 
 
 >>> publish-for-arch
-Publishes a bla bla bla.
+Builds an already-published package for a new platform
 
-Usage: fry the eggs, then
+Usage: meteor publish-for-arch packageName@version
 
-Publishes a
+When you publish a package with 'meteor publish' for a package which has
+platform-specific components (eg, npm modules with native code), the package
+will only be usable on machines of the same architecture that you are currently
+on. To make your package's version usable on other architectures, you can use
+the publish-for-arch command.  (The architectures currently supported by Meteor
+are 32-bit Linux, 64-bit Linux, and 64-bit OS X; the 'meteor deploy' servers use
+64-bit Linux.)
 
-XXX: WRITE
+On a machine of the appropriate architecture, install Meteor and run
+  $ meteor publish-for-arch packageName@version
+
+You don't need to have a copy of your package's source to do this: Meteor will
+automatically download your package's source and dependencies from the package
+server.
 
 
 >>> rebuild
@@ -443,6 +478,7 @@ debugging the Meteor packaging tools themselves.
 Search through the package server database.
 Usage: meteor search <string>
        meteor search --details <package or release name>
+       meteor search --mine
 
 Search through the meteor package&release database for names containing the
 specified substring.
@@ -451,9 +487,12 @@ Use --details to get detailed information on a specific package or release.
 Use --details <name>@<version> to get more information on a specific version
 of a package or release.
 
+Use --mine to get the list of packages on which you are one of the authorized
+maintainers.
+
 Options:
   --details  show detailed information on a specific package or release
-
+  --mine     list packages on which you are the maintainer
 
 >>> admin maintainers
 View or change authorized maintainers for a package
@@ -501,13 +540,7 @@ Usage: meteor admin change-homepage <package name> <new url>
 Change the homepage containing package information.
 
 
->>> admin set-breaking
-Mark a given version as containing breaking changes.
-Usage: stuff
-
-Mark a given package version as containing breaking changes.
-
->>> admin set-banners <banner file config>
+>>> admin set-banners
 Set banners on published releases.
 Usage: meteor admin set-banners <path to banner configuration>
 

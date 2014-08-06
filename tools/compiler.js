@@ -28,7 +28,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/11';
+compiler.BUILT_BY = 'meteor/12';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -133,10 +133,11 @@ compiler.eachUsedUnibuild = function (
 // PackgeSource), or we could have some kind of cache (the ideal place
 // for such a cache might be inside the constraint solver, since it
 // will know how/when to invalidate it).
-var determineBuildTimeDependencies = function
-    (packageSource,  constraintSolverOpts) {
+var determineBuildTimeDependencies = function (packageSource,
+                                               constraintSolverOpts) {
   var ret = {};
-  constraintSolverOpts =  constraintSolverOpts || {};
+  constraintSolverOpts = constraintSolverOpts || {};
+  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
 
   // There are some special cases where we know that the package has no source
   // files, which means it can't have any interesting build-time
@@ -334,7 +335,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   _.each(activePluginPackages, function (otherPkg) {
     _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
       // XXX comparing function text here seems wrong.
-      if (ext in allHandlers &&
+      if (_.has(allHandlers, ext) &&
           allHandlers[ext].toString() !== sourceHandler.handler.toString()) {
         buildmessage.error(
           "conflict: two packages included in " +
@@ -343,10 +344,16 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
         // Recover by just going with the first handler we saw
-      } else {
-        allHandlers[ext] = sourceHandler.handler;
-        sourceExtensions[ext] = !!sourceHandler.isTemplate;
+        return;
       }
+      // Is this handler only registered for, say, "web", and we're building,
+      // say, "os"?
+      if (sourceHandler.archMatching &&
+          !archinfo.matches(inputSourceArch.arch, sourceHandler.archMatching)) {
+        return;
+      }
+      allHandlers[ext] = sourceHandler.handler;
+      sourceExtensions[ext] = !!sourceHandler.isTemplate;
     });
   });
 
@@ -402,12 +409,6 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     var file = watch.readAndWatchFileWithHash(sourceWatchSet, absPath);
     var contents = file.contents;
 
-    // Only add the source file to the WatchSet if it's actually added to
-    // the build. This is a hacky workaround because plugins do not register
-    // themselves as "client" or "server", so we need to detect whether a file
-    // is actually added to the client/server program.
-    var sourceIsWatched = false;
-
     sources.push(relPath);
 
     if (contents === null) {
@@ -456,11 +457,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   information.
     // - pathForSourceMap: If this file is to be included in a source map,
     //   this is the name you should use for it in the map.
-    // - rootOutputPath: on client targets, for resources such as
+    // - rootOutputPath: on web targets, for resources such as
     //   stylesheet and static assets, this is the root URL that
     //   will get prepended to the paths you pick for your output
     //   files so that you get your own namespace, for example
-    //   '/packages/foo'. null on non-client targets
+    //   '/packages/foo'. null on non-web targets
     // - fileOptions: any options passed to "api.add_files"; for
     //   use by the plugin. The built-in "js" plugin uses the "bare"
     //   option for files that shouldn't be wrapped in a closure.
@@ -472,11 +473,12 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   file as a Buffer. If n is omitted you get the rest of the
     //   file.
     // - appendDocument({ section: "head", data: "my markup" })
-    //   Client targets only. Add markup to the "head" or "body"
+    //   Browser targets only. Add markup to the "head" or "body"
+    //   Web targets only. Add markup to the "head" or "body"
     //   section of the document.
     // - addStylesheet({ path: "my/stylesheet.css", data: "my css",
     //                   sourceMap: "stringified json sourcemap"})
-    //   Client targets only. Add a stylesheet to the
+    //   Web targets only. Add a stylesheet to the
     //   document. 'path' is a requested URL for the stylesheet that
     //   may or may not ultimately be honored. (Meteor will add
     //   appropriate tags to cause the stylesheet to be loaded. It
@@ -497,10 +499,10 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   a closure, so that its vars are shared with other files
     //   in the module.
     // - addAsset({ path: "my/image.png", data: Buffer })
-    //   Add a file to serve as-is over HTTP (client targets) or
+    //   Add a file to serve as-is over HTTP (web targets) or
     //   to include as-is in the bundle (os targets).
     //   This time `data` is a Buffer rather than a string. For
-    //   client targets, it will be served at the exact path you
+    //   web targets, it will be served at the exact path you
     //   request (concatenated with rootOutputPath). For server
     //   targets, the file can be retrieved by passing path to
     //   Assets.getText or Assets.getBinary.
@@ -513,7 +515,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     //   line, column, and func are all optional.
     //
     // XXX for now, these handlers must only generate portable code
-    // (code that isn't dependent on the arch, other than 'client'
+    // (code that isn't dependent on the arch, other than 'web'
     // vs 'os') -- they can look at the arch that is provided
     // but they can't rely on the running on that particular arch
     // (in the end, an arch-specific unibuild will be emitted only if
@@ -571,26 +573,24 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
         return ret;
       },
       appendDocument: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "client"))
+        if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Document sections can only be emitted to " +
-                          "client targets");
+                          "web targets");
         if (options.section !== "head" && options.section !== "body")
           throw new Error("'section' must be 'head' or 'body'");
         if (typeof options.data !== "string")
           throw new Error("'data' option to appendDocument must be a string");
-        sourceIsWatched = true;
         resources.push({
           type: options.section,
           data: new Buffer(options.data, 'utf8')
         });
       },
       addStylesheet: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "client"))
+        if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Stylesheets can only be emitted to " +
-                          "client targets");
+                          "web targets");
         if (typeof options.data !== "string")
           throw new Error("'data' option to addStylesheet must be a string");
-        sourceIsWatched = true;
         resources.push({
           type: "css",
           refreshable: true,
@@ -604,9 +604,8 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "client"))
-          throw new Error("'bare' option may only be used for client targets");
-        sourceIsWatched = true;
+        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "web"))
+          throw new Error("'bare' option may only be used for web targets");
         js.push({
           source: options.data,
           sourcePath: options.sourcePath,
@@ -618,7 +617,6 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
       addAsset: function (options) {
         if (! (options.data instanceof Buffer))
           throw new Error("'data' option to addAsset must be a Buffer");
-        sourceIsWatched = true;
         addAsset(options.data, options.path);
       },
       error: function (options) {
@@ -641,9 +639,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
       // handler might already have emitted resources)
     }
 
-    if (sourceIsWatched) {
-      watchSet.merge(sourceWatchSet);
-    }
+    watchSet.merge(sourceWatchSet);
   });
 
   // *** Run Phase 1 link
@@ -745,6 +741,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
 //   disk) that were used by the compilation (the source files you'd have to
 //   ship to a different machine to replicate the build there)
 compiler.compile = function (packageSource, options) {
+  buildmessage.assertInCapture();
   var sources = [];
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
@@ -911,7 +908,10 @@ var getPluginProviders = function (versions) {
 // string). Yes, it is possible that multiple versions of some other
 // package might be build-time dependencies (because of plugins).
 compiler.getBuildOrderConstraints = function (
-    packageSource,  constraintSolverOpts) {
+    packageSource, constraintSolverOpts) {
+  constraintSolverOpts = constraintSolverOpts || {};
+  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
+
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {
     if (name !== packageSource.name) {
@@ -950,6 +950,7 @@ compiler.getBuildOrderConstraints = function (
 // build-time dependency has changed.
 compiler.checkUpToDate = function (
     packageSource, unipackage, constraintSolverOpts) {
+  buildmessage.assertInCapture();
 
   if (unipackage.forceNotUpToDate) {
     return false;

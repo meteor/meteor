@@ -156,7 +156,7 @@ _.extend(Unibuild.prototype, {
       importStubServePath: isApp && '/packages/global-imports.js',
       prelinkFiles: self.prelinkFiles,
       packageVariables: self.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.arch, "client"),
+      includeSourceMapInstructions: archinfo.matches(self.arch, "web"),
       name: self.pkg.name || null
     });
 
@@ -186,6 +186,8 @@ _.extend(Unibuild.prototype, {
 // If the optional `filter` function is provided, then we will only load
 // packages for which `filter(packageName, version)` returns truthy.
 var getLoadedPackageVersions = function (versions, filter) {
+  buildmessage.assertInCapture();
+
   var result = {};
 
   var loader = new packageLoader.PackageLoader({ versions: versions });
@@ -308,7 +310,7 @@ _.extend(Unipackage.prototype, {
       _.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())
     ).sort();
     // Ensure that our buildArchitectures string does not look like
-    //    client+os+os.osx.x86_64
+    //    web+os+os.osx.x86_64
     // This would happen if there is an 'os' unibuild but a platform-specific
     // tool (eg, in meteor-tool).  This would confuse catalog.getBuildsForArches
     // into thinking that it would work for Linux, since the 'os' means
@@ -339,7 +341,7 @@ _.extend(Unipackage.prototype, {
   },
 
   // Return the unibuild of the package to use for a given target architecture
-  // (eg, 'os.linux.x86_64' or 'client'), or throw an exception if that
+  // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
   getUnibuildAtArch: function (arch) {
     var self = this;
@@ -401,7 +403,8 @@ _.extend(Unipackage.prototype, {
 
         self.sourceHandlers[extension] = {
           handler: handler,
-          isTemplate: !!options.isTemplate
+          isTemplate: !!options.isTemplate,
+          archMatching: options.archMatching
         };
       }
     };
@@ -660,6 +663,7 @@ _.extend(Unipackage.prototype, {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
+    buildmessage.assertInCapture();
 
     var builder = new Builder({ outputPath: outputPath });
     try {
@@ -909,6 +913,7 @@ _.extend(Unipackage.prototype, {
 
   _writeTool: function (builder) {
     var self = this;
+    buildmessage.assertInCapture();
 
     var pathsToCopy = files.runGitInCheckout(
       'ls-tree',
@@ -973,8 +978,8 @@ _.extend(Unipackage.prototype, {
   // Returns the build id as a hex string.
   getBuildIdentifier: function (options) {
     var self = this;
-
     options = options || {};
+    buildmessage.assertInCapture();
 
     // Gather all the direct dependencies (that provide plugins) and
     // plugin dependencies' versions and organize them into arrays. We
@@ -1071,6 +1076,7 @@ _.extend(Unipackage.prototype, {
   // `getBuildIdentifier`.
   addBuildIdentifierToVersion: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
     self.version = self.version + "+" +
       self.getBuildIdentifier(options);
   }

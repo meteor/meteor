@@ -2604,3 +2604,163 @@ _.each([1, 2, 3], function (n) {
     }
   );
 });
+
+Tinytest.add('spacebars-tests - template_tests - current view in event handler', function (test) {
+  var tmpl = Template.spacebars_test_current_view_in_event;
+
+  var currentView;
+  var currentData;
+
+  tmpl.events({
+    'click span': function () {
+      currentView = Blaze.getCurrentView();
+      currentData = Blaze.getCurrentData();
+    }
+  });
+
+  var div = renderToDiv(tmpl, 'blah');
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>blah</span>');
+  document.body.appendChild(div);
+  clickElement(div.querySelector('span'));
+  $(div).remove();
+
+  test.isTrue(currentView);
+  test.equal(currentData, 'blah');
+});
+
+
+Tinytest.add(
+  "spacebars-tests - template_tests - textarea attrs", function (test) {
+    var tmplNoContents = {
+      tmpl: Template.spacebars_test_textarea_attrs,
+      hasTextAreaContents: false
+    };
+    var tmplWithContents = {
+      tmpl: Template.spacebars_test_textarea_attrs_contents,
+      hasTextAreaContents: true
+    };
+    var tmplWithContentsAndMoreAttrs = {
+      tmpl: Template.spacebars_test_textarea_attrs_array_contents,
+      hasTextAreaContents: true
+    };
+
+    _.each(
+      [tmplNoContents, tmplWithContents,
+       tmplWithContentsAndMoreAttrs],
+      function (tmplInfo) {
+
+        var id = new ReactiveVar("textarea-" + Random.id());
+        var name = new ReactiveVar("one");
+        var attrs = new ReactiveVar({
+          id: "textarea-" + Random.id()
+        });
+
+        var div = renderToDiv(tmplInfo.tmpl, {
+          attrs: function () {
+            return attrs.get();
+          },
+          name: function () {
+            return name.get();
+          }
+        });
+
+        // Check that the id and value attribute are as we expect.
+        // We can't check div.innerHTML because Chrome at least doesn't
+        // appear to put textarea value attributes in innerHTML.
+        var textarea = div.querySelector("textarea");
+        test.equal(textarea.id, attrs.get().id);
+        test.equal(
+          textarea.value, tmplInfo.hasTextAreaContents ? "Hello one" : "");
+        // One of the templates has a separate attribute in addition to
+        // an attributes dictionary.
+        if (tmplInfo === tmplWithContentsAndMoreAttrs) {
+          test.equal($(textarea).attr("class"), "bar");
+        }
+
+        // Change the id, check that the attribute updates reactively.
+        attrs.set({ id: "textarea-" + Random.id() });
+        Deps.flush();
+        test.equal(textarea.id, attrs.get().id);
+
+        // Change the name variable, check that the textarea value
+        // updates reactively.
+        name.set("two");
+        Deps.flush();
+        test.equal(
+          textarea.value, tmplInfo.hasTextAreaContents ? "Hello two" : "");
+
+        if (tmplInfo === tmplWithContentsAndMoreAttrs) {
+          test.equal($(textarea).attr("class"), "bar");
+        }
+
+      });
+
+  });
+
+Tinytest.add(
+  "spacebars-tests - template_tests - this.autorun",
+  function (test) {
+    var tmpl = Template.spacebars_test_autorun;
+    var tmplInner = Template.spacebars_test_autorun_inner;
+
+    // Keep track of the value of `UI._templateInstance()` inside the
+    // autorun each time it runs.
+    var autorunTemplateInstances = [];
+    var actualTemplateInstance;
+    var returnedComputation;
+    var computationArg;
+
+    var show = new ReactiveVar(true);
+    var rv = new ReactiveVar("foo");
+
+    tmplInner.created = function () {
+      actualTemplateInstance = this;
+      returnedComputation = this.autorun(function (c) {
+        computationArg = c;
+        rv.get();
+        autorunTemplateInstances.push(UI._templateInstance());
+      });
+    };
+
+    tmpl.helpers({
+      show: function () {
+        return show.get();
+      }
+    });
+
+    var div = renderToDiv(tmpl);
+    test.equal(autorunTemplateInstances.length, 1);
+    test.equal(autorunTemplateInstances[0], actualTemplateInstance);
+
+    // Test that the autorun returned a computation and received a
+    // computation as an argument.
+    test.isTrue(returnedComputation instanceof Deps.Computation);
+    test.equal(returnedComputation, computationArg);
+
+    // Make sure the autorun re-runs when `rv` changes, and that it has
+    // the correct current view.
+    rv.set("bar");
+    Deps.flush();
+    test.equal(autorunTemplateInstances.length, 2);
+    test.equal(autorunTemplateInstances[1], actualTemplateInstance);
+
+    // If the inner template is destroyed, the autorun should be stopped.
+    show.set(false);
+    Deps.flush();
+    rv.set("baz");
+    Deps.flush();
+
+    test.equal(autorunTemplateInstances.length, 2);
+    test.equal(rv.numListeners(), 0);
+  }
+);
+
+// Test that argument in {{> UI.contentBlock arg}} is evaluated in
+// the proper data context.
+Tinytest.add(
+  "spacebars-tests - template_tests - contentBlock argument",
+  function (test) {
+    var tmpl = Template.spacebars_test_contentBlock_arg;
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), 'AAA BBB');
+  });

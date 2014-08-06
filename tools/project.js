@@ -173,6 +173,7 @@ _.extend(Project.prototype, {
   // the package loader for this project. This WILL REWRITE THE VERSIONS FILE.
   _ensureDepsUpToDate : function () {
     var self = this;
+    buildmessage.assertInCapture();
 
     // To calculate project dependencies, we need to know what release we are
     // on, but to do that, we need to have a rootDirectory. So, we initialize
@@ -198,11 +199,18 @@ _.extend(Project.prototype, {
       // Call the constraint solver, using the previous dependencies as the last
       // solution. It is useful to set ignoreProjectDeps, but not nessessary,
       // since self.viableDepSource is false.
-      var newVersions = catalog.complete.resolveConstraints(
-        self.combinedConstraints,
-        { previousSolution: self.dependencies },
-        { ignoreProjectDeps: true }
-      );
+      try {
+        var newVersions = catalog.complete.resolveConstraints(
+          self.combinedConstraints,
+          { previousSolution: self.dependencies },
+          { ignoreProjectDeps: true }
+        );
+      } catch (err) {
+        process.stdout.write(
+          "Could not resolve the specified constraints for this project:\n"
+           + err +"\n");
+        process.exit(1);
+      }
 
       // Download packages to disk, and rewrite .meteor/versions if it has
       // changed.
@@ -213,7 +221,9 @@ _.extend(Project.prototype, {
       });
 
       if (!setV.success) {
-        throw new Error ("Could not install all the requested packages.");
+        process.stdout.write(
+          "Could not install all the requested packages. \n");
+        process.exit(1);
       }
 
       // Finally, initialize the package loader.
@@ -354,7 +364,7 @@ _.extend(Project.prototype, {
       return 1;
 
     // Show the user the messageLog of packages we added.
-    if (!self.muted) {
+    if (!self.muted && !_.isEmpty(versions)) {
       _.each(messageLog, function (msg) {
         process.stdout.write(msg + "\n");
       });
@@ -421,6 +431,7 @@ _.extend(Project.prototype, {
   // null if the package is unconstrained.
   getCurrentCombinedConstraints : function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.combinedConstraints;
   },
@@ -439,6 +450,7 @@ _.extend(Project.prototype, {
   // Returns an object mapping package name to its string version.
   getVersions : function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.dependencies;
   },
@@ -480,6 +492,7 @@ _.extend(Project.prototype, {
   // transitive dependencies.
   getPackageLoader : function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.packageLoader;
   },
@@ -595,6 +608,7 @@ _.extend(Project.prototype, {
   // here because this really shouldn't fail (we are just removing things).
   removePackages : function (names) {
     var self = this;
+    buildmessage.assertInCapture();
     self._removePackageRecords(names);
 
     // Force a recalculation of all the dependencies, and record them to disk.
@@ -615,6 +629,7 @@ _.extend(Project.prototype, {
   setVersions: function (newVersions, options) {
     var self = this;
     options = options || {};
+    buildmessage.assertInCapture();
 
     var downloaded = self._ensurePackagesExistOnDisk(newVersions);
     var ret = {
@@ -671,8 +686,9 @@ _.extend(Project.prototype, {
   // that could lead to changes in the versions file.
   _ensurePackagesExistOnDisk : function (versions, options) {
     var self = this;
+    buildmessage.assertInCapture();
     options = options || {};
-    var arch = options.arch || archinfo.host();
+    var serverArch = options.serverArch || archinfo.host();
     var verbose = options.verbose || !self.muted;
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
@@ -680,7 +696,7 @@ _.extend(Project.prototype, {
       try {
         var available = tropohouse.default.maybeDownloadPackageForArchitectures(
           packageVersionInfo,
-          ['browser', arch],
+          [serverArch],  // XXX 'web.browser' too?
           verbose /* print downloading message */
         );
         downloadedPackages[name] = version;
@@ -711,6 +727,7 @@ _.extend(Project.prototype, {
   // disk and the operation has failed.
   addPackages : function (moreDeps, newVersions) {
     var self = this;
+    buildmessage.assertInCapture();
 
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to

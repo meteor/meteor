@@ -4,7 +4,13 @@ var files = require('../files.js');
 var catalog = require('../catalog.js');
 var packageLoader = require("../package-loader.js");
 
-selftest.define("springboard", ['checkout'], function () {
+// XXX: Why is this an internet using test? Because our warehouse is a
+// hackhackhack. If we clean up the hackhackhackhack, then this does not need
+// the internets. (Or, to be more specific: our warehouse code tries to fetch
+// the packages from the internet. If we could fool it into using local packages
+// instead, or think that it alreayd has the packages, it would be ok). (This is
+// because it calls 'create' from a warehouse, to be specific).
+selftest.define("springboard", ['checkout', 'net'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { },
@@ -13,7 +19,10 @@ selftest.define("springboard", ['checkout'], function () {
   });
   var run;
 
-  var toolsPackage = selftest.getToolsPackage();
+  var toolsPackage;
+  selftest.captureAndThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+  });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;
 
@@ -112,8 +121,12 @@ selftest.define("springboard", ['checkout'], function () {
   });
 });
 
-
-selftest.define("writing versions file", ['checkout'], function () {
+// XXX: Why is this an internet using test? Because our warehouse is a
+// hackhackhack. If we clean up the hackhackhackhack, then this does not need
+// the internets. (Or, to be more specific: our warehouse code tries to fetch
+// the packages from the internet. If we could fool it into using local packages
+// instead, or think that it alreayd has the packages, it would be ok).
+selftest.define("writing versions file", ['checkout', 'net'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true},
@@ -122,7 +135,10 @@ selftest.define("writing versions file", ['checkout'], function () {
   });
   var run;
 
-  var toolsPackage = selftest.getToolsPackage();
+  var toolsPackage;
+  selftest.captureAndThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+  });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;
 

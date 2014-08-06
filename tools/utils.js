@@ -211,6 +211,13 @@ exports.quotemeta = function (str) {
     return String(str).replace(/(\W)/g, '\\$1');
 };
 
+// Allow a simple way to scale up all timeouts from the command line
+var timeoutScaleFactor = 1.0;
+if (process.env.TIMEOUT_SCALE_FACTOR) {
+  timeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
+}
+exports.timeoutScaleFactor = timeoutScaleFactor;
+
 // If the given version matches a template (essentially, semver-style, but with
 // a bounded number of digits per number part, and with no restriction on the
 // amount of number parts, and some restrictions on legal prerelease labels),
@@ -221,7 +228,7 @@ exports.quotemeta = function (str) {
 // the prerelease for a given release will sort before it. Because $ sorts
 // before '.', this means that 1.2 will sort before 1.2.3.)
 exports.defaultOrderKeyForReleaseVersion = function (v) {
-  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-za-z]{1,15})(\d{0,4}))?$/);
+  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z]{1,15})(\d{0,4}))?$/);
   if (!m)
     return null;
   var numberPart = m[1];

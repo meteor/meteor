@@ -45,7 +45,7 @@ $METEOR --help | grep "List the packages explicitly used" >> $OUTPUT
 $METEOR run --help | grep "Port to listen" >> $OUTPUT
 $METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
 $METEOR create --help | grep "Make a subdirectory" >> $OUTPUT
-$METEOR update --help | grep "Sets the version" >> $OUTPUT
+$METEOR update --help | grep "Updates the meteor release" >> $OUTPUT
 $METEOR add --help | grep "Adds packages" >> $OUTPUT
 $METEOR remove --help | grep "Removes a package" >> $OUTPUT
 $METEOR list --help | grep "This will not list transitive dependencies" >> $OUTPUT
@@ -87,7 +87,7 @@ $METEOR search backbone | grep "backbone" >> $OUTPUT
 $METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
 $METEOR list | grep "backbone" >> $OUTPUT
 grep backbone packages >> $OUTPUT # remember, we are already in .meteor
-$METEOR remove backbone 2>&1 | grep "Removed constraint backbone" >> $OUTPUT
+$METEOR remove backbone 2>&1 | grep "Removed top-level dependency on backbone" >> $OUTPUT
 ! $METEOR list 2>&1 | grep "backbone" >> $OUTPUT
 
 echo "... bundle"

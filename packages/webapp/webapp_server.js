@@ -20,7 +20,7 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 WebApp = {};
 WebAppInternals = {};
 
-WebApp.defaultArch = 'client.browser';
+WebApp.defaultArch = 'web.browser';
 
 // XXX maps archs to manifests
 WebApp.clientPrograms = {};
@@ -475,11 +475,11 @@ var runWebAppServer = function () {
       staticFiles = {};
       var getClientManifest = function (clientPath, arch) {
         // read the control for the client we'll be serving up
-        var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
+        clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                    clientPath);
-        var clientDir = path.dirname(clientJsonPath);
-        var clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
-        if (clientJson.format !== "client-program-pre1")
+        clientDir = path.dirname(clientJsonPath);
+        clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
+        if (clientJson.format !== "web-program-pre1")
           throw new Error("Unsupported format for client assets: " +
                           JSON.stringify(clientJson.format));
 
@@ -527,7 +527,7 @@ var runWebAppServer = function () {
         // Exported for tests.
         WebAppInternals.staticFiles = staticFiles;
       } catch (e) {
-        Log.error("Error reloading the client program: " + e.message);
+        Log.error("Error reloading the client program: " + e.stack);
         process.exit(1);
       }
     });

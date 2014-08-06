@@ -1456,6 +1456,16 @@ var wrapInternalException = function (exception, context) {
   if (!exception || exception instanceof Meteor.Error)
     return exception;
 
+  // tests can set the 'expected' flag on an exception so it won't go to the
+  // server log
+  if (!exception.expected) {
+    Meteor._debug("Exception " + context, exception.stack);
+    if (exception.sanitizedError) {
+      Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError.message);
+      Meteor._debug();
+    }
+  }
+
   // Did the error contain more details that could have been useful if caught in
   // server code (or if thrown from non-client-originated code), but also
   // provided a "sanitized" version with more context than 500 Internal server
@@ -1466,11 +1476,6 @@ var wrapInternalException = function (exception, context) {
     Meteor._debug("Exception " + context + " provides a sanitizedError that " +
                   "is not a Meteor.Error; ignoring");
   }
-
-  // tests can set the 'expected' flag on an exception so it won't go to the
-  // server log
-  if (!exception.expected)
-    Meteor._debug("Exception " + context, exception.stack);
 
   return new Meteor.Error(500, "Internal server error");
 };

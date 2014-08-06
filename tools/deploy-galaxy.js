@@ -5,7 +5,6 @@ var path = require('path');
 var fs = require('fs');
 var uniload = require('./uniload.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var Fiber = require('fibers');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
 var release = require('./release.js');
@@ -206,7 +205,14 @@ exports.deploy = function (options) {
 
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-      stats.recordPackages();
+      var statsMessages = buildmessage.capture(function () {
+        stats.recordPackages();
+      });
+      if (statsMessages.hasMessages()) {
+        process.stdout.write("Error talking to stats server:\n" +
+                             statsMessages.formatMessages());
+        // ... but continue;
+      }
       var bundleResult = bundler.bundle({
         outputPath: bundlePath,
         buildOptions: options.buildOptions

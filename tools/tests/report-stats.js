@@ -9,6 +9,7 @@ var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 var project = require('../project.js');
+var buildmessage = require('../buildmessage.js');
 
 var testStatsServer = "https://test-package-stats.meteor.com";
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
@@ -16,8 +17,6 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 var clientAddress;
 
 var checkMeta = function (appPackages, sessionId, useFakeRelease) {
-  var toolsPackage = selftest.getToolsPackage();
-
   if (! clientAddress) {
     clientAddress = getClientAddress();
   }
@@ -36,12 +35,23 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
   }
 
   if (useFakeRelease) {
+    var toolsPackage;
+    selftest.captureAndThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+    });
     expectedUserAgentInfo.meteorReleaseTrack =
       "METEOR-CORE";
     expectedUserAgentInfo.meteorReleaseVersion =
       "v1";
     expectedUserAgentInfo.meteorToolsPackageWithVersion =
       toolsPackage.name + "@" + toolsPackage.version;
+  } else {
+    expectedUserAgentInfo.meteorReleaseTrack =
+      release.current.getReleaseTrack();
+    expectedUserAgentInfo.meteorReleaseVersion =
+      release.current.getReleaseVersion();
+    expectedUserAgentInfo.meteorToolsPackageWithVersion =
+      release.current.getToolsPackageAtVersion();
   }
 
   selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
@@ -51,7 +61,7 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
-selftest.define("report-stats", ["slow"], function () {
+selftest.define("report-stats", ["slow", "net"], function () {
   _.each(
     // If we are currently running from a checkout, then we run this
     // test twice (once in which the sandbox uses the current checkout,
@@ -110,7 +120,7 @@ selftest.define("report-stats", ["slow"], function () {
       // package usage stats
       var usage = fetchPackageUsageForApp(identifier);
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
-                           _.sortBy(stats.packageList(sandboxProject), "name"));
+                           _.sortBy(packageList(sandboxProject), "name"));
 
       // Check that the direct dependency was recorded as such.
       _.each(usage.packages, function (package) {
@@ -125,7 +135,7 @@ selftest.define("report-stats", ["slow"], function () {
       selftest.expectEqual(appPackages.appId, identifier);
       selftest.expectEqual(appPackages.userId, null);
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                           _.sortBy(stats.packageList(sandboxProject), "name"));
+                           _.sortBy(packageList(sandboxProject), "name"));
       checkMeta(appPackages, sessionId, useFakeRelease);
 
       // now bundle again while logged in. verify that the stats server
@@ -177,7 +187,7 @@ selftest.define("report-stats", ["slow"], function () {
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                           _.sortBy(stats.packageList(sandboxProject), "name"));
+                           _.sortBy(packageList(sandboxProject), "name"));
     }
   );
 });
@@ -250,4 +260,15 @@ var fetchPackageUsageForApp = function (identifier) {
 var getClientAddress = function () {
   var stats = testUtils.ddpConnect(testStatsServer);
   return stats.call("getClientAddress");
+};
+
+var packageList = function (proj) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = stats.packageList(proj);
+  });
+  if (messages.hasMessages()) {
+    selftest.fail(messages.formatMessages());
+  }
+  return ret;
 };

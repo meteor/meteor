@@ -110,7 +110,7 @@ var sessionMethodCaller = function (methodName, options) {
     var conn = options.connection || openAccountsConnection();
     conn.apply(methodName, args, fiberHelpers.firstTimeResolver(fut));
     if (options.timeout !== undefined) {
-      var timer = setTimeout(fiberHelpers.inFiber(function () {
+      var timer = setTimeout(fiberHelpers.bindEnvironment(function () {
         if (!fut.isResolved())
           fut.throw(new Error('Method call timed out'));
       }), options.timeout);
@@ -541,7 +541,7 @@ var logInToGalaxy = function (galaxyName) {
   var authorizeResult;
 
   try {
-    sendAuthorizeRequest(
+    authorizeResult = sendAuthorizeRequest(
       galaxyClientId,
       galaxyRedirect,
       encodeURIComponent(JSON.stringify(stateInfo))
@@ -821,7 +821,7 @@ exports.pollForRegistrationCompletion = function (options) {
     fut['return'](result);
   });
 
-  var timer = setTimeout(fiberHelpers.inFiber(function () {
+  var timer = setTimeout(fiberHelpers.bindEnvironment(function () {
     if (! fut.isResolved()) {
       fut['return'](null);
     }

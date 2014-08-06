@@ -1,5 +1,6 @@
 var semver = Npm.require('semver');
 
+// Copied from archinfo.matches() in tools/
 var archMatches = function (arch, baseArch) {
   return arch.substr(0, baseArch.length) === baseArch &&
     (arch.length === baseArch.length ||
@@ -66,9 +67,9 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
     var unibuilds = {};
 
     // XXX in theory there might be different archs but in practice they are
-    // always "os", "client.browser" and "client.cordova". Fix this once we
+    // always "os", "web.browser" and "web.cordova". Fix this once we
     // actually have different archs used.
-    var allArchs = ["os", "client.browser", "client.cordova"];
+    var allArchs = ["os", "web.browser", "web.cordova"];
     _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
@@ -179,11 +180,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   }
 
   // split every package name to one or more archs belonging to that package
-  // (["foobar"] => ["foobar#os", "foobar#client.browser", ...])
+  // (["foobar"] => ["foobar#os", "foobar#web.browser", ...])
   // XXX for now just hardcode in all of the known architectures
   options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (packageName) {
-    return [packageName + "#os", packageName + "#client.browser",
-            packageName + "#client.cordova"];
+    return [packageName + "#os", packageName + "#web.browser",
+            packageName + "#web.cordova"];
   })), _.identity);
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
@@ -214,7 +215,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   var resultChoices = {};
   _.each(res, function (uv) {
     // Since we don't yet define the interface for a an app to depend only on
-    // certain unibuilds of the packages (like only client unibuilds) and we know
+    // certain unibuilds of the packages (like only web unibuilds) and we know
     // that each unibuild weakly depends on other sibling unibuilds of the same
     // version, we can safely output the whole package for each unibuild in the
     // result.
@@ -257,7 +258,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
 };
 
 // takes dependencies and constraints and rewrites the names from "foo" to
-// "foo#os" and "foo#client.browser" and "foo#client.cordova"
+// "foo#os" and "foo#web.browser" and "foo#web.cordova"
 // XXX right now creates a dependency for every unibuild it can find
 ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   function (inputDeps, inputConstraints) {
@@ -294,7 +295,7 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
   var unibuilds = [];
   // XXX hardcode all common architectures assuming that every package has the
   // same set of architectures.
-  _.each(["os", "client.browser", "client.cordova"], function (arch) {
+  _.each(["os", "web.browser", "web.cordova"], function (arch) {
     if (self.resolver.unitsVersions[unibuildPrefix + arch])
       unibuilds.push(unibuildPrefix + arch);
   });

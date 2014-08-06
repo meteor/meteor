@@ -449,7 +449,7 @@ _.extend(Watcher.prototype, {
     });
 
     if (!self.stopped && !self.justCheckOnce) {
-      setTimeout(fiberHelpers.inFiber(function () {
+      setTimeout(fiberHelpers.inBareFiber(function () {
         self._checkDirectories(true);
       }), 500);
     }

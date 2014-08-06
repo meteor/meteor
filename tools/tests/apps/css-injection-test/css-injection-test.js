@@ -25,7 +25,7 @@ if (Meteor.isClient) {
             oldBackgroundColor = backgroundColor();
             Meteor.call("newStylesheet", ++numCssChanges, oldBackgroundColor);
             waitingForCssReloadToComplete = false;
-            Meteor.clearTimeout(handle);
+            Meteor.clearInterval(handle);
           }
         }, 500);
       }
