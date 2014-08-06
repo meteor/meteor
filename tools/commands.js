@@ -279,6 +279,12 @@ main.registerCommand({
       }
     });
 
+    var cordovaPlatforms = project.getCordovaPlatforms();
+    _.each(requestedPlatforms, function (platform) {
+      if (! _.contains(cordovaPlatforms, platform))
+        throw new Error("XXX Requested platform " + platform + " which is not added to the project. Enter `meteor add platforms:" + platform + "` to add it.");
+    });
+
     var cordovaSettings = null;
     if (options.settings) {
       cordovaSettings =

@@ -140,8 +140,8 @@ _.extend(Project.prototype, {
     self.cordovaPlugins = processPerConstraintLines(
       files.getLinesOrEmpty(self._getCordovaPluginsFile()));
 
-    self.cordovaPlatforms = processPerConstraintLines(
-      files.getLinesOrEmpty(self._getCordovaPlatformsFile()));
+    self.cordovaPlatforms =
+      files.getLinesOrEmpty(self._getCordovaPlatformsFile());
 
     // Lastly, invalidate everything that we have computed -- obviously the
     // dependencies that we counted with the previous rootPath are wrong and we
