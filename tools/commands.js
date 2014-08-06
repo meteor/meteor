@@ -1299,7 +1299,7 @@ main.registerCommand({
 
   var savedData = packageClient.updateServerPackageData(null, {
     packageStorageFile: tmpDataJson
-  });
+  }).data;
   if (!savedData) {
     // will have already printed an error
     process.exit(2);

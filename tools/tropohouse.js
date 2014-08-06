@@ -60,6 +60,26 @@ _.extend(exports.Tropohouse.prototype, {
     return relative ? relativePath : path.join(self.root, relativePath);
   },
 
+  // Pretty extreme! We call this when we learn that something has changed on
+  // the server in a way that our sync protocol doesn't understand well.
+  wipeAllPackages: function () {
+    var self = this;
+    var packagesDir = path.join(self.root, config.getPackagesDirectoryName());
+    try {
+      var packages = fs.readdirSync(packagesDir);
+    } catch (e) {
+      // No packages at all? We're done.
+      if (e.code === 'ENOENT')
+        return;
+      throw e;
+    }
+
+    _.each(packages, function (package) {
+      // XXX don't be a fool, save meteor-tool (if not from checkout)
+      files.rm_recursive(path.join(packagesDir, package));
+    });
+  },
+
   // Contacts the package server, downloads and extracts a tarball for a given
   // buildRecord into a temporary directory, whose path is returned.
   //

@@ -188,6 +188,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   cachedServerData = cachedServerData || emptyCachedServerDataJson();
 
   var done = false;
+  var ret = {resetData: false};
 
   var conn = openPackageServerConnection();
 
@@ -213,7 +214,9 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     // OK, we can do that.
     if (remoteData.resetData) {
       cachedServerData.collections = null;
-      // XXX also get rid of any no longer existing packages
+      // The caller may want to take this as a cue to delete packages from the
+      // tropohouse.
+      ret.resetData = true;
     }
 
     // If there is no new data from the server, don't bother writing things to
@@ -251,7 +254,8 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     conn.close();
   }
 
-  return cachedServerData;
+  ret.data = cachedServerData;
+  return ret;
 };
 
 // Returns a logged-in DDP connection to the package server, or null if

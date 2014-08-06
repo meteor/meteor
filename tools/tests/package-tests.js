@@ -460,7 +460,7 @@ selftest.define("update server package data unit test",
   // been overwritten.
   var data = packageClient.updateServerPackageData({ syncToken: {} }, {
     packageStorageFile: packageStorageFile
-  });
+  }).data;
 
   var packageNames = [];
 
@@ -476,7 +476,7 @@ selftest.define("update server package data unit test",
   var newData = packageClient.updateServerPackageData(data, {
     packageStorageFile: packageStorageFile,
     useShortPages: true
-  });
+  }).data;
   var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
 
   // Check that we didn't lose any data.

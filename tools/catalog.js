@@ -119,13 +119,17 @@ _.extend(OfficialCatalog.prototype, {
     var localData = packageClient.loadCachedServerData();
     var allPackageData;
     if (! self.offline ) {
-      allPackageData = packageClient.updateServerPackageData(localData);
+      var updateResult = packageClient.updateServerPackageData(localData);
+      allPackageData = updateResult.data;
       if (! allPackageData) {
         // If we couldn't contact the package server, use our local data.
         allPackageData = localData;
         // XXX should do some nicer error handling here (return error to
         // caller and let them handle it?)
         process.stderr.write("Warning: could not connect to package server\n");
+      }
+      if (updateResult.resetData) {
+        tropohouse.default.wipeAllPackages();
       }
     } else {
       allPackageData = localData;
