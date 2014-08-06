@@ -44,11 +44,10 @@ var testPendingCredential = function (test) {
 
     var req = {
       method: "POST",
-      url: "/_oauth/" + serviceName + "?close",
+      url: "/_oauth/" + serviceName,
       query: {
-        state: credentialToken,
+        state: OAuth._generateState('popup', credentialToken),
         oauth_token: twitterfooAccessToken,
-        close: 1,
         only_credential_secret_for_test: 1
       }
     };

@@ -27,7 +27,7 @@ var getAccessToken = function (query) {
         client_id: config.clientId,
         client_secret: OAuth.openSecret(config.secret),
         grant_type: 'authorization_code',
-        redirect_uri: Meteor.absoluteUrl("_oauth/meetup?close"),
+        redirect_uri: OAuth._redirectUri('meetup', config),
         state: query.state
       }});
   } catch (err) {
