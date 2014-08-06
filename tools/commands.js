@@ -1,8 +1,8 @@
 var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
-var fs = require("fs");
-var child_process = require("child_process");
+var fs = require('fs');
+var child_process = require('child_process');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -26,6 +26,7 @@ var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
 var cordova = require('./commands-cordova.js');
+var execFileSync = require('./utils.js').execFileSync;
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -70,22 +71,6 @@ var getLocalPackages = function () {
   });
 
   return ret;
-};
-
-var execFileSync = function (file, args, opts) {
-  var future = new Future;
-
-  var child_process = require('child_process');
-  child_process.execFile(file, args, opts, function (err, stdout, stderr) {
-    process.stderr.write(err ? 'failed: ' + file + ' ' + JSON.stringify(args) + '\n' + err.stack + '\n' : '');
-    future.return({
-      success: ! err,
-      stdout: stdout,
-      stderr: stderr
-    });
-  });
-
-  return future.wait();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -268,7 +253,7 @@ main.registerCommand({
   var proxyPort = parseInt(portMatch[2]);
 
   // If additional args were specified, then also start a mobile build.
-  if (options.args) {
+  if (options.args.length) {
     var supportedPlatforms = ['ios', 'android'];
     var requestedPlatforms = [];
 
@@ -276,17 +261,15 @@ main.registerCommand({
     var cordovaPath = path.join(localDir, 'cordova-build');
     var bundleDir = path.join(localDir, 'bundle-tar');
 
-    // Find the required platforms. ie. "ios android ios-device" will produce
-    // ["ios", "android"]
+    // Find the required platforms.
+    // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
     _.each(options.args, function (platformName) {
       var platform = platformName.split('-')[0];
-      if (_.has(supportedPlatforms, platform) &&
-          ! _.has(requestedPlatforms, platform)) {
+      if (_.contains(supportedPlatforms, platform) &&
+          ! _.contains(requestedPlatforms, platform)) {
         requestedPlatforms.push(platform);
       }
     });
-
-    cordova.ensureCordovaPlatforms(requestedPlatforms, cordovaPath);
 
     var cordovaSettings = null;
     if (options.settings) {
@@ -299,14 +282,15 @@ main.registerCommand({
       host: proxyHost,
       port: proxyPort,
       appName: path.basename(options.appDir),
-      settings: cordovaSettings
+      settings: cordovaSettings,
+      verbose: true // XXX
     };
 
     cordova.ensureCordovaProject(cordovaOptions, cordovaPath, bundleDir);
 
     _.each(options.args, function (platformName) {
       // XXX check for repeats
-      execCordovaOnPlatform(platformName, cordovaPath);
+      cordova.execCordovaOnPlatform(platformName, cordovaPath, cordovaOptions);
     });
   }
 
