@@ -81,13 +81,20 @@ var fetchCordovaPluginFromShaUrl =
   return pluginPath;
 };
 
-// XXX ensure that we have added the required platforms -- return an error
-// if we have not.
 var ensureCordovaPlatforms = function (platforms, cordovaPath) {
-  // XXX get platforms from project file
-  // XXX hack, we should take a diff from the current platforms
+  var platformsOutput = execFileSync('cordova', ['platform', 'list'],
+                                     { cwd: cordovaPath }).stdout;
+
+  var installedPlatforms = _.map(platformsOutput.split('\n')[0].match(/Installed platforms: (.*)/)[1].split(', '), function (s) { return s.split(' ')[0]; });
+
   _.each(platforms, function (platform) {
-    execFileSync('cordova', ['platform', 'add', platform], { cwd: cordovaPath });
+    if (! _.contains(installedPlatforms, platform))
+      execFileSync('cordova', ['platform', 'add', platform], { cwd: cordovaPath });
+  });
+
+  _.each(installedPlatforms, function (platform) {
+    if (! _.contains(platforms, platform))
+      execFileSync('cordova', ['platform', 'rm', platform], { cwd: cordovaPath });
   });
 
   return true;
