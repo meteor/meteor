@@ -1718,14 +1718,14 @@ main.registerCommand({
 
   try {
     if (options.unrecommend) {
-      process.stdout.write("Unrecommending " + options.args[0] + "...\n");
+      process.stdout.write("Unrecommending " + name + "@" + version + "...\n");
       conn.call('unrecommendVersion', name, version);
-      process.stdout.write("Done!\n " + options[0] +
+      process.stdout.write("Done!\n " + name + "@" + version  +
                            " is no longer a recommended release\n");
     } else {
       process.stdout.write("Recommending " + options.args[0] + "...\n");
       conn.call('recommendVersion', name, version);
-      process.stdout.write("Done!\n " + options[0] +
+      process.stdout.write("Done!\n " +  name + "@" + version +
                            " is now  a recommended release\n");
     }
   } catch (err) {
