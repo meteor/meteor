@@ -361,13 +361,11 @@ var bundleBuild = function (unipackage) {
   var packageTarName = unipackage.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
 
-  unipackage.saveToPath(tarInputDir);
-
-  // Don't upload buildinfo.json. It's only of interest locally (for
-  // example, it contains a watchset with local paths).
-  var buildInfoPath = path.join(tarInputDir, 'buildinfo.json');
-  if (fs.existsSync(buildInfoPath))
-    fs.unlinkSync(buildInfoPath);
+  unipackage.saveToPath(tarInputDir, {
+    // Don't upload buildinfo.json. It's only of interest locally (for example,
+    // it contains a watchset with local paths).
+    elideBuildInfo: true
+  });
 
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);

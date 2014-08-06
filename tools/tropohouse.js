@@ -173,8 +173,10 @@ _.extend(exports.Tropohouse.prototype, {
     var newPackageLinkTarget = '.' + version + '.'
           + utils.randomToken() + '++' + unipackage.buildArchitectures();
     var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
-    // XXX save new buildinfo stuff so it auto-rebuilds
-    unipackage.saveToPath(combinedDirectory);
+    unipackage.saveToPath(combinedDirectory, {
+      // We got this from the server, so we can't rebuild it.
+      elideBuildInfo: true
+    });
     files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
 
     // Clean up old version.

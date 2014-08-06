@@ -654,6 +654,7 @@ _.extend(Unipackage.prototype, {
   //   directory that was built to produce this package. Used as part
   //   of the dependency info to detect builds that were moved and
   //   then modified.
+  // - elideBuildInfo: If set, don't write a buildinfo.json file.
   saveToPath: function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
@@ -698,6 +699,8 @@ _.extend(Unipackage.prototype, {
       };
 
       builder.reserve("unipackage.json");
+      // Reserve this even if elideBuildInfo is set, to ensure nothing else
+      // writes it somehow.
       builder.reserve("buildinfo.json");
       builder.reserve("head");
       builder.reserve("body");
@@ -900,7 +903,9 @@ _.extend(Unipackage.prototype, {
       });
 
       builder.writeJson("unipackage.json", mainJson);
-      builder.writeJson("buildinfo.json", buildInfoJson);
+      if (!options.elideBuildInfo) {
+        builder.writeJson("buildinfo.json", buildInfoJson);
+      }
       builder.complete();
     } catch (e) {
       builder.abort();
