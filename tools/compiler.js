@@ -405,8 +405,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = path.resolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = path.basename(relPath);
-    var sourceWatchSet = new watch.WatchSet();
-    var file = watch.readAndWatchFileWithHash(sourceWatchSet, absPath);
+    var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
 
     sources.push(relPath);
@@ -638,8 +637,6 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
       // Recover by ignoring this source file (as best we can -- the
       // handler might already have emitted resources)
     }
-
-    watchSet.merge(sourceWatchSet);
   });
 
   // *** Run Phase 1 link
