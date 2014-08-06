@@ -124,6 +124,13 @@ _.extend(warehouse, {
     return fs.existsSync(warehouse.getToolsDir(version));
   },
 
+  releaseExistsInWarehouse: function (version) {
+    var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
+    var releaseManifestPath = path.join(releasesDir,
+                                        version + '.release.json');
+    return fs.existsSync(releaseManifestPath);
+  },
+
   _calculateNewPiecesForRelease: function (releaseManifest) {
     // newPieces.tools and newPieces.packages[PACKAGE] are either falsey (if
     // nothing is new), or an object with keys "version" and bool
