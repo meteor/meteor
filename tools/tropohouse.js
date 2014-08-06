@@ -34,7 +34,7 @@ var defaultWarehouseDir = function () {
   // XXX This will be `.meteor` soon, once we've written the code to make the
   // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
   // tools to springboard to warehouse tools).
-  return path.join(warehouseBase, ".meteor0");
+  return path.join(warehouseBase, ".meteor");
 };
 
 // The default tropohouse is on disk at defaultWarehouseDir() and knows not to

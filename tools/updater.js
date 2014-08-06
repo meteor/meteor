@@ -117,7 +117,7 @@ var maybeShowBanners = function () {
   }
 };
 
-// Update ~/.meteor0/meteor to point to the tool binary from the tools of the
+// Update ~/.meteor/meteor to point to the tool binary from the tools of the
 // latest recommended release on the default release track.
 var updateMeteorToolSymlink = function () {
   // Get the latest release version of METEOR-CORE. (*Always* of the default
@@ -143,7 +143,7 @@ var updateMeteorToolSymlink = function () {
 
   var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
   if (!utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
-    // The latest release from the catalog is not where the ~/.meteor0/meteor
+    // The latest release from the catalog is not where the ~/.meteor/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
     try {

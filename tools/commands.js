@@ -1312,7 +1312,7 @@ main.registerCommand({
     // instead of catalog.
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
-      path.join(tmpdir, '.meteor0'), catalog.official);
+      path.join(tmpdir, '.meteor'), catalog.official);
     var messages = buildmessage.capture(function () {
       buildmessage.enterJob({
         title: "downloading tool package " + toolPkg.package + "@" +
