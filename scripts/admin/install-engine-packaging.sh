@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This is the Meteor install script, for previews of the in-progress
+# This is the Meteor install script, for release candidates of the in-progress
 # Meteor 0.9.0!
 #
 # Are you looking at this in your web browser, and would like to install Meteor?
@@ -17,7 +17,7 @@
 #   - Linux: x86 and x86_64 systems
 
 
-RELEASE="0.9.0-preview-final"
+RELEASE="0.9.0-rc1"
 
 
 # Now, on to the actual installer!
@@ -68,33 +68,33 @@ fi
 trap "echo Installation failed." EXIT
 
 # If you already have a tropohouse, we do a clean install here:
-[ -e "$HOME/.meteor0" ] && rm -rf "$HOME/.meteor0"
+[ -e "$HOME/.meteor" ] && rm -rf "$HOME/.meteor"
 
-TARBALL_URL="https://d3sqy0vbqsdhku.cloudfront.net/packages-preview/${RELEASE}/meteor-bootstrap-${PLATFORM}.tar.gz"
+TARBALL_URL="https://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/${RELEASE}/meteor-bootstrap-${PLATFORM}.tar.gz"
 
-INSTALL_TMPDIR="$HOME/.meteor0-install-tmp"
+INSTALL_TMPDIR="$HOME/.meteor-install-tmp"
 rm -rf "$INSTALL_TMPDIR"
 mkdir "$INSTALL_TMPDIR"
 echo "Downloading Meteor pre-release distribution"
 curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR" -o
 # bomb out if it didn't work, eg no net
-test -x "${INSTALL_TMPDIR}/.meteor0/meteor"
-mv "${INSTALL_TMPDIR}/.meteor0" "$HOME"
+test -x "${INSTALL_TMPDIR}/.meteor/meteor"
+mv "${INSTALL_TMPDIR}/.meteor" "$HOME"
 rmdir "${INSTALL_TMPDIR}"
 # just double-checking :)
-test -x "$HOME/.meteor0/meteor"
-"$HOME/.meteor0/meteor" --get-ready
+test -x "$HOME/.meteor/meteor"
+"$HOME/.meteor/meteor" --get-ready
 
 echo
-echo "Meteor ${RELEASE} has been installed in your home directory (~/.meteor0)."
+echo "Meteor ${RELEASE} has been installed in your home directory (~/.meteor)."
 echo
-echo "Run the tool from ~/.meteor0/meteor"
+echo "Run the tool from ~/.meteor/meteor"
 echo
-echo "You may want to make an alias (a symlink won't work) to it called 'meteor0'"
+echo "You may want to make an alias (a symlink won't work) to it called 'meteor'"
 echo
 echo "For example, put this in your ~/.bashrc:"
-echo '  alias meteor0=$HOME/.meteor0/meteor'
-echo "(A future pre-release will merge this with the 'meteor' you already have.)"
+echo '  alias meteor=$HOME/.meteor/meteor'
+echo "(A future pre-release will install a /usr/local/bin/meteor for you just like old Meteor does.)"
 
 
 trap - EXIT
