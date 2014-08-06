@@ -154,8 +154,7 @@ var updateMeteorToolSymlink = function () {
           tropohouse.default.maybeDownloadPackageForArchitectures(
             {packageName: latestReleaseToolPackage,
              version: latestReleaseToolVersion},
-            [archinfo.host()],
-            true);
+            [archinfo.host()]);
         });
         _.each(latestRelease.packages, function (pkgVersion, pkgName) {
           buildmessage.enterJob({
@@ -163,8 +162,7 @@ var updateMeteorToolSymlink = function () {
           }, function () {
             tropohouse.default.maybeDownloadPackageForArchitectures(
               {packageName: pkgName, version: pkgVersion},
-              [archinfo.host()],
-              true);
+              [archinfo.host()]);
           });
         });
       });
