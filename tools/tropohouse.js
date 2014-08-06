@@ -64,9 +64,9 @@ _.extend(exports.Tropohouse.prototype, {
   // the server in a way that our sync protocol doesn't understand well.
   wipeAllPackages: function () {
     var self = this;
-    var packagesDir = path.join(self.root, config.getPackagesDirectoryName());
+    var packageRootDir = path.join(self.root, config.getPackagesDirectoryName());
     try {
-      var packages = fs.readdirSync(packagesDir);
+      var packages = fs.readdirSync(packageRootDir);
     } catch (e) {
       // No packages at all? We're done.
       if (e.code === 'ENOENT')
@@ -75,8 +75,14 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     _.each(packages, function (package) {
-      // XXX don't be a fool, save meteor-tool (if not from checkout)
-      files.rm_recursive(path.join(packagesDir, package));
+      var packageDir = path.join(packageRootDir, package);
+      _.each(fs.readdirSync(packageDir), function (version) {
+        // Is this a pre-0.9.0 "warehouse" version with a hash name?
+        if (/^[a-f0-9]{3,}$/.test(version))
+          return;
+        // XXX don't be a fool, skip meteor-tool
+        files.rm_recursive(path.join(packageDir, version));
+      });
     });
   },
 
