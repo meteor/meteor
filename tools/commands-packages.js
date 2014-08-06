@@ -1223,8 +1223,7 @@ main.registerCommand({
       var releaseRecord = catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
       if (!releaseRecord)
         throw Error("missing release record?");
-      var constraints = project.calculateCombinedConstraints(
-        directDependencies, releaseRecord.packages);
+      var constraints = project.calculateCombinedConstraints(releaseRecord.packages);
       try {
         solutionPackageVersions = catalog.complete.resolveConstraints(
           constraints,
@@ -1234,7 +1233,7 @@ main.registerCommand({
         // XXX we should make the error handling explicitly detectable, and not
         // actually mention failures that are recoverable
         process.stderr.write(
-          "XXX Update to release " + releaseTrack +
+          "Update to release " + releaseTrack +
             "@" + versionToTry + " impossible: " + e.message + "\n");
         return false;
       }
