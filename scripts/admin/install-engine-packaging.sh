@@ -17,7 +17,7 @@
 #   - Linux: x86 and x86_64 systems
 
 
-RELEASE="0.9.0-rc1"
+RELEASE="0.9.0-rc2"
 
 
 # Now, on to the actual installer!
