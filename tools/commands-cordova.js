@@ -102,10 +102,6 @@ cordova.ensureCordovaProject = function (options, cordovaPath, bundlePath) {
   }
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
-  var loader;
-  buildmessage.capture(function () {
-    loader = project.getPackageLoader();
-  });
 
   var webArchName = 'web.cordova';
 
@@ -204,7 +200,7 @@ cordova.ensureCordovaProject = function (options, cordovaPath, bundlePath) {
 
   var requiredPlugins = bundleResult.starManifest.cordovaDependencies;
   // XXX the project-level cordova plugins deps override the package-level ones
-  _.extend(requiredPlugins, project.cordovaPlugins);
+  _.extend(requiredPlugins, options.plugins || {});
 
   _.each(requiredPlugins, function (version, name) {
     // no-op if this plugin is already installed
@@ -325,6 +321,8 @@ main.registerCommand({
   var projectOptions = _.pick(options, 'port', 'host');
   projectOptions.appName = appName;
   projectOptions.cordovaSettings = cordovaSettings;
+  projectOptions.plugins = project.getCordovaPlugins();
+  projectOptions.platforms = project.getCordovaPlatforms();
 
   // XXX in Android simulators you can't access localhost and the correct way is
   // to use "10.0.2.2" instead.
@@ -334,7 +332,7 @@ main.registerCommand({
 
   if (_.contains(['emulate', 'build', 'prepare', 'compile', 'serve', 'create'], cordovaCommand)) {
     try {
-      ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
+      cordova.ensureCordovaProject(projectOptions, cordovaPath, bundleDir);
     } catch (e) {
       process.stderr.write('Errors preventing the Cordova project from build:\n');
       process.stderr.write(e.stack);
