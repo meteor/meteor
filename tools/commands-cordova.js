@@ -102,16 +102,19 @@ cordova.ensureCordovaProject = function (options, cordovaPath, bundlePath) {
   }
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
-  var loader = project.getPackageLoader();
+  var loader;
+  buildmessage.capture(function () {
+    loader = project.getPackageLoader();
+  });
 
-  var clientArchName = 'web.cordova';
+  var webArchName = 'web.cordova';
 
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,
     buildOptions: {
       minify: false, // XXX ! options.debug,
       arch: archinfo.host(),
-      clientArchs: [clientArchName]
+      webArchs: [webArchName]
     }
   });
 
@@ -153,7 +156,7 @@ cordova.ensureCordovaProject = function (options, cordovaPath, bundlePath) {
 
   var wwwPath = path.join(cordovaPath, "www");
 
-  var cordovaProgramPath = path.join(programPath, clientArchName);
+  var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
   // XXX hack, copy files from app folder one level up

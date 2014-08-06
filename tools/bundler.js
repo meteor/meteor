@@ -648,7 +648,7 @@ _.extend(Target.prototype, {
 
           var relPath = stripLeadingSlash(resource.servePath);
 
-          if (archinfo.matches(self.arch, "client.cordova")) {
+          if (archinfo.matches(self.arch, "web.cordova")) {
             relPath = path.join(resource.type, relPath);
 
             if (resource.type === "css") {

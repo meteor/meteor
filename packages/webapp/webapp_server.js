@@ -335,7 +335,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
 
   // XXX think of a better name
   if (pathname === "/cordova/__cordova_program__.html") {
-    var cordovaArch = "client.cordova";
+    var cordovaArch = "web.cordova";
     var program = WebApp.clientPrograms[cordovaArch];
     if (! program.inlineManifest) {
       program.inlineManifest =
