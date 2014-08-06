@@ -1,0 +1,17 @@
+<html>
+<head>
+<script type="text/javascript">
+  var config = ##CONFIG##;
+
+  if (config.setCredentialToken) {
+    sessionStorage[config.sessionStoragePrefix + config.credentialToken] =
+      config.credentialSecret;
+  }
+
+  window.location = config.redirectUrl;
+</script>
+</head>
+<body>
+  <h1>Logging In</h1>
+</body>
+</html>

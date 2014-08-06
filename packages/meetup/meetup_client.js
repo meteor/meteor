@@ -27,22 +27,25 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
   var scope = (options && options.requestPermissions) || [];
   var flatScope = _.map(scope, encodeURIComponent).join('+');
 
+  var loginStyle = OAuth._loginStyle('meetup', config);
+
   var loginUrl =
         'https://secure.meetup.com/oauth2/authorize' +
         '?client_id=' + config.clientId +
         '&response_type=code' +
         '&scope=' + flatScope +
         '&redirect_uri=' + Meteor.absoluteUrl('_oauth/meetup?close') +
-        '&state=' + credentialToken;
+        '&state=' + OAuth._stateParam(loginStyle, credentialToken);
 
   // meetup box gets taller when permissions requested.
   var height = 620;
   if (_.without(scope, 'basic').length)
     height += 130;
 
-  OAuth.showPopup(
+  OAuth.launchLogin(
+    loginStyle,
     loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken),
-    {width: 900, height: height}
-  );
+    credentialRequestCompleteCallback,
+    credentialToken,
+    {width: 900, height: height});
 };

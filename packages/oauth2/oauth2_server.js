@@ -8,9 +8,11 @@ OAuth._requestHandlers['2'] = function (service, query, res) {
     var oauthResult = service.handleOauthRequest(query);
     var credentialSecret = Random.secret();
 
+    var credentialToken = OAuth._credentialTokenFromQuery(query);
+
     // Store the login result so it can be retrieved in another
     // browser tab by the result handler
-    OAuth._storePendingCredential(query.state, {
+    OAuth._storePendingCredential(credentialToken, {
       serviceName: service.serviceName,
       serviceData: oauthResult.serviceData,
       options: oauthResult.options
