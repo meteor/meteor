@@ -148,6 +148,42 @@ npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c8
 # https://github.com/williamwicks/node-eachline/pull/4
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
+# Cordova npm tool for mobile integration
+npm install cordova@3.5.0-0.2.6
+
+mkdir "${DIR}/android"
+cd "${DIR}/android"
+
+# Download Android SDK
+if [ "$UNAME" == "Linux"]; then
+    echo "not sure what to do for linux lol"
+    # not guaranteed to have java yikes
+else
+    curl -O http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip
+    unzip android-sdk_r23.0.2-macosx.zip
+    rm android-sdk_r23.0.2-macosx.zip
+
+    curl -O http://www.motorlogy.com/apache//ant/binaries/apache-ant-1.9.4-bin.tar.gz
+    tar xzf apache-ant-1.9.4-bin.tar.gz
+    rm apache-ant-1.9.4-bin.tar.gz
+
+    # the below asks for confirmation... echo y seems to work lol
+
+    # platform tools
+    pwd
+    ls
+    sleep 20
+    echo y | android-sdk-macosx/tools/android update sdk -t platform-tools -u
+
+    # the platform that cordova likes
+    echo y | android-sdk-macosx/tools/android update sdk -t android-19 -u
+
+    # system image for android 19
+    echo y | android-sdk-macosx/tools/android update sdk -t sys-img-armeabi-v7a-android-19 --all -u
+
+    # android-sdk-macosx/tools/android create avd -t 1 -n test
+fi
+
 # Checkout and build mongodb.
 # We want to build a binary that includes SSL support but does not depend on a
 # particular version of openssl on the host system.
