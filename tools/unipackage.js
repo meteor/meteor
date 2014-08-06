@@ -925,8 +925,6 @@ _.extend(Unipackage.prototype, {
       'HEAD',
       // The actual trees to copy!
       'tools', 'examples', 'LICENSE.txt', 'meteor',
-      // This script is not actually used, but it's nice to distribute it for
-      // users (it's what ends up at /usr/local/bin/meteor).
       'scripts/admin/launch-meteor');
 
     // Trim blank line and unnecessary examples.
