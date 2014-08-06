@@ -2,5 +2,6 @@
  "track": "METEOR-CORE",
  "version": "0.9.0-test1",
  "recommended": false,
+ "official": true,
  "description": "An experimental release of meteor."
 }

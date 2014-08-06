@@ -518,7 +518,7 @@ main.registerCommand({
                   requireVersion: true });
 
                 if (buildmessage.jobHasMessages()) {
-                  process.stderr.write("\n ...Error reading package:" + item + "\n");
+                  process.stdout.write("\n ...Error reading package:" + item + "\n");
                   canBuild = false;
                   return;
                 };
@@ -544,7 +544,7 @@ main.registerCommand({
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  process.stderr.write("\n ... Error compiling unipackage: " + item + "\n");
+                  process.stdout.write("\n ... Error compiling unipackage: " + item + "\n");
                   canBuild = false;
                   return;
                 };
@@ -575,6 +575,7 @@ main.registerCommand({
                                        "at the end (ex: 1.0.0-dev). If this is an " +
                                        "official release, please set official to true " +
                                        "in the release configuration file.");
+                    process.stdout.write("NOT OK unofficial\n");
                     return;
                   }
                   toPublish[item] = {source: packageSource,
@@ -627,7 +628,7 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number.");
-                    process.stderr.write("NOT OK\n");
+                    process.stdout.write("NOT OK\n");
                   } else {
                     process.stdout.write("ok\n");
                   }
