@@ -778,6 +778,12 @@ invalidations in reactive computations using this cursor. Careful use
 of `fields` allows for more fine-grained reactivity for computations
 that don't depend on an entire document.
 
+{{#warning}}
+`Collection.find()` (return all docs) behaves differently from
+`Collection.find(undefined)` (return 0 docs).  so be
+careful about the length of arguments.
+{{/warning}}
+
 {{> api_box findone}}
 
 Equivalent to `find(selector, options).fetch()[0]` with
