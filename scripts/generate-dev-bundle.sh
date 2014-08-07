@@ -91,67 +91,67 @@ which node
 
 which npm
 
-# # When adding new node modules (or any software) to the dev bundle,
-# # remember to update LICENSE.txt! Also note that we include all the
-# # packages that these depend on, so watch out for new dependencies when
-# # you update version numbers.
+# When adding new node modules (or any software) to the dev bundle,
+# remember to update LICENSE.txt! Also note that we include all the
+# packages that these depend on, so watch out for new dependencies when
+# you update version numbers.
 
-# # First, we install the modules that are dependencies of tools/server/boot.js:
-# # the modules that users of 'meteor bundle' will also have to install. We save a
-# # shrinkwrap file with it, too.  We do this in a separate place from
-# # $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
-# # confused by the pre-existing modules.
-# mkdir "${DIR}/build/npm-install"
-# cd "${DIR}/build/npm-install"
-# cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
-# npm install
-# npm shrinkwrap
+# First, we install the modules that are dependencies of tools/server/boot.js:
+# the modules that users of 'meteor bundle' will also have to install. We save a
+# shrinkwrap file with it, too.  We do this in a separate place from
+# $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
+# confused by the pre-existing modules.
+mkdir "${DIR}/build/npm-install"
+cd "${DIR}/build/npm-install"
+cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
+npm install
+npm shrinkwrap
 
-# # This ignores the stuff in node_modules/.bin, but that's OK.
-# cp -R node_modules/* "${DIR}/lib/node_modules/"
-# mkdir "${DIR}/etc"
-# mv package.json npm-shrinkwrap.json "${DIR}/etc/"
+# This ignores the stuff in node_modules/.bin, but that's OK.
+cp -R node_modules/* "${DIR}/lib/node_modules/"
+mkdir "${DIR}/etc"
+mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
-# # Fibers ships with compiled versions of its C code for a dozen platforms. This
-# # bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
-# # thinking that the packages need to depend on both 32- and 64-bit versions of
-# # libstd++. Remove all the ones other than our architecture. (Expression based
-# # on build.js in fibers source.)
-# # XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
-# #     will it let you skip the "npm install fibers" step for running bundles?
-# cd "$DIR/lib/node_modules/fibers/bin"
-# FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
-# mv $FIBERS_ARCH ..
-# rm -rf *
-# mv ../$FIBERS_ARCH .
+# Fibers ships with compiled versions of its C code for a dozen platforms. This
+# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
+# thinking that the packages need to depend on both 32- and 64-bit versions of
+# libstd++. Remove all the ones other than our architecture. (Expression based
+# on build.js in fibers source.)
+# XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
+#     will it let you skip the "npm install fibers" step for running bundles?
+cd "$DIR/lib/node_modules/fibers/bin"
+FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+mv $FIBERS_ARCH ..
+rm -rf *
+mv ../$FIBERS_ARCH .
 
-# # Now, install the rest of the npm modules, which are only used by the 'meteor'
-# # tool (and not by the bundled app boot.js script).
-# cd "${DIR}/lib"
-# npm install request@2.33.0
-# npm install fstream@0.1.25
-# npm install tar@0.1.19
-# npm install kexec@0.2.0
-# npm install source-map@0.1.32
-# npm install browserstack-webdriver@2.41.1
-# npm install phantomjs@1.8.1-1
+# Now, install the rest of the npm modules, which are only used by the 'meteor'
+# tool (and not by the bundled app boot.js script).
+cd "${DIR}/lib"
+npm install request@2.33.0
+npm install fstream@0.1.25
+npm install tar@0.1.19
+npm install kexec@0.2.0
+npm install source-map@0.1.32
+npm install browserstack-webdriver@2.41.1
+npm install phantomjs@1.8.1-1
 
-# # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
-# npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
+# Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
+npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
 
-# # Using the formerly-unreleased 1.1 branch. We can probably switch to a built
-# # NPM version now. (For that matter, we ought to be able to get this from
-# # the copy in js-analyze rather than in the dev bundle.)
-# npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
+# Using the formerly-unreleased 1.1 branch. We can probably switch to a built
+# NPM version now. (For that matter, we ought to be able to get this from
+# the copy in js-analyze rather than in the dev bundle.)
+npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
 
-# # 2.4.0 (more or less, the package.json change isn't committed) plus our PR
-# # https://github.com/williamwicks/node-eachline/pull/4
-# npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
+# 2.4.0 (more or less, the package.json change isn't committed) plus our PR
+# https://github.com/williamwicks/node-eachline/pull/4
+npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
-# # Cordova npm tool for mobile integration
-# npm install cordova@3.5.0-0.2.6
+# Cordova npm tool for mobile integration
+npm install cordova@3.5.0-0.2.6
 
-# npm install ios-sim@2.0.1
+npm install ios-sim@2.0.1
 
 
 # Checkout and build mongodb.
