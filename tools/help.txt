@@ -135,6 +135,9 @@ Usage: meteor list
 List the packages that you have explicitly added to your project.
 This will not list transitive dependencies.
 
+Also lists the Cordova plugins and platforms used by your mobile
+build directly.
+
 >>> bundle
 Pack this project up into a tarball
 Usage: meteor bundle <output_file.tar.gz>
