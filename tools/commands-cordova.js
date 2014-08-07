@@ -2,7 +2,6 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
-var child_process = require('child_process');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
@@ -21,6 +20,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var unipackage = require('./unipackage.js');
 var execFileSync = require('./utils.js').execFileSync;
+var execFileAsync = require('./utils.js').execFileAsync;
 
 var cordova = exports;
 
@@ -319,15 +319,8 @@ cordova.execCordovaOnPlatform = function (localPath, platformName, options) {
                platform ];
 
   // XXX error if not a Cordova project
-  var cordovaProcess = execFileSync('cordova', args, { cwd: cordovaPath });
-  if (cordovaProcess.success) {
-    if (options.verbose)
-      console.log(cordovaProcess.stdout);
-    return 0;
-  } else {
-    process.stderr.write(cordovaProcess.stderr);
-    return 1;
-  }
+  execFileAsync('cordova', args, { cwd: cordovaPath });
+  return 0;
 };
 
 // packages - list of strings

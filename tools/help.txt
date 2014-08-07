@@ -301,12 +301,17 @@ can use in conjunction with a service like Browserling or BrowserStack
 to try the tests against many different browser versions.
 
 Options:
-  --port, -p    Port to listen on (instead of the default 3000). Also
-                uses port N+1 and N+2.
-  --deploy      Optionally, specify a domain to deploy to, rather than
-                running locally.
-  --production  Simulate production mode. Minify and bundle CSS and JS files.
-  --settings    Set optional data for Meteor.settings on the server
+  --port, -p        Port to listen on (instead of the default 3000). Also
+                    uses port N+1 and N+2.
+  --deploy          Optionally, specify a domain to deploy to, rather than
+                    running locally.
+  --production      Simulate production mode. Minify and bundle CSS and JS files.
+  --settings        Set optional data for Meteor.settings on the server
+
+  --ios,            Starts an emulator or an app on device with the app running
+  --android,        unit tests specific to the mobile build in addition to
+  --ios-device,     the regular server and web-app.
+  --android-device
 
 
 >>> self-test

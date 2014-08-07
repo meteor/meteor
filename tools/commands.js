@@ -2,7 +2,6 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
-var child_process = require('child_process');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -262,44 +261,14 @@ main.registerCommand({
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
-    var requestedPlatforms = [];
-
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-
-    // Find the required platforms.
-    // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
-    _.each(options.args, function (platformName) {
-      var platform = platformName.split('-')[0];
-      if (! _.contains(requestedPlatforms, platform)) {
-        requestedPlatforms.push(platform);
-      }
-    });
-
-    var cordovaPlatforms = project.getCordovaPlatforms();
-    _.each(requestedPlatforms, function (platform) {
-      if (! _.contains(cordovaPlatforms, platform))
-        throw new Error("XXX Requested platform " + platform + " which is not added to the project. Enter `meteor add platform:" + platform + "` to add it.");
-    });
-
-    var cordovaSettings = null;
-    if (options.settings) {
-      cordovaSettings =
-        JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
+    // will asynchronously start mobile emulators/devices
+    try {
+      runCordovaTargets(options.args,
+        _.extend({}, options, { host: proxyHost, port: proxyPort }));
+    } catch (err) {
+      process.stderr.write(err.message + '\n');
+      return 1;
     }
-
-    var cordovaOptions = {
-      appName: path.basename(options.appDir),
-      host: proxyHost,
-      port: proxyPort,
-      verbose: true // XXX
-    };
-
-    cordova.buildCordova(localPath, cordovaOptions);
-
-    _.each(options.args, function (platformName) {
-      // XXX check for repeats
-      cordova.execCordovaOnPlatform(localPath, platformName, cordovaOptions);
-    });
   }
 
   var appHost, appPort;
@@ -348,6 +317,49 @@ main.registerCommand({
     once: options.once
   });
 });
+
+var runCordovaTargets = function (targets, options) {
+  targets = _.uniq(targets);
+  var requestedPlatforms = [];
+
+  var localPath = path.join(options.appDir, '.meteor', 'local');
+
+  // Find the required platforms.
+  // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
+  _.each(targets, function (platformName) {
+    var platform = platformName.split('-')[0];
+    if (! _.contains(requestedPlatforms, platform)) {
+      requestedPlatforms.push(platform);
+    }
+  });
+
+  var cordovaPlatforms = project.getCordovaPlatforms();
+  _.each(requestedPlatforms, function (platform) {
+    if (! _.contains(cordovaPlatforms, platform))
+      throw new Error(platform +
+        ": platform is not added to the project. Try 'meteor add platform:" +
+        platform + "' to add it or 'meteor help add' for help.");
+  });
+
+  var cordovaSettings = null;
+  if (options.settings) {
+    cordovaSettings =
+      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
+  }
+
+  var cordovaOptions = {
+    appName: path.basename(options.appDir),
+    host: options.host || 'localhost',
+    port: options.port,
+    verbose: true // XXX
+  };
+
+  cordova.buildCordova(localPath, cordovaOptions);
+
+  _.each(targets, function (platformName) {
+    cordova.execCordovaOnPlatform(localPath, platformName, cordovaOptions);
+  });
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // create
@@ -1019,9 +1031,12 @@ main.registerCommand({
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
     'driver-package': { type: String },
-    // If set also compiles a cordova client target and serves it on
-    // localhost:8000
-    cordova: { type: Boolean }
+
+    // hard-coded options with all known Cordova platforms
+    ios: { type: Boolean },
+    'ios-device': { type: Boolean },
+    android: { type: Boolean },
+    'android-device': { type: Boolean }
   }
 }, function (options) {
   var testPackages = null;
@@ -1044,24 +1059,35 @@ main.registerCommand({
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
 
+  // We are going to operate in the special test project, so let's remap our
+  // main project to the test directory.
+  project.setRootDir(testRunnerAppDir);
+  project.setMuted(true); // Mute output where applicable
+  project.writeMeteorReleaseVersion(release.current.name || 'none');
+  project.forceEditPackages(
+    [options['driver-package'] || 'test-in-browser'],
+    'add');
 
-  if (options.cordova) {
-    var spawn = require('child_process').spawn;
-    var eachline = require('eachline');
-    var meteorCommand = process.argv.slice(0, 2);
+  var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
+  var mobileTargets = [];
 
-    var additionalArgs = options.port ? ['--port', options.port] : [];
-    var testPackagesProcess = spawn(meteorCommand[0],
-      [meteorCommand[1], 'cordova', 'serve'].concat(additionalArgs),
-      { cwd: testRunnerAppDir });
+  _.each(mobileOptions, function (option) {
+    if (options[option])
+      mobileTargets.push(option);
+  });
 
-    eachline(testPackagesProcess.stdout, 'utf8', function (line) {
-      process.stdout.write('cordova serve: ' + line + '\n');
-    });
+  if (! _.isEmpty(mobileTargets)) {
+    var platforms =
+      _.filter(mobileTargets, function (t) { return !t.match(/-device$/); });
+    project.addCordovaPlatforms(platforms);
 
-    eachline(testPackagesProcess.stdout, 'utf8', function (line) {
-      process.stdout.write('cordova serve (stderr): ' + line + '\n');
-    });
+    try {
+      runCordovaTargets(mobileTargets,
+        _.extend({}, options, { appDir: testRunnerAppDir }));
+    } catch (err) {
+      process.stderr.write(err.message + '\n');
+      return 1;
+    }
   }
 
   return runTestAppForPackages(testPackages, testRunnerAppDir, options);
@@ -1144,15 +1170,6 @@ var getPackagesForTest = function (packages) {
 };
 
 var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
-  // We are going to operate in the special test project, so let's remap our
-  // main project to the test directory.
-  project.setRootDir(testRunnerAppDir);
-  project.setMuted(true); // Mute output where applicable
-  project.writeMeteorReleaseVersion(release.current.name || 'none');
-  project.forceEditPackages(
-    [options['driver-package'] || 'test-in-browser'],
-    'add');
-
   // When we test packages, we need to know their versions and all of their
   // dependencies. We are going to add them to the project and have the project
   // compute them for us. This means that right now, we are testing all packages

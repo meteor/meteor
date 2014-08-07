@@ -380,3 +380,18 @@ exports.execFileSync = function (file, args, opts) {
   return future.wait();
 };
 
+// extra option - 'prefix' to be used on every printed line
+exports.execFileAsync = function (file, args, opts) {
+  var child_process = require('child_process');
+  var eachline = require('eachline');
+  var p = child_process.spawn(file, args, opts);
+
+  eachline(p.stdout, function (line) {
+    process.stdout.write((opts.prefix || '') + line + '\n');
+  });
+
+  eachline(p.stderr, function (line) {
+    process.stderr.write((opts.prefix || '') + line + '\n');
+  });
+};
+
