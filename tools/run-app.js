@@ -633,8 +633,9 @@ _.extend(AppRunner.prototype, {
 
     while (true) {
       crashTimer = setTimeout(function () {
+        console.log("CRASH TIMER")
         crashCount = 0;
-      }, 2000);
+      }, 3000);
 
       var runResult = self._runOnce(function () {
         /* onListen */
