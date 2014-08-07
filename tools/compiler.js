@@ -28,7 +28,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/12';
+compiler.BUILT_BY = 'meteor/13';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
