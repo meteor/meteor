@@ -56,7 +56,7 @@ var _call = function(method, url, options, callback) {
 
   _.extend(headers, options.headers || {});
   
-  if (typeof options.encoding !== 'undefined') {
+  if (typeof options.encoding === 'undefined') {
     options.encoding = "utf8";
   }
 
