@@ -1187,6 +1187,11 @@ Template.api.accounts_ui_config = {
       descr: "To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details."
     },
     {
+      name: "forceApprovalPrompt",
+      type: "Boolean",
+      descr: "If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google."
+    },
+    {
       name: "passwordSignupFields",
       type: "String",
       descr: "Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default)."
@@ -1845,6 +1850,17 @@ Template.api.template_data = {
   descr: ["The data context of this instance's latest invocation."]
 };
 
+Template.api.template_autorun = {
+  id: "template_autorun",
+  name: "<em>this</em>.autorun(runFunc)",
+  locus: "Client",
+  descr: ["A version of [Deps.autorun](#deps_autorun) that is stopped when the template is destroyed."],
+  args: [
+    {name: "runFunc",
+     type: "Function",
+     descr: "The function to run. It receives one argument: a Deps.Computation object."}
+  ]
+};
 
 Template.api.ui_registerhelper = {
   id: "ui_registerhelper",
@@ -1859,6 +1875,22 @@ Template.api.ui_registerhelper = {
     {name: "function",
      type: "Function",
      descr: "The helper function itself."
+    }]
+};
+
+Template.api.ui_dynamic = {
+  id: "ui_dynamic",
+  name: "{{> UI.dynamic template=templateName [data=dataContext]}}",
+  locus: "Client",
+  descr: ["Choose a template to include dynamically, by name."],
+  args: [
+    {name: "templateName",
+     type: "String",
+     descr: "The name of the template to include."
+    },
+    {name: "dataContext",
+     type: "Object",
+     descr: "Optional.  The data context in which to include the template."
     }]
 };
 
