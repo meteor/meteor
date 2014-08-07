@@ -1373,7 +1373,15 @@ main.registerCommand({
 
   // Update the platforms & plugins lists
   project.addCordovaPlatforms(cordovaPlatforms);
-  project.addCordovaPlugins(cordovaPlugins);
+
+  var pluginsDict = {};
+  _.each(cordovaPlugins, function (s) {
+    var splt = s.split('@');
+    if (splt.length !== 2)
+      throw new Error(s + ': exact version or tarball url is required');
+    pluginsDict[splt[0]] = splt[1];
+  });
+  project.addCordovaPlugins(pluginsDict);
 
   var args = filteredPackages.rest;
 
