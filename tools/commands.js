@@ -280,7 +280,7 @@ main.registerCommand({
     var cordovaPlatforms = project.getCordovaPlatforms();
     _.each(requestedPlatforms, function (platform) {
       if (! _.contains(cordovaPlatforms, platform))
-        throw new Error("XXX Requested platform " + platform + " which is not added to the project. Enter `meteor add platforms:" + platform + "` to add it.");
+        throw new Error("XXX Requested platform " + platform + " which is not added to the project. Enter `meteor add platform:" + platform + "` to add it.");
     });
 
     var cordovaSettings = null;
@@ -290,7 +290,6 @@ main.registerCommand({
     }
 
     var cordovaOptions = {
-      platforms: requestedPlatforms,
       host: proxyHost,
       port: proxyPort,
       appName: path.basename(options.appDir),

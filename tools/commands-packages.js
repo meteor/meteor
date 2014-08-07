@@ -1394,6 +1394,21 @@ main.registerCommand({
   });
   project.addCordovaPlugins(pluginsDict);
 
+  if (cordovaPlugins.length || cordovaPlatforms.length) {
+    var cordovaPath =
+      path.join(options.appDir, '.meteor', 'local', 'cordova-build');
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(cordovaPath, appName);
+  }
+
+  _.each(cordovaPlatforms, function (platform) {
+    process.stdout.write("added platform " + platform + "\n");
+  });
+
+  _.each(cordovaPlugins, function (plugin) {
+    process.stdout.write("added cordova plugin " + plugin + "\n");
+  });
+
   var args = filteredPackages.rest;
 
   if (_.isEmpty(args))
