@@ -153,8 +153,6 @@ _.extend(Builder.prototype, {
   //   if any path segments consist entirely of dots (eg, '..'), and
   //   if there is a file in the bundle with the same relPath, then
   //   the path is changed by adding a numeric suffix.
-  // - append: if true, append to the file if it exists rather than
-  //   throwing an exception.
   // - executable: if true, mark the file as executable.
   // - symlink: if set to a string, create a symlink to its value
   //
@@ -189,8 +187,6 @@ _.extend(Builder.prototype, {
     var absPath = path.join(self.buildPath, relPath);
     if (options.symlink) {
       fs.symlinkSync(options.symlink, absPath);
-    } else if (options.append) {
-      fs.appendFileSync(absPath, data);
     } else {
       fs.writeFileSync(absPath, data);
     }
