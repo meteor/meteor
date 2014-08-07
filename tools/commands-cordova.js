@@ -275,7 +275,7 @@ cordova.execCordovaOnPlatform = function (platformName, cordovaPath, options) {
 
 // packages - list of strings
 cordova.filterPackages = function (packages) {
-  var supportedPlatforms = ['ios', 'android'];
+  var supportedPlatforms = ['ios', 'android', 'firefoxos'];
   // We hard-code the 'cordova' and 'platform' namespaces
   var ret = {
     rest: [],
