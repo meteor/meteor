@@ -151,7 +151,8 @@ npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a0865
 # Cordova npm tool for mobile integration
 npm install cordova@3.5.0-0.2.6
 
-npm install ios-sim@2.0.1
+# Below needs rake, getting rid of it
+# npm install ios-sim@2.0.1
 
 
 # Checkout and build mongodb.
