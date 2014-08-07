@@ -633,7 +633,6 @@ _.extend(AppRunner.prototype, {
 
     while (true) {
       crashTimer = setTimeout(function () {
-        console.log("CRASH TIMER")
         crashCount = 0;
       }, 3000);
 
