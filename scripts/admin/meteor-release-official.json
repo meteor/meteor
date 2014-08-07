@@ -1,0 +1,7 @@
+{
+ "track": "METEOR-CORE",
+ "version": "0.9.0",
+ "recommended": false,
+ "official": true,
+ "description": "Meteor release, supported by MDG."
+}

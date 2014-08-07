@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Collection of small helpers: _.map, _.each, ..."
+  summary: "Collection of small helpers: _.map, _.each, ...",
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -26,4 +27,10 @@ Package.on_use(function (api) {
   // numeric length field whose constructor === Object are still treated as
   // objects, not as arrays.  Search for looksLikeArray.
   api.add_files(['pre.js', 'underscore.js', 'post.js']);
+});
+
+
+Package.on_test(function (api) {
+  // Also turn off the strong 'meteor' dependency in the test slice
+  api.use('meteor', {unordered: true});
 });

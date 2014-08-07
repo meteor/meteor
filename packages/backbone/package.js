@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "A minimalist client-side MVC framework"
+  summary: "A minimalist client-side MVC framework",
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

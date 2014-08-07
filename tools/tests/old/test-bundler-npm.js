@@ -7,11 +7,29 @@ var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
 var release = require('../../release.js');
+var project = require('../../project.js');
+var catalog = require('../../catalog.js');
 var meteorNpm = require('../../meteor-npm.js');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
+};
+
+var setAppDir = function (appDir) {
+  project.project.setRootDir(appDir);
+
+  var localPackageDirs = [tmpPackageDirContainer];
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
+  catalog.complete.initialize({
+    localPackageDirs: localPackageDirs
+  });
 };
 
 ///
@@ -21,9 +39,7 @@ var tmpPackageDirContainer = tmpDir();
 var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
 
 var reloadPackages = function () {
-  // XXX XXX hack on top of hack to force a package reload
-  // #HandlePackageDirsDifferently
-  release._resetPackageDirs([ tmpPackageDirContainer ]);
+  catalog.complete.refresh();
 };
 
 var updateTestPackage = function (npmDependencies) {
@@ -31,7 +47,7 @@ var updateTestPackage = function (npmDependencies) {
     fs.mkdirSync(testPackageDir);
 
   fs.writeFileSync(path.join(testPackageDir, 'package.js'),
-                   "Package.describe({summary: 'a package that uses npm modules'});\n"
+                   "Package.describe({version: '1.0.0'});\n"
                    + "\n"
                    + "Npm.depends(" + JSON.stringify(npmDependencies) + ");"
                    + "\n"
@@ -123,7 +139,7 @@ var _assertCorrectBundleNpmContents = function (bundleDir, deps) {
                      bundler._mainJsContents);
 
   var bundledPackageNodeModulesDir = path.join(
-    bundleDir, 'programs', 'server', 'npm', 'test-package', 'main', 'node_modules');
+    bundleDir, 'programs', 'server', 'npm', 'test-package', 'node_modules');
 
   // bundle actually has the npm modules
   _.each(deps, function (version, name) {
@@ -152,16 +168,12 @@ var looksInstalled = function (nodeModulesDir, name) {
 var runTest = function () {
   // XXX this is a huge nasty hack. see release.js,
   // #HandlePackageDirsDifferently
-  release._resetPackageDirs([ tmpPackageDirContainer ]);
-
   console.log("app that uses gcd - clean run");
   assert.doesNotThrow(function () {
     updateTestPackage({gcd: '0.0.0'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0'});
@@ -172,9 +184,7 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0'});
@@ -192,7 +202,7 @@ var runTest = function () {
     // We also have to delete the .build directory or else we won't rebuild at
     // all.
     // XXX this seems wrong!
-    files.rm_recursive(path.join(testPackageDir, ".build"));
+    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
     assert(!fs.existsSync(path.join(nodeModulesDir)));
     reloadPackages();
 
@@ -208,9 +218,7 @@ var runTest = function () {
       return bareExecFileSync(file, args, opts);
     };
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     meteorNpm._execFileSync = bareExecFileSync;
 
@@ -225,9 +233,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
@@ -245,14 +251,12 @@ var runTest = function () {
     // We also have to delete the .build directory or else we won't rebuild at
     // all.
     // XXX this seems wrong!
-    files.rm_recursive(path.join(testPackageDir, ".build"));
+    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
     assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
     reloadPackages();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
@@ -264,9 +268,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'});
@@ -278,9 +280,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert(result.errors);
     var job = _.find(result.errors.jobs, function (job) {
@@ -296,9 +296,7 @@ var runTest = function () {
     updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -313,9 +311,7 @@ var runTest = function () {
     updateTestPackage(deps);
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: appWithPackageDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
+      outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir(deps);
@@ -346,6 +342,10 @@ var runTest = function () {
       Fiber(function () {
         var tmpAppDir = tmpDir();
         files.cp_r(appWithPackageDir, tmpAppDir);
+        fs.writeFileSync(
+          path.join(tmpAppDir, '.meteor', 'release'),
+          release.current.isProperRelease()
+            ? release.current.name : 'none');
 
         var tmpDirToPutBundleTarball = tmpDir();
 
@@ -359,12 +359,14 @@ var runTest = function () {
             process.env.METEOR_TOOL_PATH,
             ["bundle", path.join(tmpDirToPutBundleTarball, "bundle.tar.gz")],
             {cwd: tmpAppDir, env: env});
+
           files.rm_recursive(tmpDirToPutBundleTarball);
         } catch (e) {
           console.log(e.stdout);
           console.log(e.stderr);
           throw e;
         }
+        assert(result.success, result.stderr);
         _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7'});
 
         files.rm_recursive(tmpAppDir);
@@ -375,13 +377,12 @@ var runTest = function () {
 
     Future.wait(futures);
   });
-
-  release._resetPackageDirs();
 };
 
 
 var Fiber = require('fibers');
 Fiber(function () {
+  setAppDir(appWithPackageDir);
   release._setCurrentForOldTest();
   meteorNpm._printNpmCalls = true;
 

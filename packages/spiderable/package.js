@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Makes the application crawlable to web spiders"
+  summary: "Makes the application crawlable to web spiders",
+  version: "1.0.1"
 });
 
 Package.on_use(function (api) {

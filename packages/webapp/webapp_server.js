@@ -11,6 +11,8 @@ var connect = Npm.require('connect');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
+var Future = Npm.require('fibers/future');
+
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
 
@@ -48,6 +50,10 @@ var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
+};
+
+var readUtf8FileSync = function (filename) {
+  return Future.wrap(fs.readFile)(filename, 'utf8').wait();
 };
 
 // #BrowserIdentification
@@ -167,11 +173,15 @@ var appUrl = function (url) {
 // (but the second is a performance enhancement, not a hard
 // requirement).
 
-var calculateClientHash = function () {
+var calculateClientHash = function (includeFilter) {
   var hash = crypto.createHash('sha1');
-  hash.update(JSON.stringify(__meteor_runtime_config__), 'utf8');
+  // Omit the old hashed client values in the new hash. These may be
+  // modified in the new boilerplate.
+  hash.update(JSON.stringify(_.omit(__meteor_runtime_config__,
+               ['autoupdateVersion', 'autoupdateVersionRefreshable']), 'utf8'));
   _.each(WebApp.clientProgram.manifest, function (resource) {
-    if (resource.where === 'client' || resource.where === 'internal') {
+      if ((! includeFilter || includeFilter(resource.type)) &&
+          (resource.where === 'client' || resource.where === 'internal')) {
       hash.update(resource.path);
       hash.update(resource.hash);
     }
@@ -199,6 +209,16 @@ var calculateClientHash = function () {
 
 Meteor.startup(function () {
   WebApp.clientHash = calculateClientHash();
+  WebApp.calculateClientHashRefreshable = function () {
+    return calculateClientHash(function (name) {
+      return name === "css";
+    });
+  };
+  WebApp.calculateClientHashNonRefreshable = function () {
+    return calculateClientHash(function (name) {
+      return name !== "css";
+    });
+  };
 });
 
 
@@ -377,15 +397,69 @@ WebAppInternals.staticFilesMiddleware = function (options, req, res, next) {
 
 var runWebAppServer = function () {
   var shuttingDown = false;
-  // read the control for the client we'll be serving up
-  var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
-                                 __meteor_bootstrap__.configJson.client);
-  var clientDir = path.dirname(clientJsonPath);
-  var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
+  var syncQueue = new Meteor._SynchronousQueue();
 
-  if (clientJson.format !== "browser-program-pre1")
-    throw new Error("Unsupported format for client assets: " +
-                    JSON.stringify(clientJson.format));
+  var getItemPathname = function (itemUrl) {
+    return decodeURIComponent(url.parse(itemUrl).pathname);
+  };
+
+  var staticFiles;
+
+  var clientJsonPath;
+  var clientDir;
+  var clientJson;
+
+  WebAppInternals.reloadClientProgram = function () {
+    syncQueue.runTask(function() {
+      try {
+        // read the control for the client we'll be serving up
+        clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
+                                   __meteor_bootstrap__.configJson.client);
+        clientDir = path.dirname(clientJsonPath);
+        clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
+        if (clientJson.format !== "web-program-pre1")
+          throw new Error("Unsupported format for client assets: " +
+                          JSON.stringify(clientJson.format));
+
+        staticFiles = {};
+        _.each(clientJson.manifest, function (item) {
+          if (item.url && item.where === "client") {
+            staticFiles[getItemPathname(item.url)] = {
+              path: item.path,
+              cacheable: item.cacheable,
+              // Link from source to its map
+              sourceMapUrl: item.sourceMapUrl,
+              type: item.type
+            };
+
+            if (item.sourceMap) {
+              // Serve the source map too, under the specified URL. We assume all
+              // source maps are cacheable.
+              staticFiles[getItemPathname(item.sourceMapUrl)] = {
+                path: item.sourceMap,
+                cacheable: true
+              };
+            }
+          }
+        });
+        WebApp.clientProgram = {
+          manifest: clientJson.manifest
+          // XXX do we need a "root: clientDir" field here? it used to be here but
+          // was unused.
+        };
+
+        // Exported for tests.
+        WebAppInternals.staticFiles = staticFiles;
+      } catch (e) {
+        Log.error("Error reloading the client program: " + e.message);
+        process.exit(1);
+      }
+    });
+  };
+  WebAppInternals.reloadClientProgram();
+
+  if (! clientJsonPath || ! clientDir || ! clientJson)
+    throw new Error("Client config file not parsed.");
 
   // webserver
   var app = connect();
@@ -424,36 +498,6 @@ var runWebAppServer = function () {
   // Parse the query string into res.query. Used by oauth_server, but it's
   // generally pretty handy..
   app.use(connect.query());
-
-  var getItemPathname = function (itemUrl) {
-    return decodeURIComponent(url.parse(itemUrl).pathname);
-  };
-
-  var staticFiles = {};
-  _.each(clientJson.manifest, function (item) {
-    if (item.url && item.where === "client") {
-      staticFiles[getItemPathname(item.url)] = {
-        path: item.path,
-        cacheable: item.cacheable,
-        // Link from source to its map
-        sourceMapUrl: item.sourceMapUrl,
-        type: item.type
-      };
-
-      if (item.sourceMap) {
-        // Serve the source map too, under the specified URL. We assume all
-        // source maps are cacheable.
-        staticFiles[getItemPathname(item.sourceMapUrl)] = {
-          path: item.sourceMap,
-          cacheable: true
-        };
-      }
-    }
-  });
-
-  // Exported for tests.
-  WebAppInternals.staticFiles = staticFiles;
-
 
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
@@ -585,12 +629,6 @@ var runWebAppServer = function () {
     connectHandlers: packageAndAppHandlers,
     rawConnectHandlers: rawConnectHandlers,
     httpServer: httpServer,
-    // metadata about the client program that we serve
-    clientProgram: {
-      manifest: clientJson.manifest
-      // XXX do we need a "root: clientDir" field here? it used to be here but
-      // was unused.
-    },
     // For testing.
     suppressConnectErrors: function () {
       suppressConnectErrors = true;
@@ -619,53 +657,66 @@ var runWebAppServer = function () {
     // '--keepalive' is a use of the option.
     var expectKeepalives = _.contains(argv, '--keepalive');
 
-    boilerplateBaseData = {
-      // 'htmlAttributes' and 'inlineScriptsAllowed' are set at render
-      // time, because they are allowed to change from request to
-      // request.
-      css: [],
-      js: [],
-      head: '',
-      body: '',
-      additionalStaticJs: _.map(
-        additionalStaticJs,
-        function (contents, pathname) {
-          return {
-            pathname: pathname,
-            contents: contents
-          };
-        }
-      ),
-      meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
-      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-      bundledJsCssPrefix: bundledJsCssPrefix ||
-        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
-    };
-
-    _.each(WebApp.clientProgram.manifest, function (item) {
-      if (item.type === 'css' && item.where === 'client') {
-        boilerplateBaseData.css.push({url: item.url});
-      }
-      if (item.type === 'js' && item.where === 'client') {
-        boilerplateBaseData.js.push({url: item.url});
-      }
-      if (item.type === 'head') {
-        boilerplateBaseData.head = fs.readFileSync(
-          path.join(clientDir, item.path), 'utf8');
-      }
-      if (item.type === 'body') {
-        boilerplateBaseData.body = fs.readFileSync(
-          path.join(clientDir, item.path), 'utf8');
-      }
-    });
-
     var boilerplateTemplateSource = Assets.getText("boilerplate.html");
-    var boilerplateRenderCode = SpacebarsCompiler.compile(
-      boilerplateTemplateSource, { isBody: true });
 
-    // Note that we are actually depending on eval's local environment capture
-    // so that UI and HTML are visible to the eval'd code.
-    boilerplateFunc = eval(boilerplateRenderCode);
+    // Exported to allow client-side only changes to rebuild the boilerplate
+    // without requiring a full server restart.
+    WebAppInternals.generateBoilerplate = function () {
+      syncQueue.runTask(function() {
+        boilerplateBaseData = {
+          // 'htmlAttributes' and 'inlineScriptsAllowed' are set at render
+          // time, because they are allowed to change from request to
+          // request.
+          css: [],
+          js: [],
+          head: '',
+          body: '',
+          additionalStaticJs: _.map(
+            additionalStaticJs,
+            function (contents, pathname) {
+              return {
+                pathname: pathname,
+                contents: contents
+              };
+            }
+          ),
+          meteorRuntimeConfig: JSON.stringify(__meteor_runtime_config__),
+          rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+          bundledJsCssPrefix: bundledJsCssPrefix ||
+            __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || ''
+        };
+
+        _.each(WebApp.clientProgram.manifest, function (item) {
+          if (item.type === 'css' && item.where === 'client') {
+            boilerplateBaseData.css.push({url: item.url});
+          }
+          if (item.type === 'js' && item.where === 'client') {
+            boilerplateBaseData.js.push({url: item.url});
+          }
+          if (item.type === 'head') {
+            boilerplateBaseData.head =
+              readUtf8FileSync(path.join(clientDir, item.path));
+          }
+          if (item.type === 'body') {
+            boilerplateBaseData.body =
+              readUtf8FileSync(path.join(clientDir, item.path));
+          }
+        });
+
+        var boilerplateRenderCode = SpacebarsCompiler.compile(
+          boilerplateTemplateSource, { isBody: true });
+
+        // Note that we are actually depending on eval's local environment capture
+        // so that UI and HTML are visible to the eval'd code.
+        boilerplateFunc = eval(boilerplateRenderCode);
+
+        // Clear the memoized boilerplate cache.
+        memoizedBoilerplate = {};
+
+        WebAppInternals.refreshableAssets = { allCss: boilerplateBaseData.css };
+      });
+    };
+    WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
     var localPort = parseInt(process.env.PORT) || 0;

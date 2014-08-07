@@ -87,10 +87,10 @@ _.extend(Module.prototype, {
   getPrelinkedFiles: function () {
     var self = this;
 
-    // If there are no files *and* we are a no-exports-at-all slice (eg a test
-    // slice), then generate no prelink output.
+    // If there are no files *and* we are a no-exports-at-all unibuild, then
+    // generate no prelink output.
     //
-    // If there are no files, but we are a use slice (and thus
+    // If there are no files, but we are a non-test package (and thus
     // self.declaredExports is an actual, albeit potentially empty, list), we
     // DON'T want to take this path: we want to return an empty prelink file, so
     // that at link time we end up at least setting `Package.foo = {}`.
@@ -462,8 +462,8 @@ var bannerPadding = function (bannerWidth) {
 //  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
 //
-// declaredExports: an array of symbols that the module exports.  null if our
-// slice isn't allowed to have exports. Symbols are {name,testOnly} pairs.
+// declaredExports: an array of symbols that the module exports. Symbols are
+// {name,testOnly} pairs.
 //
 // useGlobalNamespace: make the top level namespace be the same as the
 // global namespace, so that symbols are accessible from the
@@ -478,7 +478,7 @@ var bannerPadding = function (bannerWidth) {
 // the servePath to use for it.
 //
 // jsAnalyze: if possible, the JSAnalyze object from the js-analyze
-// package. (This is not possible if we are currently linking the main slice of
+// package. (This is not possible if we are currently linking the main unibuild of
 // the js-analyze package!)
 //
 // Output is an object with keys:
@@ -535,9 +535,6 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 // 'Foo', "Foo.bar", etc) to the module from which it should be
 // imported (which must load before us at runtime)
 //
-// noExports: if true, don't generate an exports section (don't even create
-// `Package.name`).
-//
 // packageVariables: package-scope variables, some of which may be exports.
 //   a list of {name, export} objects; any non-falsy value for "export" means
 //   to export it.
@@ -566,12 +563,9 @@ var link = function (options) {
     packageVariables: options.packageVariables
   });
 
-  var exported;
-  if (!options.noExports) {
-    exported = _.pluck(_.filter(options.packageVariables, function (v) {
-      return v.export;
-    }), 'name');
-  }
+  var exported = _.pluck(_.filter(options.packageVariables, function (v) {
+    return v.export;
+  }), 'name');
 
   var footer = getFooter({
     exported: exported,

@@ -1,18 +1,15 @@
 {
   "dependencies": {
     "mongodb": {
-      "version": "1.4.1",
+      "version": "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1",
       "dependencies": {
         "bson": {
-          "version": "0.2.7",
+          "version": "https://github.com/meteor/js-bson/tarball/574c0ee",
           "dependencies": {
             "nan": {
               "version": "0.8.0"
             }
           }
-        },
-        "kerberos": {
-          "version": "0.0.3"
         }
       }
     }

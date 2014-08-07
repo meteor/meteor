@@ -178,7 +178,7 @@ Fiber(function () {
     mains.push(main);
     globalMain = main;
   }
-  _.each(Package, function (p, n) {
+  typeof Package !== 'undefined' && _.each(Package, function (p, n) {
     if ('main' in p && p.main !== globalMain) {
       mains.push(p.main);
     }
