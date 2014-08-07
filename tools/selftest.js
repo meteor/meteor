@@ -370,8 +370,10 @@ var Sandbox = function (options) {
   // with. If a test is tagged 'test-package-server', it uses the test
   // server. Tests that publish packages should have this flag; tests that
   // assume that the release's packages can be found on the server should not.
+  // Note that this only affects subprocess meteor runs, not direct invocation
+  // of packageClient!
   if (runningTest.tags['test-package-server']) {
-    self.set('METEOR_PACKAGE_SERVER_URL', 'https://test-packages.meteor.com');
+    self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
   }
 
   if (_.has(options, 'warehouse')) {
@@ -1580,5 +1582,6 @@ _.extend(exports, {
   expectThrows: expectThrows,
   getToolsPackage: getToolsPackage,
   execFileSync: execFileSync,
-  captureAndThrow: captureAndThrow
+  captureAndThrow: captureAndThrow,
+  testPackageServerUrl: 'https://test-packages.meteor.com'
 });

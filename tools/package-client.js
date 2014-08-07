@@ -28,10 +28,10 @@ var getLoadedPackages = _.once(function () {
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
-var openPackageServerConnection = function () {
+var openPackageServerConnection = function (packageServerUrl) {
   return new ServiceConnection(
     getLoadedPackages(),
-    config.getPackageServerUrl(),
+    packageServerUrl || config.getPackageServerUrl(),
     {headers: {"User-Agent": httpHelpers.getUserAgent()},
      _dontPrintErrors: true});
 };
@@ -62,7 +62,7 @@ exports.loadCachedServerData = function (packageStorageFile) {
   packageStorageFile = packageStorageFile || config.getPackageStorage();
 
   try {
-    var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
+    var data = fs.readFileSync(packageStorageFile, 'utf8');
   } catch (e) {
     if (e.code == 'ENOENT') {
       return noDataToken;
@@ -178,8 +178,10 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 // all the data.
 //
 // options can include:
-//   - packageStorageFile: String. The file to write the data to (overrides
-//     `config.getPackageStorage()`)
+//  - packageStorageFile: String. The file to write the data to (overrides
+//    `config.getPackageStorage()`)
+//  - packageServerUrl: String. The package server (overrides
+//    `config.getPackageServerUrl()`)
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, options) {
@@ -190,7 +192,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   var done = false;
   var ret = {resetData: false};
 
-  var conn = openPackageServerConnection();
+  var conn = openPackageServerConnection(options.packageServerUrl);
 
   var getSomeData = function () {
     var syncToken = cachedServerData.syncToken;

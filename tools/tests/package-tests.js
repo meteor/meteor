@@ -459,14 +459,15 @@ selftest.define("update server package data unit test",
   // we'll check that all this data still appears on disk and hasn't
   // been overwritten.
   var data = packageClient.updateServerPackageData({ syncToken: {} }, {
-    packageStorageFile: packageStorageFile
+    packageStorageFile: packageStorageFile,
+    packageServerUrl: selftest.testPackageServerUrl
   }).data;
 
   var packageNames = [];
 
-  // Publish more than a page worth of packages. When we pass the
-  // `useShortPages` options, the server will send 3 records at a time
-  // instead of 100.
+  // Publish more than a (small) page worth of packages. When we pass the
+  // `useShortPages` option to updateServerPackageData, the server will send 3
+  // records at a time instead of 100, so this is more than a page.
   _.times(5, function (i) {
     var packageName = username + ":" + utils.randomToken();
     createAndPublishPackage(s, packageName);
@@ -475,6 +476,7 @@ selftest.define("update server package data unit test",
 
   var newData = packageClient.updateServerPackageData(data, {
     packageStorageFile: packageStorageFile,
+    packageServerUrl: selftest.testPackageServerUrl,
     useShortPages: true
   }).data;
   var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
