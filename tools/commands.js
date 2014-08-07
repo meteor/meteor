@@ -1590,7 +1590,7 @@ var fetchCordovaPluginFromShaUrl =
   return pluginPath;
 };
 
-var localCordova = path.join(files.getCurrentToolsDir(), "local_cordova");
+var localCordova = path.join(files.getCurrentToolsDir(), "scripts/cordova.sh");
 
 // Creates a Cordova project if necessary and makes sure added Cordova
 // platforms and Cordova plugins are up to date with the project's

@@ -38,7 +38,7 @@ cd "$(dirname "$0")"
 if [ -L "$(basename "$0")" ] ; then
     cd "$(dirname $(readlink $(basename "$0") ) )"
 fi
-SCRIPT_DIR=$(pwd -P)
+SCRIPT_DIR=$(pwd -P)/..
 cd "$ORIG_DIR"
 
 function install_android_bundle {
