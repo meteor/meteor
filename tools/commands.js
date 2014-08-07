@@ -1590,6 +1590,8 @@ var fetchCordovaPluginFromShaUrl =
   return pluginPath;
 };
 
+var localCordova = path.join(files.getCurrentToolsDir(), "local_cordova");
+
 // Creates a Cordova project if necessary and makes sure added Cordova
 // platforms and Cordova plugins are up to date with the project's
 // definition.
@@ -1618,14 +1620,14 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
   var newSettings = options.cordovaSettings;
 
   if (! fs.existsSync(projectPath)) {
-    execFileSync('cordova', ['create', path.basename(projectPath),
+    execFileSync(localCordova, ['create', path.basename(projectPath),
                              'com.meteor.' + options.appName,
                              options.appName.replace(/\s/g, '')],
                  { cwd: path.dirname(projectPath) });
 
     // XXX a hack as platforms management is not implemented yet
     var platform = options.platform || "firefoxos";
-    execFileSync('cordova', ['platforms', 'add', platform], { cwd: projectPath });
+    execFileSync(localCordova, ['platforms', 'add', platform], { cwd: projectPath });
 
 
     // create a folder for storing local plugins
@@ -1669,14 +1671,14 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
 
   // XXX get platforms from project file
 //  _.each(platforms, function (platform) {
-//    execFileSync('cordova', ['platform', 'add', platform], { cwd: projectPath });
+//    execFileSync(localCordova, ['platform', 'add', platform], { cwd: projectPath });
 //  });
 
   // Compare the state of plugins in the Cordova project and the required by the
   // Meteor project.
   // XXX compare the latest used sha's with the currently required sha's for
   // plugins fetched from a github/tarball url.
-  var pluginsOutput = execFileSync('cordova', ['plugin', 'list'],
+  var pluginsOutput = execFileSync(localCordova, ['plugin', 'list'],
                                    { cwd: projectPath }).stdout;
 
   var installedPlugins = {};
@@ -1704,7 +1706,7 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
       return;
 
     if (_.has(installedPlugins, name))
-      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
+      execFileSync(localCordova, ['plugin', 'rm', name], { cwd: projectPath });
 
     // XXX do something different for plugins fetched from a url.
     var pluginInstallCommand = version ? name + '@' + version : name;
@@ -1724,7 +1726,7 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
       });
     }
 
-    var execRes = execFileSync('cordova',
+    var execRes = execFileSync(localCordova,
        ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: projectPath });
     if (! execRes.success)
       throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
@@ -1732,10 +1734,10 @@ var ensureCordovaProject = function (options, projectPath, bundlePath) {
 
   _.each(installedPlugins, function (version, name) {
     if (! _.has(requiredPlugins, name))
-      execFileSync('cordova', ['plugin', 'rm', name], { cwd: projectPath });
+      execFileSync(localCordova, ['plugin', 'rm', name], { cwd: projectPath });
   });
 
-  execFileSync('cordova', ['build'], { cwd: projectPath });
+  execFileSync(localCordova, ['build'], { cwd: projectPath });
 };
 
 main.registerCommand({
@@ -1811,7 +1813,7 @@ main.registerCommand({
   }
 
   // XXX error if not a Cordova project
-  var cordovaProcess = execFileSync('cordova', options.args, { cwd: cordovaPath });
+  var cordovaProcess = execFileSync(localCordova, options.args, { cwd: cordovaPath });
   if (cordovaProcess.success) {
     if (options.verbose)
       console.log(cordovaProcess.stdout);

@@ -51,22 +51,10 @@ function install_android_bundle {
   rm -rf "$BUNDLE_TMPDIR"
   mkdir "$BUNDLE_TMPDIR"
 
-  # fyi: URL duplicated in packages/dev-bundle-fetcher/dev-bundle
   ANDROID_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
-  # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
-  # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.
-  # It still only does this if the version number has changed
-  # (setting it won't cause it to automatically delete a prod dev bundle).
-  if [ -n "$USE_TEST_DEV_BUNDLE_SERVER" ] ; then
-      ANDROID_BUNDLE_URL_ROOT="https://com.meteor.static.s3.amazonaws.com/test/"
-  fi
 
   if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
       echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL" >&2
-      tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
-  elif [ -n "$SAVE_DEV_BUNDLE_TARBALL" ] ; then
-      # URL duplicated in tools/server/target.sh.in
-      curl -# "$ANDROID_BUNDLE_URL_ROOT$TARBALL" >"$SCRIPT_DIR/$TARBALL"
       tar -xzf "$SCRIPT_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
   else
       curl -# "$ANDROID_BUNDLE_URL_ROOT$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
@@ -94,6 +82,7 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
   fi
 
   ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
+  DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
   METEOR="$SCRIPT_DIR/tools/main.js"
 else
   # In an install
@@ -106,4 +95,4 @@ export PATH=${ANDROID_BUNDLE}/android-sdk-macosx/tools:${ANDROID_BUNDLE}/android
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
 export PATH=${ANT_HOME}/bin:${PATH}
 
-exec ${ANDROID_BUNDLE}/node_modules/cordova/bin/cordova "$@"
+exec ${DEV_BUNDLE}/lib/node_modules/cordova/bin/cordova "$@"
