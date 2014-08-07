@@ -301,7 +301,9 @@ cordova.buildCordova = function (localPath, options) {
   var loaderCode = fs.readFileSync(loaderPath);
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
-  execFileSync('cordova', ['build'], { cwd: cordovaPath });
+  // Give the buffer more space as the output of the build is really huge
+  execFileSync('cordova', ['build'],
+               { cwd: cordovaPath, maxBuffer: 2000*1024 });
 };
 
 // Start the simulator or physical device for a specific platform.
