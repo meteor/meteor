@@ -316,11 +316,11 @@ var springboard = function (rel, releaseOverride) {
     var messages = buildmessage.capture({
       title: "downloading tools package " + toolsPkg + "@" + toolsVersion
     }, function () {
-      tropohouse.default.maybeDownloadPackageForArchitectures(
-        {packageName: toolsPkg, version: toolsVersion},
-        [archinfo.host()],
-        true /* print downloading message */
-      );
+      tropohouse.default.maybeDownloadPackageForArchitectures({
+        packageName: toolsPkg,
+        version: toolsVersion,
+        architectures: [archinfo.host()]
+      });
     });
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard

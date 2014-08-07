@@ -143,25 +143,28 @@ _.extend(exports.Tropohouse.prototype, {
   // Given versionInfo for a package version and required architectures, checks
   // to make sure that we have the package at the requested arch. If we do not
   // have the package, contact the server and attempt to download and extract
-  // the right build. Returns true once we have the package, or false if the
-  // correct build does not exist on the package server.
+  // the right build.
   //
   // XXX more precise error handling in offline case. maybe throw instead like
-  // warehouse does.
-  //
-  // XXX this is kinda bogus right now and needs to be fixed when we actually
-  // get around to implement cross-linking (which is the point)
-  maybeDownloadPackageForArchitectures: function (versionInfo, requiredArches, verbose) {
+  // warehouse does.  actually, generally deal with error handling.
+  maybeDownloadPackageForArchitectures: function (options) {
     var self = this;
     buildmessage.assertInCapture();
-    var packageName = versionInfo.packageName;
-    var version = versionInfo.version;
+    if (!options.packageName)
+      throw Error("Missing required argument: packageName");
+    if (!options.version)
+      throw Error("Missing required argument: version");
+    if (!options.architectures)
+      throw Error("Missing required argument: architectures");
+
+    var packageName = options.packageName;
+    var version = options.version;
 
     // If this package isn't coming from the package server (loaded from a
     // checkout, or from an app package directory), don't try to download it (we
     // already have it)
     if (self.catalog.isLocalPackage(packageName))
-      return true;
+      return;
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
@@ -192,13 +195,13 @@ _.extend(exports.Tropohouse.prototype, {
       downloadedArches = archPart.split('+');
     }
 
-    var archesToDownload = _.filter(requiredArches, function (requiredArch) {
+    var archesToDownload = _.filter(options.architectures, function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
     });
 
     // Have everything we need? Great.
     if (!archesToDownload.length) {
-      return true;
+      return;
     }
 
     var buildsToDownload = self.catalog.getBuildsForArches(
@@ -209,7 +212,7 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     // XXX replace with a real progress bar in _ensurePackagesExistOnDisk
-    if (verbose) {
+    if (!options.silent) {
       process.stderr.write(
         "  downloading " + packageName + " at version " + version + " ... ");
     }
@@ -223,7 +226,8 @@ _.extend(exports.Tropohouse.prototype, {
     // XXX how does concurrency work here?  we could just get errors if we try
     // to rename over the other thing?  but that's the same as in warehouse?
     _.each(buildsToDownload, function (build) {
-      buildTempDirs.push(self.downloadBuildToTempDir(versionInfo, build));
+      buildTempDirs.push(self.downloadBuildToTempDir(
+        {packageName: packageName, version: version}, build));
     });
 
     // We need to turn our builds into a single unipackage.
@@ -250,11 +254,11 @@ _.extend(exports.Tropohouse.prototype, {
       files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
     }
 
-    if (verbose) {
+    if (!options.silent) {
       process.stderr.write(" done\n");
     }
 
-    return true;
+    return;
   },
 
   latestMeteorSymlink: function () {

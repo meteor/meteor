@@ -193,7 +193,7 @@ main.registerCommand({
       var releasePackages = release.current.getPackages();
       // HACK: relies on fact that the function below doesn't actually
       //       have any relation to the project directory
-      project._ensurePackagesExistOnDisk(releasePackages, { verbose: true });
+      project._ensurePackagesExistOnDisk(releasePackages);
       loadPackages(
         _.keys(releasePackages),
         new packageLoader.PackageLoader({versions: releasePackages}));
@@ -1318,19 +1318,21 @@ main.registerCommand({
         title: "downloading tool package " + toolPkg.package + "@" +
           toolPkg.constraint
       }, function () {
-        tmpTropo.maybeDownloadPackageForArchitectures(
-          {packageName: toolPkg.package, version: toolPkg.constraint},
-          [osArch],  // XXX 'web.browser' too?
-          true);
+        tmpTropo.maybeDownloadPackageForArchitectures({
+          packageName: toolPkg.package,
+          version: toolPkg.constraint,
+          architectures: [osArch]  // XXX 'web.browser' too?
+        });
       });
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
           title: "downloading package " + pkgName + "@" + pkgVersion
         }, function () {
-          tmpTropo.maybeDownloadPackageForArchitectures(
-            {packageName: pkgName, version: pkgVersion},
-            [osArch],  // XXX 'web.browser' too?
-            true);
+          tmpTropo.maybeDownloadPackageForArchitectures({
+            packageName: pkgName,
+            version: pkgVersion,
+            architectures: [osArch]  // XXX 'web.browser' too?
+          });
         });
       });
     });

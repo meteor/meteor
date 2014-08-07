@@ -84,10 +84,11 @@ var Project = function () {
   // and then recompute when needed.
   self._depsUpToDate = false;
 
-  // In verbose mode (default) we print stuff out. When the project is something
-  // automatic, like test-packages or get-ready, we should mute the (expected)
-  // output. For example, we don't need to tell the user that we are adding
-  // packages to an app during test-packages.
+  // In verbose mode (default) we print stuff out when we modify the
+  // project. When the project is something automatic, like test-packages or
+  // get-ready, we should mute the (expected) output. For example, we don't need
+  // to tell the user that we are adding packages to an app during
+  // test-packages.  (We still print other messages like packages downloading.)
   self.muted = false;
 };
 
@@ -650,16 +651,15 @@ _.extend(Project.prototype, {
     buildmessage.assertInCapture();
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
-    var verbose = options.verbose || !self.muted;
     var downloadedPackages = {};
     _.each(versions, function (version, name) {
       var packageVersionInfo = { packageName: name, version: version };
       try {
-        var available = tropohouse.default.maybeDownloadPackageForArchitectures(
-          packageVersionInfo,
-          [serverArch],  // XXX 'web.browser' too?
-          verbose /* print downloading message */
-        );
+        tropohouse.default.maybeDownloadPackageForArchitectures({
+          packageName: name,
+          version: version,
+          architectures: [serverArch]
+        });
         downloadedPackages[name] = version;
       } catch (err) {
         // We have failed to download the right things and put them on disk!
@@ -693,8 +693,7 @@ _.extend(Project.prototype, {
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to
     // make sure that we have them.
-    var downloadedPackages = self._ensurePackagesExistOnDisk(newVersions,
-                                                             { verbose: true });
+    var downloadedPackages = self._ensurePackagesExistOnDisk(newVersions);
 
     // Return the packages that we have downloaded successfully and let the
     // client deal with reporting the error to the user.

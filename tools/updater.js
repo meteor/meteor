@@ -151,18 +151,23 @@ var updateMeteorToolSymlink = function () {
         buildmessage.enterJob({
           title: "downloading tool package " + latestRelease.tool
         }, function () {
-          tropohouse.default.maybeDownloadPackageForArchitectures(
-            {packageName: latestReleaseToolPackage,
-             version: latestReleaseToolVersion},
-            [archinfo.host()]);
+          tropohouse.default.maybeDownloadPackageForArchitectures({
+            packageName: latestReleaseToolPackage,
+            version: latestReleaseToolVersion,
+            architectures: [archinfo.host()],
+            silent: true
+          });
         });
         _.each(latestRelease.packages, function (pkgVersion, pkgName) {
           buildmessage.enterJob({
             title: "downloading package " + pkgName + "@" + pkgVersion
           }, function () {
-            tropohouse.default.maybeDownloadPackageForArchitectures(
-              {packageName: pkgName, version: pkgVersion},
-              [archinfo.host()]);
+            tropohouse.default.maybeDownloadPackageForArchitectures({
+              packageName: pkgName,
+              version: pkgVersion,
+              architectures: [archinfo.host()],
+              silent: true
+            });
           });
         });
       });

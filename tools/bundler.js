@@ -1669,7 +1669,7 @@ exports.bundle = function (options) {
   }, function () {
     var packageLoader = project.project.getPackageLoader();
     var downloaded = project.project._ensurePackagesExistOnDisk(
-      project.project.dependencies, { serverArch: serverArch, verbose: true });
+      project.project.dependencies, { serverArch: serverArch });
 
     if (_.keys(downloaded).length !==
         _.keys(project.project.dependencies).length) {
