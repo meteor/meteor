@@ -188,12 +188,13 @@ _.extend(Builder.prototype, {
     if (options.symlink) {
       fs.symlinkSync(options.symlink, absPath);
     } else {
-      fs.writeFileSync(absPath, data);
+      // Builder is used to create build products, which should be read-only;
+      // users shouldn't be manually editing automatically generated files and
+      // expecting the results to "stick".
+      fs.writeFileSync(absPath, data,
+                       { mode: options.executable ? 0555 : 0444 });
     }
     self.usedAsFile[relPath] = true;
-
-    if (options.executable)
-      fs.chmodSync(absPath, 0755); // rwxr-xr-x
 
     return relPath;
   },
@@ -210,7 +211,8 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(path.dirname(relPath));
     fs.writeFileSync(path.join(self.buildPath, relPath),
-                     new Buffer(JSON.stringify(data, null, 2), 'utf8'));
+                     new Buffer(JSON.stringify(data, null, 2), 'utf8'),
+                     {mode: 0444});
 
     self.usedAsFile[relPath] = true;
   },
