@@ -1137,8 +1137,8 @@ main.registerCommand({
           // ask the server if we're up to date.
         } else {
           process.stdout.write(
-            "The latest version of Meteor," + release.current.name +
-              " is already installed on this\n" +
+            "The latest version of Meteor, " + release.current.name +
+              ", is already installed on this\n" +
               "computer. Run 'meteor update' inside of a particular project\n" +
               "directory to update that project to Meteor " +
               release.current.name + "\n");
