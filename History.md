@@ -1255,7 +1255,7 @@ sdarnell, and timhaines.
 
 * Remove deprecated `Meteor.is_client` and `Meteor.is_server` variables.
 
-* Implement "meteor bundle --debug" #748
+* Implement "meteor bundle --debug" [#748](https://github.com/meteor/meteor/issues/748)
 
 * Add `forceApprovalPrompt` option to `Meteor.loginWithGoogle`. #1226
 
