@@ -998,6 +998,17 @@ main.registerCommand({
     return 1;
   }
 
+  // Append extra information about special packages, such as Cordova plugins
+  // and platforms to the list.
+  var plugins = project.getCordovaPlugins();
+  _.each(plugins, function (version, name) {
+    items.push({ name: 'cordova:' + name, description: version });
+  });
+  var platforms = project.getCordovaPlatforms();
+  _.each(platforms, function (name) {
+    items.push({ name: 'platform:' + name, description: 'Mobile build target platform.' });
+  });
+
   process.stdout.write(formatList(items));
 
   if (newVersionsAvailable) {
