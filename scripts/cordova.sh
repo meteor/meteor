@@ -12,25 +12,6 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
   exit 1
 fi
 
-if [ "$UNAME" = "Darwin" ] ; then
-  if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
-
-    # Can't just test uname -m = x86_64, because Snow Leopard can
-    # return other values.
-    echo "Only 64-bit Intel processors are supported at this time."
-    exit 1
-  fi
-  ARCH="x86_64"
-elif [ "$UNAME" = "Linux" ] ; then
-  ARCH="$(uname -m)"
-  if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-    echo "Unsupported architecture: $ARCH"
-    echo "Meteor only supports i686 and x86_64 for now."
-    exit 1
-  fi
-fi
-PLATFORM="${UNAME}_${ARCH}"
-
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
 ORIG_DIR=$(pwd)
@@ -45,7 +26,7 @@ function install_android_bundle {
   set -e
   trap "echo Failed to install dependency kit." EXIT
 
-  TARBALL="android_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz"
+  TARBALL="android_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz"
   BUNDLE_TMPDIR="$SCRIPT_DIR/android_bundle.xxx"
 
   rm -rf "$BUNDLE_TMPDIR"
