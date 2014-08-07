@@ -43,6 +43,9 @@ Autoupdate = {};
 // The collection of acceptable client versions.
 ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
   { connection: null });
+ClientVersionsRefreshable =
+  new Meteor.Collection("meteor_autoupdate_clientVersions_refreshable",
+  { connection: null });
 
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the
@@ -94,18 +97,16 @@ var updateVersions = function (shouldReloadClientProgram) {
 
       ClientVersions.insert({
         _id: Autoupdate.autoupdateVersion,
-        refreshable: false,
-        current: true,
+        current: true
       });
     }
 
     if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
       if (oldVersionRefreshable) {
-        ClientVersions.remove(oldVersionRefreshable);
+        ClientVersionsRefreshable.remove(oldVersionRefreshable);
       }
-      ClientVersions.insert({
+      ClientVersionsRefreshable.insert({
         _id: Autoupdate.autoupdateVersionRefreshable,
-        refreshable: true,
         assets: WebAppInternals.refreshableAssets
       });
     }
@@ -124,7 +125,7 @@ Meteor.startup(function () {
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function () {
-    return ClientVersions.find();
+    return [ ClientVersions.find(), ClientVersionsRefreshable.find() ];
   },
   {is_auto: true}
 );

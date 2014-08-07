@@ -30,16 +30,19 @@ var autoupdateVersionRefreshable =
 
 // The collection of acceptable client versions.
 ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
+ClientVersionsRefreshable =
+  new Meteor.Collection("meteor_autoupdate_clientVersions_refreshable");
 
 Autoupdate = {};
 
 Autoupdate.newClientAvailable = function () {
   return !! ClientVersions.findOne(
-    {$and: [
-      {current: true},
-      {_id: {$ne: autoupdateVersion}}
-    ]}
-  );
+    {  current: true,
+       _id: {$ne: autoupdateVersion}
+    }) || !! ClientVersionsRefreshable.findOne(
+    {  current: true,
+       _id: {$ne: autoupdateVersionRefreshable}
+    });
 };
 
 var knownToSupportCssOnLoad = false;
@@ -79,7 +82,18 @@ Autoupdate._retrySubscription = function () {
         var handle = ClientVersions.find().observeChanges({
           added: function (id, fields) {
             var self = this;
-            if (fields.refreshable && id !== autoupdateVersionRefreshable) {
+            if (id !== autoupdateVersion) {
+              if (handle) {
+                handle.stop();
+                Package.reload.Reload._reload();
+              }
+            }
+          }
+        });
+
+        ClientVersionsRefreshable.find().observeChanges({
+          added: function (id, fields) {
+            if (id !== autoupdateVersionRefreshable) {
               autoupdateVersionRefreshable = id;
 
               // Switch out old css links for the new css links. Inspired by:
@@ -130,11 +144,6 @@ Autoupdate._retrySubscription = function () {
                 newLink.setAttribute("href", css.url);
                 attachStylesheetLink(newLink);
               });
-            } else if (! fields.refreshable && id !== autoupdateVersion) {
-              if (handle) {
-                handle.stop();
-                Package.reload.Reload._reload();
-              }
             }
           }
         });
