@@ -262,7 +262,6 @@ main.registerCommand({
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
-    var supportedPlatforms = ['ios', 'android'];
     var requestedPlatforms = [];
 
     var localDir = path.join(options.appDir, '.meteor', 'local');
@@ -273,8 +272,7 @@ main.registerCommand({
     // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
     _.each(options.args, function (platformName) {
       var platform = platformName.split('-')[0];
-      if (_.contains(supportedPlatforms, platform) &&
-          ! _.contains(requestedPlatforms, platform)) {
+      if (! _.contains(requestedPlatforms, platform)) {
         requestedPlatforms.push(platform);
       }
     });

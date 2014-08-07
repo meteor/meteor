@@ -900,7 +900,7 @@ _.extend(Project.prototype, {
   // platforms - a list of strings
   addCordovaPlatforms: function (platforms) {
     var self = this;
-    self.cordovaPlatforms = _.uniq(platfroms.concat(self.cordovaPlatforms));
+    self.cordovaPlatforms = _.uniq(platforms.concat(self.cordovaPlatforms));
     fs.writeFileSync(self._getCordovaPlatformsFile(),
                      self.cordovaPlatforms.join('\n'), 'utf8');
   },
@@ -908,7 +908,7 @@ _.extend(Project.prototype, {
   // platforms - a list of strings
   removeCordovaPlatforms: function (platforms) {
     var self = this;
-    self.cordovaPlatforms = _.difference(platfroms, self.cordovaPlatforms);
+    self.cordovaPlatforms = _.difference(self.cordovaPlatforms, platforms);
     fs.writeFileSync(self._getCordovaPlatformsFile(),
                      self.cordovaPlatforms.join('\n'), 'utf8');
   }

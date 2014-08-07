@@ -273,6 +273,31 @@ cordova.execCordovaOnPlatform = function (platformName, cordovaPath, options) {
   }
 };
 
+// packages - list of strings
+cordova.filterPackages = function (packages) {
+  var supportedPlatforms = ['ios', 'android'];
+  // We hard-code the 'cordova' and 'platform' namespaces
+  var ret = {
+    rest: [],
+    platforms: [],
+    plugins: []
+  };
+
+  _.each(packages, function (p) {
+    var namespace = p.split(':')[0];
+    var name = p.split(':')[1];
+    if (namespace === 'cordova')
+      ret.plugins.push(name);
+    else if (namespace === 'platform') {
+      if (! _.contains(supportedPlatforms, name))
+        throw new Error(name + ": no such platform");
+      ret.platforms.push(name);
+    } else
+      ret.rest.push(p); // leave it the same
+  });
+  return ret;
+};
+
 main.registerCommand({
   name: 'cordova',
   minArgs: 1,

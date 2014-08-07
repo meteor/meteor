@@ -24,6 +24,7 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+var cordova = require('./commands-cordova.js');
 
 // Returns an object with keys:
 //  record : (a package or version record)
@@ -1365,6 +1366,19 @@ main.registerCommand({
     force: { type: Boolean, required: false }
   }
 }, function (options) {
+  // Special case on reserved package namespaces, such as 'cordova' or 'platform'
+  var filteredPackages = cordova.filterPackages(options.args);
+  var cordovaPlatforms = filteredPackages.platforms;
+  var cordovaPlugins = filteredPackages.plugins;
+
+  // Update the platforms & plugins lists
+  project.addCordovaPlatforms(cordovaPlatforms);
+  project.addCordovaPlugins(cordovaPlugins);
+
+  var args = filteredPackages.rest;
+
+  if (_.isEmpty(args))
+    return 0;
 
   var failed = false;
 
@@ -1391,7 +1405,7 @@ main.registerCommand({
   // order. Even though the package file should specify versions of its inputs,
   // we don't specify these constraints until we get them back from the
   // constraint solver.
-  var constraints = _.map(options.args, function (packageReq) {
+  var constraints = _.map(args, function (packageReq) {
     return utils.parseConstraint(packageReq);
   });
   _.each(constraints, function (constraint) {
@@ -1535,6 +1549,20 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
+  // Special case on reserved package namespaces, such as 'cordova' or 'platform'
+  var filteredPackages = cordova.filterPackages(options.args);
+  var cordovaPlatforms = filteredPackages.platforms;
+  var cordovaPlugins = filteredPackages.plugins;
+
+  // Update the platforms & plugins lists
+  project.removeCordovaPlatforms(cordovaPlatforms);
+  project.removeCordovaPlugins(cordovaPlugins);
+
+  var args = filteredPackages.rest;
+
+  if (_.isEmpty(args))
+    return 0;
+
   // Refresh the catalog, checking the remote package data on the
   // server. Technically, we don't need to do this, since it is unlikely that
   // new data will change our constraint solver decisions. But as a user, I
@@ -1549,7 +1577,7 @@ main.registerCommand({
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
   var packagesToRemove = [];
-  _.each(options.args, function (packageName) {
+  _.each(args, function (packageName) {
     if (/@/.test(packageName)) {
       process.stderr.write(packageName + ": do not specify version constraints.\n");
     } else if (! _.has(packages, packageName)) {
