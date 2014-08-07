@@ -32,7 +32,7 @@ function install_android_bundle {
   rm -rf "$BUNDLE_TMPDIR"
   mkdir "$BUNDLE_TMPDIR"
 
-  ANDROID_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
+  ANDROID_BUNDLE_URL_ROOT="http://s3.amazonaws.com/android-bundle/"
 
   if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
       echo "Skipping download and installing kit from $SCRIPT_DIR/$TARBALL" >&2
@@ -64,11 +64,9 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
 
   ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
   DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-  METEOR="$SCRIPT_DIR/tools/main.js"
 else
   # In an install
   ANDROID_BUNDLE=$(dirname "$SCRIPT_DIR")
-  METEOR="$ANDROID_BUNDLE/tools/main.js"
 fi
 
 export PATH=${ANDROID_BUNDLE}/android-sdk-macosx/tools:${ANDROID_BUNDLE}/android-sdk-macosx/platform-tools:${PATH};
