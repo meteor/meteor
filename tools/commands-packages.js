@@ -1395,10 +1395,18 @@ main.registerCommand({
   project.addCordovaPlugins(pluginsDict);
 
   if (cordovaPlugins.length || cordovaPlatforms.length) {
-    var cordovaPath =
-      path.join(options.appDir, '.meteor', 'local', 'cordova-build');
+    var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
     var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(cordovaPath, appName);
+    cordova.ensureCordovaProject(localPath, appName);
+
+    if (cordovaPlatforms.length) {
+      cordova.ensureCordovaPlatforms(localPath);
+    }
+    if (cordovaPlugins.length) {
+      cordova.ensureCordovaPlugins(localPath);
+    }
   }
 
   _.each(cordovaPlatforms, function (platform) {

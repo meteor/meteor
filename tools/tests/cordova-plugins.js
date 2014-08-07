@@ -157,6 +157,7 @@ selftest.define("add cordova plugins", function () {
 
   run = s.run("run", "firefoxos");
   run.waitSecs(20);
+  run.match("app");
 
   checkCordovaPlugins(s,
     ["org.apache.cordova.camera",

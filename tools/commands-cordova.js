@@ -94,13 +94,34 @@ var checkIsValidPlugin = function (name) {
   utils.ensureOnlyExactVersions(pluginHash);
 };
 
+var getBundle = function (bundlePath, webArchs) {
+  var bundler = require(path.join(__dirname, 'bundler.js'));
+
+  var bundleResult = bundler.bundle({
+    outputPath: bundlePath,
+    buildOptions: {
+      minify: false, // XXX ! options.debug,
+      arch: archinfo.host(),
+      webArchs: webArchs
+    }
+  });
+
+  if (bundleResult.errors) {
+    throw new Error("Errors prevented bundling:\n" +
+                    bundleResult.errors.formatMessages());
+  }
+
+  return bundleResult;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // ensureCordova
 ////////////////////////////////////////////////////////////////////////////////
 
 // Creates a Cordova project if necessary. Then synchronizes app-level plugins
 // and platofrms.
-cordova.ensureCordovaProject = function (cordovaPath, appName) {
+cordova.ensureCordovaProject = function (localPath, appName) {
+  var cordovaPath = path.join(localPath, 'cordova-build');
   var localPluginsPath = path.join(cordovaPath, 'local-plugins');
   if (! fs.existsSync(cordovaPath)) {
     try {
@@ -117,14 +138,12 @@ cordova.ensureCordovaProject = function (cordovaPath, appName) {
         err.message + "\n");
     }
   }
-
-  cordova.ensureCordovaPlatforms(cordovaPath);
-  cordova.ensureCordovaPlugins(cordovaPath);
 };
 
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
-cordova.ensureCordovaPlatforms = function (cordovaPath) {
+cordova.ensureCordovaPlatforms = function (localPath) {
+  var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
   var platformsOutput = execFileSync('cordova', ['platform', 'list'],
                                      { cwd: cordovaPath }).stdout;
@@ -146,10 +165,34 @@ cordova.ensureCordovaPlatforms = function (cordovaPath) {
   return true;
 };
 
-// Ensures that the Cordova plugins are synchronized with the app-level
-// plugins.
-cordova.ensureCordovaPlugins = function (cordovaPath, appPlugins) {
-  appPlugins = appPlugins || {};
+// Ensures that the Cordova platforms are synchronized with the app-level
+// platforms.
+// options
+//   - packagePlugins: the list of plugins required by packages. If not defined,
+//                     we bundle the app to find the required plugins.
+
+cordova.ensureCordovaPlugins = function (localPath, options) {
+  options = options || {};
+
+  var plugins = {};
+  if (options.packagePlugins) {
+    plugins = options.packagePlugins;
+  } else {
+    // Bundle to gather the plugin dependencies from packages.
+    // XXX slow - perhaps we should only do this lazily
+    // XXX code copied from buildCordova
+    var bundlePath = path.join(localPath, 'build-tar');
+    var webArchName = 'web.cordova';
+    plugins =
+      getBundle(bundlePath, [webArchName]).starManifest.cordovaDependencies;
+    files.rm_recursive(bundlePath);
+  }
+
+  // XXX the project-level cordova plugins deps override the package-level ones
+  _.extend(plugins, project.getCordovaPlugins());
+
+  var cordovaPath = path.join(localPath, 'cordova-build');
+  var newSettings = options.settings || {};
 
   // XXX compare the latest used sha's with the currently required sha's for
   // plugins fetched from a github/tarball url.
@@ -169,10 +212,15 @@ cordova.ensureCordovaPlugins = function (cordovaPath, appPlugins) {
     });
   }
 
-  // XXX the project-level cordova plugins deps override the package-level ones
-  _.extend(appPlugins, project.getCordovaPlugins());
+  var oldSettings = {};
+  try {
+    fs.readFileSync(path.join(cordovaPath, 'cordova-settings.json'), "utf8");
+  } catch(err) {
+    if (err.code !== "ENOENT")
+      throw err;
+  }
 
-  _.each(appPlugins, function (version, name) {
+  _.each(plugins, function (version, name) {
     // no-op if this plugin is already installed
     if (_.has(installedPlugins, name)
         && installedPlugins[name] === version
@@ -193,14 +241,14 @@ cordova.ensureCordovaPlugins = function (cordovaPath, appPlugins) {
     var additionalArgs = [];
     // XXX how do we get settings to work now? Do we require settings to be
     // passed every time we add a plugin?
-    // if (newSettings[name]) {
-    //   if (! _.isObject(newSettings[name]))
-    //     throw new Error("Meteor.settings.cordova." + name + " is expected to be an object");
-    //   _.each(newSettings[name], function (value, variable) {
-    //     additionalArgs.push("--variable");
-    //     additionalArgs.push(variable + "=" + JSON.stringify(value));
-    //   });
-    // }
+    if (newSettings[name]) {
+      if (! _.isObject(newSettings[name]))
+        throw new Error("Meteor.settings.cordova." + name + " is expected to be an object");
+      _.each(newSettings[name], function (value, variable) {
+        additionalArgs.push("--variable");
+        additionalArgs.push(variable + "=" + JSON.stringify(value));
+      });
+    }
 
     var execRes = execFileSync('cordova',
        ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: cordovaPath });
@@ -209,46 +257,28 @@ cordova.ensureCordovaPlugins = function (cordovaPath, appPlugins) {
   });
 
   _.each(installedPlugins, function (version, name) {
-    if (! _.has(appPlugins, name))
+    if (! _.has(plugins, name))
       execFileSync('cordova', ['plugin', 'rm', name], { cwd: cordovaPath });
   });
 };
 
 // Build a Cordova project, creating a Cordova project if necessary.
-cordova.buildCordova = function (cordovaPath, options) {
-  cordova.ensureCordovaProject(cordovaPath, options.appName);
-
-  var bundler = require(path.join(__dirname, 'bundler.js'));
-  var newSettings = options.settings || {};
-  var webArchName = 'web.cordova';
-
-  var bundleResult = bundler.bundle({
-    outputPath: bundlePath,
-    buildOptions: {
-      minify: false, // XXX ! options.debug,
-      arch: archinfo.host(),
-      webArchs: [webArchName]
-    }
-  });
-
-  if (bundleResult.errors) {
-    throw new Error("Errors prevented bundling:\n" +
-                    bundleResult.errors.formatMessages());
-  }
-
+cordova.buildCordova = function (localPath, options) {
+  var webArchName = "web.cordova";
+  var bundlePath = path.join(localPath, 'build-tar');
+  var cordovaPath = path.join(localPath, 'cordova-build');
   var programPath = path.join(bundlePath, 'programs');
-  var oldSettings = {};
-  try {
-    fs.readFileSync(path.join(cordovaPath, 'cordova-settings.json'), "utf8");
-  } catch(err) {
-    if (err.code !== "ENOENT")
-      throw err;
-  }
-
   var wwwPath = path.join(cordovaPath, "www");
-
   var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
+
+  var bundle = getBundle(bundlePath, [webArchName]);
+
+  cordova.ensureCordovaProject(localPath, options.appName);
+  cordova.ensureCordovaPlatforms(localPath);
+  cordova.ensureCordovaPlugins(localPath, _.extend(options, {
+    packagePlugins: bundle.starManifest.cordovaDependencies
+  }));
 
   // XXX hack, copy files from app folder one level up
   if (fs.existsSync(cordovaProgramAppPath)) {
@@ -276,7 +306,9 @@ cordova.buildCordova = function (cordovaPath, options) {
 
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
-cordova.execCordovaOnPlatform = function (cordovaPath, platformName, options) {
+cordova.execCordovaOnPlatform = function (localPath, platformName, options) {
+  var cordovaPath = path.join(localPath, 'cordova-build');
+
   // XXX error if an invalid platform
   var platform = platformName.split('-')[0];
   var isDevice = platformName.split('-')[1] === 'device';

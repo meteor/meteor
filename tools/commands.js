@@ -264,9 +264,7 @@ main.registerCommand({
   if (options.args.length) {
     var requestedPlatforms = [];
 
-    var localDir = path.join(options.appDir, '.meteor', 'local');
-    var cordovaPath = path.join(localDir, 'cordova-build');
-    var bundleDir = path.join(localDir, 'bundle-tar');
+    var localPath = path.join(options.appDir, '.meteor', 'local');
 
     // Find the required platforms.
     // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
@@ -290,18 +288,17 @@ main.registerCommand({
     }
 
     var cordovaOptions = {
+      appName: path.basename(options.appDir),
       host: proxyHost,
       port: proxyPort,
-      appName: path.basename(options.appDir),
-      settings: cordovaSettings,
       verbose: true // XXX
     };
 
-    cordova.ensureCordovaProject(cordovaOptions, cordovaPath, bundleDir);
+    cordova.buildCordova(localPath, cordovaOptions);
 
     _.each(options.args, function (platformName) {
       // XXX check for repeats
-      cordova.execCordovaOnPlatform(platformName, cordovaPath, cordovaOptions);
+      cordova.execCordovaOnPlatform(localPath, platformName, cordovaOptions);
     });
   }
 
