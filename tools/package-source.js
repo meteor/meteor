@@ -399,6 +399,8 @@ _.extend(PackageSource.prototype, {
   //   -requireVersion: This is a package that is going in a catalog or being
   //    published to the server. It must have a version. (as opposed to, for
   //    example, a program)
+  //   -defaultVersion: The default version if none is specified. Only assigned
+  //    if the version is required.
   //   -immutable: This package source is immutable. Do not write anything,
   //    including version files. Instead, its only purpose is to be used as
   //    guideline for a repeatable build.
@@ -660,7 +662,9 @@ _.extend(PackageSource.prototype, {
     }
 
     if (self.version === null && options.requireVersion) {
-      if (! buildmessage.jobHasMessages()) {
+      if (options.defaultVersion) {
+        self.version = options.defaultVersion;
+      } else if (! buildmessage.jobHasMessages()) {
         // Only write the error if there have been no errors so
         // far. (Otherwise if there is a parse error we'll always get
         // this message, because we won't have been able to run any

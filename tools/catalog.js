@@ -448,9 +448,13 @@ _.extend(CompleteCatalog.prototype, {
         title: "reading package `" + name + "`",
         rootPath: packageDir
       }, function () {
-        // All packages in the catalog must have versions.
+        // All packages in the catalog must have versions. Though, for local
+        // packages without version, we can be kind and set it to
+        // 0.0.0. Anything requiring any version above that will not be
+        // compatible, which is fine.
         packageSource.initFromPackageDir(name, packageDir, {
-          requireVersion: true
+          requireVersion: true,
+          defaultVersion: "0.0.0"
         });
         if (buildmessage.jobHasMessages())
           broken = true;
