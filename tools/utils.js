@@ -357,3 +357,9 @@ exports.ensureOnlyExactVersions = function (dependencies) {
   });
 };
 
+// Allow a simple way to scale up all timeouts from the command line
+var timeoutScaleFactor = 1.0;
+if (process.env.TIMEOUT_SCALE_FACTOR) {
+  timeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
+}
+exports.timeoutScaleFactor = timeoutScaleFactor;

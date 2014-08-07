@@ -312,14 +312,21 @@ Blaze.HTMLJSExpander.def({
   }
 });
 
+// Return Blaze.currentView, but only if it is being rendered
+// (i.e. we are in its render() method).
+var currentViewIfRendering = function () {
+  var view = Blaze.currentView;
+  return (view && view.isInRender) ? view : null;
+};
+
 Blaze._expand = function (htmljs, parentView) {
-  parentView = parentView || Blaze.currentView;
+  parentView = parentView || currentViewIfRendering();
   return (new Blaze.HTMLJSExpander(
     {parentView: parentView})).visit(htmljs);
 };
 
 Blaze._expandAttributes = function (attrs, parentView) {
-  parentView = parentView || Blaze.currentView;
+  parentView = parentView || currentViewIfRendering();
   return (new Blaze.HTMLJSExpander(
     {parentView: parentView})).visitAttributes(attrs);
 };
@@ -383,7 +390,7 @@ Blaze.runTemplate = function (t/*, args*/) {
 };
 
 Blaze.render = function (content, parentView) {
-  parentView = parentView || Blaze.currentView;
+  parentView = parentView || currentViewIfRendering();
 
   var view;
   if (typeof content === 'function') {
@@ -401,7 +408,7 @@ Blaze.render = function (content, parentView) {
 Blaze.toHTML = function (htmljs, parentView) {
   if (typeof htmljs === 'function')
     throw new Error("Blaze.toHTML doesn't take a function, just HTMLjs");
-  parentView = parentView || Blaze.currentView;
+  parentView = parentView || currentViewIfRendering();
   return HTML.toHTML(Blaze._expand(htmljs, parentView));
 };
 
@@ -414,7 +421,7 @@ Blaze.toText = function (htmljs, parentView, textMode) {
     textMode = parentView;
     parentView = null;
   }
-  parentView = parentView || Blaze.currentView;
+  parentView = parentView || currentViewIfRendering();
 
   if (! textMode)
     throw new Error("textMode required");
@@ -529,7 +536,11 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
           function (evt) {
             if (! range.containsElement(evt.currentTarget))
               return null;
-            return handler.apply(thisInHandler || this, arguments);
+            var handlerThis = thisInHandler || this;
+            var handlerArgs = arguments;
+            return Blaze.withCurrentView(view, function () {
+              return handler.apply(handlerThis, handlerArgs);
+            });
           },
           range, function (r) {
             return r.parentRange;

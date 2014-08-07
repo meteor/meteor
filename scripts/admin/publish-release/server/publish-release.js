@@ -59,7 +59,15 @@ var configureS3 = function () {
     return {accessKey: accessKey, secretKey: secretKey};
   };
 
-  var s3Credentials = getS3Credentials();
+  var s3Credentials;
+  if (process.env.AWS_ACCESS_KEY_ID) {
+    s3Credentials = {};
+    s3Credentials.accessKey = process.env.AWS_ACCESS_KEY_ID;
+    s3Credentials.secretKey = process.env.AWS_SECRET_ACCESS_KEY;
+  } else {
+    s3Credentials = getS3Credentials();
+  }
+
   var s3 = new S3({
     accessKeyId: s3Credentials.accessKey,
     secretAccessKey: s3Credentials.secretKey,

@@ -13,6 +13,7 @@ Package.on_test(function (api) {
   api.use('test-helpers');
   api.use('showdown');
   api.use('minimongo');
+  api.use('deps');
 
   api.use('templating', 'client');
   api.add_files([
