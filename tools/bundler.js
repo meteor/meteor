@@ -1493,10 +1493,12 @@ var writeTargetToPath = function (name, target, outputPath, options) {
 
   builder.complete();
 
+  _.extend(options.cordovaDependencies, target.cordovaDependencies);
+
   return {
     name: name,
     arch: target.mostCompatibleArch(),
-    path: path.join('programs', name, relControlFilePath)
+    path: path.join('programs', name, relControlFilePath),
   };
 };
 
@@ -1596,7 +1598,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
         builtBy: options.builtBy,
         controlProgram: options.controlProgram,
         releaseName: options.releaseName,
-        getRelativeTargetPath: options.getRelativeTargetPath
+        getRelativeTargetPath: options.getRelativeTargetPath,
+        cordovaDependencies: json.cordovaDependencies
       }));
     });
 

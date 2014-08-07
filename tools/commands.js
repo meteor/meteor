@@ -568,7 +568,10 @@ main.registerCommand({
     directory: { type: Boolean },
     architecture: { type: String },
     // Undocumented
-    'for-deploy': { type: Boolean }
+    'for-deploy': { type: Boolean },
+    settings: { type: String}, // XXX document
+    ios: { type: String },
+    android: { type: String },
   }
 }, function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
@@ -577,7 +580,7 @@ main.registerCommand({
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
-  // XXX name the root directory in t he bundle based on the basename
+  // XXX name the root directory in the bundle based on the basename
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
@@ -593,9 +596,26 @@ main.registerCommand({
       "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
     process.exit(1);
   }
+
   var bundleArch =  options.architecture || archinfo.host();
 
-  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
+  var localPath = path.join(options.appDir, '.meteor', 'local');
+
+  // XXX ensure that the mobile target has been added as a platform
+  var isMobile = options.ios || options.android;
+  if (isMobile) {
+    var cordovaSettings = {};
+    if (options.settings) {
+      cordovaSettings =
+        JSON.parse(fs.readFileSync(options.settings), "utf8").cordova;
+    }
+    cordova.buildCordova(localPath, {
+      appName: path.basename(options.appDir),
+      settings: cordovaSettings
+    });
+  }
+
+  var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
   var bundlePath = options['directory'] ?
       outputPath : path.join(buildDir, 'bundle');
@@ -627,6 +647,19 @@ main.registerCommand({
     process.stderr.write("Errors prevented bundling:\n");
     process.stderr.write(bundleResult.errors.formatMessages());
     return 1;
+  }
+
+  // Copy over the Cordova builds after we bundle so that they are not included
+  // in the main bundle.
+  if (options.ios) {
+    var iosPath = path.join(localPath, 'cordova-build', 'platforms', 'ios');
+    files.cp_r(iosPath, options.ios);
+  }
+
+  if (options.android) {
+    var androidPath =
+      path.join(localPath, 'cordova-build', 'platforms', 'android');
+    files.cp_r(androidPath, options.android);
   }
 
   if (!options['directory']) {

@@ -84,10 +84,8 @@ var fetchCordovaPluginFromShaUrl =
 };
 
 var checkIsValidPlugin = function (name) {
-  var pluginName = name.split('@')[0];
-  var pluginHash = {
-    pluginName: name.split('@')[1]
-  };
+  var pluginHash = {};
+  pluginHash[name.split('@')[0]] = name.split('@')[1];
 
   // check that every plugin is specifying either an exact constraint or a
   // tarball url with sha
@@ -114,6 +112,10 @@ var getBundle = function (bundlePath, webArchs) {
   return bundleResult;
 };
 
+var localPluginsPathFromCordovaPath = function (cordovaPath) {
+  return path.join(cordovaPath, 'local-plugins');
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // ensureCordova
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +124,7 @@ var getBundle = function (bundlePath, webArchs) {
 // and platofrms.
 cordova.ensureCordovaProject = function (localPath, appName) {
   var cordovaPath = path.join(localPath, 'cordova-build');
-  var localPluginsPath = path.join(cordovaPath, 'local-plugins');
+  var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
   if (! fs.existsSync(cordovaPath)) {
     try {
       execFileSync('cordova', ['create', path.basename(cordovaPath),
@@ -174,10 +176,8 @@ cordova.ensureCordovaPlatforms = function (localPath) {
 cordova.ensureCordovaPlugins = function (localPath, options) {
   options = options || {};
 
-  var plugins = {};
-  if (options.packagePlugins) {
-    plugins = options.packagePlugins;
-  } else {
+  var plugins = options.packagePlugins;
+  if (! plugins) {
     // Bundle to gather the plugin dependencies from packages.
     // XXX slow - perhaps we should only do this lazily
     // XXX code copied from buildCordova
@@ -187,11 +187,11 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
       getBundle(bundlePath, [webArchName]).starManifest.cordovaDependencies;
     files.rm_recursive(bundlePath);
   }
-
   // XXX the project-level cordova plugins deps override the package-level ones
   _.extend(plugins, project.getCordovaPlugins());
 
   var cordovaPath = path.join(localPath, 'cordova-build');
+  var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
   var newSettings = options.settings || {};
 
   // XXX compare the latest used sha's with the currently required sha's for
@@ -265,9 +265,11 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
 // Build a Cordova project, creating a Cordova project if necessary.
 cordova.buildCordova = function (localPath, options) {
   var webArchName = "web.cordova";
-  var bundlePath = path.join(localPath, 'build-tar');
-  var cordovaPath = path.join(localPath, 'cordova-build');
+
+  var bundlePath = path.join(localPath, 'build-cordova-temp');
   var programPath = path.join(bundlePath, 'programs');
+
+  var cordovaPath = path.join(localPath, 'cordova-build');
   var wwwPath = path.join(cordovaPath, "www");
   var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
@@ -325,7 +327,7 @@ cordova.execCordovaOnPlatform = function (localPath, platformName, options) {
 
 // packages - list of strings
 cordova.filterPackages = function (packages) {
-  // We hard-code the 'cordova' and 'platform' namespaces
+// We hard-code the 'cordova' and 'platform' namespaces
   var ret = {
     rest: [],
     platforms: [],
@@ -334,7 +336,7 @@ cordova.filterPackages = function (packages) {
 
   _.each(packages, function (p) {
     var namespace = p.split(':')[0];
-    var name = p.split(':')[1];
+    var name = p.split(':').slice(1).join(':');
     if (namespace === 'cordova') {
       checkIsValidPlugin(name);
       ret.plugins.push(name);

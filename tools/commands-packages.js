@@ -1600,6 +1600,29 @@ main.registerCommand({
   project.removeCordovaPlatforms(cordovaPlatforms);
   project.removeCordovaPlugins(cordovaPlugins);
 
+  if (cordovaPlugins.length || cordovaPlatforms.length) {
+    var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
+
+    if (cordovaPlatforms.length) {
+      cordova.ensureCordovaPlatforms(localPath);
+    }
+    if (cordovaPlugins.length) {
+      cordova.ensureCordovaPlugins(localPath);
+    }
+  }
+
+  _.each(cordovaPlatforms, function (platform) {
+    process.stdout.write("removed platform " + platform + "\n");
+  });
+
+  _.each(cordovaPlugins, function (plugin) {
+    process.stdout.write("removed cordova plugin " + plugin + "\n");
+  });
+
   var args = filteredPackages.rest;
 
   if (_.isEmpty(args))

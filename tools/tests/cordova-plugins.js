@@ -134,11 +134,11 @@ selftest.define("add cordova plugins", function () {
   run = s.run("remove", "standard-app-packages");
   run.match("removed");
 
-  run = s.run("run", "firefoxos");
+  run = s.run("run", "android");
   run.matchErr("not added to the project");
   run.matchErr("meteor add platform:");
 
-  run = s.run("add", "platform:firefoxos");
+  run = s.run("add", "platform:android");
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
@@ -155,18 +155,23 @@ selftest.define("add cordova plugins", function () {
   // XXX message about a plugin?
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
-  run = s.run("run", "firefoxos");
-  run.waitSecs(20);
-  run.match("app");
+  run = s.run("bundle", "../a", "--android", "../android", "--directory", "--debug",
+    "--settings", "settings.json");
+  run.waitSecs(30);
+  run.expectExit(0);
 
   checkCordovaPlugins(s,
     ["org.apache.cordova.camera",
-     "com.phonegap.plugins.facebookconnect",
-     "org.apache.cordova.file"]);
+     "com.phonegap.plugins.facebookconnect" ]);
 
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
+
+  run = s.run("bundle", "../a", "--android", "../android", "--directory", "--debug",
+    "--settings", "settings.json");
+  run.waitSecs(30);
+  run.expectExit(0);
 
   checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
 });

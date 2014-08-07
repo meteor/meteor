@@ -150,6 +150,9 @@ Options:
   --debug      bundle in debug mode (don't minify, etc)
   --directory  output a directory (rather than a tarball). If the output
                location exists, it will be recursively deleted first.
+  --ios        XXX
+  --android    XXX
+  --settings   XXX
 
 
 >>> mongo

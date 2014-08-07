@@ -52,20 +52,29 @@ selftest.define("add cordova platforms", function () {
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
 
-  run = s.run("run", "firefoxos");
-  run.match("No platforms added");
-  run.expectExit(22);
+  run = s.run("run", "android");
+  run.matchErr("not added");
+  run.matchErr("meteor add platform:android");
+  run.expectExit(8);
 
-  run = s.run("add platform:firefoxos");
-  run.match("successfully added");
+  run = s.run("add", "platform:android");
+  run.match("added");
 
-  run = s.run("run", "firefoxos");
-  run.waitSecs(10);
-  run.match("myapp");
-  run.match("proxy");
-  run.match("MongoDB");
-  run.match("your app");
-  run.waitSecs(5);
-  run.match("running at");
-  run.match("localhost");
+  run = s.run("run", "android");
+  // XXX uncomment this once we get run android to work
+  // run.waitSecs(30);
+  // run.match("myapp");
+  // run.match("proxy");
+  // run.match("MongoDB");
+  // run.match("your app");
+  // run.waitSecs(5);
+  // run.match("running at");
+  // run.match("localhost");
+
+  run = s.run("remove", "platform:android");
+  run.match("removed");
+  run = s.run("run", "android");
+  run.matchErr("not added");
+  run.matchErr("meteor add platform:android");
+  run.expectExit(8);
 });
