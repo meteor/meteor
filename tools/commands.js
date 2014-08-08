@@ -164,6 +164,7 @@ main.registerCommand({
 
   var loadPackages = function (packagesToLoad, loader) {
     buildmessage.assertInCapture();
+    loader.downloadMissingPackages();
     _.each(packagesToLoad, function (name) {
       // Calling getPackage on the loader will return a unipackage object, which
       // means that the package will be compiled/downloaded. That we throw the
@@ -191,7 +192,6 @@ main.registerCommand({
     // Using a release? Get all the packages in the release.
     if (release.current.isProperRelease()) {
       var releasePackages = release.current.getPackages();
-      tropohouse.default.downloadMissingPackages(releasePackages);
       loadPackages(
         _.keys(releasePackages),
         new packageLoader.PackageLoader({versions: releasePackages}));
