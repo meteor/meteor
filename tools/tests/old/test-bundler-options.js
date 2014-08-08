@@ -29,9 +29,22 @@ var setAppDir = function (appDir) {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  catalog.complete.initialize({
-    localPackageDirs: localPackageDirs
+  doOrThrow(function () {
+    catalog.complete.initialize({
+      localPackageDirs: localPackageDirs
+    });
   });
+};
+
+var doOrThrow = function (f) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+  return ret;
 };
 
 var runTest = function () {
@@ -143,7 +156,9 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  doOrThrow(function () {
+    release._setCurrentForOldTest();
+  });
 
   try {
     runTest();

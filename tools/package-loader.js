@@ -58,28 +58,6 @@ _.extend(exports.PackageLoader.prototype, {
       name, loadPath, self.constraintSolverOpts);
   },
 
-  containsPlugins: function (name) {
-    var self = this;
-
-    // We don't want to ever look at the catalog in the uniload case. We
-    // shouldn't ever care about plugins anyway, since uniload should never
-    // compile real packages from source (it sorta compiles the wrapper "load"
-    // package, which should avoid calling this function).
-    if (self.uniloadDir)
-      throw Error("called containsPlugins for uniload?");
-
-    var versionRecord;
-    if (self.versions === null) {
-      versionRecord = catalog.complete.getLatestVersion(name);
-    } else if (_.has(self.versions, name)) {
-      versionRecord = catalog.complete.getVersion(name, self.versions[name]);
-    } else {
-      throw new Error("no version specified for package " + name);
-    }
-
-    return versionRecord.containsPlugins;
-  },
-
   // As getPackage, but returns the path of the package that would be
   // loaded rather than loading the package, and does not take any
   // options. Returns null if the package is not available.

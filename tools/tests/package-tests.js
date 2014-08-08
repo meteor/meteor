@@ -440,7 +440,7 @@ selftest.define("release track defaults to METEOR-CORE",
     var run = s.run("publish", "--create");
     run.waitSecs(20);
     run.matchErr("Unknown release METEOR-CORE@" + releaseVersion);
-    run.expectExit(8);
+    run.expectExit(1);
   });
 });
 

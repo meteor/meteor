@@ -137,7 +137,7 @@ var determineBuildTimeDependencies = function (packageSource,
                                                constraintSolverOpts) {
   var ret = {};
   constraintSolverOpts = constraintSolverOpts || {};
-  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
+  buildmessage.assertInCapture();
 
   // There are some special cases where we know that the package has no source
   // files, which means it can't have any interesting build-time
@@ -898,6 +898,7 @@ compiler.compile = function (packageSource, options) {
 // so any dependencies that contains plugins have real versions in the
 // catalog already. Still, this seems very brittle and we should fix it.
 var getPluginProviders = function (versions) {
+  buildmessage.assertInCapture();
   var result = {};
   _.each(versions, function (version, name) {
     // Direct dependencies only create a build-order constraint if
@@ -918,7 +919,7 @@ var getPluginProviders = function (versions) {
 compiler.getBuildOrderConstraints = function (
     packageSource, constraintSolverOpts) {
   constraintSolverOpts = constraintSolverOpts || {};
-  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
+  buildmessage.assertInCapture();
 
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {

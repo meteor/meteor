@@ -19,12 +19,12 @@ var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var packageCache = require('./package-cache.js');
-var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+var commandsPackages = require('./commands-packages.js');
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -60,6 +60,7 @@ var hostedWithGalaxy = function (site) {
 // version record for that package.
 var getLocalPackages = function () {
   var ret = {};
+  buildmessage.assertInCapture();
 
   var names = catalog.complete.getAllPackageNames();
   _.each(names, function (name) {
@@ -70,6 +71,7 @@ var getLocalPackages = function () {
 
   return ret;
 };
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -135,75 +137,6 @@ main.registerCommand({
   name: '--requires-release',
   requiresRelease: true
 }, function (options) {
-  return 0;
-});
-
-// Internal use only. Makes sure that your Meteor install is totally good to go
-// (is "airplane safe"). Specifically, it:
-//    - Builds all local packages (including their npm dependencies)
-//    - Ensures that all packages in your current release are downloaded
-//    - Ensures that all packages used by your app (if any) are downloaded
-// (It also ensures you have the dev bundle downloaded, just like every command
-// in a checkout.)
-//
-// The use case is, for example, cloning an app from github, running this
-// command, then getting on an airplane.
-//
-// This does NOT guarantee a *re*build of all local packages (though it will
-// download any new dependencies). If you want to rebuild all local packages,
-// call meteor rebuild. That said, rebuild should only be necessary if there's a
-// bug in the build tool... otherwise, packages should be rebuilt whenever
-// necessary!
-main.registerCommand({
-  name: '--get-ready'
-}, function (options) {
-  // It is not strictly needed, but it is thematically a good idea to refresh
-  // the official catalog when we call get-ready, since it is an
-  // internet-requiring action.
-  catalog.official.refresh();
-
-  var loadPackages = function (packagesToLoad, loader) {
-    buildmessage.assertInCapture();
-    loader.downloadMissingPackages();
-    _.each(packagesToLoad, function (name) {
-      // Calling getPackage on the loader will return a unipackage object, which
-      // means that the package will be compiled/downloaded. That we throw the
-      // package variable away afterwards is immaterial.
-      loader.getPackage(name);
-    });
-  };
-
-  var messages = buildmessage.capture({
-    title: 'getting packages ready'
-  }, function () {
-    // First, build all accessible *local* packages, whether or not this app
-    // uses them.  Use the "all packages are local" loader.
-    loadPackages(catalog.complete.getLocalPackageNames(),
-                 new packageLoader.PackageLoader({versions: null}));
-
-    // In an app? Get the list of packages used by this app. Calling getVersions
-    // on the project will ensureDepsUpToDate which will ensure that all builds
-    // of everything we need from versions have been downloaded. (Calling
-    // buildPackages may be redundant, but can't hurt.)
-    if (options.appDir) {
-      loadPackages(_.keys(project.getVersions()), project.getPackageLoader());
-    }
-
-    // Using a release? Get all the packages in the release.
-    if (release.current.isProperRelease()) {
-      var releasePackages = release.current.getPackages();
-      loadPackages(
-        _.keys(releasePackages),
-        new packageLoader.PackageLoader({versions: releasePackages}));
-    }
-  });
-
-  if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
-    return 1;
-  };
-
-  console.log("You are ready!");
   return 0;
 });
 
@@ -343,7 +276,9 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = catalog.complete.getDefaultReleaseVersion();
+        var rel = commandsPackages.doOrDie(function () {
+          return catalog.complete.getDefaultReleaseVersion();
+        });
         var relString = rel.track + "@" + rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
@@ -381,10 +316,12 @@ main.registerCommand({
   // (In particular, it's not sufficient to create the new app with
   // this version of the tools, and then stamp on the correct release
   // at the end.)
-  if (! release.current.isCheckout() &&
-      release.current.name !== release.latestDownloaded() &&
-      ! release.forced) {
-    throw new main.SpringboardToLatestRelease;
+  if (! release.current.isCheckout() && !release.forced) {
+    var needToSpringboard = commandsPackages.doOrDie(function () {
+      return release.current.name !== release.latestDownloaded();
+    });
+    if (needToSpringboard)
+      throw new main.SpringboardToLatestRelease;
   }
 
   var exampleDir = path.join(__dirname, '..', 'examples');
@@ -532,7 +469,7 @@ main.registerCommand({
     process.stderr.write("Invalid architecture: " + options.architecture + "\n");
     process.stderr.write(
       "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
-    process.exit(1);
+    return 1;
   }
   var bundleArch =  options.architecture || archinfo.host();
 
@@ -979,7 +916,9 @@ main.registerCommand({
   if (options.args.length === 0) {
     // Only test local packages if no package is specified.
     // XXX should this use the new getLocalPackageNames?
-    var packageList = getLocalPackages();
+    var packageList = commandsPackages.doOrDie(function () {
+      return getLocalPackages();
+    });
     if (! packageList) {
       // Couldn't load the package list, probably because some package
       // has a parse error. Bail out -- this kind of sucks; we would
@@ -1071,12 +1010,18 @@ main.registerCommand({
   // compute them for us. This means that right now, we are testing all packages
   // as they work together.
   var tests = [];
-  _.each(testPackages, function(name) {
-    var versionRecord = catalog.complete.getLatestVersion(name);
-    if (versionRecord && versionRecord.testName) {
-      tests.push(versionRecord.testName);
-    }
+  var messages = buildmessage.capture(function () {
+    _.each(testPackages, function(name) {
+      var versionRecord = catalog.complete.getLatestVersion(name);
+      if (versionRecord && versionRecord.testName) {
+        tests.push(versionRecord.testName);
+      }
+    });
   });
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   project.forceEditPackages(tests, 'add');
 
@@ -1113,10 +1058,6 @@ main.registerCommand({
       recordPackageUsage: false
     });
   }
-
-  _.each(localPackageNames, function (name) {
-    catalog.complete.removeLocalPackage(name);
-  });
 
   return ret;
 });
@@ -1202,212 +1143,6 @@ main.registerCommand({
   name: 'whoami'
 }, function (options) {
   return auth.whoAmICommand(options);
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// admin make-bootstrap-tarballs
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'admin make-bootstrap-tarballs',
-  minArgs: 2,
-  maxArgs: 2,
-  hidden: true,
-}, function (options) {
-  var releaseNameAndVersion = options.args[0];
-  var outputDirectory = options.args[1];
-
-  // In this function, we want to use the official catalog everywhere, because
-  // we assume that all packages have been published (along with the release
-  // obviously) and we want to be sure to only bundle the published versions.
-  catalog.official.refresh();
-
-  var parsed = utils.splitConstraint(releaseNameAndVersion);
-  if (!parsed.constraint)
-    throw new main.ShowUsage;
-
-  var release = catalog.official.getReleaseVersion(parsed.package,
-                                                parsed.constraint);
-  if (!release) {
-    // XXX this could also mean package unknown.
-    process.stderr.write('Release unknown: ' + releaseNameAndVersion + '\n');
-    return 1;
-  }
-
-  var toolPkg = release.tool && utils.splitConstraint(release.tool);
-  if (! (toolPkg && toolPkg.constraint))
-    throw new Error("bad tool in release: " + toolPkg);
-  var toolPkgBuilds = catalog.official.getAllBuilds(
-    toolPkg.package, toolPkg.constraint);
-  if (!toolPkgBuilds) {
-    // XXX this could also mean package unknown.
-    process.stderr.write('Tool version unknown: ' + release.tool + '\n');
-    return 1;
-  }
-  if (!toolPkgBuilds.length) {
-    process.stderr.write('Tool version has no builds: ' + release.tool + '\n');
-    return 1;
-  }
-
-  // XXX check to make sure this is the three arches that we want? it's easier
-  // during 0.9.0 development to allow it to just decide "ok, i just want to
-  // build the OSX tarball" though.
-  var buildArches = _.pluck(toolPkgBuilds, 'buildArchitectures');
-  var osArches = _.map(buildArches, function (buildArch) {
-    var subArches = buildArch.split('+');
-    var osArches = _.filter(subArches, function (subArch) {
-      return subArch.substr(0, 3) === 'os.';
-    });
-    if (osArches.length !== 1) {
-      throw Error("build architecture " + buildArch + "  lacks unique os.*");
-    }
-    return osArches[0];
-  });
-
-  process.stderr.write(
-    'Building bootstrap tarballs for architectures ' +
-      osArches.join(', ') + '\n');
-  // Before downloading anything, check that the catalog contains everything we
-  // need for the OSes that the tool is built for.
-  var messages = buildmessage.capture(function () {
-    _.each(osArches, function (osArch) {
-      _.each(release.packages, function (pkgVersion, pkgName) {
-        buildmessage.enterJob({
-          title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
-        }, function () {
-          if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
-            buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
-                               " for " + osArch);
-          }
-        });
-      });
-    });
-  });
-
-  if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
-    return 1;
-  };
-
-  files.mkdir_p(outputDirectory);
-
-  // Get a copy of the data.json.
-  var dataTmpdir = files.mkdtemp();
-  var tmpDataJson = path.join(dataTmpdir, 'data.json');
-
-  var savedData = packageClient.updateServerPackageData(null, {
-    packageStorageFile: tmpDataJson
-  }).data;
-  if (!savedData) {
-    // will have already printed an error
-    process.exit(2);
-  }
-
-  _.each(osArches, function (osArch) {
-    var tmpdir = files.mkdtemp();
-    // We're going to build and tar up a tropohouse in a temporary directory; we
-    // don't want to use any of our local packages, so we use catalog.official
-    // instead of catalog.
-    // XXX update to '.meteor' when we combine houses
-    var tmpTropo = new tropohouse.Tropohouse(
-      path.join(tmpdir, '.meteor'), catalog.official);
-    var messages = buildmessage.capture(function () {
-      buildmessage.enterJob({
-        title: "downloading tool package " + toolPkg.package + "@" +
-          toolPkg.constraint
-      }, function () {
-        tmpTropo.maybeDownloadPackageForArchitectures({
-          packageName: toolPkg.package,
-          version: toolPkg.constraint,
-          architectures: [osArch]  // XXX 'web.browser' too?
-        });
-      });
-      _.each(release.packages, function (pkgVersion, pkgName) {
-        buildmessage.enterJob({
-          title: "downloading package " + pkgName + "@" + pkgVersion
-        }, function () {
-          tmpTropo.maybeDownloadPackageForArchitectures({
-            packageName: pkgName,
-            version: pkgVersion,
-            architectures: [osArch]  // XXX 'web.browser' too?
-          });
-        });
-      });
-    });
-    if (messages.hasMessages()) {
-      process.stderr.write("\n" + messages.formatMessages());
-      return 1;
-    }
-
-    // Install the data.json file we synced earlier.
-    files.copyFile(tmpDataJson, config.getPackageStorage(tmpTropo));
-
-    // Create the top-level 'meteor' symlink, which links to the latest tool's
-    // meteor shell script.
-    var toolUnipackagePath =
-          tmpTropo.packagePath(toolPkg.package, toolPkg.constraint);
-    var toolUnipackage = new unipackage.Unipackage;
-    toolUnipackage.initFromPath(toolPkg.package, toolUnipackagePath);
-    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk, {arch: osArch});
-    if (!toolRecord)
-      throw Error("missing tool for " + osArch);
-    fs.symlinkSync(
-      path.join(
-        tmpTropo.packagePath(toolPkg.package, toolPkg.constraint, true),
-        toolRecord.path,
-        'meteor'),
-      path.join(tmpTropo.root, 'meteor'));
-
-    files.createTarball(
-      tmpTropo.root,
-      path.join(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
-  });
-
-  return 0;
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// admin set-banners
-///////////////////////////////////////////////////////////////////////////////
-
-// We will document how to set banners on things in a later release.
-main.registerCommand({
-  name: 'admin set-banners',
-  minArgs: 1,
-  maxArgs: 1,
-  hidden: true,
-}, function (options) {
-  var bannersFile = options.args[0];
-  try {
-    var bannersData = fs.readFileSync(bannersFile, 'utf8');
-    bannersData = JSON.parse(bannersData);
-  } catch (e) {
-    process.stderr.write("Could not parse banners file: ");
-    process.stderr.write(e.message + "\n");
-    return 1;
-  }
-  if (!bannersData.track) {
-    process.stderr.write("Banners file should have a 'track' key.\n");
-    return 1;
-  }
-  if (!bannersData.banners) {
-    process.stderr.write("Banners file should have a 'banners' key.\n");
-    return 1;
-  }
-
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-
-  conn.call('setBannersOnReleases', bannersData.track,
-            bannersData.banners);
-
-  // Refresh afterwards.
-  catalog.official.refresh();
-  return 0;
 });
 
 ///////////////////////////////////////////////////////////////////////////////

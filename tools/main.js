@@ -76,6 +76,14 @@ var messages = {};
 // usage information.
 main.ShowUsage = function () {};
 
+// Exception to throw from a helper function inside a command which is identical
+// to returning the given exit code from the command.  ONLY USE THIS IN HELPERS
+// THAT ARE ONLY CALLED DIRECTLY FROM COMMANDS! DON'T BE LAZY AND PUT THROW OF
+// THIS IN RANDOM LIBRARY CODE!
+main.ExitWithCode = function (code) {
+  this.code = code;
+};
+
 // Exception to throw to skip the process.exit call.
 main.WaitForExit = function () {};
 
@@ -771,7 +779,14 @@ Fiber(function () {
     } else {
       // Run outside an app dir with no --release flag. Use the latest
       // release we know about (in the default track).
-      releaseName = release.latestDownloaded();
+      var messages = buildmessage.capture(function () {
+        releaseName = release.latestDownloaded();
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write("=> Errors while determining latest release:\n" +
+                             messages.formatMessages());
+        process.exit(1);
+      }
     }
   }
 
@@ -789,7 +804,20 @@ Fiber(function () {
     }
 
     try {
-      var rel = release.load(releaseName);
+      var rel;
+      var messages = buildmessage.capture(function () {
+        rel = release.load(releaseName);
+      });
+      if (messages.hasMessages()) {
+        // XXX The errors that trigger this are likely things like failure to
+        // load livedata when trying to refresh, or maybe failure to build some
+        // local packages, or something. They probably aren't "release doesn't
+        // exist"? But who knows?
+        process.stderr.write("=> Errors while loading release:\n" +
+                             messages.formatMessages());
+        process.exit(1);
+      }
+
     } catch (e) {
       var name = releaseName;
       if (e instanceof files.OfflineError) {
@@ -1115,8 +1143,15 @@ commandName + ": You're not in a Meteor project directory.\n" +
     // Commands that require you to be in a package directory add that package
     // as a local package to the catalog. Other random commands don't (but if we
     // see a reason for them to, we can change this rule).
-    catalog.complete.addLocalPackage(path.basename(options.packageDir),
-                                     options.packageDir);
+    messages = buildmessage.capture(function () {
+      catalog.complete.addLocalPackage(path.basename(options.packageDir),
+                                       options.packageDir);
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write("=> Errors while scanning current package:\n\n");
+      process.stderr.write(messages.formatMessages());
+      process.exit(1);
+    }
   }
 
   if (command.requiresRelease && ! release.current) {
@@ -1148,24 +1183,35 @@ commandName + ": You're not in a Meteor project directory.\n" +
     var ret = command.func(options);
   } catch (e) {
     if (e === main.ShowUsage || e === main.WaitForExit ||
-        e === main.SpringboardToLatestRelease)
+        e === main.SpringboardToLatestRelease ||
+        e === main.WaitForExit) {
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
-    if (e instanceof main.ShowUsage) {
+    } else if (e instanceof main.ShowUsage) {
       process.stderr.write(longHelp(commandName) + "\n");
       process.exit(1);
-    }
-    if (e instanceof main.SpringboardToLatestRelease) {
+    } else if (e instanceof main.SpringboardToLatestRelease) {
       // Load the latest release's metadata so that we can figure out
       // the tools version that it uses. We should only do this if
       // we know there is some latest release on this track.
-      var latestRelease = release.load(release.latestDownloaded(e.track));
+      var latestRelease;
+      var messages = buildmessage.capture(function () {
+        latestRelease = release.load(release.latestDownloaded(e.track));
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write("=> Errors while loading latest release:\n\n");
+        process.stderr.write(messages.formatMessages());
+        process.exit(1);
+      }
       springboard(latestRelease, latestRelease.name);
       // (does not return)
-    }
-    if (e instanceof main.WaitForExit)
+    } else if (e instanceof main.WaitForExit) {
       return;
-    throw e;
+    } else if (e instanceof main.ExitWithCode) {
+      process.exit(e.code);
+    } else {
+      throw e;
+    }
   }
 
   // Exit. (We will not get here if the command threw an exception

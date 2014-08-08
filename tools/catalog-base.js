@@ -105,6 +105,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // the inevitable rather than slowing down normal operations)
   _recordOrRefresh: function (recordFinder) {
     var self = this;
+    buildmessage.assertInCapture();
     var record = recordFinder();
     // If we cannot find it maybe refresh.
     if (!record) {
@@ -124,6 +125,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
     return self._recordOrRefresh(function () {
       return _.findWhere(self.releaseTracks, { name: name });
@@ -138,6 +140,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // serious refactoring.
   getReleaseVersion: function (track, version, notInitialized) {
     var self = this;
+    buildmessage.assertInCapture();
     if (!notInitialized) self._requireInitialized();
     return self._recordOrRefresh(function () {
       return _.findWhere(self.releaseVersions,
@@ -186,6 +189,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // package, or null if there is no such package.
   getPackage: function (name) {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
     return self._recordOrRefresh(function () {
       return _.findWhere(self.packages, { name: name });
@@ -213,6 +217,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getVersion: function (name, version) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
 
     var lookupVersion = function () {
       return _.has(self.versions, name) &&
@@ -250,6 +255,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getLatestVersion: function (name) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
 
     var versions = self.getSortedVersions(name);
     if (versions.length === 0)
@@ -263,6 +269,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getBuildsForArches: function (name, version, arches) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
 
     var versionInfo = self.getVersion(name, version);
     if (! versionInfo)
@@ -298,6 +305,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getBuildWithPreciseBuildArchitectures: function (versionRecord,
                                                    buildArchitectures) {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
 
     return self._recordOrRefresh(function () {
@@ -310,6 +318,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   getAllBuilds: function (name, version) {
     var self = this;
     self._requireInitialized();
+    buildmessage.assertInCapture();
 
     var versionRecord = self.getVersion(name, version);
     if (!versionRecord)
@@ -324,6 +333,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   // version).
   getDefaultReleaseVersion: function (track) {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
 
     if (!track)
