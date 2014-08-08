@@ -72,6 +72,7 @@ _.extend(PackageCache.prototype, {
   loadPackageAtPath: function (name, loadPath, constraintSolverOpts) {
     var self = this;
     buildmessage.assertInCapture();
+    constraintSolverOpts = constraintSolverOpts || {};
 
     // We need to build and load both the test and normal package, which,
     // frequently means 2 packages per directory/loadPath. Rather than
