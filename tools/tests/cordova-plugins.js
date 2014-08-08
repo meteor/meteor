@@ -69,6 +69,7 @@ var checkUserPlugins = function(sand, plugins) {
     depend[plugins] = split[1];
   });
   var i = 0;
+
   _.each(plugins, function (plugins) {
     var split = plugins.split('@');
     if (split.length > 1) {
@@ -155,8 +156,8 @@ selftest.define("add cordova plugins", function () {
   // XXX message about a plugin?
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
-  run = s.run("bundle", "../a", "--android", "../android", "--directory", "--debug",
-    "--settings", "settings.json");
+  run = s.run("bundle", "../a", "--android-path", "../android",
+    "--directory", "--debug", "--settings", "settings.json");
   run.waitSecs(30);
   run.expectExit(0);
 
@@ -168,8 +169,8 @@ selftest.define("add cordova plugins", function () {
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
-  run = s.run("bundle", "../a", "--android", "../android", "--directory", "--debug",
-    "--settings", "settings.json");
+  run = s.run("bundle", "../a", "--android-path", "../android",
+    "--directory", "--debug", "--settings", "settings.json");
   run.waitSecs(30);
   run.expectExit(0);
 

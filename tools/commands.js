@@ -570,8 +570,8 @@ main.registerCommand({
     // Undocumented
     'for-deploy': { type: Boolean },
     settings: { type: String}, // XXX document
-    ios: { type: String },
-    android: { type: String },
+    'ios-path': { type: String },
+    'android-path': { type: String },
   }
 }, function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
@@ -602,7 +602,7 @@ main.registerCommand({
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
   // XXX ensure that the mobile target has been added as a platform
-  var isMobile = options.ios || options.android;
+  var isMobile = options['ios-path'] || options['android-path'];
   if (isMobile) {
     var cordovaSettings = {};
     if (options.settings) {
@@ -651,15 +651,15 @@ main.registerCommand({
 
   // Copy over the Cordova builds after we bundle so that they are not included
   // in the main bundle.
-  if (options.ios) {
+  if (options['ios-path']) {
     var iosPath = path.join(localPath, 'cordova-build', 'platforms', 'ios');
-    files.cp_r(iosPath, options.ios);
+    files.cp_r(iosPath, options['ios-path']);
   }
 
-  if (options.android) {
+  if (options['android-path']) {
     var androidPath =
       path.join(localPath, 'cordova-build', 'platforms', 'android');
-    files.cp_r(androidPath, options.android);
+    files.cp_r(androidPath, options['android-path']);
   }
 
   if (!options['directory']) {
