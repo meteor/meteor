@@ -69,7 +69,7 @@ _.extend(PackageCache.prototype, {
   // on disk, you won't see the changes. To flush the package cache
   // and force all of the packages to be reloaded the next time
   // loadPackageAtPath() is called for them, see refresh().
-  loadPackageAtPath: function (name, loadPath) {
+  loadPackageAtPath: function (name, loadPath, constraintSolverOpts) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -179,7 +179,9 @@ _.extend(PackageCache.prototype, {
       // We don't do that anymore and at the moment, we rely on catalog to
       // initalize ahead of us and swoop in and build all of the local packages
       // informed by a topological sort
-      var unip = compiler.compile(packageSource).unipackage;
+      var unip = compiler.compile(packageSource, {
+        ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
+      }).unipackage;
       self.loadedPackages[key] = {
         pkg: unip,
         sourceDir: null,

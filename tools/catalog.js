@@ -678,7 +678,9 @@ _.extend(CompleteCatalog.prototype, {
         title: "building package `" + name + "`",
         rootPath: sourcePath
       }, function () {
-        unip = compiler.compile(self.packageSources[name]).unipackage;
+        unip = compiler.compile(self.packageSources[name], {
+          ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
+        }).unipackage;
         if (! buildmessage.jobHasMessages()) {
           // Save the build, for a fast load next time
           try {

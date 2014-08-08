@@ -17,7 +17,7 @@ exports.PackageLoader = function (options) {
   var self = this;
   self.versions = options.versions || null;
   self.uniloadDir = options.uniloadDir;
-  self.constraintSolverOpts= options.constraintSolverOpts;
+  self.constraintSolverOpts = options.constraintSolverOpts;
 };
 
 _.extend(exports.PackageLoader.prototype, {
@@ -53,7 +53,8 @@ _.extend(exports.PackageLoader.prototype, {
       return pkg;
     }
 
-    return packageCache.packageCache.loadPackageAtPath(name, loadPath);
+    return packageCache.packageCache.loadPackageAtPath(
+      name, loadPath, self.constraintSolverOpts);
   },
 
   containsPlugins: function (name) {

@@ -730,6 +730,8 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
 //    when we already have a resolved set of build-time dependencies and
 //    want to use that instead of resolving them again, e.g. when
 //    running 'meteor publish-for-arch'.
+//  - ignoreProjectDeps: if we should, in some specific context that
+//    glasser only half understands, ignore the current project deps
 //
 // Returns an object with keys:
 // - unipackage: the built Unipackage
@@ -745,7 +747,9 @@ compiler.compile = function (packageSource, options) {
   options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource, {
+    ignoreProjectDeps: options.ignoreProjectDeps
+  });
 
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
@@ -834,7 +838,10 @@ compiler.compile = function (packageSource, options) {
 
   // Compile unibuilds. Might use our plugins, so needs to happen second.
   var loader = new packageLoader.PackageLoader({
-    versions: buildTimeDeps.packageDependencies
+    versions: buildTimeDeps.packageDependencies,
+    constraintSolverOpts: {
+      ignoreProjectDeps: options.ignoreProjectDeps
+    }
   });
 
   _.each(packageSource.architectures, function (unibuild) {
