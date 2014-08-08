@@ -1051,7 +1051,7 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: ":3000" },
+    port: { type: String, short: "p", default: "localhost:3000" },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1064,6 +1064,9 @@ main.registerCommand({
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
     'driver-package': { type: String },
+
+    // Undocumented, sets the path of where the temp app should be created
+    'test-app-path': { type: String },
 
     // hard-coded options with all known Cordova platforms
     ios: { type: Boolean },
@@ -1103,7 +1106,8 @@ main.registerCommand({
   // package search path baked into release.current.catalog: we are
   // bundling the test runner app, but finding app packages from the
   // current app (if any).
-  var testRunnerAppDir = files.mkdtemp('meteor-test-run');
+  var testRunnerAppDir =
+    options['test-app-path'] || files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
 
   // We are going to operate in the special test project, so let's remap our
