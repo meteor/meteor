@@ -310,7 +310,7 @@ cordova.buildCordova = function (localPath, options) {
 
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
-cordova.execCordovaOnPlatform = function (localPath, platformName, options) {
+cordova.execCordovaOnPlatform = function (localPath, platformName) {
   var cordovaPath = path.join(localPath, 'cordova-build');
 
   // XXX error if an invalid platform

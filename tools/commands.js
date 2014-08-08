@@ -263,7 +263,7 @@ main.registerCommand({
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
-      runCordovaTargets(options.args,
+      runCordovaPlatforms(options.args,
         _.extend({}, options, { host: proxyHost, port: proxyPort }));
     } catch (err) {
       process.stderr.write(err.message + '\n');
@@ -318,15 +318,15 @@ main.registerCommand({
   });
 });
 
-var runCordovaTargets = function (targets, options) {
-  targets = _.uniq(targets);
+var buildCordovaPlatforms = function (platforms, options) {
+  platforms = _.uniq(platforms);
   var requestedPlatforms = [];
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
   // Find the required platforms.
   // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
-  _.each(targets, function (platformName) {
+  _.each(platforms, function (platformName) {
     var platform = platformName.split('-')[0];
     if (! _.contains(requestedPlatforms, platform)) {
       requestedPlatforms.push(platform);
@@ -355,9 +355,11 @@ var runCordovaTargets = function (targets, options) {
   };
 
   cordova.buildCordova(localPath, cordovaOptions);
+};
 
-  _.each(targets, function (platformName) {
-    cordova.execCordovaOnPlatform(localPath, platformName, cordovaOptions);
+var runCordovaPlatforms = function (platforms) {
+  _.each(platforms, function (platformName) {
+    cordova.execCordovaOnPlatform(localPath, platformName);
   });
 };
 
@@ -569,6 +571,7 @@ main.registerCommand({
     architecture: { type: String },
     // Undocumented
     'for-deploy': { type: Boolean },
+    port: { type: String, short: "p", default: "localhost:3000" },
     settings: { type: String}, // XXX document
     'ios-path': { type: String },
     'android-path': { type: String },
@@ -601,18 +604,31 @@ main.registerCommand({
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
-  // XXX ensure that the mobile target has been added as a platform
-  var isMobile = options['ios-path'] || options['android-path'];
-  if (isMobile) {
+  var mobilePlatforms = {};
+  if (options['ios-path'])
+    mobilePlatforms.ios = options['ios-path'];
+  if (options['android-path'])
+    mobilePlatforms.android = options['android-path'];
+
+  if (_.keys(mobilePlatforms).length) {
     var cordovaSettings = {};
-    if (options.settings) {
-      cordovaSettings =
-        JSON.parse(fs.readFileSync(options.settings), "utf8").cordova;
+
+    // XXX factor this out into a {type: host/port}?
+    var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
+    if (!portMatch) {
+      process.stderr.write(
+  "run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+  "port is a number. Try 'meteor help run' for help.\n");
+      return 1;
     }
-    cordova.buildCordova(localPath, {
+    var proxyHost = portMatch[1] || null;
+    var proxyPort = parseInt(portMatch[2]);
+
+    buildCordovaPlatforms(_.keys(mobilePlatforms), _.extend({}, options, {
       appName: path.basename(options.appDir),
-      settings: cordovaSettings
-    });
+      host: proxyHost,
+      port: proxyPort
+    }));
   }
 
   var buildDir = path.join(localPath, 'build_tar');
@@ -649,18 +665,13 @@ main.registerCommand({
     return 1;
   }
 
-  // Copy over the Cordova builds after we bundle so that they are not included
+  // Copy over the Cordova builds AFTER we bundle so that they are not included
   // in the main bundle.
-  if (options['ios-path']) {
-    var iosPath = path.join(localPath, 'cordova-build', 'platforms', 'ios');
-    files.cp_r(iosPath, options['ios-path']);
-  }
-
-  if (options['android-path']) {
-    var androidPath =
-      path.join(localPath, 'cordova-build', 'platforms', 'android');
-    files.cp_r(androidPath, options['android-path']);
-  }
+  _.each(mobilePlatforms, function (platformPath, platformName) {
+    var buildPath = path.join(localPath, 'cordova-build',
+                              'platforms', platformName);
+    files.cp_r(buildPath, platformPath);
+  });
 
   if (!options['directory']) {
     try {
@@ -1120,27 +1131,28 @@ main.registerCommand({
     'add');
 
   var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
-  var mobileTargets = [];
+  var mobilePlatforms = [];
 
   _.each(mobileOptions, function (option) {
     if (options[option])
-      mobileTargets.push(option);
+      mobilePlatforms.push(option);
   });
 
-  if (! _.isEmpty(mobileTargets)) {
+  if (! _.isEmpty(mobilePlatforms)) {
     var platforms =
-      _.map(mobileTargets, function (t) { return t.replace(/-device$/, ''); });
+      _.map(mobilePlatforms, function (t) { return t.replace(/-device$/, ''); });
 
     platforms = _.uniq(platforms);
 
     project.addCordovaPlatforms(platforms);
 
     try {
-      runCordovaTargets(mobileTargets, _.extend({}, options, {
+      buildCordovaPlatforms(mobilePlatforms, _.extend({}, options, {
         appDir: testRunnerAppDir,
         host: proxyHost,
         port: proxyPort
       }));
+      runCordovaPlatforms(mobilePlatforms);
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
