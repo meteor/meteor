@@ -6,6 +6,7 @@ var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
+var tropohouse = require('./tropohouse.js');
 
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
@@ -123,5 +124,16 @@ _.extend(exports.PackageLoader.prototype, {
 
     var pkg = self.getPackage(packageName, { throwOnError: true });
     return pkg.getUnibuildAtArch(arch);
+  },
+
+  downloadMissingPackages: function (options) {
+    var self = this;
+    options = options || {};
+    // We can only download packages if we know what versions they are.
+    if (!self.versions)
+      return;
+    tropohouse.default.downloadMissingPackages(self.versions, {
+      serverArch: options.serverArch
+    });
   }
 });

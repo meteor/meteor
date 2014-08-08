@@ -270,6 +270,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   var sources = [];
   var watchSet = inputSourceArch.watchSet.clone();
 
+  // Download whatever packages we may need for this compilation. (Since we're
+  // compiling, we're always targeting the host; we can cross-link but we can't
+  // cross-compile!)
+  packageLoader.downloadMissingPackages({serverArch: archinfo.host()});
+
   // *** Determine and load active plugins
 
   // XXX we used to include our own extensions only if we were the
@@ -762,6 +767,7 @@ compiler.compile = function (packageSource, options) {
       var loader = new packageLoader.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name]
       });
+      loader.downloadMissingPackages({serverArch: archinfo.host()});
 
       var buildResult = bundler.buildJsImage({
         name: info.name,
