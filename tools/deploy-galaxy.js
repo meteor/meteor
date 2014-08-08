@@ -49,7 +49,7 @@ var handleError = function (error, galaxyName, messages) {
     if (m)
       galaxyName = m[1];
 
-    process.stderr.write(galaxyName + ": connection failed");
+    process.stderr.write(galaxyName + ": connection failed\n");
     return 1;
   } else {
     throw error;
