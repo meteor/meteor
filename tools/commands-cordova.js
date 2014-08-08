@@ -177,7 +177,6 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
   options = options || {};
 
   var plugins = options.packagePlugins;
-  console.log(plugins);
   if (! plugins) {
     // Bundle to gather the plugin dependencies from packages.
     // XXX slow - perhaps we should only do this lazily
@@ -318,7 +317,8 @@ cordova.execCordovaOnPlatform = function (localPath, platformName, options) {
   var platform = platformName.split('-')[0];
   var isDevice = platformName.split('-')[1] === 'device';
 
-  var args = [ isDevice ? 'run' : 'emulate',
+  var args = [ 'run',
+               isDevice ? '--device' : '--emulator',
                platform ];
 
   // XXX error if not a Cordova project

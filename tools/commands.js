@@ -1051,7 +1051,7 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: Number, short: "p", default: 3000 },
+    port: { type: String, short: "p", default: ":3000" },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1072,9 +1072,23 @@ main.registerCommand({
     'android-device': { type: Boolean }
   }
 }, function (options) {
+  // XXX factor this out into a {type: host/port}?
+  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
+  if (!portMatch) {
+    process.stderr.write(
+"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+    return 1;
+  }
+  var proxyHost = portMatch[1] || null;
+  var proxyPort = parseInt(portMatch[2]);
+
   var testPackages = null;
   try {
-    testPackages = getPackagesForTest(options.args);
+    var packages = getPackagesForTest(options.args);
+    testPackages = packages.testPackages;
+    localPackages = packages.localPackages;
+    options.localPackageNames = packages.localPackages;
   } catch (err) {
     process.stderr.write('\n' + err.message);
     return 1;
@@ -1111,12 +1125,18 @@ main.registerCommand({
 
   if (! _.isEmpty(mobileTargets)) {
     var platforms =
-      _.filter(mobileTargets, function (t) { return !t.match(/-device$/); });
+      _.map(mobileTargets, function (t) { return t.replace(/-device$/, ''); });
+
+    platforms = _.uniq(platforms);
+
     project.addCordovaPlatforms(platforms);
 
     try {
-      runCordovaTargets(mobileTargets,
-        _.extend({}, options, { appDir: testRunnerAppDir }));
+      runCordovaTargets(mobileTargets, _.extend({}, options, {
+        appDir: testRunnerAppDir,
+        host: proxyHost,
+        port: proxyPort
+      }));
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
@@ -1199,7 +1219,7 @@ var getPackagesForTest = function (packages) {
     }
   }
 
-  return testPackages;
+  return { testPackages: testPackages, localPackages: localPackageNames };
 };
 
 var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
@@ -1251,7 +1271,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
     });
   }
 
-  _.each(localPackageNames, function (name) {
+  _.each(options.localPackageNames || [], function (name) {
     catalog.complete.removeLocalPackage(name);
   });
 
