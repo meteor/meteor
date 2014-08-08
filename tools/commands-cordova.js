@@ -263,7 +263,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
 };
 
 // Build a Cordova project, creating a Cordova project if necessary.
-cordova.buildCordova = function (localPath, options) {
+var buildCordova = function (localPath, options) {
   var webArchName = "web.cordova";
 
   var bundlePath = path.join(localPath, 'build-cordova-temp');
@@ -278,7 +278,7 @@ cordova.buildCordova = function (localPath, options) {
 
   cordova.ensureCordovaProject(localPath, options.appName);
   cordova.ensureCordovaPlatforms(localPath);
-  cordova.ensureCordovaPlugins(localPath, _.extend(options, {
+  cordova.ensureCordovaPlugins(localPath, _.extend({}, options, {
     packagePlugins: bundle.starManifest.cordovaDependencies
   }));
 
@@ -308,6 +308,44 @@ cordova.buildCordova = function (localPath, options) {
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
 };
 
+// Builds a Cordova project that targets the list of 'platforms'
+// options:
+//   - appName: the target path of the build
+//   - host
+//   - port
+cordova.buildPlatforms = function (localPath, platforms, options) {
+  platforms = _.uniq(platforms);
+  var requestedPlatforms = [];
+
+  // Find the required platforms.
+  // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
+  _.each(platforms, function (platformName) {
+    var platform = platformName.split('-')[0];
+    if (! _.contains(requestedPlatforms, platform)) {
+      requestedPlatforms.push(platform);
+    }
+  });
+
+  var cordovaPlatforms = project.getCordovaPlatforms();
+  _.each(requestedPlatforms, function (platform) {
+    if (! _.contains(cordovaPlatforms, platform))
+      throw new Error(platform +
+        ": platform is not added to the project. Try 'meteor add platform:" +
+        platform + "' to add it or 'meteor help add' for help.");
+  });
+
+  var cordovaSettings = null;
+  if (options.settings) {
+    cordovaSettings =
+      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
+  }
+
+  buildCordova(localPath, _.extend({}, options, {
+    settings: cordovaSettings
+  }));
+};
+
+
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
 var execCordovaOnPlatform = function (localPath, platformName) {
@@ -327,7 +365,7 @@ var execCordovaOnPlatform = function (localPath, platformName) {
 };
 
 // Start the simulator or physical device for a list of platforms
-cordova.runPlatforms = function (platforms) {
+cordova.runPlatforms = function (localPath, platforms) {
   _.each(platforms, function (platformName) {
     execCordovaOnPlatform(localPath, platformName);
   });
