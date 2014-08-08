@@ -224,6 +224,7 @@ main.registerCommand({
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
+    'no-server': { type: Boolean },
     program: { type: String },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -272,6 +273,9 @@ main.registerCommand({
       return 1;
     }
   }
+
+  if (options['no-server'])
+    return 0;
 
   var appHost, appPort;
   if (options['app-port']) {
