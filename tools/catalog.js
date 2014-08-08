@@ -18,6 +18,7 @@ var BaseCatalog = require('./catalog-base.js').BaseCatalog;
 var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Future = require('fibers/future');
+var Fiber = require('fibers');
 
 var catalog = exports;
 
@@ -66,7 +67,7 @@ _.extend(OfficialCatalog.prototype, {
 
   refreshInProgress: function () {
     var self = this;
-    return !! self._refreshFutures;
+    return self._refreshFiber === Fiber.current;
   },
 
   // Refresh the packages in the catalog. Print a warning if we cannot connect
@@ -86,6 +87,7 @@ _.extend(OfficialCatalog.prototype, {
     }
 
     self._refreshFutures = [];
+    self._refreshFiber = Fiber.current;
 
     var thrownError = null;
     try {
@@ -106,6 +108,7 @@ _.extend(OfficialCatalog.prototype, {
     }
 
     self._refreshFutures = null;
+    self._refreshFiber = null;
 
     if (thrownError)
       throw thrownError;
