@@ -561,7 +561,7 @@ main.registerCommand({
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      arch: bundleArch
+      serverArch: bundleArch
     }
   });
   if (bundleResult.errors) {
@@ -799,7 +799,7 @@ main.registerCommand({
 
   var buildOptions = {
     minify: ! options.debug,
-    arch: buildArch
+    serverArch: buildArch
   };
 
   var deployResult;
@@ -1086,7 +1086,7 @@ main.registerCommand({
 
   var ret;
   if (options.deploy) {
-    buildOptions.arch = DEPLOY_ARCH;
+    buildOptions.serverArch = DEPLOY_ARCH;
     ret = deploy.bundleAndDeploy({
       appDir: testRunnerAppDir,
       site: options.deploy,
