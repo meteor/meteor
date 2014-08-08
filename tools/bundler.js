@@ -168,6 +168,7 @@ var runLog = require('./run-log.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
+var tropohouse = require('./tropohouse.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1668,7 +1669,7 @@ exports.bundle = function (options) {
     title: "building the application"
   }, function () {
     var packageLoader = project.project.getPackageLoader();
-    var downloaded = project.project._ensurePackagesExistOnDisk(
+    var downloaded = tropohouse.default.downloadMissingPackages(
       project.project.dependencies, { serverArch: serverArch });
 
     if (_.keys(downloaded).length !==

@@ -191,9 +191,7 @@ main.registerCommand({
     // Using a release? Get all the packages in the release.
     if (release.current.isProperRelease()) {
       var releasePackages = release.current.getPackages();
-      // HACK: relies on fact that the function below doesn't actually
-      //       have any relation to the project directory
-      project._ensurePackagesExistOnDisk(releasePackages);
+      tropohouse.default.downloadMissingPackages(releasePackages);
       loadPackages(
         _.keys(releasePackages),
         new packageLoader.PackageLoader({versions: releasePackages}));

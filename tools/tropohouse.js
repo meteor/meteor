@@ -211,7 +211,7 @@ _.extend(exports.Tropohouse.prototype, {
         "No compatible build found for " + packageName + "@" + version);
     }
 
-    // XXX replace with a real progress bar in _ensurePackagesExistOnDisk
+    // XXX replace with a real progress bar in downloadMissingPackages
     if (!options.silent) {
       process.stderr.write(
         "  downloading " + packageName + " at version " + version + " ... ");
@@ -259,6 +259,37 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     return;
+  },
+
+
+  // Go through a list of packages and makes sure we have enough builds of the
+  // package downloaded such that we can load a browser unibuild and a unibuild
+  // that will run on this system (or the requested architecture). Return the
+  // object with mapping packageName to version for the packages that we have
+  // successfully downloaded.
+  downloadMissingPackages: function (versionMap, options) {
+    var self = this;
+    buildmessage.assertInCapture();
+    options = options || {};
+    var serverArch = options.serverArch || archinfo.host();
+    var downloadedPackages = {};
+    _.each(versionMap, function (version, name) {
+      try {
+        self.maybeDownloadPackageForArchitectures({
+          packageName: name,
+          version: version,
+          architectures: [serverArch]
+        });
+        downloadedPackages[name] = version;
+      } catch (err) {
+        // We have failed to download the right things and put them on disk!
+        // This should not happen, and we aren't sure why it happened.
+        // XXX plenty of reasons why this might happen!  eg, no network.
+        //     better error handling here!
+        console.log(err);
+      }
+    });
+    return downloadedPackages;
   },
 
   latestMeteorSymlink: function () {

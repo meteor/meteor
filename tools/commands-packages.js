@@ -143,7 +143,7 @@ main.registerCommand({
 
       var deps =
             compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
-      project._ensurePackagesExistOnDisk(deps);
+      tropohouse.default.downloadMissingPackages(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
@@ -275,7 +275,7 @@ main.registerCommand({
     // server, but we need to be careful.
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
-    project._ensurePackagesExistOnDisk(deps);
+    tropohouse.default.downloadMissingPackages(deps);
 
     unipkg = compiler.compile(packageSource, {
       officialBuild: true
@@ -540,7 +540,7 @@ main.registerCommand({
                 // server, but we need to be careful.
                 var directDeps =
                       compiler.determineBuildTimeDependencies(packageSource).directDependencies;
-                project._ensurePackagesExistOnDisk(directDeps);
+                tropohouse.default.downloadMissingPackages(directDeps)
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
