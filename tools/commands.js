@@ -263,7 +263,7 @@ main.registerCommand({
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
-      runCordovaPlatforms(options.args,
+      cordova.runPlatforms(options.args,
         _.extend({}, options, { host: proxyHost, port: proxyPort }));
     } catch (err) {
       process.stderr.write(err.message + '\n');
@@ -355,12 +355,6 @@ var buildCordovaPlatforms = function (platforms, options) {
   };
 
   cordova.buildCordova(localPath, cordovaOptions);
-};
-
-var runCordovaPlatforms = function (platforms) {
-  _.each(platforms, function (platformName) {
-    cordova.execCordovaOnPlatform(localPath, platformName);
-  });
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1152,7 +1146,7 @@ main.registerCommand({
         host: proxyHost,
         port: proxyPort
       }));
-      runCordovaPlatforms(mobilePlatforms);
+      cordova.runPlatforms(mobilePlatforms);
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;

@@ -310,7 +310,7 @@ cordova.buildCordova = function (localPath, options) {
 
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
-cordova.execCordovaOnPlatform = function (localPath, platformName) {
+var execCordovaOnPlatform = function (localPath, platformName) {
   var cordovaPath = path.join(localPath, 'cordova-build');
 
   // XXX error if an invalid platform
@@ -324,6 +324,13 @@ cordova.execCordovaOnPlatform = function (localPath, platformName) {
   // XXX error if not a Cordova project
   execFileAsync('cordova', args, { cwd: cordovaPath });
   return 0;
+};
+
+// Start the simulator or physical device for a list of platforms
+cordova.runPlatforms = function (platforms) {
+  _.each(platforms, function (platformName) {
+    execCordovaOnPlatform(localPath, platformName);
+  });
 };
 
 // packages - list of strings
