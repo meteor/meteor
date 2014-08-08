@@ -1378,9 +1378,16 @@ main.registerCommand({
   }
 }, function (options) {
   // Special case on reserved package namespaces, such as 'cordova' or 'platform'
-  var filteredPackages = cordova.filterPackages(options.args);
+  try {
+    var filteredPackages = cordova.filterPackages(options.args);
+  } catch (err) {
+    process.stderr.write(err.message + '\n');
+    return 1;
+  }
   var cordovaPlatforms = filteredPackages.platforms;
   var cordovaPlugins = filteredPackages.plugins;
+
+  var oldPlugins = project.getCordovaPlugins();
 
   // Update the platforms & plugins lists
   project.addCordovaPlatforms(cordovaPlatforms);
@@ -1401,11 +1408,23 @@ main.registerCommand({
     var appName = path.basename(options.appDir);
     cordova.ensureCordovaProject(localPath, appName);
 
+    // We checked the platforms above
     if (cordovaPlatforms.length) {
       cordova.ensureCordovaPlatforms(localPath);
     }
-    if (cordovaPlugins.length) {
-      cordova.ensureCordovaPlugins(localPath);
+
+    // The plugins installation still can fail
+    try {
+      if (cordovaPlugins.length) {
+        cordova.ensureCordovaPlugins(localPath);
+      }
+    } catch (err) {
+      project.removeCordovaPlugins(_.keys(project.getCordovaPlugins()));
+      project.addCordovaPlugins(oldPlugins);
+      // Print only the first line of error message, probably the rest is a
+      // stack trace.
+      process.stderr.write(err.message.split('\n')[0] + '\n');
+      return 1;
     }
   }
 

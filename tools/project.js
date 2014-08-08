@@ -464,12 +464,12 @@ _.extend(Project.prototype, {
 
   getCordovaPlugins: function () {
     var self = this;
-    return self.cordovaPlugins;
+    return _.clone(self.cordovaPlugins);
   },
 
   getCordovaPlatforms: function () {
     var self = this;
-    return self.cordovaPlatforms;
+    return _.clone(self.cordovaPlatforms);
   },
 
   // Returns the file path to the .meteor/cordova-plugins file, containing the

@@ -369,7 +369,6 @@ exports.execFileSync = function (file, args, opts) {
 
   var child_process = require('child_process');
   child_process.execFile(file, args, opts, function (err, stdout, stderr) {
-    process.stderr.write(err ? 'failed: ' + file + ' ' + JSON.stringify(args) + '\n' + err.stack + '\n' : '');
     future.return({
       success: ! err,
       stdout: stdout,

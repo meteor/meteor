@@ -148,6 +148,10 @@ selftest.define("add cordova plugins", function () {
   run = s.run("add", "cordova:org.apache.cordova.file");
   run.matchErr("Must declare exact version");
 
+  run = s.run("add", "cordova:foo@1.0.0");
+  run.matchErr("Failed to fetch package");
+  run.expectExit(1);
+
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
