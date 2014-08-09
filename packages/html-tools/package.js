@@ -1,7 +1,6 @@
-
 Package.describe({
   summary: "Standards-compliant HTML tools",
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -22,6 +21,7 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('html-tools');
   api.use('underscore');
+  api.use('htmljs');
   api.use('blaze-tools'); // for `toJS`
   api.add_files(['charref_tests.js',
                  'tokenize_tests.js',

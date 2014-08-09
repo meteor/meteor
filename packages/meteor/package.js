@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  internal: true
+  version: '1.0.2'
 });
 
 Package._transitional_registerBuildPlugin({

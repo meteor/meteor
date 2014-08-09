@@ -6,12 +6,10 @@ var utils = require('./utils.js');
 var release = require('./release.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var inFiber = fiberHelpers.inFiber;
 var runLog = require('./run-log.js');
 
 var _ = require('underscore');
-var unipackage = require('./unipackage.js');
-var Fiber = require('fibers');
+var uniload = require('./uniload.js');
 var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
@@ -309,7 +307,7 @@ var launchMongo = function (options) {
       }
     });
 
-    procExitHandler = inFiber(function (code, signal) {
+    procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
@@ -338,7 +336,7 @@ var launchMongo = function (options) {
       }
     };
 
-    var stdoutOnData = inFiber(function (data) {
+    var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
       if (/config from self or any seed \(EMPTYCONFIG\)/.test(data)) {
@@ -372,10 +370,8 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo-livedata so we'll be able to talk to it.
-      var mongoNpmModule = unipackage.load({
-        library: release.current.library,
-        packages: [ 'mongo-livedata' ],
-        release: release.current.name
+      var mongoNpmModule = uniload.load({
+        packages: [ 'mongo-livedata' ]
       })['mongo-livedata'].MongoInternals.NpmModule;
 
       // Connect to the intended primary and start a replset.
@@ -631,7 +627,7 @@ _.extend(MongoRunner.prototype, {
 
     if (self.errorCount < 3) {
       // Wait a second, then restart.
-      self.restartTimer = setTimeout(inFiber(function () {
+      self.restartTimer = setTimeout(fiberHelpers.bindEnvironment(function () {
         self.restartTimer = null;
         self._startOrRestart();
       }), 1000);

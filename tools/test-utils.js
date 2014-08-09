@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var release = require('./release.js');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var config = require('./config.js');
 var utils = require('./utils.js');
 
@@ -134,6 +134,11 @@ exports.logout = function (s) {
   run.expectExit(0);
 };
 
+exports.getUserId = function (s) {
+  var data = JSON.parse(s.readSessionFile());
+  return data.sessions[config.getUniverse()].userId;
+};
+
 var registrationUrlRegexp =
       /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
 exports.registrationUrlRegexp = registrationUrlRegexp;
@@ -163,10 +168,8 @@ exports.deployWithNewEmail = function (s, email, appName) {
 };
 
 var getLoadedPackages = _.once(function () {
-  return unipackage.load({
-    library: release.current.library,
-    packages: ['meteor', 'livedata'],
-    release: release.current.name
+  return uniload.load({
+    packages: ['meteor', 'livedata']
   });
 });
 

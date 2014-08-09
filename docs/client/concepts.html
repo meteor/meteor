@@ -719,13 +719,13 @@ update, Meteor will preserve the existing data and just refresh the
 code.
 
 You can also deploy to your own domain.  Just set up the hostname you
-want to use as a CNAME to `origin.meteor.com`,
-then deploy to that name.
+want to use as a CNAME to `origin.meteor.com`, then deploy to that name.
 
     $ meteor deploy www.myapp.com
 
 We provide this as a free service so you can try Meteor.  It is also
-helpful for quickly putting up internal betas, demos, and so on.
+helpful for quickly putting up internal betas, demos, and so on. For
+more information, see [meteor deploy](#meteordeploy).
 
 <h3 class="nosection">Running on your own infrastructure</h3>
 
@@ -745,21 +745,12 @@ HTTP port for the application to listen on, and the MongoDB endpoint.  If
 you don't already have a MongoDB server, we can recommend our friends at
 [MongoHQ](http://mongohq.com).
 
-    $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node bundle/main.js
+    $ cd bundle
+    $ (cd programs/server && npm install)
+    $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
 
 Other packages may require other environment variables (for example, the `email`
 package requires a `MAIL_URL` environment variable).
-
-{{#warning}}
-For now, bundles will only run on the platform that the bundle was
-created on.  To run on a different platform, you'll need to rebuild
-the native packages included in the bundle.  To do that, make sure you
-have `npm` available, and run the following:
-
-    $ cd bundle/programs/server/node_modules
-    $ rm -r fibers bcrypt
-    $ npm install fibers@1.0.1 bcrypt@0.7.7
-{{/warning}}
 
 {{/markdown}}
 </template>
@@ -785,7 +776,7 @@ quick tips:
   same even though the syntax is different, so it will be easy to port your
   code.
 
-* Packages explicitly list all of their source files using `api.add_files`, and
+* Packages explicitly list all of their source files using `api.addFiles`, and
   the files are loaded exactly in the order specified. (This is different from
   apps, where Meteor scans a directory tree to find the source files.)  Don't
   forget to include any build plugin packages (such as `coffeescript` or, if

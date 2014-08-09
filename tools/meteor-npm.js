@@ -359,7 +359,7 @@ var createNodeVersion = function (newPackageNpmDir) {
 meteorNpm._execFileSync = function (file, args, opts) {
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
     process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' +
-                         args.join(' ') + ' ... ');
+                         args.join(' ') + ' ...\n');
 
   var future = new Future;
 
@@ -381,8 +381,10 @@ meteorNpm._execFileSync = function (file, args, opts) {
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
   var packageJsonContents = JSON.stringify({
-    // name and version are unimportant but required for `npm install`
-    name: 'packages-for-meteor-smartpackage-' + packageName,
+    // name and version are unimportant but required for `npm install`.
+    // we used to put packageName in here, but it doesn't work when that
+    // has colons.
+    name: 'packages-for-meteor-smartpackage-' + utils.randomToken(),
     version: '0.0.0',
     dependencies: npmDependencies
   });

@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "pushState module from the jQuery project"
+  summary: "pushState module from the jQuery project",
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

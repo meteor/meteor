@@ -7,6 +7,7 @@ SpacebarsCompiler = {};
 // - `"DOUBLE"` - `{{foo}}`
 // - `"TRIPLE"` - `{{{foo}}}`
 // - `"COMMENT"` - `{{! foo}}`
+// - `"BLOCKCOMMENT" - `{{!-- foo--}}`
 // - `"INCLUSION"` - `{{> foo}}`
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
@@ -24,7 +25,8 @@ SpacebarsCompiler = {};
 //   are `[["STRING", "bar"], ["NUMBER", 3, "x"]]`.  Applies to DOUBLE,
 //   TRIPLE, INCLUSION, and BLOCKOPEN.
 //
-// - `value` - For COMMENT tags, a string of the comment's text.
+// - `value` - A string of the comment's text. Applies to COMMENT and
+//   BLOCKCOMMENT.
 //
 // These additional are typically set during parsing:
 //

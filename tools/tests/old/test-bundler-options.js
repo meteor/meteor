@@ -5,6 +5,10 @@ var assert = require('assert');
 var bundler = require('../../bundler.js');
 var release = require('../../release.js');
 var files = require('../../files.js');
+var catalog = require('../../catalog.js');
+var project = require('../../project.js');
+var compiler = require('../../compiler.js');
+var buildmessage = require('../../buildmessage.js');
 
 // an empty app. notably this app has no .meteor/release file.
 var emptyAppDir = path.join(__dirname, 'empty-app');
@@ -14,21 +18,45 @@ var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
+var setAppDir = function (appDir) {
+  project.project.setRootDir(appDir);
+
+  var localPackageDirs = [path.join(appDir, 'packages')];
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
+  catalog.complete.initialize({
+    localPackageDirs: localPackageDirs
+  });
+};
+
 var runTest = function () {
   var readManifest = function (tmpOutputDir) {
     return JSON.parse(fs.readFileSync(
-      path.join(tmpOutputDir, "programs", "client", "program.json"),
+      path.join(tmpOutputDir, "programs", "web.browser", "program.json"),
       "utf8")).manifest;
   };
+
+  setAppDir(emptyAppDir);
+  var loader;
+  var messages = buildmessage.capture(function () {
+    loader = project.project.getPackageLoader();
+  });
+  if (messages.hasMessages()) {
+    throw Error("failed to get package loader: " + messages.formatMessages());
+  }
 
   console.log("nodeModules: 'skip'");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
-      buildOptions: { minify: true }
+      buildOptions: { minify: true },
+      packageLoader: loader
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -57,10 +85,9 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
-      buildOptions: { minify: false }
+      buildOptions: { minify: false },
+      packageLoader: loader
     });
     assert.strictEqual(result.errors, false);
 
@@ -88,54 +115,13 @@ var runTest = function () {
     assert(foundDeps);
   });
 
-  console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
+  console.log("includeNodeModulesSymlink");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
-      buildOptions: { minify: false, testPackages: ['meteor'] }
-    });
-    assert.strictEqual(result.errors, false);
-
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-
-    // verify that tests for the meteor package are included
-    var manifest = readManifest(tmpOutputDir);
-    assert(_.find(manifest, function (item) {
-      return item.type === 'js' && item.path === 'packages/meteor:tests.js';
-    }));
-  });
-
-  console.log("nodeModules: 'copy'");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      appDir: emptyAppDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'copy'
-    });
-    assert.strictEqual(result.errors, false);
-
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-    // node_modules directory exists and is not a symlink
-    assert(!fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-    // node_modules contains fibers
-    assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-  });
-
-  console.log("nodeModules: 'symlink'");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      appDir: emptyAppDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'symlink'
+      includeNodeModulesSymlink: true,
+      packageLoader: loader
     });
     assert.strictEqual(result.errors, false);
 
@@ -146,10 +132,10 @@ var runTest = function () {
     assert(fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
     // node_modules contains fibers
     assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-
     // package node_modules directory also a symlink
+    // XXX might be breaking this
     assert(fs.lstatSync(path.join(
-      tmpOutputDir, "programs", "server", "npm", "livedata", "main", "node_modules"))
+      tmpOutputDir, "programs", "server", "npm", "livedata", "node_modules"))
            .isSymbolicLink());
   });
 };

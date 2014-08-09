@@ -13,8 +13,9 @@ var config = require('./config.js');
 var auth = require('./auth.js');
 var utils = require('./utils.js');
 var _ = require('underscore');
-var inFiber = require('./fiber-helpers.js').inFiber;
 var Future = require('fibers/future');
+var project = require('./project.js');
+var stats = require('./stats.js');
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
@@ -326,8 +327,14 @@ site + " is too long.\n" +
 // - site: site to deploy as
 // - settingsFile: file from which to read deploy settings (undefined
 //   to leave unchanged from previous deploy of the app, if any)
+// - recordPackageUsage: (defaults to true) if set to false, don't
+//   send information about packages used by this app to the package
+//   stats server.
 // - buildOptions: the 'buildOptions' argument to the bundler
 var bundleAndDeploy = function (options) {
+  if (options.recordPackageUsage === undefined)
+    options.recordPackageUsage = true;
+
   var site = canonicalizeSite(options.site);
   if (! site)
     return 1;
@@ -388,10 +395,20 @@ var bundleAndDeploy = function (options) {
 
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
+
+    if (options.recordPackageUsage) {
+      var statsMessages = buildmessage.capture(function () {
+        stats.recordPackages(options.appDir);
+      });
+      if (statsMessages.hasMessages()) {
+        process.stdout.write("Error talking to stats server:\n" +
+                             statsMessages.formatMessages());
+        // ... but continue;
+      }
+    }
+
     var bundleResult = bundler.bundle({
-      appDir: options.appDir,
       outputPath: bundlePath,
-      nodeModulesMode: "skip",
       buildOptions: options.buildOptions
     });
 
