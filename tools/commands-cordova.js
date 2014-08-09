@@ -219,20 +219,35 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
     });
   }
 
-  var oldSettings = {};
+  var oldSettings;
+  var settingsFile = path.join(cordovaPath, 'cordova-settings.json');
   try {
-    fs.readFileSync(path.join(cordovaPath, 'cordova-settings.json'), "utf8");
+    oldSettings = JSON.parse(
+      fs.readFileSync(settingsFile, 'utf8'));
   } catch(err) {
-    if (err.code !== "ENOENT")
+    if (err.code !== 'ENOENT')
       throw err;
+    oldSettings = {};
+  } finally {
+    if (newSettings) {
+      fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
+        'utf8');
+    }
   }
 
+  // This block checks to see if we should install or reinstall a plugin.
   _.each(plugins, function (version, name) {
     // no-op if this plugin is already installed
     if (_.has(installedPlugins, name)
-        && installedPlugins[name] === version &&
-        (! newSettings || _.isEqual(oldSettings[name], newSettings[name])))
-      return;
+        && installedPlugins[name] === version) {
+
+      if (newSettings && newSettings[name] &&
+          ! _.isEqual(oldSettings[name], newSettings[name])) {
+        // If we have newSettings and they are different, then continue.
+      } else {
+        return;
+      }
+    }
 
     if (_.has(installedPlugins, name))
       execFileSyncOrThrow('cordova', ['plugin', 'rm', name], { cwd: cordovaPath });
@@ -248,15 +263,15 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
     var additionalArgs = [];
     // XXX how do we get settings to work now? Do we require settings to be
     // passed every time we add a plugin?
-    if (newSettings[name]) {
+    if (newSettings && newSettings[name]) {
       if (! _.isObject(newSettings[name]))
-        throw new Error("Meteor.settings.cordova." + name + " is expected to be an object");
+        throw new Error('Meteor.settings.cordova.' + name + ' is expected to be an object');
       _.each(newSettings[name], function (value, variable) {
-        additionalArgs.push("--variable");
-        additionalArgs.push(variable + "=" + JSON.stringify(value));
+        additionalArgs.push('--variable');
+        additionalArgs.push(variable + '=' + JSON.stringify(value));
       });
     }
-
+    process.stdout.write('Installing ' + pluginInstallCommand + '\n');
     var execRes = execFileSyncOrThrow('cordova',
        ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: cordovaPath });
     if (! execRes.success)
@@ -311,7 +326,7 @@ var buildCordova = function (localPath, options) {
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
   // Give the buffer more space as the output of the build is really huge
-  execFileSyncOrThrow('cordova', ['build', '-d'],
+  execFileSyncOrThrow('cordova', ['build'],
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
 };
 
