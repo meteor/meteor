@@ -1059,6 +1059,10 @@ main.registerCommand({
   var proxyHost = portMatch[1] || null;
   var proxyPort = parseInt(portMatch[2]);
 
+  // XXX not good to change the options this way
+  options.port = proxyPort;
+  options.host = proxyHost;
+
   var testPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
@@ -1113,9 +1117,7 @@ main.registerCommand({
     try {
       cordova.buildPlatforms(localPath, mobilePlatforms,
         _.extend({}, options, {
-          appName: path.basename(testRunnerAppDir),
-          host: proxyHost,
-          port: proxyPort
+          appName: path.basename(testRunnerAppDir)
         }));
       cordova.runPlatforms(localPath, mobilePlatforms);
     } catch (err) {
