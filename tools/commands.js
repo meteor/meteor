@@ -257,7 +257,7 @@ main.registerCommand({
 "port is a number. Try 'meteor help run' for help.\n");
     return 1;
   }
-  var proxyHost = portMatch[1] || null;
+  var proxyHost = portMatch[1] || 'localhost';
   var proxyPort = parseInt(portMatch[2]);
 
   // If additional args were specified, then also start a mobile build.
@@ -1056,7 +1056,7 @@ main.registerCommand({
 "port is a number. Try 'meteor help run' for help.\n");
     return 1;
   }
-  var proxyHost = portMatch[1] || null;
+  var proxyHost = portMatch[1] || 'localhost';
   var proxyPort = parseInt(portMatch[2]);
 
   // XXX not good to change the options this way
