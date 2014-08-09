@@ -103,7 +103,7 @@ Template.updateTemplateInstance = function (view) {
       autorun: function (f) {
         return view.autorun(f);
       },
-      __view__: view
+      view: view
     };
   }
 
