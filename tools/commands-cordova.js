@@ -90,7 +90,12 @@ var fetchCordovaPluginFromShaUrl =
   return pluginPath;
 };
 
-var checkIsValidPlugin = function (name) {
+cordova.checkIsValidPlatform = function (name) {
+  if (! _.contains(supportedPlatforms, name))
+    throw new Error(name + ": no such platform");
+};
+
+cordova.checkIsValidPlugin = function (name) {
   var pluginHash = {};
   pluginHash[name.split('@')[0]] = name.split('@')[1];
 
@@ -406,11 +411,8 @@ cordova.filterPackages = function (packages) {
     var namespace = p.split(':')[0];
     var name = p.split(':').slice(1).join(':');
     if (namespace === 'cordova') {
-      checkIsValidPlugin(name);
       ret.plugins.push(name);
     } else if (namespace === 'platform') {
-      if (! _.contains(supportedPlatforms, name))
-        throw new Error(name + ": no such platform");
       ret.platforms.push(name);
     } else
       ret.rest.push(p); // leave it the same

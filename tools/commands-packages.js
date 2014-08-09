@@ -1380,12 +1380,20 @@ main.registerCommand({
   // Special case on reserved package namespaces, such as 'cordova' or 'platform'
   try {
     var filteredPackages = cordova.filterPackages(options.args);
+    var cordovaPlatforms = filteredPackages.platforms;
+    var cordovaPlugins = filteredPackages.plugins;
+
+    _.each(cordovaPlatforms, function (platform) {
+      cordova.checkIsValidPlatform(platform);
+    });
+
+    _.each(cordovaPlugins, function (plugin) {
+      cordova.checkIsValidPlugin(plugin);
+    });
   } catch (err) {
     process.stderr.write(err.message + '\n');
     return 1;
   }
-  var cordovaPlatforms = filteredPackages.platforms;
-  var cordovaPlugins = filteredPackages.plugins;
 
   var oldPlugins = project.getCordovaPlugins();
 

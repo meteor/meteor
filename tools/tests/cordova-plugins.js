@@ -31,6 +31,9 @@ var copyFile = function(from, to, sand) {
 var checkCordovaPlugins = function(sand, plugins) {
   var lines = selftest.execFileSync('cordova', ['plugins'],
     { cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build') }).split("\n");
+  if (lines[0].match(/No plugins/)) {
+    lines = [];
+  }
 
   lines.sort();
   plugins = _.clone(plugins).sort();
@@ -158,8 +161,11 @@ selftest.define("add cordova plugins", function () {
   run = s.run("add", "contains-cordova-plugin");
   run.match("added");
 
-  // XXX message about a plugin?
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
+
+  run = s.run("list");
+  run.match("org.apache.cordova.camera");
+  run.match("android");
 
   run = s.run("bundle", "../a", "--android-path", "../android",
     "--directory", "--debug", "--settings", "settings.json");
@@ -183,4 +189,8 @@ selftest.define("add cordova plugins", function () {
   run.expectExit(0);
 
   checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
+
+  run = s.run("remove", "cordova:org.apache.cordova.camera");
+  run.expectExit(0);
+  checkCordovaPlugins(s, []);
 });
