@@ -647,15 +647,6 @@ _.extend(Target.prototype, {
           var f = new File({data: resource.data, cacheable: false});
 
           var relPath = stripLeadingSlash(resource.servePath);
-
-          if (archinfo.matches(self.arch, "web.cordova")) {
-            relPath = path.join(resource.type, relPath);
-
-            if (resource.type === "css") {
-              f.targetPath = relPath;
-            }
-          }
-
           f.setTargetPathFromRelPath(relPath);
 
           if (isWeb) {

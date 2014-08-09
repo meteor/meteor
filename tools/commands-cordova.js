@@ -44,15 +44,9 @@ var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
 
-  var manifest = _.map(clientJson.manifest, function (item) {
-    if (item.type === 'js')
-      return _.extend(item, { url: ('/js' + item.url) });
-    return item;
-  });
-
   var meteorRelease = project.getMeteorReleaseVersion();
   var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
-  var boilerplate = new Boilerplate('web.cordova', manifest, {
+  var boilerplate = new Boilerplate('web.cordova', clientJson.manifest, {
     urlMapper: function (url) { return url ? url.substr(1) : ''; },
     pathMapper: function (p) { return path.join(clientDir, p); },
     baseDataExtension: {
@@ -104,13 +98,15 @@ cordova.checkIsValidPlugin = function (name) {
   utils.ensureOnlyExactVersions(pluginHash);
 };
 
-var getBundle = function (bundlePath, webArchs) {
+// options
+//  - debug
+var getBundle = function (bundlePath, webArchs, options) {
   var bundler = require(path.join(__dirname, 'bundler.js'));
 
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,
     buildOptions: {
-      minify: false, // XXX ! options.debug,
+      minify: ! options.debug,
       arch: archinfo.host(),
       webArchs: webArchs
     }
@@ -196,7 +192,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
     var bundlePath = path.join(localPath, 'build-tar');
     var webArchName = 'web.cordova';
     plugins =
-      getBundle(bundlePath, [webArchName]).starManifest.cordovaDependencies;
+      getBundle(bundlePath, [webArchName], options).starManifest.cordovaDependencies;
     files.rm_recursive(bundlePath);
   }
   // XXX the project-level cordova plugins deps override the package-level ones
@@ -301,7 +297,7 @@ var buildCordova = function (localPath, options) {
   var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
-  var bundle = getBundle(bundlePath, [webArchName]);
+  var bundle = getBundle(bundlePath, [webArchName], options);
 
   cordova.ensureCordovaProject(localPath, options.appName);
   cordova.ensureCordovaPlatforms(localPath);
