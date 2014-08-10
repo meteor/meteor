@@ -131,7 +131,7 @@ _.extend(Roles, {
    * @param {Array|String} roles Name(s) of roles/permissions to add users to
    * @param {String} [group] Optional group name. If supplied, roles will be
    *                         specific to that group.  
-   *                         Group names can not start with '$'.
+   *                         Group names can not start with '$' or numbers.
    *                         Periods in names '.' are automatically converted
    *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
