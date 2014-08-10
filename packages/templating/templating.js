@@ -87,7 +87,7 @@ UI.insert = function (range, parentElement, nextNode) {
     throw new Error("'parentElement' must be a DOM node");
   if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
     throw new Error("'nextNode' must be a DOM node");
-  if (! range instanceof Blaze.DOMRange)
+  if (! range instanceof Blaze._DOMRange)
     throw new Error("Expected template rendered with UI.render");
 
   range.attach(parentElement, nextNode);
@@ -95,7 +95,7 @@ UI.insert = function (range, parentElement, nextNode) {
 
 // XXX test and document
 UI.remove = function (range) {
-  if (! range instanceof Blaze.DOMRange)
+  if (! range instanceof Blaze._DOMRange)
     throw new Error("Expected template rendered with UI.render");
 
   if (range.attached)
