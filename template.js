@@ -3,9 +3,6 @@
 // Should be an actual helpers dict, so you can in theory name a
 // helper anything.  Test that you can.
 //
-// Catch it when you name a template something weird, like "name,"
-// given the global Template is now a function.
-//
 // Finish adding things to UI.  Take it out of the "templating" package.
 // Merge Blaze and UI symbols?
 

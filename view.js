@@ -205,7 +205,7 @@ Blaze._materializeView = function (view, parentView) {
         var rangesAndNodes = materializer.visit(htmljs, []);
         if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
           if (c.firstRun) {
-            domrange = new Blaze.DOMRange(rangesAndNodes);
+            domrange = new Blaze._DOMRange(rangesAndNodes);
             view.domrange = domrange;
             domrange.view = view;
           } else {
@@ -470,7 +470,7 @@ Blaze.getParentView = function (view, kind) {
 };
 
 Blaze.getElementView = function (elem, kind) {
-  var range = Blaze.DOMRange.forElement(elem);
+  var range = Blaze._DOMRange.forElement(elem);
   var view = null;
   while (range && ! view) {
     view = (range.view || null);
@@ -478,7 +478,7 @@ Blaze.getElementView = function (elem, kind) {
       if (range.parentRange)
         range = range.parentRange;
       else
-        range = Blaze.DOMRange.forElement(range.parentElement);
+        range = Blaze._DOMRange.forElement(range.parentElement);
     }
   }
 

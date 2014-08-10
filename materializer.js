@@ -99,7 +99,7 @@ Blaze.DOMMaterializer.def({
     var childNodesAndRanges = self.visit(children, []);
     for (var i = 0; i < childNodesAndRanges.length; i++) {
       var x = childNodesAndRanges[i];
-      if (x instanceof Blaze.DOMRange)
+      if (x instanceof Blaze._DOMRange)
         x.attach(elem);
       else
         elem.appendChild(x);

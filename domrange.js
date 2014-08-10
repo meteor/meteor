@@ -2,13 +2,13 @@
 // A constant empty array (frozen if the JS engine supports it).
 var _emptyArray = Object.freeze ? Object.freeze([]) : [];
 
-// `[new] Blaze.DOMRange([nodeAndRangeArray])`
+// `[new] Blaze._DOMRange([nodeAndRangeArray])`
 //
 // A DOMRange consists of an array of consecutive nodes and DOMRanges,
 // which may be replaced at any time with a new array.  If the DOMRange
 // has been attached to the DOM at some location, then updating
 // the array will cause the DOM to be updated at that location.
-Blaze.DOMRange = function (nodeAndRangeArray) {
+Blaze._DOMRange = function (nodeAndRangeArray) {
   if (! (this instanceof DOMRange))
     // called without `new`
     return new DOMRange(nodeAndRangeArray);
@@ -27,7 +27,7 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
   this.parentRange = null;
   this.attachedCallbacks = _emptyArray;
 };
-var DOMRange = Blaze.DOMRange;
+var DOMRange = Blaze._DOMRange;
 
 // In IE 8, don't use empty text nodes as placeholders
 // in empty DOMRanges, use comment nodes instead.  Using
