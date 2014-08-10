@@ -9,6 +9,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 Thanks to:
 
+  * [@kevb](https://github.com/kevb)
   * [@zimme](https://github.com/zimme)
   * [@danieljonce](https://github.com/danieljonce)
   * [@pascoual](https://github.com/pascoual)
