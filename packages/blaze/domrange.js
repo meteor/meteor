@@ -417,7 +417,7 @@ DOMRange.prototype.$ = function (selector) {
   if (parentNode.nodeType === 11 /* DocumentFragment */)
     throw new Error("Can't use $ on an offscreen range");
 
-  var results = Blaze.DOMBackend.findBySelector(selector, parentNode);
+  var results = Blaze._DOMBackend.findBySelector(selector, parentNode);
 
   // We don't assume `results` has jQuery API; a plain array
   // should do just as well.  However, if we do have a jQuery
