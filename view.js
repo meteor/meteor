@@ -231,7 +231,7 @@ Blaze._materializeView = function (view, parentView) {
     var teardownHook = null;
 
     domrange.onAttached(function attached(range, element) {
-      teardownHook = Blaze.DOMBackend.Teardown.onElementTeardown(
+      teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
         element, function teardown() {
           Blaze.destroyView(view, true /* _skipNodes */);
         });
@@ -347,7 +347,7 @@ Blaze.destroyView = function (view, _skipNodes) {
 
 Blaze.destroyNode = function (node) {
   if (node.nodeType === 1)
-    Blaze.DOMBackend.Teardown.tearDownElement(node);
+    Blaze._DOMBackend.Teardown.tearDownElement(node);
 };
 
 // Are the HTMLjs entities `a` and `b` the same?  We could be
