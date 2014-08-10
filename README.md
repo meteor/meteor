@@ -81,7 +81,7 @@ Run locally:
 
 <br />
 
-† The type of the `roles` field depends on whether groups are used or not:
+† The type of the `roles` field depends on whether or not groups are used:
 ```js
 Roles.addUsersToRoles(bobsUserId, ['manage-team','schedule-game'])
 // internal representation - no groups 
@@ -91,13 +91,16 @@ Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester-u
 Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real-madrid.com')
 // internal representation - groups
 // NOTE: MongoDB uses periods to represent hierarchy so periods in group names
-//   are converted to underscores
+//   are converted to underscores.
 //
 // user.roles = { 
 //   'manchester-united_com': ['manage-team','schedule-game'],
 //   'real-madrid_com': ['player','goalie']
 // }
 ```
+
+<em>Note: See the `addUsersToRoles` [documentation](http://alanning.github.io/meteor-roles/classes/Roles.html) for restrictions on group names.</em>
+
 
 †† `Meteor.roles` is not published by default.  Here's how you would publish it to every client without needing a subscription:
 
