@@ -139,10 +139,6 @@ var appUrl = function (url) {
   if (url === '/app.manifest')
     return false;
 
-  //Serve ordinary html if this is a weird bot request
-  if (RoutePolicy.isProxyUrl(url))
-    return true;
-  
   // Avoid serving app HTML for declared routes such as /sockjs/.
   if (RoutePolicy.classify(url))
     return false;
@@ -623,6 +619,13 @@ var runWebAppServer = function () {
   });
 
   app.use(function (req, res, next) {
+    if (!RoutePolicy.isValidUrl(req.url)) {
+      res.writeHead(500, {'Content-Type': 'text/html'});
+      res.write("Invalid Request");
+      res.end();
+      return undefined
+    }
+    
     if (! appUrl(req.url))
       return next();
 
