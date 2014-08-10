@@ -139,6 +139,10 @@ var appUrl = function (url) {
   if (url === '/app.manifest')
     return false;
 
+  //Serve ordinary html if this is a weird bot request
+  if (RoutePolicy.isProxyUrl(url))
+    return true;
+  
   // Avoid serving app HTML for declared routes such as /sockjs/.
   if (RoutePolicy.classify(url))
     return false;
