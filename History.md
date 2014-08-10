@@ -1,3 +1,8 @@
+## v1.2.11
+
+* Add `getGroupsForUser` function. #39
+
+
 ## v1.2.10
 
 * Fix behavior for groups with more than one period in their name. #44

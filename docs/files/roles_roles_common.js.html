@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.10</em>
+            <em>API Docs for: v1.2.11</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -225,7 +225,7 @@ _.extend(Roles, {
    * @param {Array|String} roles Name(s) of roles/permissions to add users to
    * @param {String} [group] Optional group name. If supplied, roles will be
    *                         specific to that group.  
-   *                         Group names can not start with &#x27;$&#x27;.
+   *                         Group names can not start with &#x27;$&#x27; or numbers.
    *                         Periods in names &#x27;.&#x27; are automatically converted
    *                         to underscores.
    *                         The special group Roles.GLOBAL_GROUP provides 
@@ -576,6 +576,53 @@ _.extend(Roles, {
 
     return Meteor.users.find(query)
   },  // end getUsersInRole 
+  
+  /**
+   * Retrieve users groups, if any
+   *
+   * @method getGroupsForUser
+   * @param {String|Object} user User Id or actual user object
+   * @param {String} [role] Optional name of roles to restrict groups to.
+   *
+   * @return {Array} Array of user&#x27;s groups, unsorted. Roles.GLOBAL_GROUP will be omitted
+   */
+  getGroupsForUser: function (user, role) {
+    var userGroups = [];
+    
+    if (!user) return []
+    if (role) {
+      if (&#x27;string&#x27; !== typeof role) return []
+      if (&#x27;$&#x27; === role[0]) return []
+
+      // convert any periods to underscores
+      role = role.replace(&#x27;.&#x27;, &#x27;_&#x27;)
+    }
+
+    if (&#x27;string&#x27; === typeof user) {
+      user = Meteor.users.findOne(
+               {_id: user},
+               {fields: {roles: 1}})
+    
+    }else if (&#x27;object&#x27; !== typeof user) {
+      // invalid user object
+      return []
+    }
+
+    //User has no roles or is not using groups
+    if (!user || !user.roles || _.isArray(user.roles)) return []
+
+    if (role) {
+      _.each(user.roles, function(groupRoles, groupName) {
+        if (_.contains(groupRoles, role) &amp;&amp; groupName !== Roles.GLOBAL_GROUP) {
+          userGroups.push(groupName);
+        }
+      });
+      return userGroups;
+    }else {
+      return _.without(_.keys(user.roles), Roles.GLOBAL_GROUP);
+    }
+
+  }, //End getGroupsForUser
 
 
   /**

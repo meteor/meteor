@@ -2,7 +2,7 @@
     "project": {
         "name": "The meteor-roles API",
         "description": "The meteor-roles API: a role-based authorization package for Meteor",
-        "version": "v1.2.10"
+        "version": "v1.2.11"
     },
     "files": {
         "roles/roles_client.js": {
@@ -204,7 +204,7 @@
                 },
                 {
                     "name": "group",
-                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        Group names can not start with '$'.\n                        Periods in names '.' are automatically converted\n                        to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        Group names can not start with '$' or numbers.\n                        Periods in names '.' are automatically converted\n                        to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
                     "type": "String",
                     "optional": true
                 }
@@ -373,7 +373,33 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 487,
+            "line": 486,
+            "description": "Retrieve users groups, if any",
+            "itemtype": "method",
+            "name": "getGroupsForUser",
+            "params": [
+                {
+                    "name": "user",
+                    "description": "User Id or actual user object",
+                    "type": "String|Object"
+                },
+                {
+                    "name": "role",
+                    "description": "Optional name of roles to restrict groups to.",
+                    "type": "String",
+                    "optional": true
+                }
+            ],
+            "return": {
+                "description": "Array of user's groups, unsorted. Roles.GLOBAL_GROUP will be omitted",
+                "type": "Array"
+            },
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 534,
             "description": "Private function 'template' that uses $set to construct an update object\nfor MongoDB.  Passed to _updateUserRoles",
             "itemtype": "method",
             "name": "_update_$set_fn",
@@ -401,7 +427,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 512,
+            "line": 559,
             "description": "Private function 'template' that uses $addToSet to construct an update \nobject for MongoDB.  Passed to _updateUserRoles",
             "itemtype": "method",
             "name": "_update_$addToSet_fn",
@@ -429,7 +455,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 538,
+            "line": 585,
             "description": "Internal function that users the Template pattern to adds or sets roles \nfor users.",
             "itemtype": "method",
             "name": "_updateUserRoles",
