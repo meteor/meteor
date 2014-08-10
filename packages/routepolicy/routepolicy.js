@@ -96,6 +96,10 @@ _.extend(RoutePolicyConstructor.prototype, {
     // TODO overlapping prefixes, e.g. /foo/ and /foo/bar/
     self.urlPrefixTypes[urlPrefix] = type;
   },
+  
+  isValidUrl: function(url) {
+    return (url.charAt(0) === '/');
+  },
 
   classify: function (url) {
     var self = this;
