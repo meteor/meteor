@@ -282,9 +282,10 @@ main.registerCommand({
     webArchs.push("web.cordova");
     // will asynchronously start mobile emulators/devices
     try {
+      var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
       cordova.buildPlatforms(localPath, options.args,
-        _.extend({}, options, parsedHostPort));
+        _.extend({ appName: appName }, options, parsedHostPort));
       cordova.runPlatforms(localPath, options.args);
     } catch (err) {
       process.stderr.write(err.message + '\n');
