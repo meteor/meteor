@@ -949,7 +949,7 @@ main.registerCommand({
   maxArgs: Infinity,
   options: {
     settings: { type: String },
-    port: { type: String, short: "p", default: '3000' },
+    port: { type: String, short: "p", default: 'localhost:3000' },
     production: { type: Boolean }
   }
 }, function (options) {
