@@ -1949,7 +1949,8 @@ exports.bundle = function (options) {
       builtBy: builtBy,
       controlProgram: controlProgram,
       releaseName: releaseName,
-      getRelativeTargetPath: getRelativeTargetPath
+      getRelativeTargetPath: getRelativeTargetPath,
+      cordovaDependencies: {}
     };
 
     if (options.hasCachedBundle) {
