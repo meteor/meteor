@@ -55,18 +55,9 @@ Template._body_.renderToDocument = function () {
 };
 
 UI.render = Blaze.render;
-
-// Same as `UI.render` with a data context passed in.
-UI.renderWithData = function (tmpl, data) {
-  if (! (tmpl instanceof Template))
-    throw new Error("Template required here");
-  if (typeof data === 'function')
-    throw new Error("Data argument can't be a function"); // XXX or can it?
-
-  return UI.render(Blaze.With(data, function () {
-    return tmpl;
-  }));
-};
+UI.renderWithData = Blaze.renderWithData;
+UI.toHTML = Blaze.toHTML;
+UI.toHTMLWithData = Blaze.toHTMLWithData;
 
 // The publicly documented API for inserting a View returned from
 // `UI.render` or `UI.renderWithData` into the DOM. If you then remove
@@ -98,3 +89,5 @@ UI.remove = function (view) {
 };
 
 UI.body = Template._body_;
+
+UI.With = Blaze.With;
