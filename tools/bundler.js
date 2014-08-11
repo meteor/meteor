@@ -1648,8 +1648,6 @@ exports.bundle = function (options) {
   var buildOptions = options.buildOptions || {};
 
   var appDir = project.project.rootDir;
-  if (! release.usingRightReleaseForApp(appDir))
-    throw new Error("running wrong release for app?");
 
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs = buildOptions.webArchs || [ "web.browser" ];
@@ -1668,6 +1666,9 @@ exports.bundle = function (options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
+    if (! release.usingRightReleaseForApp(appDir))
+      throw new Error("running wrong release for app?");
+
     var packageLoader = project.project.getPackageLoader();
     var downloaded = tropohouse.default.downloadMissingPackages(
       project.project.dependencies, { serverArch: serverArch });

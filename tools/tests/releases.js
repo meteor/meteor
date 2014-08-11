@@ -20,7 +20,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   var run;
 
   var toolsPackage;
-  selftest.captureAndThrow(function() {
+  selftest.doOrThrow(function() {
       toolsPackage = selftest.getToolsPackage();
   });
   var toolsVersion = toolsPackage.name + '@' +
@@ -125,7 +125,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
 // hackhackhack. If we clean up the hackhackhackhack, then this does not need
 // the internets. (Or, to be more specific: our warehouse code tries to fetch
 // the packages from the internet. If we could fool it into using local packages
-// instead, or think that it alreayd has the packages, it would be ok).
+// instead, or think that it already has the packages, it would be ok).
 selftest.define("writing versions file", ['checkout', 'net'], function () {
   var s = new Sandbox({
     warehouse: {
@@ -136,8 +136,8 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   var run;
 
   var toolsPackage;
-  selftest.captureAndThrow(function() {
-      toolsPackage = selftest.getToolsPackage();
+  selftest.doOrThrow(function() {
+    toolsPackage = selftest.getToolsPackage();
   });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;
@@ -167,9 +167,7 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   run.expectExit(0);
   versions = s.read('.meteor/versions');
   if (versions) {
-    selftest.expectEqual(
-        "Versions file written with --release.",
-        "Versions file NOT written with --release.");
+    selftest.fail("Versions file written with --release.");
   }
 
   // Update with --release.
@@ -179,9 +177,7 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   // version file should exist.
   versions = s.read('.meteor/versions');
   if (!versions) {
-    selftest.expectEqual(
-        "Versions file NOT written after update",
-        "Versions file written after update.");
+    selftest.fail("Versions file NOT written after update");
   }
 
 });

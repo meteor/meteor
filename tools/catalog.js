@@ -77,6 +77,7 @@ _.extend(OfficialCatalog.prototype, {
   // the in-progress refresh to finish.
   refresh: function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
 
     if (self._refreshFutures) {
@@ -212,6 +213,7 @@ _.extend(CompleteCatalog.prototype, {
   //    silently ignored.
   initialize: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
 
     options = options || {};
 
@@ -259,9 +261,7 @@ _.extend(CompleteCatalog.prototype, {
     var self = this;
     opts = opts || {};
     self._requireInitialized();
-    // XXX for now, just doing the assertion if we have to call project
-    //     stuff.  but oh, this will be improved.
-    opts.ignoreProjectDeps || buildmessage.assertInCapture();
+    buildmessage.assertInCapture();
 
     // Kind of a hack, as per specification. We don't have a constraint solver
     // initialized yet. We are probably trying to build the constraint solver
@@ -335,9 +335,12 @@ _.extend(CompleteCatalog.prototype, {
   //   anyway. When we are using hot code push, we may be restarting the app
   //   because of a local package change that impacts that catalog. Don't wait
   //   on the official catalog to refresh data.json, in this case.
+  // - watchSet: if provided, any files read in reloading packages will be added
+  //   to this set.
   refresh: function (options) {
     var self = this;
     options = options || {};
+    buildmessage.assertInCapture();
 
     // We need to limit the rate of refresh, or, at least, prevent any sort of
     // loops. ForceRefresh will override either one.
@@ -355,7 +358,7 @@ _.extend(CompleteCatalog.prototype, {
       self._insertServerPackages(localData);
 
       self._recomputeEffectiveLocalPackages();
-      self._addLocalPackageOverrides();
+      self._addLocalPackageOverrides({watchSet: options.watchSet});
       self.initialized = true;
       // Rebuild the resolver, since packages may have changed.
       self._initializeResolver();
@@ -416,8 +419,10 @@ _.extend(CompleteCatalog.prototype, {
   // first removing any existing packages that have the same name.
   //
   // XXX emits buildmessages. are callers expecting that?
-  _addLocalPackageOverrides: function () {
+  _addLocalPackageOverrides: function (options) {
     var self = this;
+    options = options || {};
+    buildmessage.assertInCapture();
 
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.
@@ -462,8 +467,19 @@ _.extend(CompleteCatalog.prototype, {
         if (buildmessage.jobHasMessages())
           broken = true;
       });
+
+      if (options.watchSet) {
+        options.watchSet.merge(packageSource.pluginWatchSet);
+        _.each(packageSource.architectures, function (sourceArch) {
+          options.watchSet.merge(sourceArch.watchSet);
+        });
+      }
+
+      // Recover by ignoring, but not until after we've augmented the watchSet
+      // (since we want the watchSet to include files with problems that the
+      // user may fix!)
       if (broken)
-        return;  // recover by ignoring
+        return;
 
       packageSources[name] = packageSource;
 
@@ -724,6 +740,7 @@ _.extend(CompleteCatalog.prototype, {
   // function twice with the same `name`.
   addLocalPackage: function (name, directory) {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
 
     var resolvedPath = path.resolve(directory);
@@ -737,20 +754,6 @@ _.extend(CompleteCatalog.prototype, {
     // want to coalesce the calls to refresh somehow, but I don't
     // think we'll actually be doing that so this should be fine.
     // #CallingRefreshEveryTimeLocalPackagesChange
-    self._recomputeEffectiveLocalPackages();
-    self.refresh();
-  },
-
-  // Reverse the effect of addLocalPackage.
-  removeLocalPackage: function (name) {
-    var self = this;
-    self._requireInitialized();
-
-    if (! _.has(self.localPackages, name))
-      throw new Error("no such local package?");
-    delete self.localPackages[name];
-
-    // see #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
     self.refresh();
   },

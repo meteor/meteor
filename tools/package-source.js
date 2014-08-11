@@ -406,6 +406,7 @@ _.extend(PackageSource.prototype, {
   //    guideline for a repeatable build.
   initFromPackageDir: function (name, dir, options) {
     var self = this;
+    buildmessage.assertInCapture();
     var isPortable = true;
     options = options || {};
 

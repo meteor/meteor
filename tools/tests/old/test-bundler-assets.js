@@ -9,6 +9,7 @@ var uniload = require('../../uniload.js');
 var release = require('../../release.js');
 var project = require('../../project.js');
 var catalog = require('../../catalog.js');
+var buildmessage = require('../../buildmessage.js');
 
 var appWithPublic = path.join(__dirname, 'app-with-public');
 var appWithPrivate = path.join(__dirname, 'app-with-private');
@@ -29,9 +30,22 @@ var setAppDir = function (appDir) {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  catalog.complete.initialize({
-    localPackageDirs: localPackageDirs
+  doOrThrow(function () {
+    catalog.complete.initialize({
+      localPackageDirs: localPackageDirs
+    });
   });
+};
+
+var doOrThrow = function (f) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+  return ret;
 };
 
 // These tests make some assumptions about the structure of stars: that there
@@ -143,7 +157,9 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  doOrThrow(function () {
+    release._setCurrentForOldTest();
+  });
 
   try {
     runTest();

@@ -5,6 +5,7 @@ var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
+var buildmessage = require('./buildmessage.js');
 
 var release = exports;
 
@@ -91,6 +92,7 @@ _.extend(Release.prototype, {
   // (XXX: Or maybe just return "checkout" or something?)
   getCurrentToolsVersion: function () {
     var self = this;
+    buildmessage.assertInCapture();
 
     if (release.current.name) {
       return self._manifest.tool;
@@ -178,6 +180,7 @@ release.explicit = null;
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
 release.usingRightReleaseForApp = function () {
+  buildmessage.assertInCapture();
   if (release.current === null)
     throw new Error("no release?");
 
@@ -195,6 +198,7 @@ release.usingRightReleaseForApp = function () {
 // for use. May not be called when running from a checkout.
 // 'track' is optional (it defaults to the default track).
 release.latestDownloaded = function (track) {
+  buildmessage.assertInCapture();
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
   // For self-test only.
@@ -233,6 +237,7 @@ release.latestDownloaded = function (track) {
 //   in the world (confirmed with server).
 release.load = function (name, options) {
   options = options || {};
+  buildmessage.assertInCapture();
 
   if (! name) {
     return new Release({ name: null });
@@ -285,6 +290,7 @@ release.setCurrent = function (releaseObject, forced, explicit) {
 
 // XXX hack
 release._setCurrentForOldTest = function () {
+  buildmessage.assertInCapture();
   if (process.env.METEOR_SPRINGBOARD_RELEASE) {
     release.setCurrent(release.load(process.env.METEOR_SPRINGBOARD_RELEASE),
                        true);

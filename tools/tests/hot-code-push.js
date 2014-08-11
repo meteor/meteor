@@ -133,15 +133,25 @@ selftest.define("javascript hot code push", function (options) {
     s.mkdir("server");
     s.write("server/test.js", "jsVar = 'bar'");
     run.match("server restarted");
+
+    // Setting the autoupdateVersion to a different string should also
+    // force the client to restart.
+    s.write("server/test.js",
+            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
+    run.match("server restarted");
+    run.match("client connected: 0");
+    run.match("jsVar: undefined");
+
+    s.unlink("server/test.js");
+    run.match("server restarted");
+
     s.write("client/empty.js", "");
     run.match("client connected: 0");
     // We should not be able to access a server variable from the client.
     run.match("jsVar: undefined");
 
-    s.unlink("server/test.js");
-    run.match("server restarted");
     s.unlink("client/empty.js");
-    run.match("client connected: 0");
+    run.match("client connected: 1");
     run.match("jsVar: undefined");
 
     // Break the HTML file. This should kill the server, and print errors.
@@ -169,6 +179,7 @@ selftest.define("javascript hot code push", function (options) {
     s.write("client/test.js", "jsVar = 'baz'");
     run.match("client connected: 3");
     run.match("jsVar: baz");
+
     s.unlink("client/test.js");
 
     run.stop();

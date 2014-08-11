@@ -1,5 +1,5 @@
 application-configuration@1.0.0
-autoupdate@1.0.0
+autoupdate@1.0.1
 binary-heap@1.0.0
 blaze-tools@1.0.0
 blaze@1.0.1
@@ -18,7 +18,7 @@ jquery@1.0.0
 json@1.0.0
 livedata@1.0.1
 logging@1.0.0
-meteor@1.0.1
+meteor@1.0.2
 minifiers@1.0.0
 minimongo@1.0.1
 mongo-livedata@1.0.0
@@ -30,10 +30,10 @@ reload@1.0.0
 retry@1.0.0
 routepolicy@1.0.0
 session@1.0.0
-spacebars-compiler@1.0.0
+spacebars-compiler@1.0.1
 spacebars@1.0.0
 standard-app-packages@1.0.0
-templating@1.0.1
+templating@1.0.2
 ui@1.0.0
 underscore@1.0.0
 webapp@1.0.0

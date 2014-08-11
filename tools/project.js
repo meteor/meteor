@@ -233,6 +233,8 @@ _.extend(Project.prototype, {
   // getCurrentCombinedConstraints.
   calculateCombinedConstraints : function (releasePackages) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var allDeps = [];
     // First, we process the contents of the .meteor/packages file. The
     // self.constraints variable is always up to date.
