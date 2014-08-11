@@ -26,14 +26,10 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
 
   var loginStyle = OAuth._loginStyle('twitter', config);
 
-  var redirectAfterLoginParam =
-    loginStyle === "redirect" ? "&redirectAfterLogin=true" : "";
-
   // url to app, enters "step 1" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
   var loginUrl = '/_oauth/twitter/?requestTokenAndRedirect=true'
-        + '&state=' + OAuth._stateParam(loginStyle, credentialToken)
-        + redirectAfterLoginParam;
+        + '&state=' + OAuth._stateParam(loginStyle, credentialToken);
 
   OAuth.launchLogin(
     loginStyle,

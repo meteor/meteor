@@ -54,7 +54,7 @@ OAuth.retrieveCredential = function(credentialToken, credentialSecret) {
 
 
 // The state parameter is normally generated on the client using
-// `bota`, but for tests we need a version that runs on the server.
+// `btoa`, but for tests we need a version that runs on the server.
 //
 OAuth._generateState = function (loginStyle, credentialToken, redirectUrl) {
   return new Buffer(JSON.stringify({
@@ -137,11 +137,17 @@ var middleware = function (req, res, next) {
     // close the popup. because nobody likes them just hanging
     // there.  when someone sees this multiple times they might
     // think to check server logs (we hope?)
-    OAuth._endOfLoginResponse(res, {
-      query: req.query,
-      loginStyle: OAuth._loginStyleFromQuery(req.query),
-      error: err
-    });
+    // Catch errors because any exception here will crash the runner.
+    try {
+      OAuth._endOfLoginResponse(res, {
+        query: req.query,
+        loginStyle: OAuth._loginStyleFromQuery(req.query),
+        error: err
+      });
+    } catch (err) {
+      Log.warn("Error generating end of login response\n" +
+               (err && (err.stack || err.message)));
+    }
   }
 };
 
@@ -247,7 +253,7 @@ var renderEndOfLoginResponse = function (loginStyle, setCredentialToken, token, 
       JSON.stringify(OAuth._storageTokenPrefix));
   } else if (loginStyle === 'redirect') {
     var config = {
-      sessionStoragePrefix: 'Meteor.oauth.credentialSecret-', // TODO
+      sessionStoragePrefix: OAuth._storageTokenPrefix,
       setCredentialToken: setCredentialToken,
       credentialToken: token,
       credentialSecret: secret,

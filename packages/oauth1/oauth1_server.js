@@ -8,8 +8,6 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
   var urls = service.urls;
   var oauthBinding = new OAuth1Binding(config, urls);
 
-  var loginStyle = 'redirectAfterLogin' in query ? 'redirect' : 'popup';
-
   var credentialSecret;
 
   if (query.requestTokenAndRedirect) {

@@ -15,7 +15,7 @@ OAuth._loginStyle = function (service, config) {
 
   if (loginStyle === 'redirect') {
     // Safari in private mode doesn't support session storage, so
-    // force the redirect style when session storage is unavailable.
+    // force the popup style when session storage is unavailable.
     try {
       sessionStorage.setItem('Meteor.oauth.test', 'test');
       sessionStorage.removeItem('Meteor.oauth.test');
@@ -88,7 +88,10 @@ OAuth.getDataAfterRedirect = function () {
 // this login attempt in the reload migration data, and redirect to
 // the service for the login.
 //
-OAuth.launchLogin = function (loginStyle, loginUrl, credentialRequestCompleteCallback, credentialToken, popupOptions) {
+OAuth.launchLogin = function (
+  loginStyle, loginUrl, credentialRequestCompleteCallback, credentialToken,
+  popupOptions)
+{
   if (loginStyle === 'popup') {
     OAuth.showPopup(
       loginUrl,
@@ -97,8 +100,9 @@ OAuth.launchLogin = function (loginStyle, loginUrl, credentialRequestCompleteCal
   } else if (loginStyle === 'redirect') {
     OAuth.saveDataForRedirect(credentialToken);
     window.location = loginUrl;
-  } else
+  } else {
     throw new Error('invalid login style');
+  }
 };
 
 
