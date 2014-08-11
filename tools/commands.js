@@ -274,8 +274,12 @@ main.registerCommand({
     return 1;
   }
 
+  // Always bundle for the browser by default.
+  var webArchs = ["web.browser"];
+
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
+    webArchs.push("web.cordova");
     // will asynchronously start mobile emulators/devices
     try {
       var localPath = path.join(options.appDir, '.meteor', 'local');
@@ -329,7 +333,8 @@ main.registerCommand({
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
-      minify: options.production
+      minify: options.production,
+      webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
