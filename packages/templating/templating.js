@@ -49,19 +49,12 @@ Template._body_.renderToDocument = function () {
   if (Template._body_.view)
     return;
 
-  var range = UI.render(Template._body_);
-  Template._body_.view = range.view;
-  UI.insert(range, document.body);
+  var view = UI.render(Template._body_);
+  Template._body_.view = view;
+  UI.insert(view, document.body);
 };
 
-// Renders a template (eg `Template.foo`), returning a DOMRange. The
-// range will keep updating reactively.
-UI.render = function (tmpl) {
-  if (! (tmpl instanceof Template))
-    throw new Error("Template required here");
-
-  return Blaze.render(tmpl);
-};
+UI.render = Blaze.render;
 
 // Same as `UI.render` with a data context passed in.
 UI.renderWithData = function (tmpl, data) {
@@ -70,16 +63,16 @@ UI.renderWithData = function (tmpl, data) {
   if (typeof data === 'function')
     throw new Error("Data argument can't be a function"); // XXX or can it?
 
-  return Blaze.render(Blaze.With(data, function () {
+  return UI.render(Blaze.With(data, function () {
     return tmpl;
   }));
 };
 
-// The publicly documented API for inserting a DOMRange returned from
+// The publicly documented API for inserting a View returned from
 // `UI.render` or `UI.renderWithData` into the DOM. If you then remove
 // `parentElement` using jQuery, all reactive updates on the rendered
 // template will stop.
-UI.insert = function (range, parentElement, nextNode) {
+UI.insert = function (view, parentElement, nextNode) {
   // parentElement must be a DOM node. in particular, can't be the
   // result of a call to `$`. Can't check if `parentElement instanceof
   // Node` since 'Node' is undefined in IE8.
@@ -87,17 +80,18 @@ UI.insert = function (range, parentElement, nextNode) {
     throw new Error("'parentElement' must be a DOM node");
   if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
     throw new Error("'nextNode' must be a DOM node");
-  if (! range instanceof Blaze._DOMRange)
+  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with UI.render");
 
-  range.attach(parentElement, nextNode);
+  view.domrange.attach(parentElement, nextNode);
 };
 
 // XXX test and document
-UI.remove = function (range) {
-  if (! range instanceof Blaze._DOMRange)
+UI.remove = function (view) {
+  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with UI.render");
 
+  var range = view.domrange;
   if (range.attached)
     range.detach();
   range.destroy();

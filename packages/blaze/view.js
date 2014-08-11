@@ -390,7 +390,9 @@ Blaze.render = function (content, parentView) {
       throw new Error("Expected a function, template, or View in Blaze.render");
     view = content;
   }
-  return Blaze._materializeView(view, parentView);
+  Blaze._materializeView(view, parentView);
+
+  return view;
 };
 
 Blaze.toHTML = function (htmljs, parentView) {
