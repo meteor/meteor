@@ -69,7 +69,7 @@ else
   ANDROID_BUNDLE=$(dirname "$SCRIPT_DIR")
 fi
 
-export PATH=${ANDROID_BUNDLE}/android-sdk-macosx/tools:${ANDROID_BUNDLE}/android-sdk-macosx/platform-tools:${PATH};
+export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH};
 
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
 export PATH=${ANT_HOME}/bin:${PATH}
