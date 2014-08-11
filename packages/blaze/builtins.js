@@ -157,8 +157,15 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   return eachView;
 };
 
-Blaze._TemplateWith = function (argFunc, contentBlock) {
+Blaze._TemplateWith = function (arg, contentBlock) {
   var w;
+
+  var argFunc = arg;
+  if (typeof arg !== 'function') {
+    argFunc = function () {
+      return arg;
+    };
+  }
 
   // This is a little messy.  When we compile `{{> UI.contentBlock}}`, we
   // wrap it in Blaze._InOuterTemplateScope in order to skip the intermediate

@@ -40,7 +40,6 @@ Tinytest.add("ui - render - basic", function (test) {
       '<p>Hello</p>',
       'HTML.P("Hello")');
 
-  run(null, '', '', 'null');
   run([], '', '', '[]');
   run([null, null], '', '', '[null, null]');
 
