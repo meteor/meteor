@@ -183,7 +183,6 @@ cordova.ensureCordovaPlatforms = function (localPath) {
 
 cordova.ensureCordovaPlugins = function (localPath, options) {
   options = options || {};
-
   var plugins = options.packagePlugins;
   if (! plugins) {
     // Bundle to gather the plugin dependencies from packages.
@@ -200,7 +199,13 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
 
   var cordovaPath = path.join(localPath, 'cordova-build');
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
-  var newSettings = options.settings;
+  var newSettings = null;
+
+  if (options.settings) {
+    newSettings =
+      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
+  }
+
 
   // XXX compare the latest used sha's with the currently required sha's for
   // plugins fetched from a github/tarball url.
@@ -286,7 +291,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
 };
 
 // Build a Cordova project, creating a Cordova project if necessary.
-var buildCordova = function (localPath, options) {
+var buildCordova = function (localPath, buildCommand, options) {
   var webArchName = "web.cordova";
 
   var bundlePath = path.join(localPath, 'build-cordova-temp');
@@ -327,19 +332,16 @@ var buildCordova = function (localPath, options) {
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
   // Give the buffer more space as the output of the build is really huge
-  execFileSyncOrThrow('cordova', ['build'],
+  execFileSyncOrThrow('cordova', [buildCommand],
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
 };
 
-// Builds a Cordova project that targets the list of 'platforms'
-// options:
-//   - appName: the target path of the build
-//   - host
-//   - port
-cordova.buildPlatforms = function (localPath, platforms, options) {
+// checks that every requested platform such as 'android' or 'ios' is already
+// added to the project
+var checkRequestedPlatforms = function (platforms) {
   platforms = _.uniq(platforms);
-  var requestedPlatforms = [];
 
+  var requestedPlatforms = [];
   // Find the required platforms.
   // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
   _.each(platforms, function (platformName) {
@@ -356,16 +358,21 @@ cordova.buildPlatforms = function (localPath, platforms, options) {
         ": platform is not added to the project. Try 'meteor add platform:" +
         platform + "' to add it or 'meteor help add' for help.");
   });
+};
 
-  var cordovaSettings = null;
-  if (options.settings) {
-    cordovaSettings =
-      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
-  }
+// Builds a Cordova project that targets the list of 'platforms'
+// options:
+//   - appName: the target path of the build
+//   - host
+//   - port
+cordova.buildPlatforms = function (localPath, platforms, options) {
+  checkRequestedPlatforms(platforms);
+  buildCordova(localPath, 'build', options);
+};
 
-  buildCordova(localPath, _.extend({}, options, {
-    settings: cordovaSettings
-  }));
+cordova.preparePlatforms = function (localPath, platforms, options) {
+  checkRequestedPlatforms(platforms);
+  buildCordova(localPath, 'prepare', options);
 };
 
 
@@ -415,3 +422,4 @@ cordova.filterPackages = function (packages) {
   });
   return ret;
 };
+

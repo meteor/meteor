@@ -72,6 +72,24 @@ var getLocalPackages = function () {
   return ret;
 };
 
+var parseHostPort = function (str) {
+  // XXX factor this out into a {type: host/port}?
+  var portMatch = str.match(/^(?:(.+):)?([0-9]+)$/);
+  if (!portMatch) {
+    throw new Error(
+"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+  }
+
+  var host = portMatch[1] || 'localhost';
+  var port = parseInt(portMatch[2]);
+
+  return {
+    host: host,
+    port: port
+  };
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
 ///////////////////////////////////////////////////////////////////////////////
@@ -249,24 +267,24 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX factor this out into a {type: host/port}?
-  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
-  if (!portMatch) {
-    process.stderr.write(
-"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
-"port is a number. Try 'meteor help run' for help.\n");
+  try {
+    var parsedHostPort = parseHostPort(options.port);
+  } catch (err) {
+    process.stderr.write(err.message);
     return 1;
   }
-  var proxyHost = portMatch[1] || 'localhost';
-  var proxyPort = parseInt(portMatch[2]);
+
+  // Always bundle for the browser by default.
+  var webArchs = ["web.browser"];
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
+    webArchs.push("web.cordova");
     // will asynchronously start mobile emulators/devices
     try {
       var localPath = path.join(options.appDir, '.meteor', 'local');
       cordova.buildPlatforms(localPath, options.args,
-        _.extend({}, options, { host: proxyHost, port: proxyPort }));
+        _.extend({}, options, parsedHostPort));
       cordova.runPlatforms(localPath, options.args);
     } catch (err) {
       process.stderr.write(err.message + '\n');
@@ -308,14 +326,15 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    proxyPort: proxyPort,
-    proxyHost: proxyHost,
+    proxyPort: parsedHostPort.port,
+    proxyHost: parsedHostPort.host,
     appPort: appPort,
     appHost: appHost,
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
-      minify: options.production
+      minify: options.production,
+      webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -574,22 +593,16 @@ main.registerCommand({
   if (! _.isEmpty(mobilePlatforms)) {
     var cordovaSettings = {};
 
-    // XXX factor this out into a {type: host/port}?
-    var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
-    if (!portMatch) {
-      process.stderr.write(
-  "run: --port (-p) must be a number or be of the form 'host:port' where\n" +
-  "port is a number. Try 'meteor help run' for help.\n");
+    try {
+      var parsedHostPort = parseHostPort(options.port);
+    } catch (err) {
+      process.stderr.write(err.message);
       return 1;
     }
-    var proxyHost = portMatch[1] || null;
-    var proxyPort = parseInt(portMatch[2]);
 
     cordova.buildPlatforms(localPath, _.keys(mobilePlatforms),
-      _.extend({}, options, {
-        appName: path.basename(options.appDir),
-        host: proxyHost,
-        port: proxyPort
+      _.extend({}, options, parsedHostPort, {
+        appName: path.basename(options.appDir)
       }));
   }
 
@@ -929,6 +942,49 @@ main.registerCommand({
   }
 });
 
+
+///////////////////////////////////////////////////////////////////////////////
+// open-ide
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'open-ide',
+  requiresApp: true,
+  minArgs: 1,
+  maxArgs: Infinity,
+  options: {
+    settings: { type: String },
+    port: { type: String, short: "p", default: 'localhost:3000' },
+    production: { type: Boolean }
+  }
+}, function (options) {
+  // XXX replace try-catch with buildmessage.capture
+  try {
+    var localPath = path.join(options.appDir, '.meteor', 'local');
+    var platforms = options.args;
+
+    // check that every passed argument is in fact a platform we can build for
+    _.each(platforms, cordova.checkIsValidPlatform);
+
+    var parsedHostPort = parseHostPort(options.port);
+
+    // open projects in ides
+    cordova.preparePlatforms(localPath, platforms,
+                             _.extend({}, options, parsedHostPort));
+
+    _.each(platforms, function (platform) {
+      if (platform !== 'ios')
+        throw new Error(platform + ": unsupported platform for 'open-ide' command. Only 'ios' is supportted at the moment.");
+
+      execFileSync('sh', ['-c', 'open ' + path.join(localPath, 'cordova-build', 'platforms', 'ios', '*.xcodeproj')]);
+    });
+  } catch (err) {
+    process.stderr.write(err.message + '\n');
+    return 1;
+  }
+});
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // authorized
 ///////////////////////////////////////////////////////////////////////////////
@@ -1048,20 +1104,15 @@ main.registerCommand({
     'android-device': { type: Boolean }
   }
 }, function (options) {
-  // XXX factor this out into a {type: host/port}?
-  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
-  if (!portMatch) {
-    process.stderr.write(
-"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
-"port is a number. Try 'meteor help run' for help.\n");
+  try {
+    var parsedHostPort = parseHostPort(options.port);
+  } catch (err) {
+    process.stderr.write(err.message);
     return 1;
   }
-  var proxyHost = portMatch[1] || 'localhost';
-  var proxyPort = parseInt(portMatch[2]);
 
   // XXX not good to change the options this way
-  options.port = proxyPort;
-  options.host = proxyHost;
+  _.extend(options, parsedHostPort);
 
   var testPackages = null;
   try {
@@ -1648,3 +1699,4 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
+
