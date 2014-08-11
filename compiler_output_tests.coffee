@@ -117,7 +117,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return Spacebars.call(view.lookup("bar"));
     }, function() {
       return Spacebars.include(view.lookupTemplate("foo"));
@@ -129,7 +129,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return {
         x: Spacebars.call(view.lookup("bar"))
       };
@@ -144,7 +144,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return Spacebars.call(Spacebars.dot(view.lookup("bar"), "baz"));
     }, function() {
       return Spacebars.include(view.lookupTemplate("foo"));
@@ -156,7 +156,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return {
         x: Spacebars.call(Spacebars.dot(view.lookup("bar"), "baz"))
       };
@@ -170,7 +170,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return Spacebars.dataMustache(view.lookup("bar"), view.lookup("baz"));
     }, function() {
       return Spacebars.include(view.lookupTemplate("foo"));
@@ -183,7 +183,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return Spacebars.dataMustache(view.lookup("bar"), view.lookup("baz"));
     }, function() {
       return Spacebars.include(view.lookupTemplate("foo"), (function() {
@@ -197,7 +197,7 @@ function() {
   """
   function() {
     var view = this;
-    return Spacebars.TemplateWith(function() {
+    return Blaze._TemplateWith(function() {
       return Spacebars.dataMustache(Spacebars.dot(view.lookup("p"), "q"), Spacebars.dot(view.lookup("r"), "s"));
     }, function() {
       return Spacebars.include(view.lookupTemplate("foo"), (function() {
