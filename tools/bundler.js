@@ -1484,12 +1484,11 @@ var writeTargetToPath = function (name, target, outputPath, options) {
 
   builder.complete();
 
-  _.extend(options.cordovaDependencies, target.cordovaDependencies);
-
   return {
     name: name,
     arch: target.mostCompatibleArch(),
     path: path.join('programs', name, relControlFilePath),
+    cordovaDependencies: target.cordovaDependencies
   };
 };
 
@@ -1584,14 +1583,15 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
+      var targetJson = writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModulesSymlink: options.includeNodeModulesSymlink,
         builtBy: options.builtBy,
         controlProgram: options.controlProgram,
         releaseName: options.releaseName,
-        getRelativeTargetPath: options.getRelativeTargetPath,
-        cordovaDependencies: json.cordovaDependencies
-      }));
+        getRelativeTargetPath: options.getRelativeTargetPath
+      });
+      json.programs.push(_.omit(targetJson, 'cordovaDependencies'));
+      _.extend(json.cordovaDependencies, targetJson.cordovaDependencies);
     });
 
     // Control file
@@ -1949,8 +1949,7 @@ exports.bundle = function (options) {
       builtBy: builtBy,
       controlProgram: controlProgram,
       releaseName: releaseName,
-      getRelativeTargetPath: getRelativeTargetPath,
-      cordovaDependencies: {}
+      getRelativeTargetPath: getRelativeTargetPath
     };
 
     if (options.hasCachedBundle) {
