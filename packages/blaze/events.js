@@ -1,4 +1,4 @@
-var EventSupport = Blaze.EventSupport = {};
+var EventSupport = Blaze._EventSupport = {};
 
 var DOMBackend = Blaze._DOMBackend;
 

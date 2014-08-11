@@ -139,7 +139,7 @@ _.extend(CodeGen.prototype, {
 
           if (path[0] === 'UI' &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
-            includeCode = 'Blaze.InOuterTemplateScope(view, function () { return '
+            includeCode = 'Blaze._InOuterTemplateScope(view, function () { return '
               + includeCode + '; })';
           }
 

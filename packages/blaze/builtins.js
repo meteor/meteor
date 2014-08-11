@@ -7,7 +7,7 @@ Blaze._calculateCondition = function (cond) {
 Blaze.With = function (data, contentFunc) {
   var view = Blaze.View('with', contentFunc);
 
-  view.dataVar = new Blaze.ReactiveVar;
+  view.dataVar = new Blaze._ReactiveVar;
 
   view.onCreated(function () {
     if (typeof data === 'function') {
@@ -24,7 +24,7 @@ Blaze.With = function (data, contentFunc) {
 };
 
 Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
-  var conditionVar = new Blaze.ReactiveVar;
+  var conditionVar = new Blaze._ReactiveVar;
 
   var view = Blaze.View(_not ? 'unless' : 'if', function () {
     return conditionVar.get() ? contentFunc() :
@@ -61,7 +61,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.stopHandle = null;
   eachView.contentFunc = contentFunc;
   eachView.elseFunc = elseFunc;
-  eachView.argVar = new Blaze.ReactiveVar;
+  eachView.argVar = new Blaze._ReactiveVar;
 
   eachView.onCreated(function () {
     // We evaluate argFunc in an autorun to make sure
@@ -161,15 +161,15 @@ Blaze._TemplateWith = function (argFunc, contentBlock) {
   var w;
 
   // This is a little messy.  When we compile `{{> UI.contentBlock}}`, we
-  // wrap it in Blaze.InOuterTemplateScope in order to skip the intermediate
+  // wrap it in Blaze._InOuterTemplateScope in order to skip the intermediate
   // parent Views in the current template.  However, when there's an argument
   // (`{{> UI.contentBlock arg}}`), the argument needs to be evaluated
   // in the original scope.  There's no good order to nest
-  // Blaze.InOuterTemplateScope and Spacebars.TemplateWith to achieve this,
+  // Blaze._InOuterTemplateScope and Spacebars.TemplateWith to achieve this,
   // so we wrap argFunc to run it in the "original parentView" of the
-  // Blaze.InOuterTemplateScope.
+  // Blaze._InOuterTemplateScope.
   //
-  // To make this better, reconsider InOuterTemplateScope as a primitive.
+  // To make this better, reconsider _InOuterTemplateScope as a primitive.
   // Longer term, evaluate expressions in the proper lexical scope.
   var wrappedArgFunc = function () {
     var viewToEvaluateArg = null;
@@ -188,7 +188,7 @@ Blaze._TemplateWith = function (argFunc, contentBlock) {
   return w;
 };
 
-Blaze.InOuterTemplateScope = function (templateView, contentFunc) {
+Blaze._InOuterTemplateScope = function (templateView, contentFunc) {
   var view = Blaze.View('InOuterTemplateScope', contentFunc);
   var parentView = templateView.parentView;
 

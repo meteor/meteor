@@ -1,10 +1,10 @@
-// new Blaze.DOMMaterializer(options)
+// new Blaze._DOMMaterializer(options)
 //
 // An HTML.Visitor that turns HTMLjs into DOM nodes and DOMRanges.
 //
 // Options: `parentView`
-Blaze.DOMMaterializer = HTML.Visitor.extend();
-Blaze.DOMMaterializer.def({
+Blaze._DOMMaterializer = HTML.Visitor.extend();
+Blaze._DOMMaterializer.def({
   visitNull: function (x, intoArray) {
     return intoArray;
   },
