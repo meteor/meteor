@@ -26,6 +26,9 @@ var cordova = exports;
 
 var supportedPlatforms = ['ios', 'android', 'firefoxos'];
 
+var localCordova = path.join(files.getCurrentToolsDir(),
+  "scripts", "cordova.sh");
+
 var execFileSyncOrThrow = function (file, args, opts) {
   var process = execFileSync(file, args, opts);
   if (! process.success)
@@ -134,7 +137,7 @@ cordova.ensureCordovaProject = function (localPath, appName) {
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
   if (! fs.existsSync(cordovaPath)) {
     try {
-      var creation = execFileSyncOrThrow('cordova',
+      var creation = execFileSyncOrThrow(localCordova,
         ['create', path.basename(cordovaPath), 'com.meteor.' + appName, appName.replace(/\s/g, '')],
         { cwd: path.dirname(cordovaPath) });
 
@@ -153,7 +156,7 @@ cordova.ensureCordovaProject = function (localPath, appName) {
 cordova.ensureCordovaPlatforms = function (localPath) {
   var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
-  var platformsList = execFileSyncOrThrow('cordova', ['platform', 'list'],
+  var platformsList = execFileSyncOrThrow(localCordova, ['platform', 'list'],
                                    { cwd: cordovaPath });
 
   // eg. ['android 3.5.0', 'ios 3.5.0']
@@ -163,13 +166,13 @@ cordova.ensureCordovaPlatforms = function (localPath) {
   _.each(platforms, function (platform) {
     if (! _.contains(installedPlatforms, platform) &&
           _.contains(supportedPlatforms, platform))
-      execFileSyncOrThrow('cordova', ['platform', 'add', platform], { cwd: cordovaPath });
+      execFileSyncOrThrow(localCordova, ['platform', 'add', platform], { cwd: cordovaPath });
   });
 
   _.each(installedPlatforms, function (platform) {
     if (! _.contains(platforms, platform) &&
           _.contains(supportedPlatforms, platform))
-      execFileSyncOrThrow('cordova', ['platform', 'rm', platform], { cwd: cordovaPath });
+      execFileSyncOrThrow(localCordova, ['platform', 'rm', platform], { cwd: cordovaPath });
   });
 
   return true;
@@ -209,7 +212,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
 
   // XXX compare the latest used sha's with the currently required sha's for
   // plugins fetched from a github/tarball url.
-  var pluginsOutput = execFileSyncOrThrow('cordova', ['plugin', 'list'],
+  var pluginsOutput = execFileSyncOrThrow(localCordova, ['plugin', 'list'],
                                    { cwd: cordovaPath }).stdout;
 
   var installedPlugins = {};
@@ -256,7 +259,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
     }
 
     if (_.has(installedPlugins, name))
-      execFileSyncOrThrow('cordova', ['plugin', 'rm', name], { cwd: cordovaPath });
+      execFileSyncOrThrow(localCordova, ['plugin', 'rm', name], { cwd: cordovaPath });
 
     // XXX do something different for plugins fetched from a url.
     var pluginInstallCommand = version ? name + '@' + version : name;
@@ -278,7 +281,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
       });
     }
     process.stdout.write('Installing ' + pluginInstallCommand + '\n');
-    var execRes = execFileSyncOrThrow('cordova',
+    var execRes = execFileSyncOrThrow(localCordova,
        ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: cordovaPath });
     if (! execRes.success)
       throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
@@ -286,7 +289,7 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
 
   _.each(installedPlugins, function (version, name) {
     if (! _.has(plugins, name))
-      execFileSyncOrThrow('cordova', ['plugin', 'rm', name], { cwd: cordovaPath });
+      execFileSyncOrThrow(localCordova, ['plugin', 'rm', name], { cwd: cordovaPath });
   });
 };
 
@@ -332,7 +335,7 @@ var buildCordova = function (localPath, buildCommand, options) {
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
   // Give the buffer more space as the output of the build is really huge
-  execFileSyncOrThrow('cordova', [buildCommand],
+  execFileSyncOrThrow(localCordova, [buildCommand],
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
 };
 
@@ -390,7 +393,7 @@ var execCordovaOnPlatform = function (localPath, platformName) {
                platform ];
 
   // XXX error if not a Cordova project
-  execFileAsync('cordova', args, { cwd: cordovaPath });
+  execFileAsync(localCordova, args, { cwd: cordovaPath });
   return 0;
 };
 
