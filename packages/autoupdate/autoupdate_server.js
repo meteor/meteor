@@ -43,9 +43,6 @@ Autoupdate = {};
 // The collection of acceptable client versions.
 ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
   { connection: null });
-ClientVersionsRefreshable =
-  new Meteor.Collection("meteor_autoupdate_clientVersions_refreshable",
-  { connection: null });
 
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the
@@ -61,9 +58,6 @@ var startupVersion = null;
 // updateVersions can only be called after the server has fully loaded.
 var updateVersions = function (shouldReloadClientProgram) {
   syncQueue.runTask(function () {
-    var oldVersion = Autoupdate.autoupdateVersion;
-    var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
-
     // Step 1: load the current client program on the server and update the
     // hash values in __meteor_runtime_config__.
     if (shouldReloadClientProgram) {
@@ -90,25 +84,30 @@ var updateVersions = function (shouldReloadClientProgram) {
       WebAppInternals.generateBoilerplate();
     }
 
-    if (Autoupdate.autoupdateVersion !== oldVersion) {
-      if (oldVersion) {
-        ClientVersions.remove(oldVersion);
-      }
-
+    if (! ClientVersions.findOne({_id: "version"})) {
       ClientVersions.insert({
-        _id: Autoupdate.autoupdateVersion,
-        current: true
+        _id: "version",
+        refreshable: false,
+        version: Autoupdate.autoupdateVersion,
       });
+    } else {
+      ClientVersions.update("version", { $set: {
+        version: Autoupdate.autoupdateVersion,
+      }});
     }
 
-    if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
-      if (oldVersionRefreshable) {
-        ClientVersionsRefreshable.remove(oldVersionRefreshable);
-      }
-      ClientVersionsRefreshable.insert({
-        _id: Autoupdate.autoupdateVersionRefreshable,
+    if (! ClientVersions.findOne({_id: "version-refreshable"})) {
+      ClientVersions.insert({
+        _id: "version-refreshable",
+        version: Autoupdate.autoupdateVersionRefreshable,
+        refreshable: true,
         assets: WebAppInternals.refreshableAssets
       });
+    } else {
+      ClientVersions.update("version-refreshable", { $set: {
+        version: Autoupdate.autoupdateVersionRefreshable,
+        assets: WebAppInternals.refreshableAssets
+      }});
     }
   });
 };
@@ -125,7 +124,7 @@ Meteor.startup(function () {
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function () {
-    return [ ClientVersions.find(), ClientVersionsRefreshable.find() ];
+    return ClientVersions.find();
   },
   {is_auto: true}
 );
