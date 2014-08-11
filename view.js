@@ -201,7 +201,7 @@ Blaze._materializeView = function (view, parentView) {
       view.isInRender = false;
 
       Deps.nonreactive(function doMaterialize() {
-        var materializer = new Blaze.DOMMaterializer({parentView: view});
+        var materializer = new Blaze._DOMMaterializer({parentView: view});
         var rangesAndNodes = materializer.visit(htmljs, []);
         if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
           if (c.firstRun) {
@@ -281,8 +281,8 @@ Blaze._expandView = function (view, parentView) {
 };
 
 // Options: `parentView`
-Blaze.HTMLJSExpander = HTML.TransformingVisitor.extend();
-Blaze.HTMLJSExpander.def({
+Blaze._HTMLJSExpander = HTML.TransformingVisitor.extend();
+Blaze._HTMLJSExpander.def({
   visitObject: function (x) {
     if (x instanceof Blaze.Template)
       x = x.constructView();
@@ -320,13 +320,13 @@ var currentViewIfRendering = function () {
 
 Blaze._expand = function (htmljs, parentView) {
   parentView = parentView || currentViewIfRendering();
-  return (new Blaze.HTMLJSExpander(
+  return (new Blaze._HTMLJSExpander(
     {parentView: parentView})).visit(htmljs);
 };
 
 Blaze._expandAttributes = function (attrs, parentView) {
   parentView = parentView || currentViewIfRendering();
-  return (new Blaze.HTMLJSExpander(
+  return (new Blaze._HTMLJSExpander(
     {parentView: parentView})).visitAttributes(attrs);
 };
 
@@ -589,7 +589,7 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
 
         var newEvents = parts.shift();
         var selector = parts.join(' ');
-        handles.push(Blaze.EventSupport.listen(
+        handles.push(Blaze._EventSupport.listen(
           element, newEvents, selector,
           function (evt) {
             if (! range.containsElement(evt.currentTarget))

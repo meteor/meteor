@@ -21,7 +21,7 @@ var bindDataContext = function (x) {
 };
 
 var wrapHelper = function (f) {
-  return Blaze.wrapCatchingExceptions(f, 'template helper');
+  return Blaze._wrapCatchingExceptions(f, 'template helper');
 };
 
 // !!! FIX THIS COMMENT !!!
