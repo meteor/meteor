@@ -377,34 +377,102 @@ Blaze.withCurrentView = function (view, func) {
   }
 };
 
+// Blaze.render publicly takes a View or a Template.
+// Privately, it takes any HTMLJS (extended with Views and Templates)
+// except null or undefined, or a function that returns any extended
+// HTMLJS.
+var checkRenderContent = function (content) {
+  if (content === null)
+    throw new Error("Can't render null");
+  if (typeof content === 'undefined')
+    throw new Error("Can't render undefined");
+
+  if ((content instanceof Blaze.View) ||
+      (content instanceof Blaze.Template) ||
+      (typeof content === 'function'))
+    return;
+
+  try {
+    // Throw if content doesn't look like HTMLJS at the top level
+    // (i.e. verify that this is an HTML.Tag, or an array,
+    // or a primitive, etc.)
+    (new HTML.Visitor).visit(content);
+  } catch (e) {
+    // Make error message suitable for public API
+    throw new Error("Expected Template or View");
+  }
+};
+
+// For Blaze.render and Blaze.toHTML, take content and
+// wrap it in a View, unless it's a single View or
+// Template already.
+var contentAsView = function (content) {
+  checkRenderContent(content);
+
+  if (content instanceof Blaze.Template) {
+    return content.constructView();
+  } else if (content instanceof Blaze.View) {
+    return content;
+  } else {
+    var func = content;
+    if (typeof func !== 'function') {
+      func = function () {
+        return content;
+      };
+    }
+    return Blaze.View('render', func);
+  }
+};
+
+// For Blaze.renderWithData and Blaze.toHTMLWithData, wrap content
+// in a function, if necessary, so it can be a content arg to
+// a Blaze.With.
+var contentAsFunc = function (content) {
+  checkRenderContent(content);
+
+  if (typeof content !== 'function') {
+    return function () {
+      return content;
+    };
+  } else {
+    return content;
+  }
+};
+
 Blaze.render = function (content, parentView) {
   parentView = parentView || currentViewIfRendering();
 
-  var view;
-  if (typeof content === 'function') {
-    view = Blaze.View('render', content);
-  } else if (content instanceof Blaze.Template) {
-    view = content.constructView();
-  } else {
-    if (! (content instanceof Blaze.View))
-      throw new Error("Expected a function, template, or View in Blaze.render");
-    view = content;
-  }
+  var view = contentAsView(content);
   Blaze._materializeView(view, parentView);
 
   return view;
 };
 
-Blaze.toHTML = function (htmljs, parentView) {
-  if (typeof htmljs === 'function')
-    throw new Error("Blaze.toHTML doesn't take a function, just HTMLjs");
+Blaze.renderWithData = function (content, data, parentView) {
   parentView = parentView || currentViewIfRendering();
-  return HTML.toHTML(Blaze._expand(htmljs, parentView));
+
+  var view = Blaze._TemplateWith(data, contentAsFunc(content));
+  Blaze._materializeView(view, parentView);
+
+  return view;
 };
 
-Blaze.toText = function (htmljs, parentView, textMode) {
+Blaze.toHTML = function (content, parentView) {
+  parentView = parentView || currentViewIfRendering();
+
+  return HTML.toHTML(Blaze._expandView(contentAsView(content), parentView));
+};
+
+Blaze.toHTMLWithData = function (content, data, parentView) {
+  parentView = parentView || currentViewIfRendering();
+
+  return HTML.toHTML(Blaze._expandView(Blaze._TemplateWith(
+    data, contentAsFunc(content)), parentView));
+};
+
+Blaze._toText = function (htmljs, parentView, textMode) {
   if (typeof htmljs === 'function')
-    throw new Error("Blaze.toText doesn't take a function, just HTMLjs");
+    throw new Error("Blaze._toText doesn't take a function, just HTMLjs");
 
   if ((parentView != null) && ! (parentView instanceof Blaze.View)) {
     // omitted parentView argument

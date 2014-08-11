@@ -133,7 +133,7 @@ _.extend(CodeGen.prototype, {
           // `{{#foo bar}}` is sugar for `{{#with bar}}{{#foo}}...`.
           if (dataCode) {
             includeCode =
-              'Spacebars.TemplateWith(' + dataCode + ', function () { return ' +
+              'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
               includeCode + '; })';
           }
 

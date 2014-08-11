@@ -3,11 +3,7 @@ renderToDiv = function (template, optData) {
   if (optData == null) {
     UI.insert(UI.render(template), div);
   } else {
-    UI.insert(UI.render(function () {
-      return Blaze.With(optData, function () {
-        return template;
-      });
-    }), div);
+    UI.insert(UI.renderWithData(template, optData), div);
   }
   return div;
 };

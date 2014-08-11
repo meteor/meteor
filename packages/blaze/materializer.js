@@ -75,9 +75,9 @@ Blaze.DOMMaterializer.def({
         var flattenedAttrs = HTML.flattenAttributes(expandedAttrs);
         var stringAttrs = {};
         for (var attrName in flattenedAttrs) {
-          stringAttrs[attrName] = Blaze.toText(flattenedAttrs[attrName],
-                                               parentView,
-                                               HTML.TEXTMODE.STRING);
+          stringAttrs[attrName] = Blaze._toText(flattenedAttrs[attrName],
+                                                parentView,
+                                                HTML.TEXTMODE.STRING);
         }
         attrUpdater.update(stringAttrs);
       };

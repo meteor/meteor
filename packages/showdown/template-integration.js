@@ -8,7 +8,7 @@ if (Package.templating) {
     var view = this;
     var content = '';
     if (view.templateContentBlock) {
-      content = Blaze.toText(view.templateContentBlock, HTML.TEXTMODE.STRING);
+      content = Blaze._toText(view.templateContentBlock, HTML.TEXTMODE.STRING);
     }
     var converter = new Showdown.converter();
     return HTML.Raw(converter.makeHtml(content));
