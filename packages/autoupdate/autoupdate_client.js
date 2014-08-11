@@ -37,7 +37,7 @@ Autoupdate.newClientAvailable = function () {
   return !! ClientVersions.findOne({
                refreshable: false,
                version: {$ne: autoupdateVersion} }) ||
-         !! ClientVersionsRefreshable.findOne({
+         !! ClientVersions.findOne({
                refreshable: true,
                version: {$ne: autoupdateVersionRefreshable} });
 };
