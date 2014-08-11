@@ -204,37 +204,6 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
   };
 };
 
-Spacebars.TemplateWith = function (argFunc, contentBlock) {
-  var w;
-
-  // This is a little messy.  When we compile `{{> UI.contentBlock}}`, we
-  // wrap it in Blaze.InOuterTemplateScope in order to skip the intermediate
-  // parent Views in the current template.  However, when there's an argument
-  // (`{{> UI.contentBlock arg}}`), the argument needs to be evaluated
-  // in the original scope.  There's no good order to nest
-  // Blaze.InOuterTemplateScope and Spacebars.TemplateWith to achieve this,
-  // so we wrap argFunc to run it in the "original parentView" of the
-  // Blaze.InOuterTemplateScope.
-  //
-  // To make this better, reconsider InOuterTemplateScope as a primitive.
-  // Longer term, evaluate expressions in the proper lexical scope.
-  var wrappedArgFunc = function () {
-    var viewToEvaluateArg = null;
-    if (w.parentView && w.parentView.kind === 'InOuterTemplateScope') {
-      viewToEvaluateArg = w.parentView.originalParentView;
-    }
-    if (viewToEvaluateArg) {
-      return Blaze.withCurrentView(viewToEvaluateArg, argFunc);
-    } else {
-      return argFunc();
-    }
-  };
-
-  w = Blaze.With(wrappedArgFunc, contentBlock);
-  w.__isTemplateWith = true;
-  return w;
-};
-
 // Spacebars.With implements the conditional logic of rendering
 // the `{{else}}` block if the argument is falsy.  It combines
 // a Blaze.If with a Blaze.With (the latter only in the truthy
