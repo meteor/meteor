@@ -348,6 +348,14 @@ Pass --browserstack to enable client side tests using BrowserStack.
 --browserstack requires s3cmd credentials.
 
 
+
+>>> open-ide
+Open mobile build project in associated IDE.
+Usage: meteor open-ide [ios]
+
+Open mobile build project in associated IDE.
+
+
 >>> admin
 Administrative commands
 Usage: meteor admin <command> [args]
