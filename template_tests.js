@@ -2257,7 +2257,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI._parentData from helpers",
+  "spacebars-tests - template_tests - UI.parentData from helpers",
   function (test) {
     var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
     var parentTmpl = Template.spacebars_test_template_parent_data_helper;
@@ -2270,7 +2270,7 @@ Tinytest.add(
     childTmpl.c = ["c"];
 
     childTmpl.foo = function () {
-      return UI._parentData(height.get());
+      return UI.parentData(height.get());
     };
 
     var div = renderToDiv(parentTmpl);
@@ -2280,7 +2280,7 @@ Tinytest.add(
     Deps.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
-    // Test UI._parentData() reactivity
+    // Test UI.parentData() reactivity
 
     bar.set("baz");
     Deps.flush();
