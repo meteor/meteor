@@ -1,4 +1,4 @@
-/// [new] Blaze.View([kind], renderMethod)
+/// [new] Blaze.View([name], renderMethod)
 ///
 /// Blaze.View is the building block of reactive DOM.  Views have
 /// the following features:
@@ -26,23 +26,23 @@
 ///
 /// ...more lifecycle stuff
 ///
-/// `kind` is an optional string tag identifying the View.  The only
+/// `name` is an optional string tag identifying the View.  The only
 /// time it's used is when looking in the View tree for a View of a
-/// particular kind; for example, data contexts are stored on Views
-/// of kind "with".  Kinds are also useful when debugging, so in
-/// general it's good for functions that create Views to set the kind.
-/// Templates have kinds of the form "Template.foo".
-Blaze.View = function (kind, render) {
+/// particular name; for example, data contexts are stored on Views
+/// of name "with".  Names are also useful when debugging, so in
+/// general it's good for functions that create Views to set the name.
+/// Views associated with templates have names of the form "Template.foo".
+Blaze.View = function (name, render) {
   if (! (this instanceof Blaze.View))
     // called without `new`
-    return new Blaze.View(kind, render);
+    return new Blaze.View(name, render);
 
-  if (typeof kind === 'function') {
-    // omitted "kind" argument
-    render = kind;
-    kind = '';
+  if (typeof name === 'function') {
+    // omitted "name" argument
+    render = name;
+    name = '';
   }
-  this.kind = kind;
+  this.name = name;
   this.render = render;
 
   this._callbacks = {
@@ -534,9 +534,9 @@ Blaze.getCurrentData = function () {
   return theWith ? theWith.dataVar.get() : null;
 };
 
-// Gets the current view or its nearest ancestor of kind
-// `kind`.
-Blaze.getCurrentView = function (kind) {
+// Gets the current view or its nearest ancestor of name
+// `name`.
+Blaze.getCurrentView = function (name) {
   var view = Blaze.currentView;
   // Better to fail in cases where it doesn't make sense
   // to use Blaze.getCurrentView().  There will be a current
@@ -545,8 +545,8 @@ Blaze.getCurrentView = function (kind) {
   if (! view)
     throw new Error("There is no current view");
 
-  if (kind) {
-    while (view && view.kind !== kind)
+  if (name) {
+    while (view && view.name !== name)
       view = view.parentView;
     return view || null;
   } else {
@@ -566,18 +566,18 @@ Blaze.getCurrentTemplateView = function () {
   return view || null;
 };
 
-Blaze.getParentView = function (view, kind) {
+Blaze.getParentView = function (view, name) {
   var v = view.parentView;
 
-  if (kind) {
-    while (v && v.kind !== kind)
+  if (name) {
+    while (v && v.name !== name)
       v = v.parentView;
   }
 
   return v || null;
 };
 
-Blaze.getElementView = function (elem, kind) {
+Blaze.getElementView = function (elem, name) {
   var range = Blaze._DOMRange.forElement(elem);
   var view = null;
   while (range && ! view) {
@@ -590,8 +590,8 @@ Blaze.getElementView = function (elem, kind) {
     }
   }
 
-  if (kind) {
-    while (view && view.kind !== kind)
+  if (name) {
+    while (view && view.name !== name)
       view = view.parentView;
     return view || null;
   } else {
