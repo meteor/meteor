@@ -17,7 +17,7 @@ See 'meteor help <command>' for details on a command.
 
 
 >>> run
-[default] Run this project in local development mode
+[default] Run this project in local development mode.
 Usage: meteor run [options]
 
 Searches upward from the current directory for the root directory of a
@@ -44,7 +44,7 @@ Options:
 
 
 >>> create
-Create a new project
+Create a new project.
 Usage: meteor create [--release <release>] <name>
        meteor create [--release <release>] --example <example_name> [<name>]
        meteor create --list
@@ -112,7 +112,7 @@ internal functionality of Meteor.
 
 
 >>> add
-Add a package to this project
+Add a package to this project.
 Usage: meteor add <package> [package] [package..]
 
 Adds packages to your Meteor project. You can add multiple
@@ -121,7 +121,7 @@ the meteor --search command.
 
 
 >>> remove
-Remove a package from this project
+Remove a package from this project.
 Usage: meteor remove <package> [package] [package..]
 
 Removes a package previously added to your Meteor project. For a
@@ -140,7 +140,7 @@ Also lists the Cordova plugins and platforms used by your mobile
 build directly.
 
 >>> bundle
-Pack this project up into a tarball
+Pack this project up into a tarball.
 Usage: meteor bundle <output_file.tar.gz>
 
 Package this project up for deployment. The output is a tarball that
@@ -157,7 +157,7 @@ Options:
 
 
 >>> mongo
-Connect to the Mongo database for the specified site
+Connect to the Mongo database for the specified site.
 Usage: meteor mongo [--url] [site]
 
 Opens a Mongo shell to view or manipulate collections.
@@ -186,7 +186,7 @@ Reset the current project to a fresh state. Removes all local data.
 
 
 >>> deploy
-Deploy this project to Meteor
+Deploy this project to Meteor.
 Usage: meteor deploy <site> [--settings settings.json] [--debug] [--delete]
 
 Deploys the project in your current directory to Meteor's servers.
@@ -216,14 +216,14 @@ Options:
 
 
 >>> logs
-Show logs for specified site
+Show logs for specified site.
 Usage: meteor logs <site>
 
 Retrieves the server logs for the requested site.
 
 
 >>> authorized
-View or change authorized users for a site
+View or change authorized users for a site.
 Usage: meteor authorized <site> [--list]
        meteor authorized <site> --add <username>
        meteor authorized <site> --remove <username>
@@ -246,7 +246,7 @@ Options:
 
 
 >>> claim
-Claim a site deployed with an old Meteor version
+Claim a site deployed with an old Meteor version.
 Usage: meteor claim <site>
 
 If you deployed a site with an old version of Meteor that did not have
@@ -256,7 +256,7 @@ be prompted for it one last time.
 
 
 >>> login
-Log in to your Meteor developer account
+Log in to your Meteor developer account.
 Usage: meteor login [--email]
 
 Prompts for your username and password and logs you in to your Meteor
@@ -265,14 +265,14 @@ by username.
 
 
 >>> logout
-Log out of your Meteor developer account
+Log out of your Meteor developer account.
 Usage: meteor logout
 
 Log out of your Meteor developer account.
 
 
 >>> whoami
-Prints the username of your Meteor developer account
+Prints the username of your Meteor developer account.
 Usage: meteor whoami
 
 Prints the username of the currently logged-in Meteor developer.
@@ -282,7 +282,7 @@ Meteor developer account.
 
 
 >>> test-packages
-Test one or more packages
+Test one or more packages.
 Usage: meteor test-packages [--release <release>] [options] [package...]
 
 Runs unit tests for one or more packages. The results are shown in
@@ -357,7 +357,7 @@ Open mobile build project in associated IDE.
 
 
 >>> admin
-Administrative commands
+Administrative commands.
 Usage: meteor admin <command> [args]
        meteor help admin <command>
 
@@ -369,14 +369,14 @@ Commands:
 See 'meteor help admin <command>' for details on an admin command.
 
 >>> admin make-bootstrap-tarballs
-Makes bootstrap tarballs
+Makes bootstrap tarballs.
 Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
 
 For internal use only.
 
 
 >>> dummy
-Dummy command used for automated testing
+Dummy command used for automated testing.
 Usage: meteor dummy [options]
 
 Dummy command used for automated testing.
@@ -393,7 +393,7 @@ Usage: meteor cordova <command>
 
 
 >>> list-sites
-List sites for which you are authorized
+List sites for which you are authorized.
 Usage: meteor list-sites
 
 List the sites that you have deployed with 'meteor deploy', and sites
@@ -402,7 +402,7 @@ command.
 
 
 >>> publish-release
-Publish a new meteor release to the package server
+Publish a new meteor release to the package server.
 
 Usage: meteor publish-release <path to json config> [--create-track]
 
@@ -431,7 +431,7 @@ Options:
 
 
 >>> publish
-Publish a new version of a package to the package server
+Publish a new version of a package to the package server.
 
 Usage: meteor publish [--create]
 
@@ -456,7 +456,7 @@ Options:
 
 
 >>> publish-for-arch
-Builds an already-published package for a new platform
+Builds an already-published package for a new platform.
 
 Usage: meteor publish-for-arch packageName@version
 
@@ -477,7 +477,7 @@ server.
 
 
 >>> rebuild
-Rebuild local packages
+Rebuild local packages.
 Usage: meteor rebuild [<package name>]
 
 Rebuild a specified local packages. Deletes the package's build directory
@@ -515,7 +515,7 @@ Options:
   --mine     list packages on which you are the maintainer
 
 >>> admin maintainers
-View or change authorized maintainers for a package
+View or change authorized maintainers for a package.
 Usage: meteor admin maintainers <package name> [--list]
        meteor admin maintainers <package name> --add <username>
        meteor admin maintainers <package name> --remove <username>
