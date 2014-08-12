@@ -394,28 +394,50 @@ var execCordovaOnPlatform = function (localPath, platformName) {
 
   // XXX error if not a Cordova project
   execFileAsync(localCordova, args, { cwd: cordovaPath });
+  var Log = getLoadedPackages().logging.Log;
 
-  var generateLineMapper = function (prefix, regex) {
-    var Log = getLoadedPackages().logging.Log;
-    return function (line) {
-      var line = line.replace(regex, '');
-      var output = Log.objFromText(prefix + line);
-      return Log.format(output, {
-        color: true,
-        metaColor: 'green'
-      });
+  var androidMapper = function (line) {
+    // remove the annoying prefix
+    line = line.replace(/^.\/CordovaLog\(\s*\d+\s*\):\s+/, '');
+    // remove a part of file url we don't like
+    line = line.replace(/^file:\/\/\/android_asset\/www\//, '');
+    // filename.js?hashsha1: Line 123 : message goes here
+    var parsedLine = line.match(/^([^?]+)\?[a-zA-Z0-9]+: Line (\d+) : (.*)$/);
+
+    if (! parsedLine)
+      return Log.format(Log.objFromText(line), { color: true });
+
+    var output = {
+      time: new Date,
+      level: 'info',
+      file: parsedLine[1],
+      line: parsedLine[2],
+      message: parsedLine[3],
+      program: 'android'
     };
+    return Log.format(output, {
+      metaColor: 'green',
+      color: true
+    });
+  };
+
+  var iosMapper = function (line) {
+    // remove the prefix
+    line = line.replace(/^\S+\s\S+\s\S+\s/, '');
+    return Log.format(Log.objFromText(line, { program: 'ios' }), {
+      metaColor: 'cyan',
+      color: true
+    });
   };
 
   if (platform === 'ios') {
-    var regex = /^[^ ]+\s[^ ]+\s[^ ]+\s/;
     execFileAsync('tail', ['-f',
-      path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log')],
-      { lineMapper: generateLineMapper('ios: ', regex) });
+      path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log')], {
+        lineMapper: iosMapper });
   } else if (platform === 'android') {
-    var regex = /^D\/CordovaLog\(\d+\):\s+file:\/\/\/android_asset\/www\//;
-    execFileAsync('adb', ['logcat', '-s', 'CordovaLog'],
-      { lineMapper: generateLineMapper('android: ', regex) });
+    execFileAsync('adb', ['logcat', '-s', 'CordovaLog'], {
+      lineMapper: androidMapper,
+    });
   }
   return 0;
 };

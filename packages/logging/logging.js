@@ -235,9 +235,12 @@ Log.format = function (obj, options) {
   if (originApp && originApp !== appName) appInfo += ' via ' + originApp;
   if (appInfo) appInfo = '[' + appInfo + '] ';
 
-  var sourceInfo = (file && lineNumber) ?
-      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ') '].join('')
-      : '';
+  var sourceInfoParts = [];
+  if (program) sourceInfoParts.push(program);
+  if (file) sourceInfoParts.push(file);
+  if (lineNumber) sourceInfoParts.push(lineNumber);
+  var sourceInfo = _.isEmpty(sourceInfoParts) ?
+    '' : '(' + sourceInfoParts.join(':') + ') ';
 
   if (satellite)
     sourceInfo += ['[', satellite, ']'].join('');
