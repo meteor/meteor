@@ -229,7 +229,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
 
 // maybe use created callback on the template instead of this?
 var extendTemplateWithInit = function (template, initFunc) {
-  var tmpl = new Template(template.__kind+'-extended', template.__render);
+  var tmpl = new Template(template.viewName+'-extended', template.renderFunction);
   tmpl.constructView = function (/*args*/) {
     var view = Template.prototype.constructView.apply(this, arguments);
     initFunc(view);
@@ -1173,7 +1173,7 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   var dep = new Deps.Dependency;
   var subtmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated_subtemplate;
   // make a copy so we can set "rendered" without mutating the original
-  var subtmplCopy = new Template(subtmpl.__kind, subtmpl.__render);
+  var subtmplCopy = new Template(subtmpl.viewName, subtmpl.renderFunction);
 
   var R = new ReactiveVar(subtmplCopy);
   tmpl.foo = function () {
