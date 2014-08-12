@@ -23,6 +23,9 @@ export PATH=${ANT_HOME}/bin:${PATH}
 # add node
 export PATH=${DEV_BUNDLE}/bin:${PATH}
 
+# add java
+export PATH=${ANDROID_BUNDLE}/jre/bin
+
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
 exec ${DEV_BUNDLE}/lib/node_modules/cordova/bin/cordova "$@"
