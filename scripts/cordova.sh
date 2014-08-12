@@ -21,7 +21,7 @@ export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
 export PATH=${ANT_HOME}/bin:${PATH}
 
 # add node
-export PATH=${DEV_BUNDLE}/bin/node:${PATH}
+export PATH=${DEV_BUNDLE}/bin:${PATH}
 
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
