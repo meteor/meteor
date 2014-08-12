@@ -213,15 +213,16 @@ ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor = function (
     }
 
     if (c.type === "compatible-with") {
-      var uv = resolver.getUnitVersion(packageName, c.version);
-      if (uv) {
+      var thisECV = resolver.getEarliestCompatibleVersion(
+        packageName, c.version);
+      if (thisECV) {
         if (earliestCompatibleVersion &&
-            earliestCompatibleVersion !== uv.earliestCompatibleVersion) {
+            earliestCompatibleVersion !== thisECV) {
           // Two constraints name versions with different ECV. Nothing can be
           // compatible with both!
           impossible = true;
         } else if (! earliestCompatibleVersion) {
-          earliestCompatibleVersion = uv.earliestCompatibleVersion;
+          earliestCompatibleVersion = thisECV;
         }
         // else the ECV matches, which is great.
       } else {

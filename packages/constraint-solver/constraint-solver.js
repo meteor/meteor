@@ -57,6 +57,12 @@ ConstraintSolver.PackagesResolver.prototype._ensurePackageInfoLoaded = function 
 ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
     packageName) {
   var self = this;
+
+  // XXX in theory there might be different archs but in practice they are
+  // always "os", "web.browser" and "web.cordova". Fix this once we
+  // actually have different archs used.
+  var allArchs = ["os", "web.browser", "web.cordova"];
+
   // XXX is sortedness actually relevant? is there a minor optimization here
   //     where we can only talk to self.catalog once?
   var sortedVersions = self.catalog.getSortedVersions(packageName);
@@ -66,10 +72,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
     var unibuilds = {};
 
-    // XXX in theory there might be different archs but in practice they are
-    // always "os", "web.browser" and "web.cordova". Fix this once we
-    // actually have different archs used.
-    var allArchs = ["os", "web.browser", "web.cordova"];
     _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
       unibuilds[unitName] = new ConstraintSolver.UnitVersion(
@@ -119,6 +121,16 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
           self.resolver.getConstraint(otherUnibuildName, constraintStr);
         unibuild.addConstraint(constraint);
       });
+    });
+  });
+
+  // We need to be aware of the earliestCompatibleVersion values for any
+  // packages that are overridden by local packages, in order to evaluate
+  // 'compatible-with' constraints that name that version.
+  _.each(self.catalog.getForgottenECVs(packageName), function (ecv, version) {
+    _.each(allArchs, function (arch) {
+      var unitName = packageName + '#' + arch;
+      self.resolver.addExtraECV(unitName, version, ecv);
     });
   });
 };

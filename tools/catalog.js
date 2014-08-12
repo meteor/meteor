@@ -192,6 +192,10 @@ var CompleteCatalog = function () {
   // XXX: use a future in the future maybe
   self.refreshing = false;
 
+  // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
+  // Maps packageName -> version -> its ECV
+  self.forgottenECVs = {};
+
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
 };
@@ -232,6 +236,12 @@ _.extend(CompleteCatalog.prototype, {
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
     self.refresh();
+  },
+
+  reset: function () {
+    var self = this;
+    BaseCatalog.prototype.reset.call(self);
+    self.forgottenECVs = {};
   },
 
   // Given a set of constraints, returns a det of dependencies that satisfy the
@@ -415,6 +425,11 @@ _.extend(CompleteCatalog.prototype, {
     _.extend(self.effectiveLocalPackages, self.localPackages);
   },
 
+  getForgottenECVs: function (packageName) {
+    var self = this;
+    return self.forgottenECVs[packageName];
+  },
+
   // Add all packages in self.effectiveLocalPackages to the catalog,
   // first removing any existing packages that have the same name.
   //
@@ -430,7 +445,10 @@ _.extend(CompleteCatalog.prototype, {
     _.each(self.effectiveLocalPackages, function (dir, packageName) {
       if (!_.has(self.versions, packageName))
         return;
+      self.forgottenECVs[packageName] = {};
       _.each(self.versions[packageName], function (record) {
+        self.forgottenECVs[packageName][record.version] =
+          record.earliestCompatibleVersion;
         removedVersionIds[record._id] = true;
       });
       delete self.versions[packageName];
