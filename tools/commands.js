@@ -972,7 +972,8 @@ main.registerCommand({
 
     // open projects in ides
     cordova.preparePlatforms(localPath, platforms,
-                             _.extend({}, options, parsedHostPort));
+                             _.extend({ debug: ! options.production },
+                                       options, parsedHostPort));
 
     _.each(platforms, function (platform) {
       if (platform !== 'ios')
