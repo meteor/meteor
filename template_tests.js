@@ -2182,7 +2182,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI._templateInstance from helper",
+  "spacebars-tests - template_tests - UI.templateInstance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
     // there from a helper.
@@ -2195,7 +2195,7 @@ Tinytest.add(
       this.value = value;
     };
     tmpl.foo = function () {
-      instanceFromHelper = UI._templateInstance();
+      instanceFromHelper = UI.templateInstance();
     };
 
     var div = renderToDiv(tmpl);
@@ -2204,7 +2204,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI._templateInstance from helper, " +
+  "spacebars-tests - template_tests - UI.templateInstance from helper, " +
     "template instance is kept up-to-date",
   function (test) {
     var tmpl = Template.spacebars_test_template_instance_helper;
@@ -2212,7 +2212,7 @@ Tinytest.add(
     var instanceFromHelper;
 
     tmpl.foo = function () {
-      return UI._templateInstance().data;
+      return UI.templateInstance().data;
     };
 
     var div = renderToDiv(tmpl, function () { return rv.get(); });
@@ -2223,10 +2223,10 @@ Tinytest.add(
     Deps.flush();
     divRendersTo(test, div, "second");
 
-    // UI._templateInstance() should throw when called from not within a
+    // UI.templateInstance() should throw when called from not within a
     // helper.
     test.throws(function () {
-      UI._templateInstance();
+      UI.templateInstance();
     });
   }
 );
@@ -2705,7 +2705,7 @@ Tinytest.add(
     var tmpl = Template.spacebars_test_autorun;
     var tmplInner = Template.spacebars_test_autorun_inner;
 
-    // Keep track of the value of `UI._templateInstance()` inside the
+    // Keep track of the value of `UI.templateInstance()` inside the
     // autorun each time it runs.
     var autorunTemplateInstances = [];
     var actualTemplateInstance;
@@ -2720,7 +2720,7 @@ Tinytest.add(
       returnedComputation = this.autorun(function (c) {
         computationArg = c;
         rv.get();
-        autorunTemplateInstances.push(UI._templateInstance());
+        autorunTemplateInstances.push(UI.templateInstance());
       });
     };
 
