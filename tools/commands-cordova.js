@@ -431,9 +431,13 @@ var execCordovaOnPlatform = function (localPath, platformName) {
   };
 
   if (platform === 'ios') {
-    execFileAsync('tail', ['-f',
-      path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log')], {
-        lineMapper: iosMapper });
+    var logFilePath =
+      path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log');
+
+    // overwrite the file so we don't have to print the old logs
+    fs.writeFileSync(logFilePath, '');
+    // print the log file
+    execFileAsync('tail', ['-f', logFilePath], { lineMapper: iosMapper });
   } else if (platform === 'android') {
     execFileAsync('adb', ['logcat', '-s', 'CordovaLog'], {
       lineMapper: androidMapper,
