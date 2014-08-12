@@ -1862,7 +1862,9 @@ main.registerCommand({
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  catalog.official.refresh();
+  doOrDie(function () {
+    catalog.official.refresh();
+  });
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
