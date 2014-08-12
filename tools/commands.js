@@ -539,26 +539,10 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// bundle
+// build
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand({
-  name: 'bundle',
-  minArgs: 1,
-  maxArgs: 1,
-  requiresApp: true,
-  options: {
-    debug: { type: Boolean },
-    directory: { type: Boolean },
-    architecture: { type: String },
-    // Undocumented
-    'for-deploy': { type: Boolean },
-    port: { type: String, short: "p", default: "localhost:3000" },
-    settings: { type: String}, // XXX document
-    'ios-path': { type: String },
-    'android-path': { type: String },
-  }
-}, function (options) {
+var buildWithOptions = function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
   // the former for them
 
@@ -659,7 +643,37 @@ main.registerCommand({
     }
   }
   files.rm_recursive(buildDir);
-});
+};
+
+var buildCommands = {
+  minArgs: 1,
+  maxArgs: 1,
+  requiresApp: true,
+  options: {
+    debug: { type: Boolean },
+    directory: { type: Boolean },
+    architecture: { type: String },
+    // Undocumented
+    'for-deploy': { type: Boolean },
+    port: { type: String, short: "p", default: "localhost:3000" },
+    settings: { type: String}, // XXX document
+    'ios-path': { type: String },
+    'android-path': { type: String },
+  }
+};
+
+main.registerCommand(_.extend({ name: 'build'}, buildCommands),
+  function (options) {
+    buildWithOptions(options);
+  });
+
+// Deprecated -- identical functionality to 'build'
+main.registerCommand(_.extend({ name: 'bundle'}, buildCommands),
+  function (options) {
+    process.stdout.write("WARNING: 'bundle' has been deprecated. " +
+                         "Use 'build' instead.\n");
+    buildWithOptions(options);
+  });
 
 ///////////////////////////////////////////////////////////////////////////////
 // mongo
