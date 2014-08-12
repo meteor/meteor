@@ -405,7 +405,7 @@ var execCordovaOnPlatform = function (localPath, platformName) {
     // remove a part of file url we don't like
     line = line.replace(/^file:\/\/\/android_asset\/www\//, '');
     // filename.js?hashsha1: Line 123 : message goes here
-    var parsedLine = line.match(/^([^?]+)\?[a-zA-Z0-9]+: Line (\d+) : (.*)$/);
+    var parsedLine = line.match(/^([^?]+)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
 
     if (! parsedLine)
       return Log.format(Log.objFromText(line), { color: true });
@@ -414,8 +414,8 @@ var execCordovaOnPlatform = function (localPath, platformName) {
       time: new Date,
       level: 'info',
       file: parsedLine[1],
-      line: parsedLine[2],
-      message: parsedLine[3],
+      line: parsedLine[3],
+      message: parsedLine[4],
       program: 'android'
     };
     return Log.format(output, {

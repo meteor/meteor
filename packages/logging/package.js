@@ -15,6 +15,7 @@ Package.on_use(function (api) {
   api.export('Log');
   api.use(['underscore', 'ejson']);
   api.add_files('logging.js');
+  api.add_files('logging_cordova.js', 'client.cordova');
 });
 
 Package.on_test(function (api) {
