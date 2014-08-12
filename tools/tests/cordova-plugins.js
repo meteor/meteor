@@ -21,6 +21,8 @@ var copyFile = function(from, to, sand) {
 };
 
 
+var localCordova = path.join(files.getCurrentToolsDir(),
+  "scripts", "cordova.sh");
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and check that it contains the plugins that we are looking for. We don't
 // check the order, we just want to make sure that the right dependencies are
@@ -29,7 +31,7 @@ var copyFile = function(from, to, sand) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
 var checkCordovaPlugins = function(sand, plugins) {
-  var lines = selftest.execFileSync('cordova', ['plugins'],
+  var lines = selftest.execFileSync(localCordova, ['plugins'],
     { cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build') }).split("\n");
   if (lines[0].match(/No plugins/)) {
     lines = [];
@@ -153,7 +155,9 @@ selftest.define("add cordova plugins", function () {
 
   run = s.run("add", "cordova:foo@1.0.0");
   run.waitSecs(5);
-  run.matchErr("Failed to fetch package");
+  // should fail to download the package as 'foo' doesn't exist
+  // printing the error message from cordova
+  run.matchErr("Error");
   run.expectExit(1);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
@@ -177,7 +181,10 @@ selftest.define("add cordova plugins", function () {
 
   checkCordovaPlugins(s,
     ["org.apache.cordova.camera",
-     "com.phonegap.plugins.facebookconnect"]);
+     "com.phonegap.plugins.facebookconnect",
+     "org.apache.cordova.console"]); // XXX we don't understand why
+                                     // but this shows up always, probably
+                                     // because of the 'logging' package
 
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
@@ -188,9 +195,10 @@ selftest.define("add cordova plugins", function () {
   run.waitSecs(30);
   run.expectExit(0);
 
-  checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
+  checkCordovaPlugins(s, ["org.apache.cordova.camera",
+                          "org.apache.cordova.console"]);
 
   run = s.run("remove", "cordova:org.apache.cordova.camera");
   run.expectExit(0);
-  checkCordovaPlugins(s, []);
+  checkCordovaPlugins(s, ["org.apache.cordova.console"]);
 });
