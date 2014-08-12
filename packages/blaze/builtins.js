@@ -180,7 +180,7 @@ Blaze._TemplateWith = function (arg, contentBlock) {
   // Longer term, evaluate expressions in the proper lexical scope.
   var wrappedArgFunc = function () {
     var viewToEvaluateArg = null;
-    if (w.parentView && w.parentView.kind === 'InOuterTemplateScope') {
+    if (w.parentView && w.parentView.name === 'InOuterTemplateScope') {
       viewToEvaluateArg = w.parentView.originalParentView;
     }
     if (viewToEvaluateArg) {

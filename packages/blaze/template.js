@@ -1,20 +1,27 @@
-// # TODO
+// [new] Blaze.Template([viewName], renderFunction)
 //
-// Should be an actual helpers dict, so you can in theory name a
-// helper anything.  Test that you can.
-//
-// Finish adding things to UI.  Take it out of the "templating" package.
-// Merge Blaze and UI symbols?
-
-
 // `Blaze.Template` is the class of templates, like `Template.foo` in
 // Meteor, which is `instanceof Template`.
 //
 // `viewKind` is a string that looks like "Template.foo" for templates
 // defined by the compiler.
-Blaze.Template = function (viewKind, viewRenderFunc) {
-  this.__kind = viewKind;
-  this.__render = viewRenderFunc;
+Blaze.Template = function (viewName, renderFunction) {
+  if (! (this instanceof Blaze.Template))
+    // called without `new`
+    return new Blaze.Template(viewName, renderFunction);
+
+  if (typeof viewName === 'function') {
+    // omitted "viewName" argument
+    renderFunction = viewName;
+    viewName = '';
+  }
+  if (typeof viewName !== 'string')
+    throw new Error("viewName must be a String (or omitted)");
+  if (typeof renderFunction !== 'function')
+    throw new Error("renderFunction must be a function");
+
+  this.viewName = viewName;
+  this.renderFunction = renderFunction;
 
   this.__eventMaps = [];
 };
@@ -26,7 +33,7 @@ Blaze.isTemplate = function (t) {
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
   var self = this;
-  var view = Blaze.View(self.__kind, self.__render);
+  var view = Blaze.View(self.viewName, self.renderFunction);
   view.template = self;
 
   view.templateContentBlock = (
@@ -77,7 +84,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
 };
 
 Template.updateTemplateInstance = function (view) {
-  // Populate `view.templateInstance.{firstNode,lastNode,data}`
+  // Populate `view._templateInstance.{firstNode,lastNode,data}`
   // on demand.
   var tmpl = view._templateInstance;
   if (! tmpl) {
