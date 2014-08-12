@@ -20,7 +20,7 @@ fi
 SCRIPT_DIR=$(pwd -P)/..
 cd "$ORIG_DIR"
 
-function install_android_bundle {
+install_android_bundle () {
   set -e
   trap "echo Failed to install dependency kit." EXIT
 
@@ -47,7 +47,7 @@ function install_android_bundle {
   echo >&2
 
   trap - EXIT
-  set +e
+  set +e;
 }
 
 # No matter if we are in the checkout or not, try to install the android_bundle
