@@ -10,7 +10,7 @@ Cordova.depends({
 Package.on_use(function (api) {
   api.use(["deps", "underscore"]);
 
-  api.add_files(["compass.js"], "client");
+  api.add_files(["device-orientation.js"], "client");
 
-  api.export("Compass", "client");
+  api.export("DeviceOrientation", "client");
 });
