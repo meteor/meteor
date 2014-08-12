@@ -2,10 +2,18 @@ var queue = [];
 var loaded = document.readyState === "loaded" ||
   document.readyState == "complete";
 
-var ready = function() {
+var allReady = function () {
   loaded = true;
   while (queue.length)
     (queue.shift())();
+};
+
+var ready = function() {
+  if (Meteor.isCordova) {
+    document.addEventListener('deviceready', allReady, false);
+  } else {
+    allReady();
+  }
 };
 
 if (document.addEventListener) {
