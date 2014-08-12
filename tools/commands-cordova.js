@@ -442,6 +442,8 @@ var execCordovaOnPlatform = function (localPath, platformName) {
     // print the log file
     execFileAsync('tail', ['-f', logFilePath], { lineMapper: iosMapper });
   } else if (platform === 'android') {
+    // clear the logcat logs from the previous run
+    execFileSync(localAdb, ['logcat', '-c']);
     execFileAsync(localAdb, ['logcat', '-s', 'CordovaLog'], {
       lineMapper: androidMapper,
     });
