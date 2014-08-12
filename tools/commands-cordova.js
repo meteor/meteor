@@ -39,7 +39,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'boilerplate-generator' ]
+    packages: [ 'boilerplate-generator', 'logging' ]
   });
 });
 
@@ -395,19 +395,27 @@ var execCordovaOnPlatform = function (localPath, platformName) {
   // XXX error if not a Cordova project
   execFileAsync(localCordova, args, { cwd: cordovaPath });
 
-  if (platform === 'ios') {
-    // XXX TODO
-    // execFileAsync('tail', ['-f',
-    //   path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log')],
-    //   { prefix: 'ios: '});
-  } else if (platform === 'android') {
-    execFileAsync('adb', ['logcat', '-s', 'CordovaLog'],
-      { prefix: 'android: ',
-        lineMapper: function (line) {
-          return line.replace(/^D\/CordovaLog\(\d+\):\s+file:\/\/\/android_asset\/www\//, '');
-        },
-        color: 'green'
+  var generateLineMapper = function (prefix, regex) {
+    var Log = getLoadedPackages().logging.Log;
+    return function (line) {
+      var line = line.replace(regex, '');
+      var output = Log.objFromText(prefix + line);
+      return Log.format(output, {
+        color: true,
+        metaColor: 'green'
       });
+    };
+  };
+
+  if (platform === 'ios') {
+    var regex = /^[^ ]+\s[^ ]+\s[^ ]+\s/;
+    execFileAsync('tail', ['-f',
+      path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log')],
+      { lineMapper: generateLineMapper('ios: ', regex) });
+  } else if (platform === 'android') {
+    var regex = /^D\/CordovaLog\(\d+\):\s+file:\/\/\/android_asset\/www\//;
+    execFileAsync('adb', ['logcat', '-s', 'CordovaLog'],
+      { lineMapper: generateLineMapper('android: ', regex) });
   }
   return 0;
 };

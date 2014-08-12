@@ -10,13 +10,6 @@ var fs = require('fs');
 
 var utils = exports;
 
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
-  return uniload.load({
-    packages: [ 'logging' ]
-  });
-});
-
 // options:
 //   - echo (boolean): defaults to true
 //   - prompt (string)
@@ -393,15 +386,10 @@ exports.execFileAsync = function (file, args, opts) {
   var eachline = require('eachline');
   var p = child_process.spawn(file, args, opts);
   var mapper = opts.lineMapper || _.identity;
-  var Log = getLoadedPackages().logging.Log;
 
   eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
     line = mapper(line);
-    var output = Log.objFromText((opts.prefix || '') + line);
-    console.log(Log.format(output, {
-      color: !! opts.color,
-      metaColor: opts.color
-    }));
+    console.log(line);
   }));
 
   eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
