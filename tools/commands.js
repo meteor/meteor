@@ -662,13 +662,13 @@ var buildCommands = {
   }
 };
 
-main.registerCommand(_.extend({ name: 'build'}, buildCommands),
+main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   function (options) {
     buildWithOptions(options);
   });
 
 // Deprecated -- identical functionality to 'build'
-main.registerCommand(_.extend({ name: 'bundle'}, buildCommands),
+main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
   function (options) {
     process.stdout.write("WARNING: 'bundle' has been deprecated. " +
                          "Use 'build' instead.\n");
