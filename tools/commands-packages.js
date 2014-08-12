@@ -1951,6 +1951,21 @@ main.registerCommand({
     return 2;
   }
 
+  // Since we're making bootstrap tarballs, we intend to recommend this release,
+  // so we should ensure that once it is downloaded, it knows it is recommended
+  // rather than having a little identity crisis and thinking that a past
+  // release is the latest recommended until it manages to sync.
+  var dataFromDisk = JSON.parse(fs.readFileSync(tmpDataJson));
+  var releaseInData = _.findWhere(dataFromDisk.collections.releaseVersions, {
+    track: parsed.package, version: parsed.constraint
+  });
+  if (!releaseInData) {
+    process.stderr.write("Can't find release in data!\n");
+    return 3;
+  }
+  releaseInData.recommended = true;
+  files.writeFileAtomically(tmpDataJson, JSON.stringify(dataFromDisk, null, 2));
+
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     // We're going to build and tar up a tropohouse in a temporary directory; we
