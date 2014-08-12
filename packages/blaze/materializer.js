@@ -87,7 +87,7 @@ Blaze._DOMMaterializer.def({
       } else {
         updaterComputation = Deps.nonreactive(function () {
           return Deps.autorun(function () {
-            Deps.withCurrentView(self.parentView, updateAttributes);
+            Deps._withCurrentView(self.parentView, updateAttributes);
           });
         });
       }

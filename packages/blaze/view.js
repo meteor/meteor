@@ -138,7 +138,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   }
 
   var c = Deps.autorun(function viewAutorun(c) {
-    return Blaze.withCurrentView(_inViewScope || self, function () {
+    return Blaze._withCurrentView(_inViewScope || self, function () {
       return f.call(self, c);
     });
   });
@@ -148,7 +148,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
 };
 
 Blaze._fireCallbacks = function (view, which) {
-  Blaze.withCurrentView(view, function () {
+  Blaze._withCurrentView(view, function () {
     Deps.nonreactive(function fireCallbacks() {
       var cbs = view._callbacks[which];
       for (var i = 0, N = (cbs && cbs.length); i < N; i++)
@@ -262,7 +262,7 @@ Blaze._expandView = function (view, parentView) {
   Blaze._createView(view, parentView, true /*forExpansion*/);
 
   view.isInRender = true;
-  var htmljs = Blaze.withCurrentView(view, function () {
+  var htmljs = Blaze._withCurrentView(view, function () {
     return view.render();
   });
   view.isInRender = false;
@@ -295,7 +295,7 @@ Blaze._HTMLJSExpander.def({
   visitAttributes: function (attrs) {
     // expand dynamic attributes
     if (typeof attrs === 'function')
-      attrs = Blaze.withCurrentView(this.parentView, attrs);
+      attrs = Blaze._withCurrentView(this.parentView, attrs);
 
     // call super (e.g. for case where `attrs` is an array)
     return HTML.TransformingVisitor.prototype.visitAttributes.call(this, attrs);
@@ -304,7 +304,7 @@ Blaze._HTMLJSExpander.def({
     // expand attribute values that are functions.  Any attribute value
     // that contains Views must be wrapped in a function.
     if (typeof value === 'function')
-      value = Blaze.withCurrentView(this.parentView, value);
+      value = Blaze._withCurrentView(this.parentView, value);
 
     return HTML.TransformingVisitor.prototype.visitAttribute.call(
       this, name, value, tag);
@@ -377,7 +377,7 @@ Blaze._isContentEqual = function (a, b) {
 
 Blaze.currentView = null;
 
-Blaze.withCurrentView = function (view, func) {
+Blaze._withCurrentView = function (view, func) {
   var oldView = Blaze.currentView;
   try {
     Blaze.currentView = view;
@@ -624,7 +624,7 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
               return null;
             var handlerThis = thisInHandler || this;
             var handlerArgs = arguments;
-            return Blaze.withCurrentView(view, function () {
+            return Blaze._withCurrentView(view, function () {
               return handler.apply(handlerThis, handlerArgs);
             });
           },

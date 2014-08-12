@@ -184,7 +184,7 @@ Blaze._TemplateWith = function (arg, contentBlock) {
       viewToEvaluateArg = w.parentView.originalParentView;
     }
     if (viewToEvaluateArg) {
-      return Blaze.withCurrentView(viewToEvaluateArg, argFunc);
+      return Blaze._withCurrentView(viewToEvaluateArg, argFunc);
     } else {
       return argFunc();
     }
