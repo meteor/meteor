@@ -736,10 +736,10 @@ _.extend(Project.prototype, {
     var identifierFile = self.appIdentifierFile();
     if (!fs.existsSync(identifierFile)) {
       var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
-      fs.writeFileSync(identifierFile, id);
+      fs.writeFileSync(identifierFile, id + '\n');
     }
     if (fs.existsSync(identifierFile)) {
-      self.appId = fs.readFileSync(identifierFile, 'utf8');
+      self.appId = trimLine(fs.readFileSync(identifierFile, 'utf8'));
     } else {
       throw new Error("Expected a file at " + identifierFile);
     }
