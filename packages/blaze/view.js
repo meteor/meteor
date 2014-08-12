@@ -233,7 +233,7 @@ Blaze._materializeView = function (view, parentView) {
     domrange.onAttached(function attached(range, element) {
       teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
         element, function teardown() {
-          Blaze.destroyView(view, true /* _skipNodes */);
+          Blaze._destroyView(view, true /* _skipNodes */);
         });
 
       scheduleRenderedCallback();
@@ -271,10 +271,10 @@ Blaze._expandView = function (view, parentView) {
 
   if (Deps.active) {
     Deps.onInvalidate(function () {
-      Blaze.destroyView(view);
+      Blaze._destroyView(view);
     });
   } else {
-    Blaze.destroyView(view);
+    Blaze._destroyView(view);
   }
 
   return result;
@@ -330,7 +330,7 @@ Blaze._expandAttributes = function (attrs, parentView) {
     {parentView: parentView})).visitAttributes(attrs);
 };
 
-Blaze.destroyView = function (view, _skipNodes) {
+Blaze._destroyView = function (view, _skipNodes) {
   if (view.isDestroyed)
     return;
   view.isDestroyed = true;
@@ -345,9 +345,19 @@ Blaze.destroyView = function (view, _skipNodes) {
     view.domrange.destroyMembers();
 };
 
-Blaze.destroyNode = function (node) {
+Blaze._destroyNode = function (node) {
   if (node.nodeType === 1)
     Blaze._DOMBackend.Teardown.tearDownElement(node);
+};
+
+Blaze.destroy = function (nodeOrView) {
+  if (nodeOrView instanceof Blaze.View) {
+    Blaze._destroyView(nodeOrView);
+  } else if (typeof nodeOrView.nodeType === 'number') {
+    Blaze._destroyNode(nodeOrView);
+  } else {
+    throw new Error("Expected View or DOM node");
+  }
 };
 
 // Are the HTMLjs entities `a` and `b` the same?  We could be
@@ -455,6 +465,34 @@ Blaze.renderWithData = function (content, data, parentView) {
   Blaze._materializeView(view, parentView);
 
   return view;
+};
+
+// The publicly documented API for inserting a View returned from
+// `UI.render` or `UI.renderWithData` into the DOM. If you then remove
+// `parentElement` using jQuery, all reactive updates on the rendered
+// template will stop.
+Blaze.insert = function (view, parentElement, nextNode) {
+  // parentElement must be a DOM node. in particular, can't be the
+  // result of a call to `$`. Can't check if `parentElement instanceof
+  // Node` since 'Node' is undefined in IE8.
+  if (! parentElement || typeof parentElement.nodeType !== 'number')
+    throw new Error("'parentElement' must be a DOM node");
+  if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
+    throw new Error("'nextNode' must be a DOM node");
+  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
+    throw new Error("Expected template rendered with UI.render");
+
+  view.domrange.attach(parentElement, nextNode);
+};
+
+Blaze.remove = function (view) {
+  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
+    throw new Error("Expected template rendered with UI.render");
+
+  var range = view.domrange;
+  if (range.attached)
+    range.detach();
+  range.destroy();
 };
 
 Blaze.toHTML = function (content, parentView) {

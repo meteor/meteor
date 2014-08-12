@@ -15,14 +15,6 @@ Template.__assign = function (name, template) {
   Template[name] = template;
 };
 
-UI._templateInstance = function () {
-  var templateView = Blaze.getCurrentTemplateView();
-  if (! templateView)
-    throw new Error("No current template");
-
-  return Template.updateTemplateInstance(templateView);
-};
-
 // Define a template `Template._body_` that renders its
 // `contentViews`.  `<body>` tags (of which there may be
 // multiple) will have their contents added to it.
@@ -54,40 +46,4 @@ Template._body_.renderToDocument = function () {
   UI.insert(view, document.body);
 };
 
-UI.render = Blaze.render;
-UI.renderWithData = Blaze.renderWithData;
-UI.toHTML = Blaze.toHTML;
-UI.toHTMLWithData = Blaze.toHTMLWithData;
-
-// The publicly documented API for inserting a View returned from
-// `UI.render` or `UI.renderWithData` into the DOM. If you then remove
-// `parentElement` using jQuery, all reactive updates on the rendered
-// template will stop.
-UI.insert = function (view, parentElement, nextNode) {
-  // parentElement must be a DOM node. in particular, can't be the
-  // result of a call to `$`. Can't check if `parentElement instanceof
-  // Node` since 'Node' is undefined in IE8.
-  if (! parentElement || typeof parentElement.nodeType !== 'number')
-    throw new Error("'parentElement' must be a DOM node");
-  if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
-    throw new Error("'nextNode' must be a DOM node");
-  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
-    throw new Error("Expected template rendered with UI.render");
-
-  view.domrange.attach(parentElement, nextNode);
-};
-
-// XXX test and document
-UI.remove = function (view) {
-  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
-    throw new Error("Expected template rendered with UI.render");
-
-  var range = view.domrange;
-  if (range.attached)
-    range.detach();
-  range.destroy();
-};
-
 UI.body = Template._body_;
-
-UI.With = Blaze.With;
