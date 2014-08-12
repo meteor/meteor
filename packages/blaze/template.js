@@ -59,70 +59,80 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     });
   }
 
+  view._templateInstance = new Blaze.TemplateInstance(view);
+  view.templateInstance = function () {
+    // Update data, firstNode, and lastNode, and return the TemplateInstance
+    // object.
+    var inst = view._templateInstance;
+
+    inst.data = Blaze.getViewData(view);
+
+    if (view.domrange && !view.isDestroyed) {
+      inst.firstNode = view.domrange.firstNode();
+      inst.lastNode = view.domrange.lastNode();
+    } else {
+      // on 'created' or 'destroyed' callbacks we don't have a DomRange
+      inst.firstNode = null;
+      inst.lastNode = null;
+    }
+
+    return inst;
+  };
+
   if (self.created) {
     view.onCreated(function () {
-      var inst = Template.updateTemplateInstance(view);
-      self.created.call(inst);
+      self.created.call(view.templateInstance());
     });
   }
 
   if (self.rendered) {
     view.onRendered(function () {
-      var inst = Template.updateTemplateInstance(view);
-      self.rendered.call(inst);
+      self.rendered.call(view.templateInstance());
     });
   }
 
   if (self.destroyed) {
     view.onDestroyed(function () {
-      var inst = Template.updateTemplateInstance(view);
-      self.destroyed.call(inst);
+      self.destroyed.call(view.templateInstance());
     });
   }
 
   return view;
 };
 
-Template.updateTemplateInstance = function (view) {
-  // Populate `view._templateInstance.{firstNode,lastNode,data}`
-  // on demand.
-  var tmpl = view._templateInstance;
-  if (! tmpl) {
-    tmpl = view._templateInstance = {
-      $: function (selector) {
-        if (! view.domrange)
-          throw new Error("Can't use $ on component with no DOM");
-        return view.domrange.$(selector);
-      },
-      findAll: function (selector) {
-        return Array.prototype.slice.call(this.$(selector));
-      },
-      find: function (selector) {
-        var result = this.$(selector);
-        return result[0] || null;
-      },
-      data: null,
-      firstNode: null,
-      lastNode: null,
-      autorun: function (f) {
-        return view.autorun(f);
-      },
-      view: view
-    };
-  }
+Blaze.TemplateInstance = function (view) {
+  if (! (this instanceof Blaze.TemplateInstance))
+    // called without `new`
+    return new Blaze.TemplateInstance(view);
 
-  tmpl.data = Blaze.getViewData(view);
+  if (! (view instanceof Blaze.View))
+    throw new Error("View required");
 
-  if (view.domrange && !view.isDestroyed) {
-    tmpl.firstNode = view.domrange.firstNode();
-    tmpl.lastNode = view.domrange.lastNode();
-  } else {
-    // on 'created' or 'destroyed' callbacks we don't have a DomRange
-    tmpl.firstNode = null;
-    tmpl.lastNode = null;
-  }
+  view._templateInstance = this;
+  this.view = view;
+  this.data = null;
+  this.firstNode = null;
+  this.lastNode = null;
+};
 
-  return tmpl;
+Blaze.TemplateInstance.prototype.$ = function (selector) {
+  var view = this.view;
+  if (! view.domrange)
+    throw new Error("Can't use $ on template instance with no DOM");
+  return view.domrange.$(selector);
+};
+
+Blaze.TemplateInstance.prototype.findAll = function (selector) {
+  return Array.prototype.slice.call(this.$(selector));
+};
+
+Blaze.TemplateInstance.prototype.find = function (selector) {
+  var result = this.$(selector);
+  return result[0] || null;
+};
+
+Blaze.TemplateInstance.prototype.autorun = function (f) {
+  return this.view.autorun(f);
 };
 
 Template.prototype.helpers = function (dict) {
@@ -141,7 +151,7 @@ Template.prototype.events = function (eventMap) {
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
-        var tmplInstance = Template.updateTemplateInstance(view);
+        var tmplInstance = view.templateInstance();
         args.splice(1, 0, tmplInstance);
         return v.apply(data, args);
       };
@@ -151,10 +161,14 @@ Template.prototype.events = function (eventMap) {
   template.__eventMaps.push(eventMap2);
 };
 
-Blaze._templateInstance = function () {
-  var templateView = Blaze.getCurrentTemplateView();
-  if (! templateView)
+Blaze.templateInstance = function () {
+  var view = Blaze.getCurrentView();
+
+  while (view && ! view.template)
+    view = view.parentView;
+
+  if (! view)
     throw new Error("No current template");
 
-  return Template.updateTemplateInstance(templateView);
+  return view.templateInstance();
 };

@@ -556,16 +556,6 @@ Blaze.getCurrentView = function (name) {
   }
 };
 
-// Gets the nearest ancestor view that corresponds to a template
-Blaze.getCurrentTemplateView = function () {
-  var view = Blaze.getCurrentView();
-
-  while (view && ! view.template)
-    view = view.parentView;
-
-  return view || null;
-};
-
 Blaze.getParentView = function (view, name) {
   var v = view.parentView;
 
