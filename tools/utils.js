@@ -380,7 +380,6 @@ exports.execFileSync = function (file, args, opts) {
   return future.wait();
 };
 
-// extra option - 'prefix' to be used on every printed line
 exports.execFileAsync = function (file, args, opts) {
   var child_process = require('child_process');
   var eachline = require('eachline');
@@ -394,6 +393,6 @@ exports.execFileAsync = function (file, args, opts) {
 
   eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
     line = mapper(line);
-    process.stderr.write((opts.prefix || '') + line + '\n');
+    console.log(line);
   }));
 };
