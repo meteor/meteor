@@ -71,6 +71,23 @@ umask 022
 mkdir build
 cd build
 
+
+# ios-sim is used to run iPhone simulator from the command-line. Doesn't make
+# sense to build it for linux.
+if [ "$OS" == "osx" ]; then
+    which rake # rake is required to build ios-sim
+    git clone https://github.com/phonegap/ios-sim.git
+    cd ios-sim
+    git checkout 2.0.1
+    rake build
+    which build/Release/ios-sim # check that we have in fact got the binary
+    mkdir -p "$DIR/lib/ios-sim"
+    cp -r build/Release/* "$DIR/lib/ios-sim/"
+    echo "done building ios-sim"
+fi
+
+
+cd "$DIR/build"
 git clone https://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
