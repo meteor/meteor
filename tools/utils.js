@@ -395,4 +395,6 @@ exports.execFileAsync = function (file, args, opts) {
     line = mapper(line);
     console.log(line);
   }));
+
+  return p;
 };

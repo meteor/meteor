@@ -19,8 +19,6 @@ var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var unipackage = require('./unipackage.js');
-var execFileSync = require('./utils.js').execFileSync;
-var execFileAsync = require('./utils.js').execFileAsync;
 
 var cordova = exports;
 
@@ -32,11 +30,33 @@ var localCordova = path.join(files.getCurrentToolsDir(),
 var localAdb = path.join(files.getCurrentToolsDir(),
   "android_bundle", "android-sdk", "platform-tools", "adb");
 
+var execFileAsyncOrThrow = function (file, args, opts) {
+  var execFileAsync = require('./utils.js').execFileAsync;
+  if (_.contains([localCordova, localAdb], file))
+    ensureAndroidBundle();
+
+  var p = execFileAsync(file, args, opts);
+  p.on('close', function (code) {
+    if (code)
+      throw new Error(file + ' ' + args.join(' ') +
+                      ' exited with non-zero code: ' + code);
+  });
+};
+
 var execFileSyncOrThrow = function (file, args, opts) {
+  var execFileSync = require('./utils.js').execFileSync;
+  if (_.contains([localCordova, localAdb], file))
+    ensureAndroidBundle();
+
   var process = execFileSync(file, args, opts);
   if (! process.success)
     throw new Error(process.stderr + '\n\n' + process.stdout);
   return process;
+};
+
+var ensureAndroidBundle = function () {
+  execFileSyncOrThrow('sh',
+    [path.join(files.getCurrentToolsDir(), 'scripts', 'ensure_android_bundle.sh')]);
 };
 
 var getLoadedPackages = _.once(function () {
@@ -396,7 +416,7 @@ var execCordovaOnPlatform = function (localPath, platformName) {
                platform ];
 
   // XXX error if not a Cordova project
-  execFileAsync(localCordova, args, { cwd: cordovaPath });
+  execFileAsyncOrThrow(localCordova, args, { cwd: cordovaPath });
   var Log = getLoadedPackages().logging.Log;
 
   var androidMapper = function (line) {
@@ -440,11 +460,11 @@ var execCordovaOnPlatform = function (localPath, platformName) {
     // overwrite the file so we don't have to print the old logs
     fs.writeFileSync(logFilePath, '');
     // print the log file
-    execFileAsync('tail', ['-f', logFilePath], { lineMapper: iosMapper });
+    execFileAsyncOrThrow('tail', ['-f', logFilePath], { lineMapper: iosMapper });
   } else if (platform === 'android') {
     // clear the logcat logs from the previous run
-    execFileSync(localAdb, ['logcat', '-c']);
-    execFileAsync(localAdb, ['logcat', '-s', 'CordovaLog'], {
+    execFileSyncOrThrow(localAdb, ['logcat', '-c']);
+    execFileAsyncOrThrow(localAdb, ['logcat', '-s', 'CordovaLog'], {
       lineMapper: androidMapper,
     });
   }
