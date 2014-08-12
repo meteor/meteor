@@ -55,7 +55,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
     if (!/^(\.)+$/.test(name))
       throw new Error("id starting with dot must be a series of dots");
 
-    return Blaze._parentData(name.length - 1, true /*_functionWrapped*/);
+    return Blaze.parentData(name.length - 1, true /*_functionWrapped*/);
 
   } else if (template && (name in template)) {
     return wrapHelper(bindDataContext(template[name]));
@@ -91,7 +91,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
 // Implement Spacebars' {{../..}}.
 // @param height {Number} The number of '..'s
-Blaze._parentData = function (height, _functionWrapped) {
+Blaze.parentData = function (height, _functionWrapped) {
   var theWith = Blaze.getCurrentView('with');
   for (var i = 0; (i < height) && theWith; i++) {
     theWith = Blaze.getParentView(theWith, 'with');
