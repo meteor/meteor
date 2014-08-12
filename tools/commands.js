@@ -542,6 +542,23 @@ main.registerCommand({
 // build
 ///////////////////////////////////////////////////////////////////////////////
 
+var buildCommands = {
+  minArgs: 1,
+  maxArgs: 1,
+  requiresApp: true,
+  options: {
+    debug: { type: Boolean },
+    directory: { type: Boolean },
+    architecture: { type: String },
+    // Undocumented
+    'for-deploy': { type: Boolean },
+    port: { type: String, short: "p", default: "localhost:3000" },
+    settings: { type: String}, // XXX document
+    'ios-path': { type: String },
+    'android-path': { type: String },
+  }
+};
+
 var buildWithOptions = function (options) {
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
   // the former for them
@@ -577,6 +594,10 @@ var buildWithOptions = function (options) {
     mobilePlatforms.android = options['android-path'];
 
   if (! _.isEmpty(mobilePlatforms)) {
+    if (options.port === buildCommands.options.port.default) {
+      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
+                           "Pass a -p argument to specify a host URL.\n");
+    }
     var cordovaSettings = {};
 
     try {
@@ -643,23 +664,6 @@ var buildWithOptions = function (options) {
     }
   }
   files.rm_recursive(buildDir);
-};
-
-var buildCommands = {
-  minArgs: 1,
-  maxArgs: 1,
-  requiresApp: true,
-  options: {
-    debug: { type: Boolean },
-    directory: { type: Boolean },
-    architecture: { type: String },
-    // Undocumented
-    'for-deploy': { type: Boolean },
-    port: { type: String, short: "p", default: "localhost:3000" },
-    settings: { type: String}, // XXX document
-    'ios-path': { type: String },
-    'android-path': { type: String },
-  }
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
