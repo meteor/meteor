@@ -394,6 +394,21 @@ var execCordovaOnPlatform = function (localPath, platformName) {
 
   // XXX error if not a Cordova project
   execFileAsync(localCordova, args, { cwd: cordovaPath });
+
+  if (platform === 'ios') {
+    // XXX TODO
+    // execFileAsync('tail', ['-f',
+    //   path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log')],
+    //   { prefix: 'ios: '});
+  } else if (platform === 'android') {
+    execFileAsync('adb', ['logcat', '-s', 'CordovaLog'],
+      { prefix: 'android: ',
+        lineMapper: function (line) {
+          return line.replace(/^D\/CordovaLog\(\d+\):\s+file:\/\/\/android_asset\/www\//, '');
+        },
+        color: 'green'
+      });
+  }
   return 0;
 };
 

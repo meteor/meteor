@@ -285,7 +285,8 @@ main.registerCommand({
       var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
       cordova.buildPlatforms(localPath, options.args,
-        _.extend({ appName: appName }, options, parsedHostPort));
+        _.extend({ appName: appName, debug: ! options.production },
+                 options, parsedHostPort));
       cordova.runPlatforms(localPath, options.args);
     } catch (err) {
       process.stderr.write(err.message + '\n');

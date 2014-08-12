@@ -260,8 +260,8 @@ Log.format = function (obj, options) {
       Npm.require('cli-color')[color](line) : line;
   };
 
-  return prettify(metaPrefix, META_COLOR)
-    + prettify(message, LEVEL_COLORS[level]);
+  return prettify(metaPrefix, options.metaColor || META_COLOR) +
+    prettify(message, LEVEL_COLORS[level]);
 };
 
 // Turn a line of text into a loggable object.

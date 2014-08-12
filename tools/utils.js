@@ -1,6 +1,7 @@
 var Future = require('fibers/future');
 var readline = require('readline');
 var _ = require('underscore');
+var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
 var semver = require('semver');
@@ -8,6 +9,13 @@ var os = require('os');
 var fs = require('fs');
 
 var utils = exports;
+
+var getLoadedPackages = _.once(function () {
+  var uniload = require('./uniload.js');
+  return uniload.load({
+    packages: [ 'logging' ]
+  });
+});
 
 // options:
 //   - echo (boolean): defaults to true
@@ -384,12 +392,20 @@ exports.execFileAsync = function (file, args, opts) {
   var child_process = require('child_process');
   var eachline = require('eachline');
   var p = child_process.spawn(file, args, opts);
+  var mapper = opts.lineMapper || _.identity;
+  var Log = getLoadedPackages().logging.Log;
 
-  eachline(p.stdout, function (line) {
-    process.stdout.write((opts.prefix || '') + line + '\n');
-  });
+  eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
+    line = mapper(line);
+    var output = Log.objFromText((opts.prefix || '') + line);
+    console.log(Log.format(output, {
+      color: !! opts.color,
+      metaColor: opts.color
+    }));
+  }));
 
-  eachline(p.stderr, function (line) {
+  eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
+    line = mapper(line);
     process.stderr.write((opts.prefix || '') + line + '\n');
-  });
+  }));
 };
