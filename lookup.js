@@ -1,3 +1,10 @@
+Blaze._globalHelpers = {};
+
+Blaze.registerHelper = function (name, func) {
+  Blaze._globalHelpers[name] = func;
+};
+
+
 var bindIfIsFunction = function (x, target) {
   if (typeof x !== 'function')
     return x;
@@ -24,17 +31,19 @@ var wrapHelper = function (f) {
   return Blaze._wrapCatchingExceptions(f, 'template helper');
 };
 
-// !!! FIX THIS COMMENT !!!
+// Looks up a name, like "foo" or "..", as a helper of the
+// current template; a global helper; the name of a template;
+// or a property of the data context.  Called on the View of
+// a template (i.e. a View with a `.template` property,
+// where the helpers are).  Used for the first name in a
+// "path" in a template tag, like "foo" in `{{foo.bar}}` or
+// ".." in `{{frobulate ../blah}}`.
 //
-// Implements {{foo}} where `name` is "foo"
-// and `component` is the component the tag is found in
-// (the lexical "self," on which to look for methods).
-// If a function is found, it is bound to the object it
-// was found on.  Returns a function,
-// non-function value, or null.
+// Returns a function, a non-function value, or null.  If
+// a function is found, it is bound appropriately.
 //
 // NOTE: This function must not establish any reactive
-// dependencies.  If there is any reactivity in the
+// dependencies itself.  If there is any reactivity in the
 // value, lookup should return a function.
 Blaze.View.prototype.lookup = function (name, _options) {
   var template = this.template;

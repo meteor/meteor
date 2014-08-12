@@ -304,12 +304,12 @@ DOMRange.prototype._memberIn = function (m) {
 DOMRange._destroy = function (m, _skipNodes) {
   if (m instanceof DOMRange) {
     if (m.view)
-      Blaze.destroyView(m.view, _skipNodes);
+      Blaze._destroyView(m.view, _skipNodes);
     m.parentRange = null;
   } else if ((! _skipNodes) && m.nodeType === 1) {
     // DOM Element
     if (m.$blaze_range) {
-      Blaze.destroyNode(m);
+      Blaze._destroyNode(m);
       m.$blaze_range = null;
     }
   }

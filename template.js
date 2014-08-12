@@ -143,3 +143,11 @@ Template.prototype.events = function (eventMap) {
 
   template.__eventMaps.push(eventMap2);
 };
+
+Blaze._templateInstance = function () {
+  var templateView = Blaze.getCurrentTemplateView();
+  if (! templateView)
+    throw new Error("No current template");
+
+  return Template.updateTemplateInstance(templateView);
+};
