@@ -7,6 +7,10 @@ Npm.depends({
   "cli-color": "0.2.3"
 });
 
+Cordova.depends({
+  'org.apache.cordova.console': '0.2.10'
+});
+
 Package.on_use(function (api) {
   api.export('Log');
   api.use(['underscore', 'ejson']);
