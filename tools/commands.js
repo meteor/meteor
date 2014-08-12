@@ -371,6 +371,14 @@ main.registerCommand({
       files.cp_r(path.join(exampleDir, options.example), appPath, {
         ignore: [/^local$/]
       });
+      // We try not to check the identifier into git, but it might still
+      // accidentally exist and get added (if running from checkout, for
+      // example). To be on the safe side, explicitly remove the identifier from
+      // example apps.
+      var idf = path.join(appPath, '.meteor', 'identifier');
+      if (fs.existsSync(idf)) {
+        fs.unlinkSync(idf);
+      }
     }
   } else {
     files.cp_r(path.join(__dirname, 'skel'), appPath, {
@@ -394,6 +402,7 @@ main.registerCommand({
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
+
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();
   });
