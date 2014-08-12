@@ -29,6 +29,9 @@ var supportedPlatforms = ['ios', 'android', 'firefoxos'];
 var localCordova = path.join(files.getCurrentToolsDir(),
   "scripts", "cordova.sh");
 
+var localAdb = path.join(files.getCurrentToolsDir(),
+  "android_bundle", "android-sdk", "platform-tools", "adb");
+
 var execFileSyncOrThrow = function (file, args, opts) {
   var process = execFileSync(file, args, opts);
   if (! process.success)
@@ -439,7 +442,7 @@ var execCordovaOnPlatform = function (localPath, platformName) {
     // print the log file
     execFileAsync('tail', ['-f', logFilePath], { lineMapper: iosMapper });
   } else if (platform === 'android') {
-    execFileAsync('adb', ['logcat', '-s', 'CordovaLog'], {
+    execFileAsync(localAdb, ['logcat', '-s', 'CordovaLog'], {
       lineMapper: androidMapper,
     });
   }

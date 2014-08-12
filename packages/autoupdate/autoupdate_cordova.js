@@ -63,7 +63,8 @@ Autoupdate._retrySubscription = function () {
 
               // XXX this will not reload the first time the app is loaded
               if (previousVersionRefreshable !== "unknown") {
-                onNewVersion(handle);
+                // XXX this doesn't work
+                // onNewVersion(handle);
               }
             } else if (! fields.refreshable && id !== autoupdateVersion) {
               console.log("Added new version", id);
@@ -72,7 +73,7 @@ Autoupdate._retrySubscription = function () {
               autoupdateVersion = id;
               // XXX this will not reload the first time the app is loaded
               if (previousVersion !== "unknown") {
-                onNewVersion(handle);
+                // onNewVersion(handle);
               }
             }
           }
