@@ -145,9 +145,11 @@ selftest.define("add cordova plugins", function () {
   run.matchErr("meteor add platform:");
 
   run = s.run("add", "platform:android");
+  run.waitSecs(5);
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
+  run.waitSecs(5);
   run.match("added cordova plugin org.apache.cordova.camera");
 
   run = s.run("add", "cordova:org.apache.cordova.file");

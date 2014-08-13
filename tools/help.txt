@@ -139,6 +139,9 @@ This will not list transitive dependencies.
 Also lists the Cordova plugins and platforms used by your mobile
 build directly.
 
+>>> bundle
+Deprecated command. Use 'build' instead.
+
 >>> build
 Pack this project up into a tarball.
 Usage: meteor build <output_file.tar.gz>
