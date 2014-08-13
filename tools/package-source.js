@@ -1322,6 +1322,7 @@ _.extend(PackageSource.prototype, {
   // - skipUnordered: omit unordered dependencies
   getDependencyMetadata: function (options) {
     var self = this;
+    options = options || {};
     var ret = self._computeDependencyMetadata(options);
     if (! ret) {
       if (options.logError)
