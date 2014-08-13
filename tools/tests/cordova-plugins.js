@@ -121,7 +121,7 @@ selftest.define("change cordova plugins", function () {
 
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
-  run.matchErr("exact version");
+  run.match("exact version");
 });
 
 
