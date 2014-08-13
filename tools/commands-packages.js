@@ -1212,8 +1212,9 @@ main.registerCommand({
     // didn't specify a release and it's the app's current release (if we're
     // in an app dir), since non-forced updates don't change the track.
     // XXX better error checking on release.current.name
-    // XXX add a method to release.current
-    var releaseTrack = release.current.getReleaseTrack();
+    // XXX add a method to release.current.
+    var releaseTrack = release.current ?
+      release.current.getReleaseTrack() : catalog.official.DEFAULT_TRACK;
 
     // Unless --release was passed (in which case we ought to already have
     // springboarded to that release), go get the latest release and switch to
