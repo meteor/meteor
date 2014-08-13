@@ -24,7 +24,7 @@ export PATH=${ANT_HOME}/bin:${PATH}
 export PATH=${DEV_BUNDLE}/bin:${PATH}
 
 # create avd if necessary
-if [ ! ${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep -q Name ]; then
+if [ ! ${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep -q Name ] ; then
   echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/x86 --path ./android_bundle/meteor_avd/
 fi
 
