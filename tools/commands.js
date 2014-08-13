@@ -261,6 +261,11 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
+    if (!packageName) {
+      process.stderr.write("Please specify the name of the package. \n");
+      throw new main.ShowUsage;
+    }
+
     if (fs.existsSync(packageName)) {
       process.stderr.write(packageName + ": Already exists\n");
       return 1;
@@ -288,10 +293,10 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
-
-    files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
-      transformFilename: function (f) {
-        return transform(f);
+    try {
+      files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+        transformFilename: function (f) {
+          return transform(f);
       },
       transformContents: function (contents, f) {
         if ((/(\.html|\.js|\.css)/).test(f))
@@ -301,6 +306,10 @@ main.registerCommand({
       },
       ignore: [/^local$/]
     });
+   } catch (err) {
+     process.stderr.write("Could not create package: " + err.message + "\n");
+     return 1;
+   }
 
     process.stdout.write(packageName + ": created\n");
     return 0;
