@@ -68,6 +68,10 @@ _.extend(OfficialCatalog.prototype, {
     self._refreshFutures = null;
   },
 
+  _refreshingIsProductive: function () {
+    return true;
+  },
+
   refreshInProgress: function () {
     var self = this;
     return self._refreshFiber === Fiber.current;
@@ -244,6 +248,10 @@ _.extend(CompleteCatalog.prototype, {
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
     self.refresh();
+  },
+
+  _refreshingIsProductive: function () {
+    return true;
   },
 
   reset: function () {
@@ -927,6 +935,56 @@ _.extend(CompleteCatalog.prototype, {
   }
 });
 
+var BuiltUniloadCatalog = function (uniloadDir) {
+  var self = this;
+  BaseCatalog.call(self);
+
+  // The uniload catalog needs its own package cache.
+  self.packageCache = new packageCache.PackageCache(self);
+};
+util.inherits(BuiltUniloadCatalog, BaseCatalog);
+
+_.extend(BuiltUniloadCatalog.prototype, {
+  initialize: function (options) {
+    var self = this;
+    if (!options.uniloadDir)
+      throw Error("no uniloadDir?");
+    self.uniloadDir = options.uniloadDir;
+
+    // Make empty data structures for all the things.
+    self.reset();
+
+    self._knownPackages = {};
+    _.each(fs.readdirSync(options.uniloadDir), function (package) {
+      if (fs.existsSync(path.join(options.uniloadDir, package,
+                                  'unipackage.json'))) {
+        self._knownPackages[package] = true;
+
+        // XXX do we have to also put stuff in self.packages/versions/builds?
+        //     probably.
+      }
+    });
+
+    self.initialized = true;
+  },
+
+  resolveConstraints: function () {
+    throw Error("uniload resolving constraints? that's wrong.");
+  },
+
+  // Ignores version (and constraintSolverOpts) because we just have a bunch of
+  // precompiled packages.
+  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
+    var self = this;
+    self._requireInitialized();
+    if (_.has(self._knownPackages, name)) {
+      return path.join(self.uniloadDir, name);
+    }
+    return null;
+  }
+
+});
+
 
 // This is the catalog that's used to answer the specific question of "so what's
 // on the server?".  It does not contain any local catalogs.  Typically, we call
@@ -938,3 +996,10 @@ catalog.official = new OfficialCatalog();
 // packages, it doesn't contain any information about the server version of
 // local packages.
 catalog.complete = new CompleteCatalog();
+
+if (files.inCheckout()) {
+  // XXX replace with uniload-specific catalog #Unicat
+  catalog.uniload = catalog.complete;
+} else {
+  catalog.uniload = new BuiltUniloadCatalog();
+}

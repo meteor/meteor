@@ -10,9 +10,6 @@ var tropohouse = require('./tropohouse.js');
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
 //    use local packages and ignore the package versions.
-//  - uniloadDir: if specified, versions should be null, and this loader will
-//    *only* load packages that are already unipackages and are in this
-//    directory
 exports.PackageLoader = function (options) {
   var self = this;
   if (!options.catalog)
@@ -71,14 +68,6 @@ _.extend(exports.PackageLoader.prototype, {
   getLoadPathForPackage: function (name) {
     var self = this;
     buildmessage.assertInCapture();
-
-    if (self.uniloadDir) {
-      var packagePath = path.join(self.uniloadDir, name);
-      if (!fs.existsSync(path.join(packagePath, 'unipackage.json'))) {
-        return null;
-      }
-      return packagePath;
-    }
 
     if (self.versions && ! _.has(self.versions, name)) {
       throw new Error("no version chosen for package " + name + "?");

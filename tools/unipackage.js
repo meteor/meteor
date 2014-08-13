@@ -967,8 +967,7 @@ _.extend(Unipackage.prototype, {
     // We only want to load local packages.
     var localPackageLoader = new packageLoader.PackageLoader({
       versions: null,
-      // XXX replace this with uniload-specific catalog too! #UniCat
-      catalog: catalog.complete
+      catalog: catalog.uniload
     });
     bundler.iterateOverAllUsedUnipackages(
       localPackageLoader, archinfo.host(), self.includeTool,

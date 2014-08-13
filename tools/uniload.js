@@ -74,9 +74,7 @@ var load = function (options) {
     // solver to build its packages in the catalog.
     var loader = new packageLoader.PackageLoader({
       versions: null,
-      uniloadDir: files.getUniloadDir(),
-      // XXX replace with uniload-specific catalog #Unicat
-      catalog: catalog.complete,
+      catalog: catalog.uniload,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
@@ -91,8 +89,7 @@ var load = function (options) {
       name: "load",
       packageLoader: loader,
       use: options.packages || [],
-      // XXX replace with uniload-specific catalog #Unicat
-      catalog: catalog.complete
+      catalog: catalog.uniload
     }).image;
     ret = image.load(env);
 

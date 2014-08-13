@@ -645,6 +645,13 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
+  // XXX this soon should move to buildmessage, for the checkout case.
+  if (catalog.uniload !== catalog.complete) {
+    catalog.uniload.initialize({
+      uniloadDir: files.getUniloadDir()
+    });
+  }
+
   var messages = buildmessage.capture(function () {
     // Initialize the complete Catalog, which we use to retrieve packages. Only
     // after this point is the Catalog (and therefore uniload) usable.

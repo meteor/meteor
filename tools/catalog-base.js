@@ -103,7 +103,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     buildmessage.assertInCapture();
     var record = recordFinder();
     // If we cannot find it maybe refresh.
-    if (!record) {
+    if (!record && self._refreshingIsProductive()) {
       if (! catalog.official.refreshInProgress()) {
         catalog.official.refresh();
       }
@@ -114,6 +114,11 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return null;
     }
     return record;
+  },
+
+  _refreshingIsProductive: function () {
+    // Refreshing is productive for catalog.official and catalog.complete only.
+    return false;
   },
 
   // Returns general (non-version-specific) information about a
