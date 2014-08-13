@@ -13,7 +13,7 @@ cd "$ORIG_DIR"
 ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 
-export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH};
+export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${DEV_BUNDLE}/lib/ios-sim:${DEV_BUNDLE}/lib/ios-deploy:${PATH};
 
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
 export PATH=${ANT_HOME}/bin:${PATH}
