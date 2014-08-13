@@ -20,7 +20,7 @@
 /// When a View is constructed by calling Blaze.View, the View is
 /// not yet considered "created."  It doesn't have a parentView yet,
 /// and no logic has been run to initialize the View.  All real
-/// work is deferred until at least creation time, when the onCreated
+/// work is deferred until at least creation time, when the onViewCreated
 /// callbacks are fired, which happens when the View is "used" in
 /// some way that requires it to be rendered.
 ///
@@ -43,7 +43,7 @@ Blaze.View = function (name, render) {
     name = '';
   }
   this.name = name;
-  this.render = render;
+  this._render = render;
 
   this._callbacks = {
     created: null,
@@ -65,9 +65,9 @@ Blaze.View = function (name, render) {
   this.renderCount = 0;
 };
 
-Blaze.View.prototype.render = function () { return null; };
+Blaze.View.prototype._render = function () { return null; };
 
-Blaze.View.prototype.onCreated = function (cb) {
+Blaze.View.prototype.onViewCreated = function (cb) {
   this._callbacks.created = this._callbacks.created || [];
   this._callbacks.created.push(cb);
 };
@@ -79,7 +79,7 @@ Blaze.View.prototype.onRendered = function (cb) {
   this._callbacks.rendered = this._callbacks.rendered || [];
   this._callbacks.rendered.push(cb);
 };
-Blaze.View.prototype.onDestroyed = function (cb) {
+Blaze.View.prototype.onViewDestroyed = function (cb) {
   this._callbacks.destroyed = this._callbacks.destroyed || [];
   this._callbacks.destroyed.push(cb);
 };
@@ -94,14 +94,14 @@ Blaze.View.prototype.onDestroyed = function (cb) {
 /// be used to stop the autorun is returned.
 ///
 /// View#autorun is meant to be called from View callbacks like
-/// onCreated, or from outside the rendering process.  It may not
-/// be called before the onCreated callbacks are fired (too early),
+/// onViewCreated, or from outside the rendering process.  It may not
+/// be called before the onViewCreated callbacks are fired (too early),
 /// or from a render() method (too confusing).
 ///
 /// Typically, autoruns that update the state
-/// of the View (as in Blaze.With) should be started from an onCreated
+/// of the View (as in Blaze.With) should be started from an onViewCreated
 /// callback.  Autoruns that update the DOM should be started
-/// from either onCreated (guarded against the absence of
+/// from either onViewCreated (guarded against the absence of
 /// view.domrange), onMaterialized, or onRendered.
 Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
@@ -110,7 +110,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   // to avoid bad patterns, like creating a Blaze.View and immediately
   // calling autorun on it.  A freshly created View is not ready to
   // have logic run on it; it doesn't have a parentView, for example.
-  // It's when the View is materialized or expanded that the onCreated
+  // It's when the View is materialized or expanded that the onViewCreated
   // handlers are fired and the View starts up.
   //
   // Letting the render() method call `this.autorun()` is problematic
@@ -123,7 +123,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   //
   // We could lift these restrictions in various ways.  One interesting
   // idea is to allow you to call `view.autorun` after instantiating
-  // `view`, and automatically wrap it in `view.onCreated`, deferring
+  // `view`, and automatically wrap it in `view.onViewCreated`, deferring
   // the autorun so that it starts at an appropriate time.  However,
   // then we can't return the Computation object to the caller, because
   // it doesn't exist yet.
@@ -142,7 +142,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
       return f.call(self, c);
     });
   });
-  self.onDestroyed(function () { c.stop(); });
+  self.onViewDestroyed(function () { c.stop(); });
 
   return c;
 };
@@ -197,7 +197,7 @@ Blaze._materializeView = function (view, parentView) {
       // from this line:
       view.renderCount++;
       view.isInRender = true;
-      var htmljs = view.render();
+      var htmljs = view._render();
       view.isInRender = false;
 
       Deps.nonreactive(function doMaterialize() {
@@ -240,7 +240,7 @@ Blaze._materializeView = function (view, parentView) {
     });
 
     // tear down the teardown hook
-    view.onDestroyed(function () {
+    view.onViewDestroyed(function () {
       teardownHook && teardownHook.stop();
       teardownHook = null;
     });
@@ -263,7 +263,7 @@ Blaze._expandView = function (view, parentView) {
 
   view.isInRender = true;
   var htmljs = Blaze._withCurrentView(view, function () {
-    return view.render();
+    return view._render();
   });
   view.isInRender = false;
 
@@ -387,7 +387,7 @@ Blaze._withCurrentView = function (view, func) {
   }
 };
 
-// Blaze.render publicly takes a View or a Template.
+// Blaze._render publicly takes a View or a Template.
 // Privately, it takes any HTMLJS (extended with Views and Templates)
 // except null or undefined, or a function that returns any extended
 // HTMLJS.
@@ -635,7 +635,7 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
     });
   });
 
-  view.onDestroyed(function () {
+  view.onViewDestroyed(function () {
     _.each(handles, function (h) {
       h.stop();
     });

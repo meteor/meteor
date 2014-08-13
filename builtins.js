@@ -9,7 +9,7 @@ Blaze.With = function (data, contentFunc) {
 
   view.dataVar = new Blaze._ReactiveVar;
 
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     if (typeof data === 'function') {
       // `data` is a reactive function
       view.autorun(function () {
@@ -31,7 +31,7 @@ Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
       (elseFunc ? elseFunc() : null);
   });
   view.__conditionVar = conditionVar;
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     this.autorun(function () {
       var cond = Blaze._calculateCondition(conditionFunc());
       conditionVar.set(_not ? (! cond) : cond);
@@ -63,7 +63,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.elseFunc = elseFunc;
   eachView.argVar = new Blaze._ReactiveVar;
 
-  eachView.onCreated(function () {
+  eachView.onViewCreated(function () {
     // We evaluate argFunc in an autorun to make sure
     // Blaze.currentView is always set when it runs (rather than
     // passing argFunc straight to ObserveSequence).
@@ -149,7 +149,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     }
   });
 
-  eachView.onDestroyed(function () {
+  eachView.onViewDestroyed(function () {
     if (eachView.stopHandle)
       eachView.stopHandle.stop();
   });
@@ -206,7 +206,7 @@ Blaze._InOuterTemplateScope = function (templateView, contentFunc) {
   if (parentView.__isTemplateWith)
     parentView = parentView.parentView;
 
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     this.originalParentView = this.parentView;
     this.parentView = parentView;
   });
