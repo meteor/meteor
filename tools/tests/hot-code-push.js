@@ -57,6 +57,31 @@ selftest.define("css hot code push", function (options) {
   });
 });
 
+selftest.define("versioning hot code push", function (options) {
+  var s = new Sandbox();
+
+  s.set("AUTOUPDATE_VERSION", "1.0");
+  s.createApp("myapp", "hot-code-push-test");
+  s.cd("myapp");
+
+  s.testWithAllClients(function (run) {
+    run.baseTimeout = 20;
+    run.match("myapp");
+    run.match("proxy");
+    run.match("MongoDB");
+    run.match("running at");
+    run.match("localhost");
+    run.connectClient();
+    run.waitSecs(20);
+
+    run.match("client connected: 0");
+
+    run.forbidAll("Error listening");
+
+    run.stop();
+  });
+});
+
 selftest.define("javascript hot code push", function (options) {
   var s = new Sandbox({
     clients: options.clients,
@@ -108,15 +133,25 @@ selftest.define("javascript hot code push", function (options) {
     s.mkdir("server");
     s.write("server/test.js", "jsVar = 'bar'");
     run.match("server restarted");
+
+    // Setting the autoupdateVersion to a different string should also
+    // force the client to restart.
+    s.write("server/test.js",
+            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
+    run.match("server restarted");
+    run.match("client connected: 0");
+    run.match("jsVar: undefined");
+
+    s.unlink("server/test.js");
+    run.match("server restarted");
+
     s.write("client/empty.js", "");
     run.match("client connected: 0");
     // We should not be able to access a server variable from the client.
     run.match("jsVar: undefined");
 
-    s.unlink("server/test.js");
-    run.match("server restarted");
     s.unlink("client/empty.js");
-    run.match("client connected: 0");
+    run.match("client connected: 1");
     run.match("jsVar: undefined");
 
     // Break the HTML file. This should kill the server, and print errors.
@@ -137,28 +172,14 @@ selftest.define("javascript hot code push", function (options) {
     run.match("client connected: 1");
     run.match("jsVar: undefined");
 
-    // Add appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages \n appcache");
-    run.match("added appcache");
-    run.match("server restarted");
-    run.match("client connected: 0");
-    run.match("jsVar: undefined");
-
     s.write("client/test.js", "jsVar = 'bar'");
-    run.match("client connected: 1");
-    run.match("jsVar: bar");
-
-    // Remove appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages");
-    run.match("removed");
-    run.match("appcache");
-    run.match("server restarted");
-    run.match("client connected: 0");
+    run.match("client connected: 2");
     run.match("jsVar: bar");
 
     s.write("client/test.js", "jsVar = 'baz'");
-    run.match("client connected: 1");
+    run.match("client connected: 3");
     run.match("jsVar: baz");
+
     s.unlink("client/test.js");
 
     run.stop();

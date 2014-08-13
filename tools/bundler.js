@@ -169,6 +169,7 @@ var runLog = require('./run-log.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
+var tropohouse = require('./tropohouse.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1667,8 +1668,6 @@ exports.bundle = function (options) {
   var buildOptions = options.buildOptions || {};
 
   var appDir = project.project.rootDir;
-  if (! release.usingRightReleaseForApp(appDir))
-    throw new Error("running wrong release for app?");
 
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs = buildOptions.webArchs || [ "web.browser" ];
@@ -1687,9 +1686,12 @@ exports.bundle = function (options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
+    if (! release.usingRightReleaseForApp(appDir))
+      throw new Error("running wrong release for app?");
+
     var packageLoader = project.project.getPackageLoader();
-    var downloaded = project.project._ensurePackagesExistOnDisk(
-      project.project.dependencies, { serverArch: serverArch, verbose: true });
+    var downloaded = tropohouse.default.downloadMissingPackages(
+      project.project.dependencies, { serverArch: serverArch });
 
     if (_.keys(downloaded).length !==
         _.keys(project.project.dependencies).length) {

@@ -28,14 +28,20 @@ var getLoadedPackages = _.once(function () {
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
-var openPackageServerConnection = function () {
+var openPackageServerConnection = function (packageServerUrl) {
   return new ServiceConnection(
     getLoadedPackages(),
-    config.getPackageServerUrl(),
+    packageServerUrl || config.getPackageServerUrl(),
     {headers: {"User-Agent": httpHelpers.getUserAgent()},
      _dontPrintErrors: true});
 };
 
+var emptyCachedServerDataJson = function () {
+  return {
+    syncToken: {},
+    collections: null
+  };
+};
 
 // Load the package data that was saved in the local data.json
 // collection from the last time we did a sync to the server. Takes an
@@ -51,15 +57,12 @@ var openPackageServerConnection = function () {
 // the collections and a default syncToken to ask the server for all the data
 // from the beginning of time.
 exports.loadCachedServerData = function (packageStorageFile) {
-  var noDataToken =  {
-    syncToken: {},
-    collections: null
-  };
+  var noDataToken = emptyCachedServerDataJson();
 
   packageStorageFile = packageStorageFile || config.getPackageStorage();
 
   try {
-    var data = fs.readFileSync(config.getPackageStorage(), 'utf8');
+    var data = fs.readFileSync(packageStorageFile, 'utf8');
   } catch (e) {
     if (e.code == 'ENOENT') {
       return noDataToken;
@@ -174,28 +177,29 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 // Returns null if contacting the server times out. Otherwise, returns
 // all the data.
 //
-// _optionsForTest can include:
-//   - packageStorageFile: String. The file to write the data to (overrides
-//     `config.getPackageStorage()`)
+// options can include:
+//  - packageStorageFile: String. The file to write the data to (overrides
+//    `config.getPackageStorage()`)
+//  - packageServerUrl: String. The package server (overrides
+//    `config.getPackageServerUrl()`)
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
-exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
+exports.updateServerPackageData = function (cachedServerData, options) {
   var self = this;
-  _optionsForTest = _optionsForTest || {};
-  var done = false;
+  options = options || {};
+  cachedServerData = cachedServerData || emptyCachedServerDataJson();
 
-  var conn = openPackageServerConnection();
+  var done = false;
+  var ret = {resetData: false};
+
+  var conn = openPackageServerConnection(options.packageServerUrl);
 
   var getSomeData = function () {
-    var sources = [];
-    if (cachedServerData.collections) {
-      sources.push(cachedServerData.collections);
-    }
     var syncToken = cachedServerData.syncToken;
     var remoteData;
     try {
       remoteData = loadRemotePackageData(conn, syncToken, {
-        useShortPages: _optionsForTest.useShortPages
+        useShortPages: options.useShortPages
       });
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
@@ -208,14 +212,26 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
       }
     }
 
+    // Is the remote server telling us to ignore everything we've heard before?
+    // OK, we can do that.
+    if (remoteData.resetData) {
+      cachedServerData.collections = null;
+      // The caller may want to take this as a cue to delete packages from the
+      // tropohouse.
+      ret.resetData = true;
+    }
+
     // If there is no new data from the server, don't bother writing things to
-    // disk.
-    // XXX fix for resetData?
-    if (_.isEqual(remoteData.collections, {})) {
+    // disk (unless we were just told to reset everything).
+    if (!remoteData.resetData && _.isEqual(remoteData.collections, {})) {
       done = true;
       return;
     }
 
+    var sources = [];
+    if (cachedServerData.collections) {
+      sources.push(cachedServerData.collections);
+    }
     sources.push(remoteData.collections);
     var allCollections = mergeCollections(sources);
     var data = {
@@ -224,7 +240,7 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
       collections: allCollections
     };
     writePackageDataToDisk(remoteData.syncToken, data, {
-      packageStorageFile: _optionsForTest.packageStorageFile
+      packageStorageFile: options.packageStorageFile
     });
 
     cachedServerData = data;
@@ -240,7 +256,8 @@ exports.updateServerPackageData = function (cachedServerData, _optionsForTest) {
     conn.close();
   }
 
-  return cachedServerData;
+  ret.data = cachedServerData;
+  return ret;
 };
 
 // Returns a logged-in DDP connection to the package server, or null if
@@ -355,13 +372,11 @@ var bundleBuild = function (unipackage) {
   var packageTarName = unipackage.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
 
-  unipackage.saveToPath(tarInputDir);
-
-  // Don't upload buildinfo.json. It's only of interest locally (for
-  // example, it contains a watchset with local paths).
-  var buildInfoPath = path.join(tarInputDir, 'buildinfo.json');
-  if (fs.existsSync(buildInfoPath))
-    fs.unlinkSync(buildInfoPath);
+  unipackage.saveToPath(tarInputDir, {
+    // Don't upload buildinfo.json. It's only of interest locally (for example,
+    // it contains a watchset with local paths).
+    elideBuildInfo: true
+  });
 
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);
@@ -512,7 +527,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       return 1;
     }
 
-    if (!amIAuthorized(name, conn, false)) {
+    if (!exports.amIAuthorized(name, conn, false)) {
       process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
       process.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
@@ -667,7 +682,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 //
 // If this returns FALSE, then we are NOT authorized.
 // Otherwise, return true.
-var amIAuthorized = function (name, conn, isRelease) {
+exports.amIAuthorized = function (name, conn, isRelease) {
   var methodName = "amIAuthorized" +
     (isRelease ? "Release" : "Package");
 

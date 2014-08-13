@@ -58,9 +58,6 @@ var startupVersion = null;
 // updateVersions can only be called after the server has fully loaded.
 var updateVersions = function (shouldReloadClientProgram) {
   syncQueue.runTask(function () {
-    var oldVersion = Autoupdate.autoupdateVersion;
-    var oldVersionRefreshable = Autoupdate.autoupdateVersionRefreshable;
-
     // Step 1: load the current client program on the server and update the
     // hash values in __meteor_runtime_config__.
     if (shouldReloadClientProgram) {
@@ -88,27 +85,30 @@ var updateVersions = function (shouldReloadClientProgram) {
       WebAppInternals.generateBoilerplate();
     }
 
-    if (Autoupdate.autoupdateVersion !== oldVersion) {
-      if (oldVersion) {
-        ClientVersions.remove(oldVersion);
-      }
-
+    if (! ClientVersions.findOne({_id: "version"})) {
       ClientVersions.insert({
-        _id: Autoupdate.autoupdateVersion,
+        _id: "version",
         refreshable: false,
-        current: true,
+        version: Autoupdate.autoupdateVersion,
       });
+    } else {
+      ClientVersions.update("version", { $set: {
+        version: Autoupdate.autoupdateVersion,
+      }});
     }
 
-    if (Autoupdate.autoupdateVersionRefreshable !== oldVersionRefreshable) {
-      if (oldVersionRefreshable) {
-        ClientVersions.remove(oldVersionRefreshable);
-      }
+    if (! ClientVersions.findOne({_id: "version-refreshable"})) {
       ClientVersions.insert({
-        _id: Autoupdate.autoupdateVersionRefreshable,
+        _id: "version-refreshable",
+        version: Autoupdate.autoupdateVersionRefreshable,
         refreshable: true,
         assets: WebAppInternals.refreshableAssets
       });
+    } else {
+      ClientVersions.update("version-refreshable", { $set: {
+        version: Autoupdate.autoupdateVersionRefreshable,
+        assets: WebAppInternals.refreshableAssets
+      }});
     }
   });
 };

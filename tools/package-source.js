@@ -409,11 +409,14 @@ _.extend(PackageSource.prototype, {
   //   -requireVersion: This is a package that is going in a catalog or being
   //    published to the server. It must have a version. (as opposed to, for
   //    example, a program)
+  //   -defaultVersion: The default version if none is specified. Only assigned
+  //    if the version is required.
   //   -immutable: This package source is immutable. Do not write anything,
   //    including version files. Instead, its only purpose is to be used as
   //    guideline for a repeatable build.
   initFromPackageDir: function (name, dir, options) {
     var self = this;
+    buildmessage.assertInCapture();
     var isPortable = true;
     options = options || {};
 
@@ -475,10 +478,15 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
+          } else if (key === "name") {
+            // this key is special because we really don't want you to think that
+            // you are successfully overriding directory name right now. Someday, you
+            // may be though, so it is reserved.
+            buildmessage.error("reserved key " + key + " in package description.");
           }
           else {
-            buildmessage.error("unknown attribute '" + key + "' " +
-                               "in package description");
+          // Do nothing. We might want to add some keys later, and we should err on
+          // the side of backwards compatibility.
           }
         });
       },
@@ -711,7 +719,9 @@ _.extend(PackageSource.prototype, {
     }
 
     if (self.version === null && options.requireVersion) {
-      if (! buildmessage.jobHasMessages()) {
+      if (options.defaultVersion) {
+        self.version = options.defaultVersion;
+      } else if (! buildmessage.jobHasMessages()) {
         // Only write the error if there have been no errors so
         // far. (Otherwise if there is a parse error we'll always get
         // this message, because we won't have been able to run any

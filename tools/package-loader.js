@@ -6,6 +6,7 @@ var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var unipackage = require('./unipackage.js');
+var tropohouse = require('./tropohouse.js');
 
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
@@ -17,7 +18,7 @@ exports.PackageLoader = function (options) {
   var self = this;
   self.versions = options.versions || null;
   self.uniloadDir = options.uniloadDir;
-  self.constraintSolverOpts= options.constraintSolverOpts;
+  self.constraintSolverOpts = options.constraintSolverOpts;
 };
 
 _.extend(exports.PackageLoader.prototype, {
@@ -53,29 +54,8 @@ _.extend(exports.PackageLoader.prototype, {
       return pkg;
     }
 
-    return packageCache.packageCache.loadPackageAtPath(name, loadPath);
-  },
-
-  containsPlugins: function (name) {
-    var self = this;
-
-    // We don't want to ever look at the catalog in the uniload case. We
-    // shouldn't ever care about plugins anyway, since uniload should never
-    // compile real packages from source (it sorta compiles the wrapper "load"
-    // package, which should avoid calling this function).
-    if (self.uniloadDir)
-      throw Error("called containsPlugins for uniload?");
-
-    var versionRecord;
-    if (self.versions === null) {
-      versionRecord = catalog.complete.getLatestVersion(name);
-    } else if (_.has(self.versions, name)) {
-      versionRecord = catalog.complete.getVersion(name, self.versions[name]);
-    } else {
-      throw new Error("no version specified for package " + name);
-    }
-
-    return versionRecord.containsPlugins;
+    return packageCache.packageCache.loadPackageAtPath(
+      name, loadPath, self.constraintSolverOpts);
   },
 
   // As getPackage, but returns the path of the package that would be
@@ -122,5 +102,16 @@ _.extend(exports.PackageLoader.prototype, {
 
     var pkg = self.getPackage(packageName, { throwOnError: true });
     return pkg.getUnibuildAtArch(arch);
+  },
+
+  downloadMissingPackages: function (options) {
+    var self = this;
+    options = options || {};
+    // We can only download packages if we know what versions they are.
+    if (!self.versions)
+      return;
+    tropohouse.default.downloadMissingPackages(self.versions, {
+      serverArch: options.serverArch
+    });
   }
 });

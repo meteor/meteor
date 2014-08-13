@@ -18,6 +18,7 @@ var BaseCatalog = require('./catalog-base.js').BaseCatalog;
 var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Future = require('fibers/future');
+var Fiber = require('fibers');
 
 var catalog = exports;
 
@@ -66,7 +67,7 @@ _.extend(OfficialCatalog.prototype, {
 
   refreshInProgress: function () {
     var self = this;
-    return !! self._refreshFutures;
+    return self._refreshFiber === Fiber.current;
   },
 
   // Refresh the packages in the catalog. Print a warning if we cannot connect
@@ -76,6 +77,7 @@ _.extend(OfficialCatalog.prototype, {
   // the in-progress refresh to finish.
   refresh: function () {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
 
     if (self._refreshFutures) {
@@ -86,6 +88,7 @@ _.extend(OfficialCatalog.prototype, {
     }
 
     self._refreshFutures = [];
+    self._refreshFiber = Fiber.current;
 
     var thrownError = null;
     try {
@@ -106,6 +109,7 @@ _.extend(OfficialCatalog.prototype, {
     }
 
     self._refreshFutures = null;
+    self._refreshFiber = null;
 
     if (thrownError)
       throw thrownError;
@@ -119,13 +123,24 @@ _.extend(OfficialCatalog.prototype, {
     var localData = packageClient.loadCachedServerData();
     var allPackageData;
     if (! self.offline ) {
-      allPackageData = packageClient.updateServerPackageData(localData);
+      var updateResult = packageClient.updateServerPackageData(localData);
+      allPackageData = updateResult.data;
       if (! allPackageData) {
         // If we couldn't contact the package server, use our local data.
         allPackageData = localData;
         // XXX should do some nicer error handling here (return error to
         // caller and let them handle it?)
         process.stderr.write("Warning: could not connect to package server\n");
+      }
+      if (updateResult.resetData) {
+        // Did we reset the data from scratch? Delete packages, which may be
+        // bogus.
+        //
+        // XXX We should actually mark "reset data please" in data.json and not
+        // remove it until the wipe step happens, and re-attempt the wipe on
+        // program startup, so that killing in the middle of a resync (a slow
+        // operation!!!) still wipes packages.
+        tropohouse.default.wipeAllPackages();
       }
     } else {
       allPackageData = localData;
@@ -177,6 +192,10 @@ var CompleteCatalog = function () {
   // XXX: use a future in the future maybe
   self.refreshing = false;
 
+  // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
+  // Maps packageName -> version -> its ECV
+  self.forgottenECVs = {};
+
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
 };
@@ -198,6 +217,7 @@ _.extend(CompleteCatalog.prototype, {
   //    silently ignored.
   initialize: function (options) {
     var self = this;
+    buildmessage.assertInCapture();
 
     options = options || {};
 
@@ -216,6 +236,12 @@ _.extend(CompleteCatalog.prototype, {
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
     self.refresh();
+  },
+
+  reset: function () {
+    var self = this;
+    BaseCatalog.prototype.reset.call(self);
+    self.forgottenECVs = {};
   },
 
   // Given a set of constraints, returns a det of dependencies that satisfy the
@@ -245,9 +271,7 @@ _.extend(CompleteCatalog.prototype, {
     var self = this;
     opts = opts || {};
     self._requireInitialized();
-    // XXX for now, just doing the assertion if we have to call project
-    //     stuff.  but oh, this will be improved.
-    opts.ignoreProjectDeps || buildmessage.assertInCapture();
+    buildmessage.assertInCapture();
 
     // Kind of a hack, as per specification. We don't have a constraint solver
     // initialized yet. We are probably trying to build the constraint solver
@@ -321,9 +345,12 @@ _.extend(CompleteCatalog.prototype, {
   //   anyway. When we are using hot code push, we may be restarting the app
   //   because of a local package change that impacts that catalog. Don't wait
   //   on the official catalog to refresh data.json, in this case.
+  // - watchSet: if provided, any files read in reloading packages will be added
+  //   to this set.
   refresh: function (options) {
     var self = this;
     options = options || {};
+    buildmessage.assertInCapture();
 
     // We need to limit the rate of refresh, or, at least, prevent any sort of
     // loops. ForceRefresh will override either one.
@@ -341,7 +368,7 @@ _.extend(CompleteCatalog.prototype, {
       self._insertServerPackages(localData);
 
       self._recomputeEffectiveLocalPackages();
-      self._addLocalPackageOverrides();
+      self._addLocalPackageOverrides({watchSet: options.watchSet});
       self.initialized = true;
       // Rebuild the resolver, since packages may have changed.
       self._initializeResolver();
@@ -398,12 +425,19 @@ _.extend(CompleteCatalog.prototype, {
     _.extend(self.effectiveLocalPackages, self.localPackages);
   },
 
+  getForgottenECVs: function (packageName) {
+    var self = this;
+    return self.forgottenECVs[packageName];
+  },
+
   // Add all packages in self.effectiveLocalPackages to the catalog,
   // first removing any existing packages that have the same name.
   //
   // XXX emits buildmessages. are callers expecting that?
-  _addLocalPackageOverrides: function () {
+  _addLocalPackageOverrides: function (options) {
     var self = this;
+    options = options || {};
+    buildmessage.assertInCapture();
 
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.
@@ -411,7 +445,10 @@ _.extend(CompleteCatalog.prototype, {
     _.each(self.effectiveLocalPackages, function (dir, packageName) {
       if (!_.has(self.versions, packageName))
         return;
+      self.forgottenECVs[packageName] = {};
       _.each(self.versions[packageName], function (record) {
+        self.forgottenECVs[packageName][record.version] =
+          record.earliestCompatibleVersion;
         removedVersionIds[record._id] = true;
       });
       delete self.versions[packageName];
@@ -433,26 +470,34 @@ _.extend(CompleteCatalog.prototype, {
     var initVersionRecordFromSource =  function (packageDir, name) {
       var packageSource = new PackageSource;
       var broken = false;
-      var messages = buildmessage.capture({
-          title: "reading package `" + name + "`",
-          rootPath: packageDir
-        }, function () {
-          // All packages in the catalog must have versions.
-          packageSource.initFromPackageDir(name, packageDir, {
-            requireVersion: true
-          });
-          if (buildmessage.jobHasMessages())
-            broken = true;
-        }
-      );
-      if (broken) {
-        _.each(messages.jobs, function (job) {
-          _.each(job.messages, function (message) {
-            process.stderr.write(message.message + "\n");
-          });
+      buildmessage.enterJob({
+        title: "reading package `" + name + "`",
+        rootPath: packageDir
+      }, function () {
+        // All packages in the catalog must have versions. Though, for local
+        // packages without version, we can be kind and set it to
+        // 0.0.0. Anything requiring any version above that will not be
+        // compatible, which is fine.
+        packageSource.initFromPackageDir(name, packageDir, {
+          requireVersion: true,
+          defaultVersion: "0.0.0"
         });
-        return;  // recover by ignoring
+        if (buildmessage.jobHasMessages())
+          broken = true;
+      });
+
+      if (options.watchSet) {
+        options.watchSet.merge(packageSource.pluginWatchSet);
+        _.each(packageSource.architectures, function (sourceArch) {
+          options.watchSet.merge(sourceArch.watchSet);
+        });
       }
+
+      // Recover by ignoring, but not until after we've augmented the watchSet
+      // (since we want the watchSet to include files with problems that the
+      // user may fix!)
+      if (broken)
+        return;
 
       packageSources[name] = packageSource;
 
@@ -670,7 +715,9 @@ _.extend(CompleteCatalog.prototype, {
         title: "building package `" + name + "`",
         rootPath: sourcePath
       }, function () {
-        unip = compiler.compile(self.packageSources[name]).unipackage;
+        unip = compiler.compile(self.packageSources[name], {
+          ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
+        }).unipackage;
         if (! buildmessage.jobHasMessages()) {
           // Save the build, for a fast load next time
           try {
@@ -711,6 +758,7 @@ _.extend(CompleteCatalog.prototype, {
   // function twice with the same `name`.
   addLocalPackage: function (name, directory) {
     var self = this;
+    buildmessage.assertInCapture();
     self._requireInitialized();
 
     var resolvedPath = path.resolve(directory);
@@ -724,20 +772,6 @@ _.extend(CompleteCatalog.prototype, {
     // want to coalesce the calls to refresh somehow, but I don't
     // think we'll actually be doing that so this should be fine.
     // #CallingRefreshEveryTimeLocalPackagesChange
-    self._recomputeEffectiveLocalPackages();
-    self.refresh();
-  },
-
-  // Reverse the effect of addLocalPackage.
-  removeLocalPackage: function (name) {
-    var self = this;
-    self._requireInitialized();
-
-    if (! _.has(self.localPackages, name))
-      throw new Error("no such local package?");
-    delete self.localPackages[name];
-
-    // see #CallingRefreshEveryTimeLocalPackagesChange
     self._recomputeEffectiveLocalPackages();
     self.refresh();
   },

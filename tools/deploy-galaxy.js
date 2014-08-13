@@ -49,7 +49,7 @@ var handleError = function (error, galaxyName, messages) {
     if (m)
       galaxyName = m[1];
 
-    process.stderr.write(galaxyName + ": connection failed");
+    process.stderr.write(galaxyName + ": connection failed\n");
     return 1;
   } else {
     throw error;
@@ -209,7 +209,7 @@ exports.deploy = function (options) {
         stats.recordPackages();
       });
       if (statsMessages.hasMessages()) {
-        process.stdout.write("Error talking to stats server:\n" +
+        process.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }

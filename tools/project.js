@@ -93,10 +93,11 @@ var Project = function () {
   // and then recompute when needed.
   self._depsUpToDate = false;
 
-  // In verbose mode (default) we print stuff out. When the project is something
-  // automatic, like test-packages or get-ready, we should mute the (expected)
-  // output. For example, we don't need to tell the user that we are adding
-  // packages to an app during test-packages.
+  // In verbose mode (default) we print stuff out when we modify the
+  // project. When the project is something automatic, like test-packages or
+  // get-ready, we should mute the (expected) output. For example, we don't need
+  // to tell the user that we are adding packages to an app during
+  // test-packages.  (We still print other messages like packages downloading.)
   self.muted = false;
 };
 
@@ -247,6 +248,8 @@ _.extend(Project.prototype, {
   // getCurrentCombinedConstraints.
   calculateCombinedConstraints : function (releasePackages) {
     var self = this;
+    buildmessage.assertInCapture();
+
     var allDeps = [];
     // First, we process the contents of the .meteor/packages file. The
     // self.constraints variable is always up to date.
@@ -631,7 +634,7 @@ _.extend(Project.prototype, {
     options = options || {};
     buildmessage.assertInCapture();
 
-    var downloaded = self._ensurePackagesExistOnDisk(newVersions);
+    var downloaded = tropohouse.default.downloadMissingPackages(newVersions);
     var ret = {
       success: true,
       downloaded: downloaded
@@ -676,40 +679,6 @@ _.extend(Project.prototype, {
                      lines.join(''), 'utf8');
   },
 
-  // Go through a list of packages and makes sure we have enough builds of the
-  // package downloaded such that we can load a browser unibuild and a unibuild
-  // that will run on this system (or the requested architecture). Return the
-  // object with mapping packageName to version for the packages that we have
-  // successfully downloaded.
-  //
-  // This primarily exists as a safety check to be used when doing operations
-  // that could lead to changes in the versions file.
-  _ensurePackagesExistOnDisk : function (versions, options) {
-    var self = this;
-    buildmessage.assertInCapture();
-    options = options || {};
-    var serverArch = options.serverArch || archinfo.host();
-    var verbose = options.verbose || !self.muted;
-    var downloadedPackages = {};
-    _.each(versions, function (version, name) {
-      var packageVersionInfo = { packageName: name, version: version };
-      try {
-        var available = tropohouse.default.maybeDownloadPackageForArchitectures(
-          packageVersionInfo,
-          [serverArch],  // XXX 'web.browser' too?
-          verbose /* print downloading message */
-        );
-        downloadedPackages[name] = version;
-      } catch (err) {
-        // We have failed to download the right things and put them on disk!
-        // This should not happen, and we aren't sure why it happened.
-        console.log(err);
-      }
-    });
-    return downloadedPackages;
-  },
-
-
   // Tries to download all the packages that changed between the old
   // self.dependencies and newVersions, and, if successful, adds 'moreDeps' to
   // the package constraints to this project and replaces the project's
@@ -732,8 +701,7 @@ _.extend(Project.prototype, {
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to
     // make sure that we have them.
-    var downloadedPackages = self._ensurePackagesExistOnDisk(newVersions,
-                                                             { verbose: true });
+    var downloadedPackages = tropohouse.default.downloadMissingPackages(newVersions);
 
     // Return the packages that we have downloaded successfully and let the
     // client deal with reporting the error to the user.
@@ -807,10 +775,10 @@ _.extend(Project.prototype, {
     var identifierFile = self.appIdentifierFile();
     if (!fs.existsSync(identifierFile)) {
       var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
-      fs.writeFileSync(identifierFile, id);
+      fs.writeFileSync(identifierFile, id + '\n');
     }
     if (fs.existsSync(identifierFile)) {
-      self.appId = fs.readFileSync(identifierFile, 'utf8');
+      self.appId = trimLine(fs.readFileSync(identifierFile, 'utf8'));
     } else {
       throw new Error("Expected a file at " + identifierFile);
     }

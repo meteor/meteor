@@ -131,7 +131,7 @@ _.extend(exports, {
     if (isLocalUniverse()) {
       return localhostOffset(20);
     } else {
-      return getUniverse().replace(/^www\./, 'test-packages.');
+      return getUniverse().replace(/^www\./, 'packages.');
     }
   },
 
@@ -197,10 +197,10 @@ _.extend(exports, {
     return prefix + ".data.json";
   },
 
-  getPackageStorage: function() {
+  getPackageStorage: function (tropo) {
     var self = this;
-    return path.join(tropohouse.default.root,
-                     "package-metadata", "v1",
+    tropo = tropo || tropohouse.default;
+    return path.join(tropo.root, "package-metadata", "v1",
                      self.getLocalPackageCacheFilename());
   },
 

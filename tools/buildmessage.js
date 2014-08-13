@@ -325,8 +325,8 @@ var exception = function (error) {
     // XXX this may be the wrong place to do this, but it makes syntax errors in
     // files loaded via unipackage.load have context.
     if (error instanceof files.FancySyntaxError) {
-      error.message = "Syntax error: " + error.message + " at " +
-        error.file + ":" + error.line + ":" + error.column;
+      error = new Error("Syntax error: " + error.message + " at " +
+        error.file + ":" + error.line + ":" + error.column);
     }
     throw error;
   }

@@ -153,8 +153,6 @@ _.extend(Builder.prototype, {
   //   if any path segments consist entirely of dots (eg, '..'), and
   //   if there is a file in the bundle with the same relPath, then
   //   the path is changed by adding a numeric suffix.
-  // - append: if true, append to the file if it exists rather than
-  //   throwing an exception.
   // - executable: if true, mark the file as executable.
   // - symlink: if set to a string, create a symlink to its value
   //
@@ -189,15 +187,14 @@ _.extend(Builder.prototype, {
     var absPath = path.join(self.buildPath, relPath);
     if (options.symlink) {
       fs.symlinkSync(options.symlink, absPath);
-    } else if (options.append) {
-      fs.appendFileSync(absPath, data);
     } else {
-      fs.writeFileSync(absPath, data);
+      // Builder is used to create build products, which should be read-only;
+      // users shouldn't be manually editing automatically generated files and
+      // expecting the results to "stick".
+      fs.writeFileSync(absPath, data,
+                       { mode: options.executable ? 0555 : 0444 });
     }
     self.usedAsFile[relPath] = true;
-
-    if (options.executable)
-      fs.chmodSync(absPath, 0755); // rwxr-xr-x
 
     return relPath;
   },
@@ -214,7 +211,8 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(path.dirname(relPath));
     fs.writeFileSync(path.join(self.buildPath, relPath),
-                     new Buffer(JSON.stringify(data, null, 2), 'utf8'));
+                     new Buffer(JSON.stringify(data, null, 2), 'utf8'),
+                     {mode: 0444});
 
     self.usedAsFile[relPath] = true;
   },

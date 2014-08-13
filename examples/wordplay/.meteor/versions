@@ -14,6 +14,7 @@ geojson-utils@1.0.0
 html-tools@1.0.0
 htmljs@1.0.0
 id-map@1.0.0
+insecure@1.0.0
 jquery@1.0.0
 json@1.0.0
 livedata@1.0.1

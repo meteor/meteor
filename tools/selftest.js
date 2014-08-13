@@ -84,13 +84,15 @@ var execFileSync = function (binary, args, opts) {
   })().wait();
 };
 
-var captureAndThrow = function (f) {
+var doOrThrow = function (f) {
+  var ret;
   var messages = buildmessage.capture(function () {
-    f();
+    ret = f();
   });
   if (messages.hasMessages()) {
     throw Error(messages.formatMessages());
   }
+  return ret;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -370,8 +372,10 @@ var Sandbox = function (options) {
   // with. If a test is tagged 'test-package-server', it uses the test
   // server. Tests that publish packages should have this flag; tests that
   // assume that the release's packages can be found on the server should not.
+  // Note that this only affects subprocess meteor runs, not direct invocation
+  // of packageClient!
   if (runningTest.tags['test-package-server']) {
-    self.set('METEOR_PACKAGE_SERVER_URL', 'https://test-packages.meteor.com');
+    self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
   }
 
   if (_.has(options, 'warehouse')) {
@@ -632,7 +636,7 @@ _.extend(Sandbox.prototype, {
     // build apps that contain core packages).
 
     var toolPackage, toolPackageDirectory;
-    captureAndThrow(function () {
+    doOrThrow(function () {
       toolPackage = getToolsPackage();
       toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
         + toolPackage.buildArchitectures();
@@ -698,22 +702,31 @@ _.extend(Sandbox.prototype, {
     // should be OK.
     var oldOffline = catalog.official.offline;
     catalog.official.offline = true;
-    catalog.official.refresh();
+    doOrThrow(function () {
+      catalog.official.refresh();
+    });
     _.each(
       ['autopublish', 'standard-app-packages', 'insecure'],
       function (name) {
-        var versionRec = catalog.official.getLatestVersion(name);
+        var versionRec = doOrThrow(function () {
+          return catalog.official.getLatestVersion(name);
+        });
         if (!versionRec) {
           catalog.official.offline = false;
-          catalog.official.refresh();
+          doOrThrow(function () {
+            catalog.official.refresh();
+          });
           catalog.official.offline = true;
-          versionRec = catalog.official.getLatestVersion(name);
+          versionRec = doOrThrow(function () {
+            return catalog.official.getLatestVersion(name);
+          });
           if (!versionRec) {
             throw new Error(" hack fails for " + name);
           }
         }
-        var buildRec = catalog.official.getAllBuilds(
-          name, versionRec.version)[0];
+        var buildRec = doOrThrow(function () {
+          return catalog.official.getAllBuilds(name, versionRec.version)[0];
+        });
 
         // Insert into packages.
         stubCatalog.collections.packages.push({
@@ -1476,7 +1489,7 @@ var runTests = function (options) {
         if (! lines.length) {
           process.stderr.write("  => No output\n");
         } else {
-          var historyLines = options.historyLines || 20;
+          var historyLines = options.historyLines || 100;
 
           process.stderr.write("  => Last " + historyLines + " lines:\n");
           _.each(lines.slice(-historyLines), function (line) {
@@ -1580,5 +1593,6 @@ _.extend(exports, {
   expectThrows: expectThrows,
   getToolsPackage: getToolsPackage,
   execFileSync: execFileSync,
-  captureAndThrow: captureAndThrow
+  doOrThrow: doOrThrow,
+  testPackageServerUrl: 'https://test-packages.meteor.com'
 });

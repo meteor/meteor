@@ -28,7 +28,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/12';
+compiler.BUILT_BY = 'meteor/13';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -137,7 +137,7 @@ var determineBuildTimeDependencies = function (packageSource,
                                                constraintSolverOpts) {
   var ret = {};
   constraintSolverOpts = constraintSolverOpts || {};
-  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
+  buildmessage.assertInCapture();
 
   // There are some special cases where we know that the package has no source
   // files, which means it can't have any interesting build-time
@@ -269,6 +269,11 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   var js = [];
   var sources = [];
   var watchSet = inputSourceArch.watchSet.clone();
+
+  // Download whatever packages we may need for this compilation. (Since we're
+  // compiling, we're always targeting the host; we can cross-link but we can't
+  // cross-compile!)
+  packageLoader.downloadMissingPackages({serverArch: archinfo.host()});
 
   // *** Determine and load active plugins
 
@@ -731,6 +736,8 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
 //    when we already have a resolved set of build-time dependencies and
 //    want to use that instead of resolving them again, e.g. when
 //    running 'meteor publish-for-arch'.
+//  - ignoreProjectDeps: if we should, in some specific context that
+//    glasser only half understands, ignore the current project deps
 //
 // Returns an object with keys:
 // - unipackage: the built Unipackage
@@ -746,7 +753,9 @@ compiler.compile = function (packageSource, options) {
   options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
-  var buildTimeDeps = determineBuildTimeDependencies(packageSource);
+  var buildTimeDeps = determineBuildTimeDependencies(packageSource, {
+    ignoreProjectDeps: options.ignoreProjectDeps
+  });
 
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
@@ -759,6 +768,7 @@ compiler.compile = function (packageSource, options) {
       var loader = new packageLoader.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name]
       });
+      loader.downloadMissingPackages({serverArch: archinfo.host()});
 
       var buildResult = bundler.buildJsImage({
         name: info.name,
@@ -836,7 +846,10 @@ compiler.compile = function (packageSource, options) {
 
   // Compile unibuilds. Might use our plugins, so needs to happen second.
   var loader = new packageLoader.PackageLoader({
-    versions: buildTimeDeps.packageDependencies
+    versions: buildTimeDeps.packageDependencies,
+    constraintSolverOpts: {
+      ignoreProjectDeps: options.ignoreProjectDeps
+    }
   });
 
   _.each(packageSource.architectures, function (unibuild) {
@@ -887,6 +900,7 @@ compiler.compile = function (packageSource, options) {
 // so any dependencies that contains plugins have real versions in the
 // catalog already. Still, this seems very brittle and we should fix it.
 var getPluginProviders = function (versions) {
+  buildmessage.assertInCapture();
   var result = {};
   _.each(versions, function (version, name) {
     // Direct dependencies only create a build-order constraint if
@@ -907,7 +921,7 @@ var getPluginProviders = function (versions) {
 compiler.getBuildOrderConstraints = function (
     packageSource, constraintSolverOpts) {
   constraintSolverOpts = constraintSolverOpts || {};
-  constraintSolverOpts.ignoreProjectDeps || buildmessage.assertInCapture();
+  buildmessage.assertInCapture();
 
   var versions = {}; // map from package name to version to true
   var addVersion = function (version, name) {

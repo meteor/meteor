@@ -33,16 +33,25 @@ exports.tryToDownloadUpdate = function (options) {
 };
 
 var checkForUpdate = function (showBanner) {
-  // XXX we should ignore errors here, right?  but still do the "can we update
-  // this app with a locally available release" check.
-  catalog.official.refresh();
+  var messages = buildmessage.capture(function () {
+    catalog.official.refresh();
 
-  if (!release.current.isProperRelease())
+    if (!release.current.isProperRelease())
+      return;
+
+    updateMeteorToolSymlink();
+
+    maybeShowBanners();
+  });
+
+  if (messages.hasMessages()) {
+    // Ignore, since running in the background.
+    // XXX unfortunately the "can't refresh" message still prints :(
+    // XXX But maybe if it's just a "we're offline" message we should keep
+    //     going? In case we want to present the "hey there's a locally
+    //     available recommended release?
     return;
-
-  updateMeteorToolSymlink();
-
-  maybeShowBanners();
+  }
 };
 
 var maybeShowBanners = function () {
@@ -117,9 +126,11 @@ var maybeShowBanners = function () {
   }
 };
 
-// Update ~/.meteor0/meteor to point to the tool binary from the tools of the
+// Update ~/.meteor/meteor to point to the tool binary from the tools of the
 // latest recommended release on the default release track.
 var updateMeteorToolSymlink = function () {
+  buildmessage.assertInCapture();
+
   // Get the latest release version of METEOR-CORE. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
@@ -143,7 +154,7 @@ var updateMeteorToolSymlink = function () {
 
   var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
   if (!utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
-    // The latest release from the catalog is not where the ~/.meteor0/meteor
+    // The latest release from the catalog is not where the ~/.meteor/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
     try {
@@ -151,20 +162,23 @@ var updateMeteorToolSymlink = function () {
         buildmessage.enterJob({
           title: "downloading tool package " + latestRelease.tool
         }, function () {
-          tropohouse.default.maybeDownloadPackageForArchitectures(
-            {packageName: latestReleaseToolPackage,
-             version: latestReleaseToolVersion},
-            [archinfo.host()],
-            true);
+          tropohouse.default.maybeDownloadPackageForArchitectures({
+            packageName: latestReleaseToolPackage,
+            version: latestReleaseToolVersion,
+            architectures: [archinfo.host()],
+            silent: true
+          });
         });
         _.each(latestRelease.packages, function (pkgVersion, pkgName) {
           buildmessage.enterJob({
             title: "downloading package " + pkgName + "@" + pkgVersion
           }, function () {
-            tropohouse.default.maybeDownloadPackageForArchitectures(
-              {packageName: pkgName, version: pkgVersion},
-              [archinfo.host()],
-              true);
+            tropohouse.default.maybeDownloadPackageForArchitectures({
+              packageName: pkgName,
+              version: pkgVersion,
+              architectures: [archinfo.host()],
+              silent: true
+            });
           });
         });
       });

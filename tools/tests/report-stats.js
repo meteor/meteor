@@ -36,7 +36,7 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
 
   if (useFakeRelease) {
     var toolsPackage;
-    selftest.captureAndThrow(function() {
+    selftest.doOrThrow(function() {
       toolsPackage = selftest.getToolsPackage();
     });
     expectedUserAgentInfo.meteorReleaseTrack =

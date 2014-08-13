@@ -1,26 +1,16 @@
 { "track": "METEOR-CORE",
   "banners": [
     {
-      "versions": ["850.0", "860.1", "860.0"],
+      "versions": ["0.9.0-preview1", "0.9.0-preview2", "0.9.0-preview3"],
       "banner": {
-        "text": "You're in the mid-eighties!\nCool!"
+        "text": "You should consider updating to the 0.9.0-preview4 release!\n We fixed some bugs. Running 'meteor update' should do the trick."
        }
     },
     {
-      "versions": ["700.0", "800.0"],
-      "banner": {
-        "text": "You're a hundred!\nCool!"
-       }
-    },
-    {
-      "versions": ["900.3"],
-      "banner": {
-        "text": "=> There be a patch yo.  900.3.1!\n   Yay!"
-       }
-    },
-    {
-      "versions": ["900.1"],
-      "banner": null
+	"versions": ["0.9.0-preview4"],
+	"banner": {
+		"text": "Minor issues fixed in preview5. Consider updating! :)"
+	}
     }
   ]
 }

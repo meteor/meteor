@@ -134,9 +134,19 @@ _.extend(LivedataTest.ClientStream.prototype, {
       _.bind(self._lostConnection, self),
       self.CONNECT_TIMEOUT);
 
-    self.client.on('open', Meteor.bindEnvironment(function () {
+    var streamConnectCallback = Meteor.bindEnvironment(function () {
       return self._onConnect(client);
-    }, "stream connect callback"));
+    }, "stream connect callback");
+    self.client.on('open', function () {
+      // XXX before 0.9.0, if we don't figure out why these surprising open
+      //     events are occuring, remove the trace and use clientOnIfCurrent
+      //     instead.  would be nice to ensure we're not leaking resources
+      //     though!
+      if (client !== self.client) {
+        console.trace("BACKTRACE FOR INACTIVE CLIENT " + !!self.client);
+      }
+      streamConnectCallback();
+    });
 
     var clientOnIfCurrent = function (event, description, f) {
       self.client.on(event, Meteor.bindEnvironment(function () {

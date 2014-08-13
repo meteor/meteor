@@ -174,6 +174,21 @@ selftest.define("change packages", ['test-package-server'], function () {
   run.waitSecs(5);
   run.match("running at");
   run.match("localhost");
+
+  // How about breaking and fixing a package.js?
+  s.cd("packages/shout-something", function () {
+    var packageJs = s.read("package.js");
+    s.write("package.js", "]");
+    run.waitSecs(3);
+    run.match("=> Errors prevented startup");
+    run.match("package.js:1:1: Unexpected token ]");
+    run.match("Waiting for file change");
+
+    s.write("package.js", packageJs);
+    run.waitSecs(3);
+    run.match("restarting");
+    run.match("restarted");
+  });
   run.stop();
 });
 
@@ -482,7 +497,7 @@ selftest.define("release track defaults to METEOR-CORE",
     var run = s.run("publish", "--create");
     run.waitSecs(20);
     run.matchErr("Unknown release METEOR-CORE@" + releaseVersion);
-    run.expectExit(8);
+    run.expectExit(1);
   });
 });
 
@@ -501,14 +516,15 @@ selftest.define("update server package data unit test",
   // we'll check that all this data still appears on disk and hasn't
   // been overwritten.
   var data = packageClient.updateServerPackageData({ syncToken: {} }, {
-    packageStorageFile: packageStorageFile
-  });
+    packageStorageFile: packageStorageFile,
+    packageServerUrl: selftest.testPackageServerUrl
+  }).data;
 
   var packageNames = [];
 
-  // Publish more than a page worth of packages. When we pass the
-  // `useShortPages` options, the server will send 3 records at a time
-  // instead of 100.
+  // Publish more than a (small) page worth of packages. When we pass the
+  // `useShortPages` option to updateServerPackageData, the server will send 3
+  // records at a time instead of 100, so this is more than a page.
   _.times(5, function (i) {
     var packageName = username + ":" + utils.randomToken();
     createAndPublishPackage(s, packageName);
@@ -517,8 +533,9 @@ selftest.define("update server package data unit test",
 
   var newData = packageClient.updateServerPackageData(data, {
     packageStorageFile: packageStorageFile,
+    packageServerUrl: selftest.testPackageServerUrl,
     useShortPages: true
-  });
+  }).data;
   var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
 
   // Check that we didn't lose any data.
