@@ -493,6 +493,15 @@ main.registerCommand({
     return 1;
   }
 
+  var statsMessages = buildmessage.capture(function () {
+    stats.recordPackages();
+  });
+  if (statsMessages.hasMessages()) {
+    process.stdout.write("Error recording package list:\n" +
+                         statsMessages.formatMessages());
+    // ... but continue;
+  }
+
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
     outputPath: bundlePath,

@@ -209,7 +209,7 @@ exports.deploy = function (options) {
         stats.recordPackages();
       });
       if (statsMessages.hasMessages()) {
-        process.stdout.write("Error talking to stats server:\n" +
+        process.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }

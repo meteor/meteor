@@ -448,11 +448,10 @@ _.extend(AppRunner.prototype, {
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     if (self.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages(self.appDir);
+        stats.recordPackages();
       });
       if (statsMessages.hasMessages()) {
-        // XXX so this happens any time you're offline?
-        process.stdout.write("Error talking to stats server:\n" +
+        process.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }

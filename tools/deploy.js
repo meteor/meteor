@@ -398,10 +398,10 @@ var bundleAndDeploy = function (options) {
 
     if (options.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages(options.appDir);
+        stats.recordPackages();
       });
       if (statsMessages.hasMessages()) {
-        process.stdout.write("Error talking to stats server:\n" +
+        process.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }
