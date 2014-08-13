@@ -195,8 +195,13 @@ var SourceArch = function (pkg, options) {
 // PackageSource
 ///////////////////////////////////////////////////////////////////////////////
 
-var PackageSource = function () {
+var PackageSource = function (catalog) {
   var self = this;
+
+  // Which catalog this PackageSource works with.
+  if (!catalog)
+    throw Error("Must provide catalog");
+  self.catalog = catalog;
 
   // The name of the package, or null for an app pseudo-package or
   // collection. The package's exports will reside in Package.<name>.
@@ -914,7 +919,7 @@ _.extend(PackageSource.prototype, {
           // catalog may not be initialized, but we are pretty sure that the
           // releases are there anyway. This is not the right way to do this
           // long term.
-          releaseRecord = catalog.complete.getReleaseVersion(
+          releaseRecord = catalog.official.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
             buildmessage.error("Unknown release "+ release);

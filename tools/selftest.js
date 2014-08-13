@@ -72,7 +72,10 @@ var getToolsPackage = function () {
   if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
     throw Error("didn't rebuild meteor-tool?");
   }
-  var loader = new packageLoader.PackageLoader({versions: null});
+  var loader = new packageLoader.PackageLoader({
+    versions: null,
+    catalog: catalog.complete
+  });
   return loader.getPackage(toolPackageName);
 };
 
@@ -641,7 +644,8 @@ _.extend(Sandbox.prototype, {
       toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
         + toolPackage.buildArchitectures();
       toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                       toolPackageName, toolPackageDirectory));
+                                       toolPackageName, toolPackageDirectory),
+                             { elideBuildInfo: true });
     });
 
     fs.symlinkSync(toolPackageDirectory,

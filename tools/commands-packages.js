@@ -18,7 +18,6 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
@@ -132,7 +131,8 @@ main.registerCommand({
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
     loadPackages(catalog.complete.getLocalPackageNames(),
-                 new packageLoader.PackageLoader({versions: null}));
+                 new packageLoader.PackageLoader({versions: null,
+                                                  catalog: catalog.complete}));
 
     // In an app? Get the list of packages used by this app. Calling getVersions
     // on the project will ensureDepsUpToDate which will ensure that all builds
@@ -147,7 +147,8 @@ main.registerCommand({
       var releasePackages = release.current.getPackages();
       loadPackages(
         _.keys(releasePackages),
-        new packageLoader.PackageLoader({versions: releasePackages}));
+        new packageLoader.PackageLoader({versions: releasePackages,
+                                         catalog: catalog.complete}));
     }
   });
 
@@ -228,7 +229,7 @@ main.registerCommand({
         buildmessage.error("Invalid package name:", packageName);
       }
 
-      packageSource = new PackageSource;
+      packageSource = new PackageSource(catalog.complete);
 
       // Anything published to the server must have a version.
       packageSource.initFromPackageDir(packageName, options.packageDir, {
@@ -355,7 +356,7 @@ main.registerCommand({
   var messages = buildmessage.capture({
     title: "building package " + name
   }, function () {
-    var packageSource = new PackageSource;
+    var packageSource = new PackageSource(catalog.complete);
 
     // This package source, although it is initialized from a directory is
     // immutable. It should be built exactly as is. If we need to modify
@@ -609,7 +610,7 @@ main.registerCommand({
           // contains 'package.js'. (We used to support unipackages in
           // localPackageDirs, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-            var packageSource = new PackageSource;
+            var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
               { title: "building package " + item },
               function () {

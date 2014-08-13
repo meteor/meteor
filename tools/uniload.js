@@ -3,8 +3,8 @@ var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
 var packageLoader = require("./package-loader.js");
-var packageCache = require("./package-cache.js");
 var files = require('./files.js');
+var catalog = require('./catalog.js');
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
@@ -69,13 +69,14 @@ var load = function (options) {
   var messages = buildmessage.capture({
     title: "loading unipackage"
   }, function () {
-
     // Load the code. The uniloader does not call the constraint solver, unless
     // it is running from checkout, in which case it will use the constraint
     // solver to build its packages in the catalog.
     var loader = new packageLoader.PackageLoader({
       versions: null,
       uniloadDir: files.getUniloadDir(),
+      // XXX replace with uniload-specific catalog #Unicat
+      catalog: catalog.complete,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
@@ -89,7 +90,9 @@ var load = function (options) {
     var image = bundler.buildJsImage({
       name: "load",
       packageLoader: loader,
-      use: options.packages || []
+      use: options.packages || [],
+      // XXX replace with uniload-specific catalog #Unicat
+      catalog: catalog.complete
     }).image;
     ret = image.load(env);
 

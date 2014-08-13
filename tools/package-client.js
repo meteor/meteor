@@ -374,7 +374,8 @@ var bundleBuild = function (unipackage) {
 
   unipackage.saveToPath(tarInputDir, {
     // Don't upload buildinfo.json. It's only of interest locally (for example,
-    // it contains a watchset with local paths).
+    // it contains a watchset with local paths).  (This also means we don't
+    // need to specify a catalog, yay.)
     elideBuildInfo: true
   });
 
@@ -571,7 +572,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
         var PackageSource = require('./package-source.js');
         var compiler = require('./compiler.js');
 
-        var testSource = new PackageSource;
+        var testSource = new PackageSource(catalog.complete);
         testSource.initFromPackageDir(testName, packageSource.sourceRoot);
         if (buildmessage.jobHasMessages())
           return; // already have errors, so skip the build
@@ -585,9 +586,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     process.stderr.write(messages.formatMessages());
     return 1;
   }
-
-  compileResult.unipackage.saveToPath(
-    path.join(packageSource.sourceRoot, '.build.' + packageSource.name));
 
   process.stdout.write('Bundling source...\n');
 

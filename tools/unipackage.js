@@ -185,12 +185,15 @@ _.extend(Unibuild.prototype, {
 //
 // If the optional `filter` function is provided, then we will only load
 // packages for which `filter(packageName, version)` returns truthy.
-var getLoadedPackageVersions = function (versions, filter) {
+var getLoadedPackageVersions = function (versions, catalog, filter) {
   buildmessage.assertInCapture();
 
   var result = {};
 
-  var loader = new packageLoader.PackageLoader({ versions: versions });
+  var loader = new packageLoader.PackageLoader({
+    versions: versions,
+    catalog: catalog
+  });
   _.each(versions, function (version, packageName) {
     if (! filter || filter(packageName, version)) {
       var unipackage = loader.getPackage(packageName);
@@ -660,6 +663,8 @@ _.extend(Unipackage.prototype, {
     var outputPath = outputDir;
     options = options || {};
     buildmessage.assertInCapture();
+    if (!options.catalog && !options.elideBuildInfo)
+      throw Error("catalog required to generate buildinfo.json");
 
     var builder = new Builder({ outputPath: outputPath });
 
@@ -675,28 +680,33 @@ _.extend(Unipackage.prototype, {
         plugins: []
       };
 
-      // Note: The contents of buildInfoJson (with the root directory of the
-      // Meteor checkout naively deleted) gets its SHA taken to determine the
-      // built package's warehouse version. So it should not contain
-      // platform-dependent data and should contain all sources of change to the
-      // unipackage's output.  See scripts/admin/build-package-tarballs.sh.
-      // XXX this script is no longer relevant; we use "build IDs" now instead
-      var buildTimeDirectDeps = getLoadedPackageVersions(
-        self.buildTimeDirectDependencies);
-      var buildTimePluginDeps = {};
-      _.each(self.buildTimePluginDependencies, function (versions, pluginName) {
-        buildTimePluginDeps[pluginName] = getLoadedPackageVersions(versions);
-      });
+      var buildInfoJson = null;
+      if (!options.elideBuildInfo) {
+        // Note: The contents of buildInfoJson (with the root directory of the
+        // Meteor checkout naively deleted) gets its SHA taken to determine the
+        // built package's warehouse version. So it should not contain
+        // platform-dependent data and should contain all sources of change to
+        // the unipackage's output.  See
+        // scripts/admin/build-package-tarballs.sh.
+        // XXX this script is no longer relevant; we use "build IDs" now instead
+        var buildTimeDirectDeps = getLoadedPackageVersions(
+          self.buildTimeDirectDependencies, options.catalog);
+        var buildTimePluginDeps = {};
+        _.each(self.buildTimePluginDependencies, function (versions, pluginName) {
+          buildTimePluginDeps[pluginName] = getLoadedPackageVersions(
+            versions, options.catalog);
+        });
 
-      var buildInfoJson = {
-        builtBy: compiler.BUILT_BY,
-        buildDependencies: { },
-        pluginDependencies: self.pluginWatchSet.toJSON(),
-        pluginProviderPackages: self.pluginProviderPackageDirs,
-        source: options.buildOfPath || undefined,
-        buildTimeDirectDependencies: buildTimeDirectDeps,
-        buildTimePluginDependencies: buildTimePluginDeps
-      };
+        buildInfoJson = {
+          builtBy: compiler.BUILT_BY,
+          buildDependencies: { },
+          pluginDependencies: self.pluginWatchSet.toJSON(),
+          pluginProviderPackages: self.pluginProviderPackageDirs,
+          source: options.buildOfPath || undefined,
+          buildTimeDirectDependencies: buildTimeDirectDeps,
+          buildTimePluginDependencies: buildTimePluginDeps
+        };
+      }
 
       builder.reserve("unipackage.json");
       // Reserve this even if elideBuildInfo is set, to ensure nothing else
@@ -745,8 +755,10 @@ _.extend(Unipackage.prototype, {
 
         // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
-        buildInfoJson.buildDependencies[unibuildJsonFile] =
-          unibuild.watchSet.toJSON();
+        if (buildInfoJson) {
+          buildInfoJson.buildDependencies[unibuildJsonFile] =
+            unibuild.watchSet.toJSON();
+        }
 
         // Figure out where the npm dependencies go.
         var nodeModulesPath = undefined;
@@ -903,7 +915,7 @@ _.extend(Unipackage.prototype, {
       });
 
       builder.writeJson("unipackage.json", mainJson);
-      if (!options.elideBuildInfo) {
+      if (buildInfoJson) {
         builder.writeJson("buildinfo.json", buildInfoJson);
       }
       builder.complete();
@@ -953,7 +965,11 @@ _.extend(Unipackage.prototype, {
     });
 
     // We only want to load local packages.
-    var localPackageLoader = new packageLoader.PackageLoader({versions: null});
+    var localPackageLoader = new packageLoader.PackageLoader({
+      versions: null,
+      // XXX replace this with uniload-specific catalog too! #UniCat
+      catalog: catalog.complete
+    });
     bundler.iterateOverAllUsedUnipackages(
       localPackageLoader, archinfo.host(), self.includeTool,
       function (unipkg) {
@@ -977,12 +993,14 @@ _.extend(Unipackage.prototype, {
   //  - relativeTo: if provided, the watch set file paths are
   //    relativized to this path. If not provided, we use absolute
   //    paths.
+  //  - catalog: required
   //
   // Returns the build id as a hex string.
   getBuildIdentifier: function (options) {
     var self = this;
-    options = options || {};
     buildmessage.assertInCapture();
+    if (!options.catalog)
+      throw Error("required to specify the catalog");
 
     // Gather all the direct dependencies (that provide plugins) and
     // plugin dependencies' versions and organize them into arrays. We
@@ -990,11 +1008,10 @@ _.extend(Unipackage.prototype, {
     // keys.
     var pluginProviders = [];
     var pluginProviderVersions = getLoadedPackageVersions(
-      self.buildTimeDirectDependencies,
+      self.buildTimeDirectDependencies, options.catalog,
       function (packageName, version) { // filter
         if (packageName !== self.name) {
-          var catalogVersion = catalog.complete.getVersion(packageName,
-                                                          version);
+          var catalogVersion = options.catalog.getVersion(packageName, version);
           // XXX This could throw if we call it on a freshly-built
           // unipackage (as opposed to one read from disk that has real
           // build ids for build-time deps instead of +local) before
@@ -1030,7 +1047,7 @@ _.extend(Unipackage.prototype, {
         var singlePluginDeps = [];
         delete versions[self.name];
         _.each(
-          getLoadedPackageVersions(versions),
+          getLoadedPackageVersions(versions, options.catalog),
           function (version, packageName) {
             if (packageName !== self.name) {
               singlePluginDeps.push([packageName, version]);

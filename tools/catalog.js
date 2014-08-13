@@ -96,6 +96,8 @@ _.extend(OfficialCatalog.prototype, {
     var thrownError = null;
     try {
       self._refresh();
+      // Force the complete catalog (which is layered on top of our data) to
+      // refresh as well.
       catalog.complete.refresh({ forceRefresh: true });
     } catch (e) {
       thrownError = e;
@@ -198,6 +200,9 @@ var CompleteCatalog = function () {
   // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
   // Maps packageName -> version -> its ECV
   self.forgottenECVs = {};
+
+  // Each complete catalog needs its own package cache.
+  self.packageCache = new packageCache.PackageCache(self);
 
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
@@ -471,7 +476,7 @@ _.extend(CompleteCatalog.prototype, {
     var packageSources = {}; // name to PackageSource
 
     var initVersionRecordFromSource =  function (packageDir, name) {
-      var packageSource = new PackageSource;
+      var packageSource = new PackageSource(self);
       var broken = false;
       buildmessage.enterJob({
         title: "reading package `" + name + "`",
@@ -726,7 +731,10 @@ _.extend(CompleteCatalog.prototype, {
           try {
             var buildDir = path.join(sourcePath, '.build.'+ name);
             files.addToGitignore(sourcePath, '.build*');
-            unip.saveToPath(buildDir, { buildOfPath: sourcePath });
+            unip.saveToPath(buildDir, {
+              buildOfPath: sourcePath,
+              catalog: self
+            });
           } catch (e) {
             // If we can't write to this directory, we don't get to cache our
             // output, but otherwise life is good.
@@ -739,8 +747,9 @@ _.extend(CompleteCatalog.prototype, {
     // And put a build record for it in the catalog
     var versionId = self.getLatestVersion(name);
 
-    packageCache.packageCache.cachePackageAtPath(
-      name, sourcePath, unip);
+    // XXX why isn't this build just happening through the package cache
+    // directly?
+    self.packageCache.cachePackageAtPath(name, sourcePath, unip);
 
     self.builds.push({
       buildArchitectures: unip.buildArchitectures(),
@@ -828,7 +837,7 @@ _.extend(CompleteCatalog.prototype, {
     buildmessage.assertInCapture();
 
     // Clear any cached builds in the package cache.
-    packageCache.packageCache.refresh();
+    self.packageCache.refresh();
 
     if (namedPackages) {
       var bad = false;
@@ -862,7 +871,7 @@ _.extend(CompleteCatalog.prototype, {
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
       if (namedPackages && !_.contains(namedPackages, name))
         return;
-      packageCache.packageCache.loadPackageAtPath(name, loadPath);
+      self.packageCache.loadPackageAtPath(name, loadPath);
       count ++;
     });
 
