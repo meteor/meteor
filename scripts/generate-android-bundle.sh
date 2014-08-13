@@ -9,7 +9,7 @@ BUNDLE_VERSION="0.1"
 cd "`dirname "$0"`"/..
 CHECKOUT_DIR=`pwd`
 
-UNAME = uname
+export UNAME=`uname`
 
 DIR=`mktemp -d -t generate-android-bundle-XXXXXXXX`
 trap 'rm -rf "$DIR" >/dev/null 2>&1' 0

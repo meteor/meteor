@@ -25,7 +25,7 @@ export PATH=${DEV_BUNDLE}/bin:${PATH}
 
 # create avd if necessary
 if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep -q Name) ]] ; then
-  echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/
+  echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
 fi
 
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
