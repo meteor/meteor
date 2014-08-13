@@ -95,6 +95,7 @@ if [ "$OS" == "osx" ]; then
 
     git clone https://github.com/phonegap/ios-deploy.git
     cd ios-deploy
+    git checkout 1.0.9
     make
     cd ..
     mkdir -p "$DIR/lib/ios-deploy"
