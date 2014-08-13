@@ -183,8 +183,16 @@ cordova.ensureCordovaPlatforms = function (localPath) {
                                    { cwd: cordovaPath });
 
   // eg. ['android 3.5.0', 'ios 3.5.0']
-  var platformsStrings = platformsList.stdout.split('\n')[0].match(/Installed platforms: (.*)/)[1].split(', ');
-  var installedPlatforms = _.map(platformsStrings, function (s) { return s.split(' ')[0]; });
+  var platformsOutput = platformsList.stdout.split('\n')[0];
+  var platformsStrings = platformsOutput.match(/Installed platforms: (.*)/)[1];
+
+  if (! platformsStrings)
+    throw new Error('Failed to parse the output of `cordova platform list`: ' +
+                    platofrmsList.stdout);
+
+  var installedPlatforms = _.map(platformsStrings.split(', '), function (s) {
+    return s.split(' ')[0];
+  });
 
   _.each(platforms, function (platform) {
     if (! _.contains(installedPlatforms, platform) &&
