@@ -467,10 +467,15 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
+          } else if (key === "name") {
+            // this key is special because we really don't want you to think that
+            // you are successfully overriding directory name right now. Someday, you
+            // may be though, so it is reserved.
+            buildmessage.error("reserved key " + key + " in package description.");
           }
           else {
-            buildmessage.error("unknown attribute '" + key + "' " +
-                               "in package description");
+          // Do nothing. We might want to add some keys later, and we should err on
+          // the side of backwards compatibility.
           }
         });
       },
