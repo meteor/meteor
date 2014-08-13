@@ -829,19 +829,25 @@ main.registerCommand({
   process.stdout.write("Done creating " + relConf.track  + "@" +
                        relConf.version + "!\n");
 
-  // Only make a git tag if we're on the default branch.
-  if (options['from-checkout'] &&
-      config.getPackageServerFilePrefix() === 'packages') {
+  if (options['from-checkout']) {
     // XXX maybe should discourage publishing if git status says we're dirty?
     var gitTag = "release/" + relConf.track  + "@" + relConf.version;
-    // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
-    //     used to
-    process.stdout.write("Creating git tag " + gitTag + "\n");
-    files.runGitInCheckout('tag', gitTag);
-    process.stdout.write(
-      "Pushing git tag (this should fail if you are not from MDG)\n");
-    files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
-                           'refs/tags/' + gitTag);
+    if (config.getPackageServerFilePrefix() !== 'packages') {
+      // Only make a git tag if we're on the default branch.
+      process.stdout.write("Skipping git tag: not using the main package server.\n");
+    } else if (gitTag.indexOf(':') !== -1) {
+      // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
+      //     used to, instead of this simple check
+      // XXX could convert : to / ?
+      process.stdout.write("Skipping git tag: bad format for git.\n");
+    } else {
+      process.stdout.write("Creating git tag " + gitTag + "\n");
+      files.runGitInCheckout('tag', gitTag);
+      process.stdout.write(
+        "Pushing git tag (this should fail if you are not from MDG)\n");
+      files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+                             'refs/tags/' + gitTag);
+    }
   }
 
   return 0;
