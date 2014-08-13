@@ -141,6 +141,7 @@ build directly.
 
 >>> bundle
 Deprecated command. Use 'build' instead.
+Usage: meteor bundle <output_file.tar.gz>
 
 >>> build
 Pack this project up into a tarball.
