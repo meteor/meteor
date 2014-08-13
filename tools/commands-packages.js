@@ -1072,7 +1072,7 @@ main.registerCommand({
         search + "\' could be found.\n");
   } else {
     process.stdout.write(
-      "To get more information on a specific item, use meteor search --details.\n");
+      "To get more information on a specific item, use meteor show.\n");
   }
 });
 
