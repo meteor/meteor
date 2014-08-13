@@ -858,9 +858,8 @@ main.registerCommand({
   maxArgs: 1
 }, function (options) {
 
-  // We don't need to refresh the catalog here. If we don't have the
-  // information, we will refresh lazily, and if we do, then there is no need to
-  // do the dance with the server.
+  // We should refresh the catalog in case there are new versions.
+  refreshOfficialCatalogOrDie();
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -976,7 +975,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    maintainer: {type: String, required: false }
+    maintainer: {type: String, required: false },
+    "show-broken": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -1000,6 +1000,21 @@ main.registerCommand({
     return 1;
   }
 
+  // Do not return true on broken packages, unless requested in options.
+  var filterBroken = function (match, isRelease, name) {
+    // If the package does not match, or it is not a package at all or if we
+    // don't want to filter anyway, we do not care.
+    if (!match || isRelease || options["show-broken"])
+      return match;
+
+    var vr;
+    doOrDie(function () {
+      vr = catalog.official.getLatestVersion(name);
+    });
+    return !(_.isEqual(vr.description,
+                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+  };
+
   if (options.maintainer) {
     var username =  options.maintainer;
     // In the future, we should consider checking this on the server, but I
@@ -1008,22 +1023,24 @@ main.registerCommand({
     // little sense to require you to be online to find out what packages you
     // own; and the consequence of not mentioning your group packages until
     // you update to a new version of meteor is not that dire.
-    selector = function (packageName, isRelease) {
+    selector = function (name, isRelease) {
       var record;
       // XXX make sure search works while offline
       doOrDie(function () {
         if (isRelease) {
-          record = catalog.official.getReleaseTrack(packageName);
+          record = catalog.official.getReleaseTrack(name);
         } else {
-          record = catalog.official.getPackage(packageName);
+          record = catalog.official.getPackage(name);
         }
       });
-      return packageName.match(search) &&
-        !!_.findWhere(record.maintainers, {username: username});
+     return filterBroken((name.match(search) &&
+        !!_.findWhere(record.maintainers, {username: username})),
+        isRelease, name);
     };
   } else {
-    selector = function (packageName) {
-      return packageName.match(search);
+    selector = function (name, isRelease) {
+      return filterBroken(name.match(search),
+        isRelease, name);
     };
   }
 
@@ -1072,7 +1089,7 @@ main.registerCommand({
         search + "\' could be found.\n");
   } else {
     process.stdout.write(
-      "To get more information on a specific item, use meteor show.\n");
+      "To get more information on a specific item, use meteor show. \n");
   }
 });
 
