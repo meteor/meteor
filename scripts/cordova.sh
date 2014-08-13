@@ -24,7 +24,9 @@ export PATH=${ANT_HOME}/bin:${PATH}
 export PATH=${DEV_BUNDLE}/bin:${PATH}
 
 # add java
-# export PATH=${ANDROID_BUNDLE}/jre/bin:${PATH}
+if [ uname == "Linux" ]; then
+  export PATH=${ANDROID_BUNDLE}/jre/bin:${PATH}
+fi
 
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
