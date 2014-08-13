@@ -39,7 +39,8 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('jquery'); // strong dependency, for testing jQuery backend
   api.use('blaze');
-  api.use(['test-helpers', 'underscore'], 'client');
+  api.use('test-helpers');
+  api.use('underscore');
 
-  // ...
+  api.add_files('view_tests.js');
 });
