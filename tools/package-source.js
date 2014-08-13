@@ -275,12 +275,11 @@ var PackageSource = function (catalog) {
   // to the catalog), so we need to keep track of them.
   self.isTest = false;
 
-  // If this is set, it should be set to an array of package names. We will take
-  // the currently running git checkout and bundle the meteor tool from it
-  // inside this package as a tool. We will include built unipackages for all
-  // the packages in this array as well as their transitive (strong)
-  // dependencies.
-  self.includeTool = null;
+  // If this is set, we will take the currently running git checkout and bundle
+  // the meteor tool from it inside this package as a tool. We will include
+  // built unipackages for all the packages in uniload.ROOT_PACKAGES as well as
+  // their transitive (strong) dependencies.
+  self.includeTool = false;
 
   // If this is true, then this package has no source files. (But the converse
   // is not true: this is only set to true by one particular constructor.) This
@@ -580,19 +579,14 @@ _.extend(PackageSource.prototype, {
         self.pluginInfo[options.name] = options;
       },
 
-      includeTool: function (packages) {
+      includeTool: function () {
         if (!files.inCheckout()) {
           buildmessage.error("Package.includeTool() can only be used with a " +
                              "checkout of meteor");
         } else if (self.includeTool) {
           buildmessage.error("Duplicate includeTool call");
-        } else if (!_.isArray(packages)) {
-          buildmessage.error("Argument to Package.includeTool must be array");
-        } else if (!_.all(packages, _.isString)) {
-          buildmessage.error(
-            "Elements of array passed to Package.includeTool must be strings");
         } else {
-          self.includeTool = packages;
+          self.includeTool = true;
         }
       }
     };

@@ -144,15 +144,6 @@ var runTest = function () {
     });
     assert.strictEqual(fut.wait(), 0);
   });
-
-  console.log("Use Assets API from unipackage");
-  assert.doesNotThrow(function () {
-    var testPackage = uniload.load({
-      library: release.current.library,
-      packages: ['test-package']
-    })['test-package'].TestAsset;
-    testPackage.go(false /* don't exit when done */);
-  });
 };
 
 var Fiber = require('fibers');

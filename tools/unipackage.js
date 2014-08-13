@@ -11,6 +11,7 @@ var watch = require('./watch.js');
 var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
+var uniload = require('./uniload.js');
 var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
@@ -263,7 +264,7 @@ var Unipackage = function () {
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
   // unipackage.
-  self.includeTool = null;
+  self.includeTool = false;
 
   // This is tools to copy from trees on disk. This is used by the
   // unipackage-merge code in tropohouse.
@@ -970,7 +971,7 @@ _.extend(Unipackage.prototype, {
       catalog: catalog.uniload
     });
     bundler.iterateOverAllUsedUnipackages(
-      localPackageLoader, archinfo.host(), self.includeTool,
+      localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
       function (unipkg) {
         // XXX assert that each name shows up once
         unipkg.saveToPath(path.join(unipath, unipkg.name), {

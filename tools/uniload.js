@@ -6,6 +6,23 @@ var packageLoader = require("./package-loader.js");
 var files = require('./files.js');
 var catalog = require('./catalog.js');
 
+// These are the only packages that may be directly loaded via this package. Add
+// more to the list if you need to uniload more things! (You don't have to
+// include the dependencies of the packages you directly load in this list.)
+var ROOT_PACKAGES = [
+  'constraint-solver',
+  'dev-bundle-fetcher',
+  'ejson',
+  'js-analyze',
+  'livedata',
+  'logging',
+  'meteor',
+  'minifiers',
+  'minimongo',
+  'mongo-livedata',
+  'package-version-parser'
+];
+
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
 // tools (such as 'meteor'). The requested packages will be loaded
@@ -54,6 +71,12 @@ var load = function (options) {
 
   if (_.has(cache, cacheKey)) {
     return cache[cacheKey];
+  }
+
+  var undeclaredPackages = _.difference(options.packages, ROOT_PACKAGES);
+  if (undeclaredPackages.length) {
+    throw new Error("attempt to uniload undeclared packages: " +
+                    JSON.stringify(undeclaredPackages));
   }
 
   // Set up a minimal server-like environment (omitting the parts that
@@ -120,5 +143,6 @@ var load = function (options) {
 
 var uniload = exports;
 _.extend(exports, {
-  load: load
+  load: load,
+  ROOT_PACKAGES: ROOT_PACKAGES
 });
