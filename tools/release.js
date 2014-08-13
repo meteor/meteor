@@ -209,7 +209,7 @@ release.latestDownloaded = function (track) {
   var defaultRelease = catalog.complete.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
-    if (!track || track === catalog.official.DEFAULT_TRACK) {
+    if (!track || track === catalog.DEFAULT_TRACK) {
       throw new Error("no latest release available on default track?");
     }
     return null;
@@ -253,7 +253,7 @@ release.load = function (name, options) {
     track = parts[0];
     version = parts[1];
   } else {
-    track = catalog.official.DEFAULT_TRACK;
+    track = catalog.DEFAULT_TRACK;
     version = parts[0];
     name = track + '@' + version;
   }

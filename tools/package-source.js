@@ -903,7 +903,7 @@ _.extend(PackageSource.prototype, {
 
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
-            release = catalog.complete.DEFAULT_TRACK + "@" + release;
+            release = catalog.DEFAULT_TRACK + "@" + release;
           }
 
           var relInf = release.split('@');

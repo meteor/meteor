@@ -34,9 +34,6 @@ baseCatalog.BaseCatalog = function () {
   self.releaseTracks = null;
   self.releaseVersions = null;
 
-  // XXX "Meteor-Core"? decide this pre 0.9.0.
-  self.DEFAULT_TRACK = 'METEOR-CORE';
-
   // We use the initialization design pattern because it makes it easier to use
   // both of our catalogs as singletons.
   self.initialized = false;
@@ -337,7 +334,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     self._requireInitialized();
 
     if (!track)
-      track = self.DEFAULT_TRACK;
+      track = catalog.DEFAULT_TRACK;
 
     var getDef = function () {
       var versions = self.getSortedRecommendedReleaseVersions(track);

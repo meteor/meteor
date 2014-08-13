@@ -290,7 +290,7 @@ exports.startsWith = function(str, starts) {
 
 exports.displayRelease = function (track, version) {
   var catalog = require('./catalog.js');
-  if (track === catalog.official.DEFAULT_TRACK)
+  if (track === catalog.DEFAULT_TRACK)
     return "Meteor " + version;
   return track + '@' + version;
 };
