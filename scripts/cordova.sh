@@ -24,7 +24,7 @@ export PATH=${ANT_HOME}/bin:${PATH}
 export PATH=${DEV_BUNDLE}/bin:${PATH}
 
 # add java
-export PATH=${ANDROID_BUNDLE}/jre/bin:${PATH}
+# export PATH=${ANDROID_BUNDLE}/jre/bin:${PATH}
 
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
