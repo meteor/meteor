@@ -80,7 +80,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
   };
 
   if (self.created) {
-    view.onCreated(function () {
+    view.onViewCreated(function () {
       self.created.call(view.templateInstance());
     });
   }
@@ -92,7 +92,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
   }
 
   if (self.destroyed) {
-    view.onDestroyed(function () {
+    view.onViewDestroyed(function () {
       self.destroyed.call(view.templateInstance());
     });
   }

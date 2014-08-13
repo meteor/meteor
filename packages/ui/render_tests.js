@@ -471,7 +471,7 @@ Tinytest.add("ui - render - views", function (test) {
       var number = counter++;
       view.number = number;
 
-      view.onCreated(function () {
+      view.onViewCreated(function () {
         var parent = Blaze.getParentView(view, 'myView');
         if (parent) {
           buf.push('parent of ' + view.number + ' is ' +
@@ -504,7 +504,7 @@ Tinytest.add("ui - render - views", function (test) {
                  nodeDescr(end));
       });
 
-      view.onDestroyed(function () {
+      view.onViewDestroyed(function () {
         buf.push('destroyed ' + Blaze.getCurrentData());
       });
 

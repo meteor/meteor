@@ -25,7 +25,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     return template.constructView(contentFunc, elseFunc);
   });
   view.__templateVar = templateVar;
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     this.autorun(function () {
       templateVar.set(templateOrFunction());
     });
@@ -217,7 +217,7 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
                       return argVar.get(); }, contentFunc); },
                     elseFunc);
   });
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     this.autorun(function () {
       argVar.set(argFunc());
 
