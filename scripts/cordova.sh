@@ -23,9 +23,9 @@ export PATH=${ANT_HOME}/bin:${PATH}
 # add node
 export PATH=${DEV_BUNDLE}/bin:${PATH}
 
-# add java
-if [ uname == "Linux" ]; then
-  export PATH=${ANDROID_BUNDLE}/jre/bin:${PATH}
+# create avd if necessary
+if [ ! ${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep -q Name ]; then
+  echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/x86 --path ./android_bundle/meteor_avd/
 fi
 
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
