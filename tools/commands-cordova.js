@@ -186,7 +186,7 @@ cordova.ensureCordovaPlatforms = function (localPath) {
   var platformsOutput = platformsList.stdout.split('\n')[0];
   var platformsStrings = platformsOutput.match(/Installed platforms: (.*)/)[1];
 
-  if (! platformsStrings)
+  if (platformsStrings === undefined)
     throw new Error('Failed to parse the output of `cordova platform list`: ' +
                      platformsList.stdout);
 

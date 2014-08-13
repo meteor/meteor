@@ -13,8 +13,11 @@ cd "$ORIG_DIR"
 ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 
-# add android stuff
-export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH}
+# Put Android build tool-chain into path
+export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH};
+
+# Put ios-sim and ios-deploy binaries' paths into path
+export PATH=${DEV_BUNDLE}/lib/ios-sim:${DEV_BUNDLE}/lib/ios-deploy:${PATH};
 
 # add ant
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
