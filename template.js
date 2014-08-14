@@ -42,7 +42,10 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     elseFunc ? new Template('(elseBlock)', elseFunc) : null);
 
   if (self.__eventMaps || typeof self.events === 'object') {
-    view.onMaterialized(function () {
+    view.onViewRendered(function () {
+      if (view.renderCount !== 1)
+        return;
+
       if (! self.__eventMaps.length && typeof self.events === "object") {
         // Provide limited back-compat support for `.events = {...}`
         // syntax.  Pass `template.events` to the original `.events(...)`
@@ -86,8 +89,22 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
   }
 
   if (self.rendered) {
-    view.onRendered(function () {
-      self.rendered.call(view.templateInstance());
+    var callRendered = function () {
+      Deps.afterFlush(function () {
+        if (! view.isDestroyed) {
+          Blaze._withCurrentView(view, function () {
+            self.rendered.call(view.templateInstance());
+          });
+        }
+      });
+    };
+    view.onViewRendered(function onViewRendered() {
+      if (view.isDestroyed)
+        return;
+      if (! view.domrange.isAttached)
+        view.domrange.onAttached(callRendered);
+      else
+        callRendered();
     });
   }
 

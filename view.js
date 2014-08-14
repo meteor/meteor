@@ -47,7 +47,6 @@ Blaze.View = function (name, render) {
 
   this._callbacks = {
     created: null,
-    materialized: null,
     rendered: null,
     destroyed: null
   };
@@ -56,9 +55,9 @@ Blaze.View = function (name, render) {
   // and also may help Chrome optimize the code by keeping
   // the View object from changing shape too much.
   this.isCreated = false;
-  this.isCreatedForExpansion = false;
+  this._isCreatedForExpansion = false;
   this.isDestroyed = false;
-  this.isInRender = false;
+  this._isInRender = false;
   this.parentView = null;
   this.domrange = null;
 
@@ -71,11 +70,7 @@ Blaze.View.prototype.onViewCreated = function (cb) {
   this._callbacks.created = this._callbacks.created || [];
   this._callbacks.created.push(cb);
 };
-Blaze.View.prototype.onMaterialized = function (cb) {
-  this._callbacks.materialized = this._callbacks.materialized || [];
-  this._callbacks.materialized.push(cb);
-};
-Blaze.View.prototype.onRendered = function (cb) {
+Blaze.View.prototype.onViewRendered = function (cb) {
   this._callbacks.rendered = this._callbacks.rendered || [];
   this._callbacks.rendered.push(cb);
 };
@@ -102,7 +97,7 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
 /// of the View (as in Blaze.With) should be started from an onViewCreated
 /// callback.  Autoruns that update the DOM should be started
 /// from either onViewCreated (guarded against the absence of
-/// view.domrange), onMaterialized, or onRendered.
+/// view.domrange), or onViewRendered.
 Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
 
@@ -130,7 +125,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   if (! self.isCreated) {
     throw new Error("View#autorun must be called from the created callback at the earliest");
   }
-  if (this.isInRender) {
+  if (this._isInRender) {
     throw new Error("Can't call View#autorun from inside render(); try calling it from the created or rendered callback");
   }
   if (Deps.active) {
@@ -164,7 +159,7 @@ Blaze._createView = function (view, parentView, forExpansion) {
   view.parentView = (parentView || null);
   view.isCreated = true;
   if (forExpansion)
-    view.isCreatedForExpansion = true;
+    view._isCreatedForExpansion = true;
 
   Blaze._fireCallbacks(view, 'created');
 };
@@ -173,32 +168,18 @@ Blaze._materializeView = function (view, parentView) {
   Blaze._createView(view, parentView);
 
   var domrange;
-
-  var needsRenderedCallback = false;
-  var scheduleRenderedCallback = function () {
-    if (needsRenderedCallback && ! view.isDestroyed &&
-        view._callbacks.rendered && view._callbacks.rendered.length) {
-      Deps.afterFlush(function callRendered() {
-        if (needsRenderedCallback && ! view.isDestroyed) {
-          needsRenderedCallback = false;
-          Blaze._fireCallbacks(view, 'rendered');
-        }
-      });
-    }
-  };
-
   var lastHtmljs;
   // We don't expect to be called in a Computation, but just in case,
   // wrap in Deps.nonreactive.
   Deps.nonreactive(function () {
     view.autorun(function doRender(c) {
       // `view.autorun` sets the current view.
+      view.renderCount++;
+      view._isInRender = true;
       // Any dependencies that should invalidate this Computation come
       // from this line:
-      view.renderCount++;
-      view.isInRender = true;
       var htmljs = view._render();
-      view.isInRender = false;
+      view._isInRender = false;
 
       Deps.nonreactive(function doMaterialize() {
         var materializer = new Blaze._DOMMaterializer({parentView: view});
@@ -211,10 +192,7 @@ Blaze._materializeView = function (view, parentView) {
           } else {
             domrange.setMembers(rangesAndNodes);
           }
-          Blaze._fireCallbacks(view, 'materialized');
-          needsRenderedCallback = true;
-          if (! c.firstRun)
-            scheduleRenderedCallback();
+          Blaze._fireCallbacks(view, 'rendered');
         }
       });
       lastHtmljs = htmljs;
@@ -235,8 +213,6 @@ Blaze._materializeView = function (view, parentView) {
         element, function teardown() {
           Blaze._destroyView(view, true /* _skipNodes */);
         });
-
-      scheduleRenderedCallback();
     });
 
     // tear down the teardown hook
@@ -261,11 +237,11 @@ Blaze._materializeView = function (view, parentView) {
 Blaze._expandView = function (view, parentView) {
   Blaze._createView(view, parentView, true /*forExpansion*/);
 
-  view.isInRender = true;
+  view._isInRender = true;
   var htmljs = Blaze._withCurrentView(view, function () {
     return view._render();
   });
-  view.isInRender = false;
+  view._isInRender = false;
 
   var result = Blaze._expand(htmljs, view);
 
@@ -315,7 +291,7 @@ Blaze._HTMLJSExpander.def({
 // (i.e. we are in its render() method).
 var currentViewIfRendering = function () {
   var view = Blaze.currentView;
-  return (view && view.isInRender) ? view : null;
+  return (view && view._isInRender) ? view : null;
 };
 
 Blaze._expand = function (htmljs, parentView) {
