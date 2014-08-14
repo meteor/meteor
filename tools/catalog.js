@@ -332,8 +332,12 @@ _.extend(CompleteCatalog.prototype, {
       return ret;
     }
 
-    if (!self.resolver)
-      throw Error("Complete catalog has no resolver?");
+    // OK, since we are the complete catalog, the uniload catalog must be fully
+    // initialized, so it's safe to load a resolver if we didn't
+    // already. (Putting this off until the first call to resolveConstraints
+    // also helps with performance: no need to build this package and load the
+    // large mori module unless we actually need it.)
+    self.resolver || self._initializeResolver();
 
     // Looks like we are not going to be able to avoid calling the constraint
     // solver, so let's process the input (constraints) into the correct
@@ -437,12 +441,8 @@ _.extend(CompleteCatalog.prototype, {
       var allOK = self._addLocalPackageOverrides(
         { watchSet: options.watchSet });
       self.initialized = true;
-      // Rebuild the resolver, since packages may have changed.  (The uniload
-      // catalog has a custom simple resolver instead of uniloading
-      // constraint-solver package, since that would have too much recursion.)
-      if (!self.forUniload) {
-        self._initializeResolver();
-      }
+      // Rebuild the resolver, since packages may have changed.
+      self.resolver = null;
     } finally {
       self.refreshing = false;
     }

@@ -6,8 +6,6 @@
 ConstraintSolver.DependenciesList = function (prev) {
   var self = this;
 
-  ensureMoriLoaded();
-
   if (prev) {
     self._mapping = prev._mapping;
   } else {
