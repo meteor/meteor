@@ -10,6 +10,7 @@
   failure on the server. (This matches the behavior described in our docs)
 
 * Upgraded dependencies:
+  - Node: 0.10.30 (from 0.10.29)
   - less: 1.7.4 (from 1.7.1)
 
 ## v0.8.3
