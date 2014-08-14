@@ -2029,7 +2029,9 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var unipackage = compiler.compile(packageSource).unipackage;
+  var unipackage = compiler.compile(packageSource, {
+    ignoreProjectDeps: options.ignoreProjectDeps
+  }).unipackage;
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,

@@ -645,8 +645,27 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  // XXX this soon should move to buildmessage, for the checkout case.
-  if (catalog.uniload !== catalog.complete) {
+  // XXX compare this to the previous block's usesWarehouse...
+  if (files.inCheckout()) {
+    // When running from a checkout, uniload does use local packages, but *ONLY
+    // THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS packages.
+    // One side effect of this: we really really expect them to all build, and
+    // we're fine with dying if they don't (there's no worries about needing to
+    // springboard).
+    var messages = buildmessage.capture(function () {
+      catalog.uniload.initialize({
+        localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
+      });
+    });
+    if (messages.hasMessages()) {
+      process.stderr.write("=> Errors while scanning core packages:\n\n");
+      process.stderr.write(messages.formatMessages());
+      process.exit(1);
+    }
+  } else {
+    // This doesn't need to be in a buildmessage, because the
+    // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
+    // bunch of precompiled unipackages!
     catalog.uniload.initialize({
       uniloadDir: files.getUniloadDir()
     });

@@ -112,7 +112,8 @@ var load = function (options) {
       name: "load",
       packageLoader: loader,
       use: options.packages || [],
-      catalog: catalog.uniload
+      catalog: catalog.uniload,
+      ignoreProjectDeps: true
     }).image;
     ret = image.load(env);
 

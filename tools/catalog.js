@@ -15,8 +15,8 @@ var watch = require('./watch.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var BaseCatalog = require('./catalog-base.js').BaseCatalog;
-var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var project = require('./project.js');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
 
@@ -175,8 +175,16 @@ _.extend(OfficialCatalog.prototype, {
 // precedence (and we want to optimize retrieval of relevant data). It also
 // doesn't bother to sync up to the server, and just relies on the server
 // catalog to provide it with the right information through data.json.
-var CompleteCatalog = function () {
+var CompleteCatalog = function (options) {
   var self = this;
+  options = options || {};
+
+  // Is this the uniload catalog, while running from checkout? In that case,
+  // never load anything from the official catalog, never refresh, etc.
+  // XXX This is a hack: we should factor out the common code between the
+  //     CompleteCatalog and the ostensible CheckoutUniloadCatalog into
+  //     a common base class.
+  self.forUniload = !!options.forUniload;
 
   // Local directories to search for package source trees
   self.localPackageDirs = null;
@@ -247,11 +255,15 @@ _.extend(CompleteCatalog.prototype, {
 
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
-    self.refresh();
+    self.refresh({forceRefresh: true});
   },
 
   _refreshingIsProductive: function () {
-    return true;
+    var self = this;
+    // If this is the normal complete catalog, then sure! Refresh away!
+    // If it's the CheckoutUniloadCatalog, then we don't use server packages,
+    // so it's not worth it.
+    return !self.forUniload;
   },
 
   reset: function () {
@@ -289,14 +301,18 @@ _.extend(CompleteCatalog.prototype, {
     self._requireInitialized();
     buildmessage.assertInCapture();
 
+    if (self.forUniload && !opts.ignoreProjectDeps)
+      throw Error("whoa, if for uniload, why not ignoring project?");
+
     // Kind of a hack, as per specification. We don't have a constraint solver
     // initialized yet. We are probably trying to build the constraint solver
     // package, or one of its dependencies. Luckily, we know that this means
     // that we are running from checkout and all packages are local, so we can
     // just use those versions. #UnbuiltConstraintSolverMustUseLocalPackages
+    // XXX does the unicat branch fix this and we can make this an error?
     if (!self.resolver) {
       return null;
-    };
+    }
 
     // Looks like we are not going to be able to avoid calling the constraint
     // solver, so let's process the input (constraints) into the correct
@@ -321,7 +337,6 @@ _.extend(CompleteCatalog.prototype, {
       }
     });
 
-    var project = require("./project.js").project;
     // If we are called with 'ignore projectDeps', then we don't even look to
     // see what the project thinks and recalculate everything. Similarly, if the
     // project root path has not been initialized, we are probably running
@@ -345,7 +360,8 @@ _.extend(CompleteCatalog.prototype, {
     } catch (e) {
       // Maybe we only failed because we need to refresh. Try to refresh (unless
       // we already are) and retry.
-      if (catalog.official.refreshInProgress()) {
+      if (!self._refreshingIsProductive() ||
+          catalog.official.refreshInProgress()) {
         throw e;
       }
       catalog.official.refresh();
@@ -380,8 +396,11 @@ _.extend(CompleteCatalog.prototype, {
 
     try {
       self.reset();
-      var localData = packageClient.loadCachedServerData();
-      self._insertServerPackages(localData);
+
+      if (!self.forUniload) {
+        var localData = packageClient.loadCachedServerData();
+        self._insertServerPackages(localData);
+      }
 
       self._recomputeEffectiveLocalPackages();
       self._addLocalPackageOverrides({watchSet: options.watchSet});
@@ -998,8 +1017,7 @@ catalog.official = new OfficialCatalog();
 catalog.complete = new CompleteCatalog();
 
 if (files.inCheckout()) {
-  // XXX replace with uniload-specific catalog #Unicat
-  catalog.uniload = catalog.complete;
+  catalog.uniload = new CompleteCatalog({forUniload: true});
 } else {
   catalog.uniload = new BuiltUniloadCatalog();
 }

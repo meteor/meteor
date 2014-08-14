@@ -968,7 +968,8 @@ _.extend(Unipackage.prototype, {
     // We only want to load local packages.
     var localPackageLoader = new packageLoader.PackageLoader({
       versions: null,
-      catalog: catalog.uniload
+      catalog: catalog.uniload,
+      constraintSolverOpts: { ignoreProjectDeps: true }
     });
     bundler.iterateOverAllUsedUnipackages(
       localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,

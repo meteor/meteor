@@ -783,7 +783,8 @@ compiler.compile = function (packageSource, options) {
         npmDir: path.resolve(path.join(packageSource.sourceRoot, '.npm',
                                        'plugin', info.name)),
         dependencyVersions: packageSource.dependencyVersions,
-        catalog: packageSource.catalog
+        catalog: packageSource.catalog,
+        ignoreProjectDeps: options.ignoreProjectDeps
       });
 
       // Add the plugin's sources to our list.
