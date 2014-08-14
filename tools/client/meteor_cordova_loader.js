@@ -10,7 +10,6 @@
 
   var evt = new Event("meteor-cordova-loaded");
 
-  // XXX refactor to share code with writeText
   var ajax = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
@@ -37,9 +36,9 @@
     ajax('cdvfile://localhost/persistent/__cordova_program__.html',
       function (err, res) {
         if (! err) {
-          document.open('text/html', 'replace');
-          document.write(res);
-          document.close();
+          // document.open('text/html', 'replace');
+          // document.write(res);
+          // document.close();
         } else {
           // We don't have any new versions, default to the bundled assets.
         }
