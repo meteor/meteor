@@ -56,10 +56,12 @@ Blaze.View = function (name, render) {
   // the View object from changing shape too much.
   this.isCreated = false;
   this._isCreatedForExpansion = false;
+  this.isRendered = false;
+  this.isAttached = false;
   this.isDestroyed = false;
   this._isInRender = false;
   this.parentView = null;
-  this.domrange = null;
+  this._domrange = null;
 
   this.renderCount = 0;
 };
@@ -97,7 +99,7 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
 /// of the View (as in Blaze.With) should be started from an onViewCreated
 /// callback.  Autoruns that update the DOM should be started
 /// from either onViewCreated (guarded against the absence of
-/// view.domrange), or onViewRendered.
+/// view._domrange), or onViewRendered.
 Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
 
@@ -187,8 +189,9 @@ Blaze._materializeView = function (view, parentView) {
         if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
           if (c.firstRun) {
             domrange = new Blaze._DOMRange(rangesAndNodes);
-            view.domrange = domrange;
+            view._domrange = domrange;
             domrange.view = view;
+            view.isRendered = true;
           } else {
             domrange.setMembers(rangesAndNodes);
           }
@@ -209,6 +212,8 @@ Blaze._materializeView = function (view, parentView) {
     var teardownHook = null;
 
     domrange.onAttached(function attached(range, element) {
+      view.isAttached = true;
+
       teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
         element, function teardown() {
           Blaze._destroyView(view, true /* _skipNodes */);
@@ -317,8 +322,8 @@ Blaze._destroyView = function (view, _skipNodes) {
   // only recurse up to views, not elements, for the case where
   // the backend (jQuery) is recursing over the elements already.
 
-  if (view.domrange)
-    view.domrange.destroyMembers();
+  if (view._domrange)
+    view._domrange.destroyMembers();
 };
 
 Blaze._destroyNode = function (node) {
@@ -455,17 +460,17 @@ Blaze.insert = function (view, parentElement, nextNode) {
     throw new Error("'parentElement' must be a DOM node");
   if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
     throw new Error("'nextNode' must be a DOM node");
-  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
+  if (! (view && (view._domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with UI.render");
 
-  view.domrange.attach(parentElement, nextNode);
+  view._domrange.attach(parentElement, nextNode);
 };
 
 Blaze.remove = function (view) {
-  if (! (view && (view.domrange instanceof Blaze._DOMRange)))
+  if (! (view && (view._domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with UI.render");
 
-  var range = view.domrange;
+  var range = view._domrange;
   if (range.attached)
     range.detach();
   range.destroy();
@@ -579,10 +584,10 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
   thisInHandler = (thisInHandler || null);
   var handles = [];
 
-  if (! view.domrange)
+  if (! view._domrange)
     throw new Error("View must have a DOMRange");
 
-  view.domrange.onAttached(function attached_eventMaps(range, element) {
+  view._domrange.onAttached(function attached_eventMaps(range, element) {
     _.each(eventMap, function (handler, spec) {
       var clauses = spec.split(/,\s+/);
       // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']

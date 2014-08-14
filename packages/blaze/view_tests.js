@@ -22,7 +22,14 @@ if (Meteor.isClient) {
     test.equal(buf, '');
 
     var div = document.createElement("DIV");
-    Blaze.insert(Blaze.render(v), div);
+    test.isFalse(v.isRendered);
+    test.isFalse(v.isAttached);
+    Blaze.render(v);
+    test.isTrue(v.isRendered);
+    test.isFalse(v.isAttached);
+    Blaze.insert(v, div);
+    test.isTrue(v.isRendered);
+    test.isTrue(v.isAttached);
     test.equal(buf, 'c0r1');
     test.equal(canonicalizeHtml(div.innerHTML), "foo");
 

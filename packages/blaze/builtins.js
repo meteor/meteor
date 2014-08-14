@@ -81,14 +81,14 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
 
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView.domrange) {
+          } else if (eachView._domrange) {
             if (eachView.inElseMode) {
-              eachView.domrange.removeMember(0);
+              eachView._domrange.removeMember(0);
               eachView.inElseMode = false;
             }
 
-            var range = Blaze.render(newItemView, eachView).domrange;
-            eachView.domrange.addMember(range, index);
+            var range = Blaze.render(newItemView, eachView)._domrange;
+            eachView._domrange.addMember(range, index);
           } else {
             eachView.initialSubviews.splice(index, 0, newItemView);
           }
@@ -99,14 +99,14 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
           eachView.numItems--;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView.domrange) {
-            eachView.domrange.removeMember(index);
+          } else if (eachView._domrange) {
+            eachView._domrange.removeMember(index);
             if (eachView.elseFunc && eachView.numItems === 0) {
               eachView.inElseMode = true;
-              eachView.domrange.addMember(
+              eachView._domrange.addMember(
                 Blaze.render(
                   Blaze.View('each_else',eachView.elseFunc),
-                  eachView).domrange, 0);
+                  eachView)._domrange, 0);
             }
           } else {
             eachView.initialSubviews.splice(index, 1);
@@ -118,8 +118,8 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
           var itemView;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView.domrange) {
-            itemView = eachView.domrange.getMember(index).view;
+          } else if (eachView._domrange) {
+            itemView = eachView._domrange.getMember(index).view;
           } else {
             itemView = eachView.initialSubviews[index];
           }
@@ -130,8 +130,8 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
         Deps.nonreactive(function () {
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView.domrange) {
-            eachView.domrange.moveMember(fromIndex, toIndex);
+          } else if (eachView._domrange) {
+            eachView._domrange.moveMember(fromIndex, toIndex);
           } else {
             var subviews = eachView.initialSubviews;
             var itemView = subviews[fromIndex];
