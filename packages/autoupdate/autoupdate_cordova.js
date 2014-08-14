@@ -38,51 +38,53 @@ var retry = new Retry({
 var failures = 0;
 
 Autoupdate._retrySubscription = function () {
-  Meteor.subscribe("meteor_autoupdate_clientVersions", {
+ Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
       Meteor._debug("autoupdate subscription failed:", error);
       failures++;
       retry.retryLater(failures, function () {
+        // Just retry making the subscription, don't reload the whole
+        // page. While reloading would catch more cases (for example,
+        // the server went back a version and is now doing old-style hot
+        // code push), it would also be more prone to reload loops,
+        // which look really bad to the user. Just retrying the
+        // subscription over DDP means it is at least possible to fix by
+        // updating the server.
         Autoupdate._retrySubscription();
       });
     },
     onReady: function () {
       if (Package.reload) {
-        var handle = ClientVersions.find().observeChanges({
-          added: function (id, fields) {
-            var self = this;
-            console.log("NEW VERSION FOUND!", id, fields);
+        var checkNewVersionDocument = function (id, fields) {
+          var self = this;
+          var isRefreshable = id === 'version-refreshable';
+          if (isRefreshable &&
+              fields.version !== autoupdateVersionRefreshable) {
+            var previousVersionRefreshable = autoupdateVersionRefreshable;
+            autoupdateVersionRefreshable = fields.version;
 
-            // XXX fix for CSS changes
-            // XXX maybe a race condition? We shouldn't start looking for
-            // updates until we run meteor_cordova_loader.
-
-            if (fields.refreshable && id !== autoupdateVersionRefreshable) {
-              var previousVersionRefreshable = autoupdateVersionRefreshable;
-              autoupdateVersionRefreshable = id;
-
-              // XXX this will not reload the first time the app is loaded
-              if (previousVersionRefreshable !== "unknown") {
-                // XXX this doesn't work
-                // onNewVersion(handle);
-              }
-            } else if (! fields.refreshable && id !== autoupdateVersion) {
-              console.log("Added new version", id);
-              console.log("current version", autoupdateVersion);
-              var previousVersion = autoupdateVersion;
-              autoupdateVersion = id;
-              // XXX this will not reload the first time the app is loaded
-              if (previousVersion !== "unknown") {
-                // onNewVersion(handle);
-              }
+            if (previousVersionRefreshable !== 'unknown') {
+              onNewVersion();
             }
           }
+          else if (! isRefreshable &&
+                   fields.version !== autoupdateVersion && handle) {
+            var previousVersion = autoupdateVersion;
+            autoupdateVersion = fields.version;
+
+            if (previousVersion !== 'unknown') {
+              onNewVersion();
+            }
+          }
+        };
+
+        var handle = ClientVersions.find().observeChanges({
+          added: checkNewVersionDocument,
+          changed: checkNewVersionDocument
         });
       }
     }
   });
 };
 
-document.addEventListener("meteor-cordova-loaded",
-  Autoupdate._retrySubscription, false);
-
+Meteor.startup(Autoupdate._retrySubscription);
