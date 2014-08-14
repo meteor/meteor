@@ -8,12 +8,12 @@ ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
 Autoupdate = {};
 
 Autoupdate.newClientAvailable = function () {
-  return !! ClientVersions.findOne(
-    {$and: [
-      {current: true},
-      {_id: {$ne: autoupdateVersion}}
-    ]}
-  );
+  return !! ClientVersions.findOne({
+               refreshable: false,
+               version: {$ne: autoupdateVersion} }) ||
+         !! ClientVersions.findOne({
+               refreshable: true,
+               version: {$ne: autoupdateVersionRefreshable} });
 };
 
 var onNewVersion = function (handle) {
@@ -55,32 +55,22 @@ Autoupdate._retrySubscription = function () {
     },
     onReady: function () {
       if (Package.reload) {
-        var checkNewVersionDocument = function (id, fields) {
-          var self = this;
-          var isRefreshable = id === 'version-refreshable';
-          if (isRefreshable &&
-              fields.version !== autoupdateVersionRefreshable) {
-            var previousVersionRefreshable = autoupdateVersionRefreshable;
-            autoupdateVersionRefreshable = fields.version;
-
-            if (previousVersionRefreshable !== 'unknown') {
-              onNewVersion();
-            }
-          }
-          else if (! isRefreshable &&
-                   fields.version !== autoupdateVersion && handle) {
-            var previousVersion = autoupdateVersion;
-            autoupdateVersion = fields.version;
-
-            if (previousVersion !== 'unknown') {
-              onNewVersion();
-            }
-          }
-        };
-
         var handle = ClientVersions.find().observeChanges({
-          added: checkNewVersionDocument,
-          changed: checkNewVersionDocument
+          changed: function (id, fields) {
+            var self = this;
+            var isRefreshable = id === 'version-refreshable';
+
+            if (isRefreshable &&
+                fields.version !== autoupdateVersionRefreshable) {
+              autoupdateVersionRefreshable = fields.version;
+              onNewVersion();
+            }
+            else if (! isRefreshable &&
+                     fields.version !== autoupdateVersion && handle) {
+              autoupdateVersion = fields.version;
+              onNewVersion();
+            }
+          }
         });
       }
     }

@@ -10,7 +10,7 @@ var allReady = function () {
 
 var ready = function() {
   if (Meteor.isCordova) {
-    document.addEventListener('deviceready', allReady, false);
+    document.addEventListener('meteor-cordova-loaded', allReady, false);
   } else {
     allReady();
   }
