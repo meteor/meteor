@@ -371,7 +371,7 @@ exports.execFileSync = function (file, args, opts) {
   var child_process = require('child_process');
   var eachline = require('eachline');
 
-  if (opts.pipeOutput) {
+  if (opts && opts.pipeOutput) {
     var p = child_process.spawn(file, args, opts);
 
     eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
