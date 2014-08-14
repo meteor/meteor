@@ -42,7 +42,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     elseFunc ? new Template('(elseBlock)', elseFunc) : null);
 
   if (self.__eventMaps || typeof self.events === 'object') {
-    view.onViewRendered(function () {
+    view._onViewRendered(function () {
       if (view.renderCount !== 1)
         return;
 
@@ -89,22 +89,8 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
   }
 
   if (self.rendered) {
-    var callRendered = function () {
-      Deps.afterFlush(function () {
-        if (! view.isDestroyed) {
-          Blaze._withCurrentView(view, function () {
-            self.rendered.call(view.templateInstance());
-          });
-        }
-      });
-    };
-    view.onViewRendered(function onViewRendered() {
-      if (view.isDestroyed)
-        return;
-      if (! view._domrange.isAttached)
-        view._domrange.onAttached(callRendered);
-      else
-        callRendered();
+    view.onViewReady(function () {
+      self.rendered.call(view.templateInstance());
     });
   }
 

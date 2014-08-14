@@ -72,10 +72,33 @@ Blaze.View.prototype.onViewCreated = function (cb) {
   this._callbacks.created = this._callbacks.created || [];
   this._callbacks.created.push(cb);
 };
-Blaze.View.prototype.onViewRendered = function (cb) {
+
+Blaze.View.prototype._onViewRendered = function (cb) {
   this._callbacks.rendered = this._callbacks.rendered || [];
   this._callbacks.rendered.push(cb);
 };
+
+Blaze.View.prototype.onViewReady = function (cb) {
+  var self = this;
+  var fire = function () {
+    Deps.afterFlush(function () {
+      if (! self.isDestroyed) {
+        Blaze._withCurrentView(self, function () {
+          cb.call(self);
+        });
+      }
+    });
+  };
+  self._onViewRendered(function onViewRendered() {
+    if (self.isDestroyed)
+      return;
+    if (! self._domrange.isAttached)
+      self._domrange.onAttached(fire);
+    else
+      fire();
+  });
+};
+
 Blaze.View.prototype.onViewDestroyed = function (cb) {
   this._callbacks.destroyed = this._callbacks.destroyed || [];
   this._callbacks.destroyed.push(cb);
@@ -99,7 +122,7 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
 /// of the View (as in Blaze.With) should be started from an onViewCreated
 /// callback.  Autoruns that update the DOM should be started
 /// from either onViewCreated (guarded against the absence of
-/// view._domrange), or onViewRendered.
+/// view._domrange), or onViewReady.
 Blaze.View.prototype.autorun = function (f, _inViewScope) {
   var self = this;
 
