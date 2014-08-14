@@ -206,6 +206,7 @@ var CompleteCatalog = function (options) {
   // a boolean.
   // XXX: use a future in the future maybe
   self.refreshing = false;
+  self.needRefresh = false;
 
   // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
   // Maps packageName -> version -> its ECV
@@ -390,6 +391,16 @@ _.extend(CompleteCatalog.prototype, {
       return;
     }
 
+    if (self.refreshing) {
+      // We're being asked to refresh re-entrantly, maybe because we just
+      // updated the official catalog.  Let's not do this now, but make the
+      // outer call do it instead.
+      // XXX refactoring the catalogs so that the two catalogs share their
+      //     data and this one is just an overlay would reduce this wackiness
+      self.needRefresh = true;
+      return;
+    }
+
     self.refreshing = true;
 
     try {
@@ -401,15 +412,21 @@ _.extend(CompleteCatalog.prototype, {
       }
 
       self._recomputeEffectiveLocalPackages();
-      self._addLocalPackageOverrides({watchSet: options.watchSet});
+      var allOK = self._addLocalPackageOverrides(
+        { watchSet: options.watchSet });
       self.initialized = true;
       // Rebuild the resolver, since packages may have changed.
       self._initializeResolver();
     } finally {
-
       self.refreshing = false;
     }
 
+    // If we got a re-entrant refresh request, do it now. (But not if we
+    // encountered build errors building the packages, since in that case
+    // we'd probably just get the same build errors again.)
+    if (self.needRefresh && allOK) {
+      self.refresh(options);
+    }
   },
 
   _initializeResolver: function () {
@@ -472,6 +489,8 @@ _.extend(CompleteCatalog.prototype, {
     options = options || {};
     buildmessage.assertInCapture();
 
+    var allOK = true;
+
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.
     var removedVersionIds = {};
@@ -515,8 +534,10 @@ _.extend(CompleteCatalog.prototype, {
           requireVersion: true,
           defaultVersion: "0.0.0"
         });
-        if (buildmessage.jobHasMessages())
+        if (buildmessage.jobHasMessages()) {
           broken = true;
+          allOK = false;
+        }
       });
 
       if (options.watchSet) {
@@ -622,6 +643,8 @@ _.extend(CompleteCatalog.prototype, {
     // build them lazily when someone asks for them.
     self.packageSources = packageSources;
     self.unbuilt = _.clone(self.effectiveLocalPackages);
+
+    return allOK;
   },
 
   // Given a version string that may or may not have a build ID, convert it into
