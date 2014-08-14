@@ -322,6 +322,9 @@ var CompleteCatalog = function (options) {
   // Each complete catalog needs its own package cache.
   self.packageCache = new packageCache.PackageCache(self);
 
+  self.packageSources = null;
+  self.built = null;
+
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
 };
@@ -357,7 +360,6 @@ _.extend(CompleteCatalog.prototype, {
     // packages. Nonetheless, let's set those.
     self.localPackageDirs =
       _.filter(options.localPackageDirs || [], utils.isDirectory);
-    self._recomputeEffectiveLocalPackages();
 
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
@@ -375,6 +377,9 @@ _.extend(CompleteCatalog.prototype, {
   reset: function () {
     var self = this;
     BaseCatalog.prototype.reset.call(self);
+
+    self.packageSources = {};
+    self.built = {};
     self.forgottenECVs = {};
   },
 
@@ -658,8 +663,6 @@ _.extend(CompleteCatalog.prototype, {
     // Load the source code and create Package and Version
     // entries from them. We have to do this before we can run the
     // constraint solver.
-    var packageSources = {}; // name to PackageSource
-
     var initVersionRecordFromSource =  function (packageDir, name) {
       var packageSource = new PackageSource(self);
       var broken = false;
@@ -694,7 +697,7 @@ _.extend(CompleteCatalog.prototype, {
       if (broken)
         return;
 
-      packageSources[name] = packageSource;
+      self.packageSources[name] = packageSource;
 
       self.packages.push({
         name: name,
@@ -780,11 +783,6 @@ _.extend(CompleteCatalog.prototype, {
     // effectiveLocalPackages in initPackageSource (to add test packages).
     _.each(self.effectiveLocalPackages, initVersionRecordFromSource);
 
-    // Save the package sources and the list of all unbuilt packages. We will
-    // build them lazily when someone asks for them.
-    self.packageSources = packageSources;
-    self.unbuilt = _.clone(self.effectiveLocalPackages);
-
     return allOK;
   },
 
@@ -846,11 +844,11 @@ _.extend(CompleteCatalog.prototype, {
 
     var unip = null;
 
-    if (! _.has(self.unbuilt, name)) {
+    if (_.has(self.built, name)) {
       return;
     }
 
-    delete self.unbuilt[name];
+    self.built[name] = true;
 
     // Go through the build-time constraints. Make sure that they are built,
     // either because we have built them already, or because we are about to
@@ -1096,9 +1094,7 @@ _.extend(CompleteCatalog.prototype, {
     if (_.has(self.effectiveLocalPackages, name)) {
 
       // If we don't have a build of this package, we need to rebuild it.
-      if (_.has(self.unbuilt, name)) {
-        self._build(name, {}, constraintSolverOpts);
-      };
+      self._build(name, {}, constraintSolverOpts);
 
       // Return the path.
       return self.effectiveLocalPackages[name];
