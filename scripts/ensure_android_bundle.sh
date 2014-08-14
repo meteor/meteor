@@ -78,7 +78,8 @@ export PATH=${ANT_HOME}/bin:${PATH}
 
 # create avd if necessary
 if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep Name) ]] ; then
-  echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
+  yes "
+" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
 fi
 
 
