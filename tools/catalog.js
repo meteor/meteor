@@ -446,6 +446,14 @@ _.extend(CompleteCatalog.prototype, {
 
     self.effectiveLocalPackages = {};
 
+    // XXX If this is the forUniload catalog, we should only consider
+    // uniload.ROOT_PACKAGES and their dependencies. Unfortunately, that takes a
+    // fair amount of refactoring (since we don't know dependencies until we
+    // start reading them).  So for now, the uniload catalog (in checkout mode)
+    // does include information about all the packages in the meteor repo, not
+    // just the ones that can be uniloaded. (But it doesn't contain information
+    // about app packages!)
+
     _.each(self.localPackageDirs, function (localPackageDir) {
       if (! utils.isDirectory(localPackageDir))
         return;
