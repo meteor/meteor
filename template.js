@@ -70,9 +70,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
 
     inst.data = Blaze.getViewData(view);
 
-    if (view.domrange && !view.isDestroyed) {
-      inst.firstNode = view.domrange.firstNode();
-      inst.lastNode = view.domrange.lastNode();
+    if (view._domrange && !view.isDestroyed) {
+      inst.firstNode = view._domrange.firstNode();
+      inst.lastNode = view._domrange.lastNode();
     } else {
       // on 'created' or 'destroyed' callbacks we don't have a DomRange
       inst.firstNode = null;
@@ -101,8 +101,8 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     view.onViewRendered(function onViewRendered() {
       if (view.isDestroyed)
         return;
-      if (! view.domrange.isAttached)
-        view.domrange.onAttached(callRendered);
+      if (! view._domrange.isAttached)
+        view._domrange.onAttached(callRendered);
       else
         callRendered();
     });
@@ -134,9 +134,9 @@ Blaze.TemplateInstance = function (view) {
 
 Blaze.TemplateInstance.prototype.$ = function (selector) {
   var view = this.view;
-  if (! view.domrange)
+  if (! view._domrange)
     throw new Error("Can't use $ on template instance with no DOM");
-  return view.domrange.$(selector);
+  return view._domrange.$(selector);
 };
 
 Blaze.TemplateInstance.prototype.findAll = function (selector) {
