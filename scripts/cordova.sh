@@ -25,16 +25,6 @@ export PATH=${ANT_HOME}/bin:${PATH}
 
 # add node
 export PATH=${DEV_BUNDLE}/bin:${PATH}
-
-command -v javac >/dev/null 2>&1 || {
-  echo >&2 "To add the android platform, please install a JDK. Here are some directions: http://openjdk.java.net/install/"; exit 1;
-}
-
-# create avd if necessary
-if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep -q Name) ]] ; then
-  echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
-fi
-
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
 exec ${DEV_BUNDLE}/lib/node_modules/cordova/bin/cordova "$@"

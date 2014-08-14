@@ -369,6 +369,30 @@ exports.execFileSync = function (file, args, opts) {
   var future = new Future;
 
   var child_process = require('child_process');
+  var eachline = require('eachline');
+
+  if (opts.pipeOutput) {
+    var p = child_process.spawn(file, args, opts);
+
+    eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
+      process.stdout.write(line + '\n');
+    }));
+
+    eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
+      process.stderr.write(line + '\n');
+    }));
+
+    p.on('exit', function (code) {
+      future.return(code);
+    });
+
+    return {
+      success: !future.wait(),
+      stdout: "",
+      stderr: ""
+    };
+  }
+
   child_process.execFile(file, args, opts, function (err, stdout, stderr) {
     future.return({
       success: ! err,

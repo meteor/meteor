@@ -1,5 +1,4 @@
 #!/bin/bash
-
 BUNDLE_VERSION=0.1
 
 # OS Check. Put here because here is where we download the precompiled
@@ -18,9 +17,13 @@ if [ -L "$(basename "$0")" ] ; then
     cd "$(dirname $(readlink $(basename "$0") ) )"
 fi
 SCRIPT_DIR=$(pwd -P)/..
+
 cd "$ORIG_DIR"
 
 install_android_bundle () {
+  echo "Going to install Android Bundle (300M-400M)."
+  echo "This might take a while, please hold on."
+
   set -e
   trap "echo Failed to install dependency kit." EXIT
 
@@ -58,4 +61,24 @@ elif [ ! -f "$SCRIPT_DIR/android_bundle/.bundle_version.txt" ] ||
   grep -qvx "$BUNDLE_VERSION" "$SCRIPT_DIR/android_bundle/.bundle_version.txt" ; then
   install_android_bundle
 fi
+
+command -v javac >/dev/null 2>&1 || {
+  echo >&2 "To add the android platform, please install a JDK. Here are some directions: http://openjdk.java.net/install/"; exit 1;
+}
+
+
+ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
+
+# Put Android build tool-chain into path
+export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH};
+
+# add ant
+export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
+export PATH=${ANT_HOME}/bin:${PATH}
+
+# create avd if necessary
+if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep Name) ]] ; then
+  echo -e "\n" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
+fi
+
 
