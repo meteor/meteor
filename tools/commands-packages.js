@@ -855,11 +855,20 @@ main.registerCommand({
 main.registerCommand({
   name: 'show',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  options: {
+    "show-broken": {type: Boolean, required: false }
+  }
 }, function (options) {
 
   // We should refresh the catalog in case there are new versions.
   refreshOfficialCatalogOrDie();
+
+  // We only show compatible versions unless we know otherwise.
+  var versionVisible = function (record) {
+    return options['show-broken'] || !(_.isEqual(record.description,
+                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+   };
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -938,6 +947,11 @@ main.registerCommand({
     }
     var unknown = "< unknown >";
     _.each(versionRecords, function (v) {
+      // Don't show versions that we shouldn't be showing.
+      if (!versionVisible(v)) {
+        return;
+      }
+
       var versionDesc = "Version " + v.version;
       if (v.description)
         versionDesc = versionDesc + " : " + v.description;
