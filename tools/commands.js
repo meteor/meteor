@@ -280,7 +280,7 @@ main.registerCommand({
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
         var rel = commandsPackages.doOrDie(function () {
-          return catalog.complete.getDefaultReleaseVersion();
+          return catalog.official.getDefaultReleaseVersion();
         });
         var relString = rel.track + "@" + rel.version;
       } else {
