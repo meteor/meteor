@@ -1,5 +1,6 @@
 var crypto = Npm.require("crypto");
 var querystring = Npm.require("querystring");
+var urlModule = Npm.require("url");
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -27,9 +28,9 @@ OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
   var response = self._call('POST', self._urls.requestToken, headers);
   var tokens = querystring.parse(response.content);
 
-  if (!tokens.oauth_callback_confirmed)
-    throw new Error(
-      "oauth_callback_confirmed false when requesting oauth1 token", tokens);
+  if (! tokens.oauth_callback_confirmed)
+    throw _.extend(new Error("oauth_callback_confirmed false when requesting oauth1 token"),
+                             {response: response});
 
   self.requestToken = tokens.oauth_token;
   self.requestTokenSecret = tokens.oauth_token_secret;
@@ -55,6 +56,15 @@ OAuth1Binding.prototype.prepareAccessToken = function(query, requestTokenSecret)
   var response = self._call('POST', self._urls.accessToken, headers);
   var tokens = querystring.parse(response.content);
 
+  if (! tokens.oauth_token || ! tokens.oauth_token_secret) {
+    var error = new Error("missing oauth token or secret");
+    // We provide response only if no token is available, we do not want to leak any tokens
+    if (! tokens.oauth_token && ! tokens.oauth_token_secret) {
+      _.extend(error, {response: response});
+    }
+    throw error;
+  }
+
   self.accessToken = tokens.oauth_token;
   self.accessTokenSecret = tokens.oauth_token_secret;
 };
@@ -66,7 +76,7 @@ OAuth1Binding.prototype.call = function(method, url, params, callback) {
     oauth_token: self.accessToken
   });
 
-  if(!params) {
+  if(! params) {
     params = {};
   }
 
@@ -123,6 +133,20 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
     url = url(self);
   }
 
+  headers = headers || {};
+  params = params || {};
+
+  // Extract all query string parameters from the provided URL
+  var parsedUrl = urlModule.parse(url, true);
+  // Merge them in a way that params given to the method call have precedence
+  params = _.extend({}, parsedUrl.query, params);
+
+  // Reconstruct the URL back without any query string parameters
+  // (they are now in params)
+  parsedUrl.query = {};
+  parsedUrl.search = '';
+  url = urlModule.format(parsedUrl);
+
   // Get the signature
   headers.oauth_signature =
     self._getSignature(method, url, headers, self.accessTokenSecret, params);
@@ -132,12 +156,21 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
 
   // Make signed request
   try {
-    return HTTP.call(method, url, {
+    var response = HTTP.call(method, url, {
       params: params,
       headers: {
         Authorization: authString
       }
-    }, callback);
+    }, callback && function (error, response) {
+      if (! error) {
+        response.nonce = headers.oauth_nonce;
+      }
+      callback(error, response);
+    });
+    // We store nonce so that JWTs can be validated
+    if (response)
+      response.nonce = headers.oauth_nonce;
+    return response;
   } catch (err) {
     throw _.extend(new Error("Failed to send OAuth1 request to " + url + ". " + err.message),
                    {response: err.response});
