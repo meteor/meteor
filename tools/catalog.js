@@ -48,7 +48,7 @@ var OfficialCatalog = function () {
 util.inherits(OfficialCatalog, BaseCatalog);
 
 _.extend(OfficialCatalog.prototype, {
-  initialize : function (options) {
+  initialize: function (options) {
     var self = this;
     options = options || {};
 
@@ -56,16 +56,14 @@ _.extend(OfficialCatalog.prototype, {
     // server.
     self.offline = options.offline ? options.offline : false;
 
-    // Set all the collections to their initial values.
-    self.reset();
-
-    // The server catalog is always initialized.
-    self.initialized = true;
-
     // This is set to an array while refresh() is running; if another refresh()
     // call happens during a yield, instead of doing a second refresh it just
     // waits for the first to finish.
     self._refreshFutures = null;
+
+    self._refresh(true);
+
+    self.initialized = true;
   },
 
   _refreshingIsProductive: function () {
@@ -126,12 +124,12 @@ _.extend(OfficialCatalog.prototype, {
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
   // to the package server, and intend to.
-  _refresh: function () {
+  _refresh: function (overrideOffline) {
     var self = this;
 
     var localData = packageClient.loadCachedServerData();
     var allPackageData;
-    if (! self.offline ) {
+    if (! (self.offline || overrideOffline)) {
       var updateResult = packageClient.updateServerPackageData(localData);
       allPackageData = updateResult.data;
       if (! allPackageData) {

@@ -617,33 +617,6 @@ Fiber(function () {
     // calculation -- we can't do that until the release is initialized.
     project.project.setRootDir(appDir);
   }
-  var packageDir = files.findPackageDir();
-  if (packageDir)
-    packageDir = path.resolve(packageDir);
-
-
-  // Figure out the directories that we should search for local
-  // packages (in addition to packages downloaded from the package
-  // server)
-  var localPackageDirs = [];
-  if (appDir)
-    localPackageDirs.push(path.join(appDir, 'packages'));
-
-  if (process.env.PACKAGE_DIRS) {
-    // User can provide additional package directories to search in
-    // PACKAGE_DIRS (colon-separated).
-    localPackageDirs = localPackageDirs.concat(
-      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
-        return path.resolve(p);
-      }));
-  }
-
-  if (!files.usesWarehouse()) {
-    // Running from a checkout, so use the Meteor core packages from
-    // the checkout.
-    localPackageDirs.push(path.join(
-      files.getCurrentToolsDir(), 'packages'));
-  }
 
   // XXX compare this to the previous block's usesWarehouse...
   if (files.inCheckout()) {
@@ -671,37 +644,26 @@ Fiber(function () {
     });
   }
 
-  var messages = buildmessage.capture(function () {
-    // Initialize the complete Catalog, which we use to retrieve packages. Only
-    // after this point is the Catalog (and therefore uniload) usable.
-    catalog.complete.initialize({
-      localPackageDirs: localPackageDirs
-    });
 
-    // Initialize the server catalog. We don't load data into the server catalog
-    // until refresh is called, so this probably doesn't take up too much
-    // memory.
-    //
-    // If the $METEOR_OFFLINE_CATALOG env var is set, the catalog will be
-    // offline and will never attempt to contact the server for more recent
-    // data. Otherwise, the catalog will attempt to synchronize with the remote
-    // package server.
+  // Initialize the server catalog. Among other things, this is where
+  // we get release information (used by springboarding).  This doesn't
+  // build anything (except maybe, if running from a checkout, packages
+  // that we need to uniload, which really ought to build) so it's OK
+  // to die on errors.
+  var messages = buildmessage.capture(function () {
     catalog.official.initialize({
       offline: !!process.env.METEOR_OFFLINE_CATALOG
     });
-
-    // So to be explicit: at this point, catalog.complete reflects whatever was
-    // in data.json when we started up (no sync with the server), and
-    // catalog.official is EMPTY.  Calling catalog.official.refresh() will sync
-    // with the server (unless offline) and then load from data.json;
-    // catalog.complete.refresh() will re-sync with data.json (eg, if we just
-    // refreshed catalog.official).
   });
   if (messages.hasMessages()) {
-    process.stderr.write("=> Errors while scanning packages:\n\n");
+    process.stderr.write("=> Errors while initializing package catalog:\n\n");
     process.stderr.write(messages.formatMessages());
     process.exit(1);
   }
+
+  // We do NOT initialize catalog.complete yet.  When we do that, we will build
+  // all local packages, and for both performance and correctness reasons, we
+  // will wait until after the springboard check to do so.
 
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
@@ -907,6 +869,43 @@ Fiber(function () {
   if (release.current && release.current.isProperRelease() &&
       release.current.getToolsPackageAtVersion() !== files.getToolsVersion()) {
     springboard(release.current); // does not return!
+  }
+
+  // OK, now it's finally time to set up the complete catalog. Only after this
+  // can we use the build system (other than via uniload).
+
+  // Figure out the directories that we should search for local
+  // packages (in addition to packages downloaded from the package
+  // server)
+  var localPackageDirs = [];
+  if (appDir)
+    localPackageDirs.push(path.join(appDir, 'packages'));
+
+  if (process.env.PACKAGE_DIRS) {
+    // User can provide additional package directories to search in
+    // PACKAGE_DIRS (colon-separated).
+    localPackageDirs = localPackageDirs.concat(
+      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
+        return path.resolve(p);
+      }));
+  }
+
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
+  var messages = buildmessage.capture(function () {
+    catalog.complete.initialize({
+      localPackageDirs: localPackageDirs
+    });
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write("=> Errors while scanning packages:\n\n");
+    process.stderr.write(messages.formatMessages());
+    process.exit(1);
   }
 
   // Check for the '--help' option.
@@ -1155,6 +1154,10 @@ commandName + ": You're not in a Meteor project directory.\n" +
   if (typeof requiresPackage === "function") {
     requiresPackage = requiresPackage(options);
   }
+
+  var packageDir = files.findPackageDir();
+  if (packageDir)
+    packageDir = path.resolve(packageDir);
 
   if (packageDir) {
     options.packageDir = packageDir;
