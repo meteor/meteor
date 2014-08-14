@@ -327,7 +327,8 @@ var springboard = function (rel, releaseOverride) {
       tropohouse.default.maybeDownloadPackageForArchitectures({
         packageName: toolsPkg,
         version: toolsVersion,
-        architectures: [archinfo.host()]
+        architectures: [archinfo.host()],
+        definitelyNotLocal: true
       });
     });
   } catch (err) {
