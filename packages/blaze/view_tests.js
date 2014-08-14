@@ -12,8 +12,11 @@ if (Meteor.isClient) {
     v.onViewCreated(function () {
       buf += 'c' + v.renderCount;
     });
-    v.onViewRendered(function () {
+    v._onViewRendered(function () {
       buf += 'r' + v.renderCount;
+    });
+    v.onViewReady(function () {
+      buf += 'y' + v.renderCount;
     });
     v.onViewDestroyed(function () {
       buf += 'd' + v.renderCount;
@@ -27,19 +30,23 @@ if (Meteor.isClient) {
     Blaze.render(v);
     test.isTrue(v.isRendered);
     test.isFalse(v.isAttached);
+    test.equal(buf, 'c0r1');
+    test.equal(canonicalizeHtml(div.innerHTML), "");
     Blaze.insert(v, div);
     test.isTrue(v.isRendered);
     test.isTrue(v.isAttached);
     test.equal(buf, 'c0r1');
     test.equal(canonicalizeHtml(div.innerHTML), "foo");
+    Deps.flush();
+    test.equal(buf, 'c0r1y1');
 
     R.set("bar");
     Deps.flush();
-    test.equal(buf, 'c0r1r2');
+    test.equal(buf, 'c0r1y1r2y2');
     test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
     Blaze.remove(v);
-    test.equal(buf, 'c0r1r2d2');
+    test.equal(buf, 'c0r1y1r2y2d2');
     test.equal(canonicalizeHtml(div.innerHTML), "");
   });
 
