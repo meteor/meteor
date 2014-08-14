@@ -409,6 +409,10 @@ var Target = function (options) {
   // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
+  //
+  // The NodeModulesDirectory objects in this map are de-duplicated
+  // aliases to the objects in the nodeModulesDirectory fields of
+  // the File objects in self.js.
   self.nodeModulesDirectories = {};
 
   // Static assets to include in the bundle. List of File.
@@ -988,6 +992,10 @@ var JsImage = function () {
   // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
+  //
+  // The NodeModulesDirectory objects in this map are de-duplicated
+  // aliases to the objects in the nodeModulesDirectory fields of
+  // the objects in self.jsToLoad.
   self.nodeModulesDirectories = {};
 
   // Architecture required by this image
