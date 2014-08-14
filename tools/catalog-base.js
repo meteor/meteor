@@ -29,8 +29,6 @@ baseCatalog.BaseCatalog = function () {
   self.packages = null;
   self.versions = null;  // package name -> version -> object
   self.builds = null;
-  self.releaseTracks = null;
-  self.releaseVersions = null;
 
   // We use the initialization design pattern because it makes it easier to use
   // both of our catalogs as singletons.
@@ -49,8 +47,6 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     self.packages = [];
     self.versions = {};
     self.builds = [];
-    self.releaseTracks = [];
-    self.releaseVersions = [];
   },
 
   // Throw if the catalog's self.initialized value has not been set to true.
@@ -74,7 +70,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return;
 
     _.each(
-      ['packages', 'builds', 'releaseTracks', 'releaseVersions'],
+      ['packages', 'builds'],
       function (field) {
         self[field].push.apply(self[field], collections[field]);
       });
@@ -119,61 +115,6 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
   _refreshingIsProductive: function () {
     // Refreshing is productive for catalog.official and catalog.complete only.
     return false;
-  },
-
-  // Returns general (non-version-specific) information about a
-  // release track, or null if there is no such release track.
-  getReleaseTrack: function (name) {
-    var self = this;
-    buildmessage.assertInCapture();
-    self._requireInitialized();
-    return self._recordOrRefresh(function () {
-      return _.findWhere(self.releaseTracks, { name: name });
-    });
-  },
-
-  // Return information about a particular release version, or null if such
-  // release version does not exist.
-  //
-  // XXX: notInitialized : don't require initialization. This is not the right thing
-  // to do long term, but it is the easiest way to deal with versionFrom without
-  // serious refactoring.
-  getReleaseVersion: function (track, version, notInitialized) {
-    var self = this;
-    buildmessage.assertInCapture();
-    if (!notInitialized) self._requireInitialized();
-    return self._recordOrRefresh(function () {
-      return _.findWhere(self.releaseVersions,
-                         { track: track,  version: version });
-    });
-  },
-
-  // Return an array with the names of all of the release tracks that we know
-  // about, in no particular order.
-  getAllReleaseTracks: function () {
-    var self = this;
-    self._requireInitialized();
-    return _.pluck(self.releaseTracks, 'name');
-  },
-
-  // Given a release track, return all recommended versions for this track, sorted
-  // by their orderKey. Returns the empty array if the release track does not
-  // exist or does not have any recommended versions.
-  getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
-    var self = this;
-    self._requireInitialized();
-
-    var recommended = _.filter(self.releaseVersions, function (v) {
-      if (v.track !== track || !v.recommended)
-        return false;
-      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
-    });
-
-    var recSort = _.sortBy(recommended, function (rec) {
-      return rec.orderKey;
-    });
-    recSort.reverse();
-    return _.pluck(recSort, "version");
   },
 
   // Return an array with the names of all of the packages that we
@@ -325,28 +266,6 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return null;
 
     return _.where(self.builds, { versionId: versionRecord._id });
-  },
-
-  // Returns the default release version: the latest recommended version on the
-  // default track. Returns null if no such thing exists (even after syncing
-  // with the server, which it only does if there is no eligible release
-  // version).
-  getDefaultReleaseVersion: function (track) {
-    var self = this;
-    buildmessage.assertInCapture();
-    self._requireInitialized();
-
-    if (!track)
-      track = catalog.DEFAULT_TRACK;
-
-    var getDef = function () {
-      var versions = self.getSortedRecommendedReleaseVersions(track);
-      if (!versions.length)
-        return null;
-      return {track: track, version: versions[0]};
-    };
-
-    return self._recordOrRefresh(getDef);
   },
 
   // Reload catalog data to account for new information if needed.

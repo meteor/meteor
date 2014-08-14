@@ -1396,7 +1396,7 @@ main.registerCommand({
     }
     var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
       var releaseRecord = doOrDie(function () {
-        return catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
+        return catalog.official.getReleaseVersion(releaseTrack, versionToTry);
       });
       if (!releaseRecord)
         throw Error("missing release record?");
