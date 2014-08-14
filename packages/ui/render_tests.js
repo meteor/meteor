@@ -499,8 +499,8 @@ Tinytest.add("ui - render - templates and views", function (test) {
       };
 
       var view = this.view;
-      var start = view._domrange.firstNode();
-      var end = view._domrange.lastNode();
+      var start = view.firstNode();
+      var end = view.lastNode();
       // skip marker nodes
       while (start !== end && ! nodeDescr(start))
         start = start.nextSibling;

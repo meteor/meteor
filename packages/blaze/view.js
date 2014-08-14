@@ -92,7 +92,7 @@ Blaze.View.prototype.onViewReady = function (cb) {
   self._onViewRendered(function onViewRendered() {
     if (self.isDestroyed)
       return;
-    if (! self._domrange.isAttached)
+    if (! self._domrange.attached)
       self._domrange.onAttached(fire);
     else
       fire();
@@ -165,6 +165,20 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   self.onViewDestroyed(function () { c.stop(); });
 
   return c;
+};
+
+Blaze.View.prototype.firstNode = function () {
+  if (! this.isAttached)
+    throw new Error("View must be attached before accessing its DOM");
+
+  return this._domrange.firstNode();
+};
+
+Blaze.View.prototype.lastNode = function () {
+  if (! this.isAttached)
+    throw new Error("View must be attached before accessing its DOM");
+
+  return this._domrange.lastNode();
 };
 
 Blaze._fireCallbacks = function (view, which) {

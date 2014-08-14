@@ -120,17 +120,17 @@ DOMRange.forElement = function (elem) {
   return range;
 };
 
-DOMRange.prototype.attach = function (parentElement, nextNode, _isMove) {
+DOMRange.prototype.attach = function (parentElement, nextNode, _isMove, _isReplace) {
   // This method is called to insert the DOMRange into the DOM for
   // the first time, but it's also used internally when
   // updating the DOM.
   //
   // If _isMove is true, move this attached range to a different
   // location under the same parentElement.
-  if (_isMove) {
+  if (_isMove || _isReplace) {
     if (! (this.parentElement === parentElement &&
            this.attached))
-      throw new Error("Can only move an attached DOMRange, and only under the same parent element");
+      throw new Error("Can only move or replace an attached DOMRange, and only under the same parent element");
   }
 
   var members = this.members;
@@ -150,7 +150,7 @@ DOMRange.prototype.attach = function (parentElement, nextNode, _isMove) {
   this.attached = true;
   this.parentElement = parentElement;
 
-  if (! _isMove) {
+  if (! (_isMove || _isReplace)) {
     for(var i = 0; i < this.attachedCallbacks.length; i++) {
       var obj = this.attachedCallbacks[i];
       obj.attached && obj.attached(this, parentElement);
@@ -178,9 +178,10 @@ DOMRange.prototype.setMembers = function (newNodeAndRangeArray) {
       // detach the old members and insert the new members
       var nextNode = this.lastNode().nextSibling;
       var parentElement = this.parentElement;
-      this.detach();
+      // Use detach/attach, but don't fire attached/detached hooks
+      this.detach(true /*_isReplace*/);
       this.members = newMembers;
-      this.attach(parentElement, nextNode);
+      this.attach(parentElement, nextNode, false, true /*_isReplace*/);
     }
   }
 };
@@ -207,7 +208,7 @@ DOMRange.prototype.lastNode = function () {
   return (m instanceof DOMRange) ? m.lastNode() : m;
 };
 
-DOMRange.prototype.detach = function () {
+DOMRange.prototype.detach = function (_isReplace) {
   if (! this.attached)
     throw new Error("Must be attached");
 
@@ -222,12 +223,15 @@ DOMRange.prototype.detach = function () {
     this.parentElement.removeChild(placeholder);
     this.emptyRangePlaceholder = null;
   }
-  this.attached = false;
-  this.parentElement = null;
 
-  for(var i = 0; i < this.attachedCallbacks.length; i++) {
-    var obj = this.attachedCallbacks[i];
-    obj.detached && obj.detached(this, oldParentElement);
+  if (! _isReplace) {
+    this.attached = false;
+    this.parentElement = null;
+
+    for(var i = 0; i < this.attachedCallbacks.length; i++) {
+      var obj = this.attachedCallbacks[i];
+      obj.detached && obj.detached(this, oldParentElement);
+    }
   }
 };
 
