@@ -132,7 +132,7 @@ Autoupdate._retrySubscription = function () {
             });
           }
           else if (! isRefreshable &&
-                   fields.version !== autoupdateVersionRefreshable && handle) {
+                   fields.version !== autoupdateVersion && handle) {
             handle.stop();
             Package.reload.Reload._reload();
           }

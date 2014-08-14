@@ -498,7 +498,7 @@ main.registerCommand({
   }
   // On the main release track, we can't name the release anything beginning
   // with 0.8 and below, because those are taken for pre-troposphere releases.
-  if ((relConf.track === catalog.official.DEFAULT_TRACK)) {
+  if ((relConf.track === catalog.DEFAULT_TRACK)) {
     var start = relConf.version.slice(0,4);
     if (start === "0.8." || start === "0.7." ||
         start === "0.6." || start === "0.5.") {
@@ -1227,7 +1227,7 @@ main.registerCommand({
     // XXX better error checking on release.current.name
     // XXX add a method to release.current.
     var releaseTrack = release.current ?
-      release.current.getReleaseTrack() : catalog.official.DEFAULT_TRACK;
+      release.current.getReleaseTrack() : catalog.DEFAULT_TRACK;
 
     // Unless --release was passed (in which case we ought to already have
     // springboarded to that release), go get the latest release and switch to

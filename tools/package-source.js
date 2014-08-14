@@ -954,7 +954,7 @@ _.extend(PackageSource.prototype, {
 
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
-            release = catalog.complete.DEFAULT_TRACK + "@" + release;
+            release = catalog.DEFAULT_TRACK + "@" + release;
           }
 
           var relInf = release.split('@');
@@ -1378,6 +1378,7 @@ _.extend(PackageSource.prototype, {
   // - skipUnordered: omit unordered dependencies
   getDependencyMetadata: function (options) {
     var self = this;
+    options = options || {};
     var ret = self._computeDependencyMetadata(options);
     if (! ret) {
       if (options.logError)

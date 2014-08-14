@@ -671,7 +671,7 @@ _.extend(Sandbox.prototype, {
       _id: utils.randomToken()
     });
     stubCatalog.collections.releaseTracks.push({
-      name: catalog.complete.DEFAULT_TRACK,
+      name: catalog.DEFAULT_TRACK,
       _id: utils.randomToken()
     });
 
@@ -679,7 +679,7 @@ _.extend(Sandbox.prototype, {
     _.each(releases, function (configuration, releaseName) {
       // Release info
       stubCatalog.collections.releaseVersions.push({
-        track: catalog.complete.DEFAULT_TRACK,
+        track: catalog.DEFAULT_TRACK,
         version: releaseName,
         orderKey: releaseName,
         description: "test release " + releaseName,

@@ -134,23 +134,13 @@ selftest.define("javascript hot code push", function (options) {
     s.write("server/test.js", "jsVar = 'bar'");
     run.match("server restarted");
 
-    // Setting the autoupdateVersion to a different string should also
-    // force the client to restart.
-    s.write("server/test.js",
-            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
-    run.match("server restarted");
-    run.match("client connected: 0");
-    run.match("jsVar: undefined");
-
-    s.unlink("server/test.js");
-    run.match("server restarted");
-
     s.write("client/empty.js", "");
     run.match("client connected: 0");
     // We should not be able to access a server variable from the client.
     run.match("jsVar: undefined");
 
     s.unlink("client/empty.js");
+    run.waitSecs(5);
     run.match("client connected: 1");
     run.match("jsVar: undefined");
 
@@ -181,6 +171,17 @@ selftest.define("javascript hot code push", function (options) {
     run.match("jsVar: baz");
 
     s.unlink("client/test.js");
+
+    // Setting the autoupdateVersion to a different string should also
+    // force the client to restart.
+    s.write("server/test.js",
+            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
+    run.match("server restarted");
+    run.match("client connected: 0");
+    run.match("jsVar: undefined");
+
+    s.unlink("server/test.js");
+    run.match("server restarted");
 
     run.stop();
   });
