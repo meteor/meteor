@@ -236,7 +236,8 @@ var determineBuildTimeDependencies = function (packageSource,
   // Every time we run the constraint solver, we record the results. This has
   // two benefits -- first, it faciliatates repeatable builds, second,
   // memorizing results makes the constraint solver more efficient.
-  if (ret.packageDependencies) {
+  // (But we don't do this during uniload.)
+  if (ret.packageDependencies && packageSource.catalog === catalog.complete) {
     var constraintResults = {
       dependencies: ret.packageDependencies,
       pluginDependencies: ret.pluginDependencies

@@ -300,18 +300,40 @@ _.extend(CompleteCatalog.prototype, {
     self._requireInitialized();
     buildmessage.assertInCapture();
 
-    if (self.forUniload && !opts.ignoreProjectDeps)
-      throw Error("whoa, if for uniload, why not ignoring project?");
+    if (self.forUniload) {
+      // uniload should always ignore the project: it's essentially loading part
+      // of the tool, which shouldn't be affected by your app's dependencies.
+      if (!opts.ignoreProjectDeps)
+        throw Error("whoa, if for uniload, why not ignoring project?");
 
-    // Kind of a hack, as per specification. We don't have a constraint solver
-    // initialized yet. We are probably trying to build the constraint solver
-    // package, or one of its dependencies. Luckily, we know that this means
-    // that we are running from checkout and all packages are local, so we can
-    // just use those versions. #UnbuiltConstraintSolverMustUseLocalPackages
-    // XXX does the unicat branch fix this and we can make this an error?
-    if (!self.resolver) {
-      return null;
+      // OK, we're building something while uniload
+      var ret = {};
+      _.each(constraints, function (constraint) {
+        // Constraints for uniload should just be packages with no version
+        // constraint and one local version (since they should all be in core).
+        if (!_.has(constraint, 'packageName') || _.size(constraint) !== 1) {
+          throw Error("Surprising constraint: " + JSON.stringify(constraint));
+        }
+        if (!_.has(self.versions, constraint.packageName)) {
+          throw Error("Trying to resolve unknown package: " +
+                      constraint.packageName);
+        }
+        if (_.isEmpty(self.versions[constraint.packageName])) {
+          throw Error("Trying to resolve versionless package: " +
+                      constraint.packageName);
+        }
+        if (_.size(self.versions[constraint.packageName]) > 1) {
+          throw Error("Too many versions for package: " +
+                      constraint.packageName);
+        }
+        ret[constraint.packageName] =
+          _.keys(self.versions[constraint.packageName])[0];
+      });
+      return ret;
     }
+
+    if (!self.resolver)
+      throw Error("Complete catalog has no resolver?");
 
     // Looks like we are not going to be able to avoid calling the constraint
     // solver, so let's process the input (constraints) into the correct
@@ -415,8 +437,12 @@ _.extend(CompleteCatalog.prototype, {
       var allOK = self._addLocalPackageOverrides(
         { watchSet: options.watchSet });
       self.initialized = true;
-      // Rebuild the resolver, since packages may have changed.
-      self._initializeResolver();
+      // Rebuild the resolver, since packages may have changed.  (The uniload
+      // catalog has a custom simple resolver instead of uniloading
+      // constraint-solver package, since that would have too much recursion.)
+      if (!self.forUniload) {
+        self._initializeResolver();
+      }
     } finally {
       self.refreshing = false;
     }

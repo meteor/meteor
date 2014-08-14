@@ -100,6 +100,9 @@ _.extend(exports.PackageLoader.prototype, {
     // We can only download packages if we know what versions they are.
     if (!self.versions)
       return;
+    // We shouldn't ever download packages for uniload.
+    if (self.catalog === catalog.uniload)
+      return;
     tropohouse.default.downloadMissingPackages(self.versions, {
       serverArch: options.serverArch
     });
