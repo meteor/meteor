@@ -457,58 +457,71 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
   })();
 });
 
-Tinytest.add("ui - render - views", function (test) {
+Tinytest.add("ui - render - templates and views", function (test) {
   (function () {
     var counter = 1;
     var buf = [];
 
-    var makeView = function () {
-      var view = Blaze.View('myView', function () {
+    var myTemplate = Blaze.Template(
+      'myTemplate',
+      function () {
         return [String(this.number),
                 (this.number < 3 ? makeView() : HR())];
       });
 
-      var number = counter++;
+    myTemplate.constructView = function (number) {
+      var view = Template.prototype.constructView.call(this);
       view.number = number;
+      return view;
+    };
 
-      view.onViewCreated(function () {
-        var parent = Blaze.getParentView(view, 'myView');
-        if (parent) {
-          buf.push('parent of ' + view.number + ' is ' +
-                   parent.number);
-        }
+    myTemplate.created = function () {
+      test.isFalse(Deps.active);
+      var view = this.view;
+      var parent = Blaze.getParentView(view, 'myTemplate');
+      if (parent) {
+        buf.push('parent of ' + view.number + ' is ' +
+                 parent.number);
+      }
 
-        buf.push('created ' + Blaze.getCurrentData());
+      buf.push('created ' + Blaze.getCurrentData());
+    };
+
+    myTemplate.rendered = function () {
+      test.isFalse(Deps.active);
+      var nodeDescr = function (node) {
+        if (node.nodeType === 8) // comment
+          return '';
+        if (node.nodeType === 3) // text
+          return node.nodeValue;
+
+        return node.nodeName;
+      };
+
+      var view = this.view;
+      var start = view.domrange.firstNode();
+      var end = view.domrange.lastNode();
+      // skip marker nodes
+      while (start !== end && ! nodeDescr(start))
+        start = start.nextSibling;
+      while (end !== start && ! nodeDescr(end))
+        end = end.previousSibling;
+
+      buf.push('dom-' + Blaze.getCurrentData() +
+               ' is ' + nodeDescr(start) +'..' +
+               nodeDescr(end));
+    };
+
+    myTemplate.destroyed = function () {
+      test.isFalse(Deps.active);
+      buf.push('destroyed ' + Blaze.getCurrentData());
+    };
+
+    var makeView = function () {
+      var number = counter++;
+      return Blaze.With(number, function () {
+        return myTemplate.constructView(number);
       });
-
-      view.onRendered(function () {
-        var nodeDescr = function (node) {
-          if (node.nodeType === 8) // comment
-            return '';
-          if (node.nodeType === 3) // text
-            return node.nodeValue;
-
-          return node.nodeName;
-        };
-
-        var start = this.domrange.firstNode();
-        var end = this.domrange.lastNode();
-        // skip marker nodes
-        while (start !== end && ! nodeDescr(start))
-          start = start.nextSibling;
-        while (end !== start && ! nodeDescr(end))
-          end = end.previousSibling;
-
-        buf.push('dom-' + Blaze.getCurrentData() +
-                 ' is ' + nodeDescr(start) +'..' +
-                 nodeDescr(end));
-      });
-
-      view.onViewDestroyed(function () {
-        buf.push('destroyed ' + Blaze.getCurrentData());
-      });
-
-      return Blaze.With(number, function () { return view; });
     };
 
     var div = document.createElement("DIV");

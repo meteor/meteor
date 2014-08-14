@@ -10,21 +10,29 @@ if (Meteor.isClient) {
     });
 
     v.onViewCreated(function () {
-      buf += 'c';
+      buf += 'c' + v.renderCount;
+    });
+    v.onViewRendered(function () {
+      buf += 'r' + v.renderCount;
     });
     v.onViewDestroyed(function () {
-      buf += 'd';
+      buf += 'd' + v.renderCount;
     });
 
     test.equal(buf, '');
 
     var div = document.createElement("DIV");
     Blaze.insert(Blaze.render(v), div);
-    test.equal(buf, 'c');
+    test.equal(buf, 'c0r1');
     test.equal(canonicalizeHtml(div.innerHTML), "foo");
 
+    R.set("bar");
+    Deps.flush();
+    test.equal(buf, 'c0r1r2');
+    test.equal(canonicalizeHtml(div.innerHTML), "bar");
+
     Blaze.remove(v);
-    test.equal(buf, 'cd');
+    test.equal(buf, 'c0r1r2d2');
     test.equal(canonicalizeHtml(div.innerHTML), "");
   });
 
