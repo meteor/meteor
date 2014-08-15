@@ -1985,7 +1985,7 @@ Template.api.ui_view = {
      descr: "Optional.  A name for this type of View.  See [`view.name`](#view_name)."},
     {name: "renderFunction",
      type: "Function",
-     descr: "A function that returns [*render content*](#render_content).  In this function, `this` is bound to the View."
+     descr: "A function that returns [*renderable content*](#renderable_content).  In this function, `this` is bound to the View."
     }
   ]
 };
