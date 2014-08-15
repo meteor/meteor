@@ -78,8 +78,7 @@ Autoupdate._retrySubscription = function () {
       if (Package.reload) {
         var checkNewVersionDocument = function (id, fields) {
           var self = this;
-          var isRefreshable = id === 'version-refreshable';
-          if (isRefreshable &&
+          if (id === 'version-refreshable' &&
               fields.version !== autoupdateVersionRefreshable) {
             autoupdateVersionRefreshable = fields.version;
             // Switch out old css links for the new css links. Inspired by:
@@ -131,7 +130,7 @@ Autoupdate._retrySubscription = function () {
               attachStylesheetLink(newLink);
             });
           }
-          else if (! isRefreshable &&
+          else if (id === 'version' &&
                    fields.version !== autoupdateVersion && handle) {
             handle.stop();
             Package.reload.Reload._reload();

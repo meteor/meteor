@@ -135,9 +135,7 @@ Meteor.startup(function () {
   // Allow people to override Autoupdate.autoupdateVersion before startup.
   // Tests do this.
   startupVersion = Autoupdate.autoupdateVersion;
-  WebApp.onListening(function () {
-    updateVersions(false);
-  });
+  updateVersions(false);
 });
 
 Meteor.publish(
