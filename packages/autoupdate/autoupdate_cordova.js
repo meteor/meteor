@@ -25,7 +25,7 @@ var onNewVersion = function (handle) {
 
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
-      console.log('failed to download the manifest ' + err.message + ' ' + res.content);
+      console.log('failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
     }
     var ft = new FileTransfer();
@@ -42,6 +42,7 @@ var onNewVersion = function (handle) {
           // save the manifest
           uri = encodeURI(urlPrefix + '/manifest.json');
           ft.download(uri, localPathPrefix + '/manifest.json', function () {
+            handle.stop();
             Package.reload.Reload._reload();
           });
         }
@@ -80,8 +81,7 @@ Autoupdate._retrySubscription = function () {
         var checkNewVersionDocument = function (id, fields) {
           var self = this;
           if (fields.version !== autoupdateVersionCordova && handle) {
-            handle.stop();
-            Package.reload.Reload._reload();
+            onNewVersion(handle);
           }
         };
 
