@@ -484,7 +484,7 @@ Tinytest.add("ui - render - templates and views", function (test) {
                  parent.number);
       }
 
-      buf.push('created ' + Blaze.getCurrentData());
+      buf.push('created ' + UI.data());
     };
 
     myTemplate.rendered = function () {
@@ -507,19 +507,19 @@ Tinytest.add("ui - render - templates and views", function (test) {
       while (end !== start && ! nodeDescr(end))
         end = end.previousSibling;
 
-      buf.push('dom-' + Blaze.getCurrentData() +
+      buf.push('dom-' + UI.data() +
                ' is ' + nodeDescr(start) +'..' +
                nodeDescr(end));
     };
 
     myTemplate.destroyed = function () {
       test.isFalse(Deps.active);
-      buf.push('destroyed ' + Blaze.getCurrentData());
+      buf.push('destroyed ' + UI.data());
     };
 
     var makeView = function () {
       var number = counter++;
-      return Blaze.With(number, function () {
+      return UI.With(number, function () {
         return myTemplate.constructView(number);
       });
     };

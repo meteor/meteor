@@ -68,7 +68,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     // object.
     var inst = view._templateInstance;
 
-    inst.data = Blaze.getViewData(view);
+    inst.data = Blaze.data(view);
 
     if (view._domrange && !view.isDestroyed) {
       inst.firstNode = view._domrange.firstNode();
@@ -150,7 +150,7 @@ Template.prototype.events = function (eventMap) {
     eventMap2[k] = (function (k, v) {
       return function (event/*, ...*/) {
         var view = this; // passed by EventAugmenter
-        var data = Blaze.getElementData(event.currentTarget);
+        var data = Blaze.data(event.currentTarget);
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
