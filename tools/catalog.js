@@ -478,12 +478,13 @@ _.extend(CompleteCatalog.prototype, {
     // see what the project thinks and recalculate everything. Similarly, if the
     // project root path has not been initialized, we are probably running
     // outside of a project, and have nothing to look at for guidance.
-    if (!opts.ignoreProjectDeps && project.viableDepSource) {
+    if (!opts.ignoreProjectDeps && project.project &&
+         project.project.viableDepSource) {
       // Anything in the project's dependencies was calculated based on a
       // previous constraint solver run, and needs to be taken as absolute truth
       // for now: we can't use any packages that are of different versions from
       // what we've already decided from the project!
-      _.each(project.getVersions(), function (version, name) {
+      _.each(project.project.getVersions(), function (version, name) {
         constr.push({packageName: name, version: version, type: 'exactly'});
       });
     }

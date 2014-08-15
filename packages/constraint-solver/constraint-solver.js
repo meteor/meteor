@@ -399,7 +399,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           } else {
             // transitive dependency
             // prefer to have less changed transitive dependencies
-            cost[MINOR] += versionsDistance === 0 ? 1 : 0;
+            cost[MINOR] += versionsDistance === 0 ? 0 : 1;
             options.debug && console.log("transitive: ", uv.name, prev.version, "=>", uv.version)
           }
         } else {

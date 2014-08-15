@@ -409,6 +409,8 @@ main.registerCommand({
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();
   });
+
+
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;
@@ -1043,8 +1045,19 @@ main.registerCommand({
     process.stderr.write(messages.formatMessages());
     return 1;
   }
-
   project.forceEditPackages(tests, 'add');
+
+  // We don't strictly need to do this before we bundle, but can't hurt.
+  messages = buildmessage.capture({
+    title: 'getting packages ready'
+  },function () {
+    project._ensureDepsUpToDate();
+  });
+
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   var buildOptions = {
     minify: options.production
