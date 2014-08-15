@@ -71,13 +71,12 @@ umask 022
 mkdir build
 cd build
 
-# For now, use our fork with https://github.com/npm/npm/pull/5821/files
-git clone https://github.com/meteor/node.git
+git clone https://github.com/joyent/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/main.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.30-with-npm-5821
+git checkout v0.10.29
 
 ./configure --prefix="$DIR"
 make -j4
