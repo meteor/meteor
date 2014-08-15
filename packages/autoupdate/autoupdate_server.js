@@ -87,7 +87,6 @@ var updateVersions = function (shouldReloadClientProgram) {
     if (! ClientVersions.findOne({_id: "version"})) {
       ClientVersions.insert({
         _id: "version",
-        refreshable: false,
         version: Autoupdate.autoupdateVersion,
       });
     } else {
@@ -100,7 +99,6 @@ var updateVersions = function (shouldReloadClientProgram) {
       ClientVersions.insert({
         _id: "version-refreshable",
         version: Autoupdate.autoupdateVersionRefreshable,
-        refreshable: true,
         assets: WebAppInternals.refreshableAssets
       });
     } else {
