@@ -63,14 +63,11 @@
   };
 
   var loadStyle = function (url) {
-    var oReq = new XMLHttpRequest();
-    oReq.onload = function () {
-      var styleTag = document.createElement('style');
-      styleTag.innerHTML = this.responseText;
-      document.getElementsByTagName('head')[0].appendChild(styleTag);
-    };
-    oReq.open("get", url, true);
-    oReq.send();
+    var styleTag = document.createElement('link');
+    styleTag.rel = "stylesheet";
+    styleTag.type = "text/css";
+    styleTag.href = url;
+    document.getElementsByTagName('head')[0].appendChild(styleTag);
   };
 
   var loadAssetsFromManifest = function (manifest, urlPrefix) {
