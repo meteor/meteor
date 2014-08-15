@@ -209,7 +209,6 @@ main.registerCommand({
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
-    webArchs.push("web.cordova");
     // will asynchronously start mobile emulators/devices
     try {
       var appName = path.basename(options.appDir);
@@ -222,6 +221,10 @@ main.registerCommand({
       process.stderr.write(err.message + '\n');
       return 1;
     }
+  }
+
+  if (!_.isEmpty(project.getCordovaPlatforms())) {
+    webArchs.push("web.cordova");
   }
 
   if (options['no-server'])
