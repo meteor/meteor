@@ -72,7 +72,7 @@
       context, or with both name and type }}
 
   {{#if name}}
-    <dt><span class="name">{{{name}}}</span>
+    <dt><span class="name" id={{#if id}}{{id}}{{/if}}>{{{name}}}</span>
       {{#if type}}<span class="type">{{type}}</span>{{/if}}
     </dt>
   {{else}}

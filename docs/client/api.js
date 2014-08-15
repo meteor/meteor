@@ -1974,7 +1974,21 @@ Template.api.ui_getelementdata = {
     }]
 };
 
-
+Template.api.ui_view = {
+  id: "ui_view",
+  name: "[new] UI.View([name], renderFunction)",
+  locus: "Client",
+  descr: ["Constructor for a View, which represents a reactive region of DOM."],
+  args: [
+    {name: "name",
+     type: "String",
+     descr: "Optional.  A name for this type of View.  See [`view.name`](#view_name)."},
+    {name: "renderFunction",
+     type: "Function",
+     descr: "A function that returns [*render content*](#render_content).  In this function, `this` is bound to the View."
+    }
+  ]
+};
 
 var rfc = function (descr) {
   return '[RFC5322](http://tools.ietf.org/html/rfc5322) ' + descr;
