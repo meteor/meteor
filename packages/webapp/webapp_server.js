@@ -182,12 +182,16 @@ var appUrl = function (url) {
 // (but the second is a performance enhancement, not a hard
 // requirement).
 
-var calculateClientHash = function (manifest, includeFilter) {
+var calculateClientHash = function (manifest, includeFilter, skipRuntimeCfg) {
   var hash = crypto.createHash('sha1');
-  // Omit the old hashed client values in the new hash. These may be
-  // modified in the new boilerplate.
-  hash.update(JSON.stringify(_.omit(__meteor_runtime_config__,
-               ['autoupdateVersion', 'autoupdateVersionRefreshable']), 'utf8'));
+
+  if (! skipRuntimeCfg) {
+    // Omit the old hashed client values in the new hash. These may be
+    // modified in the new boilerplate.
+    var runtimeCfgString = _.omit(__meteor_runtime_config__,
+      ['autoupdateVersion', 'autoupdateVersionRefreshable']);
+    hash.update(JSON.stringify(runtimeCfgString, 'utf8'));
+  }
   _.each(manifest, function (resource) {
       if ((! includeFilter || includeFilter(resource.type)) &&
           (resource.where === 'client' || resource.where === 'internal')) {
@@ -235,6 +239,16 @@ Meteor.startup(function () {
       function (name) {
         return name !== "css";
       });
+  };
+  WebApp.calculateClientHashCordova = function () {
+    var archName = 'web.cordova';
+    if (! WebApp.clientPrograms[archName])
+      return 'none';
+
+    return calculateClientHash(
+      WebApp.clientPrograms[archName].manifest,
+      function () { return true; },
+      true);
   };
 });
 

@@ -51,6 +51,7 @@ ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
 
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
+Autoupdate.autoupdateVersionCordova = null;
 
 var syncQueue = new Meteor._SynchronousQueue();
 var startupVersion = null;
@@ -77,6 +78,12 @@ var updateVersions = function (shouldReloadClientProgram) {
         process.env.AUTOUPDATE_VERSION ||
         process.env.SERVER_ID || // XXX COMPAT 0.6.6
         WebApp.calculateClientHashRefreshable();
+
+    Autoupdate.autoupdateVersionCordova =
+      __meteor_runtime_config__.autoupdateVersionCordova =
+        process.env.AUTOUPDATE_VERSION ||
+        process.env.SERVER_ID || // XXX COMPAT 0.6.6
+        WebApp.calculateClientHashCordova();
 
     // Step 2: form the new client boilerplate which contains the updated
     // assets and __meteor_runtime_config__.
@@ -107,6 +114,18 @@ var updateVersions = function (shouldReloadClientProgram) {
       ClientVersions.update("version-refreshable", { $set: {
         version: Autoupdate.autoupdateVersionRefreshable,
         assets: WebAppInternals.refreshableAssets
+      }});
+    }
+
+    if (! ClientVersions.findOne({_id: "version-cordova"})) {
+      ClientVersions.insert({
+        _id: "version-cordova",
+        version: Autoupdate.autoupdateVersionCordova,
+        refreshable: false
+      });
+    } else {
+      ClientVersions.update("version-cordova", { $set: {
+        version: Autoupdate.autoupdateVersionCordova
       }});
     }
   });
