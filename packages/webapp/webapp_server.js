@@ -334,24 +334,15 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 
   // XXX think of a better name
-  if (pathname === "/cordova/__cordova_program__.html") {
+  if (pathname === "/cordova/manifest.json") {
     var cordovaArch = "web.cordova";
     var program = WebApp.clientPrograms[cordovaArch];
-    if (! program.inlineManifest) {
-      program.inlineManifest =
-        generateBoilerplateInstance(cordovaArch, program.manifest, {
-          inline: true,
-          runtimeConfigDefaults: {
-            DDP_DEFAULT_CONNECTION_URL: __meteor_runtime_config__.ROOT_URL
-          }
-        }).toHTML().replace(/<html>|<\/html>/g, '');
-    }
     res.writeHead(200, {
-      'Content-type': 'text/html; charset=UTF-8',
+      'Content-type': 'application/json; charset=UTF-8',
       'Access-Control-Allow-Origin': '*'
     });
     // Only send the inlineManifest
-    res.write(WebApp.clientPrograms[cordovaArch].inlineManifest);
+    res.write(JSON.stringify(WebApp.clientPrograms[cordovaArch]));
     res.end();
     return;
   }

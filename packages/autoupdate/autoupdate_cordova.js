@@ -18,16 +18,34 @@ Autoupdate.newClientAvailable = function () {
 
 var onNewVersion = function (handle) {
   var ft = new FileTransfer();
-  var uri = encodeURI(Meteor.absoluteUrl() + 'cordova' +
-                      '/__cordova_program__.html');
+  var urlPrefix = Meteor.absoluteUrl() + 'cordova/';
+  var localPathPrefix = 'cdvfile://localhost/persistent/';
 
-  ft.download(uri, 'cdvfile://localhost/persistent/__cordova_program__.html',
-    function (entry) {
-      // XXX doesn't preserve session -- use reload package
-      location.reload();
-    }, function (error) {
-      console.log('fail source: ', error.source);
-      console.log('fail target: ', error.target);
+  HTTP.get(urlPrefix + 'manifest.json', function (err, res) {
+    if (err || ! res.data) return; // fail :(
+    var ft = new FileTransfer();
+    var downloads = 0;
+    _.each(res.data, function (item) {
+      if (! item.url) return;
+      var uri = encodeURI(urlPrefix + item.url);
+      downloads++;
+      ft.download(uri, localPathPrefix + item.url, function (entry) {
+        downloads--;
+
+        if (! downloads) {
+          // success! downloaded all sources
+          // save the manifest
+          uri = encodeURI(urlPrefix + 'manifest.json');
+          ft.download(uri, localPathPrefix + 'manifest.json', function () {
+            console.log('done');
+            Package.reload.Reload._reload();
+          });
+        }
+      }, function (error) {
+        console.log('fail source: ', error.source);
+        console.log('fail target: ', error.target);
+      });
+    });
   });
 };
 
