@@ -2272,6 +2272,10 @@ Most applications do not need to be aware of these Views, but they offer a
 way to understand and customize Meteor's rendering behavior for more
 advanced applications and packages.
 
+You can obtain a View object by calling [`UI.render`](#ui_render) on a
+template, or by accessing [`this.view`](#template_view) on a template
+instance.
+
 At the heart of a View is an [autorun](#deps_autorun) that calls the View's
 `renderFunction`, uses the result to create DOM nodes, and replaces the
 contents of the View with these new DOM nodes.  A View's content may consist
