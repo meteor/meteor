@@ -37,17 +37,27 @@
       f(array[i], i, array);
   };
 
-  var COUNTER = 0;
+
+  // To ensure that all our <script> tags are loaded in the correct order we add
+  // them to DOM one by one.
+  // The assumption here is that every element in the queue is a function that
+  // calls loadScript only once. Because loadScript makes sure to call
+  // launchNext after the async operation is done, it works as intended. We
+  // allow the last function to be something different (like trigger the
+  // document event).
+  var queue = [];
+  var launchNext = function () {
+    if (! queue.length)
+      return;
+    var fun = queue.shift();
+    fun();
+  };
+
   var loadScript = function (url) {
-    console.log('loadscript ' + url)
     var scriptTag = document.createElement('script');
     scriptTag.type = "text/javascript";
     scriptTag.src = url;
-    scriptTag.onload = function  () {
-      COUNTER--;
-      if (! COUNTER)
-        document.dispatchEvent(evt);
-    };
+    scriptTag.onload = launchNext;
 
     document.getElementsByTagName('head')[0].appendChild(scriptTag);
   };
@@ -62,17 +72,20 @@
 
   var loadAssetsFromManifest = function (manifest, urlPrefix) {
     each(manifest, function (item) {
-      if (item.type === 'js') {
-        COUNTER++;
-      }
+      var url = urlPrefix + (item.url ? item.url.substring(1) : '');
+      if (item.type === 'js')
+        queue.push(function () {
+          loadScript(url);
+        });
+      else if (item.type === 'css')
+        loadStyle(url);
     });
 
-    each(manifest, function (item) {
-      if (item.type === 'js')
-        loadScript(urlPrefix + item.url.substring(1));
-      else if (item.type === 'css')
-        loadStyle(urlPrefix + item.url.substring(1));
+    queue.push(function () {
+      document.dispatchEvent(evt);
     });
+
+    launchNext();
   };
 
   document.addEventListener("deviceready", function () {
