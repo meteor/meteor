@@ -50,7 +50,8 @@ Boilerplate.prototype._generateBoilerplateFromManifestAndSource =
       css: [],
       js: [],
       head: '',
-      body: ''
+      body: '',
+      meteorManifest: JSON.stringify(manifest)
     };
 
     // allow the caller to extend the default base data

@@ -41,7 +41,6 @@ var onNewVersion = function (handle) {
           // save the manifest
           uri = encodeURI(urlPrefix + '/manifest.json');
           ft.download(uri, localPathPrefix + '/manifest.json', function () {
-            console.log('done');
             Package.reload.Reload._reload();
           });
         }

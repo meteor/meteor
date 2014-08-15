@@ -39,6 +39,7 @@
 
   var COUNTER = 0;
   var loadScript = function (url) {
+    console.log('loadscript ' + url)
     var scriptTag = document.createElement('script');
     scriptTag.type = "text/javascript";
     scriptTag.src = url;
@@ -52,12 +53,26 @@
   };
 
   var loadStyle = function (url) {
-    var scriptTag = document.createElement('link');
-    scriptTag.rel = "stylesheet";
-    scriptTag.type = "text/css";
-    scriptTag.href = url;
-    scriptTag.type = "text/javascript";
-    document.getElementsByTagName('head')[0].appendChild(scriptTag);
+    var styleTag = document.createElement('link');
+    styleTag.rel = "stylesheet";
+    styleTag.type = "text/css";
+    styleTag.href = url;
+    document.getElementsByTagName('head')[0].appendChild(styleTag);
+  };
+
+  var loadAssetsFromManifest = function (manifest, urlPrefix) {
+    each(manifest, function (item) {
+      if (item.type === 'js') {
+        COUNTER++;
+      }
+    });
+
+    each(manifest, function (item) {
+      if (item.type === 'js')
+        loadScript(urlPrefix + item.url.substring(1));
+      else if (item.type === 'css')
+        loadStyle(urlPrefix + item.url.substring(1));
+    });
   };
 
   document.addEventListener("deviceready", function () {
@@ -66,26 +81,15 @@
       function (err, res) {
         if (! err) {
           var manifest = JSON.parse(res).manifest;
-
-          each(manifest, function (item) {
-            if (item.type==='js')
-              COUNTER++;
-          });
-
-          each(manifest, function (item) {
-            if (item.type === 'js')
-              loadScript(localPathPrefix + item.url);
-            else if (item.type === 'css')
-              loadStyle(localPathPrefix + item.url);
-          });
+          loadAssetsFromManifest(manifest, localPathPrefix + '/');
         } else {
           // We don't have any new versions, default to the bundled assets.
           console.log(err.message);
           console.log('Couldn\'t load from the manifest, falling back to the bundled assets.');
-        }
 
-        loadScript('document.dispatchEvent(evt);', true);
-        document.getElementsByTagName('body')[0].removeAttribute('style'); // XXX remove this?
+          loadAssetsFromManifest(__meteor_manifest__, '');
+        }
     });
   }, false);
 })();
+
