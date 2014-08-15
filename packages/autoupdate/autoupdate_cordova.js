@@ -1,6 +1,4 @@
-var autoupdateVersion = __meteor_runtime_config__.autoupdateVersion || "unknown";
-var autoupdateVersionRefreshable =
-  __meteor_runtime_config__.autoupdateVersionRefreshable || "unknown";
+var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
 ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
@@ -9,11 +7,9 @@ Autoupdate = {};
 
 Autoupdate.newClientAvailable = function () {
   return !! ClientVersions.findOne({
-               refreshable: false,
-               version: {$ne: autoupdateVersion} }) ||
-         !! ClientVersions.findOne({
-               refreshable: true,
-               version: {$ne: autoupdateVersionRefreshable} });
+    _id: 'version-cordova',
+    version: {$ne: autoupdateVersionCordova}
+  });
 };
 
 var onNewVersion = function (handle) {
@@ -81,22 +77,19 @@ Autoupdate._retrySubscription = function () {
     },
     onReady: function () {
       if (Package.reload) {
-        var handle = ClientVersions.find().observeChanges({
-          changed: function (id, fields) {
-            var self = this;
-            var isRefreshable = id === 'version-refreshable';
-
-            if (isRefreshable &&
-                fields.version !== autoupdateVersionRefreshable) {
-              autoupdateVersionRefreshable = fields.version;
-              onNewVersion();
-            }
-            else if (! isRefreshable &&
-                     fields.version !== autoupdateVersion && handle) {
-              autoupdateVersion = fields.version;
-              onNewVersion();
-            }
+        var checkNewVersionDocument = function (id, fields) {
+          var self = this;
+          if (fields.version !== autoupdateVersionCordova && handle) {
+            handle.stop();
+            Package.reload.Reload._reload();
           }
+        };
+
+        var handle = ClientVersions.find({
+          _id: 'version-cordova'
+        }).observeChanges({
+          added: checkNewVersionDocument,
+          changed: checkNewVersionDocument
         });
       }
     }
