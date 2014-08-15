@@ -310,10 +310,9 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
     if (newSettings && newSettings[name]) {
       if (! _.isObject(newSettings[name]))
         throw new Error('Meteor.settings.cordova.' + name + ' is expected to be an object');
-      // XXX throw an error if value is not a string
       _.each(newSettings[name], function (value, variable) {
         additionalArgs.push('--variable');
-        additionalArgs.push(variable + '=' + value);
+        additionalArgs.push(variable + '=' + JSON.stringify(value));
       });
     }
     process.stdout.write('Installing ' + pluginInstallCommand + '\n');
