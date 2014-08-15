@@ -457,8 +457,10 @@ var execCordovaOnPlatform = function (localPath, platformName) {
   };
 
   var iosMapper = function (line) {
-    // remove the prefix
-    line = line.replace(/^\S+\s\S+\s\S+\s/, '');
+    if (line.match(/^[0-9]+-[0-9]+-[0-9].*/)) {
+      // if the line starts with the date, we remove the prefix
+      line = line.replace(/^\S+\s\S+\s\S+\s/, '');
+    }
     return Log.format(Log.objFromText(line, { program: 'ios' }), {
       metaColor: 'cyan',
       color: true
