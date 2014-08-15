@@ -2263,6 +2263,152 @@ is used.
 For example, if there is a template named "foo", `{{dstache}}> UI.dynamic
 template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
 
+{{> api_box ui_view}}
+
+Behind every template or part of a template &mdash; a template tag, say, like `{{dstache}}foo}}` or `{{dstache}}#if}}` &mdash; is
+a View object, which is a reactively updating region of DOM.
+
+Most applications do not need to be aware of these Views, but they offer a
+way to understand and customize Meteor's rendering behavior for more
+advanced applications and packages.
+
+At the heart of a View is an [autorun](#deps_autorun) that calls the View's
+`renderFunction`, uses the result to create DOM nodes, and replaces the
+contents of the View with these new DOM nodes.  A View's content may consist
+of any number of consecutive DOM nodes (though if it is zero, a placeholder
+node such as a comment or an empty text node is automatically supplied).  Any
+reactive dependency established by `renderFunction` causes a full recalculation
+of the View's contents when the dependency is invalidated.  Templates, however,
+are compiled in such a way that they do not have top-level dependencies and so
+will only ever render once, while their parts may re-render many times.
+
+When a `UI.View` is constructed by calling the constructor, no hooks
+are fired and no rendering is performed.  In particular, the View is
+not yet considered to be "created."  Only when the View is actually
+used, by a call to `UI.render` or `UI.toHTML` or by inclusion in
+another View, is it "created," right before it is rendered for the
+first time.  When a View is created, its `.parentView` is set if
+appropriate, and then the `onViewCreated` hook is fired.  The term
+"unrendered View" means a newly constructed View that has not been
+"created" or rendered.
+
+When a View is first rendered into DOM nodes, it is not yet
+"attached," and the DOM nodes are held in a temporary array until a
+parent element is specified.  Once a parent element is provided for
+the View and the View's DOM node are inserted as children of this
+element (for example, by a call to `UI.insert`), the View is
+considered "attached," and any reactive updates to the View will write
+through to the DOM.  Once a View is attached, its DOM nodes may also
+be accessed and modified directly via the DOM API.
+
+The "current View" is kept in [`UI.currentView`](#ui_currentview) and
+is set during View rendering, callbacks, autoruns, and template event
+handlers.  It affects calls such as [`UI.data()`](#ui_data).
+
+The following properties and methods are available on UI.View:
+
+<dl class="objdesc">
+{{#dtdd name="name" type="String" id="view_name"}}
+  The name of this type of View.  View names may be used to identify
+particular kinds of Views in code, but more often they simply aid in
+debugging and comprehensibility of the View tree.  Views generated
+by Meteor have names like "Template.foo" and "if".
+{{/dtdd}}
+
+{{#dtdd name="parentView" type="View or null" id="view_parentview"}}
+  The enclosing View that caused this View to be rendered, if any.
+{{/dtdd}}
+
+{{#dtdd name="isCreated" type="Boolean" id="view_iscreated"}}
+  True if this View has been called on to be rendered by `UI.render`
+  or `UI.toHTML` or another View.  Once it becomes true, never
+  becomes false again.  A "created" View's `.parentView` has been
+  set to its final value.  `isCreated` is set to true before
+  `onViewCreated` hooks are called.
+{{/dtdd}}
+
+{{#dtdd name="isRendered" type="Boolean" id="view_isrendered"}}
+  True if this View has been rendered to DOM by `UI.render` or
+  by the rendering of an enclosing View.  Conversion to HTML by
+  `UI.toHTML` doesn't count.  A rendered View is not necessarily
+  attached.  Once true, never becomes false.
+{{/dtdd}}
+
+{{#dtdd name="isAttached" type="Boolean" id="view_isattached"}}
+  True if this View has been rendered to DOM and attached under
+  some parent element, such as by `UI.insert`.  An "attached" View's
+  DOM can be inspected via [`view.firstNode()`](#view_firstnode) and
+  [`view.lastNode()`](#view_lastnode).  Once true, never becomes false.
+{{/dtdd}}
+
+{{#dtdd name="isDestroyed" type="Boolean" id="view_isdestroyed"}}
+  True if this View has been destroyed, such as by `UI.destroy()` or
+  by a reactive update that removes it.  A destroyed View's autoruns
+  have been stopped, and its DOM nodes have generally been cleaned
+  of all Meteor reactivity and dismantled.
+{{/dtdd}}
+
+{{#dtdd name="renderCount" type="Integer" id="view_rendercount"}}
+  The number of times the View has been rendered, including the
+  current time is the View is in the process of being rendered
+  or re-rendered.
+{{/dtdd}}
+
+{{#dtdd name="autorun(runFunc)" id="view_autorun"}}
+  Like [`Deps.autorun`](#deps_autorun), except that the autorun is
+  automatically stopped when the View is destroyed, and the
+  [current View](#ui_currentview) is always set when running `runFunc`.
+  There is no relationship to the View's internal autorun or render
+  cycle.  In `runFunc`, the View is bound to `this`.
+{{/dtdd}}
+
+{{#dtdd name="onViewCreated(func)" id="view_onviewcreated"}}
+  If the View hasn't been created yet, calls `func` when the View
+  is created.  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`created`](#template_created)
+  template callback.
+{{/dtdd}}
+
+{{#dtdd name="onViewReady(func)" id="view_onviewready"}}
+  Calls `func` when the View is rendered, after waiting for the
+  View to be attached, and then until the end of
+  [flush time](#deps_afterflush).  Does not fire if the View
+  is destroyed at any point before it would fire.
+  May fire multiple times (if the View re-renders).
+  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`rendered`](#template_rendered)
+  template callback.  
+{{/dtdd}}
+
+{{#dtdd name="onViewDestroyed(func)" id="view_onviewdestroyed"}}
+  If the View hasn't been destroyed yet, calls `func` when the
+  View is destroyed.  A View may be destroyed without ever becoming
+  "ready."  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`destroyed`](#template_destroyed)
+  template callback.
+{{/dtdd}}
+
+{{#dtdd name="firstNode()" type="DOM node" id="view_firstnode"}}
+The first node of the View's rendered content.  Note that this may
+be a text node.  Requires that the View be rendered and attached.
+If the View rendered to zero DOM nodes, it may be a placeholder
+node (comment or text node).  The DOM extent of a View consists
+of the nodes between `view.firstNode()` and `view.lastNode()`,
+inclusive.
+{{/dtdd}}
+
+{{#dtdd name="lastNode()" type="DOM node" id="view_lastnode"}}
+The last node of the View's rendered content.
+
+See [`firstNode()`](#view_firstnode).
+{{/dtdd}}
+
+</dl>
+
+
 {{#api_box eventmaps}}
 
 Several functions take event maps. An event map is an object where

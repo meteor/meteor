@@ -266,6 +266,7 @@ var toc = [
         "UI.getElementData",
         {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
       ],
+      "UI.View",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
      ],
