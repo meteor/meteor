@@ -33,6 +33,7 @@ AttributeHandler = function (name, value) {
   this.name = name;
   this.value = value;
 };
+Blaze._AttributeHandler = AttributeHandler;
 
 AttributeHandler.prototype.update = function (element, oldValue, value) {
   if (value === null) {
