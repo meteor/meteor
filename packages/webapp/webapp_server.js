@@ -189,7 +189,8 @@ var calculateClientHash = function (manifest, includeFilter, skipRuntimeCfg) {
     // Omit the old hashed client values in the new hash. These may be
     // modified in the new boilerplate.
     var runtimeCfgString = _.omit(__meteor_runtime_config__,
-      ['autoupdateVersion', 'autoupdateVersionRefreshable']);
+      ['autoupdateVersion', 'autoupdateVersionRefreshable',
+       'autoupdateVersionCordova']);
     hash.update(JSON.stringify(runtimeCfgString, 'utf8'));
   }
   _.each(manifest, function (resource) {
