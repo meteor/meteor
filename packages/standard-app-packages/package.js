@@ -54,4 +54,6 @@ Package.on_use(function(api) {
     // And update automatically when new client code is available!
     'autoupdate'
   ], ['client', 'server']);
+
+  api.use('fastclick', 'client.cordova');
 });
