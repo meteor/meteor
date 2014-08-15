@@ -547,9 +547,31 @@ Blaze._toText = function (htmljs, parentView, textMode) {
   return HTML.toText(Blaze._expand(htmljs, parentView), textMode);
 };
 
-Blaze.getCurrentData = function () {
-  var theWith = Blaze.getCurrentView('with');
+Blaze.data = function (elementOrView) {
+  var theWith;
+  if (! elementOrView) {
+    theWith = Blaze.getCurrentView('with');
+  } else if (elementOrView instanceof Blaze.View) {
+    var view = elementOrView;
+    theWith = (view.name === 'with' ? view :
+               Blaze.getParentView(view, 'with'));
+  } else if (typeof elementOrView.nodeType === 'number') {
+    if (elementOrView.nodeType !== 1)
+      throw new Error("Expected DOM element");
+    theWith = Blaze.getElementView(elementOrView, 'with');
+  } else {
+    throw new Error("Expected DOM element or View");
+  }
+
   return theWith ? theWith.dataVar.get() : null;
+};
+
+// For back-compat
+Blaze.getElementData = function (element) {
+  if (element.nodeType !== 1)
+    throw new Error("Expected DOM element");
+
+  return Blaze.data(element);
 };
 
 // Gets the current view or its nearest ancestor of name
@@ -605,16 +627,6 @@ Blaze.getElementView = function (elem, name) {
   } else {
     return view;
   }
-};
-
-Blaze.getElementData = function (elem) {
-  var theWith = Blaze.getElementView(elem, 'with');
-  return theWith ? theWith.dataVar.get() : null;
-};
-
-Blaze.getViewData = function (view) {
-  var theWith = Blaze.getParentView(view, 'with');
-  return theWith ? theWith.dataVar.get() : null;
 };
 
 Blaze._addEventMap = function (view, eventMap, thisInHandler) {

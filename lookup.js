@@ -18,7 +18,7 @@ var bindIfIsFunction = function (x, target) {
 var bindDataContext = function (x) {
   if (typeof x === 'function') {
     return function () {
-      var data = Blaze.getCurrentData();
+      var data = Blaze.data();
       if (data == null)
         data = {};
       return x.apply(data, arguments);
@@ -67,7 +67,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
   } else {
     return function () {
       var isCalledAsFunction = (arguments.length > 0);
-      var data = Blaze.getCurrentData();
+      var data = Blaze.data();
       if (lookupTemplate && ! (data && data[name])) {
         throw new Error("No such template: " + name);
       }
