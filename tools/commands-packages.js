@@ -1139,6 +1139,8 @@ main.registerCommand({
     _.each(packages, function (version, name) {
       if (!version) {
         version = versions[name];
+      } else if (version[0] === "=") {
+        version = version.slice(1);
       }
       // Use complete catalog to get the local versions of local packages.
       var versionInfo = catalog.complete.getVersion(name, version);
