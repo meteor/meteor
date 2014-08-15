@@ -19,7 +19,13 @@ Autoupdate.newClientAvailable = function () {
 var onNewVersion = function (handle) {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + 'cordova';
-  var localPathPrefix = 'cdvfile://localhost/persistent';
+  var localPathPrefix = cordova.file.applicationStorageDirectory;
+  var iOS = /(iPad|iPhone|iPod)/g.test(navigator.userAgent);
+
+  // on iOS 'Documents' is read-write, unlinke the storage dir
+  if (iOS)
+    localPathPrefix += 'Documents/';
+
 
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
@@ -32,7 +38,6 @@ var onNewVersion = function (handle) {
       if (! item.url) return;
       var uri = encodeURI(urlPrefix + item.url);
       downloads++;
-      console.log('downloading ' + urlPrefix + item.url);
       ft.download(uri, localPathPrefix + item.url, function (entry) {
         downloads--;
 
@@ -99,3 +104,4 @@ Autoupdate._retrySubscription = function () {
 };
 
 Meteor.startup(Autoupdate._retrySubscription);
+

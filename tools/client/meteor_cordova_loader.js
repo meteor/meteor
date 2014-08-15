@@ -89,12 +89,18 @@
   };
 
   document.addEventListener("deviceready", function () {
-    var localPathPrefix = 'cdvfile://localhost/persistent';
-    ajax(localPathPrefix + '/manifest.json',
+    var localPathPrefix = cordova.file.applicationStorageDirectory;
+    var iOS = /(iPad|iPhone|iPod)/g.test(navigator.userAgent);
+
+    // on iOS 'Documents' is read-write, unlinke the storage dir
+    if (iOS)
+      localPathPrefix += 'Documents/';
+
+    ajax(localPathPrefix + 'manifest.json',
       function (err, res) {
         if (! err) {
           var manifest = JSON.parse(res).manifest;
-          loadAssetsFromManifest(manifest, localPathPrefix + '/');
+          loadAssetsFromManifest(manifest, localPathPrefix);
         } else {
           // We don't have any new versions, default to the bundled assets.
           console.log(err.message);
