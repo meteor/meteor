@@ -32,18 +32,60 @@
     );
   };
 
+  var each = function (array, f) {
+    for (var i = 0; i < array.length; i++)
+      f(array[i], i, array);
+  };
+
+  var COUNTER = 0;
+  var loadScript = function (url) {
+    var scriptTag = document.createElement('script');
+    scriptTag.type = "text/javascript";
+    scriptTag.src = url;
+    scriptTag.onload = function  () {
+      COUNTER--;
+      if (! COUNTER)
+        document.dispatchEvent(evt);
+    };
+
+    document.getElementsByTagName('head')[0].appendChild(scriptTag);
+  };
+
+  var loadStyle = function (url) {
+    var scriptTag = document.createElement('link');
+    scriptTag.rel = "stylesheet";
+    scriptTag.type = "text/css";
+    scriptTag.href = url;
+    scriptTag.type = "text/javascript";
+    document.getElementsByTagName('head')[0].appendChild(scriptTag);
+  };
+
   document.addEventListener("deviceready", function () {
-    ajax('cdvfile://localhost/persistent/__cordova_program__.html',
+    var localPathPrefix = 'cdvfile://localhost/persistent';
+    ajax(localPathPrefix + '/manifest.json',
       function (err, res) {
         if (! err) {
-          // document.open('text/html', 'replace');
-          // document.write(res);
-          // document.close();
+          var manifest = JSON.parse(res).manifest;
+
+          each(manifest, function (item) {
+            if (item.type==='js')
+              COUNTER++;
+          });
+
+          each(manifest, function (item) {
+            if (item.type === 'js')
+              loadScript(localPathPrefix + item.url);
+            else if (item.type === 'css')
+              loadStyle(localPathPrefix + item.url);
+          });
         } else {
           // We don't have any new versions, default to the bundled assets.
+          console.log(err.message);
+          console.log('Couldn\'t load from the manifest, falling back to the bundled assets.');
         }
-        document.dispatchEvent(evt);
-        document.getElementsByTagName('body')[0].removeAttribute('style');
+
+        loadScript('document.dispatchEvent(evt);', true);
+        document.getElementsByTagName('body')[0].removeAttribute('style'); // XXX remove this?
     });
   }, false);
 })();

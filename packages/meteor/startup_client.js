@@ -1,23 +1,16 @@
 var queue = [];
-var loaded = document.readyState === "loaded" ||
-  document.readyState == "complete";
+var loaded = !Meteor.isCordova &&
+  (document.readyState === "loaded" || document.readyState == "complete");
 
-var allReady = function () {
+var ready = function() {
   loaded = true;
   while (queue.length)
     (queue.shift())();
 };
 
-var ready = function() {
-  if (Meteor.isCordova) {
-    document.addEventListener('meteor-cordova-loaded', allReady, false);
-  } else {
-    allReady();
-  }
-};
-
 if (document.addEventListener) {
-  document.addEventListener('DOMContentLoaded', ready, false);
+  var event = Meteor.isCordova ? 'meteor-cordova-loaded' : 'DOMContentLoaded';
+  document.addEventListener(event, ready, false);
   window.addEventListener('load', ready, false);
 } else {
   document.attachEvent('onreadystatechange', function () {

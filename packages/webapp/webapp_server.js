@@ -448,7 +448,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
 var getUrlPrefixForArch = function (arch) {
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
-  return arch === WebApp.defaultArch ? '' : '/' + arch.replace(/^client\./, '');
+  return arch === WebApp.defaultArch ? '' : '/' + arch.replace(/^web\./, '');
 };
 
 var runWebAppServer = function () {
@@ -630,7 +630,7 @@ var runWebAppServer = function () {
 
     // /packages/asdfsad ... /cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
-    var archKey = 'client.' + pathname.split('/')[1];
+    var archKey = 'web.' + pathname.split('/')[1];
     if (!_.has(archPath, archKey)) {
       archKey = WebApp.defaultArch;
     }
