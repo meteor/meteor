@@ -2419,6 +2419,7 @@ Tinytest.add(
     var span = div.querySelector('SPAN');
     test.isTrue(span);
     test.equal(UI.getElementData(span), {foo: "bar"});
+    test.equal(UI.data(span), {foo: "bar"});
   });
 
 Tinytest.add(
@@ -2616,7 +2617,7 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
   tmpl.events({
     'click span': function () {
       currentView = Blaze.getCurrentView();
-      currentData = Blaze.getCurrentData();
+      currentData = Blaze.data();
     }
   });
 
