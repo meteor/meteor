@@ -127,12 +127,15 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   // We need to be aware of the earliestCompatibleVersion values for any
   // packages that are overridden by local packages, in order to evaluate
   // 'compatible-with' constraints that name that version.
-  _.each(self.catalog.getForgottenECVs(packageName), function (ecv, version) {
-    _.each(allArchs, function (arch) {
-      var unitName = packageName + '#' + arch;
-      self.resolver.addExtraECV(unitName, version, ecv);
+  // (Some of the test fixtures don't bother to implement this method.)
+  if (self.catalog.getForgottenECVs) {
+    _.each(self.catalog.getForgottenECVs(packageName), function (ecv, version) {
+      _.each(allArchs, function (arch) {
+        var unitName = packageName + '#' + arch;
+        self.resolver.addExtraECV(unitName, version, ecv);
+      });
     });
-  });
+  }
 };
 
 // dependencies - an array of string names of packages (not slices)
