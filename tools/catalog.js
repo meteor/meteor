@@ -503,6 +503,7 @@ _.extend(CompleteCatalog.prototype, {
         throw e;
       }
       catalog.official.refresh();
+      self.resolver || self._initializeResolver();
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
   },
