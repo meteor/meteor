@@ -543,13 +543,15 @@ ConstraintSolver.Constraint = function (name, versionString) {
   var self = this;
 
   if (versionString) {
-    _.extend(self, PackageVersion.parseVersionConstraint(versionString));
+    _.extend(self,
+             PackageVersion.parseVersionConstraint(
+               versionString, {allowAtLeast: true}));
     self.name = name;
   } else {
     // borrows the structure from the parseVersionConstraint format:
     // - type - String [compatibl-with|exactly|at-least]
     // - version - String - semver string
-    _.extend(self, PackageVersion.parseConstraint(name));
+    _.extend(self, PackageVersion.parseConstraint(name, {allowAtLeast: true}));
   }
   // See comment in UnitVersion constructor.
   self.version = self.version.replace(/\+.*$/, '');

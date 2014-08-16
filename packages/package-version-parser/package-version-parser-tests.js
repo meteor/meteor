@@ -57,7 +57,26 @@ Tinytest.add("Smart Package version string parsing - compatible version, exactly
 });
 
 Tinytest.add("Smart Package version string parsing - compatible version, at-least", function (test) {
-  currentTest = test;
+  var t = function (versionString, expected, descr) {
+    test.equal(
+      _.omit(PackageVersion.parseConstraint(versionString,
+                                            {allowAtLeast: true}),
+             'constraintString'),
+      expected,
+      descr);
+    test.throws(function () {
+      PackageVersion.parseConstraint(versionString);
+    });
+  };
+
+  var FAIL = function (versionString) {
+    test.throws(function () {
+      PackageVersion.parseConstraint(versionString, {allowAtLeast: true});
+    });
+    test.throws(function () {
+      PackageVersion.parseConstraint(versionString);
+    });
+  };
 
   t("foo@>=1.2.3", { name: "foo", version: "1.2.3", type: "at-least" });
   t("foo-bar@>=3.2.1", { name: "foo-bar", version: "3.2.1", type: "at-least" });

@@ -288,6 +288,8 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   });
 
   _.each(inputConstraints, function (constraint) {
+    if (!semver.valid(constraint.version))
+      throw Error("Bad semver: " + constraint.version);
     var operator = "";
     if (constraint.type === "exactly")
       operator = "=";
