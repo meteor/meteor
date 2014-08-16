@@ -126,6 +126,8 @@ var recordPackages = function () {
       // Do nothing. A failure to record package stats shouldn't be
       // visible to the end user and shouldn't affect whatever command
       // they are running.
+    } finally {
+      conn && conn.close();
     }
   }).run();
 };
@@ -141,9 +143,14 @@ var logErrorIfInCheckout = function (err) {
 // Used in a test (and can only be used against the testing packages
 // server) to fetch one package stats entry for a given application.
 var getPackagesForAppIdInTest = function (currentProject) {
-  return connectToPackagesStatsServer().call(
-    "getPackagesForAppId",
-    currentProject.getAppIdentifier());
+  var conn = connectToPackagesStatsServer();
+  try {
+    return conn.call(
+      "getPackagesForAppId",
+      currentProject.getAppIdentifier());
+  } finally {
+    conn.close();
+  }
 };
 
 var connectToPackagesStatsServer = function () {
