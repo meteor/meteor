@@ -99,8 +99,10 @@
     ajax(localPathPrefix + 'manifest.json',
       function (err, res) {
         if (! err) {
-          var manifest = JSON.parse(res).manifest;
-          loadAssetsFromManifest(manifest, localPathPrefix);
+          var program = JSON.parse(res);
+          // update the version we are loading
+          __meteor_runtime_config__.autoupdateVersionCordova = program.version;
+          loadAssetsFromManifest(program.manifest, localPathPrefix);
         } else {
           // We don't have any new versions, default to the bundled assets.
           console.log(err.message);
