@@ -28,18 +28,24 @@ var onNewVersion = function (handle) {
       console.log('failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
     }
+
     var ft = new FileTransfer();
     var downloads = 0;
     _.each(res.data.manifest, function (item) {
+      if (item.url) downloads++;
+    });
+
+    _.each(res.data.manifest, function (item) {
       if (! item.url) return;
       var uri = encodeURI(urlPrefix + item.url);
-      downloads++;
       ft.download(uri, localPathPrefix + item.url, function (entry) {
         downloads--;
 
         if (! downloads) {
           // success! downloaded all sources
-          // save the manifest
+          // save the manifest again for atomicity
+          // (if we have manifest on disk, it means all other files were
+          // saved as well)
           uri = encodeURI(urlPrefix + '/manifest.json');
           ft.download(uri, localPathPrefix + '/manifest.json', function () {
             handle.stop();
@@ -75,25 +81,23 @@ Autoupdate._retrySubscription = function () {
         // updating the server.
         Autoupdate._retrySubscription();
       });
-    },
-    onReady: function () {
-      if (Package.reload) {
-        var checkNewVersionDocument = function (id, fields) {
-          var self = this;
-          if (fields.version !== autoupdateVersionCordova && handle) {
-            onNewVersion(handle);
-          }
-        };
-
-        var handle = ClientVersions.find({
-          _id: 'version-cordova'
-        }).observeChanges({
-          added: checkNewVersionDocument,
-          changed: checkNewVersionDocument
-        });
-      }
     }
   });
+  if (Package.reload) {
+    var checkNewVersionDocument = function (id, fields) {
+      var self = this;
+      if (fields.version !== autoupdateVersionCordova && handle) {
+        onNewVersion(handle);
+      }
+    };
+
+    var handle = ClientVersions.find({
+      _id: 'version-cordova'
+    }).observeChanges({
+      added: checkNewVersionDocument,
+      changed: checkNewVersionDocument
+    });
+  }
 };
 
 Meteor.startup(Autoupdate._retrySubscription);
