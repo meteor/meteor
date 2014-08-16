@@ -4,9 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.addFiles('init-fastclick.js', 'client');
-});
+  api.export('FastClick');
 
-Npm.depends({
-  'fastclick': '1.0.3'
+  api.addFiles(['fastclick.js', 'post.js'], 'client');
 });
