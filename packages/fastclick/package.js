@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export('FastClick');
+  api.export('FastClick', 'client');
 
   api.addFiles(['fastclick.js', 'post.js'], 'client');
 });
