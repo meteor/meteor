@@ -2788,7 +2788,17 @@ Tinytest.add(
         input.selectionEnd = startEnd[1];
       } else {
         // IE 8
-
+        input.focus();
+        var r = input.createTextRange();
+        // move the start and end of the range to the beginning
+        // of the input field
+        r.moveStart('textedit', -1);
+        r.moveEnd('textedit', -1);
+        // move the start and end a certain number of characters
+        // (relative to their current position)
+        r.moveEnd('character', startEnd[1]);
+        r.moveStart('character', startEnd[0]);
+        r.select();
       }
     };
     var getSelection = function () {
@@ -2797,14 +2807,36 @@ Tinytest.add(
         return input.selectionStart + " " + input.selectionEnd;
       } else {
         // IE 8
-
+        input.focus();
+        var r = document.selection.createRange();
+        var fullText = input.value;
+        var start, end;
+        if (r.text) {
+          // one or more characters are selected.
+          // this is kind of hacky!  Relies on fullText
+          // not having duplicate letters, for example.
+          start = fullText.indexOf(r.text);
+          end = start + r.text.length;
+        } else {
+          r.moveStart('textedit', -1);
+          start = end = r.text.length;
+        }
+        return start + " " + end;
       }
     };
 
-    setSelection("2 2");
-    input.value = "BLAH"; // same as before
+    setSelection("2 3");
+    test.equal(getSelection(), "2 3");
+    // At this point, we COULD confirm that setting input.value to
+    // the same thing as before ("BLAH") loses the insertion
+    // point (per browser behavior).  However, it doesn't on Firefox.
+    // So we set it to something different, which verifies that our
+    // test machinery is correct.
+    input.value = "BLAN";
     // test that insertion point is lost
-    test.equal(getSelection(), "4 4");
+    var selectionAfterSet = getSelection();
+    if (selectionAfterSet !== "0 0") // IE 8
+      test.equal(getSelection(), "4 4");
 
     // now make the input say "BLAH" but the AttributeHandler
     // says "OTHER" (so we can make it do the no-op update)
