@@ -66,17 +66,27 @@ var ensureAndroidBundle = function () {
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'boilerplate-generator', 'logging' ]
+    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing' ]
   });
 });
 
 var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
+  var manifest = clientJson.manifest;
 
   var meteorRelease = project.getMeteorReleaseVersion();
   var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
-  var boilerplate = new Boilerplate('web.cordova', clientJson.manifest, {
+  var WebAppHashing = getLoadedPackages()['webapp-hashing'].WebAppHashing;
+
+  var calculatedHash = WebAppHashing.calculateClientHash(manifest, null, true);
+
+  // XXX partially copied from autoupdate package
+  var version = process.env.AUTOUPDATE_VERSION ||
+        process.env.SERVER_ID || // XXX COMPAT 0.6.6
+        calculatedHash;
+
+  var boilerplate = new Boilerplate('web.cordova', manifest, {
     urlMapper: function (url) { return url ? url.substr(1) : ''; },
     pathMapper: function (p) { return path.join(clientDir, p); },
     baseDataExtension: {
@@ -86,7 +96,8 @@ var generateCordovaBoilerplate = function (clientDir, options) {
         ROOT_URL: 'http://' + options.host + ':' + options.port + '/',
         // XXX propagate it from options?
         ROOT_URL_PATH_PREFIX: '',
-        DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port
+        DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port,
+        autoupdateVersionCordova: version
       })
     }
   });

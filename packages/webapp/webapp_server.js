@@ -173,37 +173,6 @@ var appUrl = function (url) {
 };
 
 
-// Calculate a hash of all the client resources downloaded by the
-// browser, including the application HTML, runtime config, code, and
-// static files.
-//
-// This hash *must* change if any resources seen by the browser
-// change, and ideally *doesn't* change for any server-only changes
-// (but the second is a performance enhancement, not a hard
-// requirement).
-
-var calculateClientHash = function (manifest, includeFilter, skipRuntimeCfg) {
-  var hash = crypto.createHash('sha1');
-
-  if (! skipRuntimeCfg) {
-    // Omit the old hashed client values in the new hash. These may be
-    // modified in the new boilerplate.
-    var runtimeCfgString = _.omit(__meteor_runtime_config__,
-      ['autoupdateVersion', 'autoupdateVersionRefreshable',
-       'autoupdateVersionCordova']);
-    hash.update(JSON.stringify(runtimeCfgString, 'utf8'));
-  }
-  _.each(manifest, function (resource) {
-      if ((! includeFilter || includeFilter(resource.type)) &&
-          (resource.where === 'client' || resource.where === 'internal')) {
-      hash.update(resource.path);
-      hash.update(resource.hash);
-    }
-  });
-  return hash.digest('hex');
-};
-
-
 // We need to calculate the client hash after all packages have loaded
 // to give them a chance to populate __meteor_runtime_config__.
 //
@@ -222,6 +191,7 @@ var calculateClientHash = function (manifest, includeFilter, skipRuntimeCfg) {
 // the right moment.
 
 Meteor.startup(function () {
+  var calculateClientHash = WebAppHashing.calculateClientHash;
   WebApp.clientHash = function (archName) {
     archName = archName || WebApp.defaultArch;
     return calculateClientHash(WebApp.clientPrograms[archName].manifest);
@@ -247,9 +217,7 @@ Meteor.startup(function () {
       return 'none';
 
     return calculateClientHash(
-      WebApp.clientPrograms[archName].manifest,
-      function () { return true; },
-      true);
+      WebApp.clientPrograms[archName].manifest, null, true);
   };
 });
 
@@ -526,7 +494,7 @@ var runWebAppServer = function () {
           var manifest = getClientManifest(clientPath, arch);
           WebApp.clientPrograms[arch] = {
             manifest: manifest,
-            version: calculateClientHash(manifest)
+            version: WebAppHashing.calculateClientHash(manifest, null, true)
           };
         });
 

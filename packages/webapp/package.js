@@ -8,8 +8,8 @@ Npm.depends({connect: "2.9.0",
              useragent: "2.0.7"});
 
 Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator' ],
-          'server');
+  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
+           'webapp-hashing' ], 'server');
   api.use(['underscore'], 'client');
   api.use(['application-configuration', 'follower-livedata'], {
     unordered: true
