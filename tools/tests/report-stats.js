@@ -104,7 +104,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       var sessionId;
 
       // verify that identifier file exists for new apps
-      var identifier = s.read(".meteor/identifier");
+      var identifier = s.read(".meteor/identifier").replace(/\n$/, '');
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
