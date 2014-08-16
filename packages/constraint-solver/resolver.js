@@ -211,8 +211,11 @@ ConstraintSolver.Resolver.prototype.resolve =
     return solution;
 
   // XXX should be much much better
-  if (someError)
-    throw new Error(someError);
+  if (someError) {
+    var e = new Error(someError);
+    e.constraintSolverError = true;
+    throw e;
+  }
 
   throw new Error("Couldn't resolve, I am sorry");
 };

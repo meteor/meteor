@@ -204,28 +204,53 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
-  // Never allow to downgrade a version of a direct dependency in regards to the
-  // previous solution.
-  // Depending on whether the option `breaking` is set or not, allow only
-  // compatible upgrades or any upgrades.
-  _.each(options.previousSolution, function (uv) {
-    // if not a root dependency, there is no 'no-upgrade' constraint
-    if (! _.contains(dependencies, uv.name))
-      return;
-
-    var constrType = options.breaking ? ">=" : "";
-    dc.constraints.push(
-      self.resolver.getConstraint(uv.name, constrType + uv.version));
-  });
-
   options.rootDependencies = dc.dependencies;
+  var resolverOptions = self._getResolverOptions(options);
 
+  var res = null;
+  // If a previous solution existed, try resolving with additional (weak)
+  // equality constraints on all the versions from the previous solution. If
+  // it's possible to solve the constraints without changing any of the previous
+  // versions (though we may add more choices in addition, or remove some
+  // now-unnecessary choices) then that's our first try.
+  if (!_.isEmpty(options.previousSolution)) {
+    var constraintsWithPreviousSolutionLock = _.clone(dc.constraints);
+    _.each(options.previousSolution, function (uv) {
+      constraintsWithPreviousSolutionLock.push(
+        self.resolver.getConstraint(uv.name, '=' + uv.version));
+    });
+    try {
+      // Try running the resolver. If it fails to resolve, that's OK, we'll keep
+      // working.
+      res = self.resolver.resolve(
+        dc.dependencies, constraintsWithPreviousSolutionLock, resolverOptions);
+    } catch (e) {
+      if (!(e.constraintSolverError))
+        throw e;
+    }
+  }
 
-  var resolverOptions = self._getResolverOptions(options, dc);
+  if (!res) {
+    // Either we didn't have a previous solution, or it doesn't work. Try again
+    // without locking in the previous solution as strict equality.
+    //
+    // However, we still don't want you to downgrade a version of a direct
+    // dependency in regards to the previous solution.
+    // Depending on whether the option `breaking` is set or not, allow only
+    // compatible upgrades or any upgrades.
+    _.each(options.previousSolution, function (uv) {
+      // if not a root dependency, there is no 'no-upgrade' constraint
+      if (! _.contains(dependencies, uv.name))
+        return;
 
-  // XXX resolver.resolve can throw an error, should have error handling with
-  // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints, resolverOptions);
+      var constrType = options.breaking ? ">=" : "";
+      dc.constraints.push(
+        self.resolver.getConstraint(uv.name, constrType + uv.version));
+    });
+
+    res = self.resolver.resolve(
+      dc.dependencies, dc.constraints, resolverOptions);
+  }
 
   var resultChoices = {};
   _.each(res, function (uv) {
@@ -324,7 +349,7 @@ ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
 };
 
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
-  function (options, dc) {
+  function (options) {
   var self = this;
 
   var semverToNum = function (version) {
