@@ -18,7 +18,7 @@
  * @param {Element} layer The layer to listen on
  * @param {Object} options The options to override the defaults
  */
-FastClick = function (layer, options) {
+function FastClick(layer, options) {
 	'use strict';
 	var oldOnClick;
 
