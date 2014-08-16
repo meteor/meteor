@@ -110,7 +110,10 @@ _.extend(PackageCache.prototype, {
           packageSource.initFromPackageDir(name, loadPath);
           unip = new unipackage.Unipackage;
           unip.initFromPath(name, entry.buildDir);
-          isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
+          isUpToDate = compiler.checkUpToDate(
+            packageSource, entry.pkg, {
+              ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
+            });
         });
       }
       if (isUpToDate) {
@@ -156,7 +159,10 @@ _.extend(PackageCache.prototype, {
           throw e;
         maybeUpToDate = false;
       }
-      if (maybeUpToDate && compiler.checkUpToDate(packageSource, unip)) {
+      if (maybeUpToDate &&
+          compiler.checkUpToDate(
+            packageSource, unip,
+            { ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps })) {
         self.loadedPackages[key] = { pkg: unip,
                                      sourceDir: loadPath,
                                      buildDir: buildDir
