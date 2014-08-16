@@ -45,7 +45,7 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
       "v1";
     expectedUserAgentInfo.meteorToolsPackageWithVersion =
       toolsPackage.name + "@" + toolsPackage.version;
-  } else {
+  } else if (! release.current.isCheckout()) {
     expectedUserAgentInfo.meteorReleaseTrack =
       release.current.getReleaseTrack();
     expectedUserAgentInfo.meteorReleaseVersion =
