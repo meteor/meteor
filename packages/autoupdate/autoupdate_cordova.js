@@ -90,14 +90,26 @@ var onNewVersion = function (handle) {
     _.each(manifest, function (item) {
       if (! item.url) return;
       var uri = encodeURI(urlPrefix + item.url);
-      ft.download(uri, versionPrefix + item.url, function (entry) {
-        if (entry) {
-          afterAllFilesDownloaded();
-        }
-      }, function (error) {
-        console.log('fail source: ', error.source);
-        console.log('fail target: ', error.target);
-      });
+
+      // Try to dowload the file a few times.
+      var tries = 0;
+      var tryDownload = function () {
+        ft.download(uri, versionPrefix + item.url, function (entry) {
+          if (entry) {
+            afterAllFilesDownloaded();
+          }
+        }, function (err) {
+          // It failed, try again if we have tries less than 5 times.
+          if (tries++ < 5) {
+            tryDownload();
+          } else {
+            console.log('fail source: ', error.source);
+            console.log('fail target: ', error.target);
+          }
+        });
+      };
+
+      tryDownload();
     });
   });
 };
