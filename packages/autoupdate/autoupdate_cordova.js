@@ -12,6 +12,28 @@ Autoupdate.newClientAvailable = function () {
   });
 };
 
+var writeFile = function (directoryPath, fileName, content, cb) {
+  var fail = function (err) {
+    cb(new Error("Failed to write file: ", err), null);
+  };
+  window.resolveLocalFileSystemURL(directoryPath,
+    function (dirEntry) {
+      var success = function (fileEntry) {
+        fileEntry.createWriter(function (writer) {
+          writer.onwrite = function (evt) {
+            var result = evt.target.result;
+            cb(null, result);
+          };
+          writer.onerror = fail;
+          writer.write(content);
+        }, fail);
+      };
+
+      dirEntry.getFile(fileName, { create: true, exclusive: false },
+        success, fail);
+    }, fail);
+};
+
 var onNewVersion = function (handle) {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + 'cordova';
@@ -29,28 +51,48 @@ var onNewVersion = function (handle) {
       return;
     }
 
+    var manifest = res.data.manifest;
+    var version = res.data.version;
     var ft = new FileTransfer();
     var downloads = 0;
-    _.each(res.data.manifest, function (item) {
+    _.each(manifest, function (item) {
       if (item.url) downloads++;
     });
 
-    _.each(res.data.manifest, function (item) {
+    var versionPrefix = localPathPrefix + version;
+
+    var afterAllFilesDownloaded = _.after(downloads, function () {
+      writeFile(versionPrefix, 'manifest.json',
+          JSON.stringify(manifest, undefined, 2),
+          function (err) {
+
+        if (err) {
+          console.log("Failed to write manifest.json");
+          // XXX do something smarter?
+          return;
+        }
+
+        // success! downloaded all sources and saved the manifest
+        // save the version string for atomicity
+        writeFile(localPathPrefix, 'version', version,
+            function (err) {
+          if (err) {
+            console.log("Failed to write version");
+            return;
+          }
+
+          handle.stop();
+          Package.reload.Reload._reload();
+        });
+      });
+    });
+
+    _.each(manifest, function (item) {
       if (! item.url) return;
       var uri = encodeURI(urlPrefix + item.url);
-      ft.download(uri, localPathPrefix + item.url, function (entry) {
-        downloads--;
-
-        if (! downloads) {
-          // success! downloaded all sources
-          // save the manifest again for atomicity
-          // (if we have manifest on disk, it means all other files were
-          // saved as well)
-          uri = encodeURI(urlPrefix + '/manifest.json');
-          ft.download(uri, localPathPrefix + '/manifest.json', function () {
-            handle.stop();
-            Package.reload.Reload._reload();
-          });
+      ft.download(uri, versionPrefix + item.url, function (entry) {
+        if (entry) {
+          afterAllFilesDownloaded();
         }
       }, function (error) {
         console.log('fail source: ', error.source);
@@ -101,4 +143,3 @@ Autoupdate._retrySubscription = function () {
 };
 
 Meteor.startup(Autoupdate._retrySubscription);
-

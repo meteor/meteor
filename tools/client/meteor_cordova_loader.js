@@ -10,7 +10,7 @@
 
   var evt = new Event("meteor-cordova-loaded");
 
-  var ajax = function (url, cb) {
+  var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
         var success = function (file) {
@@ -88,6 +88,20 @@
     launchNext();
   };
 
+  // Fallback to the bundled assets from the disk. If an error is passed as an
+  // argument, then there was a problem reading from the manifest files. If
+  // no error is passed, then we simply do not have any new versions.
+  var fallback = function (err) {
+    if (err) {
+      console.log('Couldn\'t load from the manifest, ' +
+                  'falling back to the bundled assets.');
+    } else {
+      console.log('No new versions saved to disk.');
+    }
+
+    loadAssetsFromManifest(__meteor_manifest__, '');
+  };
+
   document.addEventListener("deviceready", function () {
     var localPathPrefix = cordova.file.applicationStorageDirectory;
     var iOS = /(iPad|iPhone|iPod)/g.test(navigator.userAgent);
@@ -96,20 +110,28 @@
     if (iOS)
       localPathPrefix += 'Documents/';
 
-    ajax(localPathPrefix + 'manifest.json',
-      function (err, res) {
-        if (! err) {
-          var program = JSON.parse(res);
-          // update the version we are loading
-          __meteor_runtime_config__.autoupdateVersionCordova = program.version;
-          loadAssetsFromManifest(program.manifest, localPathPrefix);
-        } else {
-          // We don't have any new versions, default to the bundled assets.
-          console.log(err.message);
-          console.log('Couldn\'t load from the manifest, falling back to the bundled assets.');
-
-          loadAssetsFromManifest(__meteor_manifest__, '');
+    readFile(localPathPrefix + 'version',
+      function (err, version) {
+        if (err) {
+          fallback();
+          return;
         }
+
+        var versionPrefix = localPathPrefix + version + '/';
+
+        // We have a version string, now read the new version
+        readFile(versionPrefix + 'manifest.json',
+            function (err, res) {
+          if (err) {
+            fallback(err);
+            return;
+          }
+
+          var manifest = JSON.parse(res);
+          // update the version we are loading
+          __meteor_runtime_config__.autoupdateVersionCordova = version;
+          loadAssetsFromManifest(manifest, versionPrefix);
+        });
     });
   }, false);
 })();
