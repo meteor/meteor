@@ -161,9 +161,12 @@ html_scanner = {
             sourceName: 'Template "' + name + '"'
           });
 
-        results.js += "\nTemplate.__assign(" + JSON.stringify(name) +
-          ", new Template(" + JSON.stringify("Template." + name) + ", " +
-          renderFuncCode + "));\n";
+        var nameLiteral = JSON.stringify(name);
+        var templateDotNameLiteral = JSON.stringify("Template." + name);
+
+        results.js += "\nTemplate.__checkName(" + nameLiteral + ");\n" +
+          "Template[" + nameLiteral + "] = new Template(" +
+          templateDotNameLiteral + ", " + renderFuncCode + ");\n";
       } else {
         // <body>
         if (hasAttribs)
