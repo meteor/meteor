@@ -32,10 +32,11 @@ Tinytest.add("templating - html scanner", function (test) {
   // arguments are quoted strings like '"hello"'
   var simpleTemplate = function (templateName, content) {
     // '"hello"' into '"Template.hello"'
-    var kind = templateName.slice(0, 1) + 'Template.' + templateName.slice(1);
+    var viewName = templateName.slice(0, 1) + 'Template.' + templateName.slice(1);
 
-    return '\nTemplate.__assign(' + templateName + ', new Template(' + kind +
-      ', (function() {\n  var view = this;\n  return ' + content + ';\n})));\n';
+    return '\nTemplate.__checkName(' + templateName + ');\nTemplate[' + templateName +
+      '] = new Template(' + viewName +
+      ', (function() {\n  var view = this;\n  return ' + content + ';\n}));\n';
   };
 
   var checkResults = function(results, expectJs, expectHead) {

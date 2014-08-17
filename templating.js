@@ -3,28 +3,25 @@
 // Packages and apps add templates on to this object.
 Template = Blaze.Template;
 
-// Like `Template[name] = template` but also checks for duplicates
-// and illegal template names that won't work.
-Template.__assign = function (name, template) {
+// Check for duplicate template names and illegal names that won't work.
+Template.__checkName = function (name) {
   if (name in Template) {
     if (Template[name] instanceof Template)
       throw new Error("There are multiple templates named '" + name + "'. Each template needs a unique name.");
     throw new Error("This template name is reserved: " + name);
   }
-
-  Template[name] = template;
 };
 
 // Define a template `Template._body_` that renders its
 // `contentViews`.  `<body>` tags (of which there may be
 // multiple) will have their contents added to it.
-Template.__assign('_body_', new Template('_body_', function () {
+Template._body_ = new Template('_body_', function () {
   var parts = Template._body_.contentViews;
   // enable lookup by setting `view.template`
   for (var i = 0; i < parts.length; i++)
     parts[i].template = Template._body_;
   return parts;
-}));
+});
 Template._body_.contentViews = []; // array of Blaze.Views
 Template._body_.view = null;
 
