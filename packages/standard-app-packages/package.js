@@ -55,5 +55,10 @@ Package.on_use(function(api) {
     'autoupdate'
   ], ['client', 'server']);
 
-  api.use('fastclick', 'client.cordova');
+  api.use([
+    // Remove the 300ms click delay on mobile
+    'fastclick',
+    // Good defaults for the mobile status bar
+    'mobile-status-bar'
+  ], 'client.cordova');
 });

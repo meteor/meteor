@@ -1,0 +1,2 @@
+StatusBar.show();
+StatusBar.styleDefault();
