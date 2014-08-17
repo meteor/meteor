@@ -8,6 +8,5 @@ Package.onUse(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.device': '0.2.11',
   'org.apache.cordova.statusbar': '0.1.7'
 });
