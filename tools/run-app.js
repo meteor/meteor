@@ -12,7 +12,6 @@ var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
-var packageCache = require('./package-cache.js');
 var stats = require('./stats.js');
 
 // Parse out s as if it were a bash command line.
@@ -448,11 +447,10 @@ _.extend(AppRunner.prototype, {
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     if (self.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages(self.appDir);
+        stats.recordPackages();
       });
       if (statsMessages.hasMessages()) {
-        // XXX so this happens any time you're offline?
-        process.stdout.write("Error talking to stats server:\n" +
+        process.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }
@@ -462,8 +460,11 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
     var bundleApp = function () {
-      if (! self.firstRun)
-        packageCache.packageCache.refresh(true); // pick up changes to packages
+      if (! self.firstRun) {
+        // Pick up changes to packages. (Soft refresh, so we still check to see
+        // if they have changed.)
+        catalog.complete.packageCache.refresh(true);
+      }
 
       var bundle = bundler.bundle({
         outputPath: bundlePath,

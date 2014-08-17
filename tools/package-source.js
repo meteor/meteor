@@ -195,8 +195,13 @@ var SourceArch = function (pkg, options) {
 // PackageSource
 ///////////////////////////////////////////////////////////////////////////////
 
-var PackageSource = function () {
+var PackageSource = function (catalog) {
   var self = this;
+
+  // Which catalog this PackageSource works with.
+  if (!catalog)
+    throw Error("Must provide catalog");
+  self.catalog = catalog;
 
   // The name of the package, or null for an app pseudo-package or
   // collection. The package's exports will reside in Package.<name>.
@@ -270,12 +275,11 @@ var PackageSource = function () {
   // to the catalog), so we need to keep track of them.
   self.isTest = false;
 
-  // If this is set, it should be set to an array of package names. We will take
-  // the currently running git checkout and bundle the meteor tool from it
-  // inside this package as a tool. We will include built unipackages for all
-  // the packages in this array as well as their transitive (strong)
-  // dependencies.
-  self.includeTool = null;
+  // If this is set, we will take the currently running git checkout and bundle
+  // the meteor tool from it inside this package as a tool. We will include
+  // built unipackages for all the packages in uniload.ROOT_PACKAGES as well as
+  // their transitive (strong) dependencies.
+  self.includeTool = false;
 
   // If this is true, then this package has no source files. (But the converse
   // is not true: this is only set to true by one particular constructor.) This
@@ -467,10 +471,15 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
+          } else if (key === "name") {
+            // this key is special because we really don't want you to think that
+            // you are successfully overriding directory name right now. Someday, you
+            // may be though, so it is reserved.
+            buildmessage.error("reserved key " + key + " in package description.");
           }
           else {
-            buildmessage.error("unknown attribute '" + key + "' " +
-                               "in package description");
+          // Do nothing. We might want to add some keys later, and we should err on
+          // the side of backwards compatibility.
           }
         });
       },
@@ -570,19 +579,14 @@ _.extend(PackageSource.prototype, {
         self.pluginInfo[options.name] = options;
       },
 
-      includeTool: function (packages) {
+      includeTool: function () {
         if (!files.inCheckout()) {
           buildmessage.error("Package.includeTool() can only be used with a " +
                              "checkout of meteor");
         } else if (self.includeTool) {
           buildmessage.error("Duplicate includeTool call");
-        } else if (!_.isArray(packages)) {
-          buildmessage.error("Argument to Package.includeTool must be array");
-        } else if (!_.all(packages, _.isString)) {
-          buildmessage.error(
-            "Elements of array passed to Package.includeTool must be strings");
         } else {
-          self.includeTool = packages;
+          self.includeTool = true;
         }
       }
     };
@@ -898,7 +902,7 @@ _.extend(PackageSource.prototype, {
 
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
-            release = catalog.complete.DEFAULT_TRACK + "@" + release;
+            release = catalog.DEFAULT_TRACK + "@" + release;
           }
 
           var relInf = release.split('@');
@@ -909,7 +913,7 @@ _.extend(PackageSource.prototype, {
           // catalog may not be initialized, but we are pretty sure that the
           // releases are there anyway. This is not the right way to do this
           // long term.
-          releaseRecord = catalog.complete.getReleaseVersion(
+          releaseRecord = catalog.official.getReleaseVersion(
             relInf[0], relInf[1], true);
           if (!releaseRecord) {
             buildmessage.error("Unknown release "+ release);
@@ -1317,6 +1321,7 @@ _.extend(PackageSource.prototype, {
   // - skipUnordered: omit unordered dependencies
   getDependencyMetadata: function (options) {
     var self = this;
+    options = options || {};
     var ret = self._computeDependencyMetadata(options);
     if (! ret) {
       if (options.logError)

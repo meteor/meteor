@@ -10,6 +10,7 @@ var watch = require('./watch.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var packageLoader = require('./package-loader.js');
+var PackageSource = require('./package-source.js');
 
 var project = exports;
 
@@ -214,7 +215,8 @@ _.extend(Project.prototype, {
 
       // Finally, initialize the package loader.
       self.packageLoader = new packageLoader.PackageLoader({
-        versions: newVersions
+        versions: newVersions,
+        catalog: catalog.complete
       });
 
       // We are done!
@@ -248,12 +250,7 @@ _.extend(Project.prototype, {
     // this value, but this is called very rarely outside the first
     // initialization).
     var programsSubdirs = self.getProgramsSubdirs();
-    var PackageSource;
     _.each(programsSubdirs, function (item) {
-      if (! PackageSource) {
-        PackageSource = require('./package-source.js');
-      }
-
       var programName = item.substr(0, item.length - 1);
 
       var programSubdir = path.join(self.getProgramsDirectory(), item);
@@ -263,7 +260,7 @@ _.extend(Project.prototype, {
       }, function () {
         var packageSource;
         // For now, if it turns into a unipackage, it should have a version.
-        var programSource = new PackageSource(programSubdir);
+        var programSource = new PackageSource(catalog.complete);
         programSource.initFromPackageDir(programName, programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {
           _.each(sourceUnibuild.uses, function (use) {
@@ -736,10 +733,10 @@ _.extend(Project.prototype, {
     var identifierFile = self.appIdentifierFile();
     if (!fs.existsSync(identifierFile)) {
       var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
-      fs.writeFileSync(identifierFile, id);
+      fs.writeFileSync(identifierFile, id + '\n');
     }
     if (fs.existsSync(identifierFile)) {
-      self.appId = fs.readFileSync(identifierFile, 'utf8');
+      self.appId = trimLine(fs.readFileSync(identifierFile, 'utf8'));
     } else {
       throw new Error("Expected a file at " + identifierFile);
     }
@@ -788,7 +785,6 @@ _.extend(Project.prototype, {
 
 // The project is currently a singleton, but there is no universal reason for
 // this to be the case. In any case, the project.project thing is kind of
-// cumbersome, that is our general design pattern for singletons (ex:
-// packageCache.packageCache, etc)
+// cumbersome, that is our general design pattern for singletons.
 project.project = new Project();
 project.Project = Project;

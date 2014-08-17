@@ -72,7 +72,10 @@ var getToolsPackage = function () {
   if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
     throw Error("didn't rebuild meteor-tool?");
   }
-  var loader = new packageLoader.PackageLoader({versions: null});
+  var loader = new packageLoader.PackageLoader({
+    versions: null,
+    catalog: catalog.complete
+  });
   return loader.getPackage(toolPackageName);
 };
 
@@ -641,7 +644,8 @@ _.extend(Sandbox.prototype, {
       toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
         + toolPackage.buildArchitectures();
       toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                       toolPackageName, toolPackageDirectory));
+                                       toolPackageName, toolPackageDirectory),
+                             { elideBuildInfo: true });
     });
 
     fs.symlinkSync(toolPackageDirectory,
@@ -671,7 +675,7 @@ _.extend(Sandbox.prototype, {
       _id: utils.randomToken()
     });
     stubCatalog.collections.releaseTracks.push({
-      name: catalog.complete.DEFAULT_TRACK,
+      name: catalog.DEFAULT_TRACK,
       _id: utils.randomToken()
     });
 
@@ -679,7 +683,7 @@ _.extend(Sandbox.prototype, {
     _.each(releases, function (configuration, releaseName) {
       // Release info
       stubCatalog.collections.releaseVersions.push({
-        track: catalog.complete.DEFAULT_TRACK,
+        track: catalog.DEFAULT_TRACK,
         version: releaseName,
         orderKey: releaseName,
         description: "test release " + releaseName,
@@ -1489,7 +1493,7 @@ var runTests = function (options) {
         if (! lines.length) {
           process.stderr.write("  => No output\n");
         } else {
-          var historyLines = options.historyLines || 20;
+          var historyLines = options.historyLines || 100;
 
           process.stderr.write("  => Last " + historyLines + " lines:\n");
           _.each(lines.slice(-historyLines), function (line) {

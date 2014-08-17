@@ -35,10 +35,10 @@ Autoupdate = {};
 
 Autoupdate.newClientAvailable = function () {
   return !! ClientVersions.findOne({
-               refreshable: false,
+               _id: "version",
                version: {$ne: autoupdateVersion} }) ||
          !! ClientVersions.findOne({
-               refreshable: true,
+               _id: "version-refreshable",
                version: {$ne: autoupdateVersionRefreshable} });
 };
 
@@ -78,8 +78,7 @@ Autoupdate._retrySubscription = function () {
       if (Package.reload) {
         var checkNewVersionDocument = function (id, fields) {
           var self = this;
-          var isRefreshable = id === 'version-refreshable';
-          if (isRefreshable &&
+          if (id === 'version-refreshable' &&
               fields.version !== autoupdateVersionRefreshable) {
             autoupdateVersionRefreshable = fields.version;
             // Switch out old css links for the new css links. Inspired by:
@@ -131,8 +130,8 @@ Autoupdate._retrySubscription = function () {
               attachStylesheetLink(newLink);
             });
           }
-          else if (! isRefreshable &&
-                   fields.version !== autoupdateVersionRefreshable && handle) {
+          else if (id === 'version' &&
+                   fields.version !== autoupdateVersion && handle) {
             handle.stop();
             Package.reload.Reload._reload();
           }

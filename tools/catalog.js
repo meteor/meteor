@@ -15,12 +15,15 @@ var watch = require('./watch.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var BaseCatalog = require('./catalog-base.js').BaseCatalog;
-var files = require('./files.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var project = require('./project.js');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
 
 var catalog = exports;
+
+catalog.DEFAULT_TRACK = 'METEOR-CORE';
+
 
 /////////////////////////////////////////////////////////////////////////////////////
 //  Official Catalog
@@ -32,20 +35,24 @@ var catalog = exports;
 var OfficialCatalog = function () {
   var self = this;
 
+  // We inherit from the BaseCatalog class.
+  BaseCatalog.call(self);
+
   // Set this to true if we are not going to connect to the remote package
   // server, and will only use the cached data.json file for our package
   // information. This means that the catalog might be out of date on the latest
   // developments.
   self.offline = null;
 
-  // We inherit from the protolog class, since we are a catalog.
-  BaseCatalog.call(self);
+  // The official catalog is the only one with release metadata.
+  self.releaseTracks = null;
+  self.releaseVersions = null;
 };
 
 util.inherits(OfficialCatalog, BaseCatalog);
 
 _.extend(OfficialCatalog.prototype, {
-  initialize : function (options) {
+  initialize: function (options) {
     var self = this;
     options = options || {};
 
@@ -53,16 +60,44 @@ _.extend(OfficialCatalog.prototype, {
     // server.
     self.offline = options.offline ? options.offline : false;
 
-    // Set all the collections to their initial values.
-    self.reset();
-
-    // The server catalog is always initialized.
-    self.initialized = true;
-
     // This is set to an array while refresh() is running; if another refresh()
     // call happens during a yield, instead of doing a second refresh it just
     // waits for the first to finish.
     self._refreshFutures = null;
+
+    self._refresh(true);
+
+    self.initialized = true;
+  },
+
+  reset: function () {
+    var self = this;
+    BaseCatalog.prototype.reset.call(self);
+    self.releaseTracks = [];
+    self.releaseVersions = [];
+  },
+
+  _insertServerPackages: function (serverPackageData) {
+    var self = this;
+    // Insert packages/versions/builds.
+    BaseCatalog.prototype._insertServerPackages.call(self, serverPackageData);
+
+    // Now insert release metadata.
+    var collections = serverPackageData.collections;
+
+    if (!collections)
+      return;
+
+    _.each(
+      ['releaseTracks', 'releaseVersions'],
+      function (field) {
+        self[field].push.apply(self[field], collections[field]);
+      });
+  },
+
+
+  _refreshingIsProductive: function () {
+    return true;
   },
 
   refreshInProgress: function () {
@@ -93,6 +128,8 @@ _.extend(OfficialCatalog.prototype, {
     var thrownError = null;
     try {
       self._refresh();
+      // Force the complete catalog (which is layered on top of our data) to
+      // refresh as well.
       catalog.complete.refresh({ forceRefresh: true });
     } catch (e) {
       thrownError = e;
@@ -117,12 +154,12 @@ _.extend(OfficialCatalog.prototype, {
 
   // Refresh the packages in the catalog. Prints a warning if we cannot connect
   // to the package server, and intend to.
-  _refresh: function () {
+  _refresh: function (overrideOffline) {
     var self = this;
 
     var localData = packageClient.loadCachedServerData();
     var allPackageData;
-    if (! self.offline ) {
+    if (! (self.offline || overrideOffline)) {
       var updateResult = packageClient.updateServerPackageData(localData);
       allPackageData = updateResult.data;
       if (! allPackageData) {
@@ -153,6 +190,83 @@ _.extend(OfficialCatalog.prototype, {
     if (allPackageData && allPackageData.collections) {
       self._insertServerPackages(allPackageData);
     }
+  },
+
+  // Returns general (non-version-specific) information about a
+  // release track, or null if there is no such release track.
+  getReleaseTrack: function (name) {
+    var self = this;
+    buildmessage.assertInCapture();
+    self._requireInitialized();
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.releaseTracks, { name: name });
+    });
+  },
+
+  // Return information about a particular release version, or null if such
+  // release version does not exist.
+  //
+  // XXX: notInitialized : don't require initialization. This is not the right thing
+  // to do long term, but it is the easiest way to deal with versionFrom without
+  // serious refactoring.
+  getReleaseVersion: function (track, version, notInitialized) {
+    var self = this;
+    buildmessage.assertInCapture();
+    if (!notInitialized) self._requireInitialized();
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.releaseVersions,
+                         { track: track,  version: version });
+    });
+  },
+
+  // Return an array with the names of all of the release tracks that we know
+  // about, in no particular order.
+  getAllReleaseTracks: function () {
+    var self = this;
+    self._requireInitialized();
+    return _.pluck(self.releaseTracks, 'name');
+  },
+
+  // Given a release track, return all recommended versions for this track, sorted
+  // by their orderKey. Returns the empty array if the release track does not
+  // exist or does not have any recommended versions.
+  getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
+    var self = this;
+    self._requireInitialized();
+
+    var recommended = _.filter(self.releaseVersions, function (v) {
+      if (v.track !== track || !v.recommended)
+        return false;
+      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
+    });
+
+    var recSort = _.sortBy(recommended, function (rec) {
+      return rec.orderKey;
+    });
+    recSort.reverse();
+    return _.pluck(recSort, "version");
+  },
+
+  // Returns the default release version: the latest recommended version on the
+  // default track. Returns null if no such thing exists (even after syncing
+  // with the server, which it only does if there is no eligible release
+  // version).
+  getDefaultReleaseVersion: function (track) {
+    var self = this;
+    buildmessage.assertInCapture();
+    self._requireInitialized();
+
+    if (!track)
+      track = catalog.DEFAULT_TRACK;
+
+    var getDef = function () {
+      var versions = self.getSortedRecommendedReleaseVersions(track);
+      if (!versions.length)
+        return null;
+      return {track: track, version: versions[0]};
+    };
+
+    return self._recordOrRefresh(getDef);
   }
 });
 
@@ -166,8 +280,16 @@ _.extend(OfficialCatalog.prototype, {
 // precedence (and we want to optimize retrieval of relevant data). It also
 // doesn't bother to sync up to the server, and just relies on the server
 // catalog to provide it with the right information through data.json.
-var CompleteCatalog = function () {
+var CompleteCatalog = function (options) {
   var self = this;
+  options = options || {};
+
+  // Is this the uniload catalog, while running from checkout? In that case,
+  // never load anything from the official catalog, never refresh, etc.
+  // XXX This is a hack: we should factor out the common code between the
+  //     CompleteCatalog and the ostensible CheckoutUniloadCatalog into
+  //     a common base class.
+  self.forUniload = !!options.forUniload;
 
   // Local directories to search for package source trees
   self.localPackageDirs = null;
@@ -191,6 +313,17 @@ var CompleteCatalog = function () {
   // a boolean.
   // XXX: use a future in the future maybe
   self.refreshing = false;
+  self.needRefresh = false;
+
+  // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
+  // Maps packageName -> version -> its ECV
+  self.forgottenECVs = {};
+
+  // Each complete catalog needs its own package cache.
+  self.packageCache = new packageCache.PackageCache(self);
+
+  self.packageSources = null;
+  self.built = null;
 
   // We inherit from the protolog class, since we are a catalog.
   BaseCatalog.call(self);
@@ -227,11 +360,27 @@ _.extend(CompleteCatalog.prototype, {
     // packages. Nonetheless, let's set those.
     self.localPackageDirs =
       _.filter(options.localPackageDirs || [], utils.isDirectory);
-    self._recomputeEffectiveLocalPackages();
 
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
-    self.refresh();
+    self.refresh({forceRefresh: true});
+  },
+
+  _refreshingIsProductive: function () {
+    var self = this;
+    // If this is the normal complete catalog, then sure! Refresh away!
+    // If it's the CheckoutUniloadCatalog, then we don't use server packages,
+    // so it's not worth it.
+    return !self.forUniload;
+  },
+
+  reset: function () {
+    var self = this;
+    BaseCatalog.prototype.reset.call(self);
+
+    self.packageSources = {};
+    self.built = {};
+    self.forgottenECVs = {};
   },
 
   // Given a set of constraints, returns a det of dependencies that satisfy the
@@ -263,14 +412,44 @@ _.extend(CompleteCatalog.prototype, {
     self._requireInitialized();
     buildmessage.assertInCapture();
 
-    // Kind of a hack, as per specification. We don't have a constraint solver
-    // initialized yet. We are probably trying to build the constraint solver
-    // package, or one of its dependencies. Luckily, we know that this means
-    // that we are running from checkout and all packages are local, so we can
-    // just use those versions. #UnbuiltConstraintSolverMustUseLocalPackages
-    if (!self.resolver) {
-      return null;
-    };
+    if (self.forUniload) {
+      // uniload should always ignore the project: it's essentially loading part
+      // of the tool, which shouldn't be affected by your app's dependencies.
+      if (!opts.ignoreProjectDeps)
+        throw Error("whoa, if for uniload, why not ignoring project?");
+
+      // OK, we're building something while uniload
+      var ret = {};
+      _.each(constraints, function (constraint) {
+        // Constraints for uniload should just be packages with no version
+        // constraint and one local version (since they should all be in core).
+        if (!_.has(constraint, 'packageName') || _.size(constraint) !== 1) {
+          throw Error("Surprising constraint: " + JSON.stringify(constraint));
+        }
+        if (!_.has(self.versions, constraint.packageName)) {
+          throw Error("Trying to resolve unknown package: " +
+                      constraint.packageName);
+        }
+        if (_.isEmpty(self.versions[constraint.packageName])) {
+          throw Error("Trying to resolve versionless package: " +
+                      constraint.packageName);
+        }
+        if (_.size(self.versions[constraint.packageName]) > 1) {
+          throw Error("Too many versions for package: " +
+                      constraint.packageName);
+        }
+        ret[constraint.packageName] =
+          _.keys(self.versions[constraint.packageName])[0];
+      });
+      return ret;
+    }
+
+    // OK, since we are the complete catalog, the uniload catalog must be fully
+    // initialized, so it's safe to load a resolver if we didn't
+    // already. (Putting this off until the first call to resolveConstraints
+    // also helps with performance: no need to build this package and load the
+    // large mori module unless we actually need it.)
+    self.resolver || self._initializeResolver();
 
     // Looks like we are not going to be able to avoid calling the constraint
     // solver, so let's process the input (constraints) into the correct
@@ -295,17 +474,17 @@ _.extend(CompleteCatalog.prototype, {
       }
     });
 
-    var project = require("./project.js").project;
     // If we are called with 'ignore projectDeps', then we don't even look to
     // see what the project thinks and recalculate everything. Similarly, if the
     // project root path has not been initialized, we are probably running
     // outside of a project, and have nothing to look at for guidance.
-    if (!opts.ignoreProjectDeps && project.viableDepSource) {
+    if (!opts.ignoreProjectDeps && project.project &&
+         project.project.viableDepSource) {
       // Anything in the project's dependencies was calculated based on a
       // previous constraint solver run, and needs to be taken as absolute truth
       // for now: we can't use any packages that are of different versions from
       // what we've already decided from the project!
-      _.each(project.getVersions(), function (version, name) {
+      _.each(project.project.getVersions(), function (version, name) {
         constr.push({packageName: name, version: version, type: 'exactly'});
       });
     }
@@ -319,10 +498,12 @@ _.extend(CompleteCatalog.prototype, {
     } catch (e) {
       // Maybe we only failed because we need to refresh. Try to refresh (unless
       // we already are) and retry.
-      if (catalog.official.refreshInProgress()) {
+      if (!self._refreshingIsProductive() ||
+          catalog.official.refreshInProgress()) {
         throw e;
       }
       catalog.official.refresh();
+      self.resolver || self._initializeResolver();
       return self.resolver.resolve(deps, constr, resolverOpts);
     }
   },
@@ -350,23 +531,42 @@ _.extend(CompleteCatalog.prototype, {
       return;
     }
 
+    if (self.refreshing) {
+      // We're being asked to refresh re-entrantly, maybe because we just
+      // updated the official catalog.  Let's not do this now, but make the
+      // outer call do it instead.
+      // XXX refactoring the catalogs so that the two catalogs share their
+      //     data and this one is just an overlay would reduce this wackiness
+      self.needRefresh = true;
+      return;
+    }
+
     self.refreshing = true;
 
     try {
       self.reset();
-      var localData = packageClient.loadCachedServerData();
-      self._insertServerPackages(localData);
+
+      if (!self.forUniload) {
+        var localData = packageClient.loadCachedServerData();
+        self._insertServerPackages(localData);
+      }
 
       self._recomputeEffectiveLocalPackages();
-      self._addLocalPackageOverrides({watchSet: options.watchSet});
+      var allOK = self._addLocalPackageOverrides(
+        { watchSet: options.watchSet });
       self.initialized = true;
       // Rebuild the resolver, since packages may have changed.
-      self._initializeResolver();
+      self.resolver = null;
     } finally {
-
       self.refreshing = false;
     }
 
+    // If we got a re-entrant refresh request, do it now. (But not if we
+    // encountered build errors building the packages, since in that case
+    // we'd probably just get the same build errors again.)
+    if (self.needRefresh && allOK) {
+      self.refresh(options);
+    }
   },
 
   _initializeResolver: function () {
@@ -385,6 +585,14 @@ _.extend(CompleteCatalog.prototype, {
     var self = this;
 
     self.effectiveLocalPackages = {};
+
+    // XXX If this is the forUniload catalog, we should only consider
+    // uniload.ROOT_PACKAGES and their dependencies. Unfortunately, that takes a
+    // fair amount of refactoring (since we don't know dependencies until we
+    // start reading them).  So for now, the uniload catalog (in checkout mode)
+    // does include information about all the packages in the meteor repo, not
+    // just the ones that can be uniloaded. (But it doesn't contain information
+    // about app packages!)
 
     _.each(self.localPackageDirs, function (localPackageDir) {
       if (! utils.isDirectory(localPackageDir))
@@ -415,6 +623,11 @@ _.extend(CompleteCatalog.prototype, {
     _.extend(self.effectiveLocalPackages, self.localPackages);
   },
 
+  getForgottenECVs: function (packageName) {
+    var self = this;
+    return self.forgottenECVs[packageName];
+  },
+
   // Add all packages in self.effectiveLocalPackages to the catalog,
   // first removing any existing packages that have the same name.
   //
@@ -424,13 +637,18 @@ _.extend(CompleteCatalog.prototype, {
     options = options || {};
     buildmessage.assertInCapture();
 
+    var allOK = true;
+
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.
     var removedVersionIds = {};
     _.each(self.effectiveLocalPackages, function (dir, packageName) {
       if (!_.has(self.versions, packageName))
         return;
+      self.forgottenECVs[packageName] = {};
       _.each(self.versions[packageName], function (record) {
+        self.forgottenECVs[packageName][record.version] =
+          record.earliestCompatibleVersion;
         removedVersionIds[record._id] = true;
       });
       delete self.versions[packageName];
@@ -447,10 +665,8 @@ _.extend(CompleteCatalog.prototype, {
     // Load the source code and create Package and Version
     // entries from them. We have to do this before we can run the
     // constraint solver.
-    var packageSources = {}; // name to PackageSource
-
     var initVersionRecordFromSource =  function (packageDir, name) {
-      var packageSource = new PackageSource;
+      var packageSource = new PackageSource(self);
       var broken = false;
       buildmessage.enterJob({
         title: "reading package `" + name + "`",
@@ -464,8 +680,10 @@ _.extend(CompleteCatalog.prototype, {
           requireVersion: true,
           defaultVersion: "0.0.0"
         });
-        if (buildmessage.jobHasMessages())
+        if (buildmessage.jobHasMessages()) {
           broken = true;
+          allOK = false;
+        }
       });
 
       if (options.watchSet) {
@@ -481,7 +699,7 @@ _.extend(CompleteCatalog.prototype, {
       if (broken)
         return;
 
-      packageSources[name] = packageSource;
+      self.packageSources[name] = packageSource;
 
       self.packages.push({
         name: name,
@@ -567,10 +785,7 @@ _.extend(CompleteCatalog.prototype, {
     // effectiveLocalPackages in initPackageSource (to add test packages).
     _.each(self.effectiveLocalPackages, initVersionRecordFromSource);
 
-    // Save the package sources and the list of all unbuilt packages. We will
-    // build them lazily when someone asks for them.
-    self.packageSources = packageSources;
-    self.unbuilt = _.clone(self.effectiveLocalPackages);
+    return allOK;
   },
 
   // Given a version string that may or may not have a build ID, convert it into
@@ -631,11 +846,11 @@ _.extend(CompleteCatalog.prototype, {
 
     var unip = null;
 
-    if (! _.has(self.unbuilt, name)) {
+    if (_.has(self.built, name)) {
       return;
     }
 
-    delete self.unbuilt[name];
+    self.built[name] = true;
 
     // Go through the build-time constraints. Make sure that they are built,
     // either because we have built them already, or because we are about to
@@ -705,7 +920,10 @@ _.extend(CompleteCatalog.prototype, {
           try {
             var buildDir = path.join(sourcePath, '.build.'+ name);
             files.addToGitignore(sourcePath, '.build*');
-            unip.saveToPath(buildDir, { buildOfPath: sourcePath });
+            unip.saveToPath(buildDir, {
+              buildOfPath: sourcePath,
+              catalog: self
+            });
           } catch (e) {
             // If we can't write to this directory, we don't get to cache our
             // output, but otherwise life is good.
@@ -718,8 +936,9 @@ _.extend(CompleteCatalog.prototype, {
     // And put a build record for it in the catalog
     var versionId = self.getLatestVersion(name);
 
-    packageCache.packageCache.cachePackageAtPath(
-      name, sourcePath, unip);
+    // XXX why isn't this build just happening through the package cache
+    // directly?
+    self.packageCache.cachePackageAtPath(name, sourcePath, unip);
 
     self.builds.push({
       buildArchitectures: unip.buildArchitectures(),
@@ -807,7 +1026,7 @@ _.extend(CompleteCatalog.prototype, {
     buildmessage.assertInCapture();
 
     // Clear any cached builds in the package cache.
-    packageCache.packageCache.refresh();
+    self.packageCache.refresh();
 
     if (namedPackages) {
       var bad = false;
@@ -841,7 +1060,7 @@ _.extend(CompleteCatalog.prototype, {
     _.each(self.effectiveLocalPackages, function (loadPath, name) {
       if (namedPackages && !_.contains(namedPackages, name))
         return;
-      packageCache.packageCache.loadPackageAtPath(name, loadPath);
+      self.packageCache.loadPackageAtPath(name, loadPath);
       count ++;
     });
 
@@ -877,9 +1096,7 @@ _.extend(CompleteCatalog.prototype, {
     if (_.has(self.effectiveLocalPackages, name)) {
 
       // If we don't have a build of this package, we need to rebuild it.
-      if (_.has(self.unbuilt, name)) {
-        self._build(name, {}, constraintSolverOpts);
-      };
+      self._build(name, {}, constraintSolverOpts);
 
       // Return the path.
       return self.effectiveLocalPackages[name];
@@ -897,6 +1114,56 @@ _.extend(CompleteCatalog.prototype, {
   }
 });
 
+var BuiltUniloadCatalog = function (uniloadDir) {
+  var self = this;
+  BaseCatalog.call(self);
+
+  // The uniload catalog needs its own package cache.
+  self.packageCache = new packageCache.PackageCache(self);
+};
+util.inherits(BuiltUniloadCatalog, BaseCatalog);
+
+_.extend(BuiltUniloadCatalog.prototype, {
+  initialize: function (options) {
+    var self = this;
+    if (!options.uniloadDir)
+      throw Error("no uniloadDir?");
+    self.uniloadDir = options.uniloadDir;
+
+    // Make empty data structures for all the things.
+    self.reset();
+
+    self._knownPackages = {};
+    _.each(fs.readdirSync(options.uniloadDir), function (package) {
+      if (fs.existsSync(path.join(options.uniloadDir, package,
+                                  'unipackage.json'))) {
+        self._knownPackages[package] = true;
+
+        // XXX do we have to also put stuff in self.packages/versions/builds?
+        //     probably.
+      }
+    });
+
+    self.initialized = true;
+  },
+
+  resolveConstraints: function () {
+    throw Error("uniload resolving constraints? that's wrong.");
+  },
+
+  // Ignores version (and constraintSolverOpts) because we just have a bunch of
+  // precompiled packages.
+  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
+    var self = this;
+    self._requireInitialized();
+    if (_.has(self._knownPackages, name)) {
+      return path.join(self.uniloadDir, name);
+    }
+    return null;
+  }
+
+});
+
 
 // This is the catalog that's used to answer the specific question of "so what's
 // on the server?".  It does not contain any local catalogs.  Typically, we call
@@ -908,3 +1175,9 @@ catalog.official = new OfficialCatalog();
 // packages, it doesn't contain any information about the server version of
 // local packages.
 catalog.complete = new CompleteCatalog();
+
+if (files.inCheckout()) {
+  catalog.uniload = new CompleteCatalog({forUniload: true});
+} else {
+  catalog.uniload = new BuiltUniloadCatalog();
+}

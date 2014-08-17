@@ -209,7 +209,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
       oldNodeVersion = 'v0.8.24';
     }
 
-    if (oldNodeVersion !== process.version)
+    if (oldNodeVersion !== currentNodeCompatibilityVersion())
       files.rm_recursive(nodeModulesDir);
   }
 
@@ -346,7 +346,20 @@ var createReadme = function (newPackageNpmDir) {
 var createNodeVersion = function (newPackageNpmDir) {
   fs.writeFileSync(
     path.join(newPackageNpmDir, 'node_modules', '.node_version'),
-    process.version);
+    currentNodeCompatibilityVersion());
+};
+
+// This value should change whenever we think that the Node C ABI has changed
+// (ie, when we need to be sure to reinstall npm packages because they might
+// have native components that need to be rebuilt). It does not need to change
+// for every patch release of Node! Notably, it needed to change between 0.8.*
+// and 0.10.*.  If Node does make a patch release of 0.10 that breaks
+// compatibility, you can just change this from "0.10.*" to "0.10.35" or
+// whatever.
+var currentNodeCompatibilityVersion = function () {
+  var version = process.version;
+  version = version.replace(/\.(\d+)$/, '.*');
+  return version + '\n';
 };
 
 // Returns object with keys 'stdout', 'stderr', and 'success' (true

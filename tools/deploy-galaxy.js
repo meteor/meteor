@@ -11,7 +11,6 @@ var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
-var project = require('./project.js').project;
 var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
 
@@ -209,7 +208,7 @@ exports.deploy = function (options) {
         stats.recordPackages();
       });
       if (statsMessages.hasMessages()) {
-        process.stdout.write("Error talking to stats server:\n" +
+        process.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }

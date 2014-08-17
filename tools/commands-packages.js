@@ -18,7 +18,6 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
@@ -132,7 +131,8 @@ main.registerCommand({
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
     loadPackages(catalog.complete.getLocalPackageNames(),
-                 new packageLoader.PackageLoader({versions: null}));
+                 new packageLoader.PackageLoader({versions: null,
+                                                  catalog: catalog.complete}));
 
     // In an app? Get the list of packages used by this app. Calling getVersions
     // on the project will ensureDepsUpToDate which will ensure that all builds
@@ -147,7 +147,8 @@ main.registerCommand({
       var releasePackages = release.current.getPackages();
       loadPackages(
         _.keys(releasePackages),
-        new packageLoader.PackageLoader({versions: releasePackages}));
+        new packageLoader.PackageLoader({versions: releasePackages,
+                                         catalog: catalog.complete}));
     }
   });
 
@@ -228,7 +229,7 @@ main.registerCommand({
         buildmessage.error("Invalid package name:", packageName);
       }
 
-      packageSource = new PackageSource;
+      packageSource = new PackageSource(catalog.complete);
 
       // Anything published to the server must have a version.
       packageSource.initFromPackageDir(packageName, options.packageDir, {
@@ -271,8 +272,8 @@ main.registerCommand({
   })) {
     process.stdout.write(
       "\nWARNING: Your package contains binary code and is only compatible with " +
-       archinfo.host() + " architecture.\n" +
-       "Please use publish-for-arch to publish new builds of the package.\n\n");
+        archinfo.host() + " architecture.\n" +
+        "Please use publish-for-arch to publish new builds of the package.\n\n");
   }
 
   // We are only publishing one package, so we should close the connection, and
@@ -355,7 +356,7 @@ main.registerCommand({
   var messages = buildmessage.capture({
     title: "building package " + name
   }, function () {
-    var packageSource = new PackageSource;
+    var packageSource = new PackageSource(catalog.complete);
 
     // This package source, although it is initialized from a directory is
     // immutable. It should be built exactly as is. If we need to modify
@@ -497,7 +498,7 @@ main.registerCommand({
   }
   // On the main release track, we can't name the release anything beginning
   // with 0.8 and below, because those are taken for pre-troposphere releases.
-  if ((relConf.track === catalog.official.DEFAULT_TRACK)) {
+  if ((relConf.track === catalog.DEFAULT_TRACK)) {
     var start = relConf.version.slice(0,4);
     if (start === "0.8." || start === "0.7." ||
         start === "0.6." || start === "0.5.") {
@@ -576,8 +577,8 @@ main.registerCommand({
     if (relConf.packages || relConf.tool) {
       process.stderr.write(
         "Setting the --from-checkout option will use the tool and packages in your meteor " +
-        "checkout.\n" +
-        "Your release configuration file should not contain that information.\n");
+          "checkout.\n" +
+          "Your release configuration file should not contain that information.\n");
       return 1;
     }
 
@@ -609,7 +610,7 @@ main.registerCommand({
           // contains 'package.js'. (We used to support unipackages in
           // localPackageDirs, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-            var packageSource = new PackageSource;
+            var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
               { title: "building package " + item },
               function () {
@@ -657,7 +658,7 @@ main.registerCommand({
                 // overwriting. If such a version exists, we will need to make sure
                 // that the contents are the same.
                 var oldVersion = catalog.official.getVersion
-                                   (item, packageSource.version);
+                (item, packageSource.version);
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
@@ -797,19 +798,19 @@ main.registerCommand({
   if (options['create-track']) {
     process.stdout.write("Creating a new release track...\n");
     var track = conn.call('createReleaseTrack',
-                         { name: relConf.track } );
+                          { name: relConf.track } );
   }
 
   process.stdout.write("Creating a new release version...\n");
-    var record = {
-      track: relConf.track,
-      version: relConf.version,
-      orderKey: relConf.orderKey,
-      description: relConf.description,
-      recommended: !!relConf.recommended,
-      tool: relConf.tool,
-      packages: relConf.packages
-    };
+  var record = {
+    track: relConf.track,
+    version: relConf.version,
+    orderKey: relConf.orderKey,
+    description: relConf.description,
+    recommended: !!relConf.recommended,
+    tool: relConf.tool,
+    packages: relConf.packages
+  };
 
   var uploadInfo;
   try {
@@ -828,19 +829,25 @@ main.registerCommand({
   process.stdout.write("Done creating " + relConf.track  + "@" +
                        relConf.version + "!\n");
 
-  // Only make a git tag if we're on the default branch.
-  if (options['from-checkout'] &&
-      config.getPackageServerFilePrefix() === 'packages') {
+  if (options['from-checkout']) {
     // XXX maybe should discourage publishing if git status says we're dirty?
     var gitTag = "release/" + relConf.track  + "@" + relConf.version;
-    // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
-    //     used to
-    process.stdout.write("Creating git tag " + gitTag + "\n");
-    files.runGitInCheckout('tag', gitTag);
-    process.stdout.write(
-      "Pushing git tag (this should fail if you are not from MDG)\n");
-    files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
-                           'refs/tags/' + gitTag);
+    if (config.getPackageServerFilePrefix() !== 'packages') {
+      // Only make a git tag if we're on the default branch.
+      process.stdout.write("Skipping git tag: not using the main package server.\n");
+    } else if (gitTag.indexOf(':') !== -1) {
+      // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
+      //     used to, instead of this simple check
+      // XXX could convert : to / ?
+      process.stdout.write("Skipping git tag: bad format for git.\n");
+    } else {
+      process.stdout.write("Creating git tag " + gitTag + "\n");
+      files.runGitInCheckout('tag', gitTag);
+      process.stdout.write(
+        "Pushing git tag (this should fail if you are not from MDG)\n");
+      files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+                             'refs/tags/' + gitTag);
+    }
   }
 
   return 0;
@@ -848,229 +855,263 @@ main.registerCommand({
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// search
+// search & show
 ///////////////////////////////////////////////////////////////////////////////
 
+
+main.registerCommand({
+  name: 'show',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    "show-broken": {type: Boolean, required: false }
+  }
+}, function (options) {
+
+  // We should refresh the catalog in case there are new versions.
+  refreshOfficialCatalogOrDie();
+
+  // We only show compatible versions unless we know otherwise.
+  var versionVisible = function (record) {
+    return options['show-broken'] || !(_.isEqual(record.description,
+                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+   };
+
+  var full = options.args[0].split('@');
+  var name = full[0];
+  var allRecord;
+  doOrDie(function () {
+    allRecord = getReleaseOrPackageRecord(name);
+  });
+
+  var record = allRecord.record;
+  if (!record) {
+    process.stderr.write("Unknown package or release: " +  name + "\n");
+    return 1;
+  }
+
+  var versionRecords;
+  var label;
+  if (!allRecord.isRelease) {
+    label = "package";
+    var getRelevantRecord = function (version) {
+      var versionRecord = doOrDie(function () {
+        return catalog.official.getVersion(name, version);
+      });
+      var myBuilds = _.pluck(doOrDie(function () {
+        return catalog.official.getAllBuilds(name, version);
+      }), 'buildArchitectures');
+      // Does this package only have a cross-platform build?
+      if (myBuilds.length === 1) {
+        var allArches = myBuilds[0].split('+');
+        if (!_.any(allArches, function (arch) {
+          return arch.match(/^os\./);
+        })) {
+          return versionRecord;
+        }
+      }
+      // This package is only available for some architectures.
+      // XXX show in a more human way?
+      var myStringBuilds = myBuilds.join(' ');
+      return _.extend({ buildArchitectures: myStringBuilds },
+                      versionRecord);
+    };
+    var versions = catalog.official.getSortedVersions(name);
+    if (full.length > 1) {
+      versions = [full[1]];
+    }
+    versionRecords = _.map(versions, getRelevantRecord);
+  } else {
+    label = "release";
+    if (full.length > 1) {
+      doOrDie(function () {
+        versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
+      });
+    } else {
+      versionRecords =
+        _.map(
+          catalog.official.getSortedRecommendedReleaseVersions(name, "").reverse(),
+          function (v) {
+            return doOrDie(function () {
+              return catalog.official.getReleaseVersion(name, v);
+            });
+          });
+    }
+  }
+  if (_.isEqual(versionRecords, [])) {
+    if (allRecord.release) {
+      process.stderr.write(
+        "No recommended versions of release " + name + " exist.\n");
+    } else {
+      process.stderr.write("No versions of package" + name + " exist.\n");
+    }
+  } else {
+    var lastVersion = versionRecords[versionRecords.length - 1];
+    if (!lastVersion && full.length > 1) {
+      process.stderr.write(
+        "Unknown version of" + name + ":" + full[1] + "\n");
+      return 1;;
+    }
+    var unknown = "< unknown >";
+    _.each(versionRecords, function (v) {
+      // Don't show versions that we shouldn't be showing.
+      if (!versionVisible(v)) {
+        return;
+      }
+
+      var versionDesc = "Version " + v.version;
+      if (v.description)
+        versionDesc = versionDesc + " : " + v.description;
+      process.stdout.write(versionDesc + "\n");
+      if (v.buildArchitectures && full.length > 1)
+        process.stdout.write("      Architectures: "
+                             + v.buildArchitectures + "\n");
+      if (v.packages && full.length > 1) {
+        process.stdout.write("      tool: " + v.tool + "\n");
+        process.stdout.write("      packages:" + "\n");
+
+        versionDesc = versionDesc + "\n      packages:\n";
+        _.each(v.packages, function(pv, pn) {
+          process.stdout.write("          " + pn + ":" + pv + "\n");
+        });
+      }
+    });
+    process.stdout.write("\n");
+  }
+
+  var metamessage = "Maintained by " +
+        _.pluck(record.maintainers, 'username');
+  if (lastVersion.git) {
+    metamessage = metamessage + " at " + lastVersion.git;
+  }
+  metamessage += ".";
+  if (record.homepage) {
+    metamessage = metamessage + "\nYou can find more information at "
+      + record.homepage;
+  }
+  process.stdout.write(metamessage + "\n");
+});
 
 main.registerCommand({
   name: 'search',
   minArgs: 1,
   maxArgs: 1,
   options: {
-    details: { type: Boolean, required: false },
-    maintainer: {type: String, required: false }
-  },
-}, function (options) {
-
-  if (options.details && options.maintainer) {
-    process.stderr.write("You cannot pass both --details and --maintainer options. \n");
-    return 1;
+    maintainer: {type: String, required: false },
+    "show-broken": {type: Boolean, required: false }
   }
+}, function (options) {
 
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
   // refreshing" from "can't connect to catalog"
   refreshOfficialCatalogOrDie();
 
-  if (options.details) {
-    var full = options.args[0].split('@');
-    var name = full[0];
-    var allRecord;
-    doOrDie(function () {
-      allRecord = getReleaseOrPackageRecord(name);
-    });
-    var record = allRecord.record;
-    if (!record) {
-      process.stderr.write("Unknown package or release: " +  name + "\n");
-      return 1;
-    }
-    var versionRecords;
-    var label;
-    if (!allRecord.isRelease) {
-      label = "package";
-      var getRelevantRecord = function (version) {
-        var versionRecord = doOrDie(function () {
-          return catalog.official.getVersion(name, version);
-        });
-        var myBuilds = _.pluck(doOrDie(function () {
-          return catalog.official.getAllBuilds(name, version);
-        }), 'buildArchitectures');
-        // Does this package only have a cross-platform build?
-        if (myBuilds.length === 1) {
-          var allArches = myBuilds[0].split('+');
-          if (!_.any(allArches, function (arch) {
-            return arch.match(/^os\./);
-          })) {
-            return versionRecord;
-          }
-        }
-        // This package is only available for some architectures.
-        // XXX show in a more human way?
-        var myStringBuilds = myBuilds.join(' ');
-        return _.extend({ buildArchitectures: myStringBuilds },
-                        versionRecord);
-      };
-      var versions = catalog.official.getSortedVersions(name);
-      if (full.length > 1) {
-        versions = [full[1]];
-      }
-      versionRecords = _.map(versions, getRelevantRecord);
-    } else {
-      label = "release";
-      if (full.length > 1) {
-        doOrDie(function () {
-          versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
-        });
-      } else {
-        versionRecords =
-          _.map(catalog.official.getSortedRecommendedReleaseVersions(name, ""),
-                function (v) {
-                  return doOrDie(function () {
-                    return catalog.official.getReleaseVersion(name, v);
-                  });
-                });
-      }
-    }
-    if (_.isEqual(versionRecords, [])) {
-      if (allRecord.release) {
-        process.stderr.write(
-          "No recommended versions of release " + name + " exist.\n");
-      } else {
-        process.stderr.write("No versions of package" + name + " exist.\n");
-      }
-    } else {
-      var lastVersion = versionRecords[versionRecords.length - 1];
-      if (!lastVersion && full.length > 1) {
-        process.stderr.write(
-          "Unknown version of" + name + ":" + full[1] + "\n");
-        return 1;;
-      }
-      var unknown = "< unknown >";
-      _.each(versionRecords, function (v) {
-        var versionDesc = "Version " + v.version;
-        if (v.description)
-          versionDesc = versionDesc + " : " + v.description;
-        process.stdout.write(versionDesc + "\n");
-        if (v.buildArchitectures && full.length > 1)
-          process.stdout.write("      Architectures: "
-                           + v.buildArchitectures + "\n");
-        if (v.packages && full.length > 1) {
-          process.stdout.write("      tool: " + v.tool + "\n");
-          process.stdout.write("      packages:" + "\n");
+  var allPackages = catalog.official.getAllPackageNames();
+  var allReleases = catalog.official.getAllReleaseTracks();
+  var matchingPackages = [];
+  var matchingReleases = [];
 
-          versionDesc = versionDesc + "\n      packages:\n";
-          _.each(v.packages, function(pv, pn) {
-             process.stdout.write("          " + pn + ":" + pv + "\n");
-          });
+  var selector;
+
+  var search;
+  try {
+    search = new RegExp(options.args[0]);
+  } catch (err) {
+    process.stderr.write(err + "\n");
+    return 1;
+  }
+
+  // Do not return true on broken packages, unless requested in options.
+  var filterBroken = function (match, isRelease, name) {
+    // If the package does not match, or it is not a package at all or if we
+    // don't want to filter anyway, we do not care.
+    if (!match || isRelease || options["show-broken"])
+      return match;
+
+    var vr;
+    doOrDie(function () {
+      vr = catalog.official.getLatestVersion(name);
+    });
+    return !(_.isEqual(vr.description,
+                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+  };
+
+  if (options.maintainer) {
+    var username =  options.maintainer;
+    // In the future, we should consider checking this on the server, but I
+    // suspect the main use of this command will be to deal with the automatic
+    // migration and uncommon in everyday use. From that perspective, it makes
+    // little sense to require you to be online to find out what packages you
+    // own; and the consequence of not mentioning your group packages until
+    // you update to a new version of meteor is not that dire.
+    selector = function (name, isRelease) {
+      var record;
+      // XXX make sure search works while offline
+      doOrDie(function () {
+        if (isRelease) {
+          record = catalog.official.getReleaseTrack(name);
+        } else {
+          record = catalog.official.getPackage(name);
         }
       });
-      process.stdout.write("\n");
-      process.stdout.write("The " + label + " " + name + " : "
-                  + lastVersion.description || unknown + "\n");
-    }
-    var maintain = ". Maintained by " +
-          _.pluck(record.maintainers, 'username') + ".";
-    if (lastVersion.git) {
-      maintain = maintain + " at " + lastVersion.git;
-    }
-    if (record.homepage) {
-      maintain = maintain + "\nYou can find more information at "
-          + record.homepage;
-    }
-    process.stdout.write(maintain + "\n");
+     return filterBroken((name.match(search) &&
+        !!_.findWhere(record.maintainers, {username: username})),
+        isRelease, name);
+    };
   } else {
+    selector = function (name, isRelease) {
+      return filterBroken(name.match(search),
+        isRelease, name);
+    };
+  }
 
-
-    var allPackages = catalog.official.getAllPackageNames();
-    var allReleases = catalog.official.getAllReleaseTracks();
-    var matchingPackages = [];
-    var matchingReleases = [];
-
-    var selector;
-
-    var search;
-    try {
-      search = new RegExp(options.args[0]);
-    } catch (err) {
-      process.stderr.write(err + "\n");
-      return 1;
-    }
-
-    if (options.maintainer) {
-      var username =  options.maintainer;
-      // In the future, we should consider checking this on the server, but I
-      // suspect the main use of this command will be to deal with the automatic
-      // migration and uncommon in everyday use. From that perspective, it makes
-      // little sense to require you to be online to find out what packages you
-      // own; and the consequence of not mentioning your group packages until
-      // you update to a new version of meteor is not that dire.
-      selector = function (packageName, isRelease) {
-        var record;
-        // XXX make sure search works while offline
-        doOrDie(function () {
-          if (isRelease) {
-            record = catalog.official.getReleaseTrack(packageName);
-          } else {
-            record = catalog.official.getPackage(packageName);
-          }
-        });
-        return packageName.match(search) &&
-          !!_.findWhere(record.maintainers, {username: username});
-       };
-    } else {
-      selector = function (packageName) {
-        return packageName.match(search);
-      };
-    }
-
-    _.each(allPackages, function (pack) {
-      if (selector(pack, false)) {
-        var vr = doOrDie(function () {
-          return catalog.official.getLatestVersion(pack);
-        });
-        if (vr) {
-          matchingPackages.push(
-            { name: pack, description: vr.description });
-        }
+  _.each(allPackages, function (pack) {
+    if (selector(pack, false)) {
+      var vr = doOrDie(function () {
+        return catalog.official.getLatestVersion(pack);
+      });
+      if (vr) {
+        matchingPackages.push(
+          { name: pack, description: vr.description});
       }
-    });
-    _.each(allReleases, function (track) {
-      if (selector(track, true)) {
-        var vr = doOrDie(function () {
-          return catalog.official.getDefaultReleaseVersion(track);
+    }
+  });
+  _.each(allReleases, function (track) {
+    if (selector(track, true)) {
+      var vr = doOrDie(function () {
+        return catalog.official.getDefaultReleaseVersion(track);
+      });
+      if (vr) {
+        var vrlong = doOrDie(function () {
+          return catalog.official.getReleaseVersion(track, vr.version);
         });
-        if (vr) {
-          var vrlong = doOrDie(function () {
-            return catalog.official.getReleaseVersion(track, vr.version);
-          });
-          matchingReleases.push(
-            { name: track, description: vrlong.description });
-        }
+        matchingReleases.push(
+          { name: track, description: vrlong.description});
       }
-    });
-
-    var output = false;
-    if (!_.isEqual(matchingPackages, [])) {
-      output = true;
-      process.stdout.write("Found the following packages:" + "\n");
-      process.stdout.write(formatList(matchingPackages) + "\n");
     }
+  });
 
-    if (!_.isEqual(matchingReleases, [])) {
-      output = true;
-      process.stdout.write("Found the following releases:" + "\n");
-      process.stdout.write(formatList(matchingReleases) + "\n");
-    }
+  var output = false;
+  if (!_.isEqual(matchingPackages, [])) {
+    output = true;
+    process.stdout.write("Found the following packages:" + "\n");
+    process.stdout.write(formatList(matchingPackages) + "\n");
+  }
 
-    if (!output) {
-      process.stderr.write(
-        "Neither packages nor releases matching \'" +
+  if (!_.isEqual(matchingReleases, [])) {
+    output = true;
+    process.stdout.write("Found the following releases:" + "\n");
+    process.stdout.write(formatList(matchingReleases) + "\n");
+  }
+
+  if (!output) {
+    process.stderr.write(
+      "Neither packages nor releases matching \'" +
         search + "\' could be found.\n");
-    } else {
-      process.stdout.write(
-"To get more information on a specific item, use meteor search --details.\n");
-    }
-
+  } else {
+    process.stdout.write(
+      "To get more information on a specific item, use meteor show. \n");
   }
 });
 
@@ -1098,6 +1139,8 @@ main.registerCommand({
     _.each(packages, function (version, name) {
       if (!version) {
         version = versions[name];
+      } else if (version[0] === "=") {
+        version = version.slice(1);
       }
       // Use complete catalog to get the local versions of local packages.
       var versionInfo = catalog.complete.getVersion(name, version);
@@ -1193,8 +1236,9 @@ main.registerCommand({
     // didn't specify a release and it's the app's current release (if we're
     // in an app dir), since non-forced updates don't change the track.
     // XXX better error checking on release.current.name
-    // XXX add a method to release.current
-    var releaseTrack = release.current.getReleaseTrack();
+    // XXX add a method to release.current.
+    var releaseTrack = release.current ?
+      release.current.getReleaseTrack() : catalog.DEFAULT_TRACK;
 
     // Unless --release was passed (in which case we ought to already have
     // springboarded to that release), go get the latest release and switch to
@@ -1354,7 +1398,7 @@ main.registerCommand({
     }
     var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
       var releaseRecord = doOrDie(function () {
-        return catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
+        return catalog.official.getReleaseVersion(releaseTrack, versionToTry);
       });
       if (!releaseRecord)
         throw Error("missing release record?");
@@ -1862,7 +1906,9 @@ main.registerCommand({
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  catalog.official.refresh();
+  doOrDie(function () {
+    catalog.official.refresh();
+  });
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
@@ -1948,6 +1994,21 @@ main.registerCommand({
     // will have already printed an error
     return 2;
   }
+
+  // Since we're making bootstrap tarballs, we intend to recommend this release,
+  // so we should ensure that once it is downloaded, it knows it is recommended
+  // rather than having a little identity crisis and thinking that a past
+  // release is the latest recommended until it manages to sync.
+  var dataFromDisk = JSON.parse(fs.readFileSync(tmpDataJson));
+  var releaseInData = _.findWhere(dataFromDisk.collections.releaseVersions, {
+    track: parsed.package, version: parsed.constraint
+  });
+  if (!releaseInData) {
+    process.stderr.write("Can't find release in data!\n");
+    return 3;
+  }
+  releaseInData.recommended = true;
+  files.writeFileAtomically(tmpDataJson, JSON.stringify(dataFromDisk, null, 2));
 
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();

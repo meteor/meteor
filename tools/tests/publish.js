@@ -61,10 +61,9 @@ selftest.define("publish-and-search", ["slow", "net", "test-package-server"], fu
   run.expectExit(0);
   run.match(fullPackageName);
 
-  run = s.run("search", "--details", fullPackageName);
+  run = s.run("show", fullPackageName);
   run.waitSecs(15);
   run.expectExit(0);
-  run.match(fullPackageName);
   run.match("Maintained");
   run.match(githubUrl);
 });

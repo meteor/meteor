@@ -18,8 +18,6 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
-var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
@@ -261,6 +259,11 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
+    if (!packageName) {
+      process.stderr.write("Please specify the name of the package. \n");
+      throw new main.ShowUsage;
+    }
+
     if (fs.existsSync(packageName)) {
       process.stderr.write(packageName + ": Already exists\n");
       return 1;
@@ -277,7 +280,7 @@ main.registerCommand({
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
         var rel = commandsPackages.doOrDie(function () {
-          return catalog.complete.getDefaultReleaseVersion();
+          return catalog.official.getDefaultReleaseVersion();
         });
         var relString = rel.track + "@" + rel.version;
       } else {
@@ -288,10 +291,10 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
-
-    files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
-      transformFilename: function (f) {
-        return transform(f);
+    try {
+      files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+        transformFilename: function (f) {
+          return transform(f);
       },
       transformContents: function (contents, f) {
         if ((/(\.html|\.js|\.css)/).test(f))
@@ -301,6 +304,10 @@ main.registerCommand({
       },
       ignore: [/^local$/]
     });
+   } catch (err) {
+     process.stderr.write("Could not create package: " + err.message + "\n");
+     return 1;
+   }
 
     process.stdout.write(packageName + ": created\n");
     return 0;
@@ -369,7 +376,11 @@ main.registerCommand({
       return 1;
     } else {
       files.cp_r(path.join(exampleDir, options.example), appPath, {
-        ignore: [/^local$/]
+        // We try not to check the identifier into git, but it might still
+        // accidentally exist and get added (if running from checkout, for
+        // example). To be on the safe side, explicitly remove the identifier
+        // from example apps.
+        ignore: [/^local$/, /^identifier$/]
       });
     }
   } else {
@@ -383,7 +394,7 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/]
+      ignore: [/^local$/, /^identifier$/]
     });
   }
 
@@ -394,9 +405,12 @@ main.registerCommand({
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
+
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();
   });
+
+
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;
@@ -486,6 +500,15 @@ main.registerCommand({
     process.stderr.write("Errors prevented bundling your app:\n");
     process.stderr.write(messages.formatMessages());
     return 1;
+  }
+
+  var statsMessages = buildmessage.capture(function () {
+    stats.recordPackages();
+  });
+  if (statsMessages.hasMessages()) {
+    process.stdout.write("Error recording package list:\n" +
+                         statsMessages.formatMessages());
+    // ... but continue;
   }
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
@@ -1022,8 +1045,19 @@ main.registerCommand({
     process.stderr.write(messages.formatMessages());
     return 1;
   }
-
   project.forceEditPackages(tests, 'add');
+
+  // We don't strictly need to do this before we bundle, but can't hurt.
+  messages = buildmessage.capture({
+    title: 'getting packages ready'
+  },function () {
+    project._ensureDepsUpToDate();
+  });
+
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   var buildOptions = {
     minify: options.production

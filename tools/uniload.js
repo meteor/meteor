@@ -3,8 +3,25 @@ var bundler = require('./bundler.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
 var packageLoader = require("./package-loader.js");
-var packageCache = require("./package-cache.js");
 var files = require('./files.js');
+var catalog = require('./catalog.js');
+
+// These are the only packages that may be directly loaded via this package. Add
+// more to the list if you need to uniload more things! (You don't have to
+// include the dependencies of the packages you directly load in this list.)
+var ROOT_PACKAGES = [
+  'constraint-solver',
+  'dev-bundle-fetcher',
+  'ejson',
+  'js-analyze',
+  'livedata',
+  'logging',
+  'meteor',
+  'minifiers',
+  'minimongo',
+  'mongo-livedata',
+  'package-version-parser'
+];
 
 // Load unipackages into the currently running node.js process. Use
 // this to use unipackages (such as the DDP client) from command-line
@@ -56,6 +73,12 @@ var load = function (options) {
     return cache[cacheKey];
   }
 
+  var undeclaredPackages = _.difference(options.packages, ROOT_PACKAGES);
+  if (undeclaredPackages.length) {
+    throw new Error("attempt to uniload undeclared packages: " +
+                    JSON.stringify(undeclaredPackages));
+  }
+
   // Set up a minimal server-like environment (omitting the parts that
   // are specific to the HTTP server). Kind of a hack. I suspect this
   // will get refactored before too long. Note that
@@ -69,13 +92,12 @@ var load = function (options) {
   var messages = buildmessage.capture({
     title: "loading unipackage"
   }, function () {
-
     // Load the code. The uniloader does not call the constraint solver, unless
     // it is running from checkout, in which case it will use the constraint
     // solver to build its packages in the catalog.
     var loader = new packageLoader.PackageLoader({
       versions: null,
-      uniloadDir: files.getUniloadDir(),
+      catalog: catalog.uniload,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
@@ -89,7 +111,9 @@ var load = function (options) {
     var image = bundler.buildJsImage({
       name: "load",
       packageLoader: loader,
-      use: options.packages || []
+      use: options.packages || [],
+      catalog: catalog.uniload,
+      ignoreProjectDeps: true
     }).image;
     ret = image.load(env);
 
@@ -120,5 +144,6 @@ var load = function (options) {
 
 var uniload = exports;
 _.extend(exports, {
-  load: load
+  load: load,
+  ROOT_PACKAGES: ROOT_PACKAGES
 });

@@ -164,6 +164,56 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
   }, { _testing: true });
 });
 
+Tinytest.add("constraint solver - previousSolution", function (test) {
+  currentTest = test;
+  // This is what you get if you lock sparky-forms to 1.0.0.
+  t({ "sparky-forms": "=1.0.0" }, {
+    "sparky-forms": "1.0.0",
+    "awesome-dropdown": "1.4.0",
+    "dropdown": "1.2.2",
+    "jquery-widgets": "1.0.0",
+    "jquery": "1.8.2",
+    "sparkle": "2.1.1"
+  }, { _testing: true });
+
+  // If you just requires something compatible with 1.0.0, we end up choosing
+  // 1.1.2.
+  t({ "sparky-forms": "1.0.0" }, {
+    "sparky-forms": "1.1.2",
+    "forms": "1.0.1",
+    "sparkle": "2.1.1",
+    "jquery-widgets": "1.0.0",
+    "jquery": "1.8.2"
+  }, { _testing: true });
+
+  // But if you ask for something compatible with 1.0.0 and have a previous
+  // solution with 1.0.0, the previous solution works (since it is achievable).
+  t({ "sparky-forms": "1.0.0" }, {
+    "sparky-forms": "1.0.0",
+    "awesome-dropdown": "1.4.0",
+    "dropdown": "1.2.2",
+    "jquery-widgets": "1.0.0",
+    "jquery": "1.8.2",
+    "sparkle": "2.1.1"
+  }, { _testing: true, previousSolution: {
+    "sparky-forms": "1.0.0"
+  }});
+
+  // On the other hand, if the previous solution is incompatible with the
+  // constraints, it's not an error: we can try something that isn't the
+  // previous solution in this case!
+  t({ "sparky-forms": "1.1.2" }, {
+    "sparky-forms": "1.1.2",
+    "forms": "1.0.1",
+    "sparkle": "2.1.1",
+    "jquery-widgets": "1.0.0",
+    "jquery": "1.8.2"
+  }, { _testing: true, previousSolution: {
+    "sparky-forms": "1.0.0"
+  }});
+
+});
+
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   currentTest = test;
   var versions = resolver.resolve(["sparkle"], [], { _testing: true });

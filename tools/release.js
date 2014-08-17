@@ -88,8 +88,6 @@ _.extend(Release.prototype, {
   // Return the tool that we are using. If this is a proper release, return the
   // tool package listed in the manifest, otherwise return the version of the
   // meteor-tool package in checkout.
-  //
-  // (XXX: Or maybe just return "checkout" or something?)
   getCurrentToolsVersion: function () {
     var self = this;
     buildmessage.assertInCapture();
@@ -97,22 +95,7 @@ _.extend(Release.prototype, {
     if (release.current.name) {
       return self._manifest.tool;
     } else {
-      // If the release information is not set, we are building from checkout,
-      // so we are using the equivivalent of the meteor tool in this
-      // checkout. (This is oddly recursive, so maybe we shouldn't bother with
-      // it at all in that case).
-      //
-      // It is safe to call the catalog here because, by the time we are recording
-      // the dependencyVersions, we have already run the constraint solver, so the
-      // catalog has been initialized.
-      var catalog = require('./catalog.js');
-      // We call this on the complete catalog, because it is possible for us to
-      // have a local version of the tool.
-      var catversion =  catalog.complete.getLatestVersion("meteor-tool").version;
-      // The catalog version is going to have a +local at the end. We will never
-      // be able to springboard to that, so we should skip it.
-      var eqVersion = catversion.split("+")[0];
-     return "meteor-tool@" + eqVersion;
+      return "meteor-tool@CHECKOUT";
     }
   },
 
@@ -206,10 +189,10 @@ release.latestDownloaded = function (track) {
     return process.env.METEOR_TEST_LATEST_RELEASE;
 
 
-  var defaultRelease = catalog.complete.getDefaultReleaseVersion(track);
+  var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
-    if (!track || track === catalog.official.DEFAULT_TRACK) {
+    if (!track || track === catalog.DEFAULT_TRACK) {
       throw new Error("no latest release available on default track?");
     }
     return null;
@@ -253,12 +236,12 @@ release.load = function (name, options) {
     track = parts[0];
     version = parts[1];
   } else {
-    track = catalog.official.DEFAULT_TRACK;
+    track = catalog.DEFAULT_TRACK;
     version = parts[0];
     name = track + '@' + version;
   }
 
-  var releaseVersion = catalog.complete.getReleaseVersion(track, version);
+  var releaseVersion = catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
     if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline") {
       throw new files.OfflineError(new Error("scripted failure for tests"));

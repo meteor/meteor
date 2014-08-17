@@ -1,7 +1,6 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
-var packageCache = require('./package-cache.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
@@ -11,14 +10,14 @@ var tropohouse = require('./tropohouse.js');
 // options:
 //  - versions: a map from package name to the version to use.  or null to only
 //    use local packages and ignore the package versions.
-//  - uniloadDir: if specified, versions should be null, and this loader will
-//    *only* load packages that are already unipackages and are in this
-//    directory
 exports.PackageLoader = function (options) {
   var self = this;
+  if (!options.catalog)
+    throw Error("Must specify a catalog");
   self.versions = options.versions || null;
   self.uniloadDir = options.uniloadDir;
   self.constraintSolverOpts = options.constraintSolverOpts;
+  self.catalog = options.catalog;
 };
 
 _.extend(exports.PackageLoader.prototype, {
@@ -54,7 +53,7 @@ _.extend(exports.PackageLoader.prototype, {
       return pkg;
     }
 
-    return packageCache.packageCache.loadPackageAtPath(
+    return self.catalog.packageCache.loadPackageAtPath(
       name, loadPath, self.constraintSolverOpts);
   },
 
@@ -70,14 +69,6 @@ _.extend(exports.PackageLoader.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    if (self.uniloadDir) {
-      var packagePath = path.join(self.uniloadDir, name);
-      if (!fs.existsSync(path.join(packagePath, 'unipackage.json'))) {
-        return null;
-      }
-      return packagePath;
-    }
-
     if (self.versions && ! _.has(self.versions, name)) {
       throw new Error("no version chosen for package " + name + "?");
     }
@@ -89,9 +80,8 @@ _.extend(exports.PackageLoader.prototype, {
       version = null;
     }
 
-    return catalog.complete.getLoadPathForPackage(name,
-      version,
-      self.constraintSolverOpts);
+    return self.catalog.getLoadPathForPackage(
+      name, version, self.constraintSolverOpts);
   },
 
   // Given a package name like "ddp" and an architecture, get the unibuild of
@@ -109,6 +99,9 @@ _.extend(exports.PackageLoader.prototype, {
     options = options || {};
     // We can only download packages if we know what versions they are.
     if (!self.versions)
+      return;
+    // We shouldn't ever download packages for uniload.
+    if (self.catalog === catalog.uniload)
       return;
     tropohouse.default.downloadMissingPackages(self.versions, {
       serverArch: options.serverArch

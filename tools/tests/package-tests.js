@@ -174,6 +174,21 @@ selftest.define("change packages", ['test-package-server'], function () {
   run.waitSecs(5);
   run.match("running at");
   run.match("localhost");
+
+  // How about breaking and fixing a package.js?
+  s.cd("packages/shout-something", function () {
+    var packageJs = s.read("package.js");
+    s.write("package.js", "]");
+    run.waitSecs(3);
+    run.match("=> Errors prevented startup");
+    run.match("package.js:1:1: Unexpected token ]");
+    run.match("Waiting for file change");
+
+    s.write("package.js", packageJs);
+    run.waitSecs(3);
+    run.match("restarting");
+    run.match("restarted");
+  });
   run.stop();
 });
 
