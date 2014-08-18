@@ -119,12 +119,23 @@ var fetchCordovaPluginFromShaUrl =
   function (urlWithSha, localPluginsDir, pluginName) {
   var pluginPath = path.join(localPluginsDir, pluginName);
   var pluginTarballPath = pluginPath + '.tgz';
-  var curlProcess =
-    execFileSyncOrThrow('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
 
-  if (! curlProcess.success)
+  var execFileSync = require('./utils.js').execFileSync;
+  var whichCurl = execFileSync('which curl');
+
+  var downloadProcess = null;
+
+  if (whichCurl.success) {
+    downloadProcess =
+      execFileSyncOrThrow('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
+  } else {
+    downloadProcess =
+      execFileSyncOrThrow('wget', ['-O', pluginTarballPath, urlWithSha]);
+  }
+
+  if (! downloadProcess.success)
     throw new Error("Failed to fetch the tarball from " + urlWithSha + ": " +
-                    curlProcess.stderr);
+                    downloadProcess.stderr);
 
   files.mkdir_p(pluginPath);
   var tarProcess = execFileSyncOrThrow('tar',
