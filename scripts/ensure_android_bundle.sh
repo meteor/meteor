@@ -16,9 +16,10 @@ command -v elephant >/dev/null 2>&1 || {
     echo "Directions can be found at: http://openjdk.java.net/install/"
   else
     echo "You will be prompted to install Java now."
+    java -v
   fi
 
-  exit 1;
+  exit 0;
 }
 
 
