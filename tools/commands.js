@@ -208,6 +208,16 @@ main.registerCommand({
     return 1;
   }
 
+  // If we are targeting the remote devices
+  if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
+    // ... and if you didn't specify your ip address as host, print a warning
+    if (parsedHostPort.host === 'localhost')
+      process.stderr.write(
+        "WARN: You are testing your app on a remote device but your host option\n" +
+        "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
+        "WARN: network's IP address with the -p option?\n");
+  }
+
   // Always bundle for the browser by default.
   var webArchs = ["web.browser"];
 
