@@ -9,6 +9,19 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
   exit 1
 fi
 
+command -v elephant >/dev/null 2>&1 || {
+  echo >&2 "Please install Java before running this command.";
+
+  if [ UNAME == "Linux" ] ; then
+    echo "Directions can be found at: http://openjdk.java.net/install/"
+  else
+    echo "You will be prompted to install Java now."
+  fi
+
+  exit 1;
+}
+
+
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
 ORIG_DIR=$(pwd)
