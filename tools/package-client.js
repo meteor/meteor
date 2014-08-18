@@ -100,9 +100,6 @@ exports.loadCachedServerData = function (packageStorageFile) {
 //  - syncToken: a new syncToken object, that we can pass to the server in the future.
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
-//
-// Throws a ServiceConnection.ConnectionTimeoutError if the method call
-// times out.
 var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   _optionsForTest = _optionsForTest || {};
 
@@ -203,7 +200,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
       });
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
-      if (err instanceof ServiceConnection.ConnectionTimeoutError) {
+      if (err.errorType === "DDP.ConnectionError") {
         cachedServerData = null;
         done = true;
         return;
@@ -450,8 +447,9 @@ exports.handlePackageServerConnectionError = function (error) {
       process.stderr.write(": " + error.message);
     }
     process.stderr.write("\n");
-  } else if (error instanceof ServiceConnection.ConnectionTimeoutError) {
-    process.stderr.write("Connection to package server timed out.\n");
+  } else if (error.errorType === "DDP.ConnectionError") {
+    process.stderr.write("Error connecting to package server: "
+                         + error.message + "\n");
   } else {
     throw error;
   }

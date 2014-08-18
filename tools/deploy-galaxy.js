@@ -30,17 +30,16 @@ var getPackage = _.once(function () {
 // If messages is provided, it is a map from DDP error names to
 // human-readable explanation to use.
 var handleError = function (error, galaxyName, messages) {
-  var Package = getPackage();
   messages = messages || {};
 
-  if (error instanceof Package.meteor.Meteor.Error) {
+  if (error.errorType === "Meteor.Error") {
     var msg = messages[error.error];
     if (msg)
       process.stderr.write(msg + "\n");
     else if (error.message)
       process.stderr.write("Denied: " + error.message + "\n");
     return 1;
-  } else if (error instanceof ServiceConnection.ConnectionTimeoutError) {
+  } else if (error.errorType === "DDP.ConnectionError") {
     // If we have an http/https URL for a galaxyName instead of a
     // proper galaxyName (which is what the code in this file
     // currently passes), strip off the scheme and trailing slash.

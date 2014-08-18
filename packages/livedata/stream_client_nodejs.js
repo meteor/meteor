@@ -134,7 +134,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
       function () {
-        self._lostConnection(new Error("DDP connection timed out"));
+        self._lostConnection(
+          new DDP.ConnectionError("DDP connection timed out"));
       },
       self.CONNECT_TIMEOUT);
 
@@ -155,9 +156,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       if (!self.options._dontPrintErrors)
         Meteor._debug("stream error", error.message);
 
-      // XXX: Make this do something better than make the tests hang if it does
-      // not work.
-      self._lostConnection(error);
+      // Faye's 'error' object is not a JS error (and among other things,
+      // doesn't stringify well). Convert it to one.
+      self._lostConnection(new DDP.ConnectionError(error.message));
     });
 
 
@@ -176,4 +177,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
       });
     });
   }
+});
+
+DDP.ConnectionError = Meteor.makeErrorType(
+  "DDP.ConnectionError", function (message) {
+    var self = this;
+    self.message = message;
 });

@@ -2,12 +2,16 @@ var Future = require("fibers/future");
 var _ = require("underscore");
 var uniload = require("./uniload.js");
 
-var TIMEOUT_SEC = 15;
-
-// Wrapper to manage a connection to a DDP service. Provides failing
-// method calls and subscriptions if, after 10 seconds, we're not
-// connected. This functionality should eventually end up in the DDP
-// client in one form or another.
+// Wrapper to manage a connection to a DDP service. The main difference between
+// it and a raw DDP connection is that the constructor blocks until a successful
+// connection is made; you can't call methods or subscribe asynchronously (ie,
+// there's always a wait); and if the connection disconnects (with or without
+// error) while we're waiting on a method call or subscription, the
+// apply/subscribeAndWait call throws the given error. This functionality should
+// eventually end up in the DDP client in one form or another.
+//
+// ServiceConnections never retry: they always use just one underlying TCP
+// connection, and fail fast.
 //
 // - Package: a Package object as returned from uniload.load, containing
 //   the livedata and meteor packages
@@ -20,61 +24,39 @@ var TIMEOUT_SEC = 15;
 //
 var ServiceConnection = function (Package, endpointUrl, options) {
   var self = this;
-  self.Package = Package;
-  ensureConnectionTimeoutErrorDefined(Package.meteor.Meteor);
+
+  // ServiceConnection never should retry connections: just one TCP connection
+  // is enough, and any errors on it should be detected promptly.
+  options = _.extend({}, options, {retry: false});
 
   self.connection = Package.livedata.DDP.connect(endpointUrl, options);
 
-  self.connectionTimeoutCallbacks = [];
-  self.connectionTimer = Package.meteor.Meteor.setTimeout(function () {
-    // XXX This check seems bogus: it could fire during a very brief
-    // disconnection/reconnect cycle, but it seems like it's intended to mean
-    // "didn't ever connect for TIMEOUT_SEC". Really, the ddp client should
-    // handle this natively.
-    if (self.connection.status().status !== "connected") {
-      self.connection = null;
-      _.each(self.connectionTimeoutCallbacks, function (f) {
-        f();
-      });
-      self.connectionTimeoutCallbacks = [];
+  // Wait until we have some sort of initial connection or error (including the
+  // 10-second timeout built into our DDP client).
+  var connectFuture = self.currentFuture = new Future;
+  self.connection._stream.on('reset', function () {
+    if (!self.currentFuture)
+      throw Error("nobody waiting for connection?");
+    if (self.currentFuture !== connectFuture)
+      throw Error("waiting for something that isn't connection?");
+    self.currentFuture = null;
+    connectFuture.return();
+  });
+  self.connection._stream.on('disconnect', function (error) {
+    if (self.currentFuture) {
+      var fut = self.currentFuture;
+      self.currentFuture = null;
+      fut.throw(error || new Error("DDP disconnected"));
+    } else if (error) {
+      // We got some sort of error with nobody listening for it; handle it.
+      // XXX probably have a better way to handle it than this
+      throw error;
     }
-  }, TIMEOUT_SEC*1000);
-};
-
-// A story. Ideally, we'd just create an error class here (using
-// Meteor.makeErrorType from the 'meteor' package). Unfortunately, we
-// can't do that at the top-level since uniload yields therefore must
-// run in a fiber. Instead, we start out with an empty function here
-// (this is necessary so that `foo instanceof
-// ServiceConnection.ConnectionTimeoutError` doesn't throw). Then,
-// when we open the first ServiceConnection we call
-// `ensureConnectionTimeoutErrorDefined` which replaces this with a
-// real error type.
-ServiceConnection.ConnectionTimeoutError = _.extend(
-  function () {}, {uninitialized: true});
-
-// can't run this at the top-level since we're not in a fiber. see
-// comment before ServiceConnection.ConnectionTimeoutError.
-ensureConnectionTimeoutErrorDefined = function (Meteor) {
-  if (ServiceConnection.ConnectionTimeoutError.uninitialized) {
-    ServiceConnection.ConnectionTimeoutError = Meteor.makeErrorType(
-      "ServiceConnection.ConnectionTimeoutError", /*name*/
-      function () {
-        this.message = "ServiceConnection: Timeout after "
-          + TIMEOUT_SEC + " seconds";
-      } /*constructor*/);
-  }
+  });
+  connectFuture.wait();
 };
 
 _.extend(ServiceConnection.prototype, {
-  _onConnectionTimeout: function (f) {
-    var self = this;
-    if (! self.connection)
-      f();
-    else
-      self.connectionTimeoutCallbacks.push(f);
-  },
-
   call: function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
@@ -84,25 +66,25 @@ _.extend(ServiceConnection.prototype, {
 
   apply: function (/* arguments */) {
     var self = this;
-    var fut = new Future;
-    self._onConnectionTimeout(function () {
-      fut['throw'](new ServiceConnection.ConnectionTimeoutError);
-      // XXX should also disable fut somehow so we don't get a "more than once"
-      // error later
-    });
+
+    if (self.currentFuture)
+      throw Error("Can't wait on two things at once!");
+    self.currentFuture = new Future;
 
     var args = _.toArray(arguments);
     args.push(function (err, result) {
-      if (err) {
-        fut['throw'](err);
-      } else {
-        self._cleanUpTimer();
-        fut['return'](result);
+      if (!self.currentFuture) {
+        // We're not still waiting? That means we had a disconnect event. But
+        // then how did we actually get this result?
+        throw Error("nobody listening for result?");
       }
+      var fut = self.currentFuture;
+      self.currentFuture = null;
+      fut.resolver()(err, result);  // throw or return
     });
-
     self.connection.apply.apply(self.connection, args);
-    return fut.wait();
+
+    return self.currentFuture.wait();
   },
 
   // XXX derived from _subscribeAndWait in livedata_connection.js
@@ -110,37 +92,37 @@ _.extend(ServiceConnection.prototype, {
   subscribeAndWait: function (/* arguments */) {
     var self = this;
 
-    var fut = new Future();
-    self._onConnectionTimeout(function () {
-      fut['throw'](new ServiceConnection.ConnectionTimeoutError);
-    });
+    if (self.currentFuture)
+      throw Error("Can't wait on two things at once!");
+    var subFuture = self.currentFuture = new Future;
 
-    var ready = false;
     var args = _.toArray(arguments);
     args.push({
       onReady: function () {
-        ready = true;
-        self._cleanUpTimer();
-        fut['return']();
+        if (!self.currentFuture) {
+          // We're not still waiting? That means we had a disconnect event. But
+          // then how did we actually get this result?
+          throw Error("nobody listening for subscribe result?");
+        }
+        var fut = self.currentFuture;
+        self.currentFuture = null;
+        fut.return();
       },
       onError: function (e) {
-        if (! ready)
-          fut['throw'](e);
-        else
-          /* XXX handle post-ready error */;
+        if (self.currentFuture === subFuture) {
+          // Error while waiting for this sub to become ready? Throw it.
+          self.currentFuture = null;
+          subFuture.throw(e);
+        }
+        // ... ok, this is a late error on the sub.
+        // XXX handle it somehow better
+        throw e;
       }
     });
 
     var sub = self.connection.subscribe.apply(self.connection, args);
-    fut.wait();
+    subFuture.wait();
     return sub;
-  },
-
-  _cleanUpTimer: function () {
-    var self = this;
-    var Package = self.Package;
-    Package.meteor.Meteor.clearTimeout(self.connectionTimer);
-    self.connectionTimer = null;
   },
 
   close: function () {
@@ -148,10 +130,6 @@ _.extend(ServiceConnection.prototype, {
     if (self.connection) {
       self.connection.close();
       self.connection = null;
-    }
-    if (self.connectionTimer) {
-      // Clean up the timer so that Node can exit cleanly
-      self._cleanUpTimer();
     }
   }
 });
