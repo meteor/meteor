@@ -167,11 +167,11 @@ exports.deployWithNewEmail = function (s, email, appName) {
   return token;
 };
 
-var getLoadedPackages = _.once(function () {
+var getLoadedPackages = function () {
   return uniload.load({
-    packages: ['meteor', 'livedata']
+    packages: ['livedata']
   });
-});
+};
 
 var ddpConnect = function (url) {
   var DDP = getLoadedPackages().livedata.DDP;

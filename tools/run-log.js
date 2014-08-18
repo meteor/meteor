@@ -17,7 +17,7 @@ var release = require('./release.js');
 // anywhere that may overlap with use of runLog.
 
 
-var getLoggingPackage = _.once(function () {
+var getLoggingPackage = function () {
   var Log = uniload.load({
     packages: ['logging']
   }).logging.Log;
@@ -27,7 +27,7 @@ var getLoggingPackage = _.once(function () {
   Log.outputFormat = 'colored-text';
 
   return Log;
-});
+};
 
 var RunLog = function () {
   var self = this;

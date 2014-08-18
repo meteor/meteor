@@ -11,6 +11,7 @@ var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
+var uniload = require('./uniload.js');
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -18,12 +19,11 @@ var compiler = require('./compiler.js');
 //
 // meteor: base package and prerequsite for all others.
 // livedata: DDP client interface to make a connection to the package server.
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
+var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata']
+    packages: [ 'meteor', 'livedata']
   });
-});
+};
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -441,7 +441,7 @@ exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 
 exports.handlePackageServerConnectionError = function (error) {
   var Package = getLoadedPackages();
-  if (error instanceof Package.meteor.Meteor.Error) {
+  if (error.errorType === 'Meteor.Error') {
     process.stderr.write("Error connecting to package server");
     if (error.message) {
       process.stderr.write(": " + error.message);

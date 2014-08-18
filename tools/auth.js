@@ -15,12 +15,11 @@ var uniload = require('./uniload.js');
 
 var auth = exports;
 
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
+var getLoadedPackages = function () {
   return uniload.load({
     packages: [ 'meteor', 'livedata' ]
   });
-});
+};
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
@@ -946,7 +945,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       );
     } catch (e) {
       stopSpinner();
-      if (! (e instanceof getLoadedPackages().meteor.Meteor.Error))
+      if (e.errorType !== "Meteor.Error")
         throw e;
       process.stderr.write(
         "When you've picked your password, run 'meteor login' to log in.\n")
@@ -1083,7 +1082,7 @@ exports.loginWithTokenOrOAuth = function (conn, url, domain, sessionType) {
       // If we get a Meteor.Error, then we swallow it and go on to
       // attempt an OAuth flow and get a new token. If it's not a
       // Meteor.Error, then we leave it to the caller to handle.
-      if (! err instanceof Package.meteor.Meteor.Error) {
+      if (err.errorType !== "Meteor.Error") {
         throw err;
       }
     }

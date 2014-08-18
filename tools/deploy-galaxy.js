@@ -15,11 +15,11 @@ var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
 
 // a bit of a hack
-var getPackage = _.once(function () {
+var getPackage = function () {
   return uniload.load({
     packages: [ 'meteor', 'livedata' ]
   });
-});
+};
 
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
@@ -260,8 +260,7 @@ exports.deploy = function (options) {
     try {
       conn.call('createApp', options.app, appConfig);
     } catch (e) {
-      if (e instanceof Package.meteor.Meteor.Error &&
-          e.error === 'already-exists') {
+      if (e.errorType === 'Meteor.Error' && e.error === 'already-exists') {
         // Cool, it already exists. No problem. Just set the settings
         // if they were passed. We explicitly check for undefined
         // because we want to allow you to unset settings by passing
