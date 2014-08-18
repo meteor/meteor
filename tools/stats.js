@@ -136,7 +136,6 @@ var logErrorIfInCheckout = function (err) {
   if (files.inCheckout()) {
     process.stderr.write("Failed to record package usage.\n");
     process.stderr.write("(This error is hidden when you are not running Meteor from a checkout.)\n");
-    process.stderr.write("\n");
     process.stderr.write(err.stack || err);
     process.stderr.write("\n\n");
   }
