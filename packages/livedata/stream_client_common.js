@@ -191,10 +191,12 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self.statusChanged();
   },
 
-  _lostConnection: function () {
+  // maybeError is only set for the Node implementation, and not on explicitly
+  // requested reconnect or a clean close.
+  _lostConnection: function (maybeError) {
     var self = this;
 
-    self._cleanup();
+    self._cleanup(maybeError);
     self._retryLater(); // sets status. no need to do it here.
   },
 

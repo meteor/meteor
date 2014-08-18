@@ -87,7 +87,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     _.each(self.eventCallbacks.reset, function (callback) { callback(); });
   },
 
-  _cleanup: function () {
+  _cleanup: function (maybeError) {
     var self = this;
 
     self._clearConnectionTimer();
@@ -97,7 +97,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       client.close();
     }
 
-    _.each(self.eventCallbacks.disconnect, function (callback) { callback(); });
+    _.each(self.eventCallbacks.disconnect, function (callback) {
+      callback(maybeError);
+    });
   },
 
   _clearConnectionTimer: function () {
@@ -131,7 +133,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
-      _.bind(self._lostConnection, self),
+      function () {
+        self._lostConnection(new Error("DDP connection timed out"));
+      },
       self.CONNECT_TIMEOUT);
 
     self.client.on('open', Meteor.bindEnvironment(function () {
@@ -153,7 +157,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
       // XXX: Make this do something better than make the tests hang if it does
       // not work.
-      self._lostConnection();
+      self._lostConnection(error);
     });
 
 
