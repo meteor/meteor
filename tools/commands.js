@@ -173,6 +173,7 @@ main.registerCommand({
     'raw-logs': { type: Boolean },
     settings: { type: String },
     'no-server': { type: Boolean },
+    clean: { type: Boolean},
     program: { type: String },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -935,7 +936,8 @@ main.registerCommand({
   options: {
     settings: { type: String },
     port: { type: String, short: "p", default: 'localhost:3000' },
-    production: { type: Boolean }
+    production: { type: Boolean },
+    clean: { type: Boolean}
   }
 }, function (options) {
   // XXX replace try-catch with buildmessage.capture

@@ -102,13 +102,21 @@
     loadAssetsFromManifest(__meteor_manifest__, '');
   };
 
-  document.addEventListener("deviceready", function () {
-    var localPathPrefix = cordova.file.applicationStorageDirectory;
-    var iOS = /(iPad|iPhone|iPod)/g.test(navigator.userAgent);
+  var cleanCache = function (url, cb) {
+    var fail = function (err) {
+      console.log("Clearing cache failed: ");
+      console.log(err);
+      cb();
+    };
+    window.resolveLocalFileSystemURL(url, function(entry) {
+      entry.removeRecursively(function() {
+        console.log("Cleared cache successfully.");
+        cb();
+      }, fail);
+    }, fail);
+  };
 
-    // on iOS 'Documents' is read-write, unlinke the storage dir
-    if (iOS)
-      localPathPrefix += 'Documents/';
+  var loadApp = function (localPathPrefix) {
 
     readFile(localPathPrefix + 'version',
       function (err, version) {
@@ -136,6 +144,19 @@
           loadAssetsFromManifest(program.manifest, versionPrefix);
         });
     });
+  };
+
+  document.addEventListener("deviceready", function () {
+    var localPathPrefix = cordova.file.applicationStorageDirectory +
+                          'Documents/meteor/';
+    if (__meteor_runtime_config__.cleanCache) {
+      // If cleanCache is enabled, clean the cache and then load the app.
+      cleanCache(localPathPrefix, function () {
+        loadApp(localPathPrefix);
+      });
+    } else {
+      loadApp(localPathPrefix);
+    }
   }, false);
 })();
 

@@ -99,7 +99,8 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     // XXX propagate it from options?
     ROOT_URL_PATH_PREFIX: '',
     DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port,
-    autoupdateVersionCordova: version
+    autoupdateVersionCordova: version,
+    cleanCache: options.clean
   };
 
   if (publicSettings)

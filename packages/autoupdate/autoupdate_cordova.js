@@ -37,12 +37,9 @@ var writeFile = function (directoryPath, fileName, content, cb) {
 var onNewVersion = function (handle) {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + 'cordova';
-  var localPathPrefix = cordova.file.applicationStorageDirectory;
-  var iOS = /(iPad|iPhone|iPod)/g.test(navigator.userAgent);
 
-  // on iOS 'Documents' is read-write, unlinke the storage dir
-  if (iOS)
-    localPathPrefix += 'Documents/';
+  var localPathPrefix = cordova.file.applicationStorageDirectory +
+                        'Documents/meteor/';
 
 
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
@@ -155,4 +152,9 @@ Autoupdate._retrySubscription = function () {
   }
 };
 
-Meteor.startup(Autoupdate._retrySubscription);
+// XXX only use Autoupdate if we do not clean the cache. Ideally we have a
+// smarter system which only cleans the cache on initial page load, but this
+// would require persisting data through location.reload().
+if (! __meteor_runtime_config__.cleanCache) {
+  Meteor.startup(Autoupdate._retrySubscription);
+}
