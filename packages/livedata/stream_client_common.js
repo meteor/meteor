@@ -215,11 +215,14 @@ _.extend(LivedataTest.ClientStream.prototype, {
         self.currentStatus.retryCount,
         _.bind(self._retryNow, self)
       );
+      self.currentStatus.status = "waiting";
+      self.currentStatus.retryTime = (new Date()).getTime() + timeout;
+    } else {
+      self.currentStatus.status = "failed";
+      delete self.currentStatus.retryTime;
     }
 
-    self.currentStatus.status = "waiting";
     self.currentStatus.connected = false;
-    self.currentStatus.retryTime = (new Date()).getTime() + timeout;
     self.statusChanged();
   },
 
