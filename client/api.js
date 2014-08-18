@@ -2074,6 +2074,32 @@ Template.api.ui_data = {
     }]
 };
 
+Template.api.ui_currentview = {
+  id: "ui_currentview",
+  name: "UI.currentView",
+  locus: "Client",
+  descr: ["The View corresonding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
+};
+
+Template.api.ui_templateinstance = {
+  id: "ui_templateinstance",
+  name: "UI.templateInstance()",
+  locus: "Client",
+  descr: ["The template instance corresonding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
+};
+
+Template.api.ui_parentdata = {
+  id: "ui_parentdata",
+  name: "UI.parentData(numLevels)",
+  locus: "Client",
+  descr: ["Accesses other data contexts that enclose the current data context."],
+  args: [
+    {name: "numLevels",
+     type: "Integer",
+     descr: "The number of levels beyond the current data context to look."
+    }]
+};
+
 Template.api.ui_tohtml = {
   id: "ui_tohtml",
   name: "UI.toHTML(templateOrView)",
@@ -2131,6 +2157,18 @@ Template.api.ui_template = {
      type: "Function",
      descr: "A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template."
     }
+  ]
+};
+
+Template.api.ui_istemplate = {
+  id: "ui_istemplate",
+  name: "UI.isTemplate(value)",
+  locus: "Client",
+  descr: ["Returns true if `value` is a template object like `Template.myTemplate`."],
+  args: [
+    {name: "value",
+     type: "Any",
+     descr: "The value to test."}
   ]
 };
 
