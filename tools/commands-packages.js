@@ -1791,7 +1791,7 @@ main.registerCommand({
   var filteredPackages = cordova.filterPackages(options.args);
   var cordovaPlugins = filteredPackages.plugins;
 
-  // Update the plugins lists
+  // Update the plugins list
   project.removeCordovaPlugins(cordovaPlugins);
 
   if (cordovaPlugins.length) {
