@@ -405,7 +405,7 @@ Blaze._withCurrentView = function (view, func) {
   }
 };
 
-// Blaze._render publicly takes a View or a Template.
+// Blaze.render publicly takes a View or a Template.
 // Privately, it takes any HTMLJS (extended with Views and Templates)
 // except null or undefined, or a function that returns any extended
 // HTMLJS.
@@ -467,8 +467,8 @@ var contentAsFunc = function (content) {
   }
 };
 
-Blaze.render = function (content, parentView) {
-  parentView = parentView || currentViewIfRendering();
+Blaze.render = function (content, _parentView) {
+  var parentView = _parentView || currentViewIfRendering();
 
   var view = contentAsView(content);
   Blaze._materializeView(view, parentView);
@@ -476,8 +476,8 @@ Blaze.render = function (content, parentView) {
   return view;
 };
 
-Blaze.renderWithData = function (content, data, parentView) {
-  parentView = parentView || currentViewIfRendering();
+Blaze.renderWithData = function (content, data, _parentView) {
+  var parentView = parentView || currentViewIfRendering();
 
   var view = Blaze._TemplateWith(data, contentAsFunc(content));
   Blaze._materializeView(view, parentView);
@@ -568,6 +568,9 @@ Blaze.data = function (elementOrView) {
 
 // For back-compat
 Blaze.getElementData = function (element) {
+  Blaze._warn(Blaze._symbol() + ".getElementData has been deprecated.  Use " +
+              Blaze._symbol() + ".data(element) instead.");
+
   if (element.nodeType !== 1)
     throw new Error("Expected DOM element");
 
