@@ -191,7 +191,7 @@ Template.api.ejsonTypeClone = {
 Template.api.ejsonTypeEquals = {
   id: "ejson_type_equals",
   name: "<i>instance</i>.equals(other)",
-  args: [ {name: "other", type: "object", descr: "Another object to compare this to."}],
+  args: [ {name: "other", type: "Object", descr: "Another object to compare this to."}],
   descr: ["Return `true` if `other` has a value equal to `this`; `false` otherwise."]
 };
 
@@ -507,7 +507,7 @@ Template.api.onConnection = {
   descr: ["Register a callback to be called when a new DDP connection is made to the server."],
   args: [
     {name: "callback",
-     type: "function",
+     type: "Function",
      descr: "The function to call when a new DDP connection is established."}
   ]
 };
@@ -1862,6 +1862,13 @@ Template.api.template_autorun = {
   ]
 };
 
+Template.api.template_view = {
+  id: "template_view",
+  name: "<em>this</em>.view",
+  locus: "Client",
+  descr: ["The [View](#ui_view) object for this invocation of the template."]
+};
+
 Template.api.ui_registerhelper = {
   id: "ui_registerhelper",
   name: "UI.registerHelper(name, function)",
@@ -1903,74 +1910,195 @@ Template.api.ui_body = {
 
 Template.api.ui_render = {
   id: "ui_render",
-  name: "UI.render(Template.<em>myTemplate</em>)",
+  name: "UI.render(templateOrView)",
   locus: "Client",
-  descr: ["Executes a template's logic."],
+  descr: ["Renders a template or View to DOM nodes, returning a rendered View."],
   args: [
-    {name: "template",
-     type: "Template",
-     descr: "The particular template to evaluate."
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object to render."
     }]
 };
 
 Template.api.ui_renderwithdata = {
   id: "ui_renderwithdata",
-  name: "UI.renderWithData(Template.<em>myTemplate</em>, data)",
+  name: "UI.renderWithData(templateOrView, data)",
   locus: "Client",
-  descr: ["Executes a template's logic with a data context. Otherwise identical to `UI.render`."],
+  descr: ["Renders a template or View to DOM nodes with a data context.  Otherwise identical to `UI.render`."],
   args: [
-    {name: "template",
-     type: "Template",
-     descr: "The particular template to evaluate."
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object to render."
     },
     {name: "data",
-     type: "Object",
-     descr: "The data context that will be used when evaluating the template."
+     type: "Object or Function",
+     descr: "The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run."
     }]
 };
 
 Template.api.ui_insert = {
   id: "ui_insert",
-  name: "UI.insert(renderedTemplate, parentNode[, nextNode])",
+  name: "UI.insert(renderedView, parentNode[, nextNode])",
   locus: "Client",
-  descr: ["Inserts a rendered template into the DOM and calls its [`rendered`](#template_rendered) callback."],
+  descr: ["Inserts a rendered View (such as the result of `UI.render` on a template) into the DOM."],
   args: [
-    {name: "renderedTemplate",
-     type: "Rendered template object",
+    {name: "renderedView",
+     type: "View",
      descr: "The return value from `UI.render` or `UI.renderWithData`."
     },
     {name: "parentNode",
      type: "DOM Node",
-     descr: "The node that will be the parent of the rendered template."
+     descr: "The node that will be the parent of the rendered template.  It must be an Element node."
     },
     {name: "nextNode",
      type: "DOM Node",
-     descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child."
+     descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode."
     }]
 };
 
 Template.api.ui_remove = {
   id: "ui_remove",
-  name: "UI.remove(renderedTemplate)",
+  name: "UI.remove(renderedView)",
   locus: "Client",
-  descr: ["Removes a rendered template from the DOM and destroys it, calling the [`destroyed`](#template_destroyed) callback and stopping the logic that reactively updates the template."],
+  descr: ["Removes a rendered View from the DOM and destroys it."],
   args: [
-    {name: "renderedTemplate",
-     type: "Rendered template object",
+    {name: "renderedView",
+     type: "View",
      descr: "The return value from `UI.render` or `UI.renderWithData`."
     }
   ]
 };
 
-Template.api.ui_getelementdata = {
-  id: "ui_getelementdata",
-  name: "UI.getElementData(el)",
+Template.api.ui_destroy = {
+  id: "ui_destroy",
+  name: "UI.destroy(viewOrNode)",
   locus: "Client",
-  descr: ["Returns the data context that was used when rendering a DOM element from a Meteor template."],
+  descr: ["Destroys a View, stopping all reactive updates, or destroys all Views contained in a DOM node."],
   args: [
-    {name: "el",
-     type: "DOM Element",
-     descr: "An element that was rendered by a Meteor template"
+    {name: "viewOrNode",
+     type: "View or DOM Node",
+     descr: "A View (such as that returned by `UI.render`) or a DOM node."
+    }
+  ]
+};
+
+Template.api.ui_with = {
+  id: "ui_with",
+  name: "UI.With(data, contentFunc)",
+  locus: "Client",
+  descr: ["Constructs a View that renders content with a data context."],
+  args: [
+    {name: "data",
+     type: "Object or Function",
+     descr: "An object to use as the data context, or a function returning such an object.  If a function is provided, it will be reactively re-run."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    }
+  ]
+};
+
+Template.api.ui_if = {
+  id: "ui_if",
+  name: "UI.If(conditionFunc, contentFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["Constructs a View that renders content conditionally."],
+  args: [
+    {name: "conditionFunc",
+     type: "Function",
+     descr: "A function to reactively re-run.  Whether the result is truthy or falsy determines whether `contentFunc` or `elseFunc` is shown.  An empty array is considered falsy."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    },
+    {name: "elseFunc",
+     type: "Function",
+     descr: "Optional.  A Function that returns [*renderable content*](#renderable_content).  If no `elseFunc` is supplied, no content is shown in the \"else\" case."
+    }
+  ]
+};
+
+Template.api.ui_unless = {
+  id: "ui_unless",
+  name: "UI.Unless(conditionFunc, contentFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["An inverted [`UI.If`](#ui_if)."],
+  args: [
+    {name: "conditionFunc",
+     type: "Function",
+     descr: "A function to reactively re-run.  If the result is falsy, `contentFunc` is shown, otherwise `elseFunc` is shown.  An empty array is considered falsy."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    },
+    {name: "elseFunc",
+     type: "Function",
+     descr: "Optional.  A Function that returns [*renderable content*](#renderable_content).  If no `elseFunc` is supplied, no content is shown in the \"else\" case."
+    }
+  ]
+};
+
+Template.api.ui_each = {
+  id: "ui_each",
+  name: "UI.Each(argFunc, contentFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["Constructs a View that renders `contentFunc` for each item in a sequence."],
+  args: [
+    {name: "argFunc",
+     type: "Function",
+     descr: "A function to reactively re-run.  The function may return a Cursor, an array, null, or undefined."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    },
+    {name: "elseFunc",
+     type: "Function",
+     descr: "Optional.  A Function that returns [*renderable content*](#renderable_content) to display in the case when there are no items to display."
+    }
+  ]
+};
+
+Template.api.ui_data = {
+  id: "ui_data",
+  name: "UI.data([elementOrView])",
+  locus: "Client",
+  descr: ["Returns the current data context, or the data context that was used when rendering a particular DOM element or View from a Meteor template."],
+  args: [
+    {name: "elementOrView",
+     type: "DOM Element or View",
+     descr: "Optional.  An element that was rendered by a Meteor, or a View."
+    }]
+};
+
+Template.api.ui_tohtml = {
+  id: "ui_tohtml",
+  name: "UI.toHTML(templateOrView)",
+  locus: "Client",
+  descr: ["Renders a template or View to a string of HTML."],
+  args: [
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object from which to generate HTML."
+    }]
+};
+
+Template.api.ui_tohtmlwithdata = {
+  id: "ui_tohtmlwithdata",
+  name: "UI.toHTMLWithData(templateOrView, data)",
+  locus: "Client",
+  descr: ["Renders a template or View to HTML with a data context.  Otherwise identical to `UI.toHTML`."],
+  args: [
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object from which to generate HTML."
+    },
+    {name: "data",
+     type: "Object or Function",
+     descr: "The data context to use, or a function returning a data context."
     }]
 };
 
@@ -1988,6 +2116,27 @@ Template.api.ui_view = {
      descr: "A function that returns [*renderable content*](#renderable_content).  In this function, `this` is bound to the View."
     }
   ]
+};
+
+Template.api.ui_template = {
+  id: "ui_template",
+  name: "[new] UI.Template([viewName], renderFunction)",
+  locus: "Client",
+  descr: ["Constructor for a Template, which is used to construct Views with particular name and content."],
+  args: [
+    {name: "viewName",
+     type: "String",
+     descr: "Optional.  A name for Views constructed by this Template.  See [`view.name`](#view_name)."},
+    {name: "renderFunction",
+     type: "Function",
+     descr: "A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template."
+    }
+  ]
+};
+
+Template.api.renderable_content = {
+  id: "renderable_content",
+  name: "Renderable content"
 };
 
 var rfc = function (descr) {

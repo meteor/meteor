@@ -254,7 +254,8 @@ var toc = [
         {instance: "this", name: "firstNode", id: "template_firstNode"},
         {instance: "this", name: "lastNode", id: "template_lastNode"},
         {instance: "this", name: "data", id: "template_data"},
-        {instance: "this", name: "autorun", id: "template_autorun"}
+        {instance: "this", name: "autorun", id: "template_autorun"},
+        {instance: "this", name: "view", id: "template_view"}
       ],
       "UI", [
         "UI.registerHelper",
@@ -263,12 +264,21 @@ var toc = [
         "UI.renderWithData",
         "UI.insert",
         "UI.remove",
-        "UI.getElementData",
+        "UI.destroy",
+        "UI.data",
+        "UI.toHTML",
+        "UI.toHTMLWithData",
+        "UI.With",
+        "UI.If",
+        "UI.Unless",
+        "UI.Each",
         {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
       ],
       "UI.View",
+      "UI.Template",
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
+      {name: "Event maps", style: "noncode"},
+      {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
 
     "Match", [

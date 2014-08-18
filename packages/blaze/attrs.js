@@ -267,12 +267,10 @@ var UrlHandler = AttributeHandler.extend({
     } else {
       var isJavascriptProtocol = (getUrlProtocol(value) === "javascript:");
       if (isJavascriptProtocol) {
-        var blazeSymbol = ((typeof UI !== 'undefined') && UI === Blaze) ?
-              'UI' : 'Blaze';
-        Meteor._debug("URLs that use the 'javascript:' protocol are not " +
-                      "allowed in URL attribute values. " +
-                      "Call " + blazeSymbol + "._allowJavascriptUrls() " +
-                      "to enable them.");
+        Blaze._warn("URLs that use the 'javascript:' protocol are not " +
+                    "allowed in URL attribute values. " +
+                    "Call " + Blaze._symbol() + "._allowJavascriptUrls() " +
+                    "to enable them.");
         origUpdate.apply(self, [element, oldValue, null]);
       } else {
         origUpdate.apply(self, args);
