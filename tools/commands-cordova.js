@@ -316,8 +316,11 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
   // This block checks to see if we should install or reinstall a plugin.
   _.each(plugins, function (version, name) {
     // no-op if this plugin is already installed
-    if (_.has(installedPlugins, name)
-        && installedPlugins[name] === version) {
+    // XXX there is a hack here that never updates a package if you are
+    // trying to install it from a URL, because we can't determine if
+    // it's the right version or not
+    if (_.has(installedPlugins, name) &&
+      (installedPlugins[name] === version || utils.isUrlWithSha(version))) {
 
       if (newSettings && newSettings[name] &&
           ! _.isEqual(oldSettings[name], newSettings[name])) {
@@ -327,8 +330,10 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
       }
     }
 
-    if (_.has(installedPlugins, name))
-      execFileSyncOrThrow(localCordova, ['plugin', 'rm', name], { cwd: cordovaPath });
+    if (_.has(installedPlugins, name)) {
+      execFileSyncOrThrow(localCordova, ['plugin', 'rm', name],
+        { cwd: cordovaPath });
+    }
 
     // XXX do something different for plugins fetched from a url.
     var pluginInstallCommand = version ? name + '@' + version : name;
