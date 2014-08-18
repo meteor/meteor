@@ -217,7 +217,8 @@ Meteor.startup(function () {
       return 'none';
 
     return calculateClientHash(
-      WebApp.clientPrograms[archName].manifest, null, true);
+      WebApp.clientPrograms[archName].manifest, null, _.pick(
+        __meteor_runtime_config__, 'PUBLIC_SETTINGS'));
   };
 });
 
@@ -489,12 +490,15 @@ var runWebAppServer = function () {
       };
 
       try {
-        _.each(__meteor_bootstrap__.configJson.clientPaths, function (clientPath, arch) {
+        var clientPaths = __meteor_bootstrap__.configJson.clientPaths;
+        _.each(clientPaths, function (clientPath, arch) {
           archPath[arch] = path.dirname(clientPath);
           var manifest = getClientManifest(clientPath, arch);
           WebApp.clientPrograms[arch] = {
             manifest: manifest,
-            version: WebAppHashing.calculateClientHash(manifest, null, true)
+            version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
+              __meteor_runtime_config__, 'PUBLIC_SETTINGS')),
+            PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
           };
         });
 

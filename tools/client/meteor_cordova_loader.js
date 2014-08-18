@@ -127,10 +127,13 @@
             return;
           }
 
-          var manifest = JSON.parse(res);
+          var program = JSON.parse(res);
           // update the version we are loading
           __meteor_runtime_config__.autoupdateVersionCordova = version;
-          loadAssetsFromManifest(manifest, versionPrefix);
+          // update the public settings
+          __meteor_runtime_config__.PUBLIC_SETTINGS = program.PUBLIC_SETTINGS;
+
+          loadAssetsFromManifest(program.manifest, versionPrefix);
         });
     });
   }, false);

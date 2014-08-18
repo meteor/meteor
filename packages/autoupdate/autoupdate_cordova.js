@@ -51,8 +51,9 @@ var onNewVersion = function (handle) {
       return;
     }
 
-    var manifest = res.data.manifest;
-    var version = res.data.version;
+    var program = res.data;
+    var manifest = program.manifest;
+    var version = program.version;
     var ft = new FileTransfer();
     var downloads = 0;
     _.each(manifest, function (item) {
@@ -63,7 +64,7 @@ var onNewVersion = function (handle) {
 
     var afterAllFilesDownloaded = _.after(downloads, function () {
       writeFile(versionPrefix, 'manifest.json',
-          JSON.stringify(manifest, undefined, 2),
+          JSON.stringify(program, undefined, 2),
           function (err) {
 
         if (err) {

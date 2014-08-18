@@ -11,17 +11,22 @@ WebAppHashing = {};
 // (but the second is a performance enhancement, not a hard
 // requirement).
 
-WebAppHashing.calculateClientHash = function (manifest, includeFilter, skipRuntimeCfg) {
+WebAppHashing.calculateClientHash =
+  function (manifest, includeFilter, runtimeConfigOverride) {
   var hash = crypto.createHash('sha1');
 
-  if (! skipRuntimeCfg) {
-    // Omit the old hashed client values in the new hash. These may be
-    // modified in the new boilerplate.
-    var runtimeCfgString = _.omit(__meteor_runtime_config__,
-      ['autoupdateVersion', 'autoupdateVersionRefreshable',
-       'autoupdateVersionCordova']);
-    hash.update(JSON.stringify(runtimeCfgString, 'utf8'));
+  // Omit the old hashed client values in the new hash. These may be
+  // modified in the new boilerplate.
+  var runtimeCfg = _.omit(__meteor_runtime_config__,
+    ['autoupdateVersion', 'autoupdateVersionRefreshable',
+     'autoupdateVersionCordova']);
+
+  if (runtimeConfigOverride) {
+    runtimeCfg = runtimeConfigOverride;
   }
+
+  hash.update(JSON.stringify(runtimeCfg, 'utf8'));
+
   _.each(manifest, function (resource) {
       if ((! includeFilter || includeFilter(resource.type)) &&
           (resource.where === 'client' || resource.where === 'internal')) {
