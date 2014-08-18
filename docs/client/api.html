@@ -2289,6 +2289,13 @@ templates rendered with `UI.render` are destroyed.
 
 {{> api_box ui_data}}
 
+{{> api_box ui_templateinstance}}
+
+{{> api_box ui_parentdata}}
+
+For example, `UI.parentData(0)` is equivalent to `UI.data()`.  `UI.parentData(2)`
+is equivalent to `{{dstache}}../..}}` in a template.
+
 {{> api_box ui_tohtml}}
 
 Rendering a template to HTML loses all fine-grained reactivity.  The
@@ -2303,32 +2310,6 @@ changes will invalidate the current Computation if there is one
 (for example, an autorun that is the caller of `UI.toHTML`).
 
 {{> api_box ui_tohtmlwithdata}}
-
-{{> api_box ui_with}}
-
-Returns an unrendered View object you can pass to `UI.render`.
-
-Unlike `{{dstache}}#with}}` (as used in templates), `UI.With` has no "else" case, and
-a falsy value for the data context will not prevent the content from
-rendering.
-
-{{> api_box ui_if}}
-
-Returns an unrendered View object you can pass to `UI.render`.
-
-Matches the behavior of `{{dstache}}#if}}` in templates.
-
-{{> api_box ui_unless}}
-
-Returns an unrendered View object you can pass to `UI.render`.
-
-Matches the behavior of `{{dstache}}#unless}}` in templates.
-
-{{> api_box ui_each}}
-
-Returns an unrendered View object you can pass to `UI.render`.
-
-Matches the behavior of `{{dstache}}#each}}` in templates.
 
 {{> api_box ui_dynamic}}
 
@@ -2507,6 +2488,38 @@ be updated.
 
 </dl>
 
+{{> api_box ui_currentview}}
+
+The "current view" is used by [`UI.data()`](#ui_data) and
+[`UI.templateInstance()`](#ui_templateinstance) to determine
+the contextually relevant data context and template instance.
+
+{{> api_box ui_with}}
+
+Returns an unrendered View object you can pass to `UI.render`.
+
+Unlike `{{dstache}}#with}}` (as used in templates), `UI.With` has no "else" case, and
+a falsy value for the data context will not prevent the content from
+rendering.
+
+{{> api_box ui_if}}
+
+Returns an unrendered View object you can pass to `UI.render`.
+
+Matches the behavior of `{{dstache}}#if}}` in templates.
+
+{{> api_box ui_unless}}
+
+Returns an unrendered View object you can pass to `UI.render`.
+
+Matches the behavior of `{{dstache}}#unless}}` in templates.
+
+{{> api_box ui_each}}
+
+Returns an unrendered View object you can pass to `UI.render`.
+
+Matches the behavior of `{{dstache}}#each}}` in templates.
+
 {{> api_box ui_template}}
 
 Templates defined by the template compiler, such as `Template.myTemplate`,
@@ -2549,6 +2562,8 @@ be able to construct your own custom Template objects.  For example, you can:
 * Wrap or override `.constructView()` for a particular Template, in order to create
   and use custom Views.
 {{/note}}
+
+{{> api_box ui_istemplate}}
 
 {{#api_box eventmaps}}
 

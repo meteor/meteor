@@ -266,16 +266,21 @@ var toc = [
         "UI.remove",
         "UI.destroy",
         "UI.data",
+        "UI.templateInstance",
+        "UI.parentData",
         "UI.toHTML",
         "UI.toHTMLWithData",
+        {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
+      ],
+      {name: "Views", id: "ui_view"}, [
+        "UI.currentView",
         "UI.With",
         "UI.If",
         "UI.Unless",
-        "UI.Each",
-        {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
+        "UI.Each"
       ],
-      "UI.View",
       "UI.Template",
+      "UI.isTemplate",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
