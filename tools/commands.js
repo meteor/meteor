@@ -173,13 +173,16 @@ main.registerCommand({
     'raw-logs': { type: Boolean },
     settings: { type: String },
     'no-server': { type: Boolean },
-    clean: { type: Boolean},
     program: { type: String },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
     // undocumented: intended for automated testing (eg, cli-test.sh),
     // not end-user use. #Once
-    once: { type: Boolean }
+    once: { type: Boolean },
+    // With --clean, meteor cleans the application directory and uses the
+    // bundled assets only. Encapsulates the behavior of once (does not rerun)
+    // and does not monitor for file changes. Not for end-user use.
+    clean: { type: Boolean}
   }
 }, function (options) {
 
@@ -212,6 +215,11 @@ main.registerCommand({
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
+      // --clean encpasulates the behavior of once
+      if (options.clean) {
+        options.once = true;
+      }
+
       var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
       cordova.buildPlatforms(localPath, options.args,
@@ -936,8 +944,7 @@ main.registerCommand({
   options: {
     settings: { type: String },
     port: { type: String, short: "p", default: 'localhost:3000' },
-    production: { type: Boolean },
-    clean: { type: Boolean}
+    production: { type: Boolean }
   }
 }, function (options) {
   // XXX replace try-catch with buildmessage.capture

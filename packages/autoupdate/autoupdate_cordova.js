@@ -152,9 +152,4 @@ Autoupdate._retrySubscription = function () {
   }
 };
 
-// XXX only use Autoupdate if we do not clean the cache. Ideally we have a
-// smarter system which only cleans the cache on initial page load, but this
-// would require persisting data through location.reload().
-if (! __meteor_runtime_config__.cleanCache) {
-  Meteor.startup(Autoupdate._retrySubscription);
-}
+Meteor.startup(Autoupdate._retrySubscription);
