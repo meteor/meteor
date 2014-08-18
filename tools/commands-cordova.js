@@ -74,8 +74,8 @@ var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
   var manifest = clientJson.manifest;
-  var settings = JSON.parse(options.settings ?
-                            fs.readFileSync(options.settings, 'utf8') : {});
+  var settings = options.settings ?
+    JSON.parse(fs.readFileSync(options.settings, 'utf8')) : {};
   var publicSettings = settings['public'];
 
   var meteorRelease = project.getMeteorReleaseVersion();
