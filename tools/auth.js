@@ -979,6 +979,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
 });
 
 // options: firstTime, leadingNewline
+// returns true if it printed something
 exports.maybePrintRegistrationLink = function (options) {
   options = options || {};
 
@@ -990,7 +991,14 @@ exports.maybePrintRegistrationLink = function (options) {
   if (session.userId && ! session.username && session.registrationUrl) {
     if (options.leadingNewline)
       process.stderr.write("\n");
-    if (! options.firstTime) {
+    if (options.onlyAllowIfRegistered) {
+      // A stronger message: we're going to not allow whatever they were trying
+      // to do!
+      process.stderr.write(
+"You need to claim a username and set a password on your Meteor developer\n" +
+"account to run this command. It takes about a minute at:\n" +
+"  " + session.registrationUrl + "\n");
+    } else if (! options.firstTime) {
       // If they've already been prompted to set a password then this
       // is more of a friendly reminder, so we word it slightly
       // differently than the first time they're being shown a
@@ -1003,7 +1011,9 @@ exports.maybePrintRegistrationLink = function (options) {
 "You can set a password on your account or change your email address at:\n" +
 session.registrationUrl + "\n\n");
     }
+    return true;
   }
+  return false;
 };
 
 exports.tryRevokeOldTokens = tryRevokeOldTokens;

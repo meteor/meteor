@@ -257,6 +257,8 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   return ret;
 };
 
+var AlreadyPrintedMessageError = function () {};
+
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
 // (e.g. connection to package server times out), then it will be
@@ -264,7 +266,18 @@ exports.updateServerPackageData = function (cachedServerData, options) {
 exports.loggedInPackagesConnection = function () {
   // Make sure that we are logged in with Meteor Accounts so that we can
   // do an OAuth flow.
+
+  if (auth.maybePrintRegistrationLink({onlyAllowIfRegistered: true})) {
+    // Oops, we're logged in but with a deferred-registration account.
+    // Message has already been printed.
+    throw new AlreadyPrintedMessageError;
+  }
+
   if (! auth.isLoggedIn()) {
+    // XXX we should have a better account signup page.
+    process.stderr.write(
+"Please log in with your Meteor developer account. If you don't have one,\n" +
+"you can quickly create one at www.meteor.com.\n");
     auth.doUsernamePasswordLogin({ retry: true });
   }
 
@@ -440,8 +453,9 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 
 exports.handlePackageServerConnectionError = function (error) {
-  var Package = getLoadedPackages();
-  if (error.errorType === 'Meteor.Error') {
+  if (error instanceof AlreadyPrintedMessageError) {
+    // do nothing
+  } else if (error.errorType === 'Meteor.Error') {
     process.stderr.write("Error connecting to package server");
     if (error.message) {
       process.stderr.write(": " + error.message);
