@@ -130,8 +130,8 @@ mv ../$FIBERS_ARCH .
 # tool (and not by the bundled app boot.js script).
 cd "${DIR}/lib"
 npm install request@2.33.0
-npm install fstream@0.1.25
-npm install tar@0.1.19
+npm install fstream@1.0.2
+npm install tar@1.0.1
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install browserstack-webdriver@2.41.1
