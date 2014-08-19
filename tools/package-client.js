@@ -359,18 +359,21 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
 var uploadTarball = function (putUrl, tarball) {
   var size = fs.statSync(tarball).size;
   var rs = fs.createReadStream(tarball);
-  // Use getUrl instead of request, to throw on 4xx/5xx.
-  httpHelpers.getUrl({
-    method: 'PUT',
-    url: putUrl,
-    headers: {
-      'content-length': size,
-      'content-type': 'application/octet-stream',
-      'x-amz-acl': 'public-read'
-    },
-    bodyStream: rs
-  });
-  rs.close();
+  try {
+    // Use getUrl instead of request, to throw on 4xx/5xx.
+    httpHelpers.getUrl({
+      method: 'PUT',
+      url: putUrl,
+      headers: {
+        'content-length': size,
+        'content-type': 'application/octet-stream',
+        'x-amz-acl': 'public-read'
+      },
+      bodyStream: rs
+    });
+  } finally {
+    rs.close();
+  }
 };
 
 exports.uploadTarball = uploadTarball;
