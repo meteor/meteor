@@ -135,10 +135,11 @@ ConstraintSolver.Resolver.prototype.resolve =
     }
   }, options);
 
-  // required for error reporting later
-  var constraintAncestor = {};
+  // required for error reporting later.
+  // maps Constraint [object identity! thus getConstraint] to list of unit name
+  var constraintAncestor = mori.hash_map();
   _.each(constraints, function (c) {
-    constraintAncestor[c.toString()] = c.name;
+    constraintAncestor = mori.assoc(constraintAncestor, c, mori.list(c.name));
   });
 
   dependencies = ConstraintSolver.DependenciesList.fromArray(dependencies);
@@ -153,7 +154,7 @@ ConstraintSolver.Resolver.prototype.resolve =
   // - dependencies: DependenciesList
   // - constraints: ConstraintsList
   // - choices: array of UnitVersion
-  // - constraintAncestor: mapping Constraint.toString() -> Constraint
+  // - constraintAncestor: mapping Constraint -> mori.list(unitName)
   var startState = self._propagateExactTransDeps(appUV, dependencies, constraints, choices, constraintAncestor);
   startState.choices = _.filter(startState.choices, function (uv) { return uv.name !== "###TARGET###"; });
 
@@ -232,10 +233,9 @@ ConstraintSolver.Resolver.prototype.resolve =
 // - constraints: ConstraintsList - constraints to satisfy
 // - choices: array of UnitVersion - current fixed set of choices
 // - constraintAncestor: Constraint (string representation) ->
-//   Dependency name. Used for error reporting to indicate which direct
-//   dependencies have caused a failure. For every constraint, this is
-//   the list of direct dependencies which led to this constraint being
-//   present.
+//   mori.list(Dependency name). Used for error reporting to indicate which
+//   direct dependencies have caused a failure. For every constraint, this is
+//   the list of direct dependencies which led to this constraint being present.
 //
 // returns {
 //   success: Boolean,
@@ -285,14 +285,18 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     _.each(violatedConstraints, function (c) {
       if (directDepsString !== "")
         directDepsString += ", ";
-      directDepsString += constraintAncestor[c.toString()] +
-        "(" + c.toString() + ")";
+      var cAsString = c.toString();
+
+      directDepsString += mori.into_array(mori.get(constraintAncestor, c))
+        .reverse().join("=>");
+      directDepsString += "(" + c.toString() + ")";
     });
 
     return {
       success: false,
       // XXX We really want to say "directDep1 depends on X@1.0 and
       // directDep2 depends on X@2.0"
+      // XXX Imrove message
       failureMsg: "Direct dependencies of " + directDepsString + " conflict on " + name,
       conflictingUnit: candidateName
     };
@@ -314,10 +318,9 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
 
   var neighbors = _.chain(candidateVersions).map(function (uv) {
     var nChoices = _.clone(choices);
-    var nConstraintAncestors = _.clone(constraintAncestor);
     nChoices.push(uv);
 
-    return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices, nConstraintAncestors);
+    return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices, constraintAncestor);
   }).filter(function (state) {
     var vcfc =
       violatedConstraintsForSomeChoice(state.choices, state.constraints, self);
@@ -433,42 +436,47 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
     }
     // for error reporting
     uv.constraints.each(function (c) {
-      if (! constraintAncestor[c.toString()])
-        constraintAncestor[c.toString()] = constr ? constraintAncestor[constr.toString()] : uv.name;
+      if (! mori.has_key(constraintAncestor, c)) {
+        constraintAncestor = mori.assoc(
+          constraintAncestor,
+          c,
+          mori.cons(uv.name,
+                    (constr ? mori.get(constraintAncestor, constr) : null)));
+      }
     });
   }
 
-  // Update the constraintAncestor table
-  _.each(choices, function (uv) {
-    if (oldChoice[uv.name])
-      return;
+  // // Update the constraintAncestor table
+  // _.each(choices, function (uv) {
+  //   if (oldChoice[uv.name])
+  //     return;
 
-    var relevantConstraint = null;
-    constraints.forPackage(uv.name, function (c) { relevantConstraint = c; });
+  //   var relevantConstraint = null;
+  //   constraints.forPackage(uv.name, function (c) { relevantConstraint = c; });
 
-    var rootAnc = null;
-    if (relevantConstraint) {
-      rootAnc = constraintAncestor[relevantConstraint.toString()];
-    } else {
-      // XXX this probably only works correctly when uv was a root dependency
-      // w/o a constraint or dependency of one of the root deps.
-      _.each(choices, function (choice) {
-        if (rootAnc)
-          return;
+  //   var rootAnc = null;
+  //   if (relevantConstraint) {
+  //     rootAnc = constraintAncestor[relevantConstraint.toString()];
+  //   } else {
+  //     // XXX this probably only works correctly when uv was a root dependency
+  //     // w/o a constraint or dependency of one of the root deps.
+  //     _.each(choices, function (choice) {
+  //       if (rootAnc)
+  //         return;
 
-        if (choice.dependencies.contains(uv.name))
-          rootAnc = choice.name;
-      });
+  //       if (choice.dependencies.contains(uv.name))
+  //         rootAnc = choice.name;
+  //     });
 
-      if (! rootAnc)
-        rootAnc = uv.name;
-    }
+  //     if (! rootAnc)
+  //       rootAnc = uv.name;
+  //   }
 
-    uv.constraints.each(function (c) {
-      if (! constraintAncestor[c.toString()])
-        constraintAncestor[c.toString()] = rootAnc;
-    });
-  });
+  //   uv.constraints.each(function (c) {
+  //     if (! constraintAncestor[c.toString()])
+  //       constraintAncestor[c.toString()] = rootAnc;
+  //   });
+  // });
 
   return {
     dependencies: dependencies,
