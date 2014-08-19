@@ -517,7 +517,7 @@ files.extractTarGz = function (buffer, destPath) {
   var zlib = require("zlib");
   var gunzip = zlib.createGunzip()
     .on('error', function (e) {
-      future.throw(e);
+      future.isResolved() || future.throw(e);
     });
   var extractor = new tar.Extract({ path: tempDir })
     .on('error', function (e) {
@@ -526,18 +526,6 @@ files.extractTarGz = function (buffer, destPath) {
     .on('end', function () {
       future.isResolved() || future.return();
     });
-  // Ugh, extractor has a bug that makes sometimes try to do some operations (eg
-  // chmod) twice... and the second time can happen after emitting 'end'!  This
-  // would lead to a crash, since we've probably already moved the tree out of
-  // the way by then!  Ignore such errors. See
-  //   https://github.com/npm/fstream/issues/26
-  extractor._fst.on('error', function (e) {
-    if (future.isResolved()) {
-      // Ignore.
-      return;
-    }
-    future.throw(e);
-  });
 
   // write the buffer to the (gunzip|untar) pipeline; these calls
   // cause the tar to be extracted to disk.
