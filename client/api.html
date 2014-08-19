@@ -2240,7 +2240,7 @@ If the View is never inserted, or if it is removed by some other mechanism
 besides Meteor or jQuery (which Meteor integrates with by default),
 the View may continue to update indefinitely.  Most users will not need to
 manually render templates and insert them into the DOM, but if you do,
-be mindful that the View is always destroyed when it is no longer needed.
+be mindful to always destroy the View when it is no longer needed.
 {{/warning}}
 
 {{> api_box ui_renderwithdata}}
