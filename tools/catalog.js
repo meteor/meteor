@@ -628,7 +628,6 @@ _.extend(CompleteCatalog.prototype, {
     _.each(self.localPackages, function (x) {
       self.effectiveLocalPackages.push(x);
     });
-    self.effectiveLocalPackages.reverse();
   },
 
   getForgottenECVs: function (packageName) {
@@ -714,9 +713,7 @@ _.extend(CompleteCatalog.prototype, {
         if (!packageSource.isTest && packageSource.testName) {
           initSourceFromDir(packageSource.sourceRoot, packageSource.testName);
         }
-      }/* else {
-        console.log("REPEAT:", name, packageSource.sourceRoot);
-      }*/
+      }
     };
 
     // Given a package-source, create its catalog record.

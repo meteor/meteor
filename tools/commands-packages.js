@@ -203,7 +203,7 @@ main.registerCommand({
     return 1;
   }
 
-  process.stdout.write('Building package...\n');
+  process.stdout.write('Reading package...\n');
 
   // XXX Prettify error messages
 

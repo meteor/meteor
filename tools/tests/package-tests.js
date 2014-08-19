@@ -192,7 +192,6 @@ selftest.define("change packages", ['test-package-server'], function () {
   run.stop();
 });
 
-
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
 selftest.define("add packages", ["net", "test-package-server"], function () {
@@ -533,4 +532,52 @@ selftest.define("update server package data unit test",
                                   { name: name });
     selftest.expectEqual(!! foundOnDisk, true);
   });
+});
+
+
+// Add packages to an app. Change the contents of the packages and their
+// dependencies, make sure that the app still refreshes.
+selftest.define("package with --name", ['test-package-server'], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run; introducing a new package overriding a core package.
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  run = s.run("add", "accounts-base");
+  run.waitSecs(15);
+  run.match("accounts-base");
+
+  run = s.run();
+  run.waitSecs(5);
+  run.match("myapp");
+  run.match("proxy");
+  run.match("MongoDB.\n");
+  run.waitSecs(5);
+  run.read("=> Starting your app");
+  run.waitSecs(5);
+  run.match("running at");
+  run.match("localhost");
+
+  s.cd("packages", function () {
+    s.createPackage("ac-fake", "fake-accounts-base");
+  });
+
+  run.waitSecs(5);
+  run.match("overriding accounts-base!");
+  run.match("restarted");
+  run.stop();
+
+  run = s.run('list');
+  run.match("standard");
+  run.match("accounts-base");
+
+  // What about test-packages?
+  s.cd('packages');
+  s.cd('ac-fake');
+  run = s.run('test-packages', './');
+  run.waitSecs(15);
+  run.match("overriding accounts-base!");
+  run.stop();
 });
