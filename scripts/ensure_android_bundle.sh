@@ -89,6 +89,8 @@ export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/pl
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
 export PATH=${ANT_HOME}/bin:${PATH}
 
+export HOME=${ANDROID_BUNDLE}
+
 # create avd if necessary
 if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep Name) ]] ; then
   echo "
