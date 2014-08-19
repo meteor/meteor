@@ -191,19 +191,6 @@ main.registerCommand({
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
   refreshOfficialCatalogOrDie();
-  var packageName = path.basename(options.packageDir);
-
-  // Fail early if the package already exists.
-  if (options.create) {
-    var packageInfo = doOrDie(function () {
-      return catalog.official.getPackage(packageName);
-    });
-    if (packageInfo) {
-      process.stderr.write("Package already exists. To create a new version of an existing "+
-                           "package, do not use the --create flag! \n");
-      return 2;
-    }
-  };
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -225,14 +212,10 @@ main.registerCommand({
     { title: "building the package" },
     function () {
 
-      if (! utils.validPackageName(packageName)) {
-        buildmessage.error("Invalid package name:", packageName);
-      }
-
       packageSource = new PackageSource(catalog.complete);
 
       // Anything published to the server must have a version.
-      packageSource.initFromPackageDir(packageName, options.packageDir, {
+      packageSource.initFromPackageDir(options.packageDir, {
         requireVersion: true });
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
@@ -247,6 +230,26 @@ main.registerCommand({
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;
+  }
+
+  var packageName = packageSource.name;
+
+  // Fail early if the package record exists, but we don't think that it does
+  // and are passing in the --create flag!
+  if (options.create) {
+    var packageInfo = doOrDie(function () {
+      return catalog.official.getPackage(packageName);
+    });
+    if (packageInfo) {
+      process.stderr.write(
+        "Package already exists. To create a new version of an existing "+
+        "package, do not use the --create flag! \n");
+      return 2;
+    }
+  };
+
+  if (! utils.validPackageName(packageName)) {
+    buildmessage.error("Invalid package name:", packageName);
   }
 
   // We have initialized everything, so perform the publish oepration.
@@ -361,10 +364,12 @@ main.registerCommand({
     // This package source, although it is initialized from a directory is
     // immutable. It should be built exactly as is. If we need to modify
     // anything, such as the version lock file, something has gone terribly
-    // wrong and we should throw.
-    packageSource.initFromPackageDir(name, packageDir,  {
+    // wrong and we should throw. Additionally, we know exactly which package
+    // we are trying to publish-for-arch, so let's pass in the name.
+    packageSource.initFromPackageDir(packageDir,  {
       requireVersion: true,
-      immutable: true
+      immutable: true,
+      name: name
     });
     if (buildmessage.jobHasMessages())
       return;
@@ -616,10 +621,14 @@ main.registerCommand({
               function () {
                 process.stdout.write("  checking consistency of " + item + " ");
 
-                // Initialize the package source. (If we can't do this, then we should
-                // not proceed)
-                packageSource.initFromPackageDir(item, packageDir,  {
-                  requireVersion: true });
+                // Initialize the package source. Core packages have the same
+                // name as their corresponding directories, because otherwise we
+                // would have a lot of difficulties trying to keep them
+                // organized.
+                // (XXX: this is a flimsy excuse, ekate, just fix the code)
+                packageSource.initFromPackageDir(packageDir,  {
+                  requireVersion: true,
+                  name: item });
 
                 if (buildmessage.jobHasMessages()) {
                   process.stdout.write("\n ...Error reading package:" + item + "\n");

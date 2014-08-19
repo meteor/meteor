@@ -588,7 +588,12 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
         var compiler = require('./compiler.js');
 
         var testSource = new PackageSource(catalog.complete);
-        testSource.initFromPackageDir(testName, packageSource.sourceRoot);
+        // We need to pass in the name of the test package in order to
+        // initialize it. Otherwise, the defaul behaviour will be to initalize
+        // the base package.
+        testSource.initFromPackageDir(packageSource.sourceRoot, {
+          name: testName
+        });
         if (buildmessage.jobHasMessages())
           return; // already have errors, so skip the build
 

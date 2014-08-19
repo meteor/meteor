@@ -261,7 +261,7 @@ _.extend(Project.prototype, {
         var packageSource;
         // For now, if it turns into a unipackage, it should have a version.
         var programSource = new PackageSource(catalog.complete);
-        programSource.initFromPackageDir(programName, programSubdir);
+        programSource.initFromPackageDir(programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {
           _.each(sourceUnibuild.uses, function (use) {
             var constraint = use.constraint || null;

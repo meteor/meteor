@@ -992,10 +992,15 @@ main.registerCommand({
           // main package. This is not ideal (I hate how this mutates global
           // state) but it'll do for now.
           var packageDir = path.resolve(p);
-          var packageName = path.basename(packageDir);
-          catalog.complete.addLocalPackage(packageName, packageDir);
-          localPackageNames.push(packageName);
-          return packageName;
+          catalog.complete.addLocalPackage(packageDir);
+
+          // XXX: Hack.
+          var PackageSource = require('./package-source.js');
+          var packageSource = new PackageSource(catalog.complete);
+          packageSource.initFromPackageDir(packageDir);
+
+          localPackageNames.push(packageSource.name);
+          return packageSource.name;
         });
 
       });
