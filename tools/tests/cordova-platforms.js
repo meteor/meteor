@@ -54,10 +54,10 @@ selftest.define("add cordova platforms", function () {
 
   run = s.run("run", "android");
   run.matchErr("platform is not added");
-  run.matchErr("meteor add-platform android");
+  run.matchErr("meteor add platform:android");
   run.expectExit(1);
 
-  run = s.run("add-platform", "android");
+  run = s.run("add", "platform:android");
   run.match("added");
 
   run = s.run("run", "android");
@@ -71,10 +71,10 @@ selftest.define("add cordova platforms", function () {
   // run.match("running at");
   // run.match("localhost");
 
-  run = s.run("remove-platform", "android");
+  run = s.run("remove", "platform:android");
   run.match("removed");
   run = s.run("run", "android");
   run.matchErr("platform is not added");
-  run.matchErr("meteor add-platform android");
+  run.matchErr("meteor add platform:android");
   run.expectExit(1);
 });
