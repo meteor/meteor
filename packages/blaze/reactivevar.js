@@ -1,5 +1,5 @@
 /**
- * ## [new] Blaze._ReactiveVar(initialValue, [equalsFunc])
+ * ## [new] Blaze.ReactiveVar(initialValue, [equalsFunc])
  *
  * A ReactiveVar holds a single value that can be get and set,
  * such that calling `set` will invalidate any Computations that
@@ -26,17 +26,17 @@
  * it into the ReactiveVar of Geoff's Lickable Forms proposal.
  */
 
-Blaze._ReactiveVar = function (initialValue, equalsFunc) {
-  if (! (this instanceof Blaze._ReactiveVar))
+Blaze.ReactiveVar = function (initialValue, equalsFunc) {
+  if (! (this instanceof Blaze.ReactiveVar))
     // called without `new`
-    return new Blaze._ReactiveVar(initialValue, equalsFunc);
+    return new Blaze.ReactiveVar(initialValue, equalsFunc);
 
   this.curValue = initialValue;
   this.equalsFunc = equalsFunc;
   this.dep = new Deps.Dependency;
 };
 
-Blaze._ReactiveVar._isEqual = function (oldValue, newValue) {
+Blaze.ReactiveVar._isEqual = function (oldValue, newValue) {
   var a = oldValue, b = newValue;
   // Two values are "equal" here if they are `===` and are
   // number, boolean, string, undefined, or null.
@@ -47,17 +47,17 @@ Blaze._ReactiveVar._isEqual = function (oldValue, newValue) {
             (typeof a === 'string'));
 };
 
-Blaze._ReactiveVar.prototype.get = function () {
+Blaze.ReactiveVar.prototype.get = function () {
   if (Deps.active)
     this.dep.depend();
 
   return this.curValue;
 };
 
-Blaze._ReactiveVar.prototype.set = function (newValue) {
+Blaze.ReactiveVar.prototype.set = function (newValue) {
   var oldValue = this.curValue;
 
-  if ((this.equalsFunc || Blaze._ReactiveVar._isEqual)(oldValue, newValue))
+  if ((this.equalsFunc || Blaze.ReactiveVar._isEqual)(oldValue, newValue))
     // value is same as last time
     return;
 
@@ -65,6 +65,6 @@ Blaze._ReactiveVar.prototype.set = function (newValue) {
   this.dep.changed();
 };
 
-Blaze._ReactiveVar.prototype.toString = function () {
+Blaze.ReactiveVar.prototype.toString = function () {
   return 'ReactiveVar{' + this.get() + '}';
 };

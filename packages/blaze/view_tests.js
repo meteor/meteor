@@ -1,7 +1,7 @@
 if (Meteor.isClient) {
 
   Tinytest.add("blaze - view - callbacks", function (test) {
-    var R = Blaze._ReactiveVar('foo');
+    var R = Blaze.ReactiveVar('foo');
 
     var buf = '';
 
