@@ -19,7 +19,7 @@ command -v elephant >/dev/null 2>&1 || {
     java -v
   fi
 
-  exit 0;
+  exit 1;
 }
 
 

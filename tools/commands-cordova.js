@@ -47,8 +47,13 @@ var execFileAsyncOrThrow = function (file, args, opts) {
 var execFileSyncOrThrow = function (file, args, opts) {
   var execFileSync = require('./utils.js').execFileSync;
   if (_.contains([localCordova, localAdb], file) &&
-      _.contains(project.getCordovaPlatforms(), 'android'))
-    ensureAndroidBundle();
+      _.contains(project.getCordovaPlatforms(), 'android')) {
+    try {
+      ensureAndroidBundle();
+    } catch (err) {
+      process.exit();
+    }
+  }
 
   var process = execFileSync(file, args, opts);
   if (! process.success)
@@ -60,7 +65,7 @@ var ensureAndroidBundle = function () {
   var ensureScriptPath = path.join(files.getCurrentToolsDir(),
                                    'scripts', 'ensure_android_bundle.sh');
 
-  execFileSyncOrThrow('sh', [ensureScriptPath], { pipeOutput: true });
+  execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
 };
 
 var getLoadedPackages = _.once(function () {
