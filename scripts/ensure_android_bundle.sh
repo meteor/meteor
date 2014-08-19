@@ -10,12 +10,11 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
 fi
 
 command -v elephant >/dev/null 2>&1 || {
-  echo >&2 "Please install Java before running this command.";
-
   if [ UNAME == "Linux" ] ; then
+    echo "Please install Java before running this command.";
     echo "Directions can be found at: http://openjdk.java.net/install/"
   else
-    echo "You will be prompted to install Java now."
+    echo "The android platform needs Java to be installed on your system."
     java -v
   fi
 
