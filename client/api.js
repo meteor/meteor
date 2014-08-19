@@ -2189,6 +2189,22 @@ Template.api.ui_istemplate = {
   ]
 };
 
+Template.api.ui_reactivevar = {
+  id: "ui_reactivevar",
+  name: "[new] UI.ReactiveVar(initialValue, [equalsFunc])",
+  locus: "Client",
+  descr: ["Constructor for a ReactiveVar, which represents a single reactive variable."],
+  args: [
+    {name: "initialValue",
+     type: "Any",
+     descr: "The initial value to set.  `equalsFunc` is ignored when setting the initial value."},
+    {name: "equalsFunc",
+     type: "Function",
+     descr: "Optional.  A function of two arguments, called on the old value and the new value whenever the ReactiveVar is set.  If it returns true, no set is performed.  If omitted, the default `equalsFunc` returns true if its arguments are `===` and are of type number, boolean, string, undefined, or null."
+    }
+  ]
+};
+
 Template.api.renderable_content = {
   id: "renderable_content",
   name: "Renderable content"
