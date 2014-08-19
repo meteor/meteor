@@ -59,8 +59,6 @@
     scriptTag.src = url;
     scriptTag.onload = launchNext;
 
-    console.log(url);
-
     document.getElementsByTagName('head')[0].appendChild(scriptTag);
   };
 
