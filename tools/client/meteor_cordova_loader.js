@@ -59,6 +59,8 @@
     scriptTag.src = url;
     scriptTag.onload = launchNext;
 
+    console.log(url);
+
     document.getElementsByTagName('head')[0].appendChild(scriptTag);
   };
 
@@ -147,10 +149,6 @@
   };
 
   document.addEventListener("deviceready", function () {
-    // set the url to /
-    if (history) {
-      history.pushState({}, "Application", "/");
-    }
     var localPathPrefix = cordova.file.applicationStorageDirectory +
                           'Documents/meteor/';
     if (__meteor_runtime_config__.cleanCache) {

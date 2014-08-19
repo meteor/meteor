@@ -354,6 +354,8 @@ _.extend(File.prototype, {
       self.targetPath = relPath;
     else
       self.targetPath = path.join('app', relPath);
+
+    self.targetPath = self.targetPath.replace(/:/g, "-");
   },
 
   // Set a source map for this File. sourceMap is given as a string.
@@ -903,6 +905,8 @@ _.extend(ClientTarget.prototype, {
     var manifest = [];
     eachResource(function (file, type) {
       var fileContents = file.contents();
+
+      file.url = file.url.replace(/:/g, "-");
 
       var manifestItem = {
         path: file.targetPath,
