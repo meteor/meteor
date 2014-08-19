@@ -549,16 +549,17 @@ Blaze._toText = function (htmljs, parentView, textMode) {
 
 Blaze.data = function (elementOrView) {
   var theWith;
+
   if (! elementOrView) {
-    theWith = Blaze.getCurrentView('with');
+    theWith = Blaze.findView('with');
   } else if (elementOrView instanceof Blaze.View) {
     var view = elementOrView;
     theWith = (view.name === 'with' ? view :
-               Blaze.getParentView(view, 'with'));
+               Blaze.findView(view, 'with'));
   } else if (typeof elementOrView.nodeType === 'number') {
     if (elementOrView.nodeType !== 1)
       throw new Error("Expected DOM element");
-    theWith = Blaze.getElementView(elementOrView, 'with');
+    theWith = Blaze.findView(elementOrView, 'with');
   } else {
     throw new Error("Expected DOM element or View");
   }
@@ -577,12 +578,33 @@ Blaze.getElementData = function (element) {
   return Blaze.data(element);
 };
 
+// Both arguments are optional.
+Blaze.findView = function (elementOrView, viewName) {
+  if ((typeof elementOrView) === 'string') {
+    // omitted elementOrView; viewName present
+    viewName = elementOrView;
+    elementOrView = null;
+  }
+
+  // We could eventually shorten the code by folding the logic
+  // from the other methods into this method.
+  if (! elementOrView) {
+    return Blaze._getCurrentView(viewName);
+  } else if (elementOrView instanceof Blaze.View) {
+    return Blaze._getParentView(elementOrView, viewName);
+  } else if (typeof elementOrView.nodeType === 'number') {
+    return Blaze._getElementView(elementOrView, viewName);
+  } else {
+    throw new Error("Expected DOM element or View");
+  }
+};
+
 // Gets the current view or its nearest ancestor of name
 // `name`.
-Blaze.getCurrentView = function (name) {
+Blaze._getCurrentView = function (name) {
   var view = Blaze.currentView;
   // Better to fail in cases where it doesn't make sense
-  // to use Blaze.getCurrentView().  There will be a current
+  // to use Blaze._getCurrentView().  There will be a current
   // view anywhere it does.  You can check Blaze.currentView
   // if you want to know whether there is one or not.
   if (! view)
@@ -593,13 +615,13 @@ Blaze.getCurrentView = function (name) {
       view = view.parentView;
     return view || null;
   } else {
-    // Blaze.getCurrentView() with no arguments just returns
+    // Blaze._getCurrentView() with no arguments just returns
     // Blaze.currentView.
     return view;
   }
 };
 
-Blaze.getParentView = function (view, name) {
+Blaze._getParentView = function (view, name) {
   var v = view.parentView;
 
   if (name) {
@@ -610,7 +632,7 @@ Blaze.getParentView = function (view, name) {
   return v || null;
 };
 
-Blaze.getElementView = function (elem, name) {
+Blaze._getElementView = function (elem, name) {
   var range = Blaze._DOMRange.forElement(elem);
   var view = null;
   while (range && ! view) {
