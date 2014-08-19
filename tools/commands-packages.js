@@ -1559,9 +1559,10 @@ main.registerCommand({
   }
 }, function (options) {
   // Special case on reserved package namespaces, such as 'cordova'
+  var cordovaPlugins;
   try {
     var filteredPackages = cordova.filterPackages(options.args);
-    var cordovaPlugins = filteredPackages.plugins;
+    cordovaPlugins = filteredPackages.plugins;
 
     _.each(cordovaPlugins, function (plugin) {
       cordova.checkIsValidPlugin(plugin);
@@ -1581,26 +1582,6 @@ main.registerCommand({
     pluginsDict[splt[0]] = splt[1];
   });
   project.addCordovaPlugins(pluginsDict);
-
-  if (cordovaPlugins.length) {
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(localPath, appName);
-    
-    // The plugins installation still can fail
-    try {
-      cordova.ensureCordovaPlugins(localPath);
-    } catch (err) {
-      project.removeCordovaPlugins(_.keys(project.getCordovaPlugins()));
-      project.addCordovaPlugins(oldPlugins);
-      // Print only the first line of error message, probably the rest is a
-      // stack trace.
-      process.stderr.write(err.message.split('\n')[0] + '\n');
-      return 1;
-    }
-  }
 
   _.each(cordovaPlugins, function (plugin) {
     process.stdout.write("added cordova plugin " + plugin + "\n");
@@ -1791,15 +1772,6 @@ main.registerCommand({
 
   // Update the plugins list
   project.removeCordovaPlugins(cordovaPlugins);
-
-  if (cordovaPlugins.length) {
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(localPath, appName);
-    cordova.ensureCordovaPlugins(localPath);
-  }
 
   _.each(cordovaPlugins, function (plugin) {
     process.stdout.write("removed cordova plugin " + plugin + "\n");
