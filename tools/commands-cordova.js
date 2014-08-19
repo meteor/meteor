@@ -215,6 +215,11 @@ cordova.ensureCordovaProject = function (localPath, appName) {
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
 cordova.ensureCordovaPlatforms = function (localPath) {
+  files.mkdir_p(localPath);
+
+  var appName = path.basename(options.appDir);
+  cordova.ensureCordovaProject(localPath, appName);
+
   var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
   var platformsList = execFileSyncOrThrow(localCordova, ['platform', 'list'],
@@ -254,6 +259,11 @@ cordova.ensureCordovaPlatforms = function (localPath) {
 //                     we bundle the app to find the required plugins.
 
 cordova.ensureCordovaPlugins = function (localPath, options) {
+  files.mkdir_p(localPath);
+
+  var appName = path.basename(options.appDir);
+  cordova.ensureCordovaProject(localPath, appName);
+  
   options = options || {};
   var plugins = options.packagePlugins;
   if (! plugins) {
@@ -573,15 +583,7 @@ main.registerCommand({
 
   if (platforms.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(localPath, appName);
-
-    // We checked the platforms above
-    if (platforms.length) {
-      cordova.ensureCordovaPlatforms(localPath);
-    }
+    cordova.ensureCordovaPlatforms(localPath);
   }
 
   _.each(platforms, function (platform) {
@@ -602,14 +604,7 @@ main.registerCommand({
 
   if (platforms.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(localPath, appName);
-
-    if (platforms.length) {
-      cordova.ensureCordovaPlatforms(localPath);
-    }
+    cordova.ensureCordovaPlatforms(localPath);
   }
 
   _.each(platforms, function (platform) {

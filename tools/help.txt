@@ -18,7 +18,7 @@ See 'meteor help <command>' for details on a command.
 
 >>> run
 [default] Run this project in local development mode.
-Usage: meteor run [platform] [options]
+Usage: meteor run [platform..] [options]
 
 Searches upward from the current directory for the root directory of a
 Meteor project, then runs that project in local development
@@ -32,7 +32,7 @@ The application's database persists between runs. It's stored under
 the .meteor directory in the root of the project.
 
 If you have added any platforms such as ios or android
-using 'meteor add-platform', you can specify which platform to run your app on.
+using 'meteor add-platform', you can specify which platforms to run your app on.
 
 Options:
   --port, -p    Port to listen on (instead of the default 3000). Also

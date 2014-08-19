@@ -1584,16 +1584,10 @@ main.registerCommand({
 
   if (cordovaPlugins.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(localPath, appName);
-
+    
     // The plugins installation still can fail
     try {
-      if (cordovaPlugins.length) {
-        cordova.ensureCordovaPlugins(localPath);
-      }
+      cordova.ensureCordovaPlugins(localPath);
     } catch (err) {
       project.removeCordovaPlugins(_.keys(project.getCordovaPlugins()));
       project.addCordovaPlugins(oldPlugins);
@@ -1796,14 +1790,7 @@ main.registerCommand({
 
   if (cordovaPlugins.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    cordova.ensureCordovaProject(localPath, appName);
-
-    if (cordovaPlugins.length) {
-      cordova.ensureCordovaPlugins(localPath);
-    }
+    cordova.ensureCordovaPlugins(localPath);
   }
 
   _.each(cordovaPlugins, function (plugin) {
