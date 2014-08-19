@@ -990,11 +990,11 @@ main.registerCommand({
 
   var metamessage = "Maintained by " +
         _.pluck(record.maintainers, 'username');
-  if (lastVersion.git) {
+  if (lastVersion && lastVersion.git) {
     metamessage = metamessage + " at " + lastVersion.git;
   }
   metamessage += ".";
-  if (record.homepage) {
+  if (record && record.homepage) {
     metamessage = metamessage + "\nYou can find more information at "
       + record.homepage;
   }
