@@ -1584,6 +1584,10 @@ main.registerCommand({
 
   if (cordovaPlugins.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
     
     // The plugins installation still can fail
     try {
@@ -1790,6 +1794,10 @@ main.registerCommand({
 
   if (cordovaPlugins.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
     cordova.ensureCordovaPlugins(localPath);
   }
 

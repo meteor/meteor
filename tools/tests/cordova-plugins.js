@@ -142,9 +142,9 @@ selftest.define("add cordova plugins", function () {
 
   run = s.run("run", "android");
   run.matchErr("not added to the project");
-  run.matchErr("meteor add platform:");
+  run.matchErr("meteor add-platform ");
 
-  run = s.run("add", "platform:android");
+  run = s.run("add-platform", "android");
   run.waitSecs(5);
   run.match("added platform");
 
@@ -171,6 +171,8 @@ selftest.define("add cordova plugins", function () {
 
   run = s.run("list");
   run.match("org.apache.cordova.camera");
+
+  run = s.run("list-platforms");
   run.match("android");
 
   run = s.run("bundle", "../a", "--android-path", "../android",

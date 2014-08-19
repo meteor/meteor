@@ -215,11 +215,6 @@ cordova.ensureCordovaProject = function (localPath, appName) {
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
 cordova.ensureCordovaPlatforms = function (localPath) {
-  files.mkdir_p(localPath);
-
-  var appName = path.basename(options.appDir);
-  cordova.ensureCordovaProject(localPath, appName);
-
   var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
   var platformsList = execFileSyncOrThrow(localCordova, ['platform', 'list'],
@@ -259,11 +254,6 @@ cordova.ensureCordovaPlatforms = function (localPath) {
 //                     we bundle the app to find the required plugins.
 
 cordova.ensureCordovaPlugins = function (localPath, options) {
-  files.mkdir_p(localPath);
-
-  var appName = path.basename(options.appDir);
-  cordova.ensureCordovaProject(localPath, appName);
-  
   options = options || {};
   var plugins = options.packagePlugins;
   if (! plugins) {
@@ -442,7 +432,7 @@ var checkRequestedPlatforms = function (platforms) {
   _.each(requestedPlatforms, function (platform) {
     if (! _.contains(cordovaPlatforms, platform))
       throw new Error(platform +
-        ": platform is not added to the project. Try 'meteor add platform:" +
+        ": platform is not added to the project. Try 'meteor add-platform " +
         platform + "' to add it or 'meteor help add' for help.");
   });
 };
@@ -583,6 +573,10 @@ main.registerCommand({
 
   if (platforms.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
     cordova.ensureCordovaPlatforms(localPath);
   }
 
@@ -604,6 +598,10 @@ main.registerCommand({
 
   if (platforms.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
     cordova.ensureCordovaPlatforms(localPath);
   }
 
