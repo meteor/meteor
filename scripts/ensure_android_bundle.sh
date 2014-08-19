@@ -9,7 +9,7 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
   exit 1
 fi
 
-command -v elephant >/dev/null 2>&1 || {
+command -v java >/dev/null 2>&1 || {
   if [ UNAME == "Linux" ] ; then
     echo "Please install Java before running this command.";
     echo "Directions can be found at: http://openjdk.java.net/install/"
