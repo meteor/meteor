@@ -1151,15 +1151,11 @@ main.registerCommand({
     return 1;
   }
 
-  // Append extra information about special packages, such as Cordova plugins
-  // and platforms to the list.
+  // Append extra information about special packages such as Cordova plugins
+  // to the list.
   var plugins = project.getCordovaPlugins();
   _.each(plugins, function (version, name) {
     items.push({ name: 'cordova:' + name, description: version });
-  });
-  var platforms = project.getCordovaPlatforms();
-  _.each(platforms, function (name) {
-    items.push({ name: 'platform:' + name, description: 'Mobile build target platform.' });
   });
 
   process.stdout.write(formatList(items));
@@ -1562,15 +1558,10 @@ main.registerCommand({
     force: { type: Boolean, required: false }
   }
 }, function (options) {
-  // Special case on reserved package namespaces, such as 'cordova' or 'platform'
+  // Special case on reserved package namespaces, such as 'cordova'
   try {
     var filteredPackages = cordova.filterPackages(options.args);
-    var cordovaPlatforms = filteredPackages.platforms;
     var cordovaPlugins = filteredPackages.plugins;
-
-    _.each(cordovaPlatforms, function (platform) {
-      cordova.checkIsValidPlatform(platform);
-    });
 
     _.each(cordovaPlugins, function (plugin) {
       cordova.checkIsValidPlugin(plugin);
@@ -1582,9 +1573,6 @@ main.registerCommand({
 
   var oldPlugins = project.getCordovaPlugins();
 
-  // Update the platforms & plugins lists
-  project.addCordovaPlatforms(cordovaPlatforms);
-
   var pluginsDict = {};
   _.each(cordovaPlugins, function (s) {
     var splt = s.split('@');
@@ -1594,23 +1582,16 @@ main.registerCommand({
   });
   project.addCordovaPlugins(pluginsDict);
 
-  if (cordovaPlugins.length || cordovaPlatforms.length) {
+  if (cordovaPlugins.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
     files.mkdir_p(localPath);
 
     var appName = path.basename(options.appDir);
     cordova.ensureCordovaProject(localPath, appName);
-
-    // We checked the platforms above
-    if (cordovaPlatforms.length) {
-      cordova.ensureCordovaPlatforms(localPath);
-    }
-
+    
     // The plugins installation still can fail
     try {
-      if (cordovaPlugins.length) {
-        cordova.ensureCordovaPlugins(localPath);
-      }
+      cordova.ensureCordovaPlugins(localPath);
     } catch (err) {
       project.removeCordovaPlugins(_.keys(project.getCordovaPlugins()));
       project.addCordovaPlugins(oldPlugins);
@@ -1620,10 +1601,6 @@ main.registerCommand({
       return 1;
     }
   }
-
-  _.each(cordovaPlatforms, function (platform) {
-    process.stdout.write("added platform " + platform + "\n");
-  });
 
   _.each(cordovaPlugins, function (plugin) {
     process.stdout.write("added cordova plugin " + plugin + "\n");
@@ -1808,33 +1785,21 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  // Special case on reserved package namespaces, such as 'cordova' or 'platform'
+  // Special case on reserved package namespaces, such as 'cordova'
   var filteredPackages = cordova.filterPackages(options.args);
-  var cordovaPlatforms = filteredPackages.platforms;
   var cordovaPlugins = filteredPackages.plugins;
 
-  // Update the platforms & plugins lists
-  project.removeCordovaPlatforms(cordovaPlatforms);
+  // Update the plugins list
   project.removeCordovaPlugins(cordovaPlugins);
 
-  if (cordovaPlugins.length || cordovaPlatforms.length) {
+  if (cordovaPlugins.length) {
     var localPath = path.join(options.appDir, '.meteor', 'local');
     files.mkdir_p(localPath);
 
     var appName = path.basename(options.appDir);
     cordova.ensureCordovaProject(localPath, appName);
-
-    if (cordovaPlatforms.length) {
-      cordova.ensureCordovaPlatforms(localPath);
-    }
-    if (cordovaPlugins.length) {
-      cordova.ensureCordovaPlugins(localPath);
-    }
+    cordova.ensureCordovaPlugins(localPath);
   }
-
-  _.each(cordovaPlatforms, function (platform) {
-    process.stdout.write("removed platform " + platform + "\n");
-  });
 
   _.each(cordovaPlugins, function (plugin) {
     process.stdout.write("removed cordova plugin " + plugin + "\n");

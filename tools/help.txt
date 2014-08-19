@@ -18,7 +18,7 @@ See 'meteor help <command>' for details on a command.
 
 >>> run
 [default] Run this project in local development mode.
-Usage: meteor run [options]
+Usage: meteor run [platform..] [options]
 
 Searches upward from the current directory for the root directory of a
 Meteor project, then runs that project in local development
@@ -30,6 +30,9 @@ are automatically detected and applied to the running application.
 
 The application's database persists between runs. It's stored under
 the .meteor directory in the root of the project.
+
+If you have added any platforms such as ios or android
+using 'meteor add-platform', you can specify which platforms to run your app on.
 
 Options:
   --port, -p    Port to listen on (instead of the default 3000). Also
@@ -138,6 +141,26 @@ This will not list transitive dependencies.
 
 Also lists the Cordova plugins and platforms used by your mobile
 build directly.
+
+>>> add-platform
+Add a platform to this project.
+Usage: meteor add-platform <platform> [platform..]
+
+Add one or more platforms such as ios or android to your Meteor project,
+enabling you to run your app with the new platform as a target.
+See 'meteor help run'.
+
+>>> remove-platform
+Remove a platform from this project.
+Usage: meteor remove-platform <platform> [platform..]
+
+Remove one or more platforms previously added to your Meteor project.
+
+>>> list-platforms
+List the platforms added to your project.
+Usage: meteor list-packages
+
+Lists all of the platforms that have been added using 'meteor add-platform'.
 
 >>> bundle
 Deprecated command. Use 'build' instead.

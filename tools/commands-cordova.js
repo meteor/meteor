@@ -437,7 +437,7 @@ var checkRequestedPlatforms = function (platforms) {
   _.each(requestedPlatforms, function (platform) {
     if (! _.contains(cordovaPlatforms, platform))
       throw new Error(platform +
-        ": platform is not added to the project. Try 'meteor add platform:" +
+        ": platform is not added to the project. Try 'meteor add-platform " +
         platform + "' to add it or 'meteor help add' for help.");
   });
 };
@@ -541,7 +541,6 @@ cordova.filterPackages = function (packages) {
 // We hard-code the 'cordova' and 'platform' namespaces
   var ret = {
     rest: [],
-    platforms: [],
     plugins: []
   };
 
@@ -550,11 +549,81 @@ cordova.filterPackages = function (packages) {
     var name = p.split(':').slice(1).join(':');
     if (namespace === 'cordova') {
       ret.plugins.push(name);
-    } else if (namespace === 'platform') {
-      ret.platforms.push(name);
-    } else
+    } else {
       ret.rest.push(p); // leave it the same
+    }
   });
   return ret;
 };
 
+// add one or more Cordova platforms
+main.registerCommand({
+  name: "add-platform",
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true
+}, function (options) {
+  var platforms = options.args;
+
+  try {
+    _.each(platforms, function (platform) {
+      cordova.checkIsValidPlatform(platform);
+    });
+  } catch (err) {
+    process.stderr.write(err.message + "\n");
+    return 1;
+  }
+
+  project.addCordovaPlatforms(platforms);
+
+  if (platforms.length) {
+    var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
+    cordova.ensureCordovaPlatforms(localPath);
+  }
+
+  _.each(platforms, function (platform) {
+    process.stdout.write("added platform " + platform + "\n");
+  });
+});
+
+// remove one or more Cordova platforms
+main.registerCommand({
+  name: "remove-platform",
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true
+}, function (options) {
+  var platforms = options.args;
+
+  project.removeCordovaPlatforms(platforms);
+
+  if (platforms.length) {
+    var localPath = path.join(options.appDir, '.meteor', 'local');
+    files.mkdir_p(localPath);
+
+    var appName = path.basename(options.appDir);
+    cordova.ensureCordovaProject(localPath, appName);
+    cordova.ensureCordovaPlatforms(localPath);
+  }
+
+  _.each(platforms, function (platform) {
+    process.stdout.write("removed platform " + platform + "\n");
+  });
+});
+
+main.registerCommand({
+  name: "list-platforms",
+  requiresApp: true
+}, function () {
+  var platforms = project.getCordovaPlatforms();
+  process.stdout.write(platforms.join("\n"));
+
+  // print nothing at all if no platforms
+  if (platforms.length) {
+    process.stdout.write("\n");
+  }
+});
