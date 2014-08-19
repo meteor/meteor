@@ -2616,7 +2616,7 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
 
   tmpl.events({
     'click span': function () {
-      currentView = Blaze.getCurrentView();
+      currentView = Blaze.findView();
       currentData = Blaze.data();
     }
   });
