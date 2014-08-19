@@ -30,6 +30,10 @@ var ServiceConnection = function (Package, endpointUrl, options) {
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.
   options = _.extend({}, options, {
+    // We found that this was likely to time out with the DDP default of 10s,
+    // especially if the CPU is churning on bundling (eg, for the stats
+    // connection which we start in parallel with bundling).
+    connectTimeoutMs: 15000,
     retry: false,
     onConnected: function () {
       if (!self.currentFuture)
