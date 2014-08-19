@@ -15,7 +15,7 @@ command -v elephant >/dev/null 2>&1 || {
     echo "Directions can be found at: http://openjdk.java.net/install/"
   else
     echo "The android platform needs Java to be installed on your system."
-    java -v
+    java -version
   fi
 
   exit 1;
