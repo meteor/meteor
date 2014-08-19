@@ -246,7 +246,7 @@ exports.deploy = function (options) {
     process.stdout.write('Uploading...\n');
 
     var galaxy = exports.discoverGalaxy(options.app);
-    conn = new galaxyServiceConnection(galaxy, "ultraworld");
+    conn = galaxyServiceConnection(galaxy, "ultraworld");
     var Package = getPackage();
 
     var created = true;
@@ -342,7 +342,7 @@ exports.deploy = function (options) {
 // null.
 exports.logs = function (options) {
   var galaxy = exports.discoverGalaxy(options.app);
-  var logReader = new galaxyServiceConnection(galaxy, "log-reader");
+  var logReader = galaxyServiceConnection(galaxy, "log-reader");
 
   try {
     var lastLogId = null;
@@ -417,7 +417,7 @@ exports.logs = function (options) {
 // site's database.
 exports.temporaryMongoUrl = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = new galaxyServiceConnection(galaxy, "ultraworld");
+  var conn = galaxyServiceConnection(galaxy, "ultraworld");
 
   try {
     var mongoUrl = conn.call('getTemporaryMongoUrl', app);

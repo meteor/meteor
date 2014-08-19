@@ -95,11 +95,11 @@ _.extend(LivedataTest.ClientStream.prototype, {
       var client = self.client;
       self.client = null;
       client.close();
-    }
 
-    _.each(self.eventCallbacks.disconnect, function (callback) {
-      callback(maybeError);
-    });
+      _.each(self.eventCallbacks.disconnect, function (callback) {
+        callback(maybeError);
+      });
+    }
   },
 
   _clearConnectionTimer: function () {
@@ -177,10 +177,4 @@ _.extend(LivedataTest.ClientStream.prototype, {
       });
     });
   }
-});
-
-DDP.ConnectionError = Meteor.makeErrorType(
-  "DDP.ConnectionError", function (message) {
-    var self = this;
-    self.message = message;
 });

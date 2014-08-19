@@ -10,8 +10,10 @@ var uniload = require("./uniload.js");
 // apply/subscribeAndWait call throws the given error. This functionality should
 // eventually end up in the DDP client in one form or another.
 //
-// ServiceConnections never retry: they always use just one underlying TCP
-// connection, and fail fast.
+// ServiceConnections never reconnect once they have successfully negotiated the
+// DDP protocol: other than perhaps some initial attempts with the wrong
+// protocol selected, they use just one underlying TCP connection, and fail
+// fast.
 //
 // - Package: a Package object as returned from uniload.load, containing
 //   the livedata and meteor packages
@@ -27,22 +29,34 @@ var ServiceConnection = function (Package, endpointUrl, options) {
 
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.
-  options = _.extend({}, options, {retry: false});
+  options = _.extend({}, options, {
+    retry: false,
+    onConnected: function () {
+      if (!self.currentFuture)
+        throw Error("nobody waiting for connection?");
+      if (self.currentFuture !== connectFuture)
+        throw Error("waiting for something that isn't connection?");
+      self.currentFuture = null;
+      connectFuture.return();
+    }
+  });
 
   self.connection = Package.livedata.DDP.connect(endpointUrl, options);
 
   // Wait until we have some sort of initial connection or error (including the
   // 10-second timeout built into our DDP client).
   var connectFuture = self.currentFuture = new Future;
-  self.connection._stream.on('reset', function () {
-    if (!self.currentFuture)
-      throw Error("nobody waiting for connection?");
-    if (self.currentFuture !== connectFuture)
-      throw Error("waiting for something that isn't connection?");
-    self.currentFuture = null;
-    connectFuture.return();
-  });
   self.connection._stream.on('disconnect', function (error) {
+    if (error && error.errorType === "DDP.ForcedReconnectError") {
+      // OK, we requested this, probably due to version negotation failure.
+      //
+      // This ought to have happened before we successfully connect, unless
+      // somebody adds other calls to forced reconnect to Meteor...
+      if (connectFuture.isResolved())
+        throw Error("disconnect before connect?");
+      // Otherwise, ignore this error. We're going to reconnect!
+      return;
+    }
     if (self.currentFuture) {
       var fut = self.currentFuture;
       self.currentFuture = null;

@@ -144,7 +144,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     if (self.currentStatus.connected) {
       if (options._force || options.url) {
         // force reconnect.
-        self._lostConnection();
+        self._lostConnection(new DDP.ForcedReconnectError);
       } // else, noop.
       return;
     }
@@ -191,13 +191,13 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self.statusChanged();
   },
 
-  // maybeError is only set for the Node implementation, and not on explicitly
-  // requested reconnect or a clean close.
+  // maybeError is only guaranteed to be set for the Node implementation, and
+  // not on a clean close.
   _lostConnection: function (maybeError) {
     var self = this;
 
     self._cleanup(maybeError);
-    self._retryLater(); // sets status. no need to do it here.
+    self._retryLater(maybeError); // sets status. no need to do it here.
   },
 
   // fired when we detect that we've gone online. try to reconnect
@@ -208,11 +208,12 @@ _.extend(LivedataTest.ClientStream.prototype, {
       this.reconnect();
   },
 
-  _retryLater: function () {
+  _retryLater: function (maybeError) {
     var self = this;
 
     var timeout = 0;
-    if (self.options.retry) {
+    if (self.options.retry ||
+        (maybeError && maybeError.errorType === "DDP.ForcedReconnectError")) {
       timeout = self._retry.retryLater(
         self.currentStatus.retryCount,
         _.bind(self._retryNow, self)
@@ -252,3 +253,12 @@ _.extend(LivedataTest.ClientStream.prototype, {
     return self.currentStatus;
   }
 });
+
+DDP.ConnectionError = Meteor.makeErrorType(
+  "DDP.ConnectionError", function (message) {
+    var self = this;
+    self.message = message;
+});
+
+DDP.ForcedReconnectError = Meteor.makeErrorType(
+  "DDP.ForcedReconnectError", function () {});
