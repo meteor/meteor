@@ -11,6 +11,7 @@ var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
+var uniload = require('./uniload.js');
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -18,12 +19,11 @@ var compiler = require('./compiler.js');
 //
 // meteor: base package and prerequsite for all others.
 // livedata: DDP client interface to make a connection to the package server.
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
+var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata']
+    packages: [ 'meteor', 'livedata']
   });
-});
+};
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -100,9 +100,6 @@ exports.loadCachedServerData = function (packageStorageFile) {
 //  - syncToken: a new syncToken object, that we can pass to the server in the future.
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
-//
-// Throws a ServiceConnection.ConnectionTimeoutError if the method call
-// times out.
 var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   _optionsForTest = _optionsForTest || {};
 
@@ -203,7 +200,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
       });
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
-      if (err instanceof ServiceConnection.ConnectionTimeoutError) {
+      if (err.errorType === "DDP.ConnectionError") {
         cachedServerData = null;
         done = true;
         return;
@@ -260,6 +257,8 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   return ret;
 };
 
+var AlreadyPrintedMessageError = function () {};
+
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
 // (e.g. connection to package server times out), then it will be
@@ -267,7 +266,18 @@ exports.updateServerPackageData = function (cachedServerData, options) {
 exports.loggedInPackagesConnection = function () {
   // Make sure that we are logged in with Meteor Accounts so that we can
   // do an OAuth flow.
+
+  if (auth.maybePrintRegistrationLink({onlyAllowIfRegistered: true})) {
+    // Oops, we're logged in but with a deferred-registration account.
+    // Message has already been printed.
+    throw new AlreadyPrintedMessageError;
+  }
+
   if (! auth.isLoggedIn()) {
+    // XXX we should have a better account signup page.
+    process.stderr.write(
+"Please log in with your Meteor developer account. If you don't have one,\n" +
+"you can quickly create one at www.meteor.com.\n");
     auth.doUsernamePasswordLogin({ retry: true });
   }
 
@@ -349,18 +359,21 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
 var uploadTarball = function (putUrl, tarball) {
   var size = fs.statSync(tarball).size;
   var rs = fs.createReadStream(tarball);
-  // Use getUrl instead of request, to throw on 4xx/5xx.
-  httpHelpers.getUrl({
-    method: 'PUT',
-    url: putUrl,
-    headers: {
-      'content-length': size,
-      'content-type': 'application/octet-stream',
-      'x-amz-acl': 'public-read'
-    },
-    bodyStream: rs
-  });
-  rs.close();
+  try {
+    // Use getUrl instead of request, to throw on 4xx/5xx.
+    httpHelpers.getUrl({
+      method: 'PUT',
+      url: putUrl,
+      headers: {
+        'content-length': size,
+        'content-type': 'application/octet-stream',
+        'x-amz-acl': 'public-read'
+      },
+      bodyStream: rs
+    });
+  } finally {
+    rs.close();
+  }
 };
 
 exports.uploadTarball = uploadTarball;
@@ -443,15 +456,17 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 
 exports.handlePackageServerConnectionError = function (error) {
-  var Package = getLoadedPackages();
-  if (error instanceof Package.meteor.Meteor.Error) {
+  if (error instanceof AlreadyPrintedMessageError) {
+    // do nothing
+  } else if (error.errorType === 'Meteor.Error') {
     process.stderr.write("Error connecting to package server");
     if (error.message) {
       process.stderr.write(": " + error.message);
     }
     process.stderr.write("\n");
-  } else if (error instanceof ServiceConnection.ConnectionTimeoutError) {
-    process.stderr.write("Connection to package server timed out.\n");
+  } else if (error.errorType === "DDP.ConnectionError") {
+    process.stderr.write("Error connecting to package server: "
+                         + error.message + "\n");
   } else {
     throw error;
   }

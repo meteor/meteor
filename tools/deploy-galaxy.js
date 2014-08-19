@@ -15,12 +15,11 @@ var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
 
 // a bit of a hack
-var getPackage = _.once(function () {
+var getPackage = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata' ],
-    release: release.current.name
+    packages: [ 'meteor', 'livedata' ]
   });
-});
+};
 
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
@@ -30,17 +29,16 @@ var getPackage = _.once(function () {
 // If messages is provided, it is a map from DDP error names to
 // human-readable explanation to use.
 var handleError = function (error, galaxyName, messages) {
-  var Package = getPackage();
   messages = messages || {};
 
-  if (error instanceof Package.meteor.Meteor.Error) {
+  if (error.errorType === "Meteor.Error") {
     var msg = messages[error.error];
     if (msg)
       process.stderr.write(msg + "\n");
     else if (error.message)
       process.stderr.write("Denied: " + error.message + "\n");
     return 1;
-  } else if (error instanceof ServiceConnection.ConnectionTimeoutError) {
+  } else if (error.errorType === "DDP.ConnectionError") {
     // If we have an http/https URL for a galaxyName instead of a
     // proper galaxyName (which is what the code in this file
     // currently passes), strip off the scheme and trailing slash.
@@ -248,7 +246,7 @@ exports.deploy = function (options) {
     process.stdout.write('Uploading...\n');
 
     var galaxy = exports.discoverGalaxy(options.app);
-    conn = new galaxyServiceConnection(galaxy, "ultraworld");
+    conn = galaxyServiceConnection(galaxy, "ultraworld");
     var Package = getPackage();
 
     var created = true;
@@ -262,8 +260,7 @@ exports.deploy = function (options) {
     try {
       conn.call('createApp', options.app, appConfig);
     } catch (e) {
-      if (e instanceof Package.meteor.Meteor.Error &&
-          e.error === 'already-exists') {
+      if (e.errorType === 'Meteor.Error' && e.error === 'already-exists') {
         // Cool, it already exists. No problem. Just set the settings
         // if they were passed. We explicitly check for undefined
         // because we want to allow you to unset settings by passing
@@ -345,7 +342,7 @@ exports.deploy = function (options) {
 // null.
 exports.logs = function (options) {
   var galaxy = exports.discoverGalaxy(options.app);
-  var logReader = new galaxyServiceConnection(galaxy, "log-reader");
+  var logReader = galaxyServiceConnection(galaxy, "log-reader");
 
   try {
     var lastLogId = null;
@@ -420,7 +417,7 @@ exports.logs = function (options) {
 // site's database.
 exports.temporaryMongoUrl = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = new galaxyServiceConnection(galaxy, "ultraworld");
+  var conn = galaxyServiceConnection(galaxy, "ultraworld");
 
   try {
     var mongoUrl = conn.call('getTemporaryMongoUrl', app);

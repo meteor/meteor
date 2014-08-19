@@ -112,7 +112,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       // with no identifier file (eg pre-0.9.0 apps)
       runWithFreshIdentifier(s, sandboxProject);
 
-      identifier = s.read(".meteor/identifier");
+      identifier = s.read(".meteor/identifier").replace(/\n$/, '');
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 

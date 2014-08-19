@@ -112,6 +112,11 @@ _.extend(OfficialCatalog.prototype, {
   // the in-progress refresh to finish.
   refresh: function () {
     var self = this;
+    // note: this only needs to be in a capture because it refreshes the
+    // complete catalog (which actually uses the build system).  if
+    // catalog.complete was refactored to not require a rebuild whenever
+    // catalog.official changes, this function wouldn't need
+    // buildmessage.assertInCapture any more.
     buildmessage.assertInCapture();
     self._requireInitialized();
 

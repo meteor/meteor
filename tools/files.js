@@ -521,11 +521,23 @@ files.extractTarGz = function (buffer, destPath) {
     });
   var extractor = new tar.Extract({ path: tempDir })
     .on('error', function (e) {
-      future.throw(e);
+      future.isResolved() || future.throw(e);
     })
     .on('end', function () {
-      future.return();
+      future.isResolved() || future.return();
     });
+  // Ugh, extractor has a bug that makes sometimes try to do some operations (eg
+  // chmod) twice... and the second time can happen after emitting 'end'!  This
+  // would lead to a crash, since we've probably already moved the tree out of
+  // the way by then!  Ignore such errors. See
+  //   https://github.com/npm/fstream/issues/26
+  extractor._fst.on('error', function (e) {
+    if (future.isResolved()) {
+      // Ignore.
+      return;
+    }
+    future.throw(e);
+  });
 
   // write the buffer to the (gunzip|untar) pipeline; these calls
   // cause the tar to be extracted to disk.
@@ -821,6 +833,9 @@ files.FancySyntaxError = function () {};
 
 files.OfflineError = function (error) {
   this.error = error;
+};
+files.OfflineError.prototype.toString = function () {
+  return "[Offline: " + this.error.toString() + "]";
 };
 
 // Like fs.readdirSync, but skips entries whose names begin with dots, and
