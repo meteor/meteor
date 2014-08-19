@@ -274,6 +274,7 @@ var toc = [
       ],
       {name: "Views", id: "ui_view"}, [
         "UI.currentView",
+        "UI.findView",
         "UI.With",
         "UI.If",
         "UI.Unless",
