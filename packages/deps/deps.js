@@ -16,7 +16,11 @@ var setCurrentComputation = function (c) {
 };
 
 var _debugFunc = function () {
-  // lazy evaluation because `Meteor` does not exist right away
+  // We want this code to work without Meteor, and also without
+  // "console" (which is technically non-standard and may be missing
+  // on some browser we come across, like it was on IE 7).
+  //
+  // Lazy evaluation because `Meteor` does not exist right away.(??)
   return (typeof Meteor !== "undefined" ? Meteor._debug :
           ((typeof console !== "undefined") && console.log ?
            function () { console.log.apply(console, arguments); } :
@@ -27,8 +31,17 @@ var _throwOrLog = function (from, e) {
   if (throwFirstError) {
     throw e;
   } else {
+    var messageAndStack;
+    if (e.stack && e.message) {
+      if (e.stack.indexOf(e.message) <= 10) // allow for "Error: " (at least 7)
+        messageAndStack = e.stack; // message is part of e.stack, as in Chrome
+      else
+        messageAndStack = e.message + '\n' + e.stack; // e.g. Cordova
+    } else {
+      messageAndStack = e.stack || e.message;
+    }
     _debugFunc()("Exception from Deps " + from + " function:",
-                 e.stack || e.message);
+                 messageAndStack);
   }
 };
 
@@ -296,7 +309,7 @@ Deps.flush = function (_opts) {
         try {
           func();
         } catch (e) {
-          _throwOrLog("afterFlush function", e);
+          _throwOrLog("afterFlush", e);
         }
       }
     }
