@@ -282,6 +282,7 @@ var toc = [
       ],
       "UI.Template",
       "UI.isTemplate",
+      "UI.ReactiveVar",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
