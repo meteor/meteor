@@ -27,5 +27,7 @@ export PATH=${ANT_HOME}/bin:${PATH}
 export PATH=${DEV_BUNDLE}/bin:${PATH}
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
+export HOME="${ANDROID_BUNDLE}"
+
 exec ${DEV_BUNDLE}/lib/node_modules/cordova/bin/cordova "$@"
 

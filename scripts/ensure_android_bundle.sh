@@ -9,6 +9,19 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
   exit 1
 fi
 
+command -v java >/dev/null 2>&1 || {
+  if [ UNAME == "Linux" ] ; then
+    echo "Please install Java before running this command.";
+    echo "Directions can be found at: http://openjdk.java.net/install/"
+  else
+    echo "The android platform needs Java to be installed on your system."
+    java -version
+  fi
+
+  exit 1;
+}
+
+
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
 ORIG_DIR=$(pwd)
@@ -75,6 +88,8 @@ export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/pl
 # add ant
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
 export PATH=${ANT_HOME}/bin:${PATH}
+
+export HOME=${ANDROID_BUNDLE}
 
 # create avd if necessary
 if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep Name) ]] ; then
