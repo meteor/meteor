@@ -478,7 +478,7 @@ Tinytest.add("ui - render - templates and views", function (test) {
     myTemplate.created = function () {
       test.isFalse(Deps.active);
       var view = this.view;
-      var parent = Blaze.getParentView(view, 'myTemplate');
+      var parent = Blaze.findView(view, 'myTemplate');
       if (parent) {
         buf.push('parent of ' + view.number + ' is ' +
                  parent.number);
