@@ -33,10 +33,12 @@ var _throwOrLog = function (from, e) {
   } else {
     var messageAndStack;
     if (e.stack && e.message) {
-      if (e.stack.indexOf(e.message) <= 10) // allow for "Error: " (at least 7)
+      var idx = e.stack.indexOf(e.message);
+      if (idx >= 0 && idx <= 10) // allow for "Error: " (at least 7)
         messageAndStack = e.stack; // message is part of e.stack, as in Chrome
       else
-        messageAndStack = e.message + '\n' + e.stack; // e.g. Cordova
+        messageAndStack = e.message +
+        (e.stack.charAt(0) === '\n' ? '' : '\n') + e.stack; // e.g. Safari
     } else {
       messageAndStack = e.stack || e.message;
     }
