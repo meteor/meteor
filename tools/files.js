@@ -834,6 +834,9 @@ files.FancySyntaxError = function () {};
 files.OfflineError = function (error) {
   this.error = error;
 };
+files.OfflineError.prototype.toString = function () {
+  return "[Offline: " + this.error.toString() + "]";
+};
 
 // Like fs.readdirSync, but skips entries whose names begin with dots, and
 // converts ENOENT to [].
