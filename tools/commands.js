@@ -1191,7 +1191,8 @@ main.registerCommand({
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to create an organization.\n");
-    return 1;
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
   }
 
   var conn = auth.loggedInAccountsConnection(token);
@@ -1219,7 +1220,8 @@ main.registerCommand({
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to show an organization.\n");
-    return 1;
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
   }
 
   var conn = auth.loggedInAccountsConnection(token);
@@ -1243,7 +1245,8 @@ main.registerCommand({
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to list your organizations.\n");
-    return 1;
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
   }
 
   var url = config.getAccountsApiUrl() + "/organizations";
@@ -1282,7 +1285,8 @@ main.registerCommand({
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to edit organizations.\n");
-    return 1;
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
   }
 
   var conn = auth.loggedInAccountsConnection(token);
@@ -1307,7 +1311,8 @@ main.registerCommand({
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to edit organizations.\n");
-    return 1;
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
   }
 
   var conn = auth.loggedInAccountsConnection(token);

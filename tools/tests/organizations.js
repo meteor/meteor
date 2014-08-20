@@ -18,27 +18,32 @@ selftest.define("organizations - logged out", function () {
   var run = s.run("admin", "create-organization", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in");
-  run.expectExit(1);
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "add-member", "testtest", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in");
-  run.expectExit(1);
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "remove-member", "testtest", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in");
-  run.expectExit(1);
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "show-organization", orgName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in");
-  run.expectExit(1);
+  run.matchErr("Username:");
+  run.stop();
 
   run = s.run("admin", "list-organizations");
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("You must be logged in");
-  run.expectExit(1);
+  run.matchErr("Username:");
+  run.stop();
 
 });
 
