@@ -155,12 +155,15 @@ selftest.define("add cordova plugins", function () {
   run = s.run("add", "cordova:org.apache.cordova.file");
   run.matchErr("Must declare exact version");
 
+  // The current behavior doesn't fail if a plugin is not in the registry until
+  // build time.
   run = s.run("add", "cordova:foo@1.0.0");
   run.waitSecs(5);
-  // should fail to download the package as 'foo' doesn't exist
-  // printing the error message from cordova
-  run.matchErr("Error");
-  run.expectExit(1);
+  run.match("added cordova plugin foo");
+
+  run = s.run("remove", "cordova:foo");
+  run.waitSecs(5);
+  run.match("removed cordova plugin foo");
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
@@ -175,12 +178,11 @@ selftest.define("add cordova plugins", function () {
   run = s.run("list-platforms");
   run.match("android");
 
-  run = s.run("bundle", "../a", "--android-path", "../android",
-    "--directory", "--debug", "--settings", "settings.json");
+  run = s.run("build", "a", "--android-path", "../android",
+              "--settings", "settings.json");
   run.waitSecs(30);
-  // This command fails because the FB plugin does not compile on
-  // Android without additional setup steps which we do not support
-  // at the moment.
+  // This fails because the FB plugin does not compile without additional
+  // configuration for android.
   run.expectExit(8);
 
   checkCordovaPlugins(s,
@@ -194,8 +196,8 @@ selftest.define("add cordova plugins", function () {
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
-  run = s.run("bundle", "../a", "--android-path", "../android",
-    "--directory", "--debug", "--settings", "settings.json");
+  run = s.run("build", "a", "--android-path", "../android",
+              "--settings", "settings.json");
   run.waitSecs(30);
   run.expectExit(0);
 
@@ -203,6 +205,13 @@ selftest.define("add cordova plugins", function () {
                           "org.apache.cordova.console"]);
 
   run = s.run("remove", "cordova:org.apache.cordova.camera");
+  run.match("removed");
   run.expectExit(0);
+
+  run = s.run("build", "a", "--android-path", "../android",
+              "--settings", "settings.json");
+  run.waitSecs(30);
+  run.expectExit(0);
+
   checkCordovaPlugins(s, ["org.apache.cordova.console"]);
 });

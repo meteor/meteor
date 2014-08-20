@@ -122,12 +122,12 @@ var generateCordovaBoilerplate = function (clientDir, options) {
 };
 
 var fetchCordovaPluginFromShaUrl =
-  function (urlWithSha, localPluginsDir, pluginName) {
+    function (urlWithSha, localPluginsDir, pluginName) {
   var pluginPath = path.join(localPluginsDir, pluginName);
   var pluginTarballPath = pluginPath + '.tgz';
 
   var execFileSync = require('./utils.js').execFileSync;
-  var whichCurl = execFileSync('which curl');
+  var whichCurl = execFileSync('which', ['curl']);
 
   var downloadProcess = null;
 
@@ -252,13 +252,74 @@ cordova.ensureCordovaPlatforms = function (localPath) {
   return true;
 };
 
+
+var installPlugin = function (cordovaPath, name, version, settings) {
+  // XXX do something different for plugins fetched from a url.
+  var pluginInstallCommand = version ? name + '@' + version : name;
+  var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
+
+  if (version && utils.isUrlWithSha(version)) {
+    pluginInstallCommand =
+      fetchCordovaPluginFromShaUrl(version, localPluginsPath, name);
+  }
+
+  var additionalArgs = [];
+  // XXX how do we get settings to work now? Do we require settings to be
+  // passed every time we add a plugin?
+
+  if (settings && ! _.isObject(settings))
+    throw new Error('Meteor.settings.cordova.' + name +
+                    ' is expected to be an object');
+
+  _.each(settings, function (value, variable) {
+    additionalArgs.push('--variable');
+    additionalArgs.push(variable + '=' + JSON.stringify(value));
+  });
+
+  process.stdout.write('Installing ' + pluginInstallCommand + '\n');
+  var execRes = execFileSyncOrThrow(localCordova,
+     ['plugin', 'add', pluginInstallCommand].concat(additionalArgs),
+     { cwd: cordovaPath });
+  if (! execRes.success)
+    throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
+};
+
+var uninstallPlugin = function (cordovaPath, name) {
+  try {
+    execFileSyncOrThrow(localCordova, ['plugin', 'rm', name],
+      { cwd: cordovaPath });
+  } catch (err) {
+    // Catch when an uninstall fails, because it might just be a dependency
+    // issue. For example, plugin A depends on plugin B and we try to remove
+    // plugin B. In this case, we will loop and remove plugin A first.
+  }
+};
+
+// Returns the list of installed plugins as a hash from plugin name to version.
+var getInstalledPlugins = function (cordovaPath) {
+  var installedPlugins = {};
+
+  var pluginsOutput = execFileSyncOrThrow(localCordova, ['plugin', 'list'],
+                                   { cwd: cordovaPath }).stdout;
+  // Check if there are any plugins
+  if (! pluginsOutput.match(/No plugins added/)) {
+    _.each(pluginsOutput.split('\n'), function (line) {
+      line = line.trim();
+      if (line === '')
+        return;
+      var plugin = line.split(' ')[0];
+      var version = line.split(' ')[1];
+      installedPlugins[plugin] = version;
+    });
+  }
+
+  return installedPlugins;
+};
+
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
-// options
-//   - packagePlugins: the list of plugins required by packages. If not defined,
-//                     we bundle the app to find the required plugins.
 
-cordova.ensureCordovaPlugins = function (localPath, options) {
+var ensureCordovaPlugins = function (localPath, options) {
   options = options || {};
   var plugins = options.packagePlugins;
   if (! plugins) {
@@ -275,101 +336,93 @@ cordova.ensureCordovaPlugins = function (localPath, options) {
   _.extend(plugins, project.getCordovaPlugins());
 
   var cordovaPath = path.join(localPath, 'cordova-build');
-  var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
-  var newSettings = null;
+  var settingsFile = path.join(cordovaPath, 'cordova-settings.json');
 
+  var newSettings;
   if (options.settings) {
     newSettings =
       JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
-  }
-
-
-  // XXX compare the latest used sha's with the currently required sha's for
-  // plugins fetched from a github/tarball url.
-  var pluginsOutput = execFileSyncOrThrow(localCordova, ['plugin', 'list'],
-                                   { cwd: cordovaPath }).stdout;
-
-  var installedPlugins = {};
-  // Check if there are any plugins
-  if (! pluginsOutput.match(/No plugins added/)) {
-    _.each(pluginsOutput.split('\n'), function (line) {
-      line = line.trim();
-      if (line === '')
-        return;
-      var plugin = line.split(' ')[0];
-      var version = line.split(' ')[1];
-      installedPlugins[plugin] = version;
-    });
+    fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
+      'utf8');
   }
 
   var oldSettings;
-  var settingsFile = path.join(cordovaPath, 'cordova-settings.json');
   try {
-    oldSettings = JSON.parse(
-      fs.readFileSync(settingsFile, 'utf8'));
+    oldSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
   } catch(err) {
     if (err.code !== 'ENOENT')
       throw err;
     oldSettings = {};
-  } finally {
-    if (newSettings) {
-      fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
-        'utf8');
-    }
   }
 
-  // This block checks to see if we should install or reinstall a plugin.
+  // XXX compare the latest used sha's with the currently required sha's for
+  // plugins fetched from a github/tarball url.
+
+  var installedPlugins = getInstalledPlugins(cordovaPath);
+
+  // Due to the dependency structure of Cordova plugins, it is impossible to
+  // upgrade the version on an individual Cordova plugin. Instead, whenever a
+  // new Cordova plugin is added or removed, or its version is changed,
+  // we just reinstall all of the plugins.
+
+  // If there are Cordova settings and they have changed, then reinstall
+  // all of the plugins.
+  var shouldReinstallPlugins = newSettings &&
+                               ! _.isEqual(newSettings, oldSettings);
+
+  // If we have newSettings then use them, otherwise use the old settings.
+  var settings = (newSettings ? newSettings : oldSettings) || {};
+
+  // Iterate through all of the plugin and find if any of them have a new
+  // version.
   _.each(plugins, function (version, name) {
-    // no-op if this plugin is already installed
     // XXX there is a hack here that never updates a package if you are
     // trying to install it from a URL, because we can't determine if
     // it's the right version or not
-    if (_.has(installedPlugins, name) &&
-      (installedPlugins[name] === version || utils.isUrlWithSha(version))) {
-
-      if (newSettings && newSettings[name] &&
-          ! _.isEqual(oldSettings[name], newSettings[name])) {
-        // If we have newSettings and they are different, then continue.
-      } else {
-        return;
-      }
+    if (! _.has(installedPlugins, name) ||
+      (installedPlugins[name] !== version && ! utils.isUrlWithSha(version))) {
+      // The version of the plugin has changed, or we do not contain a plugin.
+      shouldReinstallPlugins = true;
     }
-
-    if (_.has(installedPlugins, name)) {
-      execFileSyncOrThrow(localCordova, ['plugin', 'rm', name],
-        { cwd: cordovaPath });
-    }
-
-    // XXX do something different for plugins fetched from a url.
-    var pluginInstallCommand = version ? name + '@' + version : name;
-
-    if (version && utils.isUrlWithSha(version)) {
-      pluginInstallCommand =
-        fetchCordovaPluginFromShaUrl(version, localPluginsPath, name);
-    }
-
-    var additionalArgs = [];
-    // XXX how do we get settings to work now? Do we require settings to be
-    // passed every time we add a plugin?
-    if (newSettings && newSettings[name]) {
-      if (! _.isObject(newSettings[name]))
-        throw new Error('Meteor.settings.cordova.' + name + ' is expected to be an object');
-      _.each(newSettings[name], function (value, variable) {
-        additionalArgs.push('--variable');
-        additionalArgs.push(variable + '=' + JSON.stringify(value));
-      });
-    }
-    process.stdout.write('Installing ' + pluginInstallCommand + '\n');
-    var execRes = execFileSyncOrThrow(localCordova,
-       ['plugin', 'add', pluginInstallCommand].concat(additionalArgs), { cwd: cordovaPath });
-    if (! execRes.success)
-      throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
   });
 
+  // Check to see if we have any installed plugins that are not in the current
+  // set of plugins.
   _.each(installedPlugins, function (version, name) {
-    if (! _.has(plugins, name))
-      execFileSyncOrThrow(localCordova, ['plugin', 'rm', name], { cwd: cordovaPath });
+    if (! _.has(plugins, name)) {
+      shouldReinstallPlugins = true;
+    }
   });
+
+  if (shouldReinstallPlugins) {
+    // Loop through all of the current plugins and remove them one by one until
+    // we have no plugins. It's necessary to loop because we might have
+    // dependencies between plugins.
+    var uninstallAllPlugins = function () {
+      process.stdout.write("Uninstalling all Cordova plugins...\n");
+      installedPlugins = getInstalledPlugins(cordovaPath);
+      while (_.size(installedPlugins)) {
+        _.each(_.keys(installedPlugins), function (name) {
+          uninstallPlugin(cordovaPath, name);
+        });
+        installedPlugins = getInstalledPlugins(cordovaPath);
+      }
+    };
+    uninstallAllPlugins();
+
+    // Now install all of the plugins.
+    try {
+      _.each(plugins, function (version, name) {
+        installPlugin(cordovaPath, name, version, settings[name]);
+      });
+    } catch (err) {
+      // If a plugin fails to install, then remove all plugins and throw the
+      // error. Cordova doesn't remove the plugin by default for some reason.
+      // XXX don't throw and improve this error message.
+      uninstallAllPlugins();
+      throw err;
+    }
+  }
 };
 
 // Build a Cordova project, creating a Cordova project if necessary.
@@ -388,7 +441,7 @@ var buildCordova = function (localPath, buildCommand, options) {
 
   cordova.ensureCordovaProject(localPath, options.appName);
   cordova.ensureCordovaPlatforms(localPath);
-  cordova.ensureCordovaPlugins(localPath, _.extend({}, options, {
+  ensureCordovaPlugins(localPath, _.extend({}, options, {
     packagePlugins: bundle.starManifest.cordovaDependencies
   }));
 
