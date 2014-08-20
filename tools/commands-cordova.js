@@ -406,6 +406,12 @@ var ensureCordovaPlugins = function (localPath, options) {
         });
         installedPlugins = getInstalledPlugins(cordovaPath);
       }
+      // XXX HACK, because Cordova doesn't properly clear its plugins on `rm`.
+      // This will completely destroy the project state. We should work with
+      // Cordova to fix the bug in their system, because it doesn't seem
+      // like there's a way around this.
+      files.rm_recursive(path.join(cordovaPath, 'platforms'));
+      cordova.ensureCordovaPlatforms(localPath);
     };
     process.stdout.write("Uninstalling all Cordova plugins...\n");
     uninstallAllPlugins();

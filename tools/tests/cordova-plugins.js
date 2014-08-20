@@ -214,4 +214,17 @@ selftest.define("add cordova plugins", function () {
   run.expectExit(0);
 
   checkCordovaPlugins(s, ["org.apache.cordova.console"]);
+
+  run = s.run("add", "cordova:org.apache.cordova.device@0.2.11");
+  run.match("added");
+  run.expectExit(0);
+
+  run = s.run("build", "a", "--android-path", "../android",
+              "--settings", "settings.json");
+  run.waitSecs(30);
+  run.expectExit(0);
+  checkCordovaPlugins(s, ["org.apache.cordova.console",
+                          "org.apache.cordova.device"]);
+
+
 });

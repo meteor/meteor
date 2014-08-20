@@ -1169,7 +1169,7 @@ main.registerCommand({
     try {
       cordova.buildPlatforms(localPath, mobilePlatforms,
         _.extend({}, options, {
-          appName: path.basename(testRunnerAppDir)
+          appName: path.basename(testRunnerAppDir),
         }));
       cordova.runPlatforms(localPath, mobilePlatforms);
     } catch (err) {
