@@ -475,6 +475,16 @@ _.extend(Project.prototype, {
     return _.clone(self.cordovaPlatforms);
   },
 
+  // Returns the set of web archs that are targeted by the project
+  getWebArchs: function () {
+    var self = this;
+    var archs = [ "web.browser" ];
+    if (! _.isEmpty(self.getCordovaPlatforms())) {
+      archs.push("web.cordova");
+    }
+    return archs;
+  },
+
   // Returns the file path to the .meteor/cordova-plugins file, containing the
   // Cordova plugins dependencies for this specific project.
   _getCordovaPluginsFile: function () {

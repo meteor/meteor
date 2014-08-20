@@ -220,7 +220,7 @@ main.registerCommand({
   }
 
   // Always bundle for the browser by default.
-  var webArchs = ["web.browser"];
+  var webArchs = project.getWebArchs();
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
@@ -241,10 +241,6 @@ main.registerCommand({
       process.stderr.write(err.message + '\n');
       return 1;
     }
-  }
-
-  if (!_.isEmpty(project.getCordovaPlatforms())) {
-    webArchs.push("web.cordova");
   }
 
   if (options['no-server'])
@@ -550,7 +546,7 @@ var buildWithOptions = function (options) {
   }
 
   var bundleArch =  options.architecture || archinfo.host();
-  var webArchs = ["web.browser"];
+  var webArchs = project.getWebArchs();
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
@@ -573,7 +569,6 @@ var buildWithOptions = function (options) {
 
     cordova.buildPlatforms(localPath, mobilePlatforms,
       _.extend({}, options, parsedHostPort, { appName: appName }));
-    webArchs.push("web.cordova");
   }
 
   var buildDir = path.join(localPath, 'build_tar');
@@ -872,9 +867,12 @@ main.registerCommand({
     buildArch = archinfo.host();
   }
 
+  var webArchs = project.getWebArchs();
+
   var buildOptions = {
     minify: ! options.debug,
-    serverArch: buildArch
+    serverArch: buildArch,
+    webArchs: webArchs
   };
 
   var deployResult;
