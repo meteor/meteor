@@ -497,7 +497,7 @@ var checkRequestedPlatforms = function (platforms) {
     if (! _.contains(cordovaPlatforms, platform))
       throw new Error(platform +
         ": platform is not added to the project. Try 'meteor add-platform " +
-        platform + "' to add it or 'meteor help add' for help.");
+        platform + "' to add it or 'meteor help add-platform' for help.");
   });
 };
 
