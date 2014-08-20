@@ -127,7 +127,7 @@ selftest.define("change cordova plugins", function () {
 
 // Add plugins through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add cordova plugins", function () {
+selftest.define("add cordova plugins", ["slow"], function () {
   var s = new Sandbox();
   var run;
 
@@ -178,8 +178,7 @@ selftest.define("add cordova plugins", function () {
   run = s.run("list-platforms");
   run.match("android");
 
-  run = s.run("build", "a", "--android-path", "../android",
-              "--settings", "settings.json");
+  run = s.run("build", "../a", "--settings", "settings.json");
   run.waitSecs(30);
   // This fails because the FB plugin does not compile without additional
   // configuration for android.
@@ -196,8 +195,7 @@ selftest.define("add cordova plugins", function () {
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
-  run = s.run("build", "a", "--android-path", "../android",
-              "--settings", "settings.json");
+  run = s.run("build", "../a", "--settings", "settings.json");
   run.waitSecs(30);
   run.expectExit(0);
 
@@ -208,8 +206,7 @@ selftest.define("add cordova plugins", function () {
   run.match("removed");
   run.expectExit(0);
 
-  run = s.run("build", "a", "--android-path", "../android",
-              "--settings", "settings.json");
+  run = s.run("build", "../a", "--settings", "settings.json");
   run.waitSecs(30);
   run.expectExit(0);
 
@@ -219,12 +216,9 @@ selftest.define("add cordova plugins", function () {
   run.match("added");
   run.expectExit(0);
 
-  run = s.run("build", "a", "--android-path", "../android",
-              "--settings", "settings.json");
+  run = s.run("build", "../a", "--settings", "settings.json");
   run.waitSecs(30);
   run.expectExit(0);
   checkCordovaPlugins(s, ["org.apache.cordova.console",
                           "org.apache.cordova.device"]);
-
-
 });
