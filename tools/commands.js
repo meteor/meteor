@@ -1274,33 +1274,6 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: 'admin delete-organization',
-  minArgs: 1,
-  maxArgs: 1
-}, function (options) {
-
-  // XXX Not sure how to test this command now because
-  // createOrganization is only accessible to verified @meteor.com
-  // users.
-
-  var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
-    process.stderr.write("You must be logged in to delete an organization.\n");
-    return 1;
-  }
-
-  var conn = auth.loggedInAccountsConnection(token);
-  try {
-    conn.call("deleteOrganization", options.args[0]);
-  } catch (err) {
-    process.stderr.write("Error deleting organization: " + err.reason + "\n");
-    return 1;
-  }
-  process.stdout.write("Organization " + options.args[0] + " deleted.\n");
-  return 0;
-});
-
-main.registerCommand({
   name: 'admin add-member',
   minArgs: 2,
   maxArgs: 2
