@@ -60,16 +60,8 @@ selftest.define("add cordova platforms", function () {
   run = s.run("add-platform", "android");
   run.match("added");
 
-  run = s.run("run", "android");
-  // XXX uncomment this once we get run android to work
-  // run.waitSecs(30);
-  // run.match("myapp");
-  // run.match("proxy");
-  // run.match("MongoDB");
-  // run.match("your app");
-  // run.waitSecs(5);
-  // run.match("running at");
-  // run.match("localhost");
+  run = s.run("remove-platform", "foo");
+  run.match("foo is not");
 
   run = s.run("remove-platform", "android");
   run.match("removed");

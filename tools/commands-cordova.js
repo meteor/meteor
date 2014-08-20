@@ -676,7 +676,15 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
   var platforms = options.args;
+  var currentPlatforms = project.getCordovaPlatforms();
 
+  _.each(platforms, function (platform) {
+    if (_.contains(currentPlatforms, platform)) {
+      process.stdout.write("removed platform " + platform + "\n");
+    } else {
+      process.stdout.write(platform + " is not in this project\n");
+    }
+  });
   project.removeCordovaPlatforms(platforms);
 
   if (platforms.length) {
@@ -688,9 +696,6 @@ main.registerCommand({
     cordova.ensureCordovaPlatforms(localPath);
   }
 
-  _.each(platforms, function (platform) {
-    process.stdout.write("removed platform " + platform + "\n");
-  });
 });
 
 main.registerCommand({
