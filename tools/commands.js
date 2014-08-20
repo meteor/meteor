@@ -525,7 +525,6 @@ var buildCommands = {
     'for-deploy': { type: Boolean },
     port: { type: String, short: "p", default: "localhost:3000" },
     settings: { type: String},
-    verbose: { type: Boolean, short: "v" },
     'ios-path': { type: String },
     'android-path': { type: String },
   }
