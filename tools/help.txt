@@ -170,7 +170,7 @@ Lists all of the platforms that have been explicitly added to your project.
 Deprecated command. Use 'build' instead.
 
 >>> build
-Outputs builds for all targetted platforms.
+Outputs builds for all targeted platforms.
 Usage: meteor build <output path> [--debug] [--directory] [--settings settings.json]
 
 Package this project up for deployment. The output is a directory with several
