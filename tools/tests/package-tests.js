@@ -86,7 +86,7 @@ var checkVersions = function(sand, packages) {
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change packages", ['test-package-server'], function () {
+selftest.define("change packages during hot code push", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -194,7 +194,7 @@ selftest.define("change packages", ['test-package-server'], function () {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add packages", ["net", "test-package-server"], function () {
+selftest.define("add packages to app", ["net"], function () {
   var s = new Sandbox();
   var run;
 
@@ -318,7 +318,11 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
+//
+// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
+// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
+// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
+selftest.define("sync local catalog", ["slow", "net", "test-package-server", "checkout"],  function () {
   var s = new Sandbox();
   var run;
 
@@ -458,9 +462,12 @@ selftest.define("release track defaults to METEOR-CORE",
   });
 });
 
-
+//
+// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
+// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
+// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
 selftest.define("update server package data unit test",
-                ["net", "test-package-server"], function () {
+                ["net", "test-package-server", "checkout"], function () {
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
   var packageStorageFile = path.join(packageStorageFileDir, "data.json");
 
