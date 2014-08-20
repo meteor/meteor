@@ -1182,29 +1182,40 @@ main.registerCommand({
 // organizations
 ///////////////////////////////////////////////////////////////////////////////
 
+var loggedInAccountsConnectionOrPrompt = function (action) {
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  var conn = auth.loggedInAccountsConnection(token);
+  if (conn === null) {
+    // Server rejected our token.
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+    token = auth.getSessionToken(config.getAccountsDomain());
+    conn = auth.loggedInAccountsConnection(token);
+  }
+
+  return conn;
+};
+
 main.registerCommand({
   name: 'admin create-organization',
   minArgs: 1,
   maxArgs: 1
 }, function (options) {
 
-  var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
-    process.stderr.write("You must be logged in to create an organization.\n");
-    auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
-  }
+  var conn = loggedInAccountsConnectionOrPrompt("create an organization");
 
-  var conn = auth.loggedInAccountsConnection(token);
   try {
     conn.call("createOrganization", options.args[0]);
   } catch (err) {
-    // XXX If the organization already exists, we'll get "Username
-    // already exists" here. We should probably rewrite that to a nicer
-    // error ("Organization name already exists"), either here or on the
-    // server.
     process.stderr.write("Error creating organization: " +
-                         err.reason + "\n");
+                         (err.reason || "unknown error") + "\n");
     return 1;
   }
   process.stdout.write("Organization " + options.args[0] + " created.\n");
@@ -1217,14 +1228,8 @@ main.registerCommand({
   maxArgs: 1
 }, function (options) {
 
-  var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
-    process.stderr.write("You must be logged in to show an organization.\n");
-    auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
-  }
+  var conn = loggedInAccountsConnectionOrPrompt("show an organization");
 
-  var conn = auth.loggedInAccountsConnection(token);
   try {
     var result = conn.call("showOrganization", options.args[0]);
   } catch (err) {
@@ -1232,7 +1237,10 @@ main.registerCommand({
                          err.reason + "\n");
     return 1;
   }
-  process.stdout.write(result.join("\n") + "\n");
+
+  var members = _.pluck(result, "username");
+
+  process.stdout.write(members.join("\n") + "\n");
   return 0;
 });
 
@@ -1242,6 +1250,7 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: 0
 }, function (options) {
+
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to list your organizations.\n");
@@ -1263,7 +1272,16 @@ main.registerCommand({
     return 1;
   }
 
-  if (! body || ! body.organizations) {
+  if (result.response.statusCode === 401 &&
+      body && body.error === "invalid_credential") {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    // XXX It would be nice to do a username/password prompt here like
+    // we do for the other orgs commands.
+    return 1;
+  }
+
+  if (result.response.statusCode !== 200 ||
+      ! body || ! body.organizations) {
     process.stderr.write("Error listing organizations.\n");
     return 1;
   }
@@ -1282,14 +1300,8 @@ main.registerCommand({
   maxArgs: 2
 }, function (options) {
 
-  var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
-    process.stderr.write("You must be logged in to edit organizations.\n");
-    auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
-  }
+  var conn = loggedInAccountsConnectionOrPrompt("edit organizations");
 
-  var conn = auth.loggedInAccountsConnection(token);
   try {
     conn.call("addOrganizationMember", options.args[0], options.args[1]);
   } catch (err) {
@@ -1308,15 +1320,16 @@ main.registerCommand({
   maxArgs: 2
 }, function (options) {
 
-  var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
-    process.stderr.write("You must be logged in to edit organizations.\n");
-    auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
+  var conn = loggedInAccountsConnectionOrPrompt("edit organizations");
+
+  try {
+    conn.call("removeOrganizationMember", options.args[0], options.args[1]);
+  } catch (err) {
+    process.stderr.write("Error removing member: " +
+                         err.reason + "\n");
+    return 1;
   }
 
-  var conn = auth.loggedInAccountsConnection(token);
-  conn.call("removeOrganizationMember", options.args[0], options.args[1]);
   process.stdout.write(options.args[1] + " removed from organization " +
                        options.args[0] + ".\n");
   return 0;
