@@ -40,7 +40,8 @@ var execFileAsyncOrThrow = function (file, args, opts) {
   p.on('close', function (code) {
     if (code)
       throw new Error(file + ' ' + args.join(' ') +
-                      ' exited with non-zero code: ' + code);
+                      ' exited with non-zero code: ' + code + '. Use -v for' +
+                      ' more logs.');
   });
 };
 
@@ -413,7 +414,7 @@ var ensureCordovaPlugins = function (localPath, options) {
       files.rm_recursive(path.join(cordovaPath, 'platforms'));
       cordova.ensureCordovaPlatforms(localPath);
     };
-    process.stdout.write("Uninstalling all Cordova plugins...\n");
+    process.stdout.write("Resetting Cordova plugins...\n");
     uninstallAllPlugins();
 
     // Now install all of the plugins.
@@ -519,7 +520,9 @@ cordova.preparePlatforms = function (localPath, platforms, options) {
 
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
-var execCordovaOnPlatform = function (localPath, platformName) {
+// options:
+//    - verbose: print all logs
+var execCordovaOnPlatform = function (localPath, platformName, options) {
   var cordovaPath = path.join(localPath, 'cordova-build');
 
   // XXX error if an invalid platform
@@ -531,7 +534,8 @@ var execCordovaOnPlatform = function (localPath, platformName) {
                platform ];
 
   // XXX error if not a Cordova project
-  execFileAsyncOrThrow(localCordova, args, { cwd: cordovaPath });
+  execFileAsyncOrThrow(localCordova, args, { verbose: options.verbose,
+                                             cwd: cordovaPath });
   var Log = getLoadedPackages().logging.Log;
 
   var androidMapper = function (line) {
@@ -577,21 +581,27 @@ var execCordovaOnPlatform = function (localPath, platformName) {
     // overwrite the file so we don't have to print the old logs
     fs.writeFileSync(logFilePath, '');
     // print the log file
-    execFileAsyncOrThrow('tail', ['-f', logFilePath], { lineMapper: iosMapper });
+    execFileAsyncOrThrow('tail', ['-f', logFilePath], {
+      verbose: true,
+      lineMapper: iosMapper
+    });
   } else if (platform === 'android') {
     // clear the logcat logs from the previous run
     execFileSyncOrThrow(localAdb, ['logcat', '-c']);
     execFileAsyncOrThrow(localAdb, ['logcat', '-s', 'CordovaLog'], {
-      lineMapper: androidMapper,
+      verbose: true,
+      lineMapper: androidMapper
     });
   }
   return 0;
 };
 
 // Start the simulator or physical device for a list of platforms
-cordova.runPlatforms = function (localPath, platforms) {
+// options:
+//   - verbose: print all build logs
+cordova.runPlatforms = function (localPath, platforms, options) {
   _.each(platforms, function (platformName) {
-    execCordovaOnPlatform(localPath, platformName);
+    execCordovaOnPlatform(localPath, platformName, options);
   });
 };
 

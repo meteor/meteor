@@ -410,15 +410,15 @@ exports.execFileAsync = function (file, args, opts) {
   var p = child_process.spawn(file, args, opts);
   var mapper = opts.lineMapper || _.identity;
 
-  eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
-    line = mapper(line);
-    console.log(line);
-  }));
+  var logOutput = fiberHelpers.bindEnvironment(function (line) {
+    if (opts.verbose) {
+      line = mapper(line);
+      console.log(line);
+    }
+  });
 
-  eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
-    line = mapper(line);
-    console.log(line);
-  }));
+  eachline(p.stdout, logOutput);
+  eachline(p.stderr, logOutput);
 
   return p;
 };

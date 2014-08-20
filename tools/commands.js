@@ -174,6 +174,7 @@ main.registerCommand({
     settings: { type: String },
     'no-server': { type: Boolean },
     program: { type: String },
+    verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
     // undocumented: intended for automated testing (eg, cli-test.sh),
@@ -235,7 +236,7 @@ main.registerCommand({
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
                  options, parsedHostPort));
-      cordova.runPlatforms(localPath, options.args);
+      cordova.runPlatforms(localPath, options.args, options);
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
@@ -523,7 +524,8 @@ var buildCommands = {
     // Undocumented
     'for-deploy': { type: Boolean },
     port: { type: String, short: "p", default: "localhost:3000" },
-    settings: { type: String}, // XXX document
+    settings: { type: String},
+    verbose: { type: Boolean, short: "v" },
     'ios-path': { type: String },
     'android-path': { type: String },
   }
@@ -1085,6 +1087,8 @@ main.registerCommand({
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
+    verbose: { type: Boolean, short: "v" },
+
     // Undocumented. See #Once
     once: { type: Boolean },
     // Undocumented. To ensure that QA covers both
@@ -1172,7 +1176,7 @@ main.registerCommand({
           appName: path.basename(testRunnerAppDir),
           debug: ! options.production
         }));
-      cordova.runPlatforms(localPath, mobilePlatforms);
+      cordova.runPlatforms(localPath, mobilePlatforms, options);
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
