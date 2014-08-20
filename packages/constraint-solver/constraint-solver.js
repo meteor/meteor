@@ -22,7 +22,9 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   self.catalog = catalog;
 
   // The main resolver
-  self.resolver = new ConstraintSolver.Resolver();
+  self.resolver = new ConstraintSolver.Resolver({
+    nudge: options.nudge
+  });
 
   self._packageInfoLoadQueue = [];
   self._packagesEverEnqueued = {};

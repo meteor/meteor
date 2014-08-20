@@ -65,6 +65,10 @@ _.extend(OfficialCatalog.prototype, {
     // waits for the first to finish.
     self._refreshFutures = null;
 
+    // We de-dup overlapping refreshes.  We want to print our Patience message
+    // if *any* of the refresh calls are non-silent.
+    self._currentRefreshIsLoud = false;
+
     self._refresh(true);
 
     self.initialized = true;
@@ -110,7 +114,7 @@ _.extend(OfficialCatalog.prototype, {
   //
   // If a refresh is already in progress (which is yielding), it just waits for
   // the in-progress refresh to finish.
-  refresh: function () {
+  refresh: function (options) {
     var self = this;
     // note: this only needs to be in a capture because it refreshes the
     // complete catalog (which actually uses the build system).  if
@@ -119,25 +123,42 @@ _.extend(OfficialCatalog.prototype, {
     // buildmessage.assertInCapture any more.
     buildmessage.assertInCapture();
     self._requireInitialized();
+    options = options || {};
 
     if (self._refreshFutures) {
       var f = new Future;
       self._refreshFutures.push(f);
+      if (!options.silent) {
+        self._currentRefreshIsLoud = true;
+      }
       f.wait();
       return;
     }
 
     self._refreshFutures = [];
     self._refreshFiber = Fiber.current;
+    self._currentRefreshIsLoud = !options.silent;
 
-    var thrownError = null;
+    var patience = new utils.Patience({
+      messageAfterMs: 2000,
+      message: function () {
+        if (self._currentRefreshIsLoud) {
+          console.log("Refreshing package metadata. This may take a moment.");
+        }
+      }
+    });
     try {
-      self._refresh();
-      // Force the complete catalog (which is layered on top of our data) to
-      // refresh as well.
-      catalog.complete.refresh({ forceRefresh: true });
-    } catch (e) {
-      thrownError = e;
+      var thrownError = null;
+      try {
+        self._refresh();
+        // Force the complete catalog (which is layered on top of our data) to
+        // refresh as well.
+        catalog.complete.refresh({ forceRefresh: true });
+      } catch (e) {
+        thrownError = e;
+      }
+    } finally {
+      patience.stop();
     }
 
     while (self._refreshFutures.length) {
@@ -495,22 +516,30 @@ _.extend(CompleteCatalog.prototype, {
       });
     }
 
-    // Then, call the constraint solver, to get the valid transitive subset of
-    // those versions to record for our solution. (We don't just return the
-    // original version lock because we want to record the correct transitive
-    // dependencies)
+    var patience = new utils.Patience({
+      messageAfterMs: 1000,
+      message: "Figuring out the best package versions to use. This may take a moment."
+    });
     try {
-      return self.resolver.resolve(deps, constr, resolverOpts);
-    } catch (e) {
-      // Maybe we only failed because we need to refresh. Try to refresh (unless
-      // we already are) and retry.
-      if (!self._refreshingIsProductive() ||
-          catalog.official.refreshInProgress()) {
-        throw e;
+      // Then, call the constraint solver, to get the valid transitive subset of
+      // those versions to record for our solution. (We don't just return the
+      // original version lock because we want to record the correct transitive
+      // dependencies)
+      try {
+        return self.resolver.resolve(deps, constr, resolverOpts);
+      } catch (e) {
+        // Maybe we only failed because we need to refresh. Try to refresh
+        // (unless we already are) and retry.
+        if (!self._refreshingIsProductive() ||
+            catalog.official.refreshInProgress()) {
+          throw e;
+        }
+        catalog.official.refresh();
+        self.resolver || self._initializeResolver();
+        return self.resolver.resolve(deps, constr, resolverOpts);
       }
-      catalog.official.refresh();
-      self.resolver || self._initializeResolver();
-      return self.resolver.resolve(deps, constr, resolverOpts);
+    } finally {
+      patience.stop();
     }
   },
   // Refresh the packages in the catalog.
@@ -582,7 +611,13 @@ _.extend(CompleteCatalog.prototype, {
       packages: [ 'constraint-solver']
     })['constraint-solver'];
     self.resolver =
-      new constraintSolverPackage.ConstraintSolver.PackagesResolver(self);
+      new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
+        nudge: function () {
+          // This may be a singleton, but the resolver is in a package so it
+          // doesn't have access to it.
+          utils.Patience.nudge();
+        }
+      });
   },
 
   // Compute self.effectiveLocalPackages from self.localPackageDirs
