@@ -48,6 +48,7 @@ Options:
   --release     Specify the release of Meteor to use
   --program     The program in the app to run (Advanced)
   --no-server   Don't start the server, only launch the specified mobile builds.
+  --verbose     Print all output from builds logs.
 
 
 >>> create
@@ -353,6 +354,7 @@ Options:
   --android,        the tests for client and server will run in addition to
   --ios-device,     mobile-specific tests.
   --android-device
+  --verbose         Print all output from builds logs.
 
 
 >>> self-test
