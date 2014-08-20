@@ -386,7 +386,7 @@ var toc = [
     "meteor list-platforms",
     "meteor mongo",
     "meteor reset",
-    "meteor bundle"
+    "meteor build"
   ] ]
 ];
 
