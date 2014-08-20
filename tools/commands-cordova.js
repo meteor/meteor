@@ -399,7 +399,6 @@ var ensureCordovaPlugins = function (localPath, options) {
     // we have no plugins. It's necessary to loop because we might have
     // dependencies between plugins.
     var uninstallAllPlugins = function () {
-      process.stdout.write("Uninstalling all Cordova plugins...\n");
       installedPlugins = getInstalledPlugins(cordovaPath);
       while (_.size(installedPlugins)) {
         _.each(_.keys(installedPlugins), function (name) {
@@ -408,6 +407,7 @@ var ensureCordovaPlugins = function (localPath, options) {
         installedPlugins = getInstalledPlugins(cordovaPath);
       }
     };
+    process.stdout.write("Uninstalling all Cordova plugins...\n");
     uninstallAllPlugins();
 
     // Now install all of the plugins.
