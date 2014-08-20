@@ -521,19 +521,14 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
+    port: { type: String, short: "p", default: "localhost:3000" },
+    settings: { type: String },
     // Undocumented
     'for-deploy': { type: Boolean },
-    port: { type: String, short: "p", default: "localhost:3000" },
-    settings: { type: String},
-    'ios-path': { type: String },
-    'android-path': { type: String },
   }
 };
 
 var buildWithOptions = function (options) {
-  // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
-  // the former for them
-
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
@@ -555,14 +550,12 @@ var buildWithOptions = function (options) {
   }
 
   var bundleArch =  options.architecture || archinfo.host();
+  var webArchs = ["web.browser"];
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
-  var mobilePlatforms = {};
-  if (options['ios-path'])
-    mobilePlatforms.ios = options['ios-path'];
-  if (options['android-path'])
-    mobilePlatforms.android = options['android-path'];
+  var mobilePlatforms = project.getCordovaPlatforms();
+  var appName = path.basename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms)) {
     if (options.port === buildCommands.options.port.default) {
@@ -578,16 +571,15 @@ var buildWithOptions = function (options) {
       return 1;
     }
 
-    cordova.buildPlatforms(localPath, _.keys(mobilePlatforms),
-      _.extend({}, options, parsedHostPort, {
-        appName: path.basename(options.appDir)
-      }));
+    cordova.buildPlatforms(localPath, mobilePlatforms,
+      _.extend({}, options, parsedHostPort, { appName: appName }));
+    webArchs.push("web.cordova");
   }
 
   var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
   var bundlePath = options['directory'] ?
-      outputPath : path.join(buildDir, 'bundle');
+      path.join(outputPath, 'bundle') : path.join(buildDir, 'bundle');
 
   var loader;
   var messages = buildmessage.capture(function () {
@@ -618,7 +610,8 @@ var buildWithOptions = function (options) {
       //     default?  i guess the problem with using DEPLOY_ARCH as default
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
-      serverArch: bundleArch
+      serverArch: bundleArch,
+      webArchs: webArchs
     }
   });
   if (bundleResult.errors) {
@@ -627,37 +620,41 @@ var buildWithOptions = function (options) {
     return 1;
   }
 
-  // Copy over the Cordova builds AFTER we bundle so that they are not included
-  // in the main bundle.
-  _.each(mobilePlatforms, function (platformPath, platformName) {
-    var buildPath = path.join(localPath, 'cordova-build',
-                              'platforms', platformName);
-    files.cp_r(buildPath, platformPath);
-  });
-
+  files.mkdir_p(outputPath);
   if (!options['directory']) {
     try {
-      files.createTarball(path.join(buildDir, 'bundle'), outputPath);
+      var outputTar = path.join(outputPath, appName + '.tar.gz');
+      files.createTarball(path.join(buildDir, 'bundle'), outputTar);
     } catch (err) {
       console.log(JSON.stringify(err));
       process.stderr.write("Couldn't create tarball\n");
     }
   }
+
+  // Copy over the Cordova builds AFTER we bundle so that they are not included
+  // in the main bundle.
+  _.each(mobilePlatforms, function (platformName) {
+    var buildPath = path.join(localPath, 'cordova-build',
+                              'platforms', platformName);
+    var platformPath = path.join(outputPath, platformName);
+    files.cp_r(buildPath, platformPath);
+  });
+
   files.rm_recursive(buildDir);
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
-  function (options) {
-    buildWithOptions(options);
-  });
+    function (options) {
+  buildWithOptions(options);
+});
 
 // Deprecated -- identical functionality to 'build'
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
-  function (options) {
-    process.stdout.write("WARNING: 'bundle' has been deprecated. " +
-                         "Use 'build' instead.\n");
-    buildWithOptions(options);
-  });
+    function (options) {
+  process.stdout.write("WARNING: 'bundle' has been deprecated. " +
+                       "Use 'build' instead.\n");
+  buildWithOptions(options);
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // mongo
