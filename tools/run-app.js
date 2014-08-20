@@ -611,15 +611,18 @@ _.extend(AppRunner.prototype, {
           };
         }
 
-        // Establish a watcher on the new files.
-        setupClientWatcher();
+        var oldFuture = self.runFuture = new Future;
 
         // Notify the server that new client assets have been added to the build.
         process.kill(appProcess.proc.pid, 'SIGUSR2');
+
+        // Establish a watcher on the new files.
+        setupClientWatcher();
+
         runLog.logClientRestart();
 
-        self.runFuture = new Future;
-        ret = self.runFuture.wait();
+        // Wait until another file changes.
+        ret = oldFuture.wait();
       }
     } finally {
       self.runFuture = null;
