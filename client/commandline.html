@@ -138,6 +138,25 @@ these packages to your project, run <code>meteor add <i>package</i></code>.
 
 With `--using`, list the packages that you have added to your project.
 
+<h3 id="meteoraddplatform">meteor add-platform <i>platform</i></h3>
+
+Adds platforms to your Meteor project. You can add multiple
+platforms with one command. Once a platform has been added, you
+can use 'meteor run <i>platform</i>' to run on the platform, and 'meteor build'
+to build the Meteor project for every added platform.
+
+
+<h3 id="meteorremoveplatform">meteor remove-platform <i>platform</i></h3>
+
+Removes a platform previously added to your Meteor project. For a
+list of the platforms that your application is currently using, see
+'meteor list-platforms'.
+
+
+<h3 id="meteorlistplatform">meteor list-platforms</h3>
+
+Lists all of the platforms that have been explicitly added to your project.
+
 
 <h3 id="meteormongo">meteor mongo</h3>
 
@@ -178,6 +197,8 @@ You can use this to host a Meteor application on your own server,
 instead of deploying to Meteor's servers.  You will have to deal with
 logging, monitoring, backups, load-balancing, etc, all of which we
 handle for you if you use `meteor deploy`.
+
+
 
 {{/markdown}}
 </div>
