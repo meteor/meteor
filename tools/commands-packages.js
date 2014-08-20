@@ -1042,7 +1042,7 @@ main.registerCommand({
     doOrDie(function () {
       vr = catalog.official.getLatestVersion(name);
     });
-    return !(_.isEqual(vr.description,
+    return vr && !(_.isEqual(vr.description,
                        "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
   };
 

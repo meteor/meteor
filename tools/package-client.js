@@ -189,7 +189,13 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   var done = false;
   var ret = {resetData: false};
 
-  var conn = openPackageServerConnection(options.packageServerUrl);
+  try {
+    var conn = openPackageServerConnection(options.packageServerUrl);
+  } catch (err) {
+    self.handlePackageServerConnectionError(err);
+    ret.data = null;
+    return ret;
+  }
 
   var getSomeData = function () {
     var syncToken = cachedServerData.syncToken;
