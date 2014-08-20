@@ -164,23 +164,30 @@ Lists all of the platforms that have been explicitly added to your project.
 
 >>> bundle
 Deprecated command. Use 'build' instead.
-Usage: meteor bundle <output_file.tar.gz>
+Usage: meteor bundle <output path>
 
 >>> build
-Pack this project up into a tarball.
-Usage: meteor build <output_file.tar.gz>
+Outputs builds for all targetted platforms.
+Usage: meteor build <output path>
 
-Package this project up for deployment. The output is a tarball that
-includes everything necessary to run the application. See README in
-the tarball for details.
+Package this project up for deployment. The output is a directory with several
+build artifacts:
+
+- a tarball that includes everything necessary to run the application server
+  (see README in the tarball for details)
+- an unassigned apk bundle and a project source if Android is targetted as a
+  mobile platform
+- a directory with an XCode project source if iOS is targetted as a mobile
+  platform
+
 
 Options:
   --debug        build in debug mode (don't minify, etc)
-  --directory    output a directory (rather than a tarball). If the output
-                 location exists, it will be recursively deleted first.
-  --ios-path     output an iOS project at the given path
-  --android-path outputs an Android project at the given path
-  --settings     set optional data for Meteor.settings
+  --directory    output a directory (rather than a tarball) for the
+                 application server bunlde. If the output location exists,
+                 it will be recursively deleted first.
+  --settings     set optional data for Meteor.settings for the build-time
+                 settings (such as settings required by Cordova plugins).
 
 
 >>> mongo
