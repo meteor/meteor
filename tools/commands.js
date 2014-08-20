@@ -1188,10 +1188,6 @@ main.registerCommand({
   maxArgs: 1
 }, function (options) {
 
-  // XXX Not sure how to test this command now because
-  // createOrganization is only accessible to verified @meteor.com
-  // users.
-
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
     process.stderr.write("You must be logged in to create an organization.\n");
