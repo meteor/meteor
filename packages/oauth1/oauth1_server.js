@@ -31,10 +31,12 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     if(typeof urls.authenticate === "function") {
       redirectUrl = urls.authenticate(oauthBinding);
     } else {
+      // Parse the URL to support additional query parameters in urls.authenticate
       var redirectUrlObj = url.parse(urls.authenticate, true);
       redirectUrlObj.query = redirectUrlObj.query || {};
       redirectUrlObj.query.oauth_token = oauthBinding.requestToken;
       redirectUrlObj.search = '';
+      // Reconstruct the URL back with provided query parameters merged with oauth_token
       redirectUrl = url.format(redirectUrlObj);
     }
 

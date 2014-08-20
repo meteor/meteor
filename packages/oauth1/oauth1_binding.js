@@ -1,6 +1,6 @@
 var crypto = Npm.require("crypto");
 var querystring = Npm.require("querystring");
-var url = Npm.require("url");
+var urlModule = Npm.require("url");
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -25,19 +25,12 @@ OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
     oauth_callback: callbackUrl
   });
 
-  var requestTokenObj = url.parse(self._urls.requestToken, true);
-  var params = requestTokenObj.query || {};
-
-  requestTokenObj.query = {};
-  requestTokenObj.search = '';
-  var requestToken = url.format(requestTokenObj);
-
-  var response = self._call('POST', requestToken, headers, params);
+  var response = self._call('POST', self._urls.requestToken, headers);
   var tokens = querystring.parse(response.content);
 
   if (!tokens.oauth_callback_confirmed)
-    throw new Error(
-      "oauth_callback_confirmed false when requesting oauth1 token", tokens);
+    throw _.extend(new Error("oauth_callback_confirmed false when requesting oauth1 token"),
+                             {response: response});
 
   self.requestToken = tokens.oauth_token;
   self.requestTokenSecret = tokens.oauth_token_secret;
@@ -60,19 +53,17 @@ OAuth1Binding.prototype.prepareAccessToken = function(query, requestTokenSecret)
     oauth_verifier: query.oauth_verifier
   });
 
-  var accessTokenObj = url.parse(self._urls.accessToken, true);
-  var params = accessTokenObj.query || {};
-
-  accessTokenObj.query = {};
-  accessTokenObj.search = '';
-  var accessToken = url.format(accessTokenObj);
-
-  var response = self._call('POST', accessToken, headers, params);
+  var response = self._call('POST', self._urls.accessToken, headers);
   var tokens = querystring.parse(response.content);
 
-  if (!tokens.oauth_token || !tokens.oauth_token_secret)
-    throw new Error(
-      "missing oauth token or secret", tokens);
+  if (!tokens.oauth_token || !tokens.oauth_token_secret) {
+    var error = new Error("missing oauth token or secret");
+    // We provide response only if no token is available, we do not want to leak any tokens
+    if (!tokens.oauth_token && !tokens.oauth_token_secret) {
+      _.extend(error, {response: response});
+    }
+    throw error;
+  }
 
   self.accessToken = tokens.oauth_token;
   self.accessTokenSecret = tokens.oauth_token_secret;
@@ -145,6 +136,17 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
   headers = headers || {};
   params = params || {};
 
+  // Extract all query string parameters from the provided URL
+  var parsedUrl = urlModule.parse(url, true);
+  // Merge them in a way that params given to the method call have precedence
+  params = _.extend({}, parsedUrl.query, params);
+
+  // Reconstruct the URL back without any query string parameters
+  // (they are now in params)
+  parsedUrl.query = {};
+  parsedUrl.search = '';
+  url = urlModule.format(parsedUrl);
+
   // Get the signature
   headers.oauth_signature =
     self._getSignature(method, url, headers, self.accessTokenSecret, params);
@@ -166,7 +168,8 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
       callback(error, response);
     });
     // We store nonce so that JWTs can be validated
-    response.nonce = headers.oauth_nonce;
+    if (response)
+      response.nonce = headers.oauth_nonce;
     return response;
   } catch (err) {
     throw _.extend(new Error("Failed to send OAuth1 request to " + url + ". " + err.message),
