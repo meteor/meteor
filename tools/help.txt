@@ -139,28 +139,28 @@ Usage: meteor list
 List the packages that you have explicitly added to your project.
 This will not list transitive dependencies.
 
-Also lists the Cordova plugins and platforms used by your mobile
-build directly.
-
 >>> add-platform
 Add a platform to this project.
 Usage: meteor add-platform <platform> [platform..]
 
-Add one or more platforms such as ios or android to your Meteor project,
-enabling you to run your app with the new platform as a target.
-See 'meteor help run'.
+Adds platforms to your Meteor project. You can add multiple
+platforms with one command. Once a platform has been added, you
+can use 'meteor run <platform>' to run on the platform, and 'meteor build'
+to build the Meteor project for every added platform.
 
 >>> remove-platform
 Remove a platform from this project.
 Usage: meteor remove-platform <platform> [platform..]
 
-Remove one or more platforms previously added to your Meteor project.
+Removes a platform previously added to your Meteor project. For a
+list of the platforms that your application is currently using, see
+'meteor list-platforms'.
 
 >>> list-platforms
 List the platforms added to your project.
 Usage: meteor list-packages
 
-Lists all of the platforms that have been added using 'meteor add-platform'.
+Lists all of the platforms that have been explicitly added to your project.
 
 >>> bundle
 Deprecated command. Use 'build' instead.
