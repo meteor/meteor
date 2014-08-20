@@ -167,7 +167,7 @@ _.extend(OfficialCatalog.prototype, {
     if (! (self.offline || overrideOffline)) {
       var updateResult = packageClient.updateServerPackageData(localData);
       allPackageData = updateResult.data;
-      if (! allPackageData) {
+      if (!allPackageData) {
         // If we couldn't contact the package server, use our local data.
         allPackageData = localData;
         // XXX should do some nicer error handling here (return error to
