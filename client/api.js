@@ -39,7 +39,7 @@ Template.api.absoluteUrl = {
           + "reads from the `ROOT_URL` environment variable to determine "
           + "where it is running. This is taken care of automatically for "
           + "apps deployed with `meteor deploy`, but must be provided when "
-          + "using `meteor bundle`."],
+          + "using `meteor build`."],
   args: [
     {name: "path",
      type: "String",
