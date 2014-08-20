@@ -438,7 +438,7 @@ var buildCordova = function (localPath, buildCommand, options) {
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
   var bundle = getBundle(bundlePath, [webArchName], options);
-  console.log(options);
+
   cordova.ensureCordovaProject(localPath, options.appName);
   cordova.ensureCordovaPlatforms(localPath);
   ensureCordovaPlugins(localPath, _.extend({}, options, {
