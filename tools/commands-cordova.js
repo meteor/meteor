@@ -414,7 +414,7 @@ var ensureCordovaPlugins = function (localPath, options) {
       files.rm_recursive(path.join(cordovaPath, 'platforms'));
       cordova.ensureCordovaPlatforms(localPath);
     };
-    process.stdout.write("Resetting Cordova plugins...\n");
+    process.stdout.write("Initializing Cordova plugins...\n");
     uninstallAllPlugins();
 
     // Now install all of the plugins.
@@ -533,9 +533,18 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
                isDevice ? '--device' : '--emulator',
                platform ];
 
-  // XXX error if not a Cordova project
-  execFileAsyncOrThrow(localCordova, args, { verbose: options.verbose,
-                                             cwd: cordovaPath });
+  // XXX assert we have a valid Cordova project
+  if (platform === 'ios' && isDevice) {
+    // ios-deploy is super buggy, so we just open xcode and let the user
+    // start the app themselves. XXX print a message about this?
+    execFileSyncOrThrow('sh',
+      ['-c', 'open ' + path.join(localPath, 'cordova-build',
+             'platforms', 'ios', '*.xcodeproj')]);
+  } else {
+    execFileAsyncOrThrow(localCordova, args, { verbose: options.verbose,
+                                               cwd: cordovaPath });
+  }
+
   var Log = getLoadedPackages().logging.Log;
 
   var androidMapper = function (line) {

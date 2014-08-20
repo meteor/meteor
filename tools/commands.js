@@ -939,51 +939,6 @@ main.registerCommand({
   }
 });
 
-
-///////////////////////////////////////////////////////////////////////////////
-// open-ide
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'open-ide',
-  requiresApp: true,
-  minArgs: 1,
-  maxArgs: Infinity,
-  options: {
-    settings: { type: String },
-    port: { type: String, short: "p", default: 'localhost:3000' },
-    production: { type: Boolean }
-  }
-}, function (options) {
-  // XXX replace try-catch with buildmessage.capture
-  try {
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-    var platforms = options.args;
-
-    // check that every passed argument is in fact a platform we can build for
-    _.each(platforms, cordova.checkIsValidPlatform);
-
-    var parsedHostPort = parseHostPort(options.port);
-
-    // open projects in ides
-    cordova.preparePlatforms(localPath, platforms,
-                             _.extend({ debug: ! options.production,
-                             appName: path.basename(options.appDir) },
-                                       options, parsedHostPort));
-
-    _.each(platforms, function (platform) {
-      if (platform !== 'ios')
-        throw new Error(platform + ": unsupported platform for 'open-ide' command. Only 'ios' is supportted at the moment.");
-
-      execFileSync('sh', ['-c', 'open ' + path.join(localPath, 'cordova-build', 'platforms', 'ios', '*.xcodeproj')]);
-    });
-  } catch (err) {
-    process.stderr.write(err.message + '\n');
-    return 1;
-  }
-});
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // authorized
 ///////////////////////////////////////////////////////////////////////////////
