@@ -12,6 +12,13 @@ Template.api.isServer = {
   descr: ["Boolean variable.  True if running in server environment."]
 };
 
+Template.api.isCordova = {
+  id: "meteor_iscordova",
+  name: "Meteor.isCordova",
+  locus: "Anywhere",
+  descr: ["Boolean variable.  True if running in a Cordova mobile environment."]
+};
+
 Template.api.startup = {
   id: "meteor_startup",
   name: "Meteor.startup(func)",
