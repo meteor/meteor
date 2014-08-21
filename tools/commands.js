@@ -275,7 +275,8 @@ main.registerCommand({
       process.stderr.write(
 "\nPackage names can only contain lowercase ASCII alphanumerics, dash,\n" +
 "and dot, and must contain at least one letter. Package names may not start\n" +
-"with a dot.\n");
+"with a dot. If you want to publish a package, it must be prefixed with your\n" +
+"username and a colon \n");
       process.exit(1);
     }
 
