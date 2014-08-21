@@ -39,6 +39,9 @@ _.extend(ResolverState.prototype, {
         // XXX we should mention other constraints that are active
         self.error = "conflict: " + constraint.toString() +
           " cannot be satisfied";
+      } else if (mori.count(newAlternatives) === 1) {
+        // There's only one choice, so we can immediately choose it.
+        self = self.addChoice(mori.first(newAlternatives));
       } else if (mori.count(newAlternatives) !== mori.count(alternatives)) {
         self._dependencies = mori.assoc(
           self._dependencies, constraint.name, newAlternatives);
@@ -74,9 +77,13 @@ _.extend(ResolverState.prototype, {
       // XXX mention constraints or something
       self.error = "conflict: " + unitName + " can't be satisfied";
       return self;
+    } else if (mori.count(alternatives) === 1) {
+      // There's only one choice, so we can immediately choose it.
+      self = self.addChoice(mori.first(alternatives));
+    } else {
+      self._dependencies = mori.assoc(
+        self._dependencies, unitName, alternatives);
     }
-
-    self._dependencies = mori.assoc(self._dependencies, unitName, alternatives);
 
     return self;
   },
@@ -87,8 +94,6 @@ _.extend(ResolverState.prototype, {
       return self;
     if (mori.has_key(self.choices, uv.name))
       throw Error("Already chose " + uv.name);
-    if (!mori.has_key(self._dependencies, uv.name))
-      throw Error("No need to choose " + uv.name);
 
     self = self._clone();
 
@@ -105,11 +110,11 @@ _.extend(ResolverState.prototype, {
 
     // Since we're committing to this version, we're committing to all it
     // implies.
-    _.each(uv.dependencies, function (unitName) {
-      self = self.addDependency(unitName);
-    });
     uv.constraints.each(function (constraint) {
       self = self.addConstraint(constraint);
+    });
+    _.each(uv.dependencies, function (unitName) {
+      self = self.addDependency(unitName);
     });
 
     return self;

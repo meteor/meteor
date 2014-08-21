@@ -192,15 +192,6 @@ ConstraintSolver.Resolver.prototype.resolve = function (
 
     var neighborsObj = self._stateNeighbors(currentState, resolutionPriority);
 
-    // Minor (but noticeable in the benchmark) optimization: as long as our
-    // state is just yielding a single non-final state, keep processing it. This
-    // lets us skip some intermediate invocations of the cost function.
-    while (neighborsObj.success && neighborsObj.neighbors.length === 1
-           && !neighborsObj.neighbors[0].success()) {
-      neighborsObj = self._stateNeighbors(
-        neighborsObj.neighbors[0], resolutionPriority);
-    }
-
     if (! neighborsObj.success) {
       someError = someError || neighborsObj.failureMsg;
       resolutionPriority[neighborsObj.conflictingUnit] =
@@ -243,13 +234,6 @@ ConstraintSolver.Resolver.prototype._stateNeighbors = function (
   var currentNaughtiness = -1;
 
   state.eachDependency(function (unitName, versions) {
-    // Prefer to resolve things where there is no choice first (at the very
-    // least this includes local packages and unknown packages).
-    if (mori.count(versions) === 1) {
-      candidateName = unitName;
-      candidateVersions = versions;
-      return BREAK;
-    }
     var r = resolutionPriority[unitName] || 0;
     if (r > currentNaughtiness) {
       currentNaughtiness = r;
