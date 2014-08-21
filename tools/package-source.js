@@ -446,6 +446,7 @@ _.extend(PackageSource.prototype, {
     var packageJsHash = Builder.sha1(code);
 
     var releaseRecord = null;
+    var hasTests = false;
 
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
@@ -513,9 +514,7 @@ _.extend(PackageSource.prototype, {
         // register the test. This is a medium-length hack until we have new
         // control files.
         if (!self.isTest) {
-          // We are relying on the fact that we have processed Package.Describe
-          // before we process this line.
-          self.testName = genTestName(self.name);
+          hasTests = true;
           return;
         }
 
@@ -682,8 +681,6 @@ _.extend(PackageSource.prototype, {
       // directory of the package. That was what we used to do: in fact, we used
       // to only do that.
       self.name = path.basename(dir);
-      if (self.testName)
-        self.testName = genTestName(self.name);
     }
 
     // Check to see if our name is valid.
@@ -1135,6 +1132,11 @@ _.extend(PackageSource.prototype, {
 
     // Serve root of the package.
     self.serveRoot = path.join(path.sep, 'packages', self.name);
+
+    // Name of the test.
+    if (hasTests) {
+      self.testName = genTestName(self.name);
+    }
   },
 
   // Initialize a package from an application directory (has .meteor/packages).

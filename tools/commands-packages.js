@@ -248,10 +248,6 @@ main.registerCommand({
     }
   };
 
-  if (! utils.validPackageName(packageName)) {
-    buildmessage.error("Invalid package name:", packageName);
-  }
-
   // We have initialized everything, so perform the publish oepration.
   var ec;  // XXX maybe combine with messages?
   messages = buildmessage.capture({

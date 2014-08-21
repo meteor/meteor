@@ -269,6 +269,16 @@ main.registerCommand({
       return 1;
     }
 
+    if (! utils.validPackageName(packageName)) {
+      process.stderr.write(
+        "Invalid package name: " + packageName + "\n");
+      process.stderr.write(
+"\nPackage names can only contain lowercase ASCII alphanumerics, dash,\n" +
+"and dot, and must contain at least one letter. Package names may not start\n" +
+"with a dot.\n");
+      process.exit(1);
+    }
+
     var transform = function (x) {
       var xn = x.replace(/~name~/g, packageName);
 
@@ -935,7 +945,6 @@ main.registerCommand({
   }
 }, function (options) {
   var testPackages;
-  var localPackageNames = [];
   if (options.args.length === 0) {
     // Only test local packages if no package is specified.
     // XXX should this use the new getLocalPackageNames?
@@ -999,7 +1008,6 @@ main.registerCommand({
           var packageSource = new PackageSource(catalog.complete);
           packageSource.initFromPackageDir(packageDir);
 
-          localPackageNames.push(packageSource.name);
           return packageSource.name;
         });
 

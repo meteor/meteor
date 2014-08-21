@@ -632,7 +632,7 @@ _.extend(CompleteCatalog.prototype, {
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
 
-    self.effectiveLocalPackages = [];
+    self.effectiveLocalPackages = _.clone(self.localPackages);
 
     // XXX If this is the forUniload catalog, we should only consider
     // uniload.ROOT_PACKAGES and their dependencies. Unfortunately, that takes a
@@ -665,11 +665,6 @@ _.extend(CompleteCatalog.prototype, {
         }
       });
     });
-
-    // XXX: There is totally a better way to extend arrays.
-    _.each(self.localPackages, function (x) {
-      self.effectiveLocalPackages.push(x);
-    });
   },
 
   getForgottenECVs: function (packageName) {
@@ -698,7 +693,7 @@ _.extend(CompleteCatalog.prototype, {
     // (note: this is the behavior that we want for overriding things in checkout.
     //  It is not clear that you get good UX if you have two packages with the same
     //  name in your app. We don't check that.)
-    var initSourceFromDir =  function (packageDir, defName) {
+    var initSourceFromDir =  function (packageDir, definiteName) {
       var packageSource = new PackageSource(self);
       var broken = false;
       buildmessage.enterJob({
@@ -716,8 +711,8 @@ _.extend(CompleteCatalog.prototype, {
         // If we specified a name, then we know what we want to get and should
         // pass that into the options. Otherwise, we will use the 'name'
         // attribute from package-source.js.
-        if (defName) {
-          opts["name"] = defName;
+        if (definiteName) {
+          opts["name"] = definiteName;
         }
         packageSource.initFromPackageDir(packageDir, opts);
         if (buildmessage.jobHasMessages()) {
@@ -862,8 +857,7 @@ _.extend(CompleteCatalog.prototype, {
       return ! _.has(self.packageSources, pkg.name);
     });
 
-    // Go through the packageSources and create a catalog record for each. This
-    // is where we are going to check that some packages are duplicate.
+    // Go through the packageSources and create a catalog record for each.
     _.each(self.packageSources, initCatalogRecordsFromSource);
 
     return allOK;
