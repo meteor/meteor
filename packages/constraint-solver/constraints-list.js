@@ -106,35 +106,6 @@ ConstraintSolver.ConstraintsList.prototype.each = function (iter) {
   });
 };
 
-// doesn't break on the false return value
-ConstraintSolver.ConstraintsList.prototype.eachExact = function (iter) {
-  var self = this;
-  mori.each(self.byName, function (coll) {
-    mori.each(mori.get(coll, "exact"), function (c) {
-      iter(mori.last(c));
-    });
-  });
-};
-
-ConstraintSolver.ConstraintsList.prototype.union = function (anotherList) {
-  var self = this;
-  var newList, oldList;
-
-  if (self.length <= anotherList.length) {
-    newList = anotherList;
-    oldList = self;
-  } else {
-    newList = self;
-    oldList = anotherList;
-  }
-
-  oldList.each(function (c) {
-    newList = newList.push(c);
-  });
-
-  return newList;
-};
-
 // Checks if the passed unit version satisfies all of the constraints.
 ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
     uv, resolver) {
@@ -151,20 +122,6 @@ ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
 
   return satisfied;
 };
-
-// XXX Returns a regular array, not a ConstraintsList.
-ConstraintSolver.ConstraintsList.prototype.constraintsForPackage = function (p) {
-  var self = this;
-
-  var constraints = [];
-
-  self.forPackage(p, function (c) {
-    constraints.push(c);
-  });
-
-  return constraints;
-};
-
 
 ConstraintSolver.ConstraintsList.prototype.toString = function (simple) {
   var self = this;
@@ -186,23 +143,4 @@ ConstraintSolver.ConstraintsList.prototype.toString = function (simple) {
   });
 
   return simple ? str : "<constraints list: " + str + ">";
-};
-
-ConstraintSolver.ConstraintsList.prototype.toArray = function () {
-  var self = this;
-  var arr = [];
-  self.each(function (c) {
-    arr.push(c);
-  });
-
-  return arr;
-};
-
-ConstraintSolver.ConstraintsList.fromArray = function (arr) {
-  var list = new ConstraintSolver.ConstraintsList();
-  _.each(arr, function (c) {
-    list = list.push(c);
-  });
-
-  return list;
 };
