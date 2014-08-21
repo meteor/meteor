@@ -507,8 +507,6 @@ _.extend(Unipackage.prototype, {
       buildInfoJson.buildTimeDirectDependencies || null;
     self.buildTimePluginDependencies =
       buildInfoJson.buildTimePluginDependencies || null;
-    self.cordovaDependencies =
-      buildInfoJson.cordovaDependencies || null;
 
     if (options.buildOfPath &&
         (buildInfoJson.source !== options.buildOfPath)) {
@@ -631,8 +629,8 @@ _.extend(Unipackage.prototype, {
           throw new Error("bad resource type in unipackage: " +
                           JSON.stringify(resource.type));
       });
-      if (unibuildMeta.arch === 'browser')
-        unibuildMeta.arch = 'client';
+
+      self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
@@ -682,7 +680,8 @@ _.extend(Unipackage.prototype, {
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
         unibuilds: [],
-        plugins: []
+        plugins: [],
+        cordovaDependencies: self.cordovaDependencies
       };
 
       var buildInfoJson = null;
@@ -941,7 +940,9 @@ _.extend(Unipackage.prototype, {
       'HEAD',
       // The actual trees to copy!
       'tools', 'examples', 'LICENSE.txt', 'meteor',
-      'scripts/admin/launch-meteor');
+      'scripts/admin/launch-meteor',
+      'scripts/cordova.sh',
+      'scripts/ensure_android_bundle.sh');
 
     // Trim blank line and unnecessary examples.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
