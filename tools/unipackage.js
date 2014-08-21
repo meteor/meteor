@@ -680,9 +680,11 @@ _.extend(Unipackage.prototype, {
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
         unibuilds: [],
-        plugins: [],
-        cordovaDependencies: self.cordovaDependencies
+        plugins: []
       };
+      if (! _.isEmpty(self.cordovaDependencies)) {
+        mainJson.cordovaDependencies = self.cordovaDependencies;
+      }
 
       var buildInfoJson = null;
       if (!options.elideBuildInfo) {
