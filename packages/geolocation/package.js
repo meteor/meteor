@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Provides reactive geolocation on desktop and mobile.",
-  version: "1.0.0-cordova1"
+  version: "1.0.0-cordova2"
 });
 
 Cordova.depends({

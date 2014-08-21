@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.0.2-cordova1'
+  version: '1.0.2-cordova2'
 });
 
 Npm.depends({
