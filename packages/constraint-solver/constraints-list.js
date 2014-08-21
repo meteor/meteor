@@ -17,8 +17,6 @@ var semver = Npm.require('semver');
 ConstraintSolver.ConstraintsList = function (prev) {
   var self = this;
 
-  ensureMoriLoaded();
-
   if (prev) {
     self.byName = prev.byName;
     self.length = prev.length;

@@ -18,7 +18,6 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
@@ -133,7 +132,8 @@ main.registerCommand({
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
     loadPackages(catalog.complete.getLocalPackageNames(),
-                 new packageLoader.PackageLoader({versions: null}));
+                 new packageLoader.PackageLoader({versions: null,
+                                                  catalog: catalog.complete}));
 
     // In an app? Get the list of packages used by this app. Calling getVersions
     // on the project will ensureDepsUpToDate which will ensure that all builds
@@ -148,7 +148,8 @@ main.registerCommand({
       var releasePackages = release.current.getPackages();
       loadPackages(
         _.keys(releasePackages),
-        new packageLoader.PackageLoader({versions: releasePackages}));
+        new packageLoader.PackageLoader({versions: releasePackages,
+                                         catalog: catalog.complete}));
     }
   });
   if (messages.hasMessages()) {
@@ -191,19 +192,6 @@ main.registerCommand({
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
   refreshOfficialCatalogOrDie();
-  var packageName = path.basename(options.packageDir);
-
-  // Fail early if the package already exists.
-  if (options.create) {
-    var packageInfo = doOrDie(function () {
-      return catalog.official.getPackage(packageName);
-    });
-    if (packageInfo) {
-      process.stderr.write("Package already exists. To create a new version of an existing "+
-                           "package, do not use the --create flag! \n");
-      return 2;
-    }
-  };
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -216,7 +204,7 @@ main.registerCommand({
     return 1;
   }
 
-  process.stdout.write('Building package...\n');
+  process.stdout.write('Reading package...\n');
 
   // XXX Prettify error messages
 
@@ -225,14 +213,10 @@ main.registerCommand({
     { title: "building the package" },
     function () {
 
-      if (! utils.validPackageName(packageName)) {
-        buildmessage.error("Invalid package name:", packageName);
-      }
-
-      packageSource = new PackageSource;
+      packageSource = new PackageSource(catalog.complete);
 
       // Anything published to the server must have a version.
-      packageSource.initFromPackageDir(packageName, options.packageDir, {
+      packageSource.initFromPackageDir(options.packageDir, {
         requireVersion: true });
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
@@ -247,6 +231,26 @@ main.registerCommand({
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;
+  }
+
+  var packageName = packageSource.name;
+
+  // Fail early if the package record exists, but we don't think that it does
+  // and are passing in the --create flag!
+  if (options.create) {
+    var packageInfo = doOrDie(function () {
+      return catalog.official.getPackage(packageName);
+    });
+    if (packageInfo) {
+      process.stderr.write(
+        "Package already exists. To create a new version of an existing "+
+        "package, do not use the --create flag! \n");
+      return 2;
+    }
+  };
+
+  if (! utils.validPackageName(packageName)) {
+    buildmessage.error("Invalid package name:", packageName);
   }
 
   // We have initialized everything, so perform the publish oepration.
@@ -356,15 +360,17 @@ main.registerCommand({
   var messages = buildmessage.capture({
     title: "building package " + name
   }, function () {
-    var packageSource = new PackageSource;
+    var packageSource = new PackageSource(catalog.complete);
 
     // This package source, although it is initialized from a directory is
     // immutable. It should be built exactly as is. If we need to modify
     // anything, such as the version lock file, something has gone terribly
-    // wrong and we should throw.
-    packageSource.initFromPackageDir(name, packageDir,  {
+    // wrong and we should throw. Additionally, we know exactly which package
+    // we are trying to publish-for-arch, so let's pass in the name.
+    packageSource.initFromPackageDir(packageDir,  {
       requireVersion: true,
-      immutable: true
+      immutable: true,
+      name: name
     });
     if (buildmessage.jobHasMessages())
       return;
@@ -610,16 +616,20 @@ main.registerCommand({
           // contains 'package.js'. (We used to support unipackages in
           // localPackageDirs, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-            var packageSource = new PackageSource;
+            var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
               { title: "building package " + item },
               function () {
                 process.stdout.write("  checking consistency of " + item + " ");
 
-                // Initialize the package source. (If we can't do this, then we should
-                // not proceed)
-                packageSource.initFromPackageDir(item, packageDir,  {
-                  requireVersion: true });
+                // Initialize the package source. Core packages have the same
+                // name as their corresponding directories, because otherwise we
+                // would have a lot of difficulties trying to keep them
+                // organized.
+                // (XXX: this is a flimsy excuse, ekate, just fix the code)
+                packageSource.initFromPackageDir(packageDir,  {
+                  requireVersion: true,
+                  name: item });
 
                 if (buildmessage.jobHasMessages()) {
                   process.stdout.write("\n ...Error reading package:" + item + "\n");
@@ -829,19 +839,25 @@ main.registerCommand({
   process.stdout.write("Done creating " + relConf.track  + "@" +
                        relConf.version + "!\n");
 
-  // Only make a git tag if we're on the default branch.
-  if (options['from-checkout'] &&
-      config.getPackageServerFilePrefix() === 'packages') {
+  if (options['from-checkout']) {
     // XXX maybe should discourage publishing if git status says we're dirty?
     var gitTag = "release/" + relConf.track  + "@" + relConf.version;
-    // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
-    //     used to
-    process.stdout.write("Creating git tag " + gitTag + "\n");
-    files.runGitInCheckout('tag', gitTag);
-    process.stdout.write(
-      "Pushing git tag (this should fail if you are not from MDG)\n");
-    files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
-                           'refs/tags/' + gitTag);
+    if (config.getPackageServerFilePrefix() !== 'packages') {
+      // Only make a git tag if we're on the default branch.
+      process.stdout.write("Skipping git tag: not using the main package server.\n");
+    } else if (gitTag.indexOf(':') !== -1) {
+      // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
+      //     used to, instead of this simple check
+      // XXX could convert : to / ?
+      process.stdout.write("Skipping git tag: bad format for git.\n");
+    } else {
+      process.stdout.write("Creating git tag " + gitTag + "\n");
+      files.runGitInCheckout('tag', gitTag);
+      process.stdout.write(
+        "Pushing git tag (this should fail if you are not from MDG)\n");
+      files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+                             'refs/tags/' + gitTag);
+    }
   }
 
   return 0;
@@ -856,11 +872,20 @@ main.registerCommand({
 main.registerCommand({
   name: 'show',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  options: {
+    "show-broken": {type: Boolean, required: false }
+  }
 }, function (options) {
 
   // We should refresh the catalog in case there are new versions.
   refreshOfficialCatalogOrDie();
+
+  // We only show compatible versions unless we know otherwise.
+  var versionVisible = function (record) {
+    return options['show-broken'] || !(_.isEqual(record.description,
+                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+   };
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -939,6 +964,11 @@ main.registerCommand({
     }
     var unknown = "< unknown >";
     _.each(versionRecords, function (v) {
+      // Don't show versions that we shouldn't be showing.
+      if (!versionVisible(v)) {
+        return;
+      }
+
       var versionDesc = "Version " + v.version;
       if (v.description)
         versionDesc = versionDesc + " : " + v.description;
@@ -961,11 +991,11 @@ main.registerCommand({
 
   var metamessage = "Maintained by " +
         _.pluck(record.maintainers, 'username');
-  if (lastVersion.git) {
+  if (lastVersion && lastVersion.git) {
     metamessage = metamessage + " at " + lastVersion.git;
   }
   metamessage += ".";
-  if (record.homepage) {
+  if (record && record.homepage) {
     metamessage = metamessage + "\nYou can find more information at "
       + record.homepage;
   }
@@ -1119,6 +1149,8 @@ main.registerCommand({
     _.each(packages, function (version, name) {
       if (!version) {
         version = versions[name];
+      } else if (version[0] === "=") {
+        version = version.slice(1);
       }
       // Use complete catalog to get the local versions of local packages.
       var versionInfo = catalog.complete.getVersion(name, version);
@@ -1383,7 +1415,7 @@ main.registerCommand({
     }
     var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
       var releaseRecord = doOrDie(function () {
-        return catalog.complete.getReleaseVersion(releaseTrack, versionToTry);
+        return catalog.official.getReleaseVersion(releaseTrack, versionToTry);
       });
       if (!releaseRecord)
         throw Error("missing release record?");

@@ -45,7 +45,7 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
       "v1";
     expectedUserAgentInfo.meteorToolsPackageWithVersion =
       toolsPackage.name + "@" + toolsPackage.version;
-  } else {
+  } else if (! release.current.isCheckout()) {
     expectedUserAgentInfo.meteorReleaseTrack =
       release.current.getReleaseTrack();
     expectedUserAgentInfo.meteorReleaseVersion =
@@ -104,7 +104,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       var sessionId;
 
       // verify that identifier file exists for new apps
-      var identifier = s.read(".meteor/identifier");
+      var identifier = s.read(".meteor/identifier").replace(/\n$/, '');
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
@@ -112,7 +112,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       // with no identifier file (eg pre-0.9.0 apps)
       runWithFreshIdentifier(s, sandboxProject);
 
-      identifier = s.read(".meteor/identifier");
+      identifier = s.read(".meteor/identifier").replace(/\n$/, '');
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 

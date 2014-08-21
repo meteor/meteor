@@ -17,8 +17,6 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
-var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
@@ -341,7 +339,7 @@ main.registerCommand({
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
         var rel = commandsPackages.doOrDie(function () {
-          return catalog.complete.getDefaultReleaseVersion();
+          return catalog.official.getDefaultReleaseVersion();
         });
         var relString = rel.track + "@" + rel.version;
       } else {
@@ -470,6 +468,8 @@ main.registerCommand({
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();
   });
+
+
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;
@@ -1266,10 +1266,15 @@ var getPackagesForTest = function (packages) {
           // main package. This is not ideal (I hate how this mutates global
           // state) but it'll do for now.
           var packageDir = path.resolve(p);
-          var packageName = path.basename(packageDir);
-          catalog.complete.addLocalPackage(packageName, packageDir);
-          localPackageNames.push(packageName);
-          return packageName;
+          catalog.complete.addLocalPackage(packageDir);
+
+          // XXX: Hack.
+          var PackageSource = require('./package-source.js');
+          var packageSource = new PackageSource(catalog.complete);
+          packageSource.initFromPackageDir(packageDir);
+
+          localPackageNames.push(packageSource.name);
+          return packageSource.name;
         });
 
       });
@@ -1302,8 +1307,19 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
     process.stderr.write(messages.formatMessages());
     return 1;
   }
-
   project.forceEditPackages(tests, 'add');
+
+  // We don't strictly need to do this before we bundle, but can't hurt.
+  messages = buildmessage.capture({
+    title: 'getting packages ready'
+  },function () {
+    project._ensureDepsUpToDate();
+  });
+
+  if (messages.hasMessages()) {
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
 
   var buildOptions = {
     minify: options.production

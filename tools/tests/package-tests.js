@@ -86,7 +86,7 @@ var checkVersions = function(sand, packages) {
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change packages", ['test-package-server'], function () {
+selftest.define("change packages during hot code push", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -192,10 +192,9 @@ selftest.define("change packages", ['test-package-server'], function () {
   run.stop();
 });
 
-
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add packages", ["net", "test-package-server"], function () {
+selftest.define("add packages to app", ["net"], function () {
   var s = new Sandbox();
   var run;
 
@@ -361,7 +360,11 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
+//
+// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
+// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
+// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
+selftest.define("sync local catalog", ["slow", "net", "test-package-server", "checkout"],  function () {
   var s = new Sandbox();
   var run;
 
@@ -501,9 +504,12 @@ selftest.define("release track defaults to METEOR-CORE",
   });
 });
 
-
+//
+// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
+// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
+// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
 selftest.define("update server package data unit test",
-                ["net", "test-package-server"], function () {
+                ["net", "test-package-server", "checkout"], function () {
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
   var packageStorageFile = path.join(packageStorageFileDir, "data.json");
 
@@ -575,4 +581,52 @@ selftest.define("update server package data unit test",
                                   { name: name });
     selftest.expectEqual(!! foundOnDisk, true);
   });
+});
+
+
+// Add packages to an app. Change the contents of the packages and their
+// dependencies, make sure that the app still refreshes.
+selftest.define("package with --name", ['test-package-server'], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run; introducing a new package overriding a core package.
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  run = s.run("add", "accounts-base");
+  run.waitSecs(15);
+  run.match("accounts-base");
+
+  run = s.run();
+  run.waitSecs(5);
+  run.match("myapp");
+  run.match("proxy");
+  run.match("MongoDB.\n");
+  run.waitSecs(5);
+  run.read("=> Starting your app");
+  run.waitSecs(5);
+  run.match("running at");
+  run.match("localhost");
+
+  s.cd("packages", function () {
+    s.createPackage("ac-fake", "fake-accounts-base");
+  });
+
+  run.waitSecs(5);
+  run.match("overriding accounts-base!");
+  run.match("restarted");
+  run.stop();
+
+  run = s.run('list');
+  run.match("standard");
+  run.match("accounts-base");
+
+  // What about test-packages?
+  s.cd('packages');
+  s.cd('ac-fake');
+  run = s.run('test-packages', './');
+  run.waitSecs(15);
+  run.match("overriding accounts-base!");
+  run.stop();
 });

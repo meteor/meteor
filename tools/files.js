@@ -517,14 +517,14 @@ files.extractTarGz = function (buffer, destPath) {
   var zlib = require("zlib");
   var gunzip = zlib.createGunzip()
     .on('error', function (e) {
-      future.throw(e);
+      future.isResolved() || future.throw(e);
     });
   var extractor = new tar.Extract({ path: tempDir })
     .on('error', function (e) {
-      future.throw(e);
+      future.isResolved() || future.throw(e);
     })
     .on('end', function () {
-      future.return();
+      future.isResolved() || future.return();
     });
 
   // write the buffer to the (gunzip|untar) pipeline; these calls
@@ -821,6 +821,9 @@ files.FancySyntaxError = function () {};
 
 files.OfflineError = function (error) {
   this.error = error;
+};
+files.OfflineError.prototype.toString = function () {
+  return "[Offline: " + this.error.toString() + "]";
 };
 
 // Like fs.readdirSync, but skips entries whose names begin with dots, and

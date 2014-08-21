@@ -366,8 +366,13 @@ _.each(["insert", "update", "remove"], function (name) {
     var insertId;
     var ret;
 
-    if (args.length && args[args.length - 1] instanceof Function)
+    // Pull off any callback (or perhaps a 'callback' variable that was passed
+    // in undefined, like how 'upsert' does it).
+    if (args.length &&
+        (args[args.length - 1] === undefined ||
+         args[args.length - 1] instanceof Function)) {
       callback = args.pop();
+    }
 
     if (name === "insert") {
       if (!args.length)
@@ -711,6 +716,16 @@ Meteor.Collection.prototype._defineMutationMethods = function() {
             if (generatedId !== null)
               args[0]._id = generatedId;
             // In insecure mode, allow any mutation (with a simple selector).
+            // XXX This is kind of bogus.  Instead of blindly passing whatever
+            //     we get from the network to this function, we should actually
+            //     know the correct arguments for the function and pass just
+            //     them.  For example, if you have an extraneous extra null
+            //     argument and this is Mongo on the server, the _wrapAsync'd
+            //     functions like update will get confused and pass the
+            //     "fut.resolver()" in the wrong slot, where _update will never
+            //     invoke it. Bam, broken DDP connection.  Probably should just
+            //     take this whole method and write it three times, invoking
+            //     helpers for the common code.
             return self._collection[method].apply(self._collection, args);
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing

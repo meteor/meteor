@@ -163,7 +163,9 @@ _.extend(exports.Tropohouse.prototype, {
     // If this package isn't coming from the package server (loaded from a
     // checkout, or from an app package directory), don't try to download it (we
     // already have it)
-    if (self.catalog.isLocalPackage(packageName))
+    // (In the special case of springboarding, we avoid using self.catalog
+    // here because it is catalog.complete and is not yet initialized.)
+    if (!options.definitelyNotLocal && self.catalog.isLocalPackage(packageName))
       return;
 
     // Figure out what arches (if any) we have loaded for this package version
@@ -204,7 +206,11 @@ _.extend(exports.Tropohouse.prototype, {
       return;
     }
 
-    var buildsToDownload = self.catalog.getBuildsForArches(
+    // Since we are downloading from the server (and we've already done the
+    // local package check), we can use the official catalog here. (This is
+    // important, since springboarding calls this function before the complete
+    // catalog is ready!)
+    var buildsToDownload = catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
       throw new Error(

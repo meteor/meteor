@@ -8,9 +8,7 @@ var PackageSource = require("./package-source.js");
 var _ = require('underscore');
 var unipackage = require("./unipackage.js");
 
-var packageCache = exports;
-
-var PackageCache = function () {
+var PackageCache = function (whichCatalog) {
   var self = this;
 
   // both map from package load path to:
@@ -19,11 +17,13 @@ var PackageCache = function () {
   // - buildDir: directory from which the built package was loaded
   self.softReloadCache = {};
   self.loadedPackages = {};
+
+  if (!whichCatalog)
+    throw Error("must provide catalog");
+  self.catalog = whichCatalog;
 };
 
 _.extend(PackageCache.prototype, {
-
-
   // Force reload of changed packages. See description at loadPackageAtPath().
   //
   // If soft is false, the default, the cache is totally flushed and
@@ -61,11 +61,11 @@ _.extend(PackageCache.prototype, {
       };
   },
 
-  // Given a path to a package on disk, retrieve a Package
+  // Given a path to a package on disk, retrieve a Unipackage
   // object.
   //
   // loadPackageAtPath() caches the packages it returns, meaning if
-  // you call loadPackageAtPath('/foo/bar') and later /foo/bar changes
+  // you call loadPackageAtPath('bar', '/foo/bar') and later /foo/bar changes
   // on disk, you won't see the changes. To flush the package cache
   // and force all of the packages to be reloaded the next time
   // loadPackageAtPath() is called for them, see refresh().
@@ -106,11 +106,18 @@ _.extend(PackageCache.prototype, {
           title: "initializing package `" + name + "`",
           rootPath: loadPath
         }, function () {
-          var packageSource = new PackageSource;
-          packageSource.initFromPackageDir(name, loadPath);
+          var packageSource = new PackageSource(self.catalog);
+          // We know exactly what package we want at this point, so let's make
+          // sure to pass in a name.
+          packageSource.initFromPackageDir(loadPath, {
+            name: name
+          });
           unip = new unipackage.Unipackage;
           unip.initFromPath(name, entry.buildDir);
-          isUpToDate = compiler.checkUpToDate(packageSource, entry.pkg);
+          isUpToDate = compiler.checkUpToDate(
+            packageSource, entry.pkg, {
+              ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
+            });
         });
       }
       if (isUpToDate) {
@@ -137,12 +144,14 @@ _.extend(PackageCache.prototype, {
     };
 
     // It's a source tree. Load it.
-    var packageSource = new PackageSource;
+    var packageSource = new PackageSource(self.catalog);
     buildmessage.enterJob({
       title: "initializing package `" + name + "`",
       rootPath: loadPath
     }, function () {
-      packageSource.initFromPackageDir(name, loadPath);
+      packageSource.initFromPackageDir(loadPath, {
+       name: name
+      });
     });
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
@@ -156,7 +165,10 @@ _.extend(PackageCache.prototype, {
           throw e;
         maybeUpToDate = false;
       }
-      if (maybeUpToDate && compiler.checkUpToDate(packageSource, unip)) {
+      if (maybeUpToDate &&
+          compiler.checkUpToDate(
+            packageSource, unip,
+            { ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps })) {
         self.loadedPackages[key] = { pkg: unip,
                                      sourceDir: loadPath,
                                      buildDir: buildDir
@@ -193,7 +205,10 @@ _.extend(PackageCache.prototype, {
         // Save it, for a fast load next time
         try {
           files.addToGitignore(loadPath, '.build*');
-          unip.saveToPath(buildDir, { buildOfPath: loadPath });
+          unip.saveToPath(buildDir, {
+            buildOfPath: loadPath,
+            catalog: self.catalog
+          });
         } catch (e) {
           // If we can't write to this directory, we don't get to cache our
           // output, but otherwise life is good.
@@ -203,20 +218,7 @@ _.extend(PackageCache.prototype, {
       }
       return unip;
     });
-  },
-
-  // Get a package that represents an app. (ignoreFiles is optional
-  // and if given, it should be an array of regexps for filenames to
-  // ignore when scanning for source files.)
-  loadAppAtPath: function (appDir, ignoreFiles) {
-    var self = this;
-    buildmessage.assertInCapture();
-
-    var packageSource = new PackageSource;
-    packageSource.initFromAppDir(appDir, ignoreFiles);
-    return compiler.compile(packageSource).unipackage;
   }
-
 });
 
-packageCache.packageCache = new PackageCache;
+exports.PackageCache = PackageCache;

@@ -22,7 +22,7 @@ LivedataTest.ClientStream = function (endpoint, options) {
 
   self.headers = self.options.headers || {};
 
-  self._initCommon();
+  self._initCommon(options);
 
   //// Kickoff!
   self._launchConnection();
@@ -87,7 +87,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     _.each(self.eventCallbacks.reset, function (callback) { callback(); });
   },
 
-  _cleanup: function () {
+  _cleanup: function (maybeError) {
     var self = this;
 
     self._clearConnectionTimer();
@@ -95,9 +95,11 @@ _.extend(LivedataTest.ClientStream.prototype, {
       var client = self.client;
       self.client = null;
       client.close();
-    }
 
-    _.each(self.eventCallbacks.disconnect, function (callback) { callback(); });
+      _.each(self.eventCallbacks.disconnect, function (callback) {
+        callback(maybeError);
+      });
+    }
   },
 
   _clearConnectionTimer: function () {
@@ -131,22 +133,15 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
-      _.bind(self._lostConnection, self),
+      function () {
+        self._lostConnection(
+          new DDP.ConnectionError("DDP connection timed out"));
+      },
       self.CONNECT_TIMEOUT);
 
-    var streamConnectCallback = Meteor.bindEnvironment(function () {
+    self.client.on('open', Meteor.bindEnvironment(function () {
       return self._onConnect(client);
-    }, "stream connect callback");
-    self.client.on('open', function () {
-      // XXX before 0.9.0, if we don't figure out why these surprising open
-      //     events are occuring, remove the trace and use clientOnIfCurrent
-      //     instead.  would be nice to ensure we're not leaking resources
-      //     though!
-      if (client !== self.client) {
-        console.trace("BACKTRACE FOR INACTIVE CLIENT " + !!self.client);
-      }
-      streamConnectCallback();
-    });
+    }, "stream connect callback"));
 
     var clientOnIfCurrent = function (event, description, f) {
       self.client.on(event, Meteor.bindEnvironment(function () {
@@ -161,9 +156,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       if (!self.options._dontPrintErrors)
         Meteor._debug("stream error", error.message);
 
-      // XXX: Make this do something better than make the tests hang if it does
-      // not work.
-      self._lostConnection();
+      // Faye's 'error' object is not a JS error (and among other things,
+      // doesn't stringify well). Convert it to one.
+      self._lostConnection(new DDP.ConnectionError(error.message));
     });
 
 

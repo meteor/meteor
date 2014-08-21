@@ -154,9 +154,7 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   // Check the contents of the versions file.
   var versions = s.read('.meteor/versions');
   if (!versions) {
-    selftest.expectEqual(
-        "Versions file NOT written in new app.",
-        "Versions file written in new app.");
+    selftest.fail("Versions file NOT written in new app.");
   }
 
   // Remove the versions file.

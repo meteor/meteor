@@ -11,6 +11,8 @@
 
 * Upgraded dependencies:
   - less: 1.7.4 (from 1.7.1)
+  - tar: 1.0.1 (from 0.1.19)
+  - fstream: 1.0.2 (from 0.1.25)
 
 ## v0.8.3
 

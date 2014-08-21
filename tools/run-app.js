@@ -12,7 +12,6 @@ var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
-var packageCache = require('./package-cache.js');
 var stats = require('./stats.js');
 
 // Parse out s as if it were a bash command line.
@@ -461,8 +460,11 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
     var bundleApp = function () {
-      if (! self.firstRun)
-        packageCache.packageCache.refresh(true); // pick up changes to packages
+      if (! self.firstRun) {
+        // Pick up changes to packages. (Soft refresh, so we still check to see
+        // if they have changed.)
+        catalog.complete.packageCache.refresh(true);
+      }
 
       var bundle = bundler.bundle({
         outputPath: bundlePath,
@@ -609,15 +611,18 @@ _.extend(AppRunner.prototype, {
           };
         }
 
-        // Establish a watcher on the new files.
-        setupClientWatcher();
+        var oldFuture = self.runFuture = new Future;
 
         // Notify the server that new client assets have been added to the build.
         process.kill(appProcess.proc.pid, 'SIGUSR2');
+
+        // Establish a watcher on the new files.
+        setupClientWatcher();
+
         runLog.logClientRestart();
 
-        self.runFuture = new Future;
-        ret = self.runFuture.wait();
+        // Wait until another file changes.
+        ret = oldFuture.wait();
       }
     } finally {
       self.runFuture = null;
