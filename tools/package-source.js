@@ -985,7 +985,7 @@ _.extend(PackageSource.prototype, {
       api.add_files = api.addFiles;
 
       try {
-        fileAndDepLoader(api);
+        buildmessage.markBoundary(fileAndDepLoader)(api);
       } catch (e) {
         buildmessage.exception(e);
         // Recover by ignoring all of the source files in the
