@@ -958,6 +958,18 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
+          // Uniloaded packages really ought to be in the core release, by
+          // definition, so saying that they should use versions from another
+          // release doesn't make sense. Moreover, if we're running from a
+          // checkout, we build packages for catalog.uniload before we
+          // initialize catalog.official, so we wouldn't actually be able to
+          // interpret the release name anyway.
+          if (self.catalog === catalog.uniload) {
+            buildmessage.error("uniloaded packages may not use versionsFrom");
+            // recover by ignoring
+            return;
+          }
+
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
             release = catalog.DEFAULT_TRACK + "@" + release;
