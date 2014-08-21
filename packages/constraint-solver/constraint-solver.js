@@ -65,13 +65,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   // actually have different archs used.
   var allArchs = ["os", "web.browser", "web.cordova"];
 
-  if (!self.catalog.getPackage(packageName, { noRefresh: true })) {
-    _.each(allArchs, function (arch) {
-      var unitName = packageName + "#" + arch;
-      self.resolver.noUnitVersionsExist(unitName);
-    });
-  }
-
   // XXX is sortedness actually relevant?
   var sortedVersions = self.catalog.getSortedVersions(packageName);
   _.each(sortedVersions, function (version) {
@@ -282,32 +275,6 @@ var resolverResultToPackageMap = function (choices) {
 };
 
 
-// This method, along with the stopAfterFirstPropagation, are designed for
-// tests; they allow us to test Resolver._propagateExactTransDeps but with an
-// interface that's a little more like PackagesResolver.resolver.
-ConstraintSolver.PackagesResolver.prototype.propagateExactDeps = function (
-    dependencies, constraints) {
-  var self = this;
-
-  check(dependencies, [String]);
-  check(constraints, [{ packageName: String, version: String, type: String }]);
-
-  _.each(dependencies, function (packageName) {
-    self._ensurePackageInfoLoaded(packageName);
-  });
-  _.each(constraints, function (constraint) {
-    self._ensurePackageInfoLoaded(constraint.packageName);
-  });
-
-  var dc = self._splitDepsToConstraints(dependencies, constraints);
-
-  // XXX resolver.resolve can throw an error, should have error handling with
-  // proper error translation.
-  var res = self.resolver.resolve(dc.dependencies, dc.constraints,
-                                  { stopAfterFirstPropagation: true });
-  return resolverResultToPackageMap(res);
-};
-
 // takes dependencies and constraints and rewrites the names from "foo" to
 // "foo#os" and "foo#web.browser" and "foo#web.cordova"
 // XXX right now creates a dependency for every unibuild it can find
@@ -396,21 +363,19 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
     resolverOptions.costFunction = function (state, options) {
       options = options || {};
-      var choices = state.choices;
-      var constraints = state.constraints;
       // very major, major, medium, minor costs
       // XXX maybe these can be calculated lazily?
       var cost = [0, 0, 0, 0];
 
       var minimalConstraint = {};
-      constraints.each(function (c) {
+      state.constraints.each(function (c) {
         if (! _.has(minimalConstraint, c.name))
           minimalConstraint[c.name] = c.version;
         else if (semver.lt(c.version, minimalConstraint[c.name]))
           minimalConstraint[c.name] = c.version;
       });
 
-      mori.each(choices, function (nameAndUv) {
+      mori.each(state.choices, function (nameAndUv) {
         var uv = mori.last(nameAndUv);
         if (_.has(prevSolMapping, uv.name)) {
           // The package was present in the previous solution
@@ -468,12 +433,11 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
     resolverOptions.estimateCostFunction = function (state, options) {
       options = options || {};
-      var dependencies = state.dependencies;
-      var constraints = state.constraints;
 
+      var constraints = state.constraints;
       var cost = [0, 0, 0, 0];
 
-      dependencies.each(function (dep) {
+      state.eachDependency(function (dep, alternatives) {
         // XXX don't try to estimate transitive dependencies
         if (! isRootDep[dep]) {
           cost[MINOR] += 10000000;
@@ -482,8 +446,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
         if (_.has(prevSolMapping, dep)) {
           var prev = prevSolMapping[dep];
-          var prevVersionMatches =
-            _.isEmpty(constraints.violatedConstraints(prev, self.resolver));
+          var prevVersionMatches = constraints.isSatisfied(prev, self.resolver);
 
           // if it matches, assume we would pick it and the cost doesn't
           // increase
