@@ -448,6 +448,13 @@ _.extend(CompleteCatalog.prototype, {
       // OK, we're building something while uniload
       var ret = {};
       _.each(constraints, function (constraint) {
+        if (_.has(constraint, 'version')) {
+          if (constraint.version !== null) {
+            throw Error("Uniload specifying version? " + JSON.stringify(constraint));
+          }
+          delete constraint.version;
+        }
+
         // Constraints for uniload should just be packages with no version
         // constraint and one local version (since they should all be in core).
         if (!_.has(constraint, 'packageName') || _.size(constraint) !== 1) {
