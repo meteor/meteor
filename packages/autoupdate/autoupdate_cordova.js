@@ -34,6 +34,7 @@ var writeFile = function (directoryPath, fileName, content, cb) {
     }, fail);
 };
 
+var hasCalledReload = false;
 var onNewVersion = function (handle) {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + 'cordova';
@@ -79,8 +80,10 @@ var onNewVersion = function (handle) {
             return;
           }
 
-          handle.stop();
-          Package.reload.Reload._reload();
+          // don't call reload twice!
+          if (! hasCalledReload) {
+            Package.reload.Reload._reload();
+          }
         });
       });
     });
