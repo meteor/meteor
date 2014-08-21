@@ -264,11 +264,6 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
-    if (fs.existsSync(packageName)) {
-      process.stderr.write(packageName + ": Already exists\n");
-      return 1;
-    }
-
     if (! utils.validPackageName(packageName)) {
       process.stderr.write(
         "Invalid package name: " + packageName + "\n");
@@ -276,8 +271,18 @@ main.registerCommand({
 "\nPackage names can only contain lowercase ASCII alphanumerics, dash,\n" +
 "and dot, and must contain at least one letter. Package names may not start\n" +
 "with a dot. If you plan to publish a package, it must be prefixed with your\n" +
-"Meteor developer username and a colon. \n");
+"Meteor developer username and a colon.\n");
       process.exit(1);
+    }
+
+    var packageDir = options.appDir
+          ? path.resolve(options.appDir, 'packages', packageName)
+          : path.resolve(packageName);
+    var inYourApp = options.appDir ? " in your app" : "";
+
+    if (fs.existsSync(packageDir)) {
+      process.stderr.write(packageName + ": Already exists" + inYourApp + "\n");
+      return 1;
     }
 
     var transform = function (x) {
@@ -303,7 +308,7 @@ main.registerCommand({
       return xn.replace(/~release~/g, relString);
     };
     try {
-      files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+      files.cp_r(path.join(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
       },
@@ -320,7 +325,7 @@ main.registerCommand({
      return 1;
    }
 
-    process.stdout.write(packageName + ": created\n");
+    process.stdout.write(packageName + ": created" + inYourApp + "\n");
     return 0;
   }
 
