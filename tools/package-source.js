@@ -684,9 +684,13 @@ _.extend(PackageSource.prototype, {
     }
 
     // Check to see if our name is valid.
-    if (!utils.validPackageName(self.name)) {
-      buildmessage.error("Package name invalid: " + self.name);
-      return;
+
+    try {
+      utils.validatePackageName(self.name);
+    } catch (e) {
+      if (!e.versionParserError)
+        throw e;
+      buildmessage.error(e.message);
     }
 
     if (self.version === null && options.requireVersion) {

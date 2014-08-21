@@ -3,6 +3,7 @@ var readline = require('readline');
 var _ = require('underscore');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
+var main = require('./main.js');
 var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
@@ -185,18 +186,75 @@ exports.dealConstraint = function (constraint, pkg) {
 // safety reasons, package names may not start with a dot. Package names must be
 // lowercase.
 //
-// This does not check that the package name is valid in terms of our naming
+// These do not check that the package name is valid in terms of our naming
 // scheme: ie, that it is prepended by a user's username. That check should
 // happen at publication time.
-exports.validPackageName = function (packageName) {
- if (/[^a-z0-9:.\-]/.test(packageName) ||
-    !/[a-z]/.test(packageName) ||
-    (packageName[0] === ".") ) {
-   return false;
- }
- return true;
+//
+// 3 variants: isValidPackageName just returns a bool.  validatePackageName
+// throws an error marked with 'versionParserError'. validatePackageNameOrExit
+// (which should only be used inside the implementation of a command, not
+// eg package-client.js) prints and throws the "exit with code 1" exception
+// on failure.
+
+
+// XXX duplicates code in package-version-parser.js, sigh.  but we need to run
+// this before we can load packages.
+exports.validatePackageName = function (packageName, options) {
+  options = options || {};
+
+  var badChar = packageName.match(/[^a-z0-9:.\-]/);
+  if (badChar) {
+    if (options.detailedColonExplanation) {
+      throwVersionParserError(
+        "Bad character in package name: " + JSON.stringify(badChar[0]) +
+          ". Package names can only contain lowercase ASCII alphanumerics, " +
+          "dash, or dot. If you plan to publish a package, it must be " +
+          "prefixed with your Meteor developer username and a colon.");
+    }
+    throwVersionParserError(
+      "Package names can only contain lowercase ASCII alphanumerics, dash, " +
+        "dot, or colon, not " + JSON.stringify(badChar[0]) + ".");
+  }
+  if (!/[a-z]/.test(packageName)) {
+    throwVersionParserError("Package names must contain a lowercase ASCII letter.");
+  }
+  if (packageName[0] === '.') {
+    throwVersionParserError("Package names may not begin with a dot.");
+  }
+};
+// XXX duplicates code in package-version-parser.js, sigh.  but we need to run
+// this before we can load packages.
+var throwVersionParserError = function (message) {
+  var e = new Error(message);
+  e.versionParserError = true;
+  throw e;
 };
 
+
+//
+// Returns a bool saying whether it is valid or not. Use validatePackageName
+// if you want a nice error message.
+exports.isValidPackageName = function (packageName) {
+  try {
+    exports.validatePackageName(packageName);
+    return true;
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    return false;
+  }
+};
+
+exports.validatePackageNameOrExit = function (packageName, options) {
+  try {
+    exports.validatePackageName(packageName, options);
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    process.stderr.write("Error: " + e.message + "\n");
+    throw new main.ExitWithCode(1);
+  }
+};
 
 // True if this looks like a valid email address. We deliberately
 // don't support

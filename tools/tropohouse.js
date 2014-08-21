@@ -51,7 +51,7 @@ _.extend(exports.Tropohouse.prototype, {
   // Returns null if the package name is lexographically invalid.
   packagePath: function (packageName, version, relative) {
     var self = this;
-    if (! utils.validPackageName(packageName)) {
+    if (! utils.isValidPackageName(packageName)) {
       return null;
     }
 

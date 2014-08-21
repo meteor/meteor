@@ -1578,6 +1578,26 @@ main.registerCommand({
     force: { type: Boolean, required: false }
   }
 }, function (options) {
+  // For every package name specified, add it to our list of package
+  // constraints. Don't run the constraint solver until you have added all of
+  // them -- add should be an atomic operation regardless of the package
+  // order. Even though the package file should specify versions of its inputs,
+  // we don't specify these constraints until we get them back from the
+  // constraint solver.
+  //
+  // In the interests of failing fast, we do this check before refreshing the
+  // catalog, touching the project, etc, since these parsings are purely
+  // syntactic.
+  var constraints = _.map(options.args, function (packageReq) {
+    try {
+      return utils.parseConstraint(packageReq);
+    } catch (e) {
+      if (!e.versionParserError)
+        throw e;
+      console.log("Error: " + e.message);
+      throw new main.ExitWithCode(1);
+    }
+  });
 
   var failed = false;
 
@@ -1599,15 +1619,6 @@ main.registerCommand({
     return 1;
   }
 
-  // For every package name specified, add it to our list of package
-  // constraints. Don't run the constraint solver until you have added all of
-  // them -- add should be an atomic operation regardless of the package
-  // order. Even though the package file should specify versions of its inputs,
-  // we don't specify these constraints until we get them back from the
-  // constraint solver.
-  var constraints = _.map(options.args, function (packageReq) {
-    return utils.parseConstraint(packageReq);
-  });
   _.each(constraints, function (constraint) {
     // Check that the package exists.
     doOrDie(function () {

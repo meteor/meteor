@@ -505,12 +505,12 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   var version = packageSource.version;
 
   // Check that the package name is valid.
-  if (! utils.validPackageName(name) ) {
-    process.stderr.write(
-      "Package name invalid. Package names can only contain \n" +
-      "lowercase ASCII alphanumerics, dash, and dot, and " +
-      "must contain at least one letter. \n" +
-      "Package names cannot begin with a dot. \n");
+  try {
+    utils.validatePackageName(name);
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    process.stderr.write(e.error + "\n");
     return 1;
   }
 

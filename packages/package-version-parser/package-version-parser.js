@@ -36,8 +36,11 @@ PackageVersion.parseVersionConstraint = function (versionString, options) {
 
   // XXX check for a dash in the version in case of foo@1.2.3-rc0
 
-  if (! semver.valid(versionString))
-    throw new Error("Version string must look like semver (1.2.3) -- " + versionString);
+  if (! semver.valid(versionString)) {
+    throwVersionParserError(
+      "Version string must look like semver (eg '1.2.3'), not '"
+        + versionString + "'.");
+  }
 
   versionDesc.version = versionString;
 
@@ -56,13 +59,20 @@ PackageVersion.parseConstraint = function (constraintString, options) {
   var name = splitted[0];
   var versionString = splitted[1];
 
-  if (! /^[a-z0-9:-]+$/.test(name) || splitted.length > 2)
-    throw new Error("Package name must contain only lowercase latin letters, digits, colons, or dashes");
+  if (splitted.length > 2) {
+    // throw error complaining about @
+    PackageVersion.validatePackageName('a@');
+  }
+  PackageVersion.validatePackageName(name);
 
   constraint.name = name;
 
-  if (splitted.length === 2 && !versionString)
-    throw new Error("semver version cannot be empty");
+  if (splitted.length === 2 && !versionString) {
+    throwVersionParserError(
+      "Version constraint for package '" + name + 
+        "' cannot be empty; leave off the @ if you don't want to constrain " +
+        "the version.");
+  }
 
   if (versionString) {
     _.extend(constraint,
@@ -72,3 +82,35 @@ PackageVersion.parseConstraint = function (constraintString, options) {
   return constraint;
 };
 
+// XXX duplicates code in utils.js, sigh.  but we need to run
+// this before we can load packages.
+PackageVersion.validatePackageName = function (packageName, options) {
+  options = options || {};
+
+  var badChar = packageName.match(/[^a-z0-9:.\-]/);
+  if (badChar) {
+    if (options.detailedColonExplanation) {
+      throwVersionParserError(
+        "Bad character in package name: " + JSON.stringify(badChar[0]) +
+          ". Package names can only contain lowercase ASCII alphanumerics, " +
+          "dash, or dot. If you plan to publish a package, it must be " +
+          "prefixed with your Meteor developer username and a colon.");
+    }
+    throwVersionParserError(
+      "Package names can only contain lowercase ASCII alphanumerics, dash, " +
+        "dot, or colon, not " + JSON.stringify(badChar[0]) + ".");
+  }
+  if (!/[a-z]/.test(packageName)) {
+    throwVersionParserError("Package names must contain a lowercase ASCII letter.");
+  }
+  if (packageName[0] === '.') {
+    throwVersionParserError("Package names may not begin with a dot.");
+  }
+};
+// XXX duplicates code in utils.js, sigh.  but we need to run
+// this before we can load packages.
+var throwVersionParserError = function (message) {
+  var e = new Error(message);
+  e.versionParserError = true;
+  throw e;
+};

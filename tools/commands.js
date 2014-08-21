@@ -264,16 +264,8 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
-    if (! utils.validPackageName(packageName)) {
-      process.stderr.write(
-        "Invalid package name: " + packageName + "\n");
-      process.stderr.write(
-"\nPackage names can only contain lowercase ASCII alphanumerics, dash,\n" +
-"and dot, and must contain at least one letter. Package names may not start\n" +
-"with a dot. If you plan to publish a package, it must be prefixed with your\n" +
-"Meteor developer username and a colon.\n");
-      process.exit(1);
-    }
+    utils.validatePackageNameOrExit(
+      packageName, {detailedColonExplanation: true});
 
     var packageDir = options.appDir
           ? path.resolve(options.appDir, 'packages', packageName)
