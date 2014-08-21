@@ -80,12 +80,18 @@ ConstraintSolver.ConstraintsList.prototype.forPackage = function (name, iter) {
   var exact = mori.get(forPackage, "exact");
   var inexact = mori.get(forPackage, "inexact");
 
+  var breaked = false;
   var niter = function (pair) {
-    iter(mori.last(pair));
+    if (iter(mori.last(pair)) === BREAK) {
+      breaked = true;
+      return true;
+    }
   };
 
-  mori.each(exact, niter);
-  mori.each(inexact, niter);
+  mori.some(niter, exact);
+  if (breaked)
+    return;
+  mori.some(niter, inexact);
 };
 
 // doesn't break on the false return value
@@ -129,23 +135,21 @@ ConstraintSolver.ConstraintsList.prototype.union = function (anotherList) {
   return newList;
 };
 
-// Checks if the passed unit version violates any of the constraints.
-// Returns a list of constraints that are violated (empty if the unit
-// version does not violate any constraints).
-// XXX Returns a regular array, not a ConstraintsList.
-ConstraintSolver.ConstraintsList.prototype.violatedConstraints = function (
+// Checks if the passed unit version satisfies all of the constraints.
+ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
     uv, resolver) {
   var self = this;
 
-  var violated = [];
+  var satisfied = true;
 
   self.forPackage(uv.name, function (c) {
     if (! c.isSatisfied(uv, resolver)) {
-      violated.push(c);
+      satisfied = false;
+      return BREAK;
     }
   });
 
-  return violated;
+  return satisfied;
 };
 
 // XXX Returns a regular array, not a ConstraintsList.
@@ -161,21 +165,6 @@ ConstraintSolver.ConstraintsList.prototype.constraintsForPackage = function (p) 
   return constraints;
 };
 
-
-// a weird method that returns a list of exact constraints those correspond to
-// the dependencies in the passed list
-ConstraintSolver.ConstraintsList.prototype.exactDependenciesIntersection =
-  function (deps) {
-  var self = this;
-  var newList = new ConstraintSolver.ConstraintsList();
-
-  self.eachExact(function (c) {
-    if (deps.contains(c.name))
-      newList = newList.push(c);
-  });
-
-  return newList;
-};
 
 // Finds the earliest and latest versions of package `dep` in `resolver` that
 // matches this list of constraints.
@@ -197,8 +186,8 @@ ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor = function (
       return;
 
     // If there's an exact constraint, then remember that, and we'll ignore all
-    // the other constraints. (We'll later use self.violatedConstraints to
-    // ensure that there aren't any constraints that conflict with this choice.)
+    // the other constraints. (We'll later use self.isSatisfied to ensure that
+    // there aren't any constraints that conflict with this choice.)
     if (c.type === "exactly") {
       exactConstraint = c;
       return;
@@ -243,10 +232,11 @@ ConstraintSolver.ConstraintsList.prototype.edgeMatchingVersionsFor = function (
   // there is some exact constraint, the choice is obvious... if it works.
   if (exactConstraint) {
     var uv = exactConstraint.getSatisfyingUnitVersion(resolver);
-    if (uv && _.isEmpty(self.violatedConstraints(uv, resolver)))
+    if (uv && self.isSatisfied(uv, resolver)) {
       return { earliest: uv, latest: uv };
-    else
+    } else {
       return { earliest: null, latest: null };
+    }
   }
 
   // OK, maybe we have a lower bound and/or an earliestCompatibleVersion

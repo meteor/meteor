@@ -245,6 +245,7 @@ _.extend(Project.prototype, {
                             utils.parseVersionConstraint(constraint)));
     });
 
+
     // Now we have to go through the programs directory, go through each of the
     // programs, get their dependencies and use them. (We could have memorized
     // this value, but this is called very rarely outside the first
