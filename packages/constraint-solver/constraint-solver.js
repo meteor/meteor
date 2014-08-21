@@ -368,14 +368,6 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
       // XXX maybe these can be calculated lazily?
       var cost = [0, 0, 0, 0];
 
-      var minimalConstraint = {};
-      state.constraints.each(function (c) {
-        if (! _.has(minimalConstraint, c.name))
-          minimalConstraint[c.name] = c.version;
-        else if (semver.lt(c.version, minimalConstraint[c.name]))
-          minimalConstraint[c.name] = c.version;
-      });
-
       mori.each(state.choices, function (nameAndUv) {
         var uv = mori.last(nameAndUv);
         if (_.has(prevSolMapping, uv.name)) {
@@ -422,8 +414,10 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           } else {
             // transitive dependency
             // prefarable earliest possible to be conservative
-            cost[MINOR] += semverToNum(uv.version) -
-              semverToNum(minimalConstraint[uv.name] || "0.0.0");
+            // How far is our choice from the most conservative version that
+            // also matches our constraints?
+            var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
+            cost[MINOR] += semverToNum(uv.version) - semverToNum(minimal);
             options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }

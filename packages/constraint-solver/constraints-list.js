@@ -22,9 +22,11 @@ ConstraintSolver.ConstraintsList = function (prev) {
   if (prev) {
     self.exact = prev.exact;
     self.inexact = prev.inexact;
+    self.minimalVersion = prev.minimalVersion;
   } else {
     self.exact = mori.hash_map();
     self.inexact = mori.hash_map();
+    self.minimalVersion = mori.hash_map();
   }
 };
 
@@ -32,6 +34,11 @@ ConstraintSolver.ConstraintsList.prototype.contains = function (c) {
   var self = this;
   var map = c.type === 'exactly' ? self.exact : self.inexact;
   return !!mori.get_in(map, [c.name, c]);
+};
+
+ConstraintSolver.ConstraintsList.prototype.getMinimalVersion = function (name) {
+  var self = this;
+  return mori.get(self.minimalVersion, name);
 };
 
 // returns a new version containing passed constraint
@@ -51,6 +58,16 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
   newList[mapField] = mori.assoc(newList[mapField],
                                  c.name,
                                  mori.conj(currentConstraints, c));
+
+  // Maintain the "minimal version" that can satisfy these constraints.
+  // Note that this is one of the only pieces of the constraint solver that
+  // actually does logic on constraints (and thus relies on the restricted set
+  // of constraints that we support).
+  var minimal = mori.get(newList.minimalVersion, c.name);
+  if (!minimal || semver.lt(c.version, minimal)) {
+    newList.minimalVersion = mori.assoc(
+      newList.minimalVersion, c.name, c.version);
+  }
   return newList;
 };
 
