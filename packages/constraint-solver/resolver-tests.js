@@ -19,17 +19,19 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   var D110 = new ConstraintSolver.UnitVersion("D", "1.1.0", "1.0.0");
   var E100 = new ConstraintSolver.UnitVersion("E", "1.0.0", "1.0.0");
   var F120 = new ConstraintSolver.UnitVersion("F", "1.2.0", "1.0.0");
+  // Ensure that the resolver knows that these versions exist and have ECV =
+  // 1.0.0.
+  var F100 = new ConstraintSolver.UnitVersion("F", "1.0.0", "1.0.0");
+  var F110 = new ConstraintSolver.UnitVersion("F", "1.1.0", "1.0.0");
 
   resolver.addUnitVersion(A100);
   resolver.addUnitVersion(B100);
   resolver.addUnitVersion(C100);
   resolver.addUnitVersion(D110);
   resolver.addUnitVersion(E100);
+  resolver.addUnitVersion(F100);
+  resolver.addUnitVersion(F110);
   resolver.addUnitVersion(F120);
-  // Ensure that the resolver knows that these versions exist and have ECV =
-  // 1.0.0.
-  resolver.addUnitVersion(new ConstraintSolver.UnitVersion("F", "1.1.0", "1.0.0"));
-  resolver.addUnitVersion(new ConstraintSolver.UnitVersion("F", "1.0.0", "1.0.0"));
 
   A100.addDependency("B");
   A100.addConstraint(resolver.getConstraint("B", "=1.0.0"));
@@ -45,8 +47,16 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   A100.addDependency("F");
   A100.addConstraint(resolver.getConstraint("F", "1.1.0"));
 
-  resultEquals(test, resolver.resolve(["A"]),
-               [A100, B100, C100, D110, E100, F120]);
+  var solution = resolver.resolve(["A"], [], {
+    // Prefer later F when possible.
+    costFunction: function (state) {
+      var F = mori.get(state.choices, "F");
+      var distanceF = F ? semver2number(F.version) : 0;
+      return -distanceF;
+    }
+  });
+
+  resultEquals(test, solution, [A100, B100, C100, D110, E100, F120]);
 });
 
 Tinytest.add("constraint solver - resolver, cost function - pick latest", function (test) {

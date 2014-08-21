@@ -21,13 +21,10 @@ ConstraintSolver.Resolver = function (options) {
 
   self._nudge = options.nudge;
 
-  // Maps unit name string to an array of version definitions
+  // Maps unit name string to a sorted array of version definitions
   self.unitsVersions = {};
   // Maps name@version string to a unit version
   self._unitsVersionsMap = {};
-
-  // Maps unit name string to the greatest version string we have
-  self._latestVersion = {};
 
   // Refs to all constraints. Mapping String -> instance
   self._constraints = {};
@@ -48,18 +45,22 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
 
   check(unitVersion, ConstraintSolver.UnitVersion);
 
+  if (_.has(self._unitsVersionsMap, unitVersion.toString())) {
+    throw Error("duplicate uv " + unitVersion.toString() + "?");
+  }
+
   if (! _.has(self.unitsVersions, unitVersion.name)) {
     self.unitsVersions[unitVersion.name] = [];
-    self._latestVersion[unitVersion.name] = unitVersion.version;
+  } else {
+    var latest = _.last(self.unitsVersions[unitVersion.name]).version;
+    if (!semver.lt(latest, unitVersion.version)) {
+      throw Error("adding uv out of order: " + latest + " vs "
+                  + unitVersion.version);
+    }
   }
 
-  if (! _.has(self._unitsVersionsMap, unitVersion.toString())) {
-    self.unitsVersions[unitVersion.name].push(unitVersion);
-    self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
-  }
-
-  if (semver.lt(self._latestVersion[unitVersion.name], unitVersion.version))
-    self._latestVersion[unitVersion.name] = unitVersion.version;
+  self.unitsVersions[unitVersion.name].push(unitVersion);
+  self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
 };
 
 
@@ -192,15 +193,6 @@ ConstraintSolver.Resolver.prototype.resolve = function (
 
     var neighborsObj = self._stateNeighbors(currentState, resolutionPriority);
 
-    // Minor (but noticeable in the benchmark) optimization: as long as our
-    // state is just yielding a single non-final state, keep processing it. This
-    // lets us skip some intermediate invocations of the cost function.
-    while (neighborsObj.success && neighborsObj.neighbors.length === 1
-           && !neighborsObj.neighbors[0].success()) {
-      neighborsObj = self._stateNeighbors(
-        neighborsObj.neighbors[0], resolutionPriority);
-    }
-
     if (! neighborsObj.success) {
       someError = someError || neighborsObj.failureMsg;
       resolutionPriority[neighborsObj.conflictingUnit] =
@@ -243,13 +235,6 @@ ConstraintSolver.Resolver.prototype._stateNeighbors = function (
   var currentNaughtiness = -1;
 
   state.eachDependency(function (unitName, versions) {
-    // Prefer to resolve things where there is no choice first (at the very
-    // least this includes local packages and unknown packages).
-    if (mori.count(versions) === 1) {
-      candidateName = unitName;
-      candidateVersions = versions;
-      return BREAK;
-    }
     var r = resolutionPriority[unitName] || 0;
     if (r > currentNaughtiness) {
       currentNaughtiness = r;
