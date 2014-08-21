@@ -1,6 +1,6 @@
 {
  "track": "METEOR-CORE",
- "version": "0.9.0-rc6",
+ "version": "0.9.0-rc10",
  "recommended": false,
  "official": true,
  "description": "An experimental release of meteor."

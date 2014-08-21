@@ -166,10 +166,10 @@ var Fiber = require('fibers');
 var Future = require(path.join('fibers', 'future'));
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
-var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var tropohouse = require('./tropohouse.js');
+var catalog = require('./catalog.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -379,7 +379,7 @@ _.extend(File.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options:
-// - packageLoader: PackageLoader to use for resolving package dependenices
+// - packageLoader: PackageLoader to use for resolving package dependencies
 // - arch: the architecture to build
 //
 // see subclasses for additional options
@@ -410,6 +410,10 @@ var Target = function (options) {
   // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
+  //
+  // The NodeModulesDirectory objects in this map are de-duplicated
+  // aliases to the objects in the nodeModulesDirectory fields of
+  // the File objects in self.js.
   self.nodeModulesDirectories = {};
 
   // Static assets to include in the bundle. List of File.
@@ -1004,6 +1008,10 @@ var JsImage = function () {
   // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
   // NodeModulesDirectory object that we have created to represent it.
+  //
+  // The NodeModulesDirectory objects in this map are de-duplicated
+  // aliases to the objects in the nodeModulesDirectory fields of
+  // the objects in self.jsToLoad.
   self.nodeModulesDirectories = {};
 
   // Architecture required by this image
@@ -1666,6 +1674,10 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
+  // bundler.bundle is never called by uniload, so it always uses
+  // the complete catalog.
+  var whichCatalog = catalog.complete;
+
   var outputPath = options.outputPath;
   var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
@@ -1762,8 +1774,9 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Unipackage object that represents the app
-      var app = packageCache.packageCache.loadAppAtPath(
-        appDir, exports.ignoreFiles);
+      var packageSource = new PackageSource(whichCatalog);
+      packageSource.initFromAppDir(appDir, exports.ignoreFiles);
+      var app = compiler.compile(packageSource).unipackage;
 
       var clientTargets = [];
       // Client
@@ -1877,7 +1890,7 @@ exports.bundle = function (options) {
     _.each(programs, function (p) {
       // Read this directory as a package and create a target from
       // it
-      var pkg = packageCache.packageCache.loadPackageAtPath(p.name, p.path);
+      var pkg = whichCatalog.packageCache.loadPackageAtPath(p.name, p.path);
       var target;
       switch (p.type) {
       case "server":
@@ -2026,8 +2039,10 @@ exports.buildJsImage = function (options) {
     throw new Error("Must indicate .npm directory to use");
   if (! options.name)
     throw new Error("Must provide a name");
+  if (! options.catalog)
+    throw new Error("Must provide a catalog");
 
-  var packageSource = new PackageSource;
+  var packageSource = new PackageSource(options.catalog);
 
   packageSource.initFromOptions(options.name, {
     archName: "plugin",
@@ -2042,7 +2057,10 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var unipackage = compiler.compile(packageSource).unipackage;
+  var unipackage = compiler.compile(packageSource, {
+    ignoreProjectDeps: options.ignoreProjectDeps
+  }).unipackage;
+
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does

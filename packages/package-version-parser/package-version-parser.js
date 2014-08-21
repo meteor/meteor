@@ -12,12 +12,14 @@ PackageVersion = {};
 //    "pick A exactly at x.y.z"
 // 3. "at-least" - A@>=x.y.z - constraints package A to version x.y.z or higher.
 //    "pick A at least at x.y.z"
-PackageVersion.parseVersionConstraint = function (versionString) {
+//    This one is only used internally by the constraint solver --- end users
+//    shouldn't be allowed to specify it, and you need to specially request it
+//    with the "allowAtLeast" option.
+PackageVersion.parseVersionConstraint = function (versionString, options) {
+  options = options || {};
   var versionDesc = { version: null, type: "compatible-with",
                       constraintString: versionString };
 
-  // XXX #noconstraint #geoff #changed
-  // XXX remove none when it is no longer used
   if (versionString === "none" || versionString === null) {
     versionDesc.type = "at-least";
     versionDesc.version = "0.0.0";
@@ -27,7 +29,7 @@ PackageVersion.parseVersionConstraint = function (versionString) {
   if (versionString.charAt(0) === '=') {
     versionDesc.type = "exactly";
     versionString = versionString.substr(1);
-  } else if (versionString.substr(0, 2) === '>=') {
+  } else if (options.allowAtLeast && versionString.substr(0, 2) === '>=') {
     versionDesc.type = "at-least";
     versionString = versionString.substr(2);
   }
@@ -42,9 +44,10 @@ PackageVersion.parseVersionConstraint = function (versionString) {
   return versionDesc;
 };
 
-PackageVersion.parseConstraint = function (constraintString) {
+PackageVersion.parseConstraint = function (constraintString, options) {
   if (typeof constraintString !== "string")
     throw new TypeError("constraintString must be a string");
+  options = options || {};
 
   var splitted = constraintString.split('@');
 
@@ -61,8 +64,10 @@ PackageVersion.parseConstraint = function (constraintString) {
   if (splitted.length === 2 && !versionString)
     throw new Error("semver version cannot be empty");
 
-  if (versionString)
-    _.extend(constraint, PackageVersion.parseVersionConstraint(versionString));
+  if (versionString) {
+    _.extend(constraint,
+             PackageVersion.parseVersionConstraint(versionString, options));
+  }
 
   return constraint;
 };

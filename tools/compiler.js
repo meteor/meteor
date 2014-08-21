@@ -4,7 +4,7 @@ var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
-var Unipackage = require('./unipackage.js').Unipackage;
+var unipackage = require('./unipackage.js');
 var packageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
@@ -188,10 +188,10 @@ var determineBuildTimeDependencies = function (packageSource,
 
   var versions = packageSource.dependencyVersions.dependencies || {};
   ret.packageDependencies =
-        catalog.complete.resolveConstraints(
-             constraints_array,
-             { previousSolution: versions },
-             constraintSolverOpts);
+    packageSource.catalog.resolveConstraints(
+      constraints_array,
+      { previousSolution: versions },
+      constraintSolverOpts);
 
   // We care about differentiating between all dependencies (which we save in
   // the version lock file) and the direct dependencies (which are packages that
@@ -227,16 +227,17 @@ var determineBuildTimeDependencies = function (packageSource,
 
     var pluginVersion = pluginVersions[info.name] || {};
     ret.pluginDependencies[info.name] =
-      catalog.complete.resolveConstraints(
-         constraints_array,
-         { previousSolution: pluginVersion },
-         constraintSolverOpts );
+      packageSource.catalog.resolveConstraints(
+        constraints_array,
+        { previousSolution: pluginVersion },
+        constraintSolverOpts );
   });
 
   // Every time we run the constraint solver, we record the results. This has
   // two benefits -- first, it faciliatates repeatable builds, second,
   // memorizing results makes the constraint solver more efficient.
-  if (ret.packageDependencies) {
+  // (But we don't do this during uniload.)
+  if (ret.packageDependencies && packageSource.catalog === catalog.complete) {
     var constraintResults = {
       dependencies: ret.packageDependencies,
       pluginDependencies: ret.pluginDependencies
@@ -262,7 +263,7 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
+var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
                                 nodeModulesPath, isPortable) {
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
@@ -287,7 +288,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   // (there's also some weirdness here with handling implies, because
   // the implies field is on the target unibuild, but we really only care
   // about packages.)
-  var activePluginPackages = [unipackage];
+  var activePluginPackages = [unipkg];
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
@@ -309,7 +310,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
     compiler.eachUsedUnibuild(
       inputSourceArch.uses, archinfo.host(),
       packageLoader, {skipUnordered: true}, function (unibuild) {
-        if (unibuild.pkg.name === unipackage.name)
+        if (unibuild.pkg.name === unipkg.name)
           return;
         if (_.isEmpty(unibuild.pkg.plugins))
           return;
@@ -703,7 +704,7 @@ var compileUnibuild = function (unipackage, inputSourceArch, packageLoader,
   }
 
   // *** Output unibuild object
-  unipackage.addUnibuild({
+  unipkg.addUnibuild({
     name: inputSourceArch.archName,
     arch: arch,
     uses: inputSourceArch.uses,
@@ -766,7 +767,8 @@ compiler.compile = function (packageSource, options) {
     }, function () {
 
       var loader = new packageLoader.PackageLoader({
-        versions: buildTimeDeps.pluginDependencies[info.name]
+        versions: buildTimeDeps.pluginDependencies[info.name],
+        catalog: packageSource.catalog
       });
       loader.downloadMissingPackages({serverArch: archinfo.host()});
 
@@ -782,7 +784,9 @@ compiler.compile = function (packageSource, options) {
         // shrinkwrap and cache state.
         npmDir: path.resolve(path.join(packageSource.sourceRoot, '.npm',
                                        'plugin', info.name)),
-        dependencyVersions: packageSource.dependencyVersions
+        dependencyVersions: packageSource.dependencyVersions,
+        catalog: packageSource.catalog,
+        ignoreProjectDeps: options.ignoreProjectDeps
       });
 
       // Add the plugin's sources to our list.
@@ -829,8 +833,8 @@ compiler.compile = function (packageSource, options) {
     }
   }
 
-  var unipackage = new Unipackage;
-  unipackage.initFromOptions({
+  var unipkg = new unipackage.Unipackage;
+  unipkg.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
     version: packageSource.version,
@@ -847,13 +851,14 @@ compiler.compile = function (packageSource, options) {
   // Compile unibuilds. Might use our plugins, so needs to happen second.
   var loader = new packageLoader.PackageLoader({
     versions: buildTimeDeps.packageDependencies,
+    catalog: packageSource.catalog,
     constraintSolverOpts: {
       ignoreProjectDeps: options.ignoreProjectDeps
     }
   });
 
   _.each(packageSource.architectures, function (unibuild) {
-    var unibuildSources = compileUnibuild(unipackage, unibuild, loader,
+    var unibuildSources = compileUnibuild(unipkg, unibuild, loader,
                                           nodeModulesPath, isPortable);
     sources.push.apply(sources, unibuildSources);
   });
@@ -874,8 +879,9 @@ compiler.compile = function (packageSource, options) {
                            packageSource.version + "because it already " +
                            "has a build identifier");
       } else {
-        unipackage.addBuildIdentifierToVersion({
-          relativeTo: packageSource.sourceRoot
+        unipkg.addBuildIdentifierToVersion({
+          relativeTo: packageSource.sourceRoot,
+          catalog: packageSource.catalog
         });
       }
     });
@@ -883,7 +889,7 @@ compiler.compile = function (packageSource, options) {
 
   return {
     sources: _.uniq(sources),
-    unipackage: unipackage
+    unipackage: unipkg
   };
 };
 
@@ -899,13 +905,13 @@ compiler.compile = function (packageSource, options) {
 // for a package whose build-time dependencies have already been built,
 // so any dependencies that contains plugins have real versions in the
 // catalog already. Still, this seems very brittle and we should fix it.
-var getPluginProviders = function (versions) {
+var getPluginProviders = function (versions, whichCatalog) {
   buildmessage.assertInCapture();
   var result = {};
   _.each(versions, function (version, name) {
     // Direct dependencies only create a build-order constraint if
     // they contain a plugin.
-    var catalogVersion = catalog.complete.getVersion(name, version);
+    var catalogVersion = whichCatalog.getVersion(name, version);
     if (catalogVersion && catalogVersion.containsPlugins) {
       result[name] = version;
     }
@@ -933,11 +939,13 @@ compiler.getBuildOrderConstraints = function (
   };
 
   var buildTimeDeps = determineBuildTimeDependencies(
-      packageSource, constraintSolverOpts);
+    packageSource, constraintSolverOpts);
 
   // Direct dependencies only impose a build-order constraint if they
   // contain plugins.
-  _.each(getPluginProviders(buildTimeDeps.directDependencies), addVersion);
+  _.each(getPluginProviders(buildTimeDeps.directDependencies,
+                            packageSource.catalog),
+         addVersion);
   _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
     _.each(versions, addVersion);
   });
@@ -960,16 +968,16 @@ compiler.getBuildOrderConstraints = function (
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
 compiler.checkUpToDate = function (
-    packageSource, unipackage, constraintSolverOpts) {
+    packageSource, unipkg, constraintSolverOpts) {
   buildmessage.assertInCapture();
 
-  if (unipackage.forceNotUpToDate) {
+  if (unipkg.forceNotUpToDate) {
     return false;
   }
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
-  if (unipackage.builtBy !== compiler.BUILT_BY) {
+  if (unipkg.builtBy !== compiler.BUILT_BY) {
     return false;
   }
 
@@ -981,12 +989,10 @@ compiler.checkUpToDate = function (
       packageSource, constraintSolverOpts);
 
   var sourcePluginProviders = getPluginProviders(
-    buildTimeDeps.directDependencies
-  );
+    buildTimeDeps.directDependencies, packageSource.catalog);
 
   var unipackagePluginProviders = getPluginProviders(
-    unipackage.buildTimeDirectDependencies
-  );
+    unipkg.buildTimeDirectDependencies, packageSource.catalog);
 
   if (_.keys(sourcePluginProviders).length !==
       _.keys(unipackagePluginProviders).length) {
@@ -994,7 +1000,8 @@ compiler.checkUpToDate = function (
   }
 
   var directDepsPackageLoader = new packageLoader.PackageLoader({
-    versions: buildTimeDeps.directDependencies
+    versions: buildTimeDeps.directDependencies,
+    catalog: packageSource.catalog
   });
   var directDepsMatch = _.all(
     sourcePluginProviders,
@@ -1012,7 +1019,7 @@ compiler.checkUpToDate = function (
   }
 
   if (_.keys(buildTimeDeps.pluginDependencies).length !==
-      _.keys(unipackage.buildTimePluginDependencies).length) {
+      _.keys(unipkg.buildTimePluginDependencies).length) {
     return false;
   }
 
@@ -1027,9 +1034,10 @@ compiler.checkUpToDate = function (
       // For each plugin, check that the resolved build-time deps for
       // that plugin match the unipackage's build time deps for it.
       var packageLoaderForPlugin = new packageLoader.PackageLoader({
+        catalog: packageSource.catalog,
         versions: buildTimeDeps.pluginDependencies[pluginName]
       });
-      var unipackagePluginDeps = unipackage.buildTimePluginDependencies[pluginName];
+      var unipackagePluginDeps = unipkg.buildTimePluginDependencies[pluginName];
       if (! unipackagePluginDeps ||
           _.keys(pluginDeps).length !== _.keys(unipackagePluginDeps).length) {
         return false;
@@ -1047,8 +1055,8 @@ compiler.checkUpToDate = function (
   }
 
   var watchSet = new watch.WatchSet();
-  watchSet.merge(unipackage.pluginWatchSet);
-  _.each(unipackage.unibuilds, function (unibuild) {
+  watchSet.merge(unipkg.pluginWatchSet);
+  _.each(unipkg.unibuilds, function (unibuild) {
     watchSet.merge(unibuild.watchSet);
   });
 

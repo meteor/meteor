@@ -21,17 +21,19 @@ var tmpDir = function () {
 var setAppDir = function (appDir) {
   project.project.setRootDir(appDir);
 
-  var localPackageDirs = [path.join(appDir, 'packages')];
-  if (!files.usesWarehouse()) {
-    // Running from a checkout, so use the Meteor core packages from
-    // the checkout.
-    localPackageDirs.push(path.join(
-      files.getCurrentToolsDir(), 'packages'));
+  if (files.usesWarehouse()) {
+    throw Error("This old test doesn't support non-checkout");
   }
+  var appPackageDir = path.join(appDir, 'packages');
+  var checkoutPackageDir = path.join(
+    files.getCurrentToolsDir(), 'packages');
 
   doOrThrow(function () {
+    catalog.uniload.initialize({
+      localPackageDirs: [checkoutPackageDir]
+    });
     catalog.complete.initialize({
-      localPackageDirs: localPackageDirs
+      localPackageDirs: [appPackageDir, checkoutPackageDir]
     });
   });
 };

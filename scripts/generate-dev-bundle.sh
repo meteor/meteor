@@ -71,7 +71,6 @@ umask 022
 mkdir build
 cd build
 
-
 # ios-sim is used to run iPhone simulator from the command-line. Doesn't make
 # sense to build it for linux.
 if [ "$OS" == "osx" ]; then
@@ -92,24 +91,18 @@ if [ "$OS" == "osx" ]; then
     curl "$IOS_SIM_URL" | tar xfz -
     mkdir -p "$DIR/lib/ios-sim"
     cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
-
-    git clone https://github.com/phonegap/ios-deploy.git
-    cd ios-deploy
-    git checkout 1.0.9
-    make
-    cd ..
-    mkdir -p "$DIR/lib/ios-deploy"
-    cp -r ios-deploy/ios-deploy "$DIR/lib/ios-deploy"
 fi
 
 
 cd "$DIR/build"
-git clone https://github.com/joyent/node.git
+
+# For now, use our fork with https://github.com/npm/npm/pull/5821/files
+git clone https://github.com/meteor/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/main.js and tools/server/boot.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.29
+git checkout v0.10.29-with-npm-5821
 
 ./configure --prefix="$DIR"
 make -j4
@@ -162,8 +155,8 @@ mv ../$FIBERS_ARCH .
 # tool (and not by the bundled app boot.js script).
 cd "${DIR}/lib"
 npm install request@2.33.0
-npm install fstream@0.1.25
-npm install tar@0.1.19
+npm install fstream@1.0.2
+npm install tar@1.0.1
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install browserstack-webdriver@2.41.1

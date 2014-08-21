@@ -1,14 +1,6 @@
 var semver = Npm.require('semver');
 
-// The mori library is an awesome persistent data library. But it's also giant,
-// so we don't load it until we actually want to create a mori data structure.
-// Call ensureMoriLoaded before any code which creates a mori data structure.
-mori = null;
-ensureMoriLoaded = function () {
-  if (!mori) {
-    mori = Npm.require('mori');
-  }
-};
+mori = Npm.require('mori');
 
 ////////////////////////////////////////////////////////////////////////////////
 // Resolver
@@ -21,8 +13,11 @@ ensureMoriLoaded = function () {
 // - every unit version was added exactly once
 // - if two unit versions are the same, their refs point at the same object
 // - if two constraints are the same, their refs point at the same object
-ConstraintSolver.Resolver = function () {
+ConstraintSolver.Resolver = function (options) {
   var self = this;
+  options = options || {};
+
+  self._nudge = options.nudge;
 
   // Maps unit name string to an array of version definitions
   self.unitsVersions = {};
@@ -192,6 +187,10 @@ ConstraintSolver.Resolver.prototype.resolve =
   var someError = null;
   var solution = null;
   while (! pq.empty()) {
+    // Since we're in a CPU-bound loop, allow yielding or printing a message or
+    // something.
+    self._nudge && self._nudge();
+
     var currentState = pq.pop();
 
     if (currentState.dependencies.isEmpty()) {
@@ -219,8 +218,11 @@ ConstraintSolver.Resolver.prototype.resolve =
     return solution;
 
   // XXX should be much much better
-  if (someError)
-    throw new Error(someError);
+  if (someError) {
+    var e = new Error(someError);
+    e.constraintSolverError = true;
+    throw e;
+  }
 
   throw new Error("Couldn't resolve, I am sorry");
 };
@@ -369,6 +371,10 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   queue.push(uv);
   hasBeenEnqueued[uv.name] = true;
   while (queue.length > 0) {
+    // Since we're in a CPU-bound loop, allow yielding or printing a message or
+    // something.
+    self._nudge && self._nudge();
+
     uv = queue[0];
     queue.shift();
 
@@ -551,13 +557,15 @@ ConstraintSolver.Constraint = function (name, versionString) {
   var self = this;
 
   if (versionString) {
-    _.extend(self, PackageVersion.parseVersionConstraint(versionString));
+    _.extend(self,
+             PackageVersion.parseVersionConstraint(
+               versionString, {allowAtLeast: true}));
     self.name = name;
   } else {
     // borrows the structure from the parseVersionConstraint format:
     // - type - String [compatibl-with|exactly|at-least]
     // - version - String - semver string
-    _.extend(self, PackageVersion.parseConstraint(name));
+    _.extend(self, PackageVersion.parseConstraint(name, {allowAtLeast: true}));
   }
   // See comment in UnitVersion constructor.
   self.version = self.version.replace(/\+.*$/, '');

@@ -136,7 +136,7 @@ echo "... rerun"
 $METEOR -p $PORT >> $OUTPUT 2>&1 &
 METEOR_PID=$!
 
-sleep 5 # XXX XXX lame
+sleep 10 # XXX XXX lame
 
 ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
 curl -s "http://localhost:$PORT" >> $OUTPUT
