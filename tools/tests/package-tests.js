@@ -360,11 +360,7 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-//
-// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
-// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
-// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
-selftest.define("sync local catalog", ["slow", "net", "test-package-server", "checkout"],  function () {
+selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
   var s = new Sandbox();
   var run;
 
@@ -471,7 +467,7 @@ var createAndPublishPackage = function (s, packageName) {
 };
 
 selftest.define("release track defaults to METEOR-CORE",
-                ["net", "test-package-server"], function () {
+                ["net", "test-package-server", "checkout"], function () {
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);

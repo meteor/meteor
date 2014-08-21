@@ -1043,7 +1043,7 @@ main.registerCommand({
     doOrDie(function () {
       vr = catalog.official.getLatestVersion(name);
     });
-    return !(_.isEqual(vr.description,
+    return vr && !(_.isEqual(vr.description,
                        "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
   };
 
@@ -1814,12 +1814,9 @@ main.registerCommand({
   if (_.isEmpty(args))
     return 0;
 
-  // Refresh the catalog, checking the remote package data on the
-  // server. Technically, we don't need to do this, since it is unlikely that
-  // new data will change our constraint solver decisions. But as a user, I
-  // would expect this command to update the local catalog.
-  // XXX what if we're offline?
-  refreshOfficialCatalogOrDie();
+  // As user may expect this to update the catalog, but we con't actually need
+  // to, and it takes frustratingly long.
+  // refreshOfficialCatalogOrDie();
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -1843,8 +1840,9 @@ main.registerCommand({
 
   var messages = buildmessage.capture(function () {
     // Get the contents of our versions file, we will want them in order to
-    // remove to the user what we removed.
-    var versions = project.getVersions();
+    // remove to the user what we removed. Note that we are actually just getting
+    // getting the versions file, not running the constraint solver.
+    var versions = project.dependencies;
 
     // Remove the packages from the project! There is really no way for this to
     // fail, unless something has gone horribly wrong, so we don't need to check

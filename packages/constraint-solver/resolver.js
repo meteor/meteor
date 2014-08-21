@@ -13,8 +13,11 @@ mori = Npm.require('mori');
 // - every unit version was added exactly once
 // - if two unit versions are the same, their refs point at the same object
 // - if two constraints are the same, their refs point at the same object
-ConstraintSolver.Resolver = function () {
+ConstraintSolver.Resolver = function (options) {
   var self = this;
+  options = options || {};
+
+  self._nudge = options.nudge;
 
   // Maps unit name string to an array of version definitions
   self.unitsVersions = {};
@@ -184,6 +187,10 @@ ConstraintSolver.Resolver.prototype.resolve =
   var someError = null;
   var solution = null;
   while (! pq.empty()) {
+    // Since we're in a CPU-bound loop, allow yielding or printing a message or
+    // something.
+    self._nudge && self._nudge();
+
     var currentState = pq.pop();
 
     if (currentState.dependencies.isEmpty()) {
@@ -364,6 +371,10 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   queue.push(uv);
   hasBeenEnqueued[uv.name] = true;
   while (queue.length > 0) {
+    // Since we're in a CPU-bound loop, allow yielding or printing a message or
+    // something.
+    self._nudge && self._nudge();
+
     uv = queue[0];
     queue.shift();
 
