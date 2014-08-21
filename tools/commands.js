@@ -276,7 +276,7 @@ main.registerCommand({
 "\nPackage names can only contain lowercase ASCII alphanumerics, dash,\n" +
 "and dot, and must contain at least one letter. Package names may not start\n" +
 "with a dot. If you plan to publish a package, it must be prefixed with your\n" +
-"username and a colon \n");
+"Meteor developer username and a colon. \n");
       process.exit(1);
     }
 
