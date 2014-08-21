@@ -195,7 +195,7 @@ _.extend(Project.prototype, {
       } catch (err) {
         process.stdout.write(
           "Could not resolve the specified constraints for this project:\n"
-           + err +"\n");
+           + (err.constraintSolverError ? err : err.stack) + "\n");
         process.exit(1);
       }
 
