@@ -1,0 +1,9 @@
+Package.describe({
+  summary: "On Cordova, only allow the app to reload when the app is resumed.",
+  version: '1.0.0'
+});
+
+Package.on_use(function (api) {
+  api.use(['reload', 'deps'], 'client.cordova');
+  api.add_files("reload-on-resume.js", 'client.cordova');
+});
