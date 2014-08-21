@@ -292,6 +292,7 @@ selftest.define("add packages client archs", function (options) {
 
     var outerRun = s.run("add", "say-something-client-targets");
     outerRun.match("added");
+    outerRun.expectExit(0);
     checkPackages(s,
                   ["standard-app-packages", "say-something-client-targets"]);
 
@@ -315,8 +316,6 @@ selftest.define("add packages client archs", function (options) {
   };
 
   runTestWithArgs("browser", [], 3000);
-  // XXX fix this once we get Cordova browser to work
-  // runTestWithArgs("cordova", ["serve"], 8000);
 });
 
 // Removes the local data.json file from disk.
