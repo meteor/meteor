@@ -189,7 +189,9 @@ exports.dealConstraint = function (constraint, pkg) {
 // scheme: ie, that it is prepended by a user's username. That check should
 // happen at publication time.
 exports.validPackageName = function (packageName) {
- if (/[^a-z0-9:.\-]/.test(packageName) || !/[a-z]/.test(packageName) ) {
+ if (/[^a-z0-9:.\-]/.test(packageName) ||
+    !/[a-z]/.test(packageName) ||
+    (packageName[0] === ".") ) {
    return false;
  }
  return true;
