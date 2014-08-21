@@ -513,7 +513,7 @@ function getCatalogStub (gems) {
       return _.uniq(_.pluck(gems, 'name'));
     },
     getPackage: function (name) {
-      throw new Error("Not implemeneted");
+      return !!_.findWhere(gems, {name: name});
     },
     getSortedVersions: function (name) {
       return _.chain(gems)

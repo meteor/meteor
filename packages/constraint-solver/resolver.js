@@ -24,6 +24,11 @@ ConstraintSolver.Resolver = function (options) {
   // Maps name@version string to a unit version
   self._unitsVersionsMap = {};
 
+  // A set of unit names which have no unit versions (ie, the package does not
+  // exist). Note that we only set this for nonexistent packages, not for
+  // version-less packages, though maybe that's wrong.
+  self._noUnitVersionsExist = {};
+
   // Maps unit name string to the greatest version string we have
   self._latestVersion = {};
 
@@ -46,6 +51,9 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
 
   check(unitVersion, ConstraintSolver.UnitVersion);
 
+  if (_.has(self._noUnitVersionsExist, unitVersion.name))
+    throw Error("but no unit versions exist for " + unitVersion.name + "!");
+
   if (! _.has(self.unitsVersions, unitVersion.name)) {
     self.unitsVersions[unitVersion.name] = [];
     self._latestVersion[unitVersion.name] = unitVersion.version;
@@ -59,6 +67,16 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
   if (semver.lt(self._latestVersion[unitVersion.name], unitVersion.version))
     self._latestVersion[unitVersion.name] = unitVersion.version;
 };
+
+ConstraintSolver.Resolver.prototype.noUnitVersionsExist = function (unitName) {
+  var self = this;
+
+  if (_.has(self.unitsVersions, unitName))
+    throw Error("already have unit versions for " + unitName + "!");
+  self._noUnitVersionsExist[unitName] = true;
+};
+
+
 
 ConstraintSolver.Resolver.prototype.getUnitVersion = function (unitName, version) {
   var self = this;
@@ -247,8 +265,8 @@ ConstraintSolver.Resolver.prototype.resolve = function (
 // }
 //
 // NOTE: assumes that exact dependencies are already propagated
-ConstraintSolver.Resolver.prototype._stateNeighbors =
-  function (state, resolutionPriority) {
+ConstraintSolver.Resolver.prototype._stateNeighbors = function (
+    state, resolutionPriority) {
   var self = this;
 
   var dependencies = state.dependencies;
@@ -267,12 +285,18 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
     }
   });
 
-  dependencies = dependencies.remove(candidateName);
-
   var edgeVersions = constraints.edgeMatchingVersionsFor(candidateName, self);
 
   edgeVersions.earliest = edgeVersions.earliest || { version: "1000.1000.1000" };
   edgeVersions.latest = edgeVersions.latest || { version: "0.0.0" };
+
+  if (_.has(self._noUnitVersionsExist, candidateName)) {
+    return {
+      success: false,
+      failureMsg: "No such package: " + candidateName,
+      conflictingUnit: candidateName
+    };
+  }
 
   var candidateVersions =
     _.filter(self.unitsVersions[candidateName], function (uv) {

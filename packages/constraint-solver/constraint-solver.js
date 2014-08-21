@@ -65,10 +65,15 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   // actually have different archs used.
   var allArchs = ["os", "web.browser", "web.cordova"];
 
-  // XXX is sortedness actually relevant? is there a minor optimization here
-  //     where we can only talk to self.catalog once?
+  if (!self.catalog.getPackage(packageName, { noRefresh: true })) {
+    _.each(allArchs, function (arch) {
+      var unitName = packageName + "#" + arch;
+      self.resolver.noUnitVersionsExist(unitName);
+    });
+  }
+
+  // XXX is sortedness actually relevant?
   var sortedVersions = self.catalog.getSortedVersions(packageName);
-  // XXX throw error if the package doesn't exist?
   _.each(sortedVersions, function (version) {
     var versionDef = self.catalog.getVersion(packageName, version);
 
