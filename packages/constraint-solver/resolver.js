@@ -2,6 +2,8 @@ var semver = Npm.require('semver');
 
 mori = Npm.require('mori');
 
+BREAK = {};  // used by our 'each' functions
+
 ////////////////////////////////////////////////////////////////////////////////
 // Resolver
 ////////////////////////////////////////////////////////////////////////////////
@@ -278,6 +280,13 @@ ConstraintSolver.Resolver.prototype._stateNeighbors = function (
   var currentNaughtiness = resolutionPriority[candidateName] || 0;
 
   dependencies.each(function (d) {
+    // Prefer to resolve things where there is no choice first (at the very
+    // least this includes local packages).
+    // XXX should we do this in _propagateExactTransDeps too?
+    if (_.size(self.unitsVersions[d]) === 1) {
+      candidateName = d;
+      return BREAK;
+    }
     var r = resolutionPriority[d] || 0;
     if (r > currentNaughtiness) {
       currentNaughtiness = r;

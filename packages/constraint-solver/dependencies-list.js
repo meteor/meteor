@@ -78,9 +78,9 @@ ConstraintSolver.DependenciesList.prototype.isEmpty = function () {
 
 ConstraintSolver.DependenciesList.prototype.each = function (iter) {
   var self = this;
-  mori.each(self._mapping, function (d) {
-    iter(mori.last(d));
-  });
+  mori.some(function (d) {
+    return iter(mori.last(d)) === BREAK;
+  }, self._mapping);
 };
 
 ConstraintSolver.DependenciesList.prototype.toString = function (simple) {
