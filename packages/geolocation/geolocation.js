@@ -28,5 +28,18 @@ Geolocation = {
     enableLocationRefresh();
     locationDep.depend();
     return location;
+  },
+  // simple version of location; just lat and lng
+  latLng: function () {
+    var loc = Geolocation.currentLocation();
+
+    if (loc) {
+      return {
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude
+      };
+    }
+
+    return null;
   }
 };
