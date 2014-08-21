@@ -202,17 +202,18 @@ Meteor.startup(function () {
                 time = (timeMs / 1000) + "";
               }
               break;
-            case "fail":
+            case "exception":
               var details = event.details || {};
               error = (details.message || '?') + " filename=" + (details.filename || '?') + " line=" + (details.line || '?');
+              break;
           }
         });
-        switch (event.status) {
+        switch (result.status) {
           case "FAIL":
             error = error || '?';
             break;
           case "EXPECTED":
-            error = "Expected failure";
+            error = null;
             break;
         }
 
