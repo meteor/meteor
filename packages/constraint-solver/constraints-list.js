@@ -4,33 +4,34 @@ var semver = Npm.require('semver');
 // ConstraintsList
 ////////////////////////////////////////////////////////////////////////////////
 // A persistent data-structure that keeps references to Constraint objects
-// arranged by the "name" field of Constraint, exact field and version.
+// arranged by the "name" field of Constraint and exactness of the constraint.
 //
-// Internal structure has the "byName" map that has the following structure:
-// byName:
-//   - nameOfPackage:
-//     - exact:
-//       - versionString <=> exactConstraintInstance
-//     - inexact:
-//       - versionString <=> inexactConstraintInstance
+// Internal structure has two maps, 'exact' and 'inexact'; they each map
+// unit name -> mori.set(Constraint).  (This relies on the fact that Constraints
+// are interned, so that mori.set can use reference identity.)
+//
+// We separate the constraints by exactness so that the iteration functions
+// (forPackage and each) can easily provide exact constraints before inexact
+// constraints, because exact constraints generally help the consumer pare down
+// their possibilities faster.
+// XXX This is just a theory, and it's not clear that we have benchmarks that
+//     prove it.
 ConstraintSolver.ConstraintsList = function (prev) {
   var self = this;
 
   if (prev) {
-    self.byName = prev.byName;
+    self.exact = prev.exact;
+    self.inexact = prev.inexact;
   } else {
-    self.byName = mori.hash_map();
+    self.exact = mori.hash_map();
+    self.inexact = mori.hash_map();
   }
 };
 
 ConstraintSolver.ConstraintsList.prototype.contains = function (c) {
   var self = this;
-  if (! mori.has_key(self.byName, c.name))
-    return false;
-
-  var bn = mori.get(self.byName, c.name);
-  var constraints = mori.get(bn, c.type === "exactly" ? "exact" : "inexact");
-  return mori.has_key(constraints, c.version);
+  var map = c.type === 'exactly' ? self.exact : self.inexact;
+  return !!mori.get_in(map, [c.name, c]);
 };
 
 // returns a new version containing passed constraint
@@ -42,61 +43,42 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
   }
 
   var newList = new ConstraintSolver.ConstraintsList(self);
-
-  // create a record or update the lookup table
-  if (! mori.has_key(self.byName, c.name)) {
-    var exactMap = mori.hash_map();
-    var inexactMap = mori.hash_map();
-
-    if (c.type === "exactly") {
-      exactMap = mori.assoc(exactMap, c.version, c);
-    } else {
-      inexactMap = mori.assoc(inexactMap, c.version, c);
-    }
-
-    var bn = mori.hash_map("exact", exactMap, "inexact", inexactMap);
-    newList.byName = mori.assoc(newList.byName, c.name, bn);
-  } else {
-    var exactStr = c.type === "exactly" ? "exact" : "inexact";
-
-    var bn = mori.get(newList.byName, c.name);
-    var constraints = mori.get(bn, exactStr);
-    constraints = mori.assoc(constraints, c.version, c);
-    bn = mori.assoc(bn, exactStr, constraints);
-    newList.byName = mori.assoc(newList.byName, c.name, bn);
-  }
-
+  var mapField = c.type === 'exactly' ? 'exact' : 'inexact';
+  // Get the current constraints on this package of the exactness, or an empty
+  // set.
+  var currentConstraints = mori.get(newList[mapField], c.name, mori.set());
+  // Add this one.
+  newList[mapField] = mori.assoc(newList[mapField],
+                                 c.name,
+                                 mori.conj(currentConstraints, c));
   return newList;
 };
 
 ConstraintSolver.ConstraintsList.prototype.forPackage = function (name, iter) {
   var self = this;
-  var forPackage = mori.get(self.byName, name);
-  var exact = mori.get(forPackage, "exact");
-  var inexact = mori.get(forPackage, "inexact");
+  var exact = mori.get(self.exact, name);
+  var inexact = mori.get(self.inexact, name);
 
   var breaked = false;
-  var niter = function (pair) {
-    if (iter(mori.last(pair)) === BREAK) {
+  var niter = function (constraint) {
+    if (iter(constraint) === BREAK) {
       breaked = true;
       return true;
     }
   };
 
-  mori.some(niter, exact);
+  exact && mori.some(niter, exact);
   if (breaked)
     return;
-  mori.some(niter, inexact);
+  inexact && mori.some(niter, inexact);
 };
 
 // doesn't break on the false return value
 ConstraintSolver.ConstraintsList.prototype.each = function (iter) {
   var self = this;
-  mori.each(self.byName, function (nameAndColl) {
-    mori.each(mori.last(nameAndColl), function (exactInexactColl) {
-      mori.each(mori.last(exactInexactColl), function (c) {
-        iter(mori.last(c));
-      });
+  _.each([self.exact, self.inexact], function (map) {
+    mori.each(map, function (nameAndConstraints) {
+      mori.each(mori.last(nameAndConstraints), iter);
     });
   });
 };
@@ -118,9 +100,8 @@ ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
   return satisfied;
 };
 
-ConstraintSolver.ConstraintsList.prototype.toString = function (simple) {
+ConstraintSolver.ConstraintsList.prototype.toString = function () {
   var self = this;
-  var str = "";
 
   var strs = [];
 
@@ -130,12 +111,5 @@ ConstraintSolver.ConstraintsList.prototype.toString = function (simple) {
 
   strs.sort();
 
-  _.each(strs, function (c) {
-    if (str !== "") {
-      str += simple ? " " : ", ";
-    }
-    str += c;
-  });
-
-  return simple ? str : "<constraints list: " + str + ">";
+  return "<constraints list: " + strs.join(", ") + ">";
 };
