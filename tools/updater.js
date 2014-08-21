@@ -34,7 +34,7 @@ exports.tryToDownloadUpdate = function (options) {
 
 var checkForUpdate = function (showBanner) {
   var messages = buildmessage.capture(function () {
-    catalog.official.refresh();
+    catalog.official.refresh({silent: true});
 
     if (!release.current.isProperRelease())
       return;
