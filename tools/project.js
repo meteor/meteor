@@ -210,7 +210,7 @@ _.extend(Project.prototype, {
       } catch (err) {
         process.stdout.write(
           "Could not resolve the specified constraints for this project:\n"
-           + err +"\n");
+           + (err.constraintSolverError ? err : err.stack) + "\n");
         process.exit(1);
       }
 
@@ -259,6 +259,7 @@ _.extend(Project.prototype, {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));
     });
+
 
     // Now we have to go through the programs directory, go through each of the
     // programs, get their dependencies and use them. (We could have memorized

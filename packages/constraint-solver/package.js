@@ -13,7 +13,7 @@ Package.on_use(function (api) {
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random'], 'server');
   api.add_files(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
-                 'dependencies-list.js', 'priority-queue.js'], ['server']);
+                 'resolver-state.js', 'priority-queue.js'], ['server']);
 });
 
 Package.on_test(function (api) {

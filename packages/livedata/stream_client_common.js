@@ -98,6 +98,8 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
   _initCommon: function (options) {
     var self = this;
+    options = options || {};
+
     //// Constants
 
     // how long to wait until we declare the connection attempt
