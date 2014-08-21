@@ -231,14 +231,10 @@ _.extend(OfficialCatalog.prototype, {
 
   // Return information about a particular release version, or null if such
   // release version does not exist.
-  //
-  // XXX: notInitialized : don't require initialization. This is not the right thing
-  // to do long term, but it is the easiest way to deal with versionFrom without
-  // serious refactoring.
-  getReleaseVersion: function (track, version, notInitialized) {
+  getReleaseVersion: function (track, version) {
     var self = this;
     buildmessage.assertInCapture();
-    if (!notInitialized) self._requireInitialized();
+    self._requireInitialized();
     return self._recordOrRefresh(function () {
       return _.findWhere(self.releaseVersions,
                          { track: track,  version: version });

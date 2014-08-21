@@ -691,6 +691,7 @@ _.extend(PackageSource.prototype, {
       if (!e.versionParserError)
         throw e;
       buildmessage.error(e.message);
+      // recover by ignoring
     }
 
     if (self.version === null && options.requireVersion) {
@@ -873,14 +874,29 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
-          _.each(names, function (name) {
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < names.length; ++i) {
+            var name = names[i];
+            // XXX would rather use parseConstraint but that requires uniload,
+            //     so this ends up recursive
+            var split = utils.splitConstraint(name);
+            try {
+              utils.validatePackageName(split.package);
+            } catch (e) {
+              if (!e.versionParserError)
+                throw e;
+              buildmessage.error(e.message, {useMyCaller: true});
+              // recover by ignoring
+              continue;
+            }
+
             forAllMatchingWheres(where, function (w) {
-              uses[w].push(_.extend(utils.splitConstraint(name), {
+              uses[w].push(_.extend(split, {
                 unordered: options.unordered || false,
                 weak: options.weak || false
               }));
             });
-          });
+          }
         },
 
         // Called when this package wants packages using it to also use
@@ -890,13 +906,28 @@ _.extend(PackageSource.prototype, {
           names = toArray(names);
           where = toWhereArray(where);
 
-          _.each(names, function (name) {
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < names.length; ++i) {
+            var name = names[i];
+            // XXX would rather use parseConstraint but that requires uniload,
+            //     so this ends up recursive
+            var split = utils.splitConstraint(name);
+            try {
+              utils.validatePackageName(split.package);
+            } catch (e) {
+              if (!e.versionParserError)
+                throw e;
+              buildmessage.error(e.message, {useMyCaller: true});
+              // recover by ignoring
+              continue;
+            }
+
             forAllMatchingWheres(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
-              implies[w].push(utils.splitConstraint(name));
+              implies[w].push(split);
             });
-          });
+          }
         },
 
         // Top-level call to add a source file to a package. It will
@@ -933,15 +964,13 @@ _.extend(PackageSource.prototype, {
           }
 
           var relInf = release.split('@');
-          // XXX: Error handling
-          if (relInf.length !== 2)
-            throw new Error("Incorrect release spec");
-          // XXX: We pass in true to override the fact that we know that teh
-          // catalog may not be initialized, but we are pretty sure that the
-          // releases are there anyway. This is not the right way to do this
-          // long term.
+          if (relInf.length !== 2) {
+            buildmessage.error("Release names in versionsFrom may not contain '@'.",
+                               { useMyCaller: true });
+            return;
+          }
           releaseRecord = catalog.official.getReleaseVersion(
-            relInf[0], relInf[1], true);
+            relInf[0], relInf[1]);
           if (!releaseRecord) {
             buildmessage.error("Unknown release "+ release);
            }

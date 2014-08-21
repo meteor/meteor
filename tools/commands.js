@@ -1001,6 +1001,12 @@ main.registerCommand({
           var packageDir = path.resolve(p);
           catalog.complete.addLocalPackage(packageDir);
 
+          if (buildmessage.jobHasMessages()) {
+            // If we already had a problem, don't get another problem when we
+            // run the hack below.
+            return 'ignored';
+          }
+
           // XXX: Hack.
           var PackageSource = require('./package-source.js');
           var packageSource = new PackageSource(catalog.complete);
