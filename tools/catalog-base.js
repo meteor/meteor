@@ -128,13 +128,17 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
 
   // Returns general (non-version-specific) information about a
   // package, or null if there is no such package.
-  getPackage: function (name) {
+  getPackage: function (name, options) {
     var self = this;
     buildmessage.assertInCapture();
     self._requireInitialized();
-    return self._recordOrRefresh(function () {
+    options = options || {};
+
+    var get = function () {
       return _.findWhere(self.packages, { name: name });
-    });
+    };
+
+    return options.noRefresh ? get() : self._recordOrRefresh(get);
   },
 
   // Given a package, returns an array of the versions available for

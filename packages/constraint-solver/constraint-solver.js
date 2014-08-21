@@ -65,10 +65,15 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   // actually have different archs used.
   var allArchs = ["os", "web.browser", "web.cordova"];
 
-  // XXX is sortedness actually relevant? is there a minor optimization here
-  //     where we can only talk to self.catalog once?
+  if (!self.catalog.getPackage(packageName, { noRefresh: true })) {
+    _.each(allArchs, function (arch) {
+      var unitName = packageName + "#" + arch;
+      self.resolver.noUnitVersionsExist(unitName);
+    });
+  }
+
+  // XXX is sortedness actually relevant?
   var sortedVersions = self.catalog.getSortedVersions(packageName);
-  // XXX throw error if the package doesn't exist?
   _.each(sortedVersions, function (version) {
     var versionDef = self.catalog.getVersion(packageName, version);
 
@@ -254,24 +259,34 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
       dc.dependencies, dc.constraints, resolverOptions);
   }
 
-  var resultChoices = {};
-  _.each(res, function (uv) {
+  return resolverResultToPackageMap(res);
+};
+
+var removeUnibuild = function (unitName) {
+  return unitName.split('#')[0];
+};
+
+var resolverResultToPackageMap = function (choices) {
+  var packageMap = {};
+  mori.each(choices, function (nameAndUv) {
+    var name = mori.first(nameAndUv);
+    var uv = mori.last(nameAndUv);
     // Since we don't yet define the interface for a an app to depend only on
     // certain unibuilds of the packages (like only web unibuilds) and we know
     // that each unibuild weakly depends on other sibling unibuilds of the same
     // version, we can safely output the whole package for each unibuild in the
     // result.
-    resultChoices[uv.name.split('#')[0]] = uv.version;
+    packageMap[removeUnibuild(name)] = uv.version;
   });
-
-  return resultChoices;
+  return packageMap;
 };
+
 
 // This method, along with the stopAfterFirstPropagation, are designed for
 // tests; they allow us to test Resolver._propagateExactTransDeps but with an
 // interface that's a little more like PackagesResolver.resolver.
-ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
-  function (dependencies, constraints) {
+ConstraintSolver.PackagesResolver.prototype.propagateExactDeps = function (
+    dependencies, constraints) {
   var self = this;
 
   check(dependencies, [String]);
@@ -290,13 +305,7 @@ ConstraintSolver.PackagesResolver.prototype.propagateExactDeps =
   // proper error translation.
   var res = self.resolver.resolve(dc.dependencies, dc.constraints,
                                   { stopAfterFirstPropagation: true });
-
-  var resultChoices = {};
-  _.each(res, function (uv) {
-    resultChoices[uv.name.split('#')[0]] = uv.version;
-  });
-
-  return resultChoices;
+  return resolverResultToPackageMap(res);
 };
 
 // takes dependencies and constraints and rewrites the names from "foo" to
@@ -363,10 +372,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
   if (options._testing) {
     resolverOptions.costFunction = function (state) {
-      var choices = state.choices;
-      return _.reduce(choices, function (sum, uv) {
-        return semverToNum(uv.version) + sum;
-      }, 0);
+      return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+        return semverToNum(mori.last(nameAndUv).version);
+      }, state.choices));
     };
   } else {
     // Poorman's enum
@@ -402,7 +410,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           minimalConstraint[c.name] = c.version;
       });
 
-      _.each(choices, function (uv) {
+      mori.each(choices, function (nameAndUv) {
+        var uv = mori.last(nameAndUv);
         if (_.has(prevSolMapping, uv.name)) {
           // The package was present in the previous solution
           var prev = prevSolMapping[uv.name];
