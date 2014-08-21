@@ -119,12 +119,12 @@ ConstraintSolver.Resolver.prototype.getEarliestCompatibleVersion = function (
 // estimated cost of the best path from state to a final state
 // - combineCostFunction: function (cost, cost) - given two costs (obtained by
 // evaluating states with costFunction and estimateCostFunction)
-ConstraintSolver.Resolver.prototype.resolve =
-  function (dependencies, constraints, options) {
+ConstraintSolver.Resolver.prototype.resolve = function (
+    dependencies, constraints, options) {
   var self = this;
 
   constraints = constraints || [];
-  var choices = [];
+  var choices = mori.hash_map();  // uv.name -> uv
   options = _.extend({
     costFunction: function (state) { return 0; },
     estimateCostFunction: function (state) {
@@ -145,18 +145,21 @@ ConstraintSolver.Resolver.prototype.resolve =
   dependencies = ConstraintSolver.DependenciesList.fromArray(dependencies);
   constraints = ConstraintSolver.ConstraintsList.fromArray(constraints);
 
-  // create a fake unit version to represnt the app or the build target
-  var appUV = new ConstraintSolver.UnitVersion("###TARGET###", "1.0.0", "0.0.0");
+  // create a fake unit version to represent the app or the build target
+  var fakeUnitName = "###TARGET###";
+  var appUV = new ConstraintSolver.UnitVersion(fakeUnitName, "1.0.0", "0.0.0");
   appUV.dependencies = dependencies;
   appUV.constraints = constraints;
 
   // state is an object:
   // - dependencies: DependenciesList
   // - constraints: ConstraintsList
-  // - choices: array of UnitVersion
+  // - choices: mori.has_map of unitName to UnitVersion
   // - constraintAncestor: mapping Constraint -> mori.list(unitName)
-  var startState = self._propagateExactTransDeps(appUV, dependencies, constraints, choices, constraintAncestor);
-  startState.choices = _.filter(startState.choices, function (uv) { return uv.name !== "###TARGET###"; });
+  var startState = self._propagateExactTransDeps(
+    appUV, dependencies, constraints, choices, constraintAncestor);
+  // The fake unit version is not a real choice --- remove it!
+  startState.choices = mori.dissoc(startState.choices, fakeUnitName);
 
   if (options.stopAfterFirstPropagation)
     return startState.choices;
@@ -210,7 +213,7 @@ ConstraintSolver.Resolver.prototype.resolve =
           combineCostFunction(costFunction(state),
                               estimateCostFunction(state));
 
-        pq.push(state, [tentativeCost, -state.choices.length]);
+        pq.push(state, [tentativeCost, -mori.count(state.choices)]);
       });
     }
   }
@@ -231,7 +234,7 @@ ConstraintSolver.Resolver.prototype.resolve =
 // state is an object:
 // - dependencies: DependenciesList - remaining dependencies
 // - constraints: ConstraintsList - constraints to satisfy
-// - choices: array of UnitVersion - current fixed set of choices
+// - choices: mori.hash_map unitName _> UnitVersion - current set of choices
 // - constraintAncestor: Constraint (string representation) ->
 //   mori.list(Dependency name). Used for error reporting to indicate which
 //   direct dependencies have caused a failure. For every constraint, this is
@@ -317,10 +320,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
   var firstError = null;
 
   var neighbors = _.chain(candidateVersions).map(function (uv) {
-    var nChoices = _.clone(choices);
-    nChoices.push(uv);
-
-    return self._propagateExactTransDeps(uv, dependencies, constraints, nChoices, constraintAncestor);
+    return self._propagateExactTransDeps(
+      uv, dependencies, constraints, choices, constraintAncestor);
   }).filter(function (state) {
     var vcfc =
       violatedConstraintsForSomeChoice(state.choices, state.constraints, self);
@@ -354,8 +355,8 @@ ConstraintSolver.Resolver.prototype._stateNeighbors =
 // Assumes that the unit versions graph without passed unit version is already
 // propagated (i.e. doesn't try to propagate anything not related to the passed
 // unit version).
-ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
-  function (uv, dependencies, constraints, choices, constraintAncestor) {
+ConstraintSolver.Resolver.prototype._propagateExactTransDeps = function (
+    uv, dependencies, constraints, choices, constraintAncestor) {
   var self = this;
 
   // XXX representing a queue as an array with push/shift operations is not
@@ -364,12 +365,18 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
   // Boolean map to avoid adding the same stuff to queue over and over again.
   // Keeps the time complexity the same but can save some memory.
   var hasBeenEnqueued = {};
-  // For keeping track of new choices in this iteration
-  var oldChoice = {};
-  _.each(choices, function (uv) { oldChoice[uv.name] = uv; });
+  // // For keeping track of new choices in this iteration
+  // var oldChoice = {};
+  // _.each(choices, function (uv) { oldChoice[uv.name] = uv; });
 
   // Keeps track of the exact constraint that led to a choice
   var exactConstrForChoice = {};
+
+  // 'dependencies' tracks units that we still need to choose a version for,
+  // so there is no need to keep anything that we've already chosen.
+  mori.each(choices, function (nameAndUv) {
+    dependencies = dependencies.remove(mori.first(nameAndUv));
+  });
 
   queue.push(uv);
   hasBeenEnqueued[uv.name] = true;
@@ -382,24 +389,20 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
     queue.shift();
 
     // Choose uv itself.
-    choices = _.clone(choices);
-    if (!_.contains(choices, uv)) {
-      choices.push(uv);
-    }
+    choices = mori.assoc(choices, uv.name, uv);
+
+    // It's not longer a dependency we need to satisfy.
+    dependencies = dependencies.remove(uv.name);
 
     // Add the constraints from uv to the list of constraints we are tracking.
     constraints = constraints.union(uv.constraints);
 
-    // Add the dependencies from uv to the list of remaining dependencies.
+    // Add any dependencies from uv that haven't already been chosen to the list
+    // of remaining dependencies.
     uv.dependencies.each(function (dep) {
-      dependencies = dependencies.push(dep);
-    });
-
-    // 'dependencies' tracks units that we still need to choose a version for,
-    // so there is no need to keep anything that we've already chosen.
-    // XXX use a better data structure for 'choices' that makes this easier
-    _.each(choices, function (uv) {
-      dependencies = dependencies.remove(uv.name);
+      if (!mori.has_key(choices, dep)) {
+        dependencies = dependencies.push(dep);
+      }
     });
 
     // Which nodes to process now? You'd think it would be
@@ -488,9 +491,10 @@ ConstraintSolver.Resolver.prototype._propagateExactTransDeps =
 
 var violatedConstraintsForSomeChoice = function (choices, constraints, resolver) {
   var ret = null;
-  _.each(choices, function (choice) {
+  mori.each(choices, function (nameAndUv) {
     if (ret)
       return;
+    var choice = mori.last(nameAndUv);
 
     var violatedConstraints = constraints.violatedConstraints(choice, resolver);
     if (! _.isEmpty(violatedConstraints))
