@@ -6,8 +6,7 @@ var semver = Npm.require('semver');
 // A persistent data-structure that keeps references to Constraint objects
 // arranged by the "name" field of Constraint, exact field and version.
 //
-// Internal structure has the "length" field for the number of elements stored
-// and the "byName" map that has the following structure:
+// Internal structure has the "byName" map that has the following structure:
 // byName:
 //   - nameOfPackage:
 //     - exact:
@@ -19,10 +18,8 @@ ConstraintSolver.ConstraintsList = function (prev) {
 
   if (prev) {
     self.byName = prev.byName;
-    self.length = prev.length;
   } else {
     self.byName = mori.hash_map();
-    self.length = 0;
   }
 };
 
@@ -68,8 +65,6 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
     bn = mori.assoc(bn, exactStr, constraints);
     newList.byName = mori.assoc(newList.byName, c.name, bn);
   }
-
-  newList.length++;
 
   return newList;
 };
