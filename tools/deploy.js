@@ -397,7 +397,7 @@ var bundleAndDeploy = function (options) {
 
     if (options.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages();
+        stats.recordPackages("sdk.deploy", site);
       });
       if (statsMessages.hasMessages()) {
         process.stdout.write("Error recording package list:\n" +

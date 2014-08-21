@@ -203,7 +203,7 @@ exports.deploy = function (options) {
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages();
+        stats.recordPackages("sdk.deploy", options.app);
       });
       if (statsMessages.hasMessages()) {
         process.stdout.write("Error recording package list:\n" +

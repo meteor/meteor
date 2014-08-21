@@ -16,7 +16,8 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
 
-var checkMeta = function (appPackages, sessionId, useFakeRelease) {
+var checkMeta = function (appPackages, useFakeRelease,
+                          sessionId, previousSessionId) {
   if (! clientAddress) {
     clientAddress = getClientAddress();
   }
@@ -30,8 +31,9 @@ var checkMeta = function (appPackages, sessionId, useFakeRelease) {
     clientAddress: clientAddress
   };
 
-  if (sessionId) {
-    expectedUserAgentInfo.sessionId = sessionId;
+  expectedUserAgentInfo.sessionId = sessionId;
+  if (previousSessionId !== undefined) {
+    expectedUserAgentInfo.previousSessionId = previousSessionId;
   }
 
   if (useFakeRelease) {
@@ -136,18 +138,29 @@ selftest.define("report-stats", ["slow", "net"], function () {
       selftest.expectEqual(appPackages.userId, null);
       selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
                            _.sortBy(packageList(sandboxProject), "name"));
-      checkMeta(appPackages, sessionId, useFakeRelease);
+      // read our new session id; we should have one at this point
+      sessionId = auth.getSessionId(config.getAccountsDomain(),
+                                    JSON.parse(s.readSessionFile()));
+      if (! sessionId) {
+        selftest.fail("No session id after recording package stats");
+      }
+      checkMeta(appPackages, useFakeRelease,
+                sessionId, null /* previous session id */);
 
       // now bundle again while logged in. verify that the stats server
       // recorded that with the right userId and meta information
       testUtils.login(s, "test", "testtest");
-      sessionId = auth.getSessionId(config.getAccountsDomain(),
-                                    JSON.parse(s.readSessionFile()));
+      // Our session id should not have changed
+      selftest.expectEqual(
+        auth.getSessionId(config.getAccountsDomain(),
+                          JSON.parse(s.readSessionFile())),
+        sessionId
+      );
 
       runWithFreshIdentifier(s, sandboxProject);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
-      checkMeta(appPackages, sessionId, useFakeRelease);
+      checkMeta(appPackages, useFakeRelease, sessionId);
 
       // Log out, and then test that our session id still gets recorded.
       testUtils.logout(s);
@@ -156,7 +169,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       run.match("BLAH");
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.userId, null);
-      checkMeta(appPackages, sessionId, useFakeRelease);
+      checkMeta(appPackages, useFakeRelease, sessionId);
       run.stop();
 
       testUtils.login(s, "test", "testtest");
