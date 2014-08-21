@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.0.4-cordova1'
+  version: '1.0.4'
 });
 
 Cordova.depends({

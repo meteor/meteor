@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.0.0-cordova1'
+  version: '1.0.0'
 });
 
 Package.on_use(function(api) {
