@@ -516,11 +516,12 @@ _.extend(CompleteCatalog.prototype, {
       });
     }
 
+<<<<<<< HEAD
     var patience = new utils.Patience({
       messageAfterMs: 1000,
       message: "Figuring out the best package versions to use. This may take a moment."
     });
-
+=======
     // XXX:hack Before we run the constraint solver, let's do an 80% check for
     // invalid packages. Specifically, if I am using a local package that
     // depends on 'hogwash', I should be told that hogwash doesn't exist
