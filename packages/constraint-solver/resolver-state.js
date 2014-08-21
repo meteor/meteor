@@ -5,7 +5,7 @@ ResolverState = function (resolver) {
   // unitName -> UnitVersion
   self.choices = mori.hash_map();
   // Units we need, but haven't chosen yet.
-  // unitName -> set(UnitVersions)
+  // unitName -> sorted vector of (UnitVersions)
   self._dependencies = mori.hash_map();
   // Constraints that apply.
   self.constraints = new ConstraintSolver.ConstraintsList;
@@ -32,9 +32,10 @@ _.extend(ResolverState.prototype, {
 
     var alternatives = mori.get(self._dependencies, constraint.name);
     if (alternatives) {
-      var newAlternatives = mori.set(mori.filter(function (unitVersion) {
+      // Note: filter preserves order, which is important.
+      var newAlternatives = filter(alternatives, function (unitVersion) {
         return constraint.isSatisfied(unitVersion, self._resolver);
-      }, alternatives));
+      });
       if (mori.is_empty(newAlternatives)) {
         // XXX we should mention other constraints that are active
         self.error = "conflict: " + constraint.toString() +
@@ -64,13 +65,12 @@ _.extend(ResolverState.prototype, {
       return self;
     }
 
-    var alternatives = mori.set();
-    _.each(self._resolver.unitsVersions[unitName], function (uv) {
-      if (self.constraints.isSatisfied(uv, self._resolver)) {
-        // XXX hang on to list of violated constraints and use it in error
-        // message
-        alternatives = mori.conj(alternatives, uv);
-      }
+    // Note: relying on sortedness of unitsVersions so that alternatives is
+    // sorted too (the estimation function uses this).
+    var alternatives = filter(self._resolver.unitsVersions[unitName], function (uv) {
+      return self.constraints.isSatisfied(uv, self._resolver);
+      // XXX hang on to list of violated constraints and use it in error
+      // message
     });
 
     if (mori.is_empty(alternatives)) {
@@ -139,3 +139,11 @@ _.extend(ResolverState.prototype, {
     return clone;
   }
 });
+
+// Helper for filtering a vector in mori. mori.filter returns a lazy sequence,
+// which is cool, but we actually do want to coerce to a vector since we (eg the
+// estimation function) runs mori.last on it a bunch and we'd like to only
+// do the O(n) work once.
+var filter = function (v, pred) {
+  return mori.into(mori.vector(), mori.filter(pred, v));
+};

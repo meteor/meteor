@@ -65,7 +65,8 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   // actually have different archs used.
   var allArchs = ["os", "web.browser", "web.cordova"];
 
-  // XXX is sortedness actually relevant?
+  // We rely on sortedness in the constraint solver, since one of the cost
+  // functions wants to be able to quickly find the earliest or latest version.
   var sortedVersions = self.catalog.getSortedVersions(packageName);
   _.each(sortedVersions, function (version) {
     var versionDef = self.catalog.getVersion(packageName, version);
@@ -410,7 +411,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            semverToNum(self.resolver._latestVersion[uv.name]) -
+            semverToNum(_.last(self.resolver.unitsVersions[uv.name]).version) -
             semverToNum(uv.version);
 
           if (isRootDep[uv.name]) {
@@ -453,25 +454,20 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           if (prevVersionMatches)
             return;
 
-          var uv =
-            constraints.earliestMatchingVersionFor(dep, self.resolver);
+          // Get earliest matching version.
+          var earliestMatching = mori.first(alternatives);
 
-          // Cannot find anything compatible
-          if (! uv) {
+          var isCompatible =
+                prev.earliestCompatibleVersion === earliestMatching.earliestCompatibleVersion;
+          if (! isCompatible) {
             cost[VMAJOR]++;
             return;
           }
 
           var versionsDistance =
-            semverToNum(uv.version) -
+            semverToNum(earliestMatching.version) -
             semverToNum(prev.version);
-
-          var isCompatible =
-                prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
-            semver.gte(prev.version, uv.earliestCompatibleVersion) ||
-            semver.gte(uv.version, prev.earliestCompatibleVersion);
-
-          if (! isCompatible || versionsDistance < 0) {
+          if (versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
           }
@@ -479,16 +475,10 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           cost[MAJOR] += versionsDistance;
         } else {
           var versions = self.resolver.unitsVersions[dep];
-          var latestMatching =
-            constraints.latestMatchingVersionFor(dep, self.resolver);
-
-          if (! latestMatching) {
-            cost[MEDIUM] = Infinity;
-            return;
-          }
+          var latestMatching = mori.last(alternatives);
 
           var latestDistance =
-            semverToNum(self.resolver._latestVersion[dep]) -
+            semverToNum(_.last(self.resolver.unitsVersions[dep]).version) -
             semverToNum(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;

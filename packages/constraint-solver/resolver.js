@@ -21,13 +21,10 @@ ConstraintSolver.Resolver = function (options) {
 
   self._nudge = options.nudge;
 
-  // Maps unit name string to an array of version definitions
+  // Maps unit name string to a sorted array of version definitions
   self.unitsVersions = {};
   // Maps name@version string to a unit version
   self._unitsVersionsMap = {};
-
-  // Maps unit name string to the greatest version string we have
-  self._latestVersion = {};
 
   // Refs to all constraints. Mapping String -> instance
   self._constraints = {};
@@ -48,18 +45,22 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
 
   check(unitVersion, ConstraintSolver.UnitVersion);
 
+  if (_.has(self._unitsVersionsMap, unitVersion.toString())) {
+    throw Error("duplicate uv " + unitVersion.toString() + "?");
+  }
+
   if (! _.has(self.unitsVersions, unitVersion.name)) {
     self.unitsVersions[unitVersion.name] = [];
-    self._latestVersion[unitVersion.name] = unitVersion.version;
+  } else {
+    var latest = _.last(self.unitsVersions[unitVersion.name]).version;
+    if (!semver.lt(latest, unitVersion.version)) {
+      throw Error("adding uv out of order: " + latest + " vs "
+                  + unitVersion.version);
+    }
   }
 
-  if (! _.has(self._unitsVersionsMap, unitVersion.toString())) {
-    self.unitsVersions[unitVersion.name].push(unitVersion);
-    self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
-  }
-
-  if (semver.lt(self._latestVersion[unitVersion.name], unitVersion.version))
-    self._latestVersion[unitVersion.name] = unitVersion.version;
+  self.unitsVersions[unitVersion.name].push(unitVersion);
+  self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
 };
 
 

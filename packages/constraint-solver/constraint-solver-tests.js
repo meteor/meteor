@@ -505,8 +505,9 @@ function getCatalogStub (gems) {
         .filter(function (v) {
           return semver.valid(v);
         })
-        .value()
-        .sort(semver.compare);
+        .sort(semver.compare)
+        .uniq(true)
+        .value();
     },
     getVersion: function (name, version) {
       var gem = _.find(gems, function (pv) {
