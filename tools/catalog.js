@@ -523,54 +523,10 @@ _.extend(CompleteCatalog.prototype, {
       });
     }
 
-<<<<<<< HEAD
     var patience = new utils.Patience({
       messageAfterMs: 1000,
       message: "Figuring out the best package versions to use. This may take a moment."
     });
-=======
-    // XXX:hack Before we run the constraint solver, let's do an 80% check for
-    // invalid packages. Specifically, if I am using a local package that
-    // depends on 'hogwash', I should be told that hogwash doesn't exist
-    // (because constraint solver errors are not there yet, and, also, because
-    // realistically, it is a rather common error, especially when starting
-    // migration. This won't cover weirdly invalid packages on the server, for
-    // example, but it is going to give us 80% for 2% effort, so it is worth it.
-    var depsToCheck = {};
-    // Make a hash map of packages that we are going to have.
-    _.each(deps, function (d) {
-      depsToCheck[d] = false;
-    });
-
-    // Checks the package & its dependencies (if it is local) for existing.
-    // This function is recursive, but it only checks each package once; it marks
-    // that the check is done before recursing and it will stop upon hitting a
-    // nonexistent package dependency.
-    var isValidDep = function (pack) {
-      if (depsToCheck[pack]) return;
-      // Do we even know about this package -- does it exist?
-      if (!self.getPackage(pack)) {
-        throw new Error (
-          "Trying to depend on a nonexistent package : " + pack + "\n");
-      }
-      depsToCheck[pack] = true;
-      // If it does, is it local?
-      if (self.isLocalPackage(pack)) {
-        var vr = self.getLatestVersion(pack);
-        var dirDeps = _.keys(vr.dependencies);
-        _.each(vr.dependencies, function (dep, name) {
-          if (_.where(dep.references, {weak: true}).length !==
-              dep.references.length)
-            isValidDep(name);
-        });
-      }
-    };
-
-    _.each(depsToCheck, function(checked, pack) {
-      if (checked) return;
-      isValidDep(pack);
-    });
-
     try {
       // Then, call the constraint solver, to get the valid transitive subset of
       // those versions to record for our solution. (We don't just return the
