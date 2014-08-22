@@ -3,7 +3,6 @@ var readline = require('readline');
 var _ = require('underscore');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
-var main = require('./main.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
@@ -198,6 +197,9 @@ exports.validatePackageNameOrExit = function (packageName, options) {
     if (!e.versionParserError)
       throw e;
     process.stderr.write("Error: " + e.message + "\n");
+    // lazy-load main: old bundler tests fail if you add a circular require to
+    // this file
+    var main = require('./main.js');
     throw new main.ExitWithCode(1);
   }
 };
