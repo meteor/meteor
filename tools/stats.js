@@ -146,13 +146,19 @@ var logErrorIfInCheckout = function (err) {
 // server) to fetch one package stats entry for a given application.
 var getPackagesForAppIdInTest = function (currentProject) {
   var conn = connectToPackagesStatsServer();
+  var result;
   try {
-    return conn.call(
+    result = conn.call(
       "getPackagesForAppId",
       currentProject.getAppIdentifier());
+    if (result) {
+      result.details.packages = _.sortBy(result.details.packages, "name");
+    }
   } finally {
     conn.close();
   }
+
+  return result;
 };
 
 var connectToPackagesStatsServer = function () {
