@@ -28,7 +28,7 @@ OAuth1Binding.prototype.prepareRequestToken = function(callbackUrl) {
   var response = self._call('POST', self._urls.requestToken, headers);
   var tokens = querystring.parse(response.content);
 
-  if (!tokens.oauth_callback_confirmed)
+  if (! tokens.oauth_callback_confirmed)
     throw _.extend(new Error("oauth_callback_confirmed false when requesting oauth1 token"),
                              {response: response});
 
@@ -76,7 +76,7 @@ OAuth1Binding.prototype.call = function(method, url, params, callback) {
     oauth_token: self.accessToken
   });
 
-  if(!params) {
+  if(! params) {
     params = {};
   }
 
@@ -162,7 +162,7 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
         Authorization: authString
       }
     }, callback && function (error, response) {
-      if (!error) {
+      if (! error) {
         response.nonce = headers.oauth_nonce;
       }
       callback(error, response);

@@ -4,7 +4,7 @@ var url = Npm.require("url");
 OAuth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
-  if (!config) {
+  if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
 
@@ -50,7 +50,7 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     // Get the user's request token so we can verify it and clear it
     var requestTokenInfo = OAuth._retrieveRequestToken(query.state);
 
-    if (!requestTokenInfo) {
+    if (! requestTokenInfo) {
       throw new Error("Unable to retrieve request token");
     }
 
