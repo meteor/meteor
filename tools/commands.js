@@ -264,8 +264,16 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
-    if (fs.existsSync(packageName)) {
-      process.stderr.write(packageName + ": Already exists\n");
+    utils.validatePackageNameOrExit(
+      packageName, {detailedColonExplanation: true});
+
+    var packageDir = options.appDir
+          ? path.resolve(options.appDir, 'packages', packageName)
+          : path.resolve(packageName);
+    var inYourApp = options.appDir ? " in your app" : "";
+
+    if (fs.existsSync(packageDir)) {
+      process.stderr.write(packageName + ": Already exists" + inYourApp + "\n");
       return 1;
     }
 
@@ -292,7 +300,7 @@ main.registerCommand({
       return xn.replace(/~release~/g, relString);
     };
     try {
-      files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+      files.cp_r(path.join(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
       },
@@ -309,7 +317,7 @@ main.registerCommand({
      return 1;
    }
 
-    process.stdout.write(packageName + ": created\n");
+    process.stdout.write(packageName + ": created" + inYourApp + "\n");
     return 0;
   }
 
@@ -935,7 +943,6 @@ main.registerCommand({
   }
 }, function (options) {
   var testPackages;
-  var localPackageNames = [];
   if (options.args.length === 0) {
     // Only test local packages if no package is specified.
     // XXX should this use the new getLocalPackageNames?
@@ -994,12 +1001,17 @@ main.registerCommand({
           var packageDir = path.resolve(p);
           catalog.complete.addLocalPackage(packageDir);
 
+          if (buildmessage.jobHasMessages()) {
+            // If we already had a problem, don't get another problem when we
+            // run the hack below.
+            return 'ignored';
+          }
+
           // XXX: Hack.
           var PackageSource = require('./package-source.js');
           var packageSource = new PackageSource(catalog.complete);
           packageSource.initFromPackageDir(packageDir);
 
-          localPackageNames.push(packageSource.name);
           return packageSource.name;
         });
 

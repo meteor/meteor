@@ -117,13 +117,14 @@ ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
   return satisfied;
 };
 
-ConstraintSolver.ConstraintsList.prototype.toString = function () {
+ConstraintSolver.ConstraintsList.prototype.toString = function (options) {
   var self = this;
+  options = options || {};
 
   var strs = [];
 
   self.each(function (c) {
-    strs.push(c.toString());
+    strs.push(c.toString({removeUnibuild: options.removeUnibuild}));
   });
 
   strs.sort();

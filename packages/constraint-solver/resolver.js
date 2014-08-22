@@ -344,14 +344,16 @@ ConstraintSolver.Constraint = function (name, versionString) {
   self.version = self.version.replace(/\+.*$/, '');
 };
 
-ConstraintSolver.Constraint.prototype.toString = function () {
+ConstraintSolver.Constraint.prototype.toString = function (options) {
   var self = this;
+  options = options || {};
   var operator = "";
   if (self.type === "exactly")
     operator = "=";
   if (self.type === "at-least")
     operator = ">=";
-  return self.name + "@" + operator + self.version;
+  var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
+  return name + "@" + operator + self.version;
 };
 
 
