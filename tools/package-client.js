@@ -427,16 +427,19 @@ exports.bundleBuild = bundleBuild;
 var createAndPublishBuiltPackage = function (conn, unipackage) {
   buildmessage.assertInJob();
 
+  // Note: we really want to do this before createPackageBuild, because the URL
+  // we get from createPackageBuild will expire!
+  process.stdout.write('Bundling build...\n');
+  var bundleResult = bundleBuild(unipackage);
+  if (buildmessage.jobHasMessages())
+    return;
+
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
     version: unipackage.version,
     buildArchitectures: unipackage.buildArchitectures()
   });
-
-  var bundleResult = bundleBuild(unipackage);
-  if (buildmessage.jobHasMessages())
-    return;
 
   process.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,
