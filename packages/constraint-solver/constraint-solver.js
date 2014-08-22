@@ -189,7 +189,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // have been undefineds?
   if (options.previousSolution) {
     options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
-      return _.map(self._unibuildsForPackage(packageName, true), function (unitName) {
+      return _.map(self._unibuildsForPackage(packageName), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
     })), _.identity);
@@ -310,19 +310,15 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
 };
 
 ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
-  function (packageName, unknownOk) {
+  function (packageName) {
   var self = this;
   var unibuildPrefix = packageName + "#";
   var unibuilds = [];
   // XXX hardcode all common architectures assuming that every package has the
   // same set of architectures.
   _.each(["os", "web.browser", "web.cordova"], function (arch) {
-    if (self.resolver.unitsVersions[unibuildPrefix + arch])
-      unibuilds.push(unibuildPrefix + arch);
+    unibuilds.push(unibuildPrefix + arch);
   });
-
-  if (_.isEmpty(unibuilds) && !unknownOk)
-    throw new Error("Cannot find anything about package -- " + packageName);
 
   return unibuilds;
 };
