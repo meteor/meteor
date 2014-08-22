@@ -25,8 +25,8 @@ _.extend(ResolverState.prototype, {
     var chosen = mori.get(self.choices, constraint.name);
     if (chosen && !constraint.isSatisfied(chosen, self._resolver)) {
       // This constraint conflicts with a choice we've already made!
-      self.error = "conflict: " + constraint.toString() + " vs " +
-        chosen.version;
+      self.error = "conflict: " + constraint.toString({removeUnibuild: true}) +
+        " vs " + chosen.version;
       return self;
     }
 
@@ -38,8 +38,8 @@ _.extend(ResolverState.prototype, {
       });
       if (mori.is_empty(newAlternatives)) {
         // XXX we should mention other constraints that are active
-        self.error = "conflict: " + constraint.toString() +
-          " cannot be satisfied";
+        self.error = "conflict: " +
+          constraint.toString({removeUnibuild: true}) + " cannot be satisfied";
       } else if (mori.count(newAlternatives) === 1) {
         // There's only one choice, so we can immediately choose it.
         self = self.addChoice(mori.first(newAlternatives));
@@ -61,7 +61,7 @@ _.extend(ResolverState.prototype, {
     self = self._clone();
 
     if (!_.has(self._resolver.unitsVersions, unitName)) {
-      self.error = "unknown package: " + unitName;
+      self.error = "unknown package: " + removeUnibuild(unitName);
       return self;
     }
 
@@ -75,7 +75,8 @@ _.extend(ResolverState.prototype, {
 
     if (mori.is_empty(alternatives)) {
       // XXX mention constraints or something
-      self.error = "conflict: " + unitName + " can't be satisfied";
+      self.error = "conflict: " + removeUnibuild(unitName) +
+        " can't be satisfied";
       return self;
     } else if (mori.count(alternatives) === 1) {
       // There's only one choice, so we can immediately choose it.
@@ -100,7 +101,8 @@ _.extend(ResolverState.prototype, {
     // Does adding this choice break some constraints we already have?
     if (!self.constraints.isSatisfied(uv, self._resolver)) {
       // XXX improve error
-      self.error = "conflict: " + uv.toString() + " can't be chosen";
+      self.error = "conflict: " + uv.toString({removeUnibuild: true}) +
+        " can't be chosen";
       return self;
     }
 
@@ -146,4 +148,13 @@ _.extend(ResolverState.prototype, {
 // do the O(n) work once.
 var filter = function (v, pred) {
   return mori.into(mori.vector(), mori.filter(pred, v));
+};
+
+// Users are mostly confused by seeing "package#web.browser" instead of just
+// "package". Remove it for error messages.
+removeUnibuild = function (unitName) {
+  // For debugging constraint solver issues.
+  if (process.env.METEOR_SHOW_UNIBUILDS)
+    return unitName;
+  return unitName.split('#')[0];
 };
