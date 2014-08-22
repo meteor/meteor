@@ -144,7 +144,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 //  - packageName - string name
 //  - version - string constraint (ex.: "1.2.3", ">=2.3.4", "=3.3.3")
 // options:
-//  - breaking - set this flag to true if breaking upgrades are allowed
 //  - upgrade - list of dependencies for which upgrade is prioritized higher
 //  than keeping the old version
 //  - previousSolution - mapping from package name to a version that was used in
@@ -156,7 +155,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // clone because we mutate options
   options = _.extend({
     _testing: false,
-    breaking: false,
     upgrade: []
   }, options || {});
 
@@ -169,7 +167,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   check(options, {
     _testing: Match.Optional(Boolean),
-    breaking: Match.Optional(Boolean),
     upgrade: [String],
     previousSolution: Match.Optional(Object)
   });
@@ -234,20 +231,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   if (!res) {
     // Either we didn't have a previous solution, or it doesn't work. Try again
     // without locking in the previous solution as strict equality.
-    //
-    // However, we still don't want you to downgrade a version of a direct
-    // dependency in regards to the previous solution.
-    // Depending on whether the option `breaking` is set or not, allow only
-    // compatible upgrades or any upgrades.
-    _.each(options.previousSolution, function (uv) {
-      // if not a root dependency, there is no 'no-upgrade' constraint
-      if (! _.contains(dependencies, uv.name))
-        return;
-
-      var constrType = options.breaking ? ">=" : "";
-      dc.constraints.push(
-        self.resolver.getConstraint(uv.name, constrType + uv.version));
-    });
 
     res = self.resolver.resolve(
       dc.dependencies, dc.constraints, resolverOptions);

@@ -1522,7 +1522,6 @@ main.registerCommand({
     var messages = buildmessage.capture(function () {
       newVersions = catalog.complete.resolveConstraints(allPackages, {
         previousSolution: versions,
-        breaking: !options.minor,
         upgrade: upgradePackages
       }, {
         ignoreProjectDeps: true
@@ -1572,11 +1571,7 @@ main.registerCommand({
   name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true,
-  options: {
-    // XXX come up with a better option name, like --allow-downgrades
-    force: { type: Boolean, required: false }
-  }
+  requiresApp: true
 }, function (options) {
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -1700,13 +1695,9 @@ main.registerCommand({
     versions = project.getVersions();
 
     // Call the constraint solver.
-    var resolverOpts =  {
-      previousSolution: versions,
-      breaking: !!options.force
-    };
     newVersions = catalog.complete.resolveConstraints(
       allPackages,
-      resolverOpts,
+      { previousSolution: versions },
       { ignoreProjectDeps: true });
     if ( ! newVersions) {
       // XXX: Better error handling.
