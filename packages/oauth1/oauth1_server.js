@@ -1,8 +1,10 @@
+var url = Npm.require("url");
+
 // connect middleware
 OAuth._requestHandlers['1'] = function (service, query, res) {
 
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
-  if (!config) {
+  if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
 
@@ -29,7 +31,13 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     if(typeof urls.authenticate === "function") {
       redirectUrl = urls.authenticate(oauthBinding);
     } else {
-      redirectUrl = urls.authenticate + '?oauth_token=' + oauthBinding.requestToken;
+      // Parse the URL to support additional query parameters in urls.authenticate
+      var redirectUrlObj = url.parse(urls.authenticate, true);
+      redirectUrlObj.query = redirectUrlObj.query || {};
+      redirectUrlObj.query.oauth_token = oauthBinding.requestToken;
+      redirectUrlObj.search = '';
+      // Reconstruct the URL back with provided query parameters merged with oauth_token
+      redirectUrl = url.format(redirectUrlObj);
     }
 
     // redirect to provider login, which will redirect back to "step 2" below
@@ -41,6 +49,10 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
 
     // Get the user's request token so we can verify it and clear it
     var requestTokenInfo = OAuth._retrieveRequestToken(query.state);
+
+    if (! requestTokenInfo) {
+      throw new Error("Unable to retrieve request token");
+    }
 
     // Verify user authorized access and the oauth_token matches
     // the requestToken from previous step
