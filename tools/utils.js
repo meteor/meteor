@@ -4,6 +4,7 @@ var _ = require('underscore');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
 var main = require('./main.js');
+var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
@@ -140,26 +141,9 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-(function () {
-  var PackageVersion = null;
-
-  var maybeLoadPackageVersionParser = function () {
-    if (PackageVersion)
-      return;
-    var uniload = require('./uniload.js');
-    var Package = uniload.load({packages: ['package-version-parser']});
-    PackageVersion = Package['package-version-parser'].PackageVersion;
-  };
-
-  exports.parseVersionConstraint = function () {
-    maybeLoadPackageVersionParser();
-    return PackageVersion.parseVersionConstraint.apply(this, arguments);
-  };
-  exports.parseConstraint = function () {
-    maybeLoadPackageVersionParser();
-    return PackageVersion.parseConstraint.apply(this, arguments);
-  };
-})();
+exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+exports.parseConstraint = packageVersionParser.parseConstraint;
+exports.validatePackageName = packageVersionParser.validatePackageName;
 
 // XXX should unify this with utils.parseConstraint
 exports.splitConstraint = function (constraint) {
@@ -196,44 +180,6 @@ exports.dealConstraint = function (constraint, pkg) {
 // eg package-client.js) prints and throws the "exit with code 1" exception
 // on failure.
 
-
-// XXX duplicates code in package-version-parser.js, sigh.  but we need to run
-// this before we can load packages.
-exports.validatePackageName = function (packageName, options) {
-  options = options || {};
-
-  var badChar = packageName.match(/[^a-z0-9:.\-]/);
-  if (badChar) {
-    if (options.detailedColonExplanation) {
-      throwVersionParserError(
-        "Bad character in package name: " + JSON.stringify(badChar[0]) +
-          ". Package names can only contain lowercase ASCII alphanumerics, " +
-          "dash, or dot. If you plan to publish a package, it must be " +
-          "prefixed with your Meteor developer username and a colon.");
-    }
-    throwVersionParserError(
-      "Package names can only contain lowercase ASCII alphanumerics, dash, " +
-        "dot, or colon, not " + JSON.stringify(badChar[0]) + ".");
-  }
-  if (!/[a-z]/.test(packageName)) {
-    throwVersionParserError("Package names must contain a lowercase ASCII letter.");
-  }
-  if (packageName[0] === '.') {
-    throwVersionParserError("Package names may not begin with a dot.");
-  }
-};
-// XXX duplicates code in package-version-parser.js, sigh.  but we need to run
-// this before we can load packages.
-var throwVersionParserError = function (message) {
-  var e = new Error(message);
-  e.versionParserError = true;
-  throw e;
-};
-
-
-//
-// Returns a bool saying whether it is valid or not. Use validatePackageName
-// if you want a nice error message.
 exports.isValidPackageName = function (packageName) {
   try {
     exports.validatePackageName(packageName);
