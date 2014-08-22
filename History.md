@@ -9,6 +9,8 @@
 * When a call to `match` fails in a method or subscription, log the
   failure on the server. (This matches the behavior described in our docs)
 
+* Allow query parameters in OAuth1 URLs.
+
 * Upgraded dependencies:
   - less: 1.7.4 (from 1.7.1)
   - tar: 1.0.1 (from 0.1.19)
