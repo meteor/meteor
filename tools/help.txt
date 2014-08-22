@@ -49,9 +49,12 @@ Usage: meteor create [--release <release>] <name>
        meteor create --list
        meteor create --package [<package_name>]
 
-Make a subdirectory named <name> and create a new Meteor project
-there. If the package option is specified, creates a meteor package,
-otherwise creates a meteor app. You can also pass an absolute or relative path.
+Make a subdirectory named <name> and create a new Meteor app there.  You can
+also pass an absolute or relative path.
+
+With the --package option, creates a Meteor package instead of an app. If you're
+in an app, the package will go in the app's top-level 'packages' directory;
+otherwise it will be created in the current directory.
 
 The app will use the release of Meteor specified with the --release
 option, or the latest available version if the option is not specified. (A

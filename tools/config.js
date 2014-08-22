@@ -152,7 +152,7 @@ _.extend(exports, {
     if (isLocalUniverse()) {
       return localhostOffset(30);
     } else {
-      return getUniverse().replace(/^www\./, 'package-stats.');
+      return getUniverse().replace(/^www\./, 'activity.');
     }
   },
 
