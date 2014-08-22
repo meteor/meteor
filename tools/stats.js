@@ -151,7 +151,7 @@ var getPackagesForAppIdInTest = function (currentProject) {
     result = conn.call(
       "getPackagesForAppId",
       currentProject.getAppIdentifier());
-    if (result) {
+    if (result && result.details) {
       result.details.packages = _.sortBy(result.details.packages, "name");
     }
   } finally {
