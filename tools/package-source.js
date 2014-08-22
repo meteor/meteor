@@ -877,11 +877,8 @@ _.extend(PackageSource.prototype, {
           // using for loop rather than underscore to help with useMyCaller
           for (var i = 0; i < names.length; ++i) {
             var name = names[i];
-            // XXX would rather use parseConstraint but that requires uniload,
-            //     so this ends up recursive
-            var split = utils.splitConstraint(name);
             try {
-              utils.validatePackageName(split.package);
+              var parsed = utils.parseConstraint(name);
             } catch (e) {
               if (!e.versionParserError)
                 throw e;
@@ -891,10 +888,12 @@ _.extend(PackageSource.prototype, {
             }
 
             forAllMatchingWheres(where, function (w) {
-              uses[w].push(_.extend(split, {
+              uses[w].push({
+                package: parsed.name,
+                constraint: parsed.constraintString,
                 unordered: options.unordered || false,
                 weak: options.weak || false
-              }));
+              });
             });
           }
         },
@@ -909,11 +908,8 @@ _.extend(PackageSource.prototype, {
           // using for loop rather than underscore to help with useMyCaller
           for (var i = 0; i < names.length; ++i) {
             var name = names[i];
-            // XXX would rather use parseConstraint but that requires uniload,
-            //     so this ends up recursive
-            var split = utils.splitConstraint(name);
             try {
-              utils.validatePackageName(split.package);
+              var parsed = utils.parseConstraint(name);
             } catch (e) {
               if (!e.versionParserError)
                 throw e;
@@ -925,7 +921,10 @@ _.extend(PackageSource.prototype, {
             forAllMatchingWheres(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
-              implies[w].push(split);
+              implies[w].push({
+                package: parsed.name,
+                constraint: parsed.constraintString
+              });
             });
           }
         },
