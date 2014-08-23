@@ -17,7 +17,6 @@ process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
 
-
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
@@ -75,14 +74,14 @@ selftest.define("report-stats", ["slow", "net"], function () {
       var sessionId;
 
       // verify that identifier file exists for new apps
-      var identifier = s.read(".meteor/identifier").replace(/\n$/, '');
+      var identifier = readProjectId(s);
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
       // verify that identifier file when running 'meteor run' on apps
       // with no identifier file (eg pre-0.9.0 apps)
       runWithFreshIdentifier(s, sandboxProject);
-      identifier = s.read(".meteor/identifier").replace(/\n$/, '');
+      identifier = readProjectId(s);
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
@@ -203,13 +202,18 @@ selftest.define("report-stats", ["slow", "net"], function () {
 });
 
 // Run the app in the current working directory after deleting its
-// identifier file (meaning a new one will be created).
+// project ID file (meaning a new one will be created).
 // @param s {Sandbox}
 // @param sandboxProject {Project}
 // @param expectStats {Boolean} (defaults to true)
 var runWithFreshIdentifier = function (s, sandboxProject, expectStats) {
-  s.unlink(".meteor/identifier");
+  s.unlink(".meteor/.id");
   runApp(s, sandboxProject, expectStats);
+};
+
+var readProjectId = function (s) {
+  // XXX parse comments
+  return s.read(".meteor/.id").replace(/\n$/, '');
 };
 
 // Bundle the app in the current working directory.
@@ -230,7 +234,7 @@ var runApp = function (s, sandboxProject, expectStats) {
   }
   run.stop();
   // Pick up new app identifier and/or packages added/removed. Usually the
-  // changes to .meteor/packages and .meteor/identifier would be handled by the
+  // changes to .meteor/packages and .meteor/.id would be handled by the
   // code that handles the hotcodepush, so the project does not cache them.
   sandboxProject.reload();
 };

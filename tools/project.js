@@ -72,8 +72,9 @@ var Project = function () {
   // loaders). Derived from self.dependencies.
   self.packageLoader = null;
 
-  // The app identifier is used for stats, read from a file and not invalidated
-  // by any constraint-related operations.
+  // The app identifier is used for stats and to prevent accidental deploys to
+  // the wrong domain. It is read from a file and not invalidated by any
+  // constraint-related operations.
   self.appId = null;
 
   // Should we use this project as a source for dependencies? Certainly not
@@ -714,7 +715,7 @@ _.extend(Project.prototype, {
   // The file for the app identifier.
   appIdentifierFile : function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'identifier');
+    return path.join(self.rootDir, '.meteor', '.id');
   },
 
   // Get the app identifier.
@@ -734,9 +735,11 @@ _.extend(Project.prototype, {
     var identifierFile = self.appIdentifierFile();
     if (!fs.existsSync(identifierFile)) {
       var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
+      // XXX add a comment
       fs.writeFileSync(identifierFile, id + '\n');
     }
     if (fs.existsSync(identifierFile)) {
+      // XXX parse out comments
       self.appId = trimLine(fs.readFileSync(identifierFile, 'utf8'));
     } else {
       throw new Error("Expected a file at " + identifierFile);

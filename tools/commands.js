@@ -384,11 +384,11 @@ main.registerCommand({
       return 1;
     } else {
       files.cp_r(path.join(exampleDir, options.example), appPath, {
-        // We try not to check the identifier into git, but it might still
+        // We try not to check the project ID into git, but it might still
         // accidentally exist and get added (if running from checkout, for
-        // example). To be on the safe side, explicitly remove the identifier
+        // example). To be on the safe side, explicitly remove the project ID
         // from example apps.
-        ignore: [/^local$/, /^identifier$/]
+        ignore: [/^local$/, /^\.id$/]
       });
     }
   } else {
@@ -402,7 +402,7 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/, /^identifier$/]
+      ignore: [/^local$/, /^\.id$/]
     });
   }
 
