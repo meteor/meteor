@@ -384,11 +384,11 @@ main.registerCommand({
       return 1;
     } else {
       files.cp_r(path.join(exampleDir, options.example), appPath, {
-        // We try not to check the identifier into git, but it might still
+        // We try not to check the project ID into git, but it might still
         // accidentally exist and get added (if running from checkout, for
-        // example). To be on the safe side, explicitly remove the identifier
+        // example). To be on the safe side, explicitly remove the project ID
         // from example apps.
-        ignore: [/^local$/, /^identifier$/]
+        ignore: [/^local$/, /^\.id$/]
       });
     }
   } else {
@@ -402,14 +402,14 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/, /^identifier$/]
+      ignore: [/^local$/, /^\.id$/]
     });
   }
 
   // We are actually working with a new meteor project at this point, so
   // reorient its path. We might do some things to it, but they should be
   // invisible to the user, so mute non-error output.
-  project.setRootDir(appPath);
+  project.setRootDir(path.resolve(appPath));
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
