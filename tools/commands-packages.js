@@ -878,9 +878,8 @@ main.registerCommand({
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
-    return options['show-old'] || !(_.isEqual(record.description,
-                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
-   };
+    return options['show-old'] || !record.unmigrated;
+  };
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -1038,8 +1037,7 @@ main.registerCommand({
     doOrDie(function () {
       vr = catalog.official.getLatestVersion(name);
     });
-    return vr && !(_.isEqual(vr.description,
-                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+    return vr && !vr.unmigrated;
   };
 
   if (options.maintainer) {
