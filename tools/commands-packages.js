@@ -869,7 +869,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    "include-old": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -878,7 +878,7 @@ main.registerCommand({
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
-    return options['include-old'] || !(_.isEqual(record.description,
+    return options['show-old'] || !(_.isEqual(record.description,
                        "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
    };
 
@@ -1003,7 +1003,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
-    "include-old": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -1031,7 +1031,7 @@ main.registerCommand({
   var filterBroken = function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
-    if (!match || isRelease || options["include-old"])
+    if (!match || isRelease || options["show-old"])
       return match;
 
     var vr;
