@@ -1227,15 +1227,11 @@ main.registerCommand({
     return 1;
   }
 
-  if (!options["packages-only"]) {
-
-    // refuse to update the release if we're in a git checkout.
-    if (! files.usesWarehouse()) {
-      process.stderr.write(
-        "update: can only be run from official releases, not from checkouts\n");
-      return 1;
-    }
-
+  if (!options["packages-only"] && ! files.usesWarehouse()) {
+    process.stderr.write(
+"You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
+"Checking to see if we can update your packages.\n");
+  } else if (!options["packages-only"]) {
     // This is the release track we'll end up on --- either because it's
     // the explicitly specified (with --release) track; or because we
     // didn't specify a release and it's the app's current release (if we're
