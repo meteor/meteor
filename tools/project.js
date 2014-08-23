@@ -733,17 +733,27 @@ _.extend(Project.prototype, {
   ensureAppIdentifier : function () {
     var self = this;
     var identifierFile = self.appIdentifierFile();
-    if (!fs.existsSync(identifierFile)) {
-      var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
-      // XXX add a comment
-      fs.writeFileSync(identifierFile, id + '\n');
+
+    // Find the first non-empty line, ignoring comments.
+    var lines = files.getLinesOrEmpty(identifierFile);
+    var appId = _.find(_.map(lines, trimLine), _.identity);
+
+    // If the file doesn't exist or has no non-empty lines, regenerate the
+    // token.
+    if (!appId) {
+      appId = utils.randomToken() + utils.randomToken() + utils.randomToken();
+
+      var comment = (
+"# This file contains a token that is unique to your project.\n" +
+"# Check it into your repository along with the rest of this directory.\n" +
+"# It can be used for purposes such as:\n" +
+"#   - ensuring you don't accidentally deploy one app on top of another\n" +
+"#   - providing package authors with aggregated statistics\n" +
+"\n");
+      fs.writeFileSync(identifierFile, comment + appId + '\n');
     }
-    if (fs.existsSync(identifierFile)) {
-      // XXX parse out comments
-      self.appId = trimLine(fs.readFileSync(identifierFile, 'utf8'));
-    } else {
-      throw new Error("Expected a file at " + identifierFile);
-    }
+
+    self.appId = appId;
   },
 
   _finishedUpgradersFile: function () {
