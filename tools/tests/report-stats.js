@@ -3,6 +3,7 @@ var os = require("os");
 var util = require("util");
 
 var auth = require("../auth.js");
+var files = require("../files.js");
 var config = require("../config.js");
 var release = require("../release.js");
 var selftest = require('../selftest.js');
@@ -212,8 +213,9 @@ var runWithFreshIdentifier = function (s, sandboxProject, expectStats) {
 };
 
 var readProjectId = function (s) {
-  // XXX parse comments
-  return s.read(".meteor/.id").replace(/\n$/, '');
+  var raw = s.read(".meteor/.id");
+  var lines = raw.split(/\r*\n\r*/);
+  return _.find(_.map(lines, files.trimLine), _.identity);
 };
 
 // Bundle the app in the current working directory.

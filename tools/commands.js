@@ -409,7 +409,7 @@ main.registerCommand({
   // We are actually working with a new meteor project at this point, so
   // reorient its path. We might do some things to it, but they should be
   // invisible to the user, so mute non-error output.
-  project.setRootDir(appPath);
+  project.setRootDir(path.resolve(appPath));
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);

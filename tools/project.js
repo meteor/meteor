@@ -14,15 +14,6 @@ var PackageSource = require('./package-source.js');
 
 var project = exports;
 
-// Trims whitespace & other filler characters of a line in a project file.
-var trimLine = function (line) {
-  var match = line.match(/^([^#]*)#/);
-  if (match)
-    line = match[1];
-  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
-  return line;
-};
-
 // Given a set of lines, each of the form "foo@bar", return an array of form
 // [{packageName: foo, versionConstraint: bar}]. If there is bar,
 // versionConstraint is null.
@@ -31,7 +22,7 @@ var processPerConstraintLines = function(lines) {
 
   // read from .meteor/packages
   _.each(lines, function (line) {
-    line = trimLine(line);
+    line = files.trimLine(line);
     if (line !== '') {
       var constraint = utils.splitConstraint(line);
       ret[constraint.package] = constraint.constraint;
@@ -486,7 +477,7 @@ _.extend(Project.prototype, {
     // This should really never happen, and the caller will print a special error.
     if (!lines.length)
       return '';
-    return trimLine(lines[0]);
+    return files.trimLine(lines[0]);
   },
 
   // Returns the full filepath of the projects .meteor/release file.
@@ -559,7 +550,7 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = files.getLinesOrEmpty(packages);
     lines = _.reject(lines, function (line) {
-      var cur = trimLine(line).split('@')[0];
+      var cur = files.trimLine(line).split('@')[0];
       return _.indexOf(names, cur) !== -1;
     });
     fs.writeFileSync(packages,
@@ -736,7 +727,7 @@ _.extend(Project.prototype, {
 
     // Find the first non-empty line, ignoring comments.
     var lines = files.getLinesOrEmpty(identifierFile);
-    var appId = _.find(_.map(lines, trimLine), _.identity);
+    var appId = _.find(_.map(lines, files.trimLine), _.identity);
 
     // If the file doesn't exist or has no non-empty lines, regenerate the
     // token.
@@ -764,7 +755,7 @@ _.extend(Project.prototype, {
   getFinishedUpgraders: function () {
     var self = this;
     var lines = files.getLinesOrEmpty(self._finishedUpgradersFile());
-    return _.filter(_.map(lines, trimLine), _.identity);
+    return _.filter(_.map(lines, files.trimLine), _.identity);
   },
 
   appendFinishedUpgrader: function (upgrader) {
