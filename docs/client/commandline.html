@@ -235,7 +235,7 @@ Shows more information about a specific package or release: name, summary, the
 usernames of its maintainers, and, if specified, its homepage and git URL.
 
 
-<h3 id="meteorshow">meteor publish</h3>
+<h3 id="meteorpublish">meteor publish</h3>
 
 Publishes your package. To publish, you must cd into the package directory, log
 in with your Meteor Developer Account and run `meteor publish`. By convention,
@@ -288,6 +288,14 @@ version of the Meteor command-line tool (`tool`). Note that this means that
 forks of the meteor tool can be published as packages and people can use them by
 switching to a corresponding release. For more information, run
 `meteor help publish-release`.
+
+
+<h3 id="meteortestpackages">meteor test-packages</h3>
+
+Test Meteor packages, either by name, or by directory. Not specifying an
+argument will run tests for all local packages. The results are displayed in an
+app that runs at `localhost:3000` by default. If you need to, you can pass the
+`--settings` and `--port` arguments.
 
 
 <h3 id="meteoradmin">meteor admin</h3>
