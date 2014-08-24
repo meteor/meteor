@@ -9,7 +9,7 @@ _.extend(MongoInternals.RemoteCollectionDriver.prototype, {
     var self = this;
     var ret = {};
     _.each(
-      ['find', 'findOne', 'insert', 'update', , 'upsert',
+      ['find', 'findOne', 'insert', 'update', 'upsert',
        'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection',
        'dropCollection'],
       function (m) {
