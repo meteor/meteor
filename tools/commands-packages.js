@@ -176,7 +176,10 @@ main.registerCommand({
     // locally (and other local packages you may have) instead of downloading
     // the source bundle. It does verify that the source is the same, though.
     // Good for bootstrapping things in the core release.
-    'existing-version': { type: Boolean }
+    'existing-version': { type: Boolean },
+    // This is the equivalent of "sudo": make sure that administrators don't
+    // accidentally put their personal packages in the top level namespace.
+    'top-level': { type: Boolean }
   },
   requiresPackage: true
 }, function (options) {
@@ -244,6 +247,14 @@ main.registerCommand({
       process.stderr.write(
         "Package already exists. To create a new version of an existing "+
         "package, do not use the --create flag! \n");
+      return 2;
+    }
+
+    if (!options['top-level'] && !packageName.match(/:/)) {
+      process.stderr.write(
+"To confirm that you wish to create a top-level package with no account\n" +
+"prefix, please run this command again with the --top-level option.\n" +
+"(Only administrators can create top-level packages without an account prefix)\n");
       return 2;
     }
   };
