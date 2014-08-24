@@ -383,7 +383,13 @@ var toc = [
     "meteor list",
     "meteor mongo",
     "meteor reset",
-    "meteor bundle"
+    "meteor bundle",
+    "meteor search",
+    "meteor show",
+    "meteor publish",
+    "meteor publish-for-arch",
+    "meteor publish-release",
+    "meteor admin"
   ] ]
 ];
 
