@@ -755,7 +755,19 @@ package requires a `MAIL_URL` environment variable).
 
   <h2 id="writingpackages">Writing packages</h2>
 
-fillmein
+A package is a directory containing a package.js file. You can initialize a
+mostly-blank package with the `meteor create --package` command. Package names
+of published packages must be prefixed with the username of the author.
+
+(something about version dependencies)
+
+(something about repeatable builds)
+
+You can publish a package to the official Meteor Package server by running
+`meteor publish --create` from the package directory.
+
+For more detailed information on writing packages, `package.js` files and various capabilities of Meteor packages, check out [Packages](#publishandsubscribe) in the API section.
+
 
 {{/markdown}}
 </template>

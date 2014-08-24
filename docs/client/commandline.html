@@ -125,14 +125,19 @@ You can pass in the flag `--packages-only` to update only the packages, and not
 the release itself. Similarly, you can pass in names of packages (`meteor update
 foo:kittens baz:cats`) to only update specific packages.
 
+Every project is pinned to a specific release of Meteor. You can temporarily try
+using your package with another release by passing the `--release` option to any
+command; `meteor update` changes the pinned release.
+
+Sometimes, Meteor will ask you to run `meteor update --patch`. Patch releases
+are special releases that contain only very minor change (usually crucial bug
+fixes) from previous releases. We highly recommend that you always run `update
+--patch` when prompted.
+
 You may also pass the `--release` flag to act as an override to update to a
 specific release. This is an override: if it cannot find compatible versions of
 packages, it will log a warning, but perform the update anyway. This will only
 change your package versions if nessesary.
-
-Every project is pinned to a specific release of Meteor. You can temporarily try
-using your package with another release by passing the `--release` option to any
-command; `meteor update` changes the pinned release.
 
 
 <h3 id="meteoradd">meteor add <i>package</i></h3>
@@ -267,10 +272,7 @@ and Mac OS. The servers for `meteor deploy` run 64-bit linux.
 
 <h3 id="meteorpublishrelease">meteor publish-release</h3>
 
-Publishes a release of Meteor. Takes in a json configuration file. Releases
-include a specification for the package and version of the Meteor tool, a
-mapping of various Meteor packages to specific versions and various
-metadata. For more information, run `meteor help publish-release`.
+Publishes a release of Meteor. Takes in a json configuration file.
 
 Meteor releases are divided into tracks. While only MDG members can publish to
 the default Meteor track, anyone can create a track of their own and publish to
@@ -278,6 +280,14 @@ it. Running `meteor update` without specifying the `--release` option will not
 cause the user to switch tracks.
 
 To publish to a release track for the first time, use the `create-track` flag.
+
+The JSON configuration file must contain the name of the release track
+(`track`), the release version (`version`), various metadata, the packages
+specified by the release as mapped to versions (`packages`), and the package &
+version of the Meteor command-line tool (`tool`). Note that this means that
+forks of the meteor tool can be published as packages and people can use them by
+switching to a corresponding release. For more information, run
+`meteor help publish-release`.
 
 
 <h3 id="meteoradmin">meteor admin</h3>
