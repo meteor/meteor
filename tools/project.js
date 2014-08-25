@@ -201,7 +201,7 @@ _.extend(Project.prototype, {
 
       if (!setV.success) {
         process.stdout.write(
-          "Could not install all the requested packages. \n");
+          "Could not install all the requested packages.\n");
         process.exit(1);
       }
 

@@ -131,7 +131,7 @@ var maybeShowBanners = function () {
 var updateMeteorToolSymlink = function () {
   buildmessage.assertInCapture();
 
-  // Get the latest release version of METEOR-CORE. (*Always* of the default
+  // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
   var latestReleaseVersion = catalog.official.getDefaultReleaseVersion();

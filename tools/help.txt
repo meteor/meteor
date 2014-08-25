@@ -386,7 +386,7 @@ Usage: meteor publish-release <path to json config> [--create-track]
 
 Publishes a new release to the package server, as determined by the json
 configuration file, which must have the following keys:
-  track: the release track to which you are publishing (ex: METEOR-CORE)
+  track: the release track to which you are publishing (ex: METEOR)
   version: the version of this release
   recommended: is this a recommended release? (see below)
   description: a brief description of the release
@@ -394,7 +394,7 @@ configuration file, which must have the following keys:
   tool: <package name>@<version> of the meteor tool that this release specifies
   packages: object of <package name> to <version> for specified package versions
 
-Set the recommended flag to true for recommended releases (ex: METEOR-CORE@0.90)
+Set the recommended flag to true for recommended releases (ex: METEOR@0.90)
 and false for release candidates, experimental releases, etc. You must publish
 all package versions to the package server before you can specify them in a
 release.
@@ -549,7 +549,7 @@ Options:
 
 
 >>> admin change-homepage
-Change the repository url of a package.
+Change the homepage url of a package.
 Usage: meteor admin change-homepage <package name> <new url>
 
 Change the homepage containing package information.

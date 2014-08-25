@@ -55,7 +55,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       s.createApp("foo", "package-stats-tests");
       s.cd("foo");
       if (useFakeRelease) {
-        s.write('.meteor/release', 'METEOR-CORE@v1');
+        s.write('.meteor/release', 'METEOR@v1');
       }
 
       var sandboxProject = new project.Project();
@@ -64,7 +64,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       // XXX Copied from http-helpers.js
       var version;
       if (useFakeRelease) {
-        version = "METEOR-CORE@v1";
+        version = "METEOR@v1";
       } else {
         version = release.current.isCheckout() ? "checkout" : release.current.name;
       }

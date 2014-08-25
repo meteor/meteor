@@ -261,19 +261,33 @@ main.registerCommand({
 
   // We have initialized everything, so perform the publish oepration.
   var ec;  // XXX maybe combine with messages?
-  messages = buildmessage.capture({
-    title: "publishing the package"
-  }, function () {
-    ec = packageClient.publishPackage(
-      packageSource, compileResult, conn, {
-        new: options.create,
-        existingVersion: options['existing-version']
-      });
-  });
+  try {
+    messages = buildmessage.capture({
+      title: "publishing the package"
+    }, function () {
+      ec = packageClient.publishPackage(
+        packageSource, compileResult, conn, {
+          new: options.create,
+          existingVersion: options['existing-version']
+        });
+    });
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return ec || 1;
   }
+
+  // We are only publishing one package, so we should close the connection, and
+  // then exit with the previous error code.
+  conn.close();
+
+  // If the publishPackage failed, exit now (no need to spend time trying to
+  // refresh).
+  if (ec)
+    return ec;
 
   // Warn the user if their package is not good for all architectures.
   var allArchs = compileResult.unipackage.buildArchitectures().split('+');
@@ -286,10 +300,7 @@ main.registerCommand({
         "Please use publish-for-arch to publish new builds of the package.\n\n");
   }
 
-  // We are only publishing one package, so we should close the connection, and
-  // then exit with the previous error code.
-  conn.close();
-
+  // Refresh, so that we actually learn about the thing we just published.
   refreshOfficialCatalogOrDie();
 
   return ec;
@@ -386,6 +397,10 @@ main.registerCommand({
     // it doesn't we should fail. Hopefully, of course, we have
     // tested our stuff before deciding to publish it to the package
     // server, but we need to be careful.
+    // XXX If you're not using a matching version of the tool, this will give
+    //     an error like "Version lock for FOO should never change"!  Including
+    //     if you've swapped between checkout and released tool.  We really
+    //     should springboard here...
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
@@ -410,11 +425,16 @@ main.registerCommand({
     return 1;
   }
 
-  messages = buildmessage.capture({
-    title: "publishing package " + name
-  }, function () {
-    packageClient.createAndPublishBuiltPackage(conn, unipkg);
-  });
+  try {
+    messages = buildmessage.capture({
+      title: "publishing package " + name
+    }, function () {
+      packageClient.createAndPublishBuiltPackage(conn, unipkg);
+    });
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
 
   if (messages.hasMessages()) {
     process.stderr.write("\n" + messages.formatMessages());
@@ -772,24 +792,31 @@ main.registerCommand({
 
       process.stdout.write("Publishing package: " + name + "\n");
 
-      var pubEC;  // XXX merge with messages?
-      messages = buildmessage.capture({
-        title: "publishing package " + name
-      }, function () {
-        var opts = {
-          new: !catalog.official.getPackage(name)
-        };
+      // XXX merge with messages? having THREE kinds of error handling here is
+      // um something.
+      var pubEC;
+      try {
+        messages = buildmessage.capture({
+          title: "publishing package " + name
+        }, function () {
+          var opts = {
+            new: !catalog.official.getPackage(name)
+          };
 
-        // If we are creating a new package, dsPS will document this for us, so
-        // we don't need to do this here. Though, in the future, once we are
-        // done bootstrapping package servers, we should consider having some
-        // extra checks around this.
-        pubEC = packageClient.publishPackage(
-          prebuilt.source,
-          prebuilt.compileResult,
-          conn,
-          opts);
-      });
+          // If we are creating a new package, dsPS will document this for us,
+          // so we don't need to do this here. Though, in the future, once we
+          // are done bootstrapping package servers, we should consider having
+          // some extra checks around this.
+          pubEC = packageClient.publishPackage(
+            prebuilt.source,
+            prebuilt.compileResult,
+            conn,
+            opts);
+        });
+      } catch (e) {
+          packageClient.handlePackageServerConnectionError(e);
+          return 1;
+      }
       if (messages.hasMessages()) {
         process.stderr.write(messages.formatMessages());
         return pubEC || 1;
@@ -813,8 +840,13 @@ main.registerCommand({
   // Create the new track, if we have been told to.
   if (options['create-track']) {
     process.stdout.write("Creating a new release track...\n");
-    var track = conn.call('createReleaseTrack',
-                          { name: relConf.track } );
+    try {
+      var track = conn.call('createReleaseTrack',
+                            { name: relConf.track } );
+    } catch (e) {
+      packageClient.handlePackageServerConnectionError(e);
+      return 1;
+    }
   }
 
   process.stdout.write("Creating a new release version...\n");
@@ -836,7 +868,7 @@ main.registerCommand({
       uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
     }
   } catch (err) {
-    process.stderr.write("ERROR: " + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
 
@@ -1265,7 +1297,7 @@ main.registerCommand({
       // and the user ran 'meteor update' without specifying a release? We
       // really can't do much here.
       if (!latestRelease) {
-        // XXX is there a command to get to the latest METEOR-CORE@? Should we
+        // XXX is there a command to get to the latest METEOR@? Should we
         // recommend it here?
         process.stderr.write(
           "There are no recommended releases on release track " +
@@ -1884,10 +1916,18 @@ main.registerCommand({
         process.stdout.write(" Done!\n");
       }
     } catch (err) {
-      process.stderr.write("\n" + err + "\n");
+      packageClient.handlePackageServerConnectionError(err);
+      return 1;
     }
     conn.close();
+
+    // Update the catalog so that we have this information, and find the record
+    // again so that the message below is correct.
     refreshOfficialCatalogOrDie();
+    doOrDie(function () {
+      fullRecord = getReleaseOrPackageRecord(name);
+    });
+    record = fullRecord.record;
   }
 
   process.stdout.write("\n The maintainers for " + name + " are:\n");
@@ -2115,8 +2155,13 @@ main.registerCommand({
     return 1;
   }
 
-  conn.call('setBannersOnReleases', bannersData.track,
-            bannersData.banners);
+  try {
+    conn.call('setBannersOnReleases', bannersData.track,
+              bannersData.banners);
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
 
   // Refresh afterwards.
   refreshOfficialCatalogOrDie();
@@ -2172,7 +2217,8 @@ main.registerCommand({
                            " is now  a recommended release\n");
     }
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
@@ -2223,7 +2269,8 @@ main.registerCommand({
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
@@ -2266,7 +2313,8 @@ main.registerCommand({
       conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
