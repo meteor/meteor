@@ -1403,6 +1403,14 @@ main.registerCommand({
           "You are at the latest patch version.\n");
         return 1;
       }
+      var patchRecord = doOrDie(function () {
+        return catalog.official.getReleaseVersion(r[0], updateTo);
+      });
+      if (!patchRecord || !patchRecord.recommended) {
+        process.stderr.write(
+          "You are at the latest patch version.\n");
+        return 1;
+      }
       releaseVersionsToTry = [updateTo];
     } else if (release.forced) {
       doOrDie(function () {
