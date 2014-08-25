@@ -1208,8 +1208,7 @@ main.registerCommand({
 
       var description = version + versionAddendum +
             (versionInfo.description ?
-             (": " + versionInfo.description) :
-             "");
+             (" " + versionInfo.description) : "");
       items.push({ name: name, description: description });
 
     });

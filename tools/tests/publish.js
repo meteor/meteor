@@ -190,7 +190,7 @@ selftest.define("list-with-a-new-version",
   s.cd('mapp', function () {
     run = s.run("list");
     run.match(fullPackageName);
-    run.match("1.0.0*:");
+    run.match("1.0.0*");
     run.match("New versions");
     run.match("meteor update");
     run.expectExit(0);
