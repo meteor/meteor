@@ -27,16 +27,19 @@ var maybePrintNoticeHeader = function () {
 // some.  (It probably makes sense to extract "print this message" or "print
 // this message if a package is directly used" into helpers.)
 var upgradersByName = {
-   "notices-for-0.9.0-test": function () {
+   "notices-for-0.9.0": function () {
      maybePrintNoticeHeader();
     console.log(
-"0.9.0: Welcome to packaging! It's great. You should fix your\n" +
-"       code to make sure it works still.");
-    if (_.has(project.project.getConstraints(), 'accounts-ui')) {
-      console.log(
-"\n" +
-"       Accounts UI has totally changed, yo.");
-    }
+"0.9.0: Now your app can use packages from the Meteor Package Server!\n" +
+"       If you were previously using Atmosphere packages with mrt,\n" +
+"       run 'mrt migrate-app' to start using the same packages in our\n" +
+"       new system.");
+     // How to do package-specific notices:
+//     if (_.has(project.project.getConstraints(), 'accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
     console.log();
   }
 };

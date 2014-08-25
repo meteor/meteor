@@ -1,0 +1,12 @@
+# Copy this into manifest.json.
+
+=> Meteor 0.9.0: Announcing Isobuild, the Meteor Packaging System.
+
+   Now you can publish your own packages and use any of the over 1800 community
+   packages in your app, without needing an external tool such as Meteorite.
+
+   This release is being downloaded in the background. It's a big change!  The
+   first time you run it it, it will erase your existing Meteor installation and
+   replace it with an installation of Meteor 0.9.0.  (Older versions of Meteor
+   will still be automatically downloaded if you need to develop apps that use
+   them.)
