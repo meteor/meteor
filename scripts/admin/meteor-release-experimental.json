@@ -1,11 +1,12 @@
 {
  "track": "METEOR",
- "version": "0.9.0-rc17",
- "patchFrom": ["0.9.0-rc13", "0.9.0-rc14", "0.9.0-rc15", "0.9.0-rc16"],
+ "version": "0.9.0-rc18",
+ "patchFrom": ["0.9.0-rc13", "0.9.0-rc14", "0.9.0-rc15", "0.9.0-rc16",
+               "0.9.0-rc17"],
  "recommended": false,
  "official": true,
  "description": "The official Meteor distribution.",
-        "tool": "meteor-tool@1.0.19",
+        "tool": "meteor-tool@1.0.20",
         "packages": {
           "accounts-base": "1.0.0",
           "accounts-facebook": "1.0.0",
