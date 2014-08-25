@@ -2178,8 +2178,8 @@ Template.api.pack_versions = {
 "all packages will default to the versions released along with " +
 "`meteorversion`. This will save you from having to figure out the exact " +
 "versions of the core packages you want to use. For example, if the newest " +
-"release of meteor is METEOR-CORE@0.9.0 and it uses jquery@1.0.0, you can use " +
-"`api.versionsFrom('METEOR-CORE@0.9.0')`. If your package uses jQuery, it will " +
+"release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use " +
+"`api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will " +
 "automatically depend on jQuery 1.0.0 when it is published."],
   args: [
    {name: "meteorversion",
