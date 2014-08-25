@@ -185,6 +185,8 @@ _.extend(Project.prototype, {
           { ignoreProjectDeps: true }
         );
       } catch (err) {
+        // XXX This error handling is bogus. Use buildmessage instead, or
+        // something. See also compiler.determineBuildTimeDependencies
         process.stdout.write(
           "Could not resolve the specified constraints for this project:\n"
            + (err.constraintSolverError ? err : err.stack) + "\n");
