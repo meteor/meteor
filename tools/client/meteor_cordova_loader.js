@@ -8,7 +8,30 @@
 
 (function () {
 
-  var evt = new Event("meteor-cordova-loaded");
+  var loadedEvent = (function () {
+    var usingEventConstructor = false;
+
+    // some browsers don't support the Event constructor
+    // eg Cordova on Android JellyBean
+    if (window.Event) {
+      usingEventConstructor = true;
+    }
+
+    var eventName = 'meteor-cordova-loaded';
+    var event;
+    if (usingEventConstructor) {
+      event = new Event(eventName);
+    } else {
+      event = document.createEvent('Event');
+      event.initEvent(eventName, true, true);
+    }
+
+    return {
+      dispatch: function () {
+        document.dispatchEvent(event);
+      }
+    };
+  })();
 
   var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
@@ -82,7 +105,7 @@
     });
 
     queue.push(function () {
-      document.dispatchEvent(evt);
+      loadedEvent.dispatch();
     });
 
     launchNext();
