@@ -1287,10 +1287,11 @@ main.registerCommand({
     // Unless --release was passed (in which case we ought to already have
     // springboarded to that release), go get the latest release and switch to
     // it. (We already know what the latest release is because we refreshed the
-    // catalog above.)  Note that after springboarding, we will hit this again
-    // (because springboarding to a specific release does NOT set release.forced),
-    // but it should be a no-op next time (unless there actually was a new latest
-    // release in the interim).
+    // catalog above.)  Note that after springboarding, we will hit this again.
+    // However, the override that's done by SpringboardToLatestRelease also sets
+    // release.forced (although it does not set release.explicit), so we won't
+    // double-springboard.  (We might miss an super recently published release,
+    // but that's probably OK.)
     if (! release.forced) {
       var latestRelease = doOrDie(function () {
         return release.latestDownloaded(releaseTrack);
@@ -1323,7 +1324,7 @@ main.registerCommand({
     // If we're not in an app, then we're done (other than maybe printing some
     // stuff).
     if (! options.appDir) {
-      if (release.forced || process.env.METEOR_SPRINGBOARD_RELEASE) {
+      if (release.forced) {
         // We get here if:
         // 1) the user ran 'meteor update' and we found a new version
         // 2) the user ran 'meteor update --release xyz' (regardless of
@@ -1412,7 +1413,7 @@ main.registerCommand({
         return 1;
       }
       releaseVersionsToTry = [updateTo];
-    } else if (release.forced) {
+    } else if (release.explicit) {
       doOrDie(function () {
         releaseVersionsToTry = [release.current.getReleaseVersion()];
       });
