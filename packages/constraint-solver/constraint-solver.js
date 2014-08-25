@@ -144,7 +144,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 //  - packageName - string name
 //  - version - string constraint (ex.: "1.2.3", ">=2.3.4", "=3.3.3")
 // options:
-//  - breaking - set this flag to true if breaking upgrades are allowed
 //  - upgrade - list of dependencies for which upgrade is prioritized higher
 //  than keeping the old version
 //  - previousSolution - mapping from package name to a version that was used in
@@ -156,7 +155,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // clone because we mutate options
   options = _.extend({
     _testing: false,
-    breaking: false,
     upgrade: []
   }, options || {});
 
@@ -169,7 +167,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   check(options, {
     _testing: Match.Optional(Boolean),
-    breaking: Match.Optional(Boolean),
     upgrade: [String],
     previousSolution: Match.Optional(Object)
   });
@@ -198,10 +195,13 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // split every package name to one or more archs belonging to that package
   // (["foobar"] => ["foobar#os", "foobar#web.browser", ...])
   // XXX for now just hardcode in all of the known architectures
-  options.upgrade = _.filter(_.flatten(_.map(options.upgrade, function (packageName) {
-    return [packageName + "#os", packageName + "#web.browser",
-            packageName + "#web.cordova"];
-  })), _.identity);
+  var upgradeUnibuilds = {};
+  _.each(options.upgrade, function (packageName) {
+    _.each(self._unibuildsForPackage(packageName), function (unibuildName) {
+      upgradeUnibuilds[unibuildName] = true;
+    });
+  });
+  options.upgrade = upgradeUnibuilds;
 
   var dc = self._splitDepsToConstraints(dependencies, constraints);
 
@@ -210,15 +210,18 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   var res = null;
   // If a previous solution existed, try resolving with additional (weak)
-  // equality constraints on all the versions from the previous solution. If
-  // it's possible to solve the constraints without changing any of the previous
-  // versions (though we may add more choices in addition, or remove some
-  // now-unnecessary choices) then that's our first try.
+  // equality constraints on all the versions from the previous solution (except
+  // those we've explicitly been asked to update). If it's possible to solve the
+  // constraints without changing any of the previous versions (though we may
+  // add more choices in addition, or remove some now-unnecessary choices) then
+  // that's our first try.
   if (!_.isEmpty(options.previousSolution)) {
     var constraintsWithPreviousSolutionLock = _.clone(dc.constraints);
     _.each(options.previousSolution, function (uv) {
-      constraintsWithPreviousSolutionLock.push(
-        self.resolver.getConstraint(uv.name, '=' + uv.version));
+      if (!_.has(options.upgrade, uv.name)) {
+        constraintsWithPreviousSolutionLock.push(
+          self.resolver.getConstraint(uv.name, '=' + uv.version));
+      }
     });
     try {
       // Try running the resolver. If it fails to resolve, that's OK, we'll keep
@@ -234,20 +237,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   if (!res) {
     // Either we didn't have a previous solution, or it doesn't work. Try again
     // without locking in the previous solution as strict equality.
-    //
-    // However, we still don't want you to downgrade a version of a direct
-    // dependency in regards to the previous solution.
-    // Depending on whether the option `breaking` is set or not, allow only
-    // compatible upgrades or any upgrades.
-    _.each(options.previousSolution, function (uv) {
-      // if not a root dependency, there is no 'no-upgrade' constraint
-      if (! _.contains(dependencies, uv.name))
-        return;
-
-      var constrType = options.breaking ? ">=" : "";
-      dc.constraints.push(
-        self.resolver.getConstraint(uv.name, constrType + uv.version));
-    });
 
     res = self.resolver.resolve(
       dc.dependencies, dc.constraints, resolverOptions);
@@ -354,7 +343,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     // if the upgrade is preferred over preserving previous solution, pretend
     // there are no previous solution
     _.each(prevSol, function (uv) {
-      if (! _.contains(options.upgrade, uv.name))
+      if (! _.has(options.upgrade, uv.name))
         prevSolMapping[uv.name] = uv;
     });
 

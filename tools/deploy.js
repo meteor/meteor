@@ -759,6 +759,7 @@ var listSites = function () {
       ! result.payload.sites.length) {
     process.stdout.write("You don't have any sites yet.\n");
   } else {
+    result.payload.sites.sort();
     _.each(result.payload.sites, function (site) {
       process.stdout.write(site + "\n");
     });

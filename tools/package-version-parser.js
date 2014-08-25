@@ -82,7 +82,7 @@ PV.parseConstraint = function (constraintString, options) {
 
   if (splitted.length === 2 && !versionString) {
     throwVersionParserError(
-      "Version constraint for package '" + name + 
+      "Version constraint for package '" + name +
         "' cannot be empty; leave off the @ if you don't want to constrain " +
         "the version.");
   }
@@ -103,9 +103,9 @@ PV.validatePackageName = function (packageName, options) {
     if (options.detailedColonExplanation) {
       throwVersionParserError(
         "Bad character in package name: " + JSON.stringify(badChar[0]) +
-          ". Package names can only contain lowercase ASCII alphanumerics, " +
-          "dash, or dot. If you plan to publish a package, it must be " +
-          "prefixed with your Meteor developer username and a colon.");
+          ".\n\nPackage names can only contain lowercase ASCII alphanumerics, " +
+          "dash, or dot.\nIf you plan to publish a package, it must be " +
+          "prefixed with your\nMeteor Developer Account username and a colon.");
     }
     throwVersionParserError(
       "Package names can only contain lowercase ASCII alphanumerics, dash, " +

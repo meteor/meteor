@@ -474,7 +474,7 @@ debugging the Meteor packaging tools themselves.
 
 >>> search
 Search through the package server database.
-Usage: meteor search <regex> [--maintainer <username>] [--show-broken]
+Usage: meteor search <regex> [--maintainer <username>] [--show-old]
 
 Search through the meteor package&release database for names containing the
 specified substring.
@@ -483,11 +483,11 @@ Use --maintainer to filter by authorized maintainers.
 
 By default, meteor search will not show packages that, due to migration issues,
 are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those packages anyway, use the --show-broken option.
+want to see those packages anyway, use the --show-old option.
 
 Options:
   --maintainer    filter by authorized maintainer
-  --show-broken   show packages incompatible with Meteor 0.9.0 and later.
+  --show-old      show packages incompatible with Meteor 0.9.0 and later.
 
 
 >>> show
@@ -501,11 +501,11 @@ version of a package or release.
 
 By default, meteor show will not show versions that, due to migration issues,
 are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those versions anyway, use the --show-broken option.
+want to see those versions anyway, use the --show-old option.
 
 Options:
   --maintainer    filter by authorized maintainer
-  --show-broken   show versions incompatible with Meteor 0.9.0 and later.
+  --show-old      show versions incompatible with Meteor 0.9.0 and later.
 
 
 

@@ -160,6 +160,7 @@ Copyright (c) 2011 Nate Smith <nate@nateps.com>
 
 ----------
 socket.io: https://github.com/learnboost/socket.io
+ms: https://github.com/guille/ms.js
 ----------
 
 Copyright (c) 2011 Guillermo Rauch <guillermo@learnboost.com>
@@ -277,6 +278,7 @@ nopt: https://github.com/isaacs/nopt
 slide: https://github.com/isaacs/slide-flow-control
 which: https://github.com/isaacs/node-which
 minimatch: https://github.com/isaacs/minimatch
+core-util-is: https://github.com/isaacs/core-util-is
 ----------
 
 Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
@@ -293,6 +295,10 @@ editor: https://github.com/substack/node-editor
 minimist: https://github.com/substack/minimist
 quotemeta: https://github.com/substack/quotemeta
 text-table: https://github.com/substack/text-table
+buffers: https://github.com/substack/node-buffers
+chainsaw: https://github.com/substack/node-chainsaw
+traverse: https://github.com/substack/js-traverse
+binary: https://github.com/substack/node-binary
 ----------
 
 Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
@@ -344,7 +350,7 @@ Copyright (c) 2011-2012 JP Richardson
 
 
 ----------
-setImmediate: https://github.com/NobleJS/setImmediate
+setimmediate: https://github.com/NobleJS/setImmediate
 ----------
 
 Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola
@@ -569,6 +575,37 @@ Copyright (c) 2013 Patrick Van Oosterwijck
 
 
 ----------
+isarray: https://github.com/juliangruber/isarray
+----------
+
+Copyright (c) 2013 Julian Gruber <julian@juliangruber.com>
+
+
+----------
+keep-alive-agent: https://github.com/ceejbot/keep-alive-agent
+----------
+
+Copyright (c) 2012 C J Silverio
+
+
+----------
+match-stream: https://github.com/EvanOxfeld/match-stream
+slice-stream: https://github.com/EvanOxfeld/slice-stream
+----------
+
+Copyright (c) 2013 Evan Oxfeld
+
+
+----------
+unzip: https://github.com/joeferner/node-unzip
+over: https://github.com/joeferner/node-over
+pullstream: https://github.com/EvanOxfeld/node-pullstream
+----------
+
+Copyright (c) 2012 Near Infinity Corporation
+
+
+----------
 nan: https://github.com/rvagg/nan
 ----------
 
@@ -618,6 +655,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 Except where noted, this license applies to any and all software
 programs and associated documentation files created by the
 Original Author, when distributed with the Software.
+
+
 
 
 
@@ -748,6 +787,21 @@ punycode: https://github.com/bestiejs/punycode.js
 ----------
 
 Copyright Mathias Bynens <http://mathiasbynens.be/>
+
+
+----------
+browserstack-webdriver: https://github.com/browserstack/selenium-webdriver-nodejs
+----------
+
+Copyright 2009-2014 Software Freedom Conservancy
+
+----------
+phantomjs: https://github.com/Medium/phantomjs (npm installer)
+----------
+
+Copyright 2012 The Obvious Corporation.
+
+
 
 
 ======================
@@ -1495,6 +1549,13 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+----------
+phantomjs: http://phantomjs.org/
+----------
+
+Copyright 2010-2014 Ariya Hidayat
+
+
 =============
 Public Domain
 =============
@@ -1606,6 +1667,7 @@ By Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)
 ----------
 opener: https://github.com/domenic/opener
 path-is-inside: https://github.com/domenic/path-is-inside
+sorted-object: https://github.com/domenic/sorted-object
 ----------
 
             DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
@@ -2080,6 +2142,8 @@ nodejs: http://nodejs.org/
 readable-stream: https://github.com/isaacs/readable-stream
 npm: https://github.com/isaacs/npm
 init-package-json: https://github.com/isaacs/init-package-json
+string_decoder: https://github.com/rvagg/string_decoder
+util-extend: https://github.com/isaacs/util-extend
 ----------
 
 
@@ -2677,3 +2741,47 @@ License: http://opendatacommons.org/licenses/dbcl/1.0/ The cartography is
 licensed under the under the Creative Commons Attribution-ShareAlike 2.0 license
 (CC-BY-SA). Full information is available at
 http://www.openstreetmap.org/copyright
+
+
+
+----------
+char-spinner: https://github.com/isaacs/char-spinner
+inflight: https://github.com/isaacs/inflight
+----------
+
+Copyright (c) Isaac Z. Schlueter
+
+The ISC License
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
+----------
+npm-cache-filename: https://github.com/npm/npm-cache-filename
+----------
+
+Copyright (c) npm, Inc. and Contributors
+
+The ISC License
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.

@@ -176,7 +176,10 @@ main.registerCommand({
     // locally (and other local packages you may have) instead of downloading
     // the source bundle. It does verify that the source is the same, though.
     // Good for bootstrapping things in the core release.
-    'existing-version': { type: Boolean }
+    'existing-version': { type: Boolean },
+    // This is the equivalent of "sudo": make sure that administrators don't
+    // accidentally put their personal packages in the top level namespace.
+    'top-level': { type: Boolean }
   },
   requiresPackage: true
 }, function (options) {
@@ -244,6 +247,14 @@ main.registerCommand({
       process.stderr.write(
         "Package already exists. To create a new version of an existing "+
         "package, do not use the --create flag! \n");
+      return 2;
+    }
+
+    if (!options['top-level'] && !packageName.match(/:/)) {
+      process.stderr.write(
+"To confirm that you wish to create a top-level package with no account\n" +
+"prefix, please run this command again with the --top-level option.\n" +
+"(Only administrators can create top-level packages without an account prefix)\n");
       return 2;
     }
   };
@@ -869,7 +880,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    "show-broken": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -878,9 +889,8 @@ main.registerCommand({
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
-    return options['show-broken'] || !(_.isEqual(record.description,
-                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
-   };
+    return options['show-old'] || !record.unmigrated;
+  };
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -1003,7 +1013,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
-    "show-broken": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -1031,15 +1041,14 @@ main.registerCommand({
   var filterBroken = function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
-    if (!match || isRelease || options["show-broken"])
+    if (!match || isRelease || options["show-old"])
       return match;
 
     var vr;
     doOrDie(function () {
       vr = catalog.official.getLatestVersion(name);
     });
-    return vr && !(_.isEqual(vr.description,
-                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+    return vr && !vr.unmigrated;
   };
 
   if (options.maintainer) {
@@ -1227,15 +1236,11 @@ main.registerCommand({
     return 1;
   }
 
-  if (!options["packages-only"]) {
-
-    // refuse to update the release if we're in a git checkout.
-    if (! files.usesWarehouse()) {
-      process.stderr.write(
-        "update: can only be run from official releases, not from checkouts\n");
-      return 1;
-    }
-
+  if (!options["packages-only"] && ! files.usesWarehouse()) {
+    process.stderr.write(
+"You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
+"Checking to see if we can update your packages.\n");
+  } else if (!options["packages-only"]) {
     // This is the release track we'll end up on --- either because it's
     // the explicitly specified (with --release) track; or because we
     // didn't specify a release and it's the app's current release (if we're
@@ -1522,7 +1527,6 @@ main.registerCommand({
     var messages = buildmessage.capture(function () {
       newVersions = catalog.complete.resolveConstraints(allPackages, {
         previousSolution: versions,
-        breaking: !options.minor,
         upgrade: upgradePackages
       }, {
         ignoreProjectDeps: true
@@ -1572,11 +1576,7 @@ main.registerCommand({
   name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true,
-  options: {
-    // XXX come up with a better option name, like --allow-downgrades
-    force: { type: Boolean, required: false }
-  }
+  requiresApp: true
 }, function (options) {
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -1700,13 +1700,9 @@ main.registerCommand({
     versions = project.getVersions();
 
     // Call the constraint solver.
-    var resolverOpts =  {
-      previousSolution: versions,
-      breaking: !!options.force
-    };
     newVersions = catalog.complete.resolveConstraints(
       allPackages,
-      resolverOpts,
+      { previousSolution: versions },
       { ignoreProjectDeps: true });
     if ( ! newVersions) {
       // XXX: Better error handling.

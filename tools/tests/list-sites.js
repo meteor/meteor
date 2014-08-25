@@ -13,9 +13,16 @@ selftest.define('list-sites - basic', ['net', 'slow'], function () {
   var appName2 = testUtils.randomAppName();
   testUtils.deployWithNewEmail(s, email, appName1);
   testUtils.createAndDeployApp(s, { appName: appName2 });
+  var sortedApps = [appName1, appName2];
+  sortedApps.sort();
+
   var run = s.run('list-sites');
   run.waitSecs(commandTimeoutSecs);
-  run.read(appName1 + '.meteor.com' + '\n' + appName2 + '.meteor.com');
+  _.each(sortedApps, function (app) {
+    run.read(app + '.meteor.com\n');
+  })
+  run.expectEnd();
+  run.expectExit(0);
   testUtils.cleanUpApp(s, appName1);
   testUtils.cleanUpApp(s, appName2);
   testUtils.logout(s);

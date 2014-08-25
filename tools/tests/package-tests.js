@@ -325,7 +325,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = username + ":" + packageName + "-a";
   var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
 
   // First test -- pretend that the user has downloaded meteor for the purpose
@@ -342,7 +342,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   publishReleaseInNewTrack(s, releaseTrack, fullPackageName /*tool*/, packages);
 
   // Create a package that has a versionsFrom for the just-published release.
-  var newPack = fullPackageName + "2";
+  var newPack = username + ":" + packageName + "-b";
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
     var packOpen = s.read("package.js");
@@ -383,8 +383,10 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   s.cd("testApp", function () {
     run = s.run("add", newPack);
     run.waitSecs(5);
-    run.match(/  added .*2 at version 1.0.0/);
-    run.match(/  added .* at version 1.0.0/);
+    var match1 = run.match(/  added .*-([ab]) at version 1.0.0/);
+    var match2 = run.match(/  added .*-([ab]) at version 1.0.0/);
+    // the lines should be different:
+    selftest.expectEqual(match1[1] !== match2[1], true);
     run.match("Test package");
     run.expectExit(0);
 
