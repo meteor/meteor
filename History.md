@@ -23,14 +23,14 @@ Other packaging-related changes:
   currently using, use `meteor search`.  The concept of an "internal" package
   (which did not show up in `meteor list`) no longer exists.
 
+* To prepare a bundle created with `meteor bundle` for execution on a
+  server, you now run `npm install` with no arguments instead of having
+  to specify a few specific npm modules and their versions
+  explicitly. See the README in the generated bundle for more details.
+
 * All `under_score`-style `package.js` APIs (`Package.on_use`, `api.add_files`,
   etc) have been replaced with `camelCase` names (`Package.onUse`,
   `api.addFiles`, etc).  The old names continue to work for now.
-
-* To prepare a bundle created with `meteor bundle` for execution on a server,
-  you now run `npm install` with no arguments instead of having to specify a few
-  specific npm modules and their versions explicitly. The README in the bundle
-  has been updated to show this.
 
 * There's a new `archMatching` option to `Plugin.registerSourceHandler`, which
   should be used by any plugin whose output is only for the client or only for
@@ -41,17 +41,18 @@ Other changes:
 
 * When running your app with the local development server, changes that only
   affect the client no longer require restarting the server.  Changes that only
-  affect CSS no longer require the browser to refresh the page (both in local
-  development and in some production environments).  #490
+  affect CSS no longer require the browser to refresh the page, both in local
+  development and in some production environments.  #490
 
 * When a call to `match` fails in a method or subscription, log the
   failure on the server. (This matches the behavior described in our docs)
 
-* The `appcache` package now defaults to functioning on all browsers that
-  support the AppCache API, rather than a whitelist of browsers. You can still
-  disable individual browsers with `AppCache.config`. The main effect of this
-  change is that `appcache` is now enabled by default on Firefox, because
-  Firefox no longer makes a confusing popup.  #2241
+* The `appcache` package now defaults to functioning on all browsers
+  that support the AppCache API, rather than a whitelist of browsers.
+  The main effect of this change is that `appcache` is now enabled by
+  default on Firefox, because Firefox no longer makes a confusing
+  popup. You can still disable individual browsers with
+  `AppCache.config`.  #2241
 
 * The `forceApprovalPrompt` option can now be specified in `Accounts.ui.config`
   in addition to `Meteor.loginWithGoogle`.  #2149
@@ -60,12 +61,12 @@ Other changes:
   "Got open from inactive client"
   error). https://github.com/faye/websocket-driver-node/pull/8
 
-* Updated OAuth url for Meetup.
+* Updated OAuth url for login with Meetup.
 
-* Allow minimongo `changed` callbacks to mutated their `oldDocument`
+* Allow minimongo `changed` callbacks to mutate their `oldDocument`
   argument. #2231
 
-* Fix upsert called from client with no callback.
+* Fix upsert called from client with no callback.  #2413
 
 * Avoid a few harmless exceptions in OplogObserveDriver.
 
