@@ -213,8 +213,10 @@ _.extend(exports.Tropohouse.prototype, {
     var buildsToDownload = catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
-      throw new Error(
+      var e = new Error(
         "No compatible build found for " + packageName + "@" + version);
+      e.noCompatibleBuildError = true;
+      throw e;
     }
 
     // XXX replace with a real progress bar in downloadMissingPackages
@@ -273,6 +275,10 @@ _.extend(exports.Tropohouse.prototype, {
   // that will run on this system (or the requested architecture). Return the
   // object with mapping packageName to version for the packages that we have
   // successfully downloaded.
+  //
+  // XXX This function's error handling capabilities are poor. It's supposed to
+  // return a data structure that its callers check, but most of its callers
+  // don't check it. Bleah.  Should rewrite this and all of its callers.
   downloadMissingPackages: function (versionMap, options) {
     var self = this;
     buildmessage.assertInCapture();
@@ -288,11 +294,12 @@ _.extend(exports.Tropohouse.prototype, {
         });
         downloadedPackages[name] = version;
       } catch (err) {
-        // We have failed to download the right things and put them on disk!
-        // This should not happen, and we aren't sure why it happened.
-        // XXX plenty of reasons why this might happen!  eg, no network.
-        //     better error handling here!
-        console.log(err);
+        if (!(err.noCompatibleBuildError))
+          throw err;
+        console.log(err.message);
+        // continue, which is weird, but we want to avoid a stack trace...
+        // the caller is supposed to check the size of the return value,
+        // although many callers do not.
       }
     });
     return downloadedPackages;
