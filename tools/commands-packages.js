@@ -1891,9 +1891,17 @@ main.registerCommand({
       }
     } catch (err) {
       process.stderr.write("\n" + err + "\n");
+      return 1;
     }
     conn.close();
+
+    // Update the catalog so that we have this information, and find the record
+    // again so that the message below is correct.
     refreshOfficialCatalogOrDie();
+    doOrDie(function () {
+      fullRecord = getReleaseOrPackageRecord(name);
+    });
+    record = fullRecord.record;
   }
 
   process.stdout.write("\n The maintainers for " + name + " are:\n");
