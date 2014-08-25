@@ -549,7 +549,7 @@ Options:
 
 
 >>> admin change-homepage
-Change the repository url of a package.
+Change the homepage url of a package.
 Usage: meteor admin change-homepage <package name> <new url>
 
 Change the homepage containing package information.
