@@ -1190,6 +1190,7 @@ var loggedInAccountsConnectionOrPrompt = function (action) {
     process.stdout.write("\n");
   }
 
+  token = auth.getSessionToken(config.getAccountsDomain());
   var conn = auth.loggedInAccountsConnection(token);
   if (conn === null) {
     // Server rejected our token.
@@ -1202,47 +1203,6 @@ var loggedInAccountsConnectionOrPrompt = function (action) {
 
   return conn;
 };
-
-main.registerCommand({
-  name: 'admin create-organization',
-  minArgs: 1,
-  maxArgs: 1
-}, function (options) {
-
-  var conn = loggedInAccountsConnectionOrPrompt("create an organization");
-
-  try {
-    conn.call("createOrganization", options.args[0]);
-  } catch (err) {
-    process.stderr.write("Error creating organization: " +
-                         (err.reason || "unknown error") + "\n");
-    return 1;
-  }
-  process.stdout.write("Organization " + options.args[0] + " created.\n");
-  return 0;
-});
-
-main.registerCommand({
-  name: 'admin show-organization',
-  minArgs: 1,
-  maxArgs: 1
-}, function (options) {
-
-  var conn = loggedInAccountsConnectionOrPrompt("show an organization");
-
-  try {
-    var result = conn.call("showOrganization", options.args[0]);
-  } catch (err) {
-    process.stderr.write("Error showing organization: " +
-                         err.reason + "\n");
-    return 1;
-  }
-
-  var members = _.pluck(result, "username");
-
-  process.stdout.write(members.join("\n") + "\n");
-  return 0;
-});
 
 // List the organizations of which the current user is a member.
 main.registerCommand({
@@ -1295,22 +1255,60 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: 'admin add-member',
-  minArgs: 2,
-  maxArgs: 2
+  name: 'admin members',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    add: { type: String },
+    remove: { type: String },
+    list: { type: Boolean }
+  }
 }, function (options) {
 
-  var conn = loggedInAccountsConnectionOrPrompt("edit organizations");
-
-  try {
-    conn.call("addOrganizationMember", options.args[0], options.args[1]);
-  } catch (err) {
-    process.stderr.write("Error adding member: " +
-                         err.reason + "\n");
-    return 1;
+  if (options.add && options.remove) {
+    process.stderr.write(
+      "Sorry, you can only add or remove one member at a time.\n");
+    throw new main.ShowUsage;
   }
-  process.stdout.write(options.args[1] + " added to organization " +
-                       options.args[0] + ".\n");
+
+  config.printUniverseBanner();
+
+  var username = options.add || options.remove;
+
+  var conn = loggedInAccountsConnectionOrPrompt(
+    username ? "edit organizations" : "show an organization's members");
+
+  if (username ) {
+    // Adding or removing members
+    try {
+      conn.call(
+        options.add ? "addOrganizationMember": "removeOrganizationMember",
+        options.args[0], username);
+    } catch (err) {
+      process.stderr.write("Error " +
+                           (options.add ? "adding" : "removing") +
+                           " member: " + err.reason + "\n");
+      return 1;
+    }
+
+    process.stdout.write(username + " " +
+                         (options.add ? "added to" : "removed from") +
+                         " organization " + options.args[0] + ".\n");
+  } else {
+    // Showing the members of an org
+    try {
+      var result = conn.call("showOrganization", options.args[0]);
+    } catch (err) {
+      process.stderr.write("Error showing organization: " +
+                           err.reason + "\n");
+      return 1;
+    }
+
+    var members = _.pluck(result, "username");
+
+    process.stdout.write(members.join("\n") + "\n");
+  }
+
   return 0;
 });
 

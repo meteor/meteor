@@ -1120,3 +1120,4 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 };
 
 exports.loggedInAccountsConnection = loggedInAccountsConnection;
+exports.withAccountsConnection = withAccountsConnection;
