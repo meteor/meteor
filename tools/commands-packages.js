@@ -397,6 +397,10 @@ main.registerCommand({
     // it doesn't we should fail. Hopefully, of course, we have
     // tested our stuff before deciding to publish it to the package
     // server, but we need to be careful.
+    // XXX If you're not using a matching version of the tool, this will give
+    //     an error like "Version lock for FOO should never change"!  Including
+    //     if you've swapped between checkout and released tool.  We really
+    //     should springboard here...
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
