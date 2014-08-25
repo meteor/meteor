@@ -84,7 +84,10 @@ Other changes:
   - tar: 1.0.1 (from 0.1.19)
   - fstream: 1.0.2 (from 0.1.25)
 
-Patches by XXX
+Patches by Github users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
+mquandalle, rcy, RichardLitt, thatneat, and twhy.
+
+
 
 ## v0.8.3
 
