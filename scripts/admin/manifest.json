@@ -1,0 +1,8 @@
+{
+    "releases": {
+        "stable": {
+            "version": "0.9.0",
+            "banner": "This is a banner!"
+        }
+    }
+}
