@@ -75,13 +75,7 @@ var runTest = function () {
         return m.url === file[0];
       });
       assert(manifestItem);
-<<<<<<< HEAD
-      var diskPath = path.join(tmpOutputDir, "programs", "client.browser",
-||||||| merged common ancestors
-      var diskPath = path.join(tmpOutputDir, "programs", "client",
-=======
       var diskPath = path.join(tmpOutputDir, "programs", "web.browser",
->>>>>>> packaging
                                manifestItem.path);
       assert(fs.existsSync(diskPath));
       assert.strictEqual(fs.readFileSync(diskPath, "utf8"), file[1]);

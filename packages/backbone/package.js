@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A minimalist client-side MVC framework",
-  version: "0.9.2"
+  version: "0.9.2-cordova1"
 });
 
 Package.on_use(function (api) {

@@ -169,6 +169,7 @@ Lists all of the platforms that have been explicitly added to your project.
 
 >>> bundle
 Deprecated command. Use 'build' instead.
+Deprecated command. Use 'build' instead.
 
 >>> build
 Outputs builds for all targeted platforms.
