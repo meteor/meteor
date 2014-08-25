@@ -205,7 +205,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
         useShortPages: options.useShortPages
       });
     } catch (err) {
-      process.stderr.write("ERROR " + err.message + "\n");
+      exports.handlePackageServerConnectionError(err);
       if (err.errorType === "DDP.ConnectionError") {
         cachedServerData = null;
         done = true;
@@ -446,15 +446,10 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
                 bundleResult.buildTarball);
 
   process.stdout.write('Publishing package build...\n');
-  try {
-    conn.call('publishPackageBuild',
-      uploadInfo.uploadToken,
-      bundleResult.tarballHash,
-      bundleResult.treeHash);
-  } catch (err) {
-    process.stderr.write("ERROR " + err.message + "\n");
-    return;
-  }
+  conn.call('publishPackageBuild',
+            uploadInfo.uploadToken,
+            bundleResult.tarballHash,
+            bundleResult.treeHash);
 
   process.stdout.write('Published ' + unipackage.name +
                        ', version ' + unipackage.version);
@@ -468,7 +463,7 @@ exports.handlePackageServerConnectionError = function (error) {
   if (error instanceof AlreadyPrintedMessageError) {
     // do nothing
   } else if (error.errorType === 'Meteor.Error') {
-    process.stderr.write("Error connecting to package server");
+    process.stderr.write("Error from package server");
     if (error.message) {
       process.stderr.write(": " + error.message);
     }

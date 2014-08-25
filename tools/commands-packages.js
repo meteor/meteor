@@ -261,15 +261,20 @@ main.registerCommand({
 
   // We have initialized everything, so perform the publish oepration.
   var ec;  // XXX maybe combine with messages?
-  messages = buildmessage.capture({
-    title: "publishing the package"
-  }, function () {
-    ec = packageClient.publishPackage(
-      packageSource, compileResult, conn, {
-        new: options.create,
-        existingVersion: options['existing-version']
-      });
-  });
+  try {
+    messages = buildmessage.capture({
+      title: "publishing the package"
+    }, function () {
+      ec = packageClient.publishPackage(
+        packageSource, compileResult, conn, {
+          new: options.create,
+          existingVersion: options['existing-version']
+        });
+    });
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return ec || 1;
@@ -416,11 +421,16 @@ main.registerCommand({
     return 1;
   }
 
-  messages = buildmessage.capture({
-    title: "publishing package " + name
-  }, function () {
-    packageClient.createAndPublishBuiltPackage(conn, unipkg);
-  });
+  try {
+    messages = buildmessage.capture({
+      title: "publishing package " + name
+    }, function () {
+      packageClient.createAndPublishBuiltPackage(conn, unipkg);
+    });
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
 
   if (messages.hasMessages()) {
     process.stderr.write("\n" + messages.formatMessages());
@@ -778,24 +788,31 @@ main.registerCommand({
 
       process.stdout.write("Publishing package: " + name + "\n");
 
-      var pubEC;  // XXX merge with messages?
-      messages = buildmessage.capture({
-        title: "publishing package " + name
-      }, function () {
-        var opts = {
-          new: !catalog.official.getPackage(name)
-        };
+      // XXX merge with messages? having THREE kinds of error handling here is
+      // um something.
+      var pubEC;
+      try {
+        messages = buildmessage.capture({
+          title: "publishing package " + name
+        }, function () {
+          var opts = {
+            new: !catalog.official.getPackage(name)
+          };
 
-        // If we are creating a new package, dsPS will document this for us, so
-        // we don't need to do this here. Though, in the future, once we are
-        // done bootstrapping package servers, we should consider having some
-        // extra checks around this.
-        pubEC = packageClient.publishPackage(
-          prebuilt.source,
-          prebuilt.compileResult,
-          conn,
-          opts);
-      });
+          // If we are creating a new package, dsPS will document this for us,
+          // so we don't need to do this here. Though, in the future, once we
+          // are done bootstrapping package servers, we should consider having
+          // some extra checks around this.
+          pubEC = packageClient.publishPackage(
+            prebuilt.source,
+            prebuilt.compileResult,
+            conn,
+            opts);
+        });
+      } catch (e) {
+          packageClient.handlePackageServerConnectionError(e);
+          return 1;
+      }
       if (messages.hasMessages()) {
         process.stderr.write(messages.formatMessages());
         return pubEC || 1;
@@ -819,8 +836,13 @@ main.registerCommand({
   // Create the new track, if we have been told to.
   if (options['create-track']) {
     process.stdout.write("Creating a new release track...\n");
-    var track = conn.call('createReleaseTrack',
-                          { name: relConf.track } );
+    try {
+      var track = conn.call('createReleaseTrack',
+                            { name: relConf.track } );
+    } catch (e) {
+      packageClient.handlePackageServerConnectionError(e);
+      return 1;
+    }
   }
 
   process.stdout.write("Creating a new release version...\n");
@@ -842,7 +864,7 @@ main.registerCommand({
       uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
     }
   } catch (err) {
-    process.stderr.write("ERROR: " + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
 
@@ -1890,7 +1912,7 @@ main.registerCommand({
         process.stdout.write(" Done!\n");
       }
     } catch (err) {
-      process.stderr.write("\n" + err + "\n");
+      packageClient.handlePackageServerConnectionError(err);
       return 1;
     }
     conn.close();
@@ -2129,8 +2151,13 @@ main.registerCommand({
     return 1;
   }
 
-  conn.call('setBannersOnReleases', bannersData.track,
-            bannersData.banners);
+  try {
+    conn.call('setBannersOnReleases', bannersData.track,
+              bannersData.banners);
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
 
   // Refresh afterwards.
   refreshOfficialCatalogOrDie();
@@ -2186,7 +2213,8 @@ main.registerCommand({
                            " is now  a recommended release\n");
     }
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
@@ -2237,7 +2265,8 @@ main.registerCommand({
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
@@ -2280,7 +2309,8 @@ main.registerCommand({
       conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
