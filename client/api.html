@@ -3170,26 +3170,27 @@ rest of this section will explain the specific API commands in greater detail.
     Package.describe({
       // Short two-sentence summary.
       summary: "What this does",
-      // Version number. New in 0.9.0.
+      // Version number.
       version: "1.0.0",
       // Optional.  Default is package directory name.
-      name: "username:packageName",
-      // Optional github URL to your source repository. New in 0.9.0.
+      name: "username:package-name",
+      // Optional github URL to your source repository.
       git: "https://github.com/something/something.git",
     });
 
     /* This defines your actual package */
     Package.onUse(function (api) {
-      // If no version is specified, use the one defined in Meteor 0.9.0.
+      // If no version is specified for an 'api.use' dependency, use the
+      // one defined in Meteor 0.9.0.
       api.versionsFrom('0.9.0');
       // Use Underscore package, but only on the server.
       // Version not specified, so it will be as of Meteor 0.9.0.
       api.use('underscore', 'server');
-      // Use application-configuration package, version 1.0.0.
+      // Use application-configuration package, version 1.0.0 or newer.
       api.use('application-configuration@1.0.0');
       // Give users of this package access to the Templating package.
       api.imply('templating')
-      // Export the functions in this package to the 'Email' object.
+      // Export the object 'Email' to packages or apps that use this package.
       api.export('Email', 'server');
       // Specify the source code for the package.
       api.addFiles('email.js', 'server');
@@ -3198,7 +3199,7 @@ rest of this section will explain the specific API commands in greater detail.
     /* This defines the tests for the package */
     Package.onTest(function (api) {
       // Sets up a dependency on this package
-      api.use('username:packageName');
+      api.use('username:package-name');
       // Allows you to use the 'tinytest' framework
       api.use('tinytest@1.0.0');
       // Specify the source code for the package tests
@@ -3210,23 +3211,30 @@ rest of this section will explain the specific API commands in greater detail.
       simplesmtp: "0.3.10",
       "stream-buffers": "0.2.5"});
 
-Build plugins are created with _transitional_registerBuildPlugin, an API that is
-very much in flux. See the coffeescript package in the meteor core for an
+Build plugins are created with `_transitional_registerBuildPlugin`, an API that is
+very much in flux. See the coffeescript package for an
 example. Build plugins are fully-fledged Meteor programs in their own right and
 have their own namespace, package dependencies, source files and npm
 requirements.
 
-
 <h3 id="packagedescription"><span>Package Description</span></h3>
 
-Provide basic package information with `Package.describe(options)`. To publish a package, you must define `summary` and `version`.
+Provide basic package information with `Package.describe(options)`. To publish a
+package, you must define `summary` and `version`.
+
+{{/markdown}}
 
 {{> api_box pack_describe }}
 
 
 <h3 id="packagedefinition"><span>Package Definition</span></h3>
 
-Define dependencies and expose package methods with the `Package.onUse` handler. This section lets you define what packages your package depends on, what packages are implied by your package, and what object your package is exported to.
+{{#markdown}}
+Define dependencies and expose package methods with the
+`Package.onUse` handler. This section lets you define what packages your package
+depends on, what packages are implied by your package, and what object your
+package is exported to.
+{{/markdown}}
 
 {{> api_box pack_onUse }}
 
@@ -3237,14 +3245,21 @@ Define dependencies and expose package methods with the `Package.onUse` handler.
 {{> api_box pack_addFiles }}
 
 
-<h3 id="packagedefinition"><span>Unit Tests</span></h3>
-Set up your tests with the `Package.onTest` handler, which has an interface that's parallel to that of the `onUse` handler. The tests will need to depend on the package that you have just created. For example, if your package is the `email` package, you have to call `api.use('email')` in order to test the package.
+<h3 id="packagetests"><span>Unit Tests</span></h3>
 
-If you used`meteor create` to set up your package, Meteor will create the required scaffolding in `package.js`, and you'll only need to add unit test code in the `_test.js` file that was created.
+{{#markdown}}
+Set up your tests with the `Package.onTest` handler, which has an interface
+that's parallel to that of the `onUse` handler. The tests will need to depend on
+the package that you have just created. For example, if your package is the
+`email` package, you have to call `api.use('email')` in order to test the
+package.
+
+If you used `meteor create` to set up your package, Meteor will create the
+required scaffolding in `package.js`, and you'll only need to add unit test code
+in the `_test.js` file that was created.
+{{/markdown}}
 
 {{> api_box pack_onTest }}
-
-{{/markdown}}
 
 </template>
 

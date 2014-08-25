@@ -347,6 +347,18 @@ var toc = [
     {name: "Assets", id: "assets"}, [
       {name: "Assets.getText", id: "assets_getText"},
       {name: "Assets.getBinary", id: "assets_getBinary"}
+    ],
+
+    {name: "Package.js", id: "packagejs"}, [
+      {name: "Package.describe", id: "packagedescription"},
+      {name: "Package.onUse", id: "packagedefinition"}, [
+        {name: "api.versionsFrom", id: "pack_versions"},
+        {name: "api.use", id: "pack_use"},
+        {name: "api.imply", id: "pack_api_imply"},
+        {name: "api.export", id: "pack_export"},
+        {name: "api.addFiles", id: "pack_addFiles"}
+      ],
+      {name: "Package.onTest", id: "packagetests"}
     ]
   ],
 
