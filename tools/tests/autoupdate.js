@@ -53,7 +53,7 @@ selftest.define("autoupdate", ['checkout'], function () {
   s.createApp('myapp', 'packageless');
   s.cd('myapp', function () {
     setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
-    s.write('.meteor/release', 'METEOR-CORE@v2');
+    s.write('.meteor/release', 'METEOR@v2');
 
     // console.log("WE ARE READY NOW", s.warehouse, s.cwd)
     // require('../utils.js').sleepMs(1000*10000)
@@ -76,7 +76,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     // If we are not at the latest version of Meteor, at startup, we get a
     // boring prompt to update (not a banner since we didn't set one for v1).
-    s.write('.meteor/release', 'METEOR-CORE@v1');
+    s.write('.meteor/release', 'METEOR@v1');
 
     // We don't see any information if we run a simple command like list.
     run = s.run("list");
@@ -98,7 +98,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.stop();
 
     // .. unless we explicitly forced this release. Then, no prompt.
-    s.write('.meteor/release', 'METEOR-CORE@somethingelse');
+    s.write('.meteor/release', 'METEOR@somethingelse');
     run = s.run("--release", "v1", "--port", "23000");
     run.waitSecs(5);
     run.match("running at");
@@ -135,7 +135,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     // and the downloading code turns out to be a noop if we already
     // have that version).
     recommend(s, "v3");
-    s.write('.meteor/release', 'METEOR-CORE@v2');
+    s.write('.meteor/release', 'METEOR@v2');
     run = s.run("--port", "26000");
     run.match("Meteor v3 is available");
     run.match("meteor update");

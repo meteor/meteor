@@ -245,22 +245,22 @@ selftest.define("update during run", ["checkout"], function () {
   s.set("NO_METEOR_PACKAGE", "t");
 
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'METEOR-CORE@v1');
+  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR-CORE@v2');
-  run.matchErr('to Meteor METEOR-CORE@v2 from Meteor METEOR-CORE@v1');
+  s.write('.meteor/release', 'METEOR@v2');
+  run.matchErr('to Meteor METEOR@v2 from Meteor METEOR@v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
-  s.write('.meteor/release', 'METEOR-CORE@v1');
-  run = s.run("--release", "METEOR-CORE@v3");
+  s.write('.meteor/release', 'METEOR@v1');
+  run = s.run("--release", "METEOR@v3");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR-CORE@v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -268,12 +268,12 @@ selftest.define("update during run", ["checkout"], function () {
   run.forbidAll("updated");
 
   // But not if the release was forced (case 2)
-  s.write('.meteor/release', 'METEOR-CORE@v1');
-  run = s.run("--release", "METEOR-CORE@v1");
+  s.write('.meteor/release', 'METEOR@v1');
+  run = s.run("--release", "METEOR@v1");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR-CORE@v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -285,12 +285,12 @@ selftest.define("update during run", ["checkout"], function () {
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  s.write('.meteor/release', 'METEOR-CORE@v1');
+  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR-CORE@v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');

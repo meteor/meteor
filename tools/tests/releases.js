@@ -28,13 +28,13 @@ selftest.define("springboard", ['checkout', 'net'], function () {
 
   // If run not in an app dir, runs the latest version ...
   run = s.run("--long-version");
-  run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
+  run.read('METEOR@v2\n' + toolsVersion + '\n');
   run.expectEnd();
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--long-version", "--release", "METEOR-CORE@v1");
-  run.read('METEOR-CORE@v1\n' + toolsVersion + '\n');
+  run = s.run("--long-version", "--release", "METEOR@v1");
+  run.read('METEOR@v1\n' + toolsVersion + '\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -44,15 +44,15 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   run.expectExit(0);
   s.cd('myapp', function () {
     run = s.run("--long-version");
-    run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
+    run.read('METEOR@v2\n' + toolsVersion + '\n');
     run.expectExit(0);
   });
 
   // ... unless you asked for a different one.
-  run = s.run("create", "myapp2", "--release", "METEOR-CORE@v1").expectExit(0);
+  run = s.run("create", "myapp2", "--release", "METEOR@v1").expectExit(0);
   s.cd('myapp2', function () {
     run = s.run("--long-version");
-    run.read('METEOR-CORE@v1\n' + toolsVersion + '\n');
+    run.read('METEOR@v1\n' + toolsVersion + '\n');
     run.expectExit(0);
   });
 
@@ -148,7 +148,7 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   run.expectExit(0);
   s.cd('myapp');
   run = s.run("--long-version");
-  run.read('METEOR-CORE@v2\n' + toolsVersion + '\n');
+  run.read('METEOR@v2\n' + toolsVersion + '\n');
   run.expectExit(0);
 
   // Check the contents of the versions file.

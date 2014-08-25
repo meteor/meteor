@@ -1265,7 +1265,7 @@ main.registerCommand({
       // and the user ran 'meteor update' without specifying a release? We
       // really can't do much here.
       if (!latestRelease) {
-        // XXX is there a command to get to the latest METEOR-CORE@? Should we
+        // XXX is there a command to get to the latest METEOR@? Should we
         // recommend it here?
         process.stderr.write(
           "There are no recommended releases on release track " +

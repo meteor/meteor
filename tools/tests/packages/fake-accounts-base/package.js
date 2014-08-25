@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-//  api.versionsFrom('METEOR-CORE@0.9.0-rc9');
+//  api.versionsFrom('METEOR@0.9.0-rc9');
   api.addFiles('fake-accounts-base.js');
 });
 

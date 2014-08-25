@@ -426,7 +426,7 @@ var createAndPublishPackage = function (s, packageName) {
   s.cd("..");
 };
 
-selftest.define("release track defaults to METEOR-CORE",
+selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
@@ -438,7 +438,7 @@ selftest.define("release track defaults to METEOR-CORE",
   // Create a package that has a versionsFrom for the just-published
   // release, but without the release track present in the call to
   // `versionsFrom`. This implies that it should be prefixed
-  // by "METEOR-CORE@"
+  // by "METEOR@"
   var newPack = fullPackageName;
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
@@ -450,12 +450,12 @@ selftest.define("release track defaults to METEOR-CORE",
   });
 
   // Try to publish the package. The error message should demonstrate
-  // that we indeed default to the METEOR-CORE release track when not
+  // that we indeed default to the METEOR release track when not
   // specified.
   s.cd(newPack, function() {
     var run = s.run("publish", "--create");
     run.waitSecs(20);
-    run.matchErr("Unknown release METEOR-CORE@" + releaseVersion);
+    run.matchErr("Unknown release METEOR@" + releaseVersion);
     run.expectExit(1);
   });
 });
