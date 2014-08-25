@@ -944,6 +944,7 @@ _.extend(Unipackage.prototype, {
       'tools', 'examples', 'LICENSE.txt', 'meteor',
       'scripts/admin/launch-meteor',
       'scripts/cordova.sh',
+      'scripts/android.sh',
       'scripts/ensure_android_bundle.sh');
 
     // Trim blank line and unnecessary examples.
