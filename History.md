@@ -18,19 +18,19 @@ https://docs.meteor.com/#packagejs for more details.
 
 Other packaging-related changes:
 
-* To prepare a bundle created with `meteor bundle` for execution on a server,
-  you now run `npm install` with no arguments instead of having to specify a few
-  specific npm modules and their versions explicitly. The README in the bundle
-  has been updated to show this.
+* `meteor list` now lists the packages your app is using, which was formerly the
+  behavior of `meteor list --using`. To search for packages you are not
+  currently using, use `meteor search`.  The concept of an "internal" package
+  (which did not show up in `meteor list`) no longer exists.
 
 * All `under_score`-style `package.js` APIs (`Package.on_use`, `api.add_files`,
   etc) have been replaced with `camelCase` names (`Package.onUse`,
   `api.addFiles`, etc).  The old names continue to work for now.
 
-* `meteor list` now lists the packages your app is using, which was formerly the
-  behavior of `meteor list --using`. To search for packages you are not
-  currently using, use `meteor search`.  The concept of an "internal" package
-  (which did not show up in `meteor list`) no longer exists.
+* To prepare a bundle created with `meteor bundle` for execution on a server,
+  you now run `npm install` with no arguments instead of having to specify a few
+  specific npm modules and their versions explicitly. The README in the bundle
+  has been updated to show this.
 
 * There's a new `archMatching` option to `Plugin.registerSourceHandler`, which
   should be used by any plugin whose output is only for the client or only for
@@ -44,9 +44,8 @@ Other changes:
   affect CSS no longer require the browser to refresh the page (both in local
   development and in some production environments).  #490
 
-* Don't leak websocket clients in server-to-server DDP in some cases (and fix
-  "Got open from inactive client"
-  error). https://github.com/faye/websocket-driver-node/pull/8
+* When a call to `match` fails in a method or subscription, log the
+  failure on the server. (This matches the behavior described in our docs)
 
 * The `appcache` package now defaults to functioning on all browsers that
   support the AppCache API, rather than a whitelist of browsers. You can still
@@ -54,11 +53,12 @@ Other changes:
   change is that `appcache` is now enabled by default on Firefox, because
   Firefox no longer makes a confusing popup.  #2241
 
-* When a call to `match` fails in a method or subscription, log the
-  failure on the server. (This matches the behavior described in our docs)
-
 * The `forceApprovalPrompt` option can now be specified in `Accounts.ui.config`
   in addition to `Meteor.loginWithGoogle`.  #2149
+
+* Don't leak websocket clients in server-to-server DDP in some cases (and fix
+  "Got open from inactive client"
+  error). https://github.com/faye/websocket-driver-node/pull/8
 
 * Updated OAuth url for Meetup.
 
