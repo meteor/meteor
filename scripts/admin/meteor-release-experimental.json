@@ -1,7 +1,7 @@
 {
  "track": "METEOR",
- "version": "0.9.0-rc12",
+ "version": "0.9.0-rc13",
  "recommended": false,
  "official": true,
- "description": "An experimental release of meteor."
+ "description": "The official Meteor distribution."
 }
