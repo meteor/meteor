@@ -85,7 +85,7 @@ _.extend(exports.Tropohouse.prototype, {
     var currentToolVersion = null;
     // Warning: we can't examine release.current here, because we might be
     // currently processing release.load!
-    if (!files.isCheckout()) {
+    if (!files.inCheckout()) {
       // toolsDir is something like:
       // /home/user/.meteor/packages/meteor-tool/.1.0.17.ut200e++os.osx.x86_64+web.browser+web.cordova/meteor-tool-os.osx.x86_64
       var toolsDir = files.getCurrentToolsDir();
