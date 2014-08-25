@@ -98,6 +98,14 @@ _.extend(exports.Tropohouse.prototype, {
 
     _.each(packages, function (package) {
       var packageDir = path.join(packageRootDir, package);
+      try {
+        var versions = fs.readdirSync(packageDir);
+      } catch (e) {
+        // Somebody put a file in here or something? Whatever, ignore.
+        if (e.code === 'ENOENT' || e.code === 'ENOTDIR')
+          return;
+        throw e;
+      }
       _.each(fs.readdirSync(packageDir), function (version) {
         // Is this a pre-0.9.0 "warehouse" version with a hash name?
         if (/^[a-f0-9]{3,}$/.test(version))
