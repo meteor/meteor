@@ -1,5 +1,53 @@
 ## v.NEXT
 
+## v0.9.0
+
+Meteor 0.9.0 introduces the Meteor Package Server. Incorporating lessons from
+our community's Meteorite tool, Meteor 0.9.0 allows users to develop and publish
+Meteor packages to a central repository. The `meteor publish` command is used to
+publish packages. Non-core packages can now be added with `meteor add`, and you
+can specify version constraints on the packages you use. Binary packages can be
+published for additional architectures with `meteor publish-for-arch`, which
+allows cross-platform deploys and bundling.  You can search for packages with
+`meteor search` and display information on them with `meteor show`, or you can
+use the Atmosphere web interface developed by Percolate Studios at
+https://atmospherejs.com/
+
+See https://docs.meteor.com/#writingpackages and
+https://docs.meteor.com/#packagejs for more details.
+
+Other packaging-related changes:
+
+* To prepare a bundle created with `meteor bundle` for execution on a server,
+  you now run `npm install` with no arguments instead of having to specify a few
+  specific npm modules and their versions explicitly. The README in the bundle
+  has been updated to show this.
+
+* All `under_score`-style `package.js` APIs (`Package.on_use`, `api.add_files`,
+  etc) have been replaced with `camelCase` names (`Package.onUse`,
+  `api.addFiles`, etc).  The old names continue to work for now.
+
+* `meteor list` now lists the packages your app is using, which was formerly the
+  behavior of `meteor list --using`. To search for packages you are not
+  currently using, use `meteor search`.  The concept of an "internal" package
+  (which did not show up in `meteor list`) no longer exists.
+
+* There's a new `archMatching` option to `Plugin.registerSourceHandler`, which
+  should be used by any plugin whose output is only for the client or only for
+  the server (eg, CSS and HTML templating packages); this allows Meteor to avoid
+  restarting the server when files processed by these plugins change.
+
+Other changes:
+
+* When running your app with the local development server, changes that only
+  affect the client no longer require restarting the server.  Changes that only
+  affect CSS no longer require the browser to refresh the page (both in local
+  development and in some production environments).  #490
+
+* Don't leak websocket clients in server-to-server DDP in some cases (and fix
+  "Got open from inactive client"
+  error). https://github.com/faye/websocket-driver-node/pull/8
+
 * The `appcache` package now defaults to functioning on all browsers that
   support the AppCache API, rather than a whitelist of browsers. You can still
   disable individual browsers with `AppCache.config`. The main effect of this
@@ -9,10 +57,34 @@
 * When a call to `match` fails in a method or subscription, log the
   failure on the server. (This matches the behavior described in our docs)
 
+* The `forceApprovalPrompt` option can now be specified in `Accounts.ui.config`
+  in addition to `Meteor.loginWithGoogle`.  #2149
+
+* Updated OAuth url for Meetup.
+
+* Allow minimongo `changed` callbacks to mutated their `oldDocument`
+  argument. #2231
+
+* Fix upsert called from client with no callback.
+
+* Avoid a few harmless exceptions in OplogObserveDriver.
+
+* Refactor `observe-sequence` package.
+
+* Fix `spiderable` race condition.
+
+* Re-apply our fix of NPM bug https://github.com/npm/npm/issues/3265 which got
+  accidentally reverted upstream.
+
+* Workaround for a crash in recent Safari
+  versions. https://github.com/meteor/meteor/commit/e897539adb
+
 * Upgraded dependencies:
   - less: 1.7.4 (from 1.7.1)
   - tar: 1.0.1 (from 0.1.19)
   - fstream: 1.0.2 (from 0.1.25)
+
+Patches by XXX
 
 ## v0.8.3
 
