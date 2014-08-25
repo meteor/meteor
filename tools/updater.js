@@ -104,7 +104,8 @@ var maybeShowBanners = function () {
   var track = release.current.getReleaseTrack();
   var patchReleaseVersion = releaseData.patchReleaseVersion;
   if (patchReleaseVersion) {
-    var patchRelease = catalog.official.getReleaseVersion(track, patchRelease);
+    var patchRelease = catalog.official.getReleaseVersion(
+      track, patchReleaseVersion);
     if (patchRelease && patchRelease.recommended) {
       runLog.log("=> A patch (" +
                  utils.displayRelease(track, patchReleaseVersion) +
