@@ -46,6 +46,7 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
 
   ensureLegacyReleaseDownloaded(sandbox);
 
+  name = name + "." + config.getDeployHostname();
   var runArgs = ['deploy', '--release', '0.7.0.1', name];
   if (password)
     runArgs.push('-P');
@@ -61,7 +62,7 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
   }
 
   run.waitSecs(90);
-  run.match('Now serving at ' + name + '.meteor.com');
+  run.match('Now serving at ' + name);
   // XXX: We should wait for it to exit with code 0, but it times out for some reason.
   run.stop();
   return name;
@@ -69,6 +70,10 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
 
 exports.cleanUpLegacyApp = function (sandbox, name, password) {
   ensureLegacyReleaseDownloaded(sandbox);
+
+  if (name.indexOf(".") === -1) {
+    name = name + "." + config.getDeployHostname();
+  }
 
   var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
   if (password) {
@@ -94,6 +99,11 @@ exports.createAndDeployApp = function (sandbox, options) {
   var name = options.appName || randomAppName();
   sandbox.createApp(name, options.templateApp || 'empty');
   sandbox.cd(name);
+
+  if (name.indexOf(".") === -1) {
+    name = name + "." + config.getDeployHostname();
+  }
+
   var runArgs = ['deploy', name];
   if (options.settingsFile) {
     runArgs.push('--settings');
@@ -101,13 +111,17 @@ exports.createAndDeployApp = function (sandbox, options) {
   }
   var run = sandbox.run.apply(sandbox, runArgs);
   run.waitSecs(90);
-  run.match('Now serving at ' + name + '.meteor.com');
+  run.match('Now serving at ' + name);
   run.waitSecs(10);
   run.expectExit(0);
   return name;
 };
 
 exports.cleanUpApp = function (sandbox, name) {
+  if (name.indexOf(".") === -1) {
+    name = name + "." + config.getDeployHostname();
+  }
+
   var run = sandbox.run('deploy', '-D', name);
   run.waitSecs(90);
   run.match('Deleted');
@@ -149,6 +163,11 @@ exports.registrationUrlRegexp = registrationUrlRegexp;
 exports.deployWithNewEmail = function (s, email, appName) {
   s.createApp('deployapp', 'empty');
   s.cd('deployapp');
+
+  if (appName.indexOf(".") === -1) {
+    appName = appName + "." + config.getDeployHostname();
+  }
+
   var run = s.run('deploy', appName);
   run.waitSecs(exports.accountsCommandTimeoutSecs);
   run.matchErr('Email:');
