@@ -766,7 +766,8 @@ Meteor promises repeatable builds for both packages and applications. This means
 that, if you built your package on a machine, then checked the code into a
 repository and checked it out elsewhere, you should get the same result. In your
 package directory, you will find an automatically generated versions.json
-file. That file is part of the source. Check it into version control to ensure
+file. This file specifies the versions of all packages used to build your
+package and is part of the source. Check it into version control to ensure
 repeatable builds across machines.
 
 {{#note}}
@@ -795,11 +796,11 @@ test and run your app as usual. Meteor will detect and respond to changes to
 your local package, just as it does to your app files.
 
 * Unit tests are run with the command [`meteor test-packages
-package-name`](#meteortestpackages). As mentioned in the previous section, you
-can use the `package.js` file to specify where your unit tests are located. If
-you have a repository that contains only the package source, you can test your
-package by specifying the path to the package directory (which must contain a
-slash), such as `meteor test-packages ./`.
+package-name`](#meteortestpackages). As described in the [`package.js`](#packagejs)
+section, you can use the `package.js` file to specify where your unit tests are
+located. If you have a repository that contains only the package source, you can
+test your package by specifying the path to the package directory (which must
+contain a slash), such as `meteor test-packages ./`.
 
 To publish a package, run [`meteor publish`](#meteorpublish) from the package
 directory.  There are some extra restrictions on published packages: they must
