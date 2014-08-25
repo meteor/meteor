@@ -405,6 +405,7 @@ exports.execFileSync = function (file, args, opts) {
 };
 
 exports.execFileAsync = function (file, args, opts) {
+  opts = opts || {};
   var child_process = require('child_process');
   var eachline = require('eachline');
   var p = child_process.spawn(file, args, opts);

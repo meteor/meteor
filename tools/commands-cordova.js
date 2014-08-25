@@ -30,7 +30,11 @@ var localCordova = path.join(files.getCurrentToolsDir(),
 var localAdb = path.join(files.getCurrentToolsDir(),
   "android_bundle", "android-sdk", "platform-tools", "adb");
 
-var execFileAsyncOrThrow = function (file, args, opts) {
+var execFileAsyncOrThrow = function (file, args, opts, cb) {
+  if (_.isFunction(opts)) {
+    cb = opts;
+    opts = undefined;
+  }
   var execFileAsync = require('./utils.js').execFileAsync;
   if (_.contains([localCordova, localAdb], file) &&
       _.contains(project.getCordovaPlatforms(), 'android'))
@@ -38,10 +42,14 @@ var execFileAsyncOrThrow = function (file, args, opts) {
 
   var p = execFileAsync(file, args, opts);
   p.on('close', function (code) {
+    var err = null;
     if (code)
-      throw new Error(file + ' ' + args.join(' ') +
+      err = new Error(file + ' ' + args.join(' ') +
                       ' exited with non-zero code: ' + code + '. Use -v for' +
                       ' more logs.');
+
+    if (cb) cb(err, code);
+    else if (err) throw err;
   });
 };
 
@@ -541,8 +549,9 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       ['-c', 'open ' + path.join(localPath, 'cordova-build',
              'platforms', 'ios', '*.xcodeproj')]);
   } else {
-    execFileAsyncOrThrow(localCordova, args, { verbose: options.verbose,
-                                               cwd: cordovaPath });
+    execFileAsyncOrThrow(
+      localCordova, args,
+      { verbose: options.verbose, cwd: cordovaPath });
   }
 
   var Log = getLoadedPackages().logging.Log;
@@ -596,7 +605,16 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     });
   } else if (platform === 'android') {
     // clear the logcat logs from the previous run
-    execFileSyncOrThrow(localAdb, ['logcat', '-c']);
+    // set a timeout for this command for 5s
+    var future = new Future;
+    execFileAsyncOrThrow(localAdb, ['logcat', '-c'], future.resolver());
+    setTimeout(function () {
+      if (! future.isResolved) {
+        future.throw(new Error("clearing logs of Android device timed out: adb logcat -c"));
+      }
+    }, 5000);
+    future.wait();
+
     execFileAsyncOrThrow(localAdb, ['logcat', '-s', 'CordovaLog'], {
       verbose: true,
       lineMapper: androidMapper
