@@ -2158,14 +2158,14 @@ Template.api.pack_use = {
 "weak dependency on package B, it means that including A in an app does not " +
 "force B to be included too — but, if B is included " +
 "or by another package, then B will load before A. You can use this to make " +
-"packages that optionally integrate with or enhance other packages if those" +
+"packages that optionally integrate with or enhance other packages if those " +
 "packages are present."
    },
    {name: "unordered",
     type: "Boolean",
     descr: "It's okay to load this dependency after your package. "+
 "(In general, dependencies specified by `api.use` are loaded before your "+
-"package.)"
+"package.) You can use this option to break circular dependencies."
    },
   ]
 };
@@ -2179,7 +2179,7 @@ Template.api.pack_versions = {
 "`meteorversion`. This will save you from having to figure out the exact " +
 "versions of the core packages you want to use. For example, if the newest " +
 "release of meteor is METEOR-CORE@0.9.0 and it uses jquery@1.0.0, you can use " +
-"`api.versionsFrom(METEOR-CORE@0.9.0)`. If your package uses jQuery, it will " +
+"`api.versionsFrom('METEOR-CORE@0.9.0')`. If your package uses jQuery, it will " +
 "automatically depend on jQuery 1.0.0 when it is published."],
   args: [
    {name: "meteorversion",
@@ -2211,7 +2211,9 @@ Template.api.pack_export = {
   id: "pack_export",
   name: "api.export(exportedObject, [architecture])",
   locus: "package.js",
-  descr: ["Export the functions in your package to methods in an object."],
+  descr: ["Export package-level variables in your package. The specified " +
+          "variables (declared without `var` in the source code) will " +
+          "be available to packages that use this package."],
   args: [
    {name: "exportedObject",
     type: "String",

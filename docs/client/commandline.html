@@ -116,14 +116,14 @@ Attempts to bring you to the latest version of Meteor, and then to upgrade your
 packages to their latest versions. By default, update will not break
 compatibility.
 
-For example, let's say, packages A and B both depend on version 1.1.0 of package
+For example, let's say packages A and B both depend on version 1.1.0 of package
 X. If a new version of A depends on X@2.0.0, but there is no new version of
 package B, running `meteor update` will not update A, because doing so will
 break package B.
 
 You can pass in the flag `--packages-only` to update only the packages, and not
-the release itself. Similarly, you can pass in names of packages (`meteor update
-foo:kittens baz:cats`) to only update specific packages.
+the release itself. Similarly, you can pass in names of packages
+(`meteor update foo:kittens baz:cats`) to only update specific packages.
 
 Every project is pinned to a specific release of Meteor. You can temporarily try
 using your package with another release by passing the `--release` option to any
@@ -147,8 +147,8 @@ include the name of the maintainer. For example: `meteor add iron:router`. You
 can add multiple packages with one command
 
 Optionally, adds version constraints. Running `meteor add package@1.1.0` will
-add the package at version `1.1.0` or higher. If you want to use version `1.1.0`
-exactly, use `meteor add package@=1.1.0`.
+add the package at version `1.1.0` or higher (but not `2.0.0` or higher). If you
+want to use version `1.1.0` exactly, use `meteor add package@=1.1.0`.
 
 To remove a version constraint for a specific package, run `meteor add` again
 without specifying a version. For example above, to stop using version `1.1.0`
@@ -165,7 +165,7 @@ This removes the package entirely. To continue using the package,
 but remove its version constraint, use [`meteor add`](#meteoradd).
 
 Meteor does not downgrade transitive dependencies unless it's necessary. This
-means that if running`meteor add A` upgrades A's parent package X to a new
+means that if running `meteor add A` upgrades A's parent package X to a new
 version, your project will continue to use X at the new version even after you
 run `meteor remove A`.
 
@@ -262,12 +262,13 @@ upload a different build.
 
 For example, let's say you published name:cool-binary-blob from a Mac. If you
 want people to be able to use cool-binary-blob from Linux, you should log into a
-Linux machine and then run `meteor publish-for-arch
-name:cool-binary-blob@version`.  It will notice that you are on a linux machine,
-and that there is no Linux-compatible build for your package and publish one.
+Linux machine and then run
+`meteor publish-for-arch name:cool-binary-blob@version`.  It will notice that you
+are on a linux machine, and that there is no Linux-compatible build for your package
+and publish one.
 
 Currently, the supported architectures for Meteor are 32-bit Linux, 64-bit Linux
-and Mac OS. The servers for `meteor deploy` run 64-bit linux.
+and Mac OS. The servers for `meteor deploy` run 64-bit Linux.
 
 
 <h3 id="meteorpublishrelease">meteor publish-release</h3>

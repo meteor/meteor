@@ -37,7 +37,7 @@ send emails, or the Meteor Accounts series (`accounts-password`,
 `accounts-facebook`, `accounts-ui`, and others) which provide a
 full-featured user account system that you can drop right into your
 app. In addition to these "core" packages, there are thousands of
-community-written packages in [Atmosphere](https://atmosphere.meteor.com/),
+community-written packages in [Atmosphere](https://atmospherejs.com/),
 one of which might do just what you need.
 
 * A _command-line tool_ called `meteor`.<br>
@@ -795,10 +795,11 @@ test and run your app as usual. Meteor will detect and respond to changes to
 your local package, just as it does to your app files.
 
 * Unit tests are run with the command [`meteor test-packages
-packageName`](#meteortestpackages). As mentioned in the previous section, you
+package-name`](#meteortestpackages). As mentioned in the previous section, you
 can use the `package.js` file to specify where your unit tests are located. If
-you have a repository that contains only the package file, you can test your
-package with `meteor test-packages ./`.
+you have a repository that contains only the package source, you can test your
+package by specifying the path to the package directory (which must contain a
+slash), such as `meteor test-packages ./`.
 
 To publish a package, run [`meteor publish`](#meteorpublish) from the package
 directory.  There are some extra restrictions on published packages: they must
