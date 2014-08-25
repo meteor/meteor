@@ -62,8 +62,11 @@ var formatList = function (items) {
   _.each(items, function (item) {
     var name = item.name + pad.substr(item.name.length);
     var description = item.description || 'No description';
-    out += (name + "  " +
-            description.substr(0, width - 2 - pad.length) + "\n");
+    var line = name + "  " + description;
+    if (line.length > width) {
+      line = line.substr(0, width - 3) + '...';
+    }
+    out += line + "\n";
   });
 
   return out;
