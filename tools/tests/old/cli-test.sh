@@ -177,7 +177,7 @@ $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
 
 METEOR_PID=$!
 
-sleep 5 # XXX XXX lame
+sleep 10 # XXX XXX lame
 
 ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
 curl -s "http://localhost:$PORT" >> $OUTPUT
@@ -256,7 +256,7 @@ EOF
 
 ! $METEOR add a-package-named-bar >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
-$METEOR -p $PORT --once 2>&1 | grep "Cannot find anything about package -- a-package-named-bar" >> $OUTPUT
+$METEOR -p $PORT --once 2>&1 | grep "unknown package: a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
 tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT
