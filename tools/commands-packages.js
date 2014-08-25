@@ -275,6 +275,15 @@ main.registerCommand({
     return ec || 1;
   }
 
+  // We are only publishing one package, so we should close the connection, and
+  // then exit with the previous error code.
+  conn.close();
+
+  // If the publishPackage failed, exit now (no need to spend time trying to
+  // refresh).
+  if (ec)
+    return ec;
+
   // Warn the user if their package is not good for all architectures.
   var allArchs = compileResult.unipackage.buildArchitectures().split('+');
   if (_.any(allArchs, function (arch) {
@@ -286,10 +295,7 @@ main.registerCommand({
         "Please use publish-for-arch to publish new builds of the package.\n\n");
   }
 
-  // We are only publishing one package, so we should close the connection, and
-  // then exit with the previous error code.
-  conn.close();
-
+  // Refresh, so that we actually learn about the thing we just published.
   refreshOfficialCatalogOrDie();
 
   return ec;
