@@ -285,7 +285,7 @@ var installPlugin = function (cordovaPath, name, version, settings) {
     additionalArgs.push(variable + '=' + JSON.stringify(value));
   });
 
-  process.stdout.write('Installing ' + pluginInstallCommand + '\n');
+  process.stdout.write('  installing ' + pluginInstallCommand + '\n');
   var execRes = execFileSyncOrThrow(localCordova,
      ['plugin', 'add', pluginInstallCommand].concat(additionalArgs),
      { cwd: cordovaPath });
