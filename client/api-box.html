@@ -1,12 +1,7 @@
 <template name="api_box">
 <div class="api {{bare}}">
 
-<h3 id="{{id}}">
-  <a class="name selflink" href="#{{id}}">{{{name}}}</a>
-{{#if locus}}
-  <span class="locus">{{locus}}</span>
-{{/if}}
-</h3>
+{{> apiBoxTitle}}
 
 <div class="desc">
 {{#each descr}}{{#markdown}}{{{this}}}{{/markdown}}{{/each}}
@@ -30,21 +25,19 @@
 
 </template>
 
-<template name="autoApiBox">
-{{#with apiData this}}
-<div class="api {{bare}}">
-  <h3 id="{{link}}">
-    <a class="name selflink" href="#{{link}}">
-      {{#if isFunction}}
-        {{{signatureName}}}({{paramsSentence}})
-      {{else}}
-        {{{signatureName}}}
-      {{/if}}
-    </a>
+<template name="apiBoxTitle">
+  <h3 id="{{id}}">
+    <a class="name selflink" href="#{{id}}">{{{name}}}</a>
     {{#if locus}}
       <span class="locus">{{locus}}</span>
     {{/if}}
   </h3>
+</template>
+
+<template name="autoApiBox">
+{{#with apiData this}}
+<div class="api {{bare}}">
+  {{> apiBoxTitle name=signature locus=locus id=link}}
 
   <div class="desc">
     {{#markdown}}{{summary}}{{/markdown}}
