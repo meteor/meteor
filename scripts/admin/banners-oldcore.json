@@ -3,7 +3,7 @@
     {
       "versions": ["0.9.0-rc10", "0.9.0-rc11", "0.9.0-rc12"],
       "banner": {
-        "text": "We changed the name of the core Meteor release track from METEOR-CORE\nto METEOR.  Update to the current rc with `meteor update --release METEOR@0.9.0-rc13`.\nMeteor 0.9.0 is coming soon; thanks for helping test the release candidates!"
+        "text": "=> Meteor 0.9.0 is now out! Upgrade to it with:\n     `meteor update --release METEOR@0.9.0`\n   Thanks for helping test the release candidates!"
        }
     }
   ]

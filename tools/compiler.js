@@ -187,11 +187,24 @@ var determineBuildTimeDependencies = function (packageSource,
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
-  ret.packageDependencies =
-    packageSource.catalog.resolveConstraints(
-      constraints_array,
-      { previousSolution: versions },
-      constraintSolverOpts);
+  try {
+    ret.packageDependencies =
+      packageSource.catalog.resolveConstraints(
+        constraints_array,
+        { previousSolution: versions },
+        constraintSolverOpts);
+  } catch (e) {
+    if (!e.constraintSolverError)
+      throw e;
+    // XXX should use buildmessage here, but the code isn't structured properly
+    // to ignore issues.  eg, try "meteor publish" where the onTest depends on a
+    // nonexistent package.  see the other call in this function too, and
+    // project._ensureDepsUpToDate
+    process.stderr.write(
+      "Could not resolve the specified constraints for this package:\n"
+        + e + "\n");
+    process.exit(1);
+  }
 
   // We care about differentiating between all dependencies (which we save in
   // the version lock file) and the direct dependencies (which are packages that
@@ -226,11 +239,24 @@ var determineBuildTimeDependencies = function (packageSource,
     });
 
     var pluginVersion = pluginVersions[info.name] || {};
-    ret.pluginDependencies[info.name] =
-      packageSource.catalog.resolveConstraints(
-        constraints_array,
-        { previousSolution: pluginVersion },
-        constraintSolverOpts );
+    try {
+      ret.pluginDependencies[info.name] =
+        packageSource.catalog.resolveConstraints(
+          constraints_array,
+          { previousSolution: pluginVersion },
+          constraintSolverOpts );
+    } catch (e) {
+      if (!e.constraintSolverError)
+        throw e;
+      // XXX should use buildmessage here, but the code isn't structured
+      // properly to ignore issues.  eg, try "meteor publish" where the onTest
+      // depends on a nonexistent package.  see the other call in this function
+      // too, and project._ensureDepsUpToDate
+      process.stderr.write(
+        "Could not resolve the specified constraints for this package:\n"
+          + e + "\n");
+      process.exit(1);
+    }
   });
 
   // Every time we run the constraint solver, we record the results. This has

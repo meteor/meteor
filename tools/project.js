@@ -185,6 +185,8 @@ _.extend(Project.prototype, {
           { ignoreProjectDeps: true }
         );
       } catch (err) {
+        // XXX This error handling is bogus. Use buildmessage instead, or
+        // something. See also compiler.determineBuildTimeDependencies
         process.stdout.write(
           "Could not resolve the specified constraints for this project:\n"
            + (err.constraintSolverError ? err : err.stack) + "\n");
@@ -426,8 +428,11 @@ _.extend(Project.prototype, {
   // versions file.
   //
   // Returns an object mapping package name to its string version.
-  getVersions : function () {
+  getVersions : function (options) {
     var self = this;
+    options = options || {};
+    if (options.dontRunConstraintSolver)
+      return self.dependencies;
     buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.dependencies;
@@ -749,7 +754,7 @@ _.extend(Project.prototype, {
 
   _finishedUpgradersFile: function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'finished-upgraders');
+    return path.join(self.rootDir, '.meteor', '.finished-upgraders');
   },
 
   getFinishedUpgraders: function () {

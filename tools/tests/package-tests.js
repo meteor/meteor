@@ -417,13 +417,11 @@ var createAndPublishPackage = function (s, packageName) {
   var run = s.run("create", "--package", packageName);
   run.waitSecs(10);
   run.expectExit(0);
-  s.cd(packageName);
-
-  run = s.run("publish", "--create");
-  run.waitSecs(25);
-  run.expectExit(0);
-
-  s.cd("..");
+  s.cd(packageName, function (){
+    run = s.run("publish", "--create");
+    run.waitSecs(25);
+    run.expectExit(0);
+  });
 };
 
 selftest.define("release track defaults to METEOR",
