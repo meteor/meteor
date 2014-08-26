@@ -146,6 +146,31 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
   resultEquals(test, solution, [A110, B100, C100]);
 });
 
+Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
+  var resolver = new ConstraintSolver.Resolver();
+  var A100 = new ConstraintSolver.UnitVersion("A", "1.0.0", "1.0.0");
+  var A100rc1 = new ConstraintSolver.UnitVersion("A", "1.0.0-rc1", "1.0.0");
+
+  resolver.addUnitVersion(A100rc1);
+  resolver.addUnitVersion(A100);
+  var initialConstraint = resolver.getConstraint("A", ">=0.0.0");
+
+  var solution = resolver.resolve(["A"], [initialConstraint], {
+    costFunction: function (state) {
+      return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+        var name = mori.first(nameAndUv);
+        var uv = mori.last(nameAndUv);
+        // Make the non-rc one more costly. But we still shouldn't choose it!
+        if (uv.version === "1.0.0")
+          return 100;
+        return 0;
+      }, state.choices));
+    }
+  });
+
+  resultEquals(test, solution, [A100]);
+});
+
 function semver2number (semverStr) {
   return parseInt(semverStr.replace(/\./g, ""));
 }
