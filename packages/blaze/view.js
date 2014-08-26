@@ -360,7 +360,7 @@ Blaze._destroyView = function (view, _skipNodes) {
   // the backend (jQuery) is recursing over the elements already.
 
   if (view._domrange)
-    view._domrange.destroyMembers();
+    view._domrange.destroyMembers(_skipNodes);
 };
 
 Blaze._destroyNode = function (node) {
