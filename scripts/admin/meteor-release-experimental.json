@@ -1,6 +1,6 @@
 {
  "track": "CORDOVA-PREVIEW",
- "version": "2",
+ "version": "4",
  "recommended": true,
  "official": false,
  "description": "An experimental release of meteor with Cordova support."
