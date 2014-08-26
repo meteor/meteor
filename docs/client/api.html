@@ -177,25 +177,23 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {{/warning}}
 
-{{> api_box subscription_userId}}
+{{> autoApiBox "Subscription#userId"}}
 
 This is constant. However, if the logged-in user changes, the publish
 function is rerun with the new value.
 
-{{> api_box subscription_added}}
-{{> api_box subscription_changed}}
-{{> api_box subscription_removed}}
-{{> api_box subscription_ready}}
-
-{{> api_box subscription_onStop}}
+{{> autoApiBox "Subscription#added"}}
+{{> autoApiBox "Subscription#changed"}}
+{{> autoApiBox "Subscription#removed"}}
+{{> autoApiBox "Subscription#ready"}}
+{{> autoApiBox "Subscription#onStop"}}
 
 If you call [`observe`](#observe) or [`observeChanges`](#observe_changes) in your
 publish handler, this is the place to stop the observes.
 
-{{> api_box subscription_error}}
-{{> api_box subscription_stop}}
-
-{{> api_box subscription_connection}}
+{{> autoApiBox "Subscription#error"}}
+{{> autoApiBox "Subscription#stop"}}
+{{> autoApiBox "Subscription#connection"}}
 
 {{> api_box subscribe}}
 
@@ -321,13 +319,13 @@ their stub version that update the local cache, and sending the same write
 request to the server. When the server responds, the client updates the local
 cache with the writes that actually occurred on the server.
 
-{{> api_box method_invocation_userId}}
+{{> autoApiBox "MethodInvocation#userId"}}
 
 The user id is an arbitrary string &mdash; typically the id of the user record
 in the database. You can set it with the `setUserId` function. If you're using
 the [Meteor accounts system](#accounts_api) then this is handled for you.
 
-{{> api_box method_invocation_setUserId}}
+{{> autoApiBox "MethodInvocation#setUserId"}}
 
 Call this function to change the currently logged in user on the
 connection that made this method call. This simply sets the value of
@@ -343,18 +341,18 @@ any future method calls on the connection. Any previous method calls on
 this connection will still see the value of `userId` that was in effect
 when they started.
 
-{{> api_box method_invocation_isSimulation}}
+{{> autoApiBox "MethodInvocation#isSimulation"}}
 
-{{> api_box method_invocation_unblock}}
+{{> autoApiBox "MethodInvocation#unblock"}}
 
 On the server, methods from a given client run one at a time. The N+1th
 invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
 
-{{> api_box method_invocation_connection}}
+{{> autoApiBox "MethodInvocation#connection"}}
 
-{{> api_box error}}
+{{> autoApiBox "Meteor.Error"}}
 
 If you want to return an error from a method, throw an exception.  Methods can
 throw any kind of exception.  But `Meteor.Error` is the only kind of error that
@@ -593,7 +591,7 @@ server.
 Meteor stores data in *collections*.  To get started, declare a
 collection with `new Meteor.Collection`.
 
-{{> api_box meteor_collection}}
+{{> autoApiBox "Meteor.Collection"}}
 
 Calling this function is analogous to declaring a model in a traditional ORM
 (Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
@@ -1277,7 +1275,7 @@ Example:
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
 
-{{> api_box collection_object_id}}
+{{> autoApiBox "Meteor.Collection.ObjectID"}}
 
 `Meteor.Collection.ObjectID` follows the same API as the [Node MongoDB driver
 `ObjectID`](http://mongodb.github.com/node-mongodb-native/api-bson-generated/objectid.html)
@@ -1291,7 +1289,9 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
   method, since Meteor currently constructs them fully randomly.
 {{/note}}
 
-{{#api_box selectors}}
+
+
+{{> apiBoxTitle name="Mongo-Style Selectors" id="selectors"}}
 
 The simplest selectors are just a string or
 [`Meteor.Collection.ObjectID`](#collection_object_id). These selectors match the
@@ -1323,9 +1323,7 @@ But they can also contain more complicated tests:
 See the [complete
 documentation](http://docs.mongodb.org/manual/reference/operator/).
 
-{{/api_box}}
-
-{{#api_box modifiers}}
+{{> apiBoxTitle name="Mongo-Style Modifiers" id="modifiers"}}
 
 A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
@@ -1348,9 +1346,9 @@ supported by [validated updates](#allow).)
 See the [full list of
 modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
 
-{{/api_box}}
 
-{{#api_box sortspecifiers}}
+
+{{> apiBoxTitle name="Sort Specifiers" id="sortspecifiers"}}
 
 Sorts may be specified using your choice of several syntaxes:
 
@@ -1365,9 +1363,9 @@ The last form will only work if your JavaScript implementation
 preserves the order of keys in objects. Most do, most of the time, but
 it's up to you to be sure.
 
-{{/api_box}}
 
-{{#api_box fieldspecifiers}}
+
+{{> apiBoxTitle name="Field Specifiers" id="fieldspecifiers"}}
 
 Queries can specify a particular set of fields to include or exclude from the
 result object.
@@ -1410,7 +1408,7 @@ A more advanced example:
 See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
 the MongoDB docs</a> for details of the nested field rules and array behavior.
 
-{{/api_box}}
+
 
 <h2 id="session"><span>Session</span></h2>
 
@@ -1996,7 +1994,7 @@ to [`Accounts.verifyEmail`](#accounts_verifyemail).
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
-{{> api_box accounts_emailTemplates}}
+{{> autoApiBox "Accounts.emailTemplates"}}
 
 This is an `Object` with several fields that are used to generate text/html
 for the emails sent by `sendResetPasswordEmail`, `sendEnrollmentEmail`,
@@ -2269,7 +2267,7 @@ is used.
 For example, if there is a template named "foo", `{{dstache}}> UI.dynamic
 template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
 
-{{#api_box eventmaps}}
+{{> apiBoxTitle name="Event Maps" id="eventmaps"}}
 
 Several functions take event maps. An event map is an object where
 the properties specify a set of events to handle, and the values are
@@ -2436,7 +2434,6 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
-{{/api_box}}
 
 
 <h2 id="match"><span>Match</span></h2>
@@ -2691,12 +2688,12 @@ and returns `func`'s own return value.  If `func` accesses reactive data
 sources, these data sources will never cause a rerun of the enclosing
 computation.
 
-{{> api_box deps_active }}
+{{> autoApiBox "Deps.active" }}
 
 This value is useful for data source implementations to determine
 whether they are being accessed reactively or not.
 
-{{> api_box deps_currentcomputation }}
+{{> autoApiBox "Deps.currentComputation" }}
 
 It's very rare to need to access `currentComputation` directly.  The
 current computation is used implicitly by
@@ -2804,15 +2801,15 @@ break dependencies when a computation is rerun or stopped.
 To get a callback after a computation has been recomputed, you can
 call [`Deps.afterFlush`](#deps_afterflush) from `onInvalidate`.
 
-{{> api_box computation_stopped }}
+{{> autoApiBox "Computation#stopped" }}
 
-{{> api_box computation_invalidated }}
+{{> autoApiBox "Computation#invalidated" }}
 
 This property is initially false.  It is set to true by `stop()` and
 `invalidate()`.  It is reset to false when the computation is
 recomputed at flush time.
 
-{{> api_box computation_firstrun }}
+{{> autoApiBox "Computation#firstRun" }}
 
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.

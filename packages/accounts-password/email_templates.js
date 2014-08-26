@@ -1,3 +1,7 @@
+/**
+ * @summary Options to customize emails sent from the Accounts system.
+ * @locus Anywhere
+ */
 Accounts.emailTemplates = {
   from: "Meteor Accounts <no-reply@meteor.com>",
   siteName: Meteor.absoluteUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''),

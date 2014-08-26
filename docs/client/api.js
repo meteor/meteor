@@ -963,12 +963,6 @@ Template.api.dependency_hasdependents = {
 // invalidationCrossbar
 
 
-Template.api.eventmaps = {
-  id: "eventmaps",
-  name: "Event Maps"
-};
-
-
 Template.api.user = {
   id: "meteor_user",
   name: "Meteor.user()",

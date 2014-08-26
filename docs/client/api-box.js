@@ -14,9 +14,6 @@ var apiData = function (longname) {
 
 Template.autoApiBox.helpers({
   apiData: apiData,
-  isFunction: function () {
-    return _.contains(["function", "class"], this.kind);
-  },
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
@@ -31,25 +28,36 @@ Template.autoApiBox.helpers({
 
     return nameList.join(" or ");
   },
-  paramsSentence: function () {
-    var params = this.params;
+  signature: function () {
+    var signature;
 
-    var paramNames = _.map(params, function (param) {
-      if (param.optional) {
-        return "[" + param.name + "]";
-      }
-
-      return param.name;
-    });
-
-    return paramNames.join(", ");
-  },
-  signatureName: function () {
+    var beforeParens;
     if (this.scope === "instance") {
-      return "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
+      beforeParens = "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
+    } else if (this.kind === "class") {
+      beforeParens = "new " + this.longname;
+    } else {
+      beforeParens = this.longname;
     }
 
-    return this.longname;
+    signature = beforeParens;
+
+    // if it is a function, and therefore has arguments
+    if (_.contains(["function", "class"], this.kind)) {
+      var params = this.params;
+
+      var paramNames = _.map(params, function (param) {
+        if (param.optional) {
+          return "[" + param.name + "]";
+        }
+
+        return param.name;
+      });
+
+      signature += "(" + paramNames.join(", ") + ")";
+    }
+
+    return signature;
   },
   link: function () {
     if (this.scope === "instance") {

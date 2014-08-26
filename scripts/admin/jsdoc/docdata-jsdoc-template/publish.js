@@ -65,15 +65,6 @@
       }
     });
 
-    var constructors = helper.find(data, {kind: "class"});
-
-    _.each(constructors, function (constructor) {
-      if (constructor.summary) {
-        addToTree(docTree, constructor.longname, constructor);
-        addToTree(nameTree, constructor.longname, {});
-      }
-    });
-
     var properties = helper.find(data, {kind: "member"});
 
     _.each(properties, function (property) {
@@ -84,6 +75,10 @@
     });
 
     var functions = helper.find(data, {kind: "function"});
+    var constructors = helper.find(data, {kind: "class"});
+
+    // we want to do all of the same transformations to classes and functions
+    functions = functions.concat(constructors);
 
     // insert all of the function data into the namespaces
     _.each(functions, function (func) {

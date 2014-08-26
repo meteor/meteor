@@ -3,6 +3,7 @@
     "ui": {
       "config": {}
     },
+    "emailTemplates": {},
     "config": {},
     "validateLoginAttempt": {},
     "onLogin": {},
@@ -20,15 +21,6 @@
     "sendVerificationEmail": {}
   },
   "Meteor": {
-    "Collection": {
-      "Cursor": {},
-      "Cursor#forEach": {},
-      "Cursor#map": {},
-      "Cursor#fetch": {},
-      "Cursor#count": {},
-      "Cursor#observe": {},
-      "Cursor#observeChanges": {}
-    },
     "users": {},
     "isClient": {},
     "isServer": {},
@@ -52,6 +44,16 @@
     "clearInterval": {},
     "clearTimeout": {},
     "absoluteUrl": {},
+    "Collection": {
+      "Cursor#forEach": {},
+      "Cursor#map": {},
+      "Cursor#fetch": {},
+      "Cursor#count": {},
+      "Cursor#observe": {},
+      "Cursor#observeChanges": {},
+      "Cursor": {},
+      "ObjectID": {}
+    },
     "Collection#insert": {},
     "Collection#update": {},
     "Collection#find": {},
@@ -59,10 +61,15 @@
     "Collection#remove": {},
     "Collection#upsert": {},
     "Collection#allow": {},
-    "Collection#deny": {}
+    "Collection#deny": {},
+    "Error": {}
   },
   "Deps": {
-    "Dependency": {},
+    "active": {},
+    "currentComputation": {},
+    "Computation#stopped": {},
+    "Computation#invalidated": {},
+    "Computation#firstRun": {},
     "Computation": {},
     "Computation#onInvalidate": {},
     "Computation#invalidate": {},
@@ -74,9 +81,17 @@
     "autorun": {},
     "nonreactive": {},
     "onInvalidate": {},
-    "afterFlush": {}
+    "afterFlush": {},
+    "Dependency": {}
   },
-  "Template": {},
+  "MethodInvocation#isSimulation": {},
+  "MethodInvocation#userId": {},
+  "MethodInvocation#connection": {},
+  "Subscription#connection": {},
+  "Subscription#userId": {},
+  "Template#created": {},
+  "Template#rendered": {},
+  "Template#destroyed": {},
   "EJSON": {
     "newBinary": {},
     "addType": {},
@@ -91,9 +106,19 @@
   "HTTP": {
     "call": {}
   },
+  "MethodInvocation": {},
+  "MethodInvocation#unblock": {},
+  "MethodInvocation#setUserId": {},
   "DDP": {
     "connect": {}
   },
+  "Subscription#error": {},
+  "Subscription#stop": {},
+  "Subscription#onStop": {},
+  "Subscription#added": {},
+  "Subscription#changed": {},
+  "Subscription#removed": {},
+  "Subscription#ready": {},
   "Session": {
     "set": {},
     "setDefault": {},
@@ -101,5 +126,7 @@
     "equals": {}
   },
   "Template#helpers": {},
-  "Template#events": {}
+  "Template#events": {},
+  "Subscription": {},
+  "Template": {}
 }

@@ -5,9 +5,19 @@
 Deps = {};
 
 // http://docs.meteor.com/#deps_active
+
+/**
+ * @summary True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun.
+ * @locus Client
+ */
 Deps.active = false;
 
 // http://docs.meteor.com/#deps_currentcomputation
+
+/**
+ * @summary The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed.
+ * @locus Client
+ */
 Deps.currentComputation = null;
 
 var setCurrentComputation = function (c) {
@@ -118,12 +128,36 @@ Deps.Computation = function (f, parent) {
   var self = this;
 
   // http://docs.meteor.com/#computation_stopped
+  
+  /**
+   * @summary True if this computation has been stopped.
+   * @locus Client
+   * @memberOf Deps.Computation
+   * @instance
+   * @name  stopped
+   */
   self.stopped = false;
 
   // http://docs.meteor.com/#computation_invalidated
+  
+  /**
+   * @summary True if this computation has been invalidated (and not yet rerun), or if it has been stopped.
+   * @locus Client
+   * @memberOf Deps.Computation
+   * @instance
+   * @name  invalidated
+   */
   self.invalidated = false;
 
   // http://docs.meteor.com/#computation_firstrun
+  
+  /**
+   * @summary True during the initial run of the computation at the time `Deps.autorun` is called, and false on subsequent reruns and at other times.
+   * @locus Client
+   * @memberOf Deps.Computation
+   * @instance
+   * @name  firstRun
+   */
   self.firstRun = true;
 
   self._id = nextId++;

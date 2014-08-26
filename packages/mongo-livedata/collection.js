@@ -5,6 +5,7 @@
  * @summary Constructor for a Collection
  * @locus Anywhere
  * @instancename collection
+ * @class
  * @param {String} name The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection.
  * @param {Object} [options]
  * @param {Object} options.connection The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#ddp_connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
@@ -628,6 +629,12 @@ Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
   self._collection._createCappedCollection(byteSize);
 };
 
+/**
+ * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
+ * @locus Anywhere
+ * @class
+ * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
+ */
 Meteor.Collection.ObjectID = LocalCollection._ObjectID;
 
 ///

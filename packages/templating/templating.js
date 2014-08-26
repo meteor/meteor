@@ -141,8 +141,8 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
    * @summary Provide a callback when an instance of a template is created.
    * @locus Client
    * @memberOf Template
+   * @name  created
    * @instance
-   * @member {Function}
    */
   if (template.created) {
     view.onCreated(function () {
@@ -155,8 +155,8 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
    * @summary Provide a callback when an instance of a template is rendered.
    * @locus Client
    * @memberOf Template
+   * @name  rendered
    * @instance
-   * @member {Function}
    */
   if (template.rendered) {
     view.onRendered(function () {
@@ -169,7 +169,8 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
    * @summary Provide a callback when an instance of a template is destroyed.
    * @locus Client
    * @instance
-   * @member {Function}
+   * @name  destroyed
+   * @memberOf Template
    */
   if (template.destroyed) {
     view.onDestroyed(function () {
