@@ -559,8 +559,8 @@ Blaze.data = function (elementOrView) {
 
 // For back-compat
 Blaze.getElementData = function (element) {
-  Blaze._warn(Blaze._symbol() + ".getElementData has been deprecated.  Use " +
-              Blaze._symbol() + ".data(element) instead.");
+  Blaze._warn("Blaze.getElementData has been deprecated.  Use " +
+              "Blaze.data(element) instead.");
 
   if (element.nodeType !== 1)
     throw new Error("Expected DOM element");
