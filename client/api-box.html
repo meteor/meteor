@@ -43,13 +43,13 @@
   </h3>
 
   <div class="desc">
-    {{{description}}}
+    {{#markdown}}{{summary}}{{/markdown}}
   </div>
 
-  {{#if paramsNoNested}}
+  {{#if paramsNoOptions}}
     <h4>Arguments</h4>
     <dl class="args">
-      {{#each paramsNoNested}}
+      {{#each paramsNoOptions}}
         <dt>
           <span class="name">{{name}}</span>
           <span class="type">{{typeNames type.names}}</span>
