@@ -12,7 +12,7 @@ can specify version constraints on the packages you use. Binary packages can be
 published for additional architectures with `meteor publish-for-arch`, which
 allows cross-platform deploys and bundling.  You can search for packages with
 `meteor search` and display information on them with `meteor show`, or you can
-use the Atmosphere web interface developed by Percolate Studios at
+use the Atmosphere web interface developed by Percolate Studio at
 https://atmospherejs.com/
 
 See https://docs.meteor.com/#writingpackages and
