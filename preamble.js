@@ -27,9 +27,3 @@ Blaze._warn = function (msg) {
   else if ((typeof 'console' !== 'undefined') && console.log)
     console.log(msg);
 };
-
-// For the sake of error messages, try to work out if this is Meteor
-// (and say "UI.render", etc.) or just Blaze ("Blaze.render");
-Blaze._symbol = function () {
-  return ((typeof UI !== 'undefined') && UI === Blaze) ? 'UI' : 'Blaze';
-};

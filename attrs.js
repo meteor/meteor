@@ -269,7 +269,7 @@ var UrlHandler = AttributeHandler.extend({
       if (isJavascriptProtocol) {
         Blaze._warn("URLs that use the 'javascript:' protocol are not " +
                     "allowed in URL attribute values. " +
-                    "Call " + Blaze._symbol() + "._allowJavascriptUrls() " +
+                    "Call Blaze._allowJavascriptUrls() " +
                     "to enable them.");
         origUpdate.apply(self, [element, oldValue, null]);
       } else {
