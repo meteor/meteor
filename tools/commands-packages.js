@@ -1494,6 +1494,12 @@ main.registerCommand({
       return 1;
     }
 
+    if (solutionReleaseVersion !== releaseVersionsToTry[0]) {
+      process.stdout.write(
+        "(Newer releases are available but are not compatible with your\n" +
+          "current package constraints.)\n");
+    }
+
     var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
 
     // We could at this point springboard to solutionRelease (which is no newer
