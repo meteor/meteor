@@ -52,12 +52,10 @@
    */
   exports.publish = function(taffyData) {
     var data = helper.prune(taffyData);
-
-    var namespaces = helper.find(data,
-      {kind: "namespace"});
-
     var docTree = {};
     var nameTree = {};
+
+    var namespaces = helper.find(data, {kind: "namespace"});
 
     // prepare all of the namespaces
     _.each(namespaces, function (namespace) {
@@ -73,6 +71,15 @@
       if (constructor.summary) {
         addToTree(docTree, constructor.longname, constructor);
         addToTree(nameTree, constructor.longname, {});
+      }
+    });
+
+    var properties = helper.find(data, {kind: "member"});
+
+    _.each(properties, function (property) {
+      if (property.summary) {
+        addToTree(docTree, property.longname, property);
+        addToTree(nameTree, property.longname, {});
       }
     });
 

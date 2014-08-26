@@ -132,7 +132,11 @@ if (Meteor.isClient) {
 // Users table. Don't use the normal autopublish, since we want to hide
 // some fields. Code to autopublish this is in accounts_server.js.
 // XXX Allow users to configure this collection name.
-//
+
+/**
+ * @summary A [Meteor.Collection](#collections) containing user documents.
+ * @locus Anywhere
+ */
 Meteor.users = new Meteor.Collection("users", {
   _preventAutopublish: true,
   connection: Meteor.isClient ? Accounts.connection : Meteor.connection

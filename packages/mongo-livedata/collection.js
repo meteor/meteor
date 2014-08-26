@@ -1,6 +1,21 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
+/**
+ * @summary Constructor for a Collection
+ * @locus Anywhere
+ * @instancename collection
+ * @param {String} name The name of the collection.  If null, creates an unmanaged (unsynchronized) local collection.
+ * @param {Object} [options]
+ * @param {Object} options.connection The server connection that will manage this collection. Uses the default connection if not specified.  Pass the return value of calling [`DDP.connect`](#ddp_connect) to specify a different server. Pass `null` to specify no connection. Unmanaged (`name` is null) collections cannot specify a connection.
+ * @param {String} options.idGeneration The method of generating the `_id` fields of new documents in this collection.  Possible values:
+
+ - **`'STRING'`**: random strings
+ - **`'MONGO'`**:  random [`Meteor.Collection.ObjectID`](#collection_object_id) values
+
+The default id generation technique is `'STRING'`.
+ * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
+ */
 Meteor.Collection = function (name, options) {
   var self = this;
   if (! (self instanceof Meteor.Collection))
@@ -226,6 +241,21 @@ _.extend(Meteor.Collection.prototype, {
     }
   },
 
+  /**
+   * @summary Find the documents in a collection that match the selector.
+   * @locus Anywhere
+   * @method find
+   * @memberOf Meteor.Collection
+   * @instance
+   * @param {MongoSelector} selector The query
+   * @param {Object} [options]
+   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+   * @param {Number} options.skip Number of results to skip at the beginning
+   * @param {Number} options.limit Maximum number of results to return
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
+   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   */
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
     // from Collection.find(undefined) (return 0 docs).  so be
@@ -236,6 +266,20 @@ _.extend(Meteor.Collection.prototype, {
                                  self._getFindOptions(argArray));
   },
 
+  /**
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options.
+   * @locus Anywhere
+   * @method findOne
+   * @memberOf Meteor.Collection
+   * @instance
+   * @param {MongoSelector} selector The query
+   * @param {Object} [options]
+   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+   * @param {Number} options.skip Number of results to skip at the beginning
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
+   * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   */
   findOne: function (/* selector, options */) {
     var self = this;
     var argArray = _.toArray(arguments);
@@ -358,6 +402,41 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 // generating their result until the database has acknowledged
 // them. In the future maybe we should provide a flag to turn this
 // off.
+
+/**
+ * @summary Insert a document in the collection.  Returns its unique _id.
+ * @locus Anywhere
+ * @method  insert
+ * @memberOf Meteor.Collection
+ * @instance
+ * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+ * @param {Function} callback Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+ */
+
+/**
+ * @summary Modify one or more documents in the collection. Returns the number of affected documents.
+ * @locus Anywhere
+ * @method update
+ * @memberOf Meteor.Collection
+ * @instance
+ * @param {MongoSelector} selector Specifies which documents to modify
+ * @param {MongoModifier} modifier Specifies how to modify the documents
+ * @param {Function} callback Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
+ * @param {Object} [options]
+ * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+ * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+ */
+
+/**
+ * @summary Remove documents from the collection
+ * @locus Anywhere
+ * @method remove
+ * @memberOf Meteor.Collection
+ * @instance
+ * @param {MongoSelector | String} selector A Mongo selector or ID which specifies documents to remove
+ * @param {Function} callback Optional.  If present, called with an error object as its argument.
+ */
+
 _.each(["insert", "update", "remove"], function (name) {
   Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
@@ -501,6 +580,15 @@ _.each(["insert", "update", "remove"], function (name) {
   };
 });
 
+/**
+ * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+ * @locus Anywhere
+ * @param {MongoSelector | String} selector Mongo Selector or ID which specifies documents to modify
+ * @param {MongoModifier} modifier Specifies how to modify the documents
+ * @param {Function} callback Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
+ * @param {Object} [options]
+ * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+ */
 Meteor.Collection.prototype.upsert = function (selector, modifier,
                                                options, callback) {
   var self = this;
@@ -619,9 +707,30 @@ Meteor.Collection.ObjectID = LocalCollection._ObjectID;
     }
   };
 
+  /**
+   * @summary Allow users to write directly to this collection from client code, subject to limitations you define.
+   * @locus Server
+   * @param {Object} options
+   * @param {Function} options.insert
+   * @param {Function} options.update
+   * @param {Function} options.remove Functions that look at a proposed modification to the database and return true if it should be allowed.
+   * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
+   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
+   */
   Meteor.Collection.prototype.allow = function(options) {
     addValidator.call(this, 'allow', options);
   };
+
+  /**
+   * @summary Override `allow` rules.
+   * @locus Server
+   * @param {Object} options
+   * @param {Function} options.insert
+   * @param {Function} options.update
+   * @param {Function} options.remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise.
+   * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
+   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
+   */
   Meteor.Collection.prototype.deny = function(options) {
     addValidator.call(this, 'deny', options);
   };

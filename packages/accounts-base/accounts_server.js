@@ -52,10 +52,20 @@ Accounts.validateLoginAttempt = function (func) {
   return validateLoginHook.register(func);
 };
 
+/**
+ * @summary Register a callback to be called after a login attempt succeeds.
+ * @locus Server
+ * @param {Function} func The callback to be called when login is successful.
+ */
 Accounts.onLogin = function (func) {
   return onLoginHook.register(func);
 };
 
+/**
+ * @summary Register a callback to be called after a login attempt fails.
+ * @locus Server
+ * @param {Function} func The callback to be called after the login has failed.
+ */
 Accounts.onLoginFailure = function (func) {
   return onLoginFailureHook.register(func);
 };

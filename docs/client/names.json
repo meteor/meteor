@@ -1,7 +1,12 @@
 {
   "Accounts": {
+    "ui": {
+      "config": {}
+    },
     "config": {},
     "validateLoginAttempt": {},
+    "onLogin": {},
+    "onLoginFailure": {},
     "onCreateUser": {},
     "validateNewUser": {},
     "createUser": {},
@@ -13,6 +18,48 @@
     "sendResetPasswordEmail": {},
     "sendEnrollmentEmail": {},
     "sendVerificationEmail": {}
+  },
+  "Meteor": {
+    "Collection": {
+      "Cursor": {},
+      "Cursor#forEach": {},
+      "Cursor#map": {},
+      "Cursor#fetch": {},
+      "Cursor#count": {},
+      "Cursor#observe": {},
+      "Cursor#observeChanges": {}
+    },
+    "users": {},
+    "isClient": {},
+    "isServer": {},
+    "settings": {},
+    "release": {},
+    "userId": {},
+    "loggingIn": {},
+    "user": {},
+    "logout": {},
+    "logoutOtherClients": {},
+    "loginWithPassword": {},
+    "status": {},
+    "reconnect": {},
+    "disconnect": {},
+    "onConnection": {},
+    "publish": {},
+    "methods": {},
+    "startup": {},
+    "setTimeout": {},
+    "setInterval": {},
+    "clearInterval": {},
+    "clearTimeout": {},
+    "absoluteUrl": {},
+    "Collection#insert": {},
+    "Collection#update": {},
+    "Collection#find": {},
+    "Collection#findOne": {},
+    "Collection#remove": {},
+    "Collection#upsert": {},
+    "Collection#allow": {},
+    "Collection#deny": {}
   },
   "Deps": {
     "Dependency": {},
@@ -29,25 +76,7 @@
     "onInvalidate": {},
     "afterFlush": {}
   },
-  "Meteor": {
-    "userId": {},
-    "loggingIn": {},
-    "user": {},
-    "logout": {},
-    "logoutOtherClients": {},
-    "loginWithPassword": {},
-    "status": {},
-    "reconnect": {},
-    "disconnect": {},
-    "onConnection": {},
-    "publish": {},
-    "methods": {},
-    "setTimeout": {},
-    "setInterval": {},
-    "clearInterval": {},
-    "clearTimeout": {},
-    "absoluteUrl": {}
-  },
+  "Template": {},
   "EJSON": {
     "newBinary": {},
     "addType": {},
@@ -70,5 +99,7 @@
     "setDefault": {},
     "get": {},
     "equals": {}
-  }
+  },
+  "Template#helpers": {},
+  "Template#events": {}
 }
