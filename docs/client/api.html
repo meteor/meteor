@@ -2599,7 +2599,7 @@ visit the <a href="http://manual.meteor.com/#deps"> Deps</a> chapter in the
 <a href="http://manual.meteor.com/">Meteor Manual</a>, which describes it in
 complete detail.
 
-{{> api_box deps_autorun }}
+{{> autoApiBox "Deps.autorun" }}
 
 `Deps.autorun` allows you to run a function that depends on reactive data
 sources, in such a way that if there are changes to the data later,
@@ -2649,7 +2649,7 @@ subscriptions and reactivity.
 If the initial run of an autorun throws an exception, the computation
 is automatically stopped and won't be rerun.
 
-{{> api_box deps_flush }}
+{{> autoApiBox "Deps.flush" }}
 
 Normally, when you make changes (like writing to the database),
 their impact (like updating the DOM) is delayed until the system is
@@ -2678,7 +2678,7 @@ The <a href="http://manual.meteor.com/#deps-theflushcycle">Meteor Manual</a>
 describes the motivation for the flush cycle and the guarantees made by
 `Deps.flush` and `Deps.afterFlush`.
 
-{{> api_box deps_nonreactive }}
+{{> autoApiBox "Deps.nonreactive" }}
 
 Calls `func` with `Deps.currentComputation` temporarily set to `null`
 and returns `func`'s own return value.  If `func` accesses reactive data
@@ -2699,12 +2699,12 @@ current computation is used implicitly by
 dependency), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
 registers a callback with it).
 
-{{> api_box deps_oninvalidate }}
+{{> autoApiBox "Deps.onInvalidate" }}
 
 See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for more
 details.
 
-{{> api_box deps_afterflush }}
+{{> autoApiBox "Deps.afterFlush" }}
 
 Functions scheduled by multiple calls to `afterFlush` are guaranteed
 to run in the order that `afterFlush` was called.  Functions are

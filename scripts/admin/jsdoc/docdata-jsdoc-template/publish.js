@@ -95,6 +95,9 @@
 
       func.params = filteredParams;
 
+      // takes up too much room
+      delete func.comment;
+
       addToTree(docTree, func.longname, func);
       addToTree(nameTree, func.longname, {});
     });

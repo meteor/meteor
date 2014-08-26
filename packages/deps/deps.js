@@ -271,6 +271,11 @@ Deps.Dependency.prototype.hasDependents = function () {
 };
 
 // http://docs.meteor.com/#deps_flush
+
+/**
+ * @summary Process all reactive updates immediately and ensure that all invalidated computations are rerun.
+ * @locus Client
+ */
 Deps.flush = function (_opts) {
   // XXX What part of the comment below is still true? (We no longer
   // have Spark)
@@ -336,6 +341,12 @@ Deps.flush = function (_opts) {
 //
 // Links the computation to the current computation
 // so that it is stopped if the current computation is invalidated.
+
+/**
+ * @summary Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning.
+ * @locus Client
+ * @param {Function} runFunc The function to run. It receives one argument: the Computation object that will be returned.
+ */
 Deps.autorun = function (f) {
   if (typeof f !== 'function')
     throw new Error('Deps.autorun requires a function argument');
@@ -357,6 +368,12 @@ Deps.autorun = function (f) {
 // of `f`.  Used to turn off reactivity for the duration of `f`,
 // so that reactive data sources accessed by `f` will not result in any
 // computations being invalidated.
+
+/**
+ * @summary Run a function without tracking dependencies.
+ * @locus Client
+ * @param {Function} func A function to call immediately.
+ */
 Deps.nonreactive = function (f) {
   var previous = Deps.currentComputation;
   setCurrentComputation(null);
@@ -368,6 +385,12 @@ Deps.nonreactive = function (f) {
 };
 
 // http://docs.meteor.com/#deps_oninvalidate
+
+/**
+ * @summary Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped.
+ * @locus Client
+ * @param {Function} callback A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered.
+ */
 Deps.onInvalidate = function (f) {
   if (! Deps.active)
     throw new Error("Deps.onInvalidate requires a currentComputation");
@@ -376,6 +399,12 @@ Deps.onInvalidate = function (f) {
 };
 
 // http://docs.meteor.com/#deps_afterflush
+
+/**
+ * @summary Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again.
+ * @locus Client
+ * @param {Function} callback A function to call at flush time.
+ */
 Deps.afterFlush = function (f) {
   afterFlushCallbacks.push(f);
   requireFlush();
