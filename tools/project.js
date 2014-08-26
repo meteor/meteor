@@ -428,8 +428,11 @@ _.extend(Project.prototype, {
   // versions file.
   //
   // Returns an object mapping package name to its string version.
-  getVersions : function () {
+  getVersions : function (options) {
     var self = this;
+    options = options || {};
+    if (options.dontRunConstraintSolver)
+      return self.dependencies;
     buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.dependencies;

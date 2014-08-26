@@ -1270,6 +1270,8 @@ main.registerCommand({
     return 1;
   }
 
+  var solutionReleaseRecord = null;
+
   if (!options["packages-only"] && ! files.usesWarehouse()) {
     process.stderr.write(
 "You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
@@ -1443,7 +1445,7 @@ main.registerCommand({
     var directDependencies = project.getConstraints();
     var previousVersions;
     var messages = buildmessage.capture(function () {
-      previousVersions = project.getVersions();
+      previousVersions = project.getVersions({dontRunConstraintSolver: true});
     });
     if (messages.hasMessages()) {
       process.stderr.write(messages.formatMessages());
@@ -1481,11 +1483,14 @@ main.registerCommand({
         }
         return false;
       }
+      solutionReleaseRecord = releaseRecord;
       return true;
     });
 
     if (!solutionReleaseVersion) {
-      // XXX put an error here when we stop doing an error on every failure above
+      process.stdout.write(
+        "This project is at the latest release which is compatible with your\n" +
+          "current package constraints.\n");
       return 1;
     }
 
@@ -1544,10 +1549,23 @@ main.registerCommand({
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 
+    var releasePackages = {};
+    if (release.current.isProperRelease()) {
+      if (solutionReleaseRecord) {
+        // We updated the release (well, possibly a no-op). Use the packages
+        // from the chosen release.
+        releasePackages = solutionReleaseRecord.packages;
+      } else {
+        // This maybe is --packages-only. Use the packages from the current
+        // release.
+        releasePackages = release.current.getPackages();
+      }
+    }
+
     var versions, allPackages;
     messages = buildmessage.capture(function () {
-      versions = project.getVersions();
-      allPackages = project.getCurrentCombinedConstraints();
+      versions = project.getVersions({dontRunConstraintSolver: true});
+      allPackages = project.calculateCombinedConstraints(releasePackages);
     });
     if (messages.hasMessages()) {
       process.stderr.write(messages.formatMessages());
