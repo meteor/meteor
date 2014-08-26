@@ -2,6 +2,7 @@ var _ = require('underscore');
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var testUtils = require('../test-utils.js');
+var config = require("../config.js");
 
 // XXX need to make sure that mother doesn't clean up:
 // 'legacy-password-app-for-selftest'
@@ -25,6 +26,11 @@ var loginTimeoutSecs = 2;
 //  - password: the password to use if given a login prompt (defaults to
 //   'testtest');
 var logsOrMongoForApp = function (sandbox, command, appName, options) {
+
+  if (appName.indexOf(".") === -1) {
+    appName = appName + "." + config.getDeployHostname();
+  }
+
   var runArgs = [command, appName];
   var matchString;
   if (command === 'mongo') {

@@ -62,8 +62,11 @@ var formatList = function (items) {
   _.each(items, function (item) {
     var name = item.name + pad.substr(item.name.length);
     var description = item.description || 'No description';
-    out += (name + "  " +
-            description.substr(0, width - 2 - pad.length) + "\n");
+    var line = name + "  " + description;
+    if (line.length > width) {
+      line = line.substr(0, width - 3) + '...';
+    }
+    out += line + "\n";
   });
 
   return out;
@@ -1208,8 +1211,7 @@ main.registerCommand({
 
       var description = version + versionAddendum +
             (versionInfo.description ?
-             (": " + versionInfo.description) :
-             "");
+             (" " + versionInfo.description) : "");
       items.push({ name: name, description: description });
 
     });
@@ -1268,6 +1270,8 @@ main.registerCommand({
     return 1;
   }
 
+  var solutionReleaseRecord = null;
+
   if (!options["packages-only"] && ! files.usesWarehouse()) {
     process.stderr.write(
 "You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
@@ -1285,10 +1289,11 @@ main.registerCommand({
     // Unless --release was passed (in which case we ought to already have
     // springboarded to that release), go get the latest release and switch to
     // it. (We already know what the latest release is because we refreshed the
-    // catalog above.)  Note that after springboarding, we will hit this again
-    // (because springboarding to a specific release does NOT set release.forced),
-    // but it should be a no-op next time (unless there actually was a new latest
-    // release in the interim).
+    // catalog above.)  Note that after springboarding, we will hit this again.
+    // However, the override that's done by SpringboardToLatestRelease also sets
+    // release.forced (although it does not set release.explicit), so we won't
+    // double-springboard.  (We might miss an super recently published release,
+    // but that's probably OK.)
     if (! release.forced) {
       var latestRelease = doOrDie(function () {
         return release.latestDownloaded(releaseTrack);
@@ -1321,7 +1326,7 @@ main.registerCommand({
     // If we're not in an app, then we're done (other than maybe printing some
     // stuff).
     if (! options.appDir) {
-      if (release.forced || process.env.METEOR_SPRINGBOARD_RELEASE) {
+      if (release.forced) {
         // We get here if:
         // 1) the user ran 'meteor update' and we found a new version
         // 2) the user ran 'meteor update --release xyz' (regardless of
@@ -1401,8 +1406,16 @@ main.registerCommand({
           "You are at the latest patch version.\n");
         return 1;
       }
+      var patchRecord = doOrDie(function () {
+        return catalog.official.getReleaseVersion(r[0], updateTo);
+      });
+      if (!patchRecord || !patchRecord.recommended) {
+        process.stderr.write(
+          "You are at the latest patch version.\n");
+        return 1;
+      }
       releaseVersionsToTry = [updateTo];
-    } else if (release.forced) {
+    } else if (release.explicit) {
       doOrDie(function () {
         releaseVersionsToTry = [release.current.getReleaseVersion()];
       });
@@ -1432,7 +1445,7 @@ main.registerCommand({
     var directDependencies = project.getConstraints();
     var previousVersions;
     var messages = buildmessage.capture(function () {
-      previousVersions = project.getVersions();
+      previousVersions = project.getVersions({dontRunConstraintSolver: true});
     });
     if (messages.hasMessages()) {
       process.stderr.write(messages.formatMessages());
@@ -1470,12 +1483,21 @@ main.registerCommand({
         }
         return false;
       }
+      solutionReleaseRecord = releaseRecord;
       return true;
     });
 
     if (!solutionReleaseVersion) {
-      // XXX put an error here when we stop doing an error on every failure above
+      process.stdout.write(
+        "This project is at the latest release which is compatible with your\n" +
+          "current package constraints.\n");
       return 1;
+    }
+
+    if (solutionReleaseVersion !== releaseVersionsToTry[0]) {
+      process.stdout.write(
+        "(Newer releases are available but are not compatible with your\n" +
+          "current package constraints.)\n");
     }
 
     var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
@@ -1533,10 +1555,23 @@ main.registerCommand({
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 
+    var releasePackages = {};
+    if (release.current.isProperRelease()) {
+      if (solutionReleaseRecord) {
+        // We updated the release (well, possibly a no-op). Use the packages
+        // from the chosen release.
+        releasePackages = solutionReleaseRecord.packages;
+      } else {
+        // This maybe is --packages-only. Use the packages from the current
+        // release.
+        releasePackages = release.current.getPackages();
+      }
+    }
+
     var versions, allPackages;
     messages = buildmessage.capture(function () {
-      versions = project.getVersions();
-      allPackages = project.getCurrentCombinedConstraints();
+      versions = project.getVersions({dontRunConstraintSolver: true});
+      allPackages = project.calculateCombinedConstraints(releasePackages);
     });
     if (messages.hasMessages()) {
       process.stderr.write(messages.formatMessages());
@@ -1711,9 +1746,10 @@ main.registerCommand({
     packages[constraint.name] = constraint.constraintString;
 
     // Also, add it to all of our combined dependencies.
-    var constraintForResolver = _.clone(constraint);
-    constraintForResolver.packageName = constraintForResolver.name;
-    delete constraintForResolver.name;
+    // This matches code in project.calculateCombinedConstraints.
+    var constraintForResolver = _.extend(
+      { packageName: constraint.name },
+      utils.parseVersionConstraint(constraint.constraintString));
     allPackages.push(constraintForResolver);
   });
 

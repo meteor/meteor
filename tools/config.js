@@ -220,6 +220,10 @@ _.extend(exports, {
     return getUniverse();
   },
 
+  getDeployHostname: function () {
+    return process.env.DEPLOY_HOSTNAME || "meteor.com";
+  },
+
   // Deploy URL for MDG free hosting, eg 'https://deploy.meteor.com'.
   getDeployUrl: function () {
     var host;

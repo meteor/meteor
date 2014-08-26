@@ -413,6 +413,12 @@ main.registerCommand({
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
+  // Any upgrader that is in this version of Meteor doesn't need to be run on
+  // this project.
+  var upgraders = require('./upgraders.js');
+  _.each(upgraders.allUpgraders(), function (upgrader) {
+    project.appendFinishedUpgrader(upgrader);
+  });
 
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();

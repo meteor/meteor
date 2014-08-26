@@ -78,14 +78,26 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     // We want to be careful not to break the 'meteor' symlink inside the
-    // tropohouse. Hopefully nobody deleted that package!
+    // tropohouse. Hopefully nobody deleted/modified that package!
     var latestToolPackage = null;
     var latestToolVersion = null;
     var currentToolPackage = null;
     var currentToolVersion = null;
-    if (release.current.isProperRelease()) {
-      currentToolPackage = release.current.getToolsPackage();
-      currentToolVersion = release.current.getToolsVersion();
+    // Warning: we can't examine release.current here, because we might be
+    // currently processing release.load!
+    if (!files.inCheckout()) {
+      // toolsDir is something like:
+      // /home/user/.meteor/packages/meteor-tool/.1.0.17.ut200e++os.osx.x86_64+web.browser+web.cordova/meteor-tool-os.osx.x86_64
+      var toolsDir = files.getCurrentToolsDir();
+      // eg, 'meteor-tool'
+      currentToolPackage = path.basename(path.dirname(path.dirname(toolsDir)));
+      // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova'
+      var toolVersionDir = path.basename(path.dirname(toolsDir));
+      var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
+      var pieces = toolVersionWithDotAndRandomBit.split('.');
+      pieces.shift();
+      pieces.pop();
+      currentToolVersion = pieces.join('.');
       var latestMeteorSymlink = self.latestMeteorSymlink();
       if (utils.startsWith(latestMeteorSymlink,
                            packagesDirectoryName + path.sep)) {

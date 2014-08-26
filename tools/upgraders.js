@@ -9,7 +9,7 @@ var project = require('./project.js');
 // You can test upgraders by running "meteor run-upgrader myupgradername".
 //
 // Upgraders are run automatically by "meteor update". It looks at the
-// .meteor/finished-upgraders file in the app and runs every upgrader listed
+// .meteor/.finished-upgraders file in the app and runs every upgrader listed
 // here that is not in that file; then it appends their names to that file.
 // Upgraders are run in the order they are listed in upgradersByName below.
 
@@ -23,34 +23,39 @@ var maybePrintNoticeHeader = function () {
   printedNoticeHeaderThisProcess = true;
 };
 
-// We don't have any upgraders now, but this is an example of how to write
-// some.  (It probably makes sense to extract "print this message" or "print
-// this message if a package is directly used" into helpers.)
 var upgradersByName = {
-//   "notices-for-1.7.0": function () {
-//     maybePrintNoticeHeader();
-//     console.log(
-// "1.7.0: Something super awesome happened. You should fix your\n" +
-// "       code to make sure it works still.");
+   "notices-for-0.9.0": function () {
+     maybePrintNoticeHeader();
+     if (fs.existsSync(path.join(project.project.rootDir, 'smart.json'))) {
+       // Meteorite apps:
+       console.log(
+"0.9.0: Welcome to the new Meteor package system! You can now add any Meteor\n" +
+"       package to your app (from more than 1800 packages available on the\n" +
+"       Meteor Package Server) just by typing 'meteor add <packagename>', no\n" +
+"       Meteorite required.\n" +
+"\n" +
+"       It looks like you have been using Meteorite with this project. To\n" +
+"       migrate your project automatically to the new system:\n" +
+"         (1) upgrade your Meteorite with 'npm install -g meteorite', then\n" +
+"         (2) run 'mrt migrate-app' inside the project.\n" +
+"       Having done this, you no longer need 'mrt' and can just use 'meteor'.\n");
+     } else {
+       // Non-Meteorite apps:
+       console.log(
+"0.9.0: Welcome to the new Meteor package system! You can now add any Meteor\n" +
+"       package to your app (from more than 1800 packages available on the\n" +
+"       Meteor Package Server) just by typing 'meteor add <packagename>'. Check\n" +
+"       out the available packages by typing 'meteor search <term>' or by\n" +
+"       visiting atmospherejs.com.\n");
+     }
+     // How to do package-specific notices:
 //     if (_.has(project.project.getConstraints(), 'accounts-ui')) {
 //       console.log(
 // "\n" +
 // "       Accounts UI has totally changed, yo.");
 //     }
-//     console.log();
-//   },
-//   "notices-for-1.7.1": function () {
-//     maybePrintNoticeHeader();
-//     console.log(
-// "1.7.1: Oh we changed our minds again completely, sorry.");
-//     console.log();
-//   },
-//   "notices-for-1.7.2": function () {
-//     maybePrintNoticeHeader();
-//     console.log(
-// "1.7.2: Oh gosh never mind, change all your code again.");
-//     console.log();
-//   }
+    console.log();
+  }
 };
 
 exports.runUpgrader = function (upgraderName) {
@@ -72,4 +77,8 @@ exports.upgradersToRun = function () {
     }
   });
   return ret;
+};
+
+exports.allUpgraders = function () {
+  return _.keys(upgradersByName);
 };

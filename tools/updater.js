@@ -104,11 +104,15 @@ var maybeShowBanners = function () {
   var track = release.current.getReleaseTrack();
   var patchReleaseVersion = releaseData.patchReleaseVersion;
   if (patchReleaseVersion) {
-    runLog.log("=> A patch (" +
-               utils.displayRelease(track, patchReleaseVersion) +
-               ") for your current release is available!");
-    runLog.log("   Update this project now with 'meteor update --patch'.");
-    return;
+    var patchRelease = catalog.official.getReleaseVersion(
+      track, patchReleaseVersion);
+    if (patchRelease && patchRelease.recommended) {
+      runLog.log("=> A patch (" +
+                 utils.displayRelease(track, patchReleaseVersion) +
+                 ") for your current release is available!");
+      runLog.log("   Update this project now with 'meteor update --patch'.");
+      return;
+    }
   }
 
   // There's no patch (so no urgent exclamation!) but there may be something

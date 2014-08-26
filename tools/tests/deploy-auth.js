@@ -4,6 +4,7 @@ var testUtils = require('../test-utils.js');
 var files = require('../files.js');
 var Sandbox = selftest.Sandbox;
 var httpHelpers = require('../http-helpers.js');
+var config = require("../config.js");
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
@@ -13,7 +14,8 @@ selftest.define('deploy - expired credentials', ['net', 'slow'], function () {
   // username. On the next deploy, we should get an email prompt
   // followed by a registration email, not a username prompt.
   var email = testUtils.randomUserEmail();
-  var appName = testUtils.randomAppName();
+  var appName = testUtils.randomAppName() + "." +
+        config.getDeployHostname();
   var token = testUtils.deployWithNewEmail(s, email, appName);
   var sessionFile = s.readSessionFile();
   testUtils.logout(s);
@@ -34,7 +36,8 @@ selftest.define('deploy - expired credentials', ['net', 'slow'], function () {
   // Create an account, set a username, expire the login token, and
   // deploy again. We should get a username/password prompt.
   email = testUtils.randomUserEmail();
-  appName = testUtils.randomAppName();
+  appName = testUtils.randomAppName() + "." +
+    config.getDeployHostname();
   username = testUtils.randomString(10);
   token = testUtils.deployWithNewEmail(s, email, appName);
   testUtils.registerWithToken(token, username,
@@ -70,7 +73,8 @@ selftest.define('deploy - bad arguments', [], function () {
   run.expectExit(1);
 
   // Deploy outside of an app directory
-  run = s.run('deploy', testUtils.randomAppName());
+  run = s.run('deploy', testUtils.randomAppName() + "." +
+              config.getDeployHostname());
   run.matchErr('not in a Meteor project directory');
   run.expectExit(1);
 });
@@ -107,7 +111,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // deploy to the legacy app.
   var run = sandbox.run('deploy', noPasswordLegacyApp);
   run.waitSecs(90);
-  run.match('Now serving at ' + noPasswordLegacyApp + '.meteor.com');
+  run.match('Now serving at ' + noPasswordLegacyApp);
   run.expectExit(0);
   // And we should have claimed the app by deploying to it.
   run = sandbox.run('claim', noPasswordLegacyApp);
@@ -137,7 +141,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(0);
   run = sandbox.run('deploy', passwordLegacyApp);
   run.waitSecs(90);
-  run.match('Now serving at ' + passwordLegacyApp + '.meteor.com');
+  run.match('Now serving at ' + passwordLegacyApp);
   run.expectExit(0);
   // Clean up
   testUtils.cleanUpApp(sandbox, passwordLegacyApp);
@@ -189,7 +193,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Password:');
   run.write('testtest\n');
   run.waitSecs(90);
-  run.match('Now serving at ' + appName + '.meteor.com');
+  run.match('Now serving at ' + appName);
   run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
 
@@ -237,7 +241,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   // Deploying to a new app using a user that exists but has no password
   // set should prompt us to set a password.
   // First, create a user without a password.
-  appName = testUtils.randomAppName();
+  appName = testUtils.randomAppName() + "." + config.getDeployHostname();
   var email = testUtils.randomUserEmail();
   run = s.run('deploy', appName);
   run.waitSecs(commandTimeoutSecs);
@@ -252,7 +256,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   testUtils.cleanUpApp(s, appName);
   testUtils.logout(s);
   // Now that we've created a user, try to deploy a new app.
-  appName = testUtils.randomAppName();
+  appName = testUtils.randomAppName() + "." + config.getDeployHostname();
   run = s.run('deploy', appName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr('Email:');
