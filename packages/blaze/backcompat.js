@@ -1,7 +1,7 @@
 Handlebars = {};
-Handlebars.registerHelper = UI.registerHelper;
+Handlebars.registerHelper = Blaze.registerHelper;
 
-Handlebars._escape = UI._escape;
+Handlebars._escape = Blaze._escape;
 
 // Return these from {{...}} helpers to achieve the same as returning
 // strings from {{{...}}} helpers
@@ -11,3 +11,6 @@ Handlebars.SafeString = function(string) {
 Handlebars.SafeString.prototype.toString = function() {
   return this.string.toString();
 };
+
+
+UI = Blaze;

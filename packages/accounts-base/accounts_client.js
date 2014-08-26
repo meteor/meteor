@@ -271,13 +271,13 @@ Accounts.loginServicesConfigured = function () {
 /// HANDLEBARS HELPERS
 ///
 
-// If our app has a UI, register the {{currentUser}} and {{loggingIn}}
+// If our app has a Blaze, register the {{currentUser}} and {{loggingIn}}
 // global helpers.
-if (Package.ui) {
-  Package.ui.UI.registerHelper('currentUser', function () {
+if (Package.blaze) {
+  Package.blaze.Blaze.registerHelper('currentUser', function () {
     return Meteor.user();
   });
-  Package.ui.UI.registerHelper('loggingIn', function () {
+  Package.blaze.Blaze.registerHelper('loggingIn', function () {
     return Meteor.loggingIn();
   });
 }
