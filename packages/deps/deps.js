@@ -99,7 +99,16 @@ var constructingComputation = false;
 
 //
 // http://docs.meteor.com/#deps_computation
-//
+
+/**
+ * @summary A Computation object represents code that is repeatedly rerun
+ * in response to
+ * reactive data changes. Computations don't have return values; they just
+ * perform actions, such as rerendering a template on the screen. Computations
+ * are created using Deps.autorun. Use stop to prevent further rerunning of a
+ * computation.
+ * @instancename computation
+ */
 Deps.Computation = function (f, parent) {
   if (! constructingComputation)
     throw new Error(
@@ -137,6 +146,12 @@ Deps.Computation = function (f, parent) {
 };
 
 // http://docs.meteor.com/#computation_oninvalidate
+
+/**
+ * @summary Registers `callback` to run when this computation is next invalidated, or runs it immediately if the computation is already invalidated.  The callback is run exactly once and not upon future invalidations unless `onInvalidate` is called again after the computation becomes valid again.
+ * @locus Client
+ * @param {Function} callback Function to be called on invalidation. Receives one argument, the computation that was invalidated.
+ */
 Deps.Computation.prototype.onInvalidate = function (f) {
   var self = this;
 
@@ -153,6 +168,11 @@ Deps.Computation.prototype.onInvalidate = function (f) {
 };
 
 // http://docs.meteor.com/#computation_invalidate
+
+/**
+ * @summary Invalidates this computation so that it will be rerun.
+ * @locus Client
+ */
 Deps.Computation.prototype.invalidate = function () {
   var self = this;
   if (! self.invalidated) {
@@ -177,6 +197,11 @@ Deps.Computation.prototype.invalidate = function () {
 };
 
 // http://docs.meteor.com/#computation_stop
+
+/**
+ * @summary Prevents this computation from rerunning.
+ * @locus Client
+ */
 Deps.Computation.prototype.stop = function () {
   if (! this.stopped) {
     this.stopped = true;

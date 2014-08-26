@@ -16,6 +16,10 @@
   },
   "Deps": {
     "Dependency": {},
+    "Computation": {},
+    "Computation#onInvalidate": {},
+    "Computation#invalidate": {},
+    "Computation#stop": {},
     "Dependency#depend": {},
     "Dependency#changed": {},
     "Dependency#hasDependents": {},
