@@ -1207,6 +1207,12 @@ Server = function (options) {
 
 _.extend(Server.prototype, {
 
+  /**
+   * @summary Register a callback to be called when a new DDP connection is made to the server.
+   * @locus Server
+   * @param {function} callback The function to call when a new DDP connection is established.
+   * @memberOf Meteor
+   */
   onConnection: function (fn) {
     var self = this;
     return self.onConnectionHook.register(fn);
@@ -1271,6 +1277,14 @@ _.extend(Server.prototype, {
    *    (it lets us determine whether to print a warning suggesting
    *    that you turn off autopublish.)
    */
+  
+  /**
+   * @summary Publish a record set.
+   * @memberOf Meteor
+   * @locus Server
+   * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
+   * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
+   */
   publish: function (name, handler, options) {
     var self = this;
 
@@ -1330,6 +1344,12 @@ _.extend(Server.prototype, {
     }
   },
 
+  /**
+   * @summary Defines functions that can be invoked over the network by clients.
+   * @locus Anywhere
+   * @param {Object} methods Dictionary whose keys are method names and values are functions.
+   * @memberOf Meteor
+   */
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {

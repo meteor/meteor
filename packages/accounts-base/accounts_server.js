@@ -43,6 +43,11 @@ var onLoginFailureHook = new Hook({
   debugPrintExceptions: "onLoginFailure callback"
 });
 
+/**
+ * @summary Validate login attempts.
+ * @locus Server
+ * @param {Function} func Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception.
+ */
 Accounts.validateLoginAttempt = function (func) {
   return validateLoginHook.register(func);
 };
@@ -962,6 +967,12 @@ Meteor.startup(function () {
 ///
 
 var onCreateUserHook = null;
+
+/**
+ * @summary Customize new user creation.
+ * @locus Server
+ * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.
+ */
 Accounts.onCreateUser = function (func) {
   if (onCreateUserHook)
     throw new Error("Can only call onCreateUser once");
@@ -1036,6 +1047,12 @@ Accounts.insertUserDoc = function (options, user) {
 };
 
 var validateNewUserHooks = [];
+
+/**
+ * @summary Set restrictions on new user creation.
+ * @locus Server
+ * @param {Function} func Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort.
+ */
 Accounts.validateNewUser = function (func) {
   validateNewUserHooks.push(func);
 };

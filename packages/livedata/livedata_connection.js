@@ -927,16 +927,33 @@ _.extend(Connection.prototype, {
     self._stream._lostConnection();
   },
 
+  /**
+   * @summary Get the current connection status. A reactive data source.
+   * @locus Client
+   * @memberOf Meteor
+   */
   status: function (/*passthrough args*/) {
     var self = this;
     return self._stream.status.apply(self._stream, arguments);
   },
 
+  /**
+   * @summary Force an immediate reconnection attempt if the client is not connected to the server.
+
+  This method does nothing if the client is already connected.
+   * @locus Client
+   * @memberOf Meteor
+   */
   reconnect: function (/*passthrough args*/) {
     var self = this;
     return self._stream.reconnect.apply(self._stream, arguments);
   },
 
+  /**
+   * @summary Disconnect the client from the server.
+   * @locus Client
+   * @memberOf Meteor
+   */
   disconnect: function (/*passthrough args*/) {
     var self = this;
     return self._stream.disconnect.apply(self._stream, arguments);
@@ -1533,7 +1550,12 @@ LivedataTest.Connection = Connection;
 //     "http://subdomain.meteor.com",
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
-//
+
+/**
+ * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.
+ * @locus Anywhere
+ * @param {String} url The URL of another Meteor application.
+ */
 DDP.connect = function (url, options) {
   var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.

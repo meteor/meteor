@@ -17,15 +17,1513 @@ DocsData = {
     "summary": "The namespace for all accounts-related methods.",
     "longname": "Accounts",
     "___id": "T000002R000046",
-    "___s": true
-  },
-  "Meteor": {
-    "absoluteUrl": {
-      "comment": "/**\n * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor bundle`.\n * @locus Anywhere\n * @param {String} [path] A path to append to the root URL. Do not include a leading \"`/`\".\n * @param {Object} options\n * @param {Boolean} options.secure Create an HTTPS URL.\n * @param {Boolean} options.replaceLocalhost Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name.\n * @param {String} options.rootUrl Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\"\n */",
+    "___s": true,
+    "config": {
+      "comment": "/**\n * @summary Set global accounts options.\n * @locus Anywhere\n * @param {Object} [options]\n * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.\n * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the \"Create account\" link will not be available.\n * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.\n * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.\n * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.\n */",
       "meta": {
         "range": [
-          767,
-          1901
+          3343,
+          5575
+        ],
+        "filename": "accounts_common.js",
+        "lineno": 55,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100000619",
+          "name": "Accounts.config",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "options"
+          ]
+        },
+        "vars": {
+          "__meteor_runtime_config__.accountsConfigCalled": null,
+          "options": null,
+          "VALID_KEYS": null,
+          "": null
+        }
+      },
+      "summary": "Set global accounts options.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "optional": true,
+          "name": "options"
+        }
+      ],
+      "name": "config",
+      "longname": "Accounts.config",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000053",
+      "___s": true,
+      "options": [
+        {
+          "type": {
+            "names": [
+              "Boolean"
+            ]
+          },
+          "description": "<p>New users with an email address will receive an address verification email.</p>",
+          "name": "sendVerificationEmail"
+        },
+        {
+          "type": {
+            "names": [
+              "Boolean"
+            ]
+          },
+          "description": "<p>Calls to <a href=\"#accounts_createuser\"><code>createUser</code></a> from the client will be rejected. In addition, if you are using <a href=\"#accountsui\">accounts-ui</a>, the &quot;Create account&quot; link will not be available.</p>",
+          "name": "forbidClientAccountCreation"
+        },
+        {
+          "type": {
+            "names": [
+              "String",
+              "function"
+            ]
+          },
+          "description": "<p>If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: <code>Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })</code>.</p>",
+          "name": "restrictCreationByEmailDomain"
+        },
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to <code>null</code> to disable login expiration.</p>",
+          "name": "loginExpirationInDays"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>When using the <code>oauth-encryption</code> package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.</p>",
+          "name": "oauthSecretKey"
+        }
+      ],
+      "locus": "Anywhere"
+    },
+    "validateLoginAttempt": {
+      "comment": "/**\n * @summary Validate login attempts.\n * @locus Server\n * @param {Function} func Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception.\n */",
+      "meta": {
+        "range": [
+          1621,
+          1715
+        ],
+        "filename": "accounts_server.js",
+        "lineno": 51,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100001075",
+          "name": "Accounts.validateLoginAttempt",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "func"
+          ]
+        }
+      },
+      "summary": "Validate login attempts.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception.</p>",
+          "name": "func"
+        }
+      ],
+      "name": "validateLoginAttempt",
+      "longname": "Accounts.validateLoginAttempt",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000086",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "onCreateUser": {
+      "comment": "/**\n * @summary Customize new user creation.\n * @locus Server\n * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.\n */",
+      "meta": {
+        "range": [
+          32388,
+          32547
+        ],
+        "filename": "accounts_server.js",
+        "lineno": 976,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100003117",
+          "name": "Accounts.onCreateUser",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "func"
+          ]
+        },
+        "vars": {
+          "onCreateUserHook": null
+        }
+      },
+      "summary": "Customize new user creation.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>Called whenever a new user is created. Return the new user object, or throw an <code>Error</code> to abort the creation.</p>",
+          "name": "func"
+        }
+      ],
+      "name": "onCreateUser",
+      "longname": "Accounts.onCreateUser",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000294",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "validateNewUser": {
+      "comment": "/**\n * @summary Set restrictions on new user creation.\n * @locus Server\n * @param {Function} func Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort.\n */",
+      "meta": {
+        "range": [
+          35236,
+          35317
+        ],
+        "filename": "accounts_server.js",
+        "lineno": 1056,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100003340",
+          "name": "Accounts.validateNewUser",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "func"
+          ]
+        }
+      },
+      "summary": "Set restrictions on new user creation.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort.</p>",
+          "name": "func"
+        }
+      ],
+      "name": "validateNewUser",
+      "longname": "Accounts.validateNewUser",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000310",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "createUser": {
+      "comment": "/**\n * @summary Create a new user.\n * @locus Anywhere\n * @param {Function} callback Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n * @param {Object} [options]\n * @param {String} options.username A unique name for this user.\n * @param {String} options.email The user's email address.\n * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.\n * @param {Object} options.profile The user's profile, typically including the `name` field.\n */",
+      "meta": {
+        "range": [
+          3912,
+          4457
+        ],
+        "filename": "password_client.js",
+        "lineno": 108,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100009903",
+          "name": "Accounts.createUser",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "options",
+            "callback"
+          ]
+        },
+        "vars": {
+          "options": null,
+          "options.password": null
+        }
+      },
+      "summary": "Create a new user.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>Client only, optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "optional": true,
+          "name": "options"
+        }
+      ],
+      "name": "createUser",
+      "longname": "Accounts.createUser",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000734",
+      "___s": true,
+      "options": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>A unique name for this user.</p>",
+          "name": "username"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The user's email address.</p>",
+          "name": "email"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The user's password. This is <strong>not</strong> sent in plain text over the wire.</p>",
+          "name": "password"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>The user's profile, typically including the <code>name</code> field.</p>",
+          "name": "profile"
+        }
+      ],
+      "locus": "Anywhere"
+    },
+    "changePassword": {
+      "comment": "/**\n * @summary Change the current user's password. Must be logged in.\n * @locus Client\n * @param {String} oldPassword The user's current password. This is __not__ sent in plain text over the wire.\n * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
+      "meta": {
+        "range": [
+          5240,
+          6773
+        ],
+        "filename": "password_client.js",
+        "lineno": 145,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100009970",
+          "name": "Accounts.changePassword",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "oldPassword",
+            "newPassword",
+            "callback"
+          ]
+        },
+        "vars": {
+          "": null
+        }
+      },
+      "summary": "Change the current user's password. Must be logged in.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The user's current password. This is <strong>not</strong> sent in plain text over the wire.</p>",
+          "name": "oldPassword"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>A new password for the user. This is <strong>not</strong> sent in plain text over the wire.</p>",
+          "name": "newPassword"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "changePassword",
+      "longname": "Accounts.changePassword",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000740",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "forgotPassword": {
+      "comment": "/**\n * @summary Request a forgot password email.\n * @locus Client\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n * @param {Object} [options]\n * @param {String} options.email The email address to send a password reset link.\n */",
+      "meta": {
+        "range": [
+          7286,
+          7478
+        ],
+        "filename": "password_client.js",
+        "lineno": 206,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100010111",
+          "name": "Accounts.forgotPassword",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "options",
+            "callback"
+          ]
+        }
+      },
+      "summary": "Request a forgot password email.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "optional": true,
+          "name": "options"
+        }
+      ],
+      "name": "forgotPassword",
+      "longname": "Accounts.forgotPassword",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000745",
+      "___s": true,
+      "options": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The email address to send a password reset link.</p>",
+          "name": "email"
+        }
+      ],
+      "locus": "Client"
+    },
+    "resetPassword": {
+      "comment": "/**\n * @summary Reset the password for a user using a token received in email. Logs the user in afterwards.\n * @locus Client\n * @param {String} token The token retrieved from the reset password URL.\n * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
+      "meta": {
+        "range": [
+          8170,
+          8546
+        ],
+        "filename": "password_client.js",
+        "lineno": 226,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100010139",
+          "name": "Accounts.resetPassword",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "token",
+            "newPassword",
+            "callback"
+          ]
+        }
+      },
+      "summary": "Reset the password for a user using a token received in email. Logs the user in afterwards.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The token retrieved from the reset password URL.</p>",
+          "name": "token"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>A new password for the user. This is <strong>not</strong> sent in plain text over the wire.</p>",
+          "name": "newPassword"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "resetPassword",
+      "longname": "Accounts.resetPassword",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000746",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "verifyEmail": {
+      "comment": "/**\n * @summary Marks the user's email address as verified. Logs the user in afterwards.\n * @locus Client\n * @param {String} token The token retrieved from the verification URL.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
+      "meta": {
+        "range": [
+          9060,
+          9290
+        ],
+        "filename": "password_client.js",
+        "lineno": 253,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100010189",
+          "name": "Accounts.verifyEmail",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "token",
+            "callback"
+          ]
+        }
+      },
+      "summary": "Marks the user's email address as verified. Logs the user in afterwards.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The token retrieved from the verification URL.</p>",
+          "name": "token"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "verifyEmail",
+      "longname": "Accounts.verifyEmail",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000750",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "setPassword": {
+      "comment": "/**\n * @summary Forcibly change the password for a user.\n * @locus Server\n * @param {String} userId The id of the user to update.\n * @param {String} newPassword A new password for the user.\n */",
+      "meta": {
+        "range": [
+          10469,
+          10842
+        ],
+        "filename": "password_server.js",
+        "lineno": 326,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100011068",
+          "name": "Accounts.setPassword",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "userId",
+            "newPlaintextPassword"
+          ]
+        },
+        "vars": {
+          "user": null
+        }
+      },
+      "summary": "Forcibly change the password for a user.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The id of the user to update.</p>",
+          "name": "userId"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>A new password for the user.</p>",
+          "name": "newPassword"
+        }
+      ],
+      "name": "setPassword",
+      "longname": "Accounts.setPassword",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000827",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "sendResetPasswordEmail": {
+      "comment": "/**\n * @summary Send an email with a link the user can use to reset their password.\n * @locus Server\n * @param {String} userId The id of the user to send email to.\n * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.\n */",
+      "meta": {
+        "range": [
+          11744,
+          13104
+        ],
+        "filename": "password_server.js",
+        "lineno": 364,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100011172",
+          "name": "Accounts.sendResetPasswordEmail",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "userId",
+            "email"
+          ]
+        },
+        "vars": {
+          "user": null,
+          "email": null,
+          "token": null,
+          "when": null,
+          "tokenRecord": null,
+          ".reset": null,
+          "resetPasswordUrl": null,
+          "options": null,
+          "options.html": null
+        }
+      },
+      "summary": "Send an email with a link the user can use to reset their password.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The id of the user to send email to.</p>",
+          "name": "userId"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional. Which address of the user's to send the email to. This address must be in the user's <code>emails</code> list. Defaults to the first email in the list.</p>",
+          "name": "email"
+        }
+      ],
+      "name": "sendResetPasswordEmail",
+      "longname": "Accounts.sendResetPasswordEmail",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000838",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "sendEnrollmentEmail": {
+      "comment": "/**\n * @summary Send an email with a link the user can use to set their initial password.\n * @locus Server\n * @param {String} userId The id of the user to send email to.\n * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.\n */",
+      "meta": {
+        "range": [
+          13875,
+          15304
+        ],
+        "filename": "password_server.js",
+        "lineno": 419,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100011367",
+          "name": "Accounts.sendEnrollmentEmail",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "userId",
+            "email"
+          ]
+        },
+        "vars": {
+          "user": null,
+          "email": null,
+          "token": null,
+          "when": null,
+          "tokenRecord": null,
+          ".reset": null,
+          "enrollAccountUrl": null,
+          "options": null,
+          "options.html": null
+        }
+      },
+      "summary": "Send an email with a link the user can use to set their initial password.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The id of the user to send email to.</p>",
+          "name": "userId"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional. Which address of the user's to send the email to. This address must be in the user's <code>emails</code> list. Defaults to the first email in the list.</p>",
+          "name": "email"
+        }
+      ],
+      "name": "sendEnrollmentEmail",
+      "longname": "Accounts.sendEnrollmentEmail",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000857",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "sendVerificationEmail": {
+      "comment": "/**\n * @summary Send an email with a link the user can use verify their email address.\n * @locus Server\n * @param {String} userId The id of the user to send email to.\n * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.\n */",
+      "meta": {
+        "range": [
+          18249,
+          19994
+        ],
+        "filename": "password_server.js",
+        "lineno": 548,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100011779",
+          "name": "Accounts.sendVerificationEmail",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "userId",
+            "address"
+          ]
+        },
+        "vars": {
+          "user": null,
+          "email": null,
+          "": null,
+          "address": null,
+          "tokenRecord": null,
+          "user.services.email.verificationTokens": null,
+          "verifyEmailUrl": null,
+          "options": null,
+          "options.html": null
+        }
+      },
+      "summary": "Send an email with a link the user can use verify their email address.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The id of the user to send email to.</p>",
+          "name": "userId"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional. Which address of the user's to send the email to. This address must be in the user's <code>emails</code> list. Defaults to the first unverified email in the list.</p>",
+          "name": "email"
+        }
+      ],
+      "name": "sendVerificationEmail",
+      "longname": "Accounts.sendVerificationEmail",
+      "kind": "function",
+      "memberof": "Accounts",
+      "scope": "static",
+      "___id": "T000002R000899",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    }
+  },
+  "Meteor": {
+    "userId": {
+      "comment": "/**\n * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.\n * @locus Anywhere but publish functions\n */",
+      "meta": {
+        "range": [
+          193,
+          263
+        ],
+        "filename": "accounts_client.js",
+        "lineno": 11,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100000002",
+          "name": "Meteor.userId",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": []
+        }
+      },
+      "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere but publish functions",
+          "value": "Anywhere but publish functions"
+        }
+      ],
+      "name": "userId",
+      "longname": "Meteor.userId",
+      "kind": "function",
+      "memberof": "Meteor",
+      "scope": "static",
+      "___id": "T000002R000002",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Anywhere but publish functions"
+    },
+    "loggingIn": {
+      "comment": "/**\n * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.\n * @locus Client\n */",
+      "meta": {
+        "range": [
+          826,
+          906
+        ],
+        "filename": "accounts_client.js",
+        "lineno": 31,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100000049",
+          "name": "Meteor.loggingIn",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": []
+        }
+      },
+      "summary": "True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "name": "loggingIn",
+      "longname": "Meteor.loggingIn",
+      "kind": "function",
+      "memberof": "Meteor",
+      "scope": "static",
+      "___id": "T000002R000007",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Client"
+    },
+    "user": {
+      "comment": "/**\n * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.\n * @locus Anywhere but publish functions\n */",
+      "meta": {
+        "range": [
+          1100,
+          1232
+        ],
+        "filename": "accounts_client.js",
+        "lineno": 42,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100000063",
+          "name": "Meteor.user",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": []
+        },
+        "vars": {
+          "userId": null
+        }
+      },
+      "summary": "Get the current user record, or `null` if no user is logged in. A reactive data source.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere but publish functions",
+          "value": "Anywhere but publish functions"
+        }
+      ],
+      "name": "user",
+      "longname": "Meteor.user",
+      "kind": "function",
+      "memberof": "Meteor",
+      "scope": "static",
+      "___id": "T000002R000008",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Anywhere but publish functions"
+    },
+    "logout": {
+      "comment": "/**\n * @summary Log the user out.\n * @locus Client\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
+      "meta": {
+        "range": [
+          8757,
+          9014
+        ],
+        "filename": "accounts_client.js",
+        "lineno": 226,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100000423",
+          "name": "Meteor.logout",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "callback"
+          ]
+        },
+        "vars": {
+          "": null
+        }
+      },
+      "summary": "Log the user out.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "logout",
+      "longname": "Meteor.logout",
+      "kind": "function",
+      "memberof": "Meteor",
+      "scope": "static",
+      "___id": "T000002R000039",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "logoutOtherClients": {
+      "comment": "/**\n * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.\n * @locus Client\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
+      "meta": {
+        "range": [
+          9299,
+          10692
+        ],
+        "filename": "accounts_client.js",
+        "lineno": 242,
+        "path": "/Users/sashko/git/meteor/packages/accounts-base",
+        "code": {
+          "id": "astnode100000465",
+          "name": "Meteor.logoutOtherClients",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "callback"
+          ]
+        },
+        "vars": {
+          "": null
+        }
+      },
+      "summary": "Log out other clients logged in as the current user, but does not log out the client that calls this function.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "logoutOtherClients",
+      "longname": "Meteor.logoutOtherClients",
+      "kind": "function",
+      "memberof": "Meteor",
+      "scope": "static",
+      "___id": "T000002R000041",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "loginWithPassword": {
+      "comment": "/**\n * @summary Log the user in with a password.\n * @locus Client\n * @param {Object | String} user Either a string interpreted as a username or an email; or an object with a single key: `email`, `username` or `id`.\n * @param {String} password The user's password.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
+      "meta": {
+        "range": [
+          725,
+          2207
+        ],
+        "filename": "password_client.js",
+        "lineno": 18,
+        "path": "/Users/sashko/git/meteor/packages/accounts-password",
+        "code": {
+          "id": "astnode100009710",
+          "name": "Meteor.loginWithPassword",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "selector",
+            "password",
+            "callback"
+          ]
+        },
+        "vars": {
+          "selector": null,
+          "": null
+        }
+      },
+      "summary": "Log the user in with a password.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Object",
+              "String"
+            ]
+          },
+          "description": "<p>Either a string interpreted as a username or an email; or an object with a single key: <code>email</code>, <code>username</code> or <code>id</code>.</p>",
+          "name": "user"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The user's password.</p>",
+          "name": "password"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "optional": true,
+          "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "loginWithPassword",
+      "longname": "Meteor.loginWithPassword",
+      "kind": "function",
+      "memberof": "Meteor",
+      "scope": "static",
+      "___id": "T000002R000711",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "status": {
+      "comment": "/**\n   * @summary Get the current connection status. A reactive data source.\n   * @locus Client\n   * @memberOf Meteor\n   */",
+      "meta": {
+        "range": [
+          35995,
+          36124
+        ],
+        "filename": "livedata_connection.js",
+        "lineno": 935,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100351476",
+          "name": "status",
+          "type": "FunctionExpression",
+          "value": "function"
+        },
+        "vars": {
+          "self": null
+        }
+      },
+      "summary": "Get the current connection status. A reactive data source.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "memberof": "Meteor",
+      "name": "status",
+      "longname": "Meteor.status",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R063203",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Client"
+    },
+    "reconnect": {
+      "comment": "/**\n   * @summary Force an immediate reconnection attempt if the client is not connected to the server.\n\n  This method does nothing if the client is already connected.\n   * @locus Client\n   * @memberOf Meteor\n   */",
+      "meta": {
+        "range": [
+          36346,
+          36481
+        ],
+        "filename": "livedata_connection.js",
+        "lineno": 947,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100351496",
+          "name": "reconnect",
+          "type": "FunctionExpression",
+          "value": "function"
+        },
+        "vars": {
+          "self": null
+        }
+      },
+      "summary": "Force an immediate reconnection attempt if the client is not connected to the server.\n\n  This method does nothing if the client is already connected.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "memberof": "Meteor",
+      "name": "reconnect",
+      "longname": "Meteor.reconnect",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R063205",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Client"
+    },
+    "disconnect": {
+      "comment": "/**\n   * @summary Disconnect the client from the server.\n   * @locus Client\n   * @memberOf Meteor\n   */",
+      "meta": {
+        "range": [
+          36592,
+          36729
+        ],
+        "filename": "livedata_connection.js",
+        "lineno": 957,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100351516",
+          "name": "disconnect",
+          "type": "FunctionExpression",
+          "value": "function"
+        },
+        "vars": {
+          "self": null
+        }
+      },
+      "summary": "Disconnect the client from the server.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "memberof": "Meteor",
+      "name": "disconnect",
+      "longname": "Meteor.disconnect",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R063207",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Client"
+    },
+    "onConnection": {
+      "comment": "/**\n   * @summary Register a callback to be called when a new DDP connection is made to the server.\n   * @locus Server\n   * @param {function} callback The function to call when a new DDP connection is established.\n   * @memberOf Meteor\n   */",
+      "meta": {
+        "range": [
+          39287,
+          39388
+        ],
+        "filename": "livedata_server.js",
+        "lineno": 1216,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100366092",
+          "name": "onConnection",
+          "type": "FunctionExpression",
+          "value": "function"
+        },
+        "vars": {
+          "self": null
+        }
+      },
+      "summary": "Register a callback to be called when a new DDP connection is made to the server.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>The function to call when a new DDP connection is established.</p>",
+          "name": "callback"
+        }
+      ],
+      "memberof": "Meteor",
+      "name": "onConnection",
+      "longname": "Meteor.onConnection",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R064528",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "publish": {
+      "comment": "/**\n   * @summary Publish a record set.\n   * @memberOf Meteor\n   * @locus Server\n   * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.\n   * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.\n   */",
+      "meta": {
+        "range": [
+          42219,
+          44185
+        ],
+        "filename": "livedata_server.js",
+        "lineno": 1288,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100366261",
+          "name": "publish",
+          "type": "FunctionExpression",
+          "value": "function"
+        },
+        "vars": {
+          "self": null,
+          "options": null,
+          "self.warned_about_autopublish": null,
+          "self.publish_handlers[undefined]": null,
+          "": null
+        }
+      },
+      "summary": "Publish a record set.",
+      "memberof": "Meteor",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Server",
+          "value": "Server"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>Name of the record set.  If <code>null</code>, the set has no name, and the record set is automatically sent to all connected clients.</p>",
+          "name": "name"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>Function called on the server each time a client subscribes.  Inside the function, <code>this</code> is the publish handler object, described below.  If the client passed arguments to <code>subscribe</code>, the function is called with the same arguments.</p>",
+          "name": "func"
+        }
+      ],
+      "name": "publish",
+      "longname": "Meteor.publish",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R064539",
+      "___s": true,
+      "options": [],
+      "locus": "Server"
+    },
+    "methods": {
+      "comment": "/**\n   * @summary Defines functions that can be invoked over the network by clients.\n   * @locus Anywhere\n   * @param {Object} methods Dictionary whose keys are method names and values are functions.\n   * @memberOf Meteor\n   */",
+      "meta": {
+        "range": [
+          44569,
+          44831
+        ],
+        "filename": "livedata_server.js",
+        "lineno": 1353,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100366421",
+          "name": "methods",
+          "type": "FunctionExpression",
+          "value": "function"
+        },
+        "vars": {
+          "self": null,
+          "": null
+        }
+      },
+      "summary": "Defines functions that can be invoked over the network by clients.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>Dictionary whose keys are method names and values are functions.</p>",
+          "name": "methods"
+        }
+      ],
+      "memberof": "Meteor",
+      "name": "methods",
+      "longname": "Meteor.methods",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R064546",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "absoluteUrl": {
+      "comment": "/**\n * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor bundle`.\n * @locus Anywhere\n * @param {String} [path] A path to append to the root URL. Do not include a leading \"`/`\".\n * @param {Object} [options]\n * @param {Boolean} options.secure Create an HTTPS URL.\n * @param {Boolean} options.replaceLocalhost Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name.\n * @param {String} options.rootUrl Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\"\n */",
+      "meta": {
+        "range": [
+          769,
+          1903
         ],
         "filename": "url_common.js",
         "lineno": 10,
@@ -72,6 +1570,7 @@ DocsData = {
               "Object"
             ]
           },
+          "optional": true,
           "name": "options"
         }
       ],
@@ -112,6 +1611,265 @@ DocsData = {
         }
       ],
       "locus": "Anywhere"
+    }
+  },
+  "DDP": {
+    "connect": {
+      "comment": "/**\n * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.\n * @locus Anywhere\n * @param {String} url The URL of another Meteor application.\n */",
+      "meta": {
+        "range": [
+          58256,
+          58401
+        ],
+        "filename": "livedata_connection.js",
+        "lineno": 1559,
+        "path": "/Users/sashko/git/meteor/packages/livedata",
+        "code": {
+          "id": "astnode100353419",
+          "name": "DDP.connect",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "url",
+            "options"
+          ]
+        },
+        "vars": {
+          "ret": null
+        }
+      },
+      "summary": "Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The URL of another Meteor application.</p>",
+          "name": "url"
+        }
+      ],
+      "name": "connect",
+      "longname": "DDP.connect",
+      "kind": "function",
+      "memberof": "DDP",
+      "scope": "static",
+      "___id": "T000002R063322",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    }
+  },
+  "Session": {
+    "set": {
+      "comment": "/**\n * @memberOf Session\n * @method set\n * @summary Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)\n * @locus Client\n * @param {String} key The key to set, eg, `selectedItem`\n * @param {EJSONable | undefined} value The new value for `key`\n */",
+      "meta": {
+        "range": [
+          293,
+          707
+        ],
+        "filename": "session.js",
+        "lineno": 12,
+        "path": "/Users/sashko/git/meteor/packages/session",
+        "code": {}
+      },
+      "memberof": "Session",
+      "kind": "function",
+      "name": "set",
+      "summary": "Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The key to set, eg, <code>selectedItem</code></p>",
+          "name": "key"
+        },
+        {
+          "type": {
+            "names": [
+              "EJSONable",
+              "undefined"
+            ]
+          },
+          "description": "<p>The new value for <code>key</code></p>",
+          "name": "value"
+        }
+      ],
+      "scope": "static",
+      "longname": "Session.set",
+      "___id": "T000002R072442",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "setDefault": {
+      "comment": "/**\n * @memberOf Session\n * @method setDefault\n * @summary Set a variable in the session if it is undefined. Otherwise works exactly the same as [`Session.set`](#session_set).\n * @locus Client\n * @param {String} key The key to set, eg, `selectedItem`\n * @param {EJSONable | undefined} value The new value for `key`\n */",
+      "meta": {
+        "range": [
+          709,
+          1027
+        ],
+        "filename": "session.js",
+        "lineno": 21,
+        "path": "/Users/sashko/git/meteor/packages/session",
+        "code": {}
+      },
+      "memberof": "Session",
+      "kind": "function",
+      "name": "setDefault",
+      "summary": "Set a variable in the session if it is undefined. Otherwise works exactly the same as [`Session.set`](#session_set).",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The key to set, eg, <code>selectedItem</code></p>",
+          "name": "key"
+        },
+        {
+          "type": {
+            "names": [
+              "EJSONable",
+              "undefined"
+            ]
+          },
+          "description": "<p>The new value for <code>key</code></p>",
+          "name": "value"
+        }
+      ],
+      "scope": "static",
+      "longname": "Session.setDefault",
+      "___id": "T000002R072443",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "get": {
+      "comment": "/**\n * @memberOf Session\n * @method get\n * @summary Get the value of a session variable. If inside a [reactive computation](#reactivity), invalidate the computation the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session.\n * @locus Client\n * @param {String} key The name of the session variable to return\n */",
+      "meta": {
+        "range": [
+          1029,
+          1520
+        ],
+        "filename": "session.js",
+        "lineno": 30,
+        "path": "/Users/sashko/git/meteor/packages/session",
+        "code": {}
+      },
+      "memberof": "Session",
+      "kind": "function",
+      "name": "get",
+      "summary": "Get the value of a session variable. If inside a [reactive computation](#reactivity), invalidate the computation the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The name of the session variable to return</p>",
+          "name": "key"
+        }
+      ],
+      "scope": "static",
+      "longname": "Session.get",
+      "___id": "T000002R072444",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "equals": {
+      "comment": "/**\n * @memberOf Session\n * @method equals\n * @summary Test if a session variable is equal to a value. If inside a [reactive computation](#reactivity), invalidate the computation the next time the variable changes to or from the value.\n * @locus Client\n * @param {String} key The name of the session variable to test\n * @param {String | Number | Boolean | null | undefined} value The value to test against\n */",
+      "meta": {
+        "range": [
+          1522,
+          1931
+        ],
+        "filename": "session.js",
+        "lineno": 38,
+        "path": "/Users/sashko/git/meteor/packages/session",
+        "code": {}
+      },
+      "memberof": "Session",
+      "kind": "function",
+      "name": "equals",
+      "summary": "Test if a session variable is equal to a value. If inside a [reactive computation](#reactivity), invalidate the computation the next time the variable changes to or from the value.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The name of the session variable to test</p>",
+          "name": "key"
+        },
+        {
+          "type": {
+            "names": [
+              "String",
+              "Number",
+              "Boolean",
+              "null",
+              "undefined"
+            ]
+          },
+          "description": "<p>The value to test against</p>",
+          "name": "value"
+        }
+      ],
+      "scope": "static",
+      "longname": "Session.equals",
+      "___id": "T000002R072448",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
     }
   }
 };

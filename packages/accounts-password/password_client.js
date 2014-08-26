@@ -7,6 +7,14 @@
 //     it contains "@".
 // @param password {String}
 // @param callback {Function(error|undefined)}
+
+/**
+ * @summary Log the user in with a password.
+ * @locus Client
+ * @param {Object | String} user Either a string interpreted as a username or an email; or an object with a single key: `email`, `username` or `id`.
+ * @param {String} password The user's password.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Meteor.loginWithPassword = function (selector, password, callback) {
   if (typeof selector === 'string')
     if (selector.indexOf('@') === -1)
@@ -86,6 +94,17 @@ var srpUpgradePath = function (options, callback) {
 
 
 // Attempt to log in as a new user.
+
+/**
+ * @summary Create a new user.
+ * @locus Anywhere
+ * @param {Function} callback Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Object} [options]
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ */
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
@@ -115,6 +134,14 @@ Accounts.createUser = function (options, callback) {
 //   support passing no password to the server and letting it decide.
 // @param newPassword {String}
 // @param callback {Function(error|undefined)}
+
+/**
+ * @summary Change the current user's password. Must be logged in.
+ * @locus Client
+ * @param {String} oldPassword The user's current password. This is __not__ sent in plain text over the wire.
+ * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.changePassword = function (oldPassword, newPassword, callback) {
   if (!Meteor.user()) {
     callback && callback(new Error("Must be logged in to change password."));
@@ -168,6 +195,14 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 // @param options {Object}
 //   - email: (email)
 // @param callback (optional) {Function(error|undefined)}
+
+/**
+ * @summary Request a forgot password email.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Object} [options]
+ * @param {String} options.email The email address to send a password reset link.
+ */
 Accounts.forgotPassword = function(options, callback) {
   if (!options.email)
     throw new Error("Must pass options.email");
@@ -180,6 +215,14 @@ Accounts.forgotPassword = function(options, callback) {
 // @param token {String}
 // @param newPassword {String}
 // @param callback (optional) {Function(error|undefined)}
+
+/**
+ * @summary Reset the password for a user using a token received in email. Logs the user in afterwards.
+ * @locus Client
+ * @param {String} token The token retrieved from the reset password URL.
+ * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.resetPassword = function(token, newPassword, callback) {
   check(token, String);
   check(newPassword, String);
@@ -200,6 +243,13 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 //
 // @param token {String}
 // @param callback (optional) {Function(error|undefined)}
+
+/**
+ * @summary Marks the user's email address as verified. Logs the user in afterwards.
+ * @locus Client
+ * @param {String} token The token retrieved from the verification URL.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.verifyEmail = function(token, callback) {
   if (!token)
     throw new Error("Need to pass token");

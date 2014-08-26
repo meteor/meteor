@@ -1,3 +1,7 @@
+/**
+ * @namespace Accounts
+ * @summary The namespace for all accounts-related methods.
+ */
 Accounts = {};
 
 // Currently this is read directly by packages like accounts-password
@@ -37,7 +41,17 @@ CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 // - loginExpirationInDays {Number}
 //     Number of days since login until a user is logged out (login token
 //     expires).
-//
+
+/**
+ * @summary Set global accounts options.
+ * @locus Anywhere
+ * @param {Object} [options]
+ * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
+ * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available.
+ * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
+ * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
+ * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.
+ */
 Accounts.config = function(options) {
   // We don't want users to accidentally only call Accounts.config on the
   // client, where some of the options will have partial effects (eg removing
