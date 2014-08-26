@@ -180,7 +180,7 @@ npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a0865
 # upstream.
 # https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
 #npm install cordova@3.5.0-0.2.6
-npm install "https://github.com/meteor/cordova-cli/commit/898040e71f6d6900cac4d477986b0451fb196ff1"
+npm install "https://github.com/meteor/cordova-cli/tarball/898040e71f6d6900cac4d477986b0451fb196ff1"
 
 # Below needs rake, getting rid of it
 # npm install ios-sim@2.0.1
