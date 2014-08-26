@@ -175,7 +175,12 @@ npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c8
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
 # Cordova npm tool for mobile integration
-npm install cordova@3.5.0-0.2.6
+# XXX We install our own fork of cordova because we need a particular patch that
+# didn't land to cordova-android yet. As soon as it lands, we can switch back to
+# upstream.
+# https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
+#npm install cordova@3.5.0-0.2.6
+npm install "https://github.com/meteor/cordova-cli/commit/898040e71f6d6900cac4d477986b0451fb196ff1"
 
 # Below needs rake, getting rid of it
 # npm install ios-sim@2.0.1
