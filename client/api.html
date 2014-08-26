@@ -10,8 +10,8 @@ on the client, just on the server, or *Anywhere*.
 
 <h2 id="core"><span>Meteor Core</span></h2>
 
-{{> api_box isClient}}
-{{> api_box isServer}}
+{{> autoApiBox "Meteor.isClient"}}
+{{> autoApiBox "Meteor.isServer"}}
 
 {{#note}}
 `Meteor.isServer` can be used to limit where code runs, but it does not
@@ -21,7 +21,7 @@ authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
 
-{{> api_box startup}}
+{{> autoApiBox "Meteor.startup"}}
 
 On a server, the function will run as soon as the server process is
 finished starting. On a client, the function will run as soon as the DOM
@@ -45,9 +45,9 @@ followed by your application code.
 
 {{> autoApiBox "Meteor.absoluteUrl"}}
 
-{{> api_box settings}}
+{{> autoApiBox "Meteor.settings"}}
 
-{{> api_box release}}
+{{> autoApiBox "Meteor.release"}}
 
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 
@@ -748,7 +748,7 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 {{/warning}}
 
-{{> api_box find}}
+{{> autoApiBox "Meteor.Collection#find"}}
 
 `find` returns a cursor.  It does not immediately access the database or return
 documents.  Cursors provide `fetch` to return all matching documents, `map` and
@@ -778,12 +778,12 @@ invalidations in reactive computations using this cursor. Careful use
 of `fields` allows for more fine-grained reactivity for computations
 that don't depend on an entire document.
 
-{{> api_box findone}}
+{{> autoApiBox "Meteor.Collection#findOne"}}
 
 Equivalent to `find(selector, options).fetch()[0]` with
 `options.limit = 1`.
 
-{{> api_box insert}}
+{{> autoApiBox "Meteor.Collection#insert"}}
 
 Add a document to the collection. A document is just an object, and
 its fields can contain any combination of EJSON-compatible datatypes
@@ -815,7 +815,7 @@ Example:
     Items.insert({list: groceriesId, name: "Watercress"});
     Items.insert({list: groceriesId, name: "Persimmons"});
 
-{{> api_box update}}
+{{> autoApiBox "Meteor.Collection#update"}}
 
 Modify documents that match `selector` according to `modifier` (see
 [modifier documentation](#modifiers)).
@@ -880,7 +880,7 @@ option to true. You can also use the [`upsert`](#upsert) method to perform an
 upsert that returns the _id of the document that was inserted (if there was one)
 in addition to the number of affected documents.
 
-{{> api_box upsert}}
+{{> autoApiBox "Meteor.Collection#upsert"}}
 
 Modify documents that match `selector` according to `modifier`, or insert
 a document if no documents were modified. `upsert` is the same as calling
@@ -888,7 +888,7 @@ a document if no documents were modified. `upsert` is the same as calling
 value of `upsert` is an object that contain the keys `numberAffected`
 and `insertedId`. (`update` returns only the number of affected documents.)
 
-{{> api_box remove}}
+{{> autoApiBox "Meteor.Collection#remove"}}
 
 Find all of the documents that match `selector` and delete them from
 the collection.
@@ -949,7 +949,7 @@ Server example:
       }
     });
 
-{{> api_box allow}}
+{{> autoApiBox "Meteor.Collection#allow"}}
 
 When a client calls `insert`, `update`, or `remove` on a collection, the
 collection's `allow` and [`deny`](#deny) callbacks are called
@@ -1074,7 +1074,7 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
-{{> api_box deny}}
+{{> autoApiBox "Meteor.Collection#deny"}}
 
 This works just like [`allow`](#allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an
@@ -1091,7 +1091,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 To create a cursor, use [`find`](#find).  To access the documents in a
 cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
-{{> api_box cursor_foreach}}
+{{> autoApiBox "Meteor.Collection.Cursor#forEach"}}
 
 This interface is compatible with [Array.forEach](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
 
@@ -1108,7 +1108,7 @@ Examples:
       count += 1;
     });
 
-{{> api_box cursor_map}}
+{{> autoApiBox "Meteor.Collection.Cursor#map"}}
 
 This interface is compatible with [Array.map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
 
@@ -1121,18 +1121,18 @@ On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
-{{> api_box cursor_fetch}}
+{{> autoApiBox "Meteor.Collection.Cursor#fetch"}}
 
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
-{{> api_box cursor_count}}
+{{> autoApiBox "Meteor.Collection.Cursor#count"}}
 
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
-{{> api_box cursor_observe}}
+{{> autoApiBox "Meteor.Collection.Cursor#observe"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
@@ -1197,7 +1197,7 @@ only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
 
-{{> api_box cursor_observe_changes}}
+{{> autoApiBox "Meteor.Collection.Cursor#observeChanges"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. In contrast to [`observe`](#observe),
@@ -1548,7 +1548,7 @@ the fields used in user documents.
 
 {{> autoApiBox "Meteor.userId"}}
 
-{{> api_box users}}
+{{> autoApiBox "Meteor.users"}}
 
 This collection contains one document per registered user. Here's an example
 user document:
@@ -1732,8 +1732,9 @@ not make login buttons visible or active until it is true.
 
 {{> api_box currentUser}}
 {{> api_box loggingInTemplate}}
+
 {{> autoApiBox "Accounts.config"}}
-{{> api_box accounts_ui_config}}
+{{> autoApiBox "Accounts.ui.config"}}
 
 Example:
 
@@ -1880,7 +1881,12 @@ to fail, and should start with
       return false;
 
 
-{{> api_box accounts_onLogin}}
+{{> autoApiBox "Accounts.onLogin"}}
+
+See description of [Accounts.onLoginFailure](#accounts_onloginfailure)
+for details.
+
+{{> autoApiBox "Accounts.onLoginFailure"}}
 
 Either the `onLogin` or the `onLoginFailure` callbacks will be called
 for each login attempt. The `onLogin` callbacks are called after the
@@ -2048,7 +2054,7 @@ template instance, and you can access its DOM nodes when it is in the
 document.
 
 
-{{> api_box template_events}}
+{{> autoApiBox "Template#events"}}
 
 Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
@@ -2056,7 +2062,7 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{{> api_box template_helpers}}
+{{> autoApiBox "Template#helpers"}}
 
 Each template has a local dictionary of helpers that are made available to it,
 and this call specifies helpers to add to the template's dictionary.

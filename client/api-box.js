@@ -5,11 +5,18 @@ var apiData = function (longname) {
     root = root[pathSegment];
   });
 
+  if (! root) {
+    console.log("API Data not found: " + longname);
+  }
+
   return root;
 };
 
 Template.autoApiBox.helpers({
   apiData: apiData,
+  isFunction: function () {
+    return _.contains(["function", "class"], this.kind);
+  },
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
@@ -37,7 +44,7 @@ Template.autoApiBox.helpers({
 
     return paramNames.join(", ");
   },
-  name: function () {
+  signatureName: function () {
     if (this.scope === "instance") {
       return "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
     }

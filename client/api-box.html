@@ -35,7 +35,11 @@
 <div class="api {{bare}}">
   <h3 id="{{link}}">
     <a class="name selflink" href="#{{link}}">
-      {{{name}}}({{paramsSentence}})
+      {{#if isFunction}}
+        {{{signatureName}}}({{paramsSentence}})
+      {{else}}
+        {{{signatureName}}}
+      {{/if}}
     </a>
     {{#if locus}}
       <span class="locus">{{locus}}</span>
