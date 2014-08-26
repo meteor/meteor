@@ -264,8 +264,16 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
-    if (fs.existsSync(packageName)) {
-      process.stderr.write(packageName + ": Already exists\n");
+    utils.validatePackageNameOrExit(
+      packageName, {detailedColonExplanation: true});
+
+    var packageDir = options.appDir
+          ? path.resolve(options.appDir, 'packages', packageName)
+          : path.resolve(packageName);
+    var inYourApp = options.appDir ? " in your app" : "";
+
+    if (fs.existsSync(packageDir)) {
+      process.stderr.write(packageName + ": Already exists" + inYourApp + "\n");
       return 1;
     }
 
@@ -292,7 +300,7 @@ main.registerCommand({
       return xn.replace(/~release~/g, relString);
     };
     try {
-      files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+      files.cp_r(path.join(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
       },
@@ -309,7 +317,7 @@ main.registerCommand({
      return 1;
    }
 
-    process.stdout.write(packageName + ": created\n");
+    process.stdout.write(packageName + ": created" + inYourApp + "\n");
     return 0;
   }
 
@@ -376,11 +384,11 @@ main.registerCommand({
       return 1;
     } else {
       files.cp_r(path.join(exampleDir, options.example), appPath, {
-        // We try not to check the identifier into git, but it might still
+        // We try not to check the project ID into git, but it might still
         // accidentally exist and get added (if running from checkout, for
-        // example). To be on the safe side, explicitly remove the identifier
+        // example). To be on the safe side, explicitly remove the project ID
         // from example apps.
-        ignore: [/^local$/, /^identifier$/]
+        ignore: [/^local$/, /^\.id$/]
       });
     }
   } else {
@@ -394,17 +402,23 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/, /^identifier$/]
+      ignore: [/^local$/, /^\.id$/]
     });
   }
 
   // We are actually working with a new meteor project at this point, so
   // reorient its path. We might do some things to it, but they should be
   // invisible to the user, so mute non-error output.
-  project.setRootDir(appPath);
+  project.setRootDir(path.resolve(appPath));
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
+  // Any upgrader that is in this version of Meteor doesn't need to be run on
+  // this project.
+  var upgraders = require('./upgraders.js');
+  _.each(upgraders.allUpgraders(), function (upgrader) {
+    project.appendFinishedUpgrader(upgrader);
+  });
 
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();
@@ -503,7 +517,7 @@ main.registerCommand({
   }
 
   var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages();
+    stats.recordPackages("sdk.bundle");
   });
   if (statsMessages.hasMessages()) {
     process.stdout.write("Error recording package list:\n" +
@@ -935,7 +949,6 @@ main.registerCommand({
   }
 }, function (options) {
   var testPackages;
-  var localPackageNames = [];
   if (options.args.length === 0) {
     // Only test local packages if no package is specified.
     // XXX should this use the new getLocalPackageNames?
@@ -992,10 +1005,20 @@ main.registerCommand({
           // main package. This is not ideal (I hate how this mutates global
           // state) but it'll do for now.
           var packageDir = path.resolve(p);
-          var packageName = path.basename(packageDir);
-          catalog.complete.addLocalPackage(packageName, packageDir);
-          localPackageNames.push(packageName);
-          return packageName;
+          catalog.complete.addLocalPackage(packageDir);
+
+          if (buildmessage.jobHasMessages()) {
+            // If we already had a problem, don't get another problem when we
+            // run the hack below.
+            return 'ignored';
+          }
+
+          // XXX: Hack.
+          var PackageSource = require('./package-source.js');
+          var packageSource = new PackageSource(catalog.complete);
+          packageSource.initFromPackageDir(packageDir);
+
+          return packageSource.name;
         });
 
       });

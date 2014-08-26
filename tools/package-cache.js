@@ -107,7 +107,11 @@ _.extend(PackageCache.prototype, {
           rootPath: loadPath
         }, function () {
           var packageSource = new PackageSource(self.catalog);
-          packageSource.initFromPackageDir(name, loadPath);
+          // We know exactly what package we want at this point, so let's make
+          // sure to pass in a name.
+          packageSource.initFromPackageDir(loadPath, {
+            name: name
+          });
           unip = new unipackage.Unipackage;
           unip.initFromPath(name, entry.buildDir);
           isUpToDate = compiler.checkUpToDate(
@@ -145,7 +149,9 @@ _.extend(PackageCache.prototype, {
       title: "initializing package `" + name + "`",
       rootPath: loadPath
     }, function () {
-      packageSource.initFromPackageDir(name, loadPath);
+      packageSource.initFromPackageDir(loadPath, {
+       name: name
+      });
     });
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);

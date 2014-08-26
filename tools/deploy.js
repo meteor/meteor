@@ -397,7 +397,7 @@ var bundleAndDeploy = function (options) {
 
     if (options.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages();
+        stats.recordPackages("sdk.deploy", site);
       });
       if (statsMessages.hasMessages()) {
         process.stdout.write("Error recording package list:\n" +
@@ -759,6 +759,7 @@ var listSites = function () {
       ! result.payload.sites.length) {
     process.stdout.write("You don't have any sites yet.\n");
   } else {
+    result.payload.sites.sort();
     _.each(result.payload.sites, function (site) {
       process.stdout.write(site + "\n");
     });

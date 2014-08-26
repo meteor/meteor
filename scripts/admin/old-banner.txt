@@ -1,0 +1,17 @@
+# Copy this into manifest.json.
+
+=> Meteor 0.9.0: Introducing the official Meteor package system,
+   including Isobuild and the Meteor Package Server!
+
+   Starting in 0.9.0, you can publish your own packages and use any of
+   the over 1800 community packages in your app, without needing an
+   external tool such as Meteorite. Just use commands like 'meteor add
+   <packagename>', 'meteor publish', and 'meteor search <query>'.
+
+   This release is being downloaded in the background. It's a big
+   change! Once it's done downloading, then the next time you run
+   'meteor', your Meteor install will be automatically upgraded to the
+   new system. The upgrade will take a few minutes and as part of it
+   old versions of Meteor will be removed from your machine. These old
+   versions will be automatically redownloaded using the new system if
+   you work on apps that use them.

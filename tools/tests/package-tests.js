@@ -86,7 +86,7 @@ var checkVersions = function(sand, packages) {
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change packages", ['test-package-server'], function () {
+selftest.define("change packages during hot code push", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -192,10 +192,9 @@ selftest.define("change packages", ['test-package-server'], function () {
   run.stop();
 });
 
-
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add packages", ["net", "test-package-server"], function () {
+selftest.define("add packages to app", ["net"], function () {
   var s = new Sandbox();
   var run;
 
@@ -326,7 +325,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = username + ":" + packageName + "-a";
   var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
 
   // First test -- pretend that the user has downloaded meteor for the purpose
@@ -343,7 +342,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   publishReleaseInNewTrack(s, releaseTrack, fullPackageName /*tool*/, packages);
 
   // Create a package that has a versionsFrom for the just-published release.
-  var newPack = fullPackageName + "2";
+  var newPack = username + ":" + packageName + "-b";
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
     var packOpen = s.read("package.js");
@@ -384,8 +383,10 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   s.cd("testApp", function () {
     run = s.run("add", newPack);
     run.waitSecs(5);
-    run.match(/  added .*2 at version 1.0.0/);
-    run.match(/  added .* at version 1.0.0/);
+    var match1 = run.match(/  added .*-([ab]) at version 1.0.0/);
+    var match2 = run.match(/  added .*-([ab]) at version 1.0.0/);
+    // the lines should be different:
+    selftest.expectEqual(match1[1] !== match2[1], true);
     run.match("Test package");
     run.expectExit(0);
 
@@ -416,17 +417,15 @@ var createAndPublishPackage = function (s, packageName) {
   var run = s.run("create", "--package", packageName);
   run.waitSecs(10);
   run.expectExit(0);
-  s.cd(packageName);
-
-  run = s.run("publish", "--create");
-  run.waitSecs(25);
-  run.expectExit(0);
-
-  s.cd("..");
+  s.cd(packageName, function (){
+    run = s.run("publish", "--create");
+    run.waitSecs(25);
+    run.expectExit(0);
+  });
 };
 
-selftest.define("release track defaults to METEOR-CORE",
-                ["net", "test-package-server"], function () {
+selftest.define("release track defaults to METEOR",
+                ["net", "test-package-server", "checkout"], function () {
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
@@ -437,7 +436,7 @@ selftest.define("release track defaults to METEOR-CORE",
   // Create a package that has a versionsFrom for the just-published
   // release, but without the release track present in the call to
   // `versionsFrom`. This implies that it should be prefixed
-  // by "METEOR-CORE@"
+  // by "METEOR@"
   var newPack = fullPackageName;
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
@@ -449,19 +448,22 @@ selftest.define("release track defaults to METEOR-CORE",
   });
 
   // Try to publish the package. The error message should demonstrate
-  // that we indeed default to the METEOR-CORE release track when not
+  // that we indeed default to the METEOR release track when not
   // specified.
   s.cd(newPack, function() {
     var run = s.run("publish", "--create");
     run.waitSecs(20);
-    run.matchErr("Unknown release METEOR-CORE@" + releaseVersion);
+    run.matchErr("Unknown release METEOR@" + releaseVersion);
     run.expectExit(1);
   });
 });
 
-
+//
+// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
+// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
+// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
 selftest.define("update server package data unit test",
-                ["net", "test-package-server"], function () {
+                ["net", "test-package-server", "checkout"], function () {
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
   var packageStorageFile = path.join(packageStorageFileDir, "data.json");
 
@@ -533,4 +535,52 @@ selftest.define("update server package data unit test",
                                   { name: name });
     selftest.expectEqual(!! foundOnDisk, true);
   });
+});
+
+
+// Add packages to an app. Change the contents of the packages and their
+// dependencies, make sure that the app still refreshes.
+selftest.define("package with --name", ['test-package-server'], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run; introducing a new package overriding a core package.
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  run = s.run("add", "accounts-base");
+  run.waitSecs(15);
+  run.match("accounts-base");
+
+  run = s.run();
+  run.waitSecs(5);
+  run.match("myapp");
+  run.match("proxy");
+  run.match("MongoDB.\n");
+  run.waitSecs(5);
+  run.read("=> Starting your app");
+  run.waitSecs(5);
+  run.match("running at");
+  run.match("localhost");
+
+  s.cd("packages", function () {
+    s.createPackage("ac-fake", "fake-accounts-base");
+  });
+
+  run.waitSecs(5);
+  run.match("overriding accounts-base!");
+  run.match("restarted");
+  run.stop();
+
+  run = s.run('list');
+  run.match("standard");
+  run.match("accounts-base");
+
+  // What about test-packages?
+  s.cd('packages');
+  s.cd('ac-fake');
+  run = s.run('test-packages', './');
+  run.waitSecs(15);
+  run.match("overriding accounts-base!");
+  run.stop();
 });

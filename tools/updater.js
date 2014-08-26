@@ -34,7 +34,7 @@ exports.tryToDownloadUpdate = function (options) {
 
 var checkForUpdate = function (showBanner) {
   var messages = buildmessage.capture(function () {
-    catalog.official.refresh();
+    catalog.official.refresh({silent: true});
 
     if (!release.current.isProperRelease())
       return;
@@ -104,11 +104,15 @@ var maybeShowBanners = function () {
   var track = release.current.getReleaseTrack();
   var patchReleaseVersion = releaseData.patchReleaseVersion;
   if (patchReleaseVersion) {
-    runLog.log("=> A patch (" +
-               utils.displayRelease(track, patchReleaseVersion) +
-               ") for your current release is available!");
-    runLog.log("   Update this project now with 'meteor update --patch'.");
-    return;
+    var patchRelease = catalog.official.getReleaseVersion(
+      track, patchReleaseVersion);
+    if (patchRelease && patchRelease.recommended) {
+      runLog.log("=> A patch (" +
+                 utils.displayRelease(track, patchReleaseVersion) +
+                 ") for your current release is available!");
+      runLog.log("   Update this project now with 'meteor update --patch'.");
+      return;
+    }
   }
 
   // There's no patch (so no urgent exclamation!) but there may be something
@@ -131,7 +135,7 @@ var maybeShowBanners = function () {
 var updateMeteorToolSymlink = function () {
   buildmessage.assertInCapture();
 
-  // Get the latest release version of METEOR-CORE. (*Always* of the default
+  // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
   var latestReleaseVersion = catalog.official.getDefaultReleaseVersion();

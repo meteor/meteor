@@ -94,14 +94,6 @@ var t = function (deps, expected, options) {
   currentTest.equal(resolvedDeps, expected);
 };
 
-var t_progagateExact = function (deps, expected) {
-  var dependencies = splitArgs(deps).dependencies;
-  var constraints = splitArgs(deps).constraints;
-
-  var resolvedDeps = resolver.propagateExactDeps(dependencies, constraints);
-  currentTest.equal(resolvedDeps, expected);
-};
-
 var FAIL = function (deps, regexp) {
   currentTest.throws(function () {
     var dependencies = splitArgs(deps).dependencies;
@@ -110,21 +102,6 @@ var FAIL = function (deps, regexp) {
     var resolvedDeps = resolver.resolve(dependencies, constraints);
   }, regexp);
 };
-
-Tinytest.add("constraint solver - exact dependencies", function (test) {
-  currentTest = test;
-  t_progagateExact({ "sparky-forms": "=1.1.2" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
-  t_progagateExact({ "sparky-forms": "=1.1.2", "forms": "=1.0.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
-  t_progagateExact({ "sparky-forms": "=1.1.2", "sparkle": "=2.1.1" }, { "sparky-forms": "1.1.2", "forms": "1.0.1", "sparkle": "2.1.1" });
-  t_progagateExact({ "awesome-dropdown": "=1.5.0" }, { "awesome-dropdown": "1.5.0", "dropdown": "1.2.2" });
-  t_progagateExact({ foobar1: "=1.0.0" }, {foobar1: "1.0.0", foobar2: "1.0.0"});
-
-  FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=1.0.0" }, /(.*sparkle.*sparky-forms.*)|(.*sparky-forms.*sparkle.*).*sparkle/);
-  // something that isn't available for your architecture
-  FAIL({ "sparky-forms": "=1.1.2", "sparkle": "=2.0.0" });
-  FAIL({ "sparky-forms": "=0.0.1" });
-  FAIL({ "sparky-forms-nonexistent": "0.0.1" }, /Cannot find anything about.*sparky-forms-nonexistent/);
-});
 
 Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
   currentTest = test;
@@ -513,7 +490,7 @@ function getCatalogStub (gems) {
       return _.uniq(_.pluck(gems, 'name'));
     },
     getPackage: function (name) {
-      throw new Error("Not implemeneted");
+      return !!_.findWhere(gems, {name: name});
     },
     getSortedVersions: function (name) {
       return _.chain(gems)
@@ -528,8 +505,9 @@ function getCatalogStub (gems) {
         .filter(function (v) {
           return semver.valid(v);
         })
-        .value()
-        .sort(semver.compare);
+        .sort(semver.compare)
+        .uniq(true)
+        .value();
     },
     getVersion: function (name, version) {
       var gem = _.find(gems, function (pv) {

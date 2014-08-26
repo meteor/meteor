@@ -447,7 +447,7 @@ _.extend(AppRunner.prototype, {
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     if (self.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages();
+        stats.recordPackages("sdk.run");
       });
       if (statsMessages.hasMessages()) {
         process.stdout.write("Error recording package list:\n" +
@@ -611,15 +611,18 @@ _.extend(AppRunner.prototype, {
           };
         }
 
-        // Establish a watcher on the new files.
-        setupClientWatcher();
+        var oldFuture = self.runFuture = new Future;
 
         // Notify the server that new client assets have been added to the build.
         process.kill(appProcess.proc.pid, 'SIGUSR2');
+
+        // Establish a watcher on the new files.
+        setupClientWatcher();
+
         runLog.logClientRestart();
 
-        self.runFuture = new Future;
-        ret = self.runFuture.wait();
+        // Wait until another file changes.
+        ret = oldFuture.wait();
       }
     } finally {
       self.runFuture = null;

@@ -45,7 +45,7 @@ var getAccessToken = function (query) {
 var getIdentity = function (accessToken) {
   try {
     var response = HTTP.get(
-      "https://secure.meetup.com/2/members",
+      "https://api.meetup.com/2/members",
       {params: {member_id: 'self', access_token: accessToken}});
     return response.data.results && response.data.results[0];
   } catch (err) {

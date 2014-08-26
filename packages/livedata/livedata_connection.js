@@ -58,7 +58,8 @@ var Connection = function (url, options) {
       // fail (e.g. sending package usage stats). At some point we
       // should have a real API for handling client-stream-level
       // errors.
-      _dontPrintErrors: options._dontPrintErrors
+      _dontPrintErrors: options._dontPrintErrors,
+      connectTimeoutMs: options.connectTimeoutMs
     });
   }
 

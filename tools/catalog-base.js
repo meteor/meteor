@@ -128,13 +128,17 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
 
   // Returns general (non-version-specific) information about a
   // package, or null if there is no such package.
-  getPackage: function (name) {
+  getPackage: function (name, options) {
     var self = this;
     buildmessage.assertInCapture();
     self._requireInitialized();
-    return self._recordOrRefresh(function () {
+    options = options || {};
+
+    var get = function () {
       return _.findWhere(self.packages, { name: name });
-    });
+    };
+
+    return options.noRefresh ? get() : self._recordOrRefresh(get);
   },
 
   // Given a package, returns an array of the versions available for
@@ -220,24 +224,30 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     //     so in practice we don't really support "maybe-platform-specific"
     //     packages
 
-    var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
-    var solution = null;
-    utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
-      // This build subset works if for all the arches we need, at least one
-      // build in the subset satisfies it. It is guaranteed to be minimal,
-      // because we look at subsets in increasing order of size.
-      var satisfied = _.all(arches, function (neededArch) {
-        return _.any(buildSubset, function (build) {
-          var buildArches = build.buildArchitectures.split('+');
-          return !!archinfo.mostSpecificMatch(neededArch, buildArches);
+    // Even though getVersion already has its own _recordOrRefresh, we need this
+    // one, in case our local cache says "version exists but only for the wrong
+    // arch" and the right arch has been recently published.
+    // XXX should ensure at most one refresh
+    return self._recordOrRefresh(function () {
+      var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
+      var solution = null;
+      utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
+        // This build subset works if for all the arches we need, at least one
+        // build in the subset satisfies it. It is guaranteed to be minimal,
+        // because we look at subsets in increasing order of size.
+        var satisfied = _.all(arches, function (neededArch) {
+          return _.any(buildSubset, function (build) {
+            var buildArches = build.buildArchitectures.split('+');
+            return !!archinfo.mostSpecificMatch(neededArch, buildArches);
+          });
         });
+        if (satisfied) {
+          solution = buildSubset;
+          return true;  // stop the iteration
+        }
       });
-      if (satisfied) {
-        solution = buildSubset;
-        return true;  // stop the iteration
-      }
+      return solution;  // might be null!
     });
-    return solution;  // might be null!
   },
 
   // Unlike the previous, this looks for a build which *precisely* matches the

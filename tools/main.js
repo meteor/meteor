@@ -786,7 +786,7 @@ Fiber(function () {
     // presumably doesn't exist on the new server, and this is a slow
     // operation).
     if (releaseName !== null &&
-        warehouse.releaseExistsInWarehouse(releaseName)) {
+        warehouse.realReleaseExistsInWarehouse(releaseName)) {
       var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
         releaseName);
       oldSpringboard(manifest.tools);
@@ -1174,8 +1174,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
     // as a local package to the catalog. Other random commands don't (but if we
     // see a reason for them to, we can change this rule).
     messages = buildmessage.capture(function () {
-      catalog.complete.addLocalPackage(path.basename(options.packageDir),
-                                       options.packageDir);
+      catalog.complete.addLocalPackage(options.packageDir);
     });
     if (messages.hasMessages()) {
       process.stderr.write("=> Errors while scanning current package:\n\n");
@@ -1252,4 +1251,3 @@ commandName + ": You're not in a Meteor project directory.\n" +
     throw new Error("command returned non-number?");
   process.exit(ret);
 }).run();
-

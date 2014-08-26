@@ -20,7 +20,7 @@ selftest.define("help", function () {
   // Command help
   var checkCommandHelp = function (run) {
     run.read("Usage: meteor create");
-    run.match("create a new Meteor project");
+    run.match("create a new Meteor app");
     run.match("Options:");
     run.match(/--list\s*Show list/);
     run.expectExit(0);

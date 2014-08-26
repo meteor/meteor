@@ -1,16 +1,10 @@
-{ "track": "METEOR-CORE",
+{ "track": "METEOR",
   "banners": [
     {
-      "versions": ["0.9.0-preview1", "0.9.0-preview2", "0.9.0-preview3"],
+      "versions": ["0.9.0-rc13", "0.9.0-rc14", "0.9.0-rc20", "0.9.0-rc21", "0.9.0-rc22"],
       "banner": {
-        "text": "You should consider updating to the 0.9.0-preview4 release!\n We fixed some bugs. Running 'meteor update' should do the trick."
+        "text": "=> Meteor 0.9.0 is now out! Upgrade to it with:\n     `meteor update`\n   Thanks for helping test the release candidates!"
        }
-    },
-    {
-	"versions": ["0.9.0-preview4"],
-	"banner": {
-		"text": "Minor issues fixed in preview5. Consider updating! :)"
-	}
     }
   ]
 }

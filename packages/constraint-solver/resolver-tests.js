@@ -1,3 +1,11 @@
+var mori = Npm.require('mori');
+
+var resultEquals = function (test, actual, expected) {
+  actual = mori.set(mori.vals(actual));
+  expected = mori.set(expected);
+  test.isTrue(mori.equals(actual, expected), actual + " VS " + expected);
+};
+
 Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   // Fat arrow - exact deps
   // Thin arrow - inexact dep or no constraint
@@ -11,17 +19,19 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   var D110 = new ConstraintSolver.UnitVersion("D", "1.1.0", "1.0.0");
   var E100 = new ConstraintSolver.UnitVersion("E", "1.0.0", "1.0.0");
   var F120 = new ConstraintSolver.UnitVersion("F", "1.2.0", "1.0.0");
+  // Ensure that the resolver knows that these versions exist and have ECV =
+  // 1.0.0.
+  var F100 = new ConstraintSolver.UnitVersion("F", "1.0.0", "1.0.0");
+  var F110 = new ConstraintSolver.UnitVersion("F", "1.1.0", "1.0.0");
 
   resolver.addUnitVersion(A100);
   resolver.addUnitVersion(B100);
   resolver.addUnitVersion(C100);
   resolver.addUnitVersion(D110);
   resolver.addUnitVersion(E100);
+  resolver.addUnitVersion(F100);
+  resolver.addUnitVersion(F110);
   resolver.addUnitVersion(F120);
-  // Ensure that the resolver knows that these versions exist and have ECV =
-  // 1.0.0.
-  resolver.addUnitVersion(new ConstraintSolver.UnitVersion("F", "1.1.0", "1.0.0"));
-  resolver.addUnitVersion(new ConstraintSolver.UnitVersion("F", "1.0.0", "1.0.0"));
 
   A100.addDependency("B");
   A100.addConstraint(resolver.getConstraint("B", "=1.0.0"));
@@ -37,7 +47,16 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   A100.addDependency("F");
   A100.addConstraint(resolver.getConstraint("F", "1.1.0"));
 
-  test.equal(resolver.resolve(["A"]), [A100, B100, C100, D110, E100, F120]);
+  var solution = resolver.resolve(["A"], [], {
+    // Prefer later F when possible.
+    costFunction: function (state) {
+      var F = mori.get(state.choices, "F");
+      var distanceF = F ? semver2number(F.version) : 0;
+      return -distanceF;
+    }
+  });
+
+  resultEquals(test, solution, [A100, B100, C100, D110, E100, F120]);
 });
 
 Tinytest.add("constraint solver - resolver, cost function - pick latest", function (test) {
@@ -66,27 +85,25 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
   // Run looking for a conservative solution for A
   var AOnlySolution = resolver.resolve(["A"], [], {
     costFunction: function (state) {
-      var choices = state.choices;
-      var A = _.find(choices, function (uv) { return uv.name === "A"; });
+      var A = mori.get(state.choices, "A");
       var distanceA = A ? semver2number(A.version) : 0;
       return distanceA - 100;
     }
   });
 
-  test.equal(AOnlySolution, [A100, C100]);
+  resultEquals(test, AOnlySolution, [A100, C100]);
 
   var AnBSolution = resolver.resolve(["A", "B"], [], {
     costFunction: function (state) {
-      var choices = state.choices;
-      var C = _.find(choices, function (uv) { return uv.name === "C"; });
-      var A = _.find(choices, function (uv) { return uv.name === "A"; });
+      var C = mori.get(state.choices, "C");
+      var A = mori.get(state.choices, "A");
       var distanceC = C ? semver2number(C.version) : 0;
       var distanceA = A ? semver2number(A.version) : 0;
       return 1000000000 - distanceC - distanceA;
     }
-  }).sort();
+  });
 
-  test.equal(AnBSolution, [A100, B100, C120]);
+  resultEquals(test, AnBSolution, [A100, B100, C120]);
 });
 
 Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", function (test) {
@@ -115,17 +132,43 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
   var lockedVersions = [B100];
   var solution = resolver.resolve(["A", "B"], [], {
     costFunction: function (state) {
-      var choices = state.choices;
-      return _.reduce(choices, function (sum, uv) {
-        var lockedVersion = _.find(lockedVersions, function (luv) { return luv.name === uv.name; });
+      return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+        var name = mori.first(nameAndUv);
+        var uv = mori.last(nameAndUv);
+        var lockedVersion = _.findWhere(lockedVersions, {name: name});
         if (! lockedVersion || lockedVersion === uv)
-          return sum;
-        return sum + 100;
-      }, 0);
+          return 0;
+        return 100;
+      }, state.choices));
     }
-  }).sort();
+  });
 
-  test.equal(solution, [A110, B100, C100]);
+  resultEquals(test, solution, [A110, B100, C100]);
+});
+
+Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
+  var resolver = new ConstraintSolver.Resolver();
+  var A100 = new ConstraintSolver.UnitVersion("A", "1.0.0", "1.0.0");
+  var A100rc1 = new ConstraintSolver.UnitVersion("A", "1.0.0-rc1", "1.0.0");
+
+  resolver.addUnitVersion(A100rc1);
+  resolver.addUnitVersion(A100);
+  var initialConstraint = resolver.getConstraint("A", ">=0.0.0");
+
+  var solution = resolver.resolve(["A"], [initialConstraint], {
+    costFunction: function (state) {
+      return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+        var name = mori.first(nameAndUv);
+        var uv = mori.last(nameAndUv);
+        // Make the non-rc one more costly. But we still shouldn't choose it!
+        if (uv.version === "1.0.0")
+          return 100;
+        return 0;
+      }, state.choices));
+    }
+  });
+
+  resultEquals(test, solution, [A100]);
 });
 
 function semver2number (semverStr) {

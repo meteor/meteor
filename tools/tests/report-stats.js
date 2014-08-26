@@ -1,7 +1,9 @@
 var _ = require('underscore');
 var os = require("os");
+var util = require("util");
 
 var auth = require("../auth.js");
+var files = require("../files.js");
 var config = require("../config.js");
 var release = require("../release.js");
 var selftest = require('../selftest.js');
@@ -15,48 +17,6 @@ var testStatsServer = "https://test-package-stats.meteor.com";
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
-
-var checkMeta = function (appPackages, sessionId, useFakeRelease) {
-  if (! clientAddress) {
-    clientAddress = getClientAddress();
-  }
-
-  var expectedUserAgentInfo = {
-    hostname: os.hostname(),
-    osPlatform: os.platform(),
-    osType: os.type(),
-    osRelease: os.release(),
-    osArch: os.arch(),
-    clientAddress: clientAddress
-  };
-
-  if (sessionId) {
-    expectedUserAgentInfo.sessionId = sessionId;
-  }
-
-  if (useFakeRelease) {
-    var toolsPackage;
-    selftest.doOrThrow(function() {
-      toolsPackage = selftest.getToolsPackage();
-    });
-    expectedUserAgentInfo.meteorReleaseTrack =
-      "METEOR-CORE";
-    expectedUserAgentInfo.meteorReleaseVersion =
-      "v1";
-    expectedUserAgentInfo.meteorToolsPackageWithVersion =
-      toolsPackage.name + "@" + toolsPackage.version;
-  } else if (! release.current.isCheckout()) {
-    expectedUserAgentInfo.meteorReleaseTrack =
-      release.current.getReleaseTrack();
-    expectedUserAgentInfo.meteorReleaseVersion =
-      release.current.getReleaseVersion();
-    expectedUserAgentInfo.meteorToolsPackageWithVersion =
-      release.current.getToolsPackageAtVersion();
-  }
-
-  selftest.expectEqual(appPackages.meta, expectedUserAgentInfo);
-
-};
 
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
@@ -95,24 +55,34 @@ selftest.define("report-stats", ["slow", "net"], function () {
       s.createApp("foo", "package-stats-tests");
       s.cd("foo");
       if (useFakeRelease) {
-        s.write('.meteor/release', 'METEOR-CORE@v1');
+        s.write('.meteor/release', 'METEOR@v1');
       }
 
       var sandboxProject = new project.Project();
       sandboxProject.setRootDir(s.cwd);
 
+      // XXX Copied from http-helpers.js
+      var version;
+      if (useFakeRelease) {
+        version = "METEOR@v1";
+      } else {
+        version = release.current.isCheckout() ? "checkout" : release.current.name;
+      }
+      var userAgentForSandbox =
+            util.format('Meteor/%s OS/%s (%s; %s; %s;)', version,
+                        os.platform(), os.type(), os.release(), os.arch());
+
       var sessionId;
 
       // verify that identifier file exists for new apps
-      var identifier = s.read(".meteor/identifier").replace(/\n$/, '');
+      var identifier = readProjectId(s);
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
       // verify that identifier file when running 'meteor run' on apps
       // with no identifier file (eg pre-0.9.0 apps)
       runWithFreshIdentifier(s, sandboxProject);
-
-      identifier = s.read(".meteor/identifier").replace(/\n$/, '');
+      identifier = readProjectId(s);
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
@@ -132,31 +102,71 @@ selftest.define("report-stats", ["slow", "net"], function () {
 
       // verify that the stats server recorded that with no userId
       var appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
-      selftest.expectEqual(appPackages.appId, identifier);
-      selftest.expectEqual(appPackages.userId, null);
-      selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
-                           _.sortBy(packageList(sandboxProject), "name"));
-      checkMeta(appPackages, sessionId, useFakeRelease);
+      if (! appPackages) {
+        selftest.fail("No packages for app " + identifier + "?");
+      }
+
+      var expected = {
+        what: "sdk.run",
+        sequence: 0,
+        details: {},
+        ip: getClientAddress(),
+        userAgent: userAgentForSandbox
+      };
+
+      expected.details.appId = identifier,
+      expected.details.packages = _.sortBy(packageList(sandboxProject), "name");
+
+      // read our new session id; we should have one at this point
+      sessionId = auth.getSessionId(config.getAccountsDomain(),
+                                    JSON.parse(s.readSessionFile()));
+      if (! sessionId) {
+        selftest.fail("No session id after recording package stats");
+      }
+      expected.session = sessionId;
+      expected.previousSession = null;
+
+      delete appPackages._id;
+      delete appPackages.when;
+      delete appPackages.host;
+
+      selftest.expectEqual(appPackages, expected);
 
       // now bundle again while logged in. verify that the stats server
       // recorded that with the right userId and meta information
       testUtils.login(s, "test", "testtest");
-      sessionId = auth.getSessionId(config.getAccountsDomain(),
-                                    JSON.parse(s.readSessionFile()));
+      // Our session id should not have changed
+      selftest.expectEqual(
+        auth.getSessionId(config.getAccountsDomain(),
+                          JSON.parse(s.readSessionFile())),
+        sessionId
+      );
 
       runWithFreshIdentifier(s, sandboxProject);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
-      selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
-      checkMeta(appPackages, sessionId, useFakeRelease);
+      delete appPackages._id;
+      delete appPackages.when;
+      delete appPackages.host;
+
+      expected.details.appId = sandboxProject.getAppIdentifier();
+      expected.who = testUtils.getUserId(s);
+      delete expected.previousSession;
+      selftest.expectEqual(appPackages, expected);
 
       // Log out, and then test that our session id still gets recorded.
       testUtils.logout(s);
       run = s.run("run");
       run.waitSecs(15);
-      run.match("BLAH");
+      run.match("PACKAGE STATS SENT");
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
-      selftest.expectEqual(appPackages.userId, null);
-      checkMeta(appPackages, sessionId, useFakeRelease);
+      delete appPackages._id;
+      delete appPackages.when;
+      delete appPackages.host;
+
+      delete expected.who;
+
+      selftest.expectEqual(appPackages, expected);
+
       run.stop();
 
       testUtils.login(s, "test", "testtest");
@@ -185,21 +195,27 @@ selftest.define("report-stats", ["slow", "net"], function () {
       run.expectExit(0);
       runApp(s, sandboxProject);
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
-      selftest.expectEqual(appPackages.userId, testUtils.getUserId(s));
-      selftest.expectEqual(_.sortBy(appPackages.packages, "name"),
+      selftest.expectEqual(appPackages.who, testUtils.getUserId(s));
+      selftest.expectEqual(_.sortBy(appPackages.details.packages, "name"),
                            _.sortBy(packageList(sandboxProject), "name"));
     }
   );
 });
 
 // Run the app in the current working directory after deleting its
-// identifier file (meaning a new one will be created).
+// project ID file (meaning a new one will be created).
 // @param s {Sandbox}
 // @param sandboxProject {Project}
 // @param expectStats {Boolean} (defaults to true)
 var runWithFreshIdentifier = function (s, sandboxProject, expectStats) {
-  s.unlink(".meteor/identifier");
+  s.unlink(".meteor/.id");
   runApp(s, sandboxProject, expectStats);
+};
+
+var readProjectId = function (s) {
+  var raw = s.read(".meteor/.id");
+  var lines = raw.split(/\r*\n\r*/);
+  return _.find(_.map(lines, files.trimLine), _.identity);
 };
 
 // Bundle the app in the current working directory.
@@ -220,7 +236,7 @@ var runApp = function (s, sandboxProject, expectStats) {
   }
   run.stop();
   // Pick up new app identifier and/or packages added/removed. Usually the
-  // changes to .meteor/packages and .meteor/identifier would be handled by the
+  // changes to .meteor/packages and .meteor/.id would be handled by the
   // code that handles the hotcodepush, so the project does not cache them.
   sandboxProject.reload();
 };
@@ -257,10 +273,10 @@ var fetchPackageUsageForApp = function (identifier) {
   return found;
 };
 
-var getClientAddress = function () {
+var getClientAddress = _.once(function () {
   var stats = testUtils.ddpConnect(testStatsServer);
   return stats.call("getClientAddress");
-};
+});
 
 var packageList = function (proj) {
   var ret;

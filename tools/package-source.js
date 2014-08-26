@@ -408,16 +408,24 @@ _.extend(PackageSource.prototype, {
   //   -immutable: This package source is immutable. Do not write anything,
   //    including version files. Instead, its only purpose is to be used as
   //    guideline for a repeatable build.
-  initFromPackageDir: function (name, dir, options) {
+  //   -name: override the name of this package with a different name.
+  initFromPackageDir: function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
     options = options || {};
 
-    self.name = name;
+    // If we know what package we are initializing, we pass in a
+    // name. Otherwise, we are intializing the base package specified by 'name:'
+    // field in Package.Describe. In that case, it is clearly not a test
+    // package. (Though we could be initializing a specific package without it
+    // being a test, for a variety of reasons).
+    if (options.name) {
+      self.isTest = isTestName(options.name);
+      self.name = options.name;
+    }
+
     self.sourceRoot = dir;
-    self.serveRoot = path.join(path.sep, 'packages', name);
-    self.isTest = isTestName(name);
 
     // If we are running from checkout we may be looking at a core package. If
     // we are, let's remember this for things like not recording version files.
@@ -427,12 +435,6 @@ _.extend(PackageSource.prototype, {
         self.isCore = true;
       }
     }
-
-    if (!utils.validPackageName(self.name)) {
-      buildmessage.error("Package name invalid: " + self.name);
-      return;
-    }
-
     if (! fs.existsSync(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
 
@@ -444,6 +446,7 @@ _.extend(PackageSource.prototype, {
     var packageJsHash = Builder.sha1(code);
 
     var releaseRecord = null;
+    var hasTests = false;
 
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
@@ -471,11 +474,15 @@ _.extend(PackageSource.prototype, {
             self.version = value;
           } else if (key === "earliestCompatibleVersion") {
             self.earliestCompatibleVersion = value;
-          } else if (key === "name") {
-            // this key is special because we really don't want you to think that
-            // you are successfully overriding directory name right now. Someday, you
-            // may be though, so it is reserved.
-            buildmessage.error("reserved key " + key + " in package description.");
+          } else if (key === "name" && !self.isTest) {
+            if (!self.name) {
+              self.name = value;
+            } else if (self.name !== value) {
+              // Woah, so we requested a non-test package by name, and it is not
+              // the name that we find inside. That's super weird.
+              buildmessage.error(
+                "trying to initialize a nonexistent base package " + value);
+            }
           }
           else {
           // Do nothing. We might want to add some keys later, and we should err on
@@ -507,7 +514,7 @@ _.extend(PackageSource.prototype, {
         // register the test. This is a medium-length hack until we have new
         // control files.
         if (!self.isTest) {
-          self.testName = genTestName(self.name);
+          hasTests = true;
           return;
         }
 
@@ -664,6 +671,27 @@ _.extend(PackageSource.prototype, {
       fileAndDepLoader = null;
       self.pluginInfo = {};
       npmDependencies = null;
+    }
+
+    // In the past, we did not require a Package.Describe.name field. So, it is
+    // possible that we are initializing a package that doesn't use it and
+    // expects us to be implicit about it.
+    if (!self.name) {
+      // For backwards-compatibility, we will take the package name from the
+      // directory of the package. That was what we used to do: in fact, we used
+      // to only do that.
+      self.name = path.basename(dir);
+    }
+
+    // Check to see if our name is valid.
+
+    try {
+      utils.validatePackageName(self.name);
+    } catch (e) {
+      if (!e.versionParserError)
+        throw e;
+      buildmessage.error(e.message);
+      // recover by ignoring
     }
 
     if (self.version === null && options.requireVersion) {
@@ -846,14 +874,28 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
-          _.each(names, function (name) {
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < names.length; ++i) {
+            var name = names[i];
+            try {
+              var parsed = utils.parseConstraint(name);
+            } catch (e) {
+              if (!e.versionParserError)
+                throw e;
+              buildmessage.error(e.message, {useMyCaller: true});
+              // recover by ignoring
+              continue;
+            }
+
             forAllMatchingWheres(where, function (w) {
-              uses[w].push(_.extend(utils.splitConstraint(name), {
+              uses[w].push({
+                package: parsed.name,
+                constraint: parsed.constraintString,
                 unordered: options.unordered || false,
                 weak: options.weak || false
-              }));
+              });
             });
-          });
+          }
         },
 
         // Called when this package wants packages using it to also use
@@ -863,13 +905,28 @@ _.extend(PackageSource.prototype, {
           names = toArray(names);
           where = toWhereArray(where);
 
-          _.each(names, function (name) {
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < names.length; ++i) {
+            var name = names[i];
+            try {
+              var parsed = utils.parseConstraint(name);
+            } catch (e) {
+              if (!e.versionParserError)
+                throw e;
+              buildmessage.error(e.message, {useMyCaller: true});
+              // recover by ignoring
+              continue;
+            }
+
             forAllMatchingWheres(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
-              implies[w].push(utils.splitConstraint(name));
+              implies[w].push({
+                package: parsed.name,
+                constraint: parsed.constraintString
+              });
             });
-          });
+          }
         },
 
         // Top-level call to add a source file to a package. It will
@@ -900,21 +957,31 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
+          // Uniloaded packages really ought to be in the core release, by
+          // definition, so saying that they should use versions from another
+          // release doesn't make sense. Moreover, if we're running from a
+          // checkout, we build packages for catalog.uniload before we
+          // initialize catalog.official, so we wouldn't actually be able to
+          // interpret the release name anyway.
+          if (self.catalog === catalog.uniload) {
+            buildmessage.error("uniloaded packages may not use versionsFrom");
+            // recover by ignoring
+            return;
+          }
+
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
             release = catalog.DEFAULT_TRACK + "@" + release;
           }
 
           var relInf = release.split('@');
-          // XXX: Error handling
-          if (relInf.length !== 2)
-            throw new Error("Incorrect release spec");
-          // XXX: We pass in true to override the fact that we know that teh
-          // catalog may not be initialized, but we are pretty sure that the
-          // releases are there anyway. This is not the right way to do this
-          // long term.
+          if (relInf.length !== 2) {
+            buildmessage.error("Release names in versionsFrom may not contain '@'.",
+                               { useMyCaller: true });
+            return;
+          }
           releaseRecord = catalog.official.getReleaseVersion(
-            relInf[0], relInf[1], true);
+            relInf[0], relInf[1]);
           if (!releaseRecord) {
             buildmessage.error("Unknown release "+ release);
            }
@@ -958,7 +1025,7 @@ _.extend(PackageSource.prototype, {
       api.add_files = api.addFiles;
 
       try {
-        fileAndDepLoader(api);
+        buildmessage.markBoundary(fileAndDepLoader)(api);
       } catch (e) {
         buildmessage.exception(e);
         // Recover by ignoring all of the source files in the
@@ -1043,7 +1110,7 @@ _.extend(PackageSource.prototype, {
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
       // XXX add a better API for js-analyze to declare itself here
-      if (name !== "meteor" && name !== "js-analyze" &&
+      if (self.name !== "meteor" && self.name !== "js-analyze" &&
           !process.env.NO_METEOR_PACKAGE) {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
@@ -1107,6 +1174,13 @@ _.extend(PackageSource.prototype, {
       self.immutable = true;
     };
 
+    // Serve root of the package.
+    self.serveRoot = path.join(path.sep, 'packages', self.name);
+
+    // Name of the test.
+    if (hasTests) {
+      self.testName = genTestName(self.name);
+    }
   },
 
   // Initialize a package from an application directory (has .meteor/packages).

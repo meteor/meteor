@@ -49,9 +49,12 @@ Usage: meteor create [--release <release>] <name>
        meteor create --list
        meteor create --package [<package_name>]
 
-Make a subdirectory named <name> and create a new Meteor project
-there. If the package option is specified, creates a meteor package,
-otherwise creates a meteor app. You can also pass an absolute or relative path.
+Make a subdirectory named <name> and create a new Meteor app there.  You can
+also pass an absolute or relative path.
+
+With the --package option, creates a Meteor package instead of an app. If you're
+in an app, the package will go in the app's top-level 'packages' directory;
+otherwise it will be created in the current directory.
 
 The app will use the release of Meteor specified with the --release
 option, or the latest available version if the option is not specified. (A
@@ -383,7 +386,7 @@ Usage: meteor publish-release <path to json config> [--create-track]
 
 Publishes a new release to the package server, as determined by the json
 configuration file, which must have the following keys:
-  track: the release track to which you are publishing (ex: METEOR-CORE)
+  track: the release track to which you are publishing (ex: METEOR)
   version: the version of this release
   recommended: is this a recommended release? (see below)
   description: a brief description of the release
@@ -391,7 +394,7 @@ configuration file, which must have the following keys:
   tool: <package name>@<version> of the meteor tool that this release specifies
   packages: object of <package name> to <version> for specified package versions
 
-Set the recommended flag to true for recommended releases (ex: METEOR-CORE@0.90)
+Set the recommended flag to true for recommended releases (ex: METEOR@0.90)
 and false for release candidates, experimental releases, etc. You must publish
 all package versions to the package server before you can specify them in a
 release.
@@ -471,7 +474,7 @@ debugging the Meteor packaging tools themselves.
 
 >>> search
 Search through the package server database.
-Usage: meteor search <regex> [--maintainer <username>] [--show-broken]
+Usage: meteor search <regex> [--maintainer <username>] [--show-old]
 
 Search through the meteor package&release database for names containing the
 specified substring.
@@ -480,11 +483,11 @@ Use --maintainer to filter by authorized maintainers.
 
 By default, meteor search will not show packages that, due to migration issues,
 are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those packages anyway, use the --show-broken option.
+want to see those packages anyway, use the --show-old option.
 
 Options:
   --maintainer    filter by authorized maintainer
-  --show-broken   show packages incompatible with Meteor 0.9.0 and later.
+  --show-old      show packages incompatible with Meteor 0.9.0 and later.
 
 
 >>> show
@@ -498,11 +501,11 @@ version of a package or release.
 
 By default, meteor show will not show versions that, due to migration issues,
 are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those versions anyway, use the --show-broken option.
+want to see those versions anyway, use the --show-old option.
 
 Options:
   --maintainer    filter by authorized maintainer
-  --show-broken   show versions incompatible with Meteor 0.9.0 and later.
+  --show-old      show versions incompatible with Meteor 0.9.0 and later.
 
 
 
@@ -546,7 +549,7 @@ Options:
 
 
 >>> admin change-homepage
-Change the repository url of a package.
+Change the homepage url of a package.
 Usage: meteor admin change-homepage <package name> <new url>
 
 Change the homepage containing package information.

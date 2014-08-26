@@ -76,14 +76,14 @@ Autoupdate._retrySubscription = function () {
     },
     onReady: function () {
       if (Package.reload) {
-        var checkNewVersionDocument = function (id, fields) {
+        var checkNewVersionDocument = function (doc) {
           var self = this;
-          if (id === 'version-refreshable' &&
-              fields.version !== autoupdateVersionRefreshable) {
-            autoupdateVersionRefreshable = fields.version;
+          if (doc._id === 'version-refreshable' &&
+              doc.version !== autoupdateVersionRefreshable) {
+            autoupdateVersionRefreshable = doc.version;
             // Switch out old css links for the new css links. Inspired by:
             // https://github.com/guard/guard-livereload/blob/master/js/livereload.js#L710
-            var newCss = fields.assets.allCss;
+            var newCss = (doc.assets && doc.assets.allCss) || [];
             var oldLinks = [];
             _.each(document.getElementsByTagName('link'), function (link) {
               if (link.className === '__meteor-css__') {
@@ -130,14 +130,13 @@ Autoupdate._retrySubscription = function () {
               attachStylesheetLink(newLink);
             });
           }
-          else if (id === 'version' &&
-                   fields.version !== autoupdateVersion && handle) {
-            handle.stop();
+          else if (doc._id === 'version' && doc.version !== autoupdateVersion) {
+            handle && handle.stop();
             Package.reload.Reload._reload();
           }
         };
 
-        var handle = ClientVersions.find().observeChanges({
+        var handle = ClientVersions.find().observe({
           added: checkNewVersionDocument,
           changed: checkNewVersionDocument
         });

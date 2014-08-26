@@ -66,6 +66,38 @@ selftest.define("publish-and-search", ["slow", "net", "test-package-server"], fu
   run.expectExit(0);
   run.match("Maintained");
   run.match(githubUrl);
+
+  // name override.
+  packageName = utils.randomToken();
+  var newPackageName = username + ":" + packageName;
+  var minPack = " Package.describe({ " +
+    "summary: 'Test package: " + packageName + "'," +
+    "version: '1.0.1'," +
+    "name: '" + newPackageName + "'});";
+
+  s.createPackage(fullPackageName, "package-of-two-versions");
+  s.cd(fullPackageName, function() {
+    s.write("package.js", minPack);
+    // If we manage to publish without the --create flag, that's probably an
+    // indicator that we are reading the directory instead of the override, or,
+    // in any case, that we can't rely on the rest of this test working.
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.match("Reading package...\n");
+    run.matchErr("There is no package named " + newPackageName);
+    run.expectExit(1);
+
+    // Might a well actually publish it.
+    run = s.run("publish", "--create");
+    run.waitSecs(30);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  run = s.run("show", newPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+  run.match("package: " + packageName);
 });
 
 selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], function () {
@@ -158,7 +190,7 @@ selftest.define("list-with-a-new-version",
   s.cd('mapp', function () {
     run = s.run("list");
     run.match(fullPackageName);
-    run.match("1.0.0*:");
+    run.match("1.0.0*");
     run.match("New versions");
     run.match("meteor update");
     run.expectExit(0);

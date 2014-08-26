@@ -3,6 +3,7 @@ var readline = require('readline');
 var _ = require('underscore');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
+var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
@@ -139,26 +140,9 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-(function () {
-  var PackageVersion = null;
-
-  var maybeLoadPackageVersionParser = function () {
-    if (PackageVersion)
-      return;
-    var uniload = require('./uniload.js');
-    var Package = uniload.load({packages: ['package-version-parser']});
-    PackageVersion = Package['package-version-parser'].PackageVersion;
-  };
-
-  exports.parseVersionConstraint = function () {
-    maybeLoadPackageVersionParser();
-    return PackageVersion.parseVersionConstraint.apply(this, arguments);
-  };
-  exports.parseConstraint = function () {
-    maybeLoadPackageVersionParser();
-    return PackageVersion.parseConstraint.apply(this, arguments);
-  };
-})();
+exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+exports.parseConstraint = packageVersionParser.parseConstraint;
+exports.validatePackageName = packageVersionParser.validatePackageName;
 
 // XXX should unify this with utils.parseConstraint
 exports.splitConstraint = function (constraint) {
@@ -185,16 +169,40 @@ exports.dealConstraint = function (constraint, pkg) {
 // safety reasons, package names may not start with a dot. Package names must be
 // lowercase.
 //
-// This does not check that the package name is valid in terms of our naming
+// These do not check that the package name is valid in terms of our naming
 // scheme: ie, that it is prepended by a user's username. That check should
 // happen at publication time.
-exports.validPackageName = function (packageName) {
- if (/[^a-z0-9:.\-]/.test(packageName) || !/[a-z]/.test(packageName) ) {
-   return false;
- }
- return true;
+//
+// 3 variants: isValidPackageName just returns a bool.  validatePackageName
+// throws an error marked with 'versionParserError'. validatePackageNameOrExit
+// (which should only be used inside the implementation of a command, not
+// eg package-client.js) prints and throws the "exit with code 1" exception
+// on failure.
+
+exports.isValidPackageName = function (packageName) {
+  try {
+    exports.validatePackageName(packageName);
+    return true;
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    return false;
+  }
 };
 
+exports.validatePackageNameOrExit = function (packageName, options) {
+  try {
+    exports.validatePackageName(packageName, options);
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    process.stderr.write("Error: " + e.message + "\n");
+    // lazy-load main: old bundler tests fail if you add a circular require to
+    // this file
+    var main = require('./main.js');
+    throw new main.ExitWithCode(1);
+  }
+};
 
 // True if this looks like a valid email address. We deliberately
 // don't support
@@ -341,3 +349,137 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
       throw e;
   }
 };
+
+
+// Patience: a way to make slow operations a little more bearable.
+//
+// It's frustrating when you write code that takes a while, either because it
+// uses a lot of CPU or because it uses a lot of network/IO. There are two
+// issues:
+//   - It would be nice to apologize/explain to users that an operation is
+//     taking a while... but not to spam them with the message when the
+//     operation is fast. This is true no matter which kind of slowness we
+///    have.
+//   - In Node, consuming lots of CPU without yielding is especially bad.
+//     Other IO/network tasks will stall, and you can't even kill the process!
+//
+// Patience is a class to help alleviate the pain of long waits.  When you're
+// going to run a long operation, create a Patience object; when it's done (make
+// sure to use try/finally!), stop() it.
+//
+// Within any code that may burn CPU for too long, call
+// `utils.Patience.nudge()`.  (This is a singleton method, not a method on your
+// particular patience.)  If there are any active Patience objects and it's been
+// a while since your last yield, your Fiber will sleep momentarily.  (So the
+// caller has to be OK with yielding --- it has to be in a Fiber and it can't be
+// anything that depends for correctness on not yielding!)
+//
+// In addition, for each Patience, you can specify a message (a string to print
+// or a function to call) and a timeout for when that gets called.  We use two
+// strategies to try to call it: a standard JavaScript timeout, and as a backup
+// in case we're getting CPU-starved, we also check during each nudge.  The
+// message will not be printed after the Patience is stopped, which prevents you
+// from apologizing to users about operations that don't end up being slow.
+exports.Patience = function (options) {
+  var self = this;
+
+  self._id = nextPatienceId++;
+  ACTIVE_PATIENCES[self._id] = self;
+
+  self._whenMessage = null;
+  self._message = null;
+  self._messageTimeout = null;
+
+  var now = +(new Date);
+
+  if (options.messageAfterMs) {
+    if (!options.message)
+      throw Error("missing message!");
+    if (typeof(options.message) !== 'string' &&
+        typeof(options.message) !== 'function') {
+      throw Error("message must be string or function");
+    }
+    self._message = options.message;
+    self._whenMessage = now + options.messageAfterMs;
+    self._messageTimeout = setTimeout(function () {
+      self._messageTimeout = null;
+      self._printMessage();
+    }, options.messageAfterMs);
+  }
+
+  // If this is the first patience we made, the next yield time is
+  // YIELD_EVERY_MS from now.
+  if (_.size(ACTIVE_PATIENCES) === 1) {
+    nextYield = now + YIELD_EVERY_MS;
+  }
+};
+
+var nextYield = null;
+var YIELD_EVERY_MS = 150;
+var ACTIVE_PATIENCES = {};
+var nextPatienceId = 1;
+
+exports.Patience.nudge = function () {
+  // Is it time to yield?
+  if (!_.isEmpty(ACTIVE_PATIENCES) &&
+      +(new Date) >= nextYield) {
+    nextYield = +(new Date) + YIELD_EVERY_MS;
+    utils.sleepMs(1);
+  }
+
+  // save a copy, in case it gets updated
+  var patienceIds = _.keys(ACTIVE_PATIENCES);
+  _.each(patienceIds, function (id) {
+    if (_.has(ACTIVE_PATIENCES, id)) {
+      ACTIVE_PATIENCES[id]._maybePrintMessage();
+    }
+  });
+};
+
+_.extend(exports.Patience.prototype, {
+  stop: function () {
+    var self = this;
+    delete ACTIVE_PATIENCES[self._id];
+    if (_.isEmpty(ACTIVE_PATIENCES)) {
+      nextYield = null;
+    }
+    self._clearMessageTimeout();
+  },
+
+  _maybePrintMessage: function () {
+    var self = this;
+    var now = +(new Date);
+
+    // Is it time to print a message?
+    if (self._whenMessage && +(new Date) >= self._whenMessage) {
+      self._printMessage();
+    }
+  },
+
+  _printMessage: function () {
+    var self = this;
+    // Did the timeout just fire, but we already printed the message due to a
+    // nudge while CPU-bound? We're done. (This shouldn't happen since we clear
+    // the timeout, but just in case...)
+    if (self._message === null)
+      return;
+    self._clearMessageTimeout();
+    // Pull out message, in case it's a function and it yields.
+    var message = self._message;
+    self._message = null;
+    if (typeof (message) === 'function') {
+      message();
+    } else {
+      console.log(message);
+    }
+  },
+
+  _clearMessageTimeout: function () {
+    var self = this;
+    if (self._messageTimeout) {
+      clearTimeout(self._messageTimeout);
+      self._messageTimeout = null;
+    }
+    self._whenMessage = null;
+  }
+});

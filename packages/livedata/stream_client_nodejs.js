@@ -22,7 +22,7 @@ LivedataTest.ClientStream = function (endpoint, options) {
 
   self.headers = self.options.headers || {};
 
-  self._initCommon();
+  self._initCommon(self.options);
 
   //// Kickoff!
   self._launchConnection();

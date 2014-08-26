@@ -96,13 +96,15 @@ _.extend(LivedataTest.ClientStream.prototype, {
   },
 
 
-  _initCommon: function () {
+  _initCommon: function (options) {
     var self = this;
+    options = options || {};
+
     //// Constants
 
     // how long to wait until we declare the connection attempt
     // failed.
-    self.CONNECT_TIMEOUT = 10000;
+    self.CONNECT_TIMEOUT = options.connectTimeoutMs || 10000;
 
     self.eventCallbacks = {}; // name -> [callback]
 
