@@ -112,7 +112,7 @@
 
     // write name tree JSON
     jsonString = JSON.stringify(nameTree, null, 2);
-    var nameTreeFilename= "docs/client/names.js";
+    var nameTreeFilename= "docs/client/names.json";
     fs.writeFileSync(nameTreeFilename, jsonString);
   };
 })();

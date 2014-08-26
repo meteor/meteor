@@ -36,5 +36,10 @@ Template.autoApiBox.helpers({
   },
   link: function () {
     return this.longname.replace(".", "_").toLowerCase();
+  },
+  paramsNoOptions: function () {
+    return _.reject(this.params, function (param) {
+      return param.name === "options";
+    });
   }
 });

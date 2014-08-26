@@ -1,3 +1,12 @@
+/**
+ * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor bundle`.
+ * @locus Anywhere
+ * @param {String} [path] A path to append to the root URL. Do not include a leading "`/`".
+ * @param {Object} [options]
+ * @param {Boolean} options.secure Create an HTTPS URL.
+ * @param {Boolean} options.replaceLocalhost Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name.
+ * @param {String} options.rootUrl Override the default ROOT_URL from the server environment. For example: "`http://foo.example.com`"
+ */
 Meteor.absoluteUrl = function (path, options) {
   // path is optional
   if (!options && typeof path === 'object') {
