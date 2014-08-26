@@ -22,10 +22,6 @@
       });
     }
 
-    if (data.tags) {
-      console.log(tagDict);
-    }
-
     return tagDict;
   };
 
@@ -100,7 +96,7 @@
       func.params = filteredParams;
 
       addToTree(docTree, func.longname, func);
-      addToTree(nameTree, func.longname, func.longname);
+      addToTree(nameTree, func.longname, {});
     });
 
     // write full docs JSON
