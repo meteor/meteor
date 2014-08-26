@@ -1,14 +1,15 @@
+var apiData = function (longname) {
+  var root = DocsData;
+
+  _.each(longname.split("."), function (pathSegment) {
+    root = root[pathSegment];
+  });
+
+  return root;
+};
+
 Template.autoApiBox.helpers({
-  apiData: function () {
-    var longname = this;
-    var root = DocsData;
-
-    _.each(longname.split("."), function (pathSegment) {
-      root = root[pathSegment];
-    });
-
-    return root;
-  },
+  apiData: apiData,
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
@@ -36,7 +37,18 @@ Template.autoApiBox.helpers({
 
     return paramNames.join(", ");
   },
+  name: function () {
+    if (this.scope === "instance") {
+      return "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
+    }
+
+    return this.longname;
+  },
   link: function () {
+    if (this.scope === "instance") {
+      return apiData(this.memberof).instancename + "_" + this.name;
+    }
+
     return this.longname.replace(".", "_").toLowerCase();
   },
   paramsNoOptions: function () {

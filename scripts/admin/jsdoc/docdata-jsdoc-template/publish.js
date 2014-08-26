@@ -67,6 +67,15 @@
       }
     });
 
+    var constructors = helper.find(data, {kind: "class"});
+
+    _.each(constructors, function (constructor) {
+      if (constructor.summary) {
+        addToTree(docTree, constructor.longname, constructor);
+        addToTree(nameTree, constructor.longname, {});
+      }
+    });
+
     var functions = helper.find(data, {kind: "function"});
 
     // insert all of the function data into the namespaces

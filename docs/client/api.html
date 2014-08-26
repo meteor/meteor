@@ -2869,14 +2869,14 @@ See the <a href="http://manual.meteor.com/#deps-reactivevaluewithdependency">
 Meteor Manual</a> to learn how to create a reactive data source using
   Deps.Dependency.
 
-{{> api_box dependency_changed }}
+{{> autoApiBox "Deps.Dependency#changed" }}
 
-{{> api_box dependency_depend }}
+{{> autoApiBox "Deps.Dependency#depend" }}
 
 `dep.depend()` is used in reactive data source implementations to record
 the fact that `dep` is being accessed from the current computation.
 
-{{> api_box dependency_hasdependents }}
+{{> autoApiBox "Deps.Dependency#hasDependents" }}
 
 For reactive data sources that create many internal Dependencies,
 this function is useful to determine whether a particular Dependency is
