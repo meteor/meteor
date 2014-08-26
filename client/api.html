@@ -2905,19 +2905,19 @@ and a binary buffer would be serialized in EJSON as:
 Meteor supports all built-in EJSON data types in publishers, method arguments
 and results, Mongo databases, and [`Session`](#session) variables.
 
-{{> api_box ejsonParse}}
+{{> autoApiBox "EJSON.parse"}}
 
-{{> api_box ejsonStringify}}
+{{> autoApiBox "EJSON.stringify"}}
 
-{{> api_box ejsonFromJSONValue}}
+{{> autoApiBox "EJSON.fromJSONValue"}}
 
-{{> api_box ejsonToJSONValue}}
+{{> autoApiBox "EJSON.toJSONValue"}}
 
-{{> api_box ejsonEquals}}
+{{> autoApiBox "EJSON.equals"}}
 
-{{> api_box ejsonClone}}
+{{> autoApiBox "EJSON.clone"}}
 
-{{> api_box ejsonNewBinary}}
+{{> autoApiBox "EJSON.newBinary"}}
 
 Buffers of binary data are represented by `Uint8Array` instances on JavaScript
 platforms that support them.  On implementations of JavaScript that do not
@@ -2925,9 +2925,9 @@ support `Uint8Array`, binary data buffers are represented by standard arrays
 containing numbers ranging from 0 to 255, and the `$Uint8ArrayPolyfill` key
 set to `true`.
 
-{{> api_box ejsonIsBinary}}
+{{> autoApiBox "EJSON.isBinary"}}
 
-{{> api_box ejsonAddType}}
+{{> autoApiBox "EJSON.addType"}}
 
 When you add a type to EJSON, Meteor will be able to use that type in:
 
@@ -2985,7 +2985,7 @@ result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
 `HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project with `$ meteor add http`.
 
-{{> api_box httpcall}}
+{{> autoApiBox "HTTP.call"}}
 
 This function initiates an HTTP request to a remote server.
 

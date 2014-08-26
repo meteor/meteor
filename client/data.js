@@ -2042,6 +2042,725 @@ DocsData = {
       "locus": "Client"
     }
   },
+  "EJSON": {
+    "newBinary": {
+      "meta": {
+        "range": [
+          1470,
+          1769
+        ],
+        "filename": "base64.js",
+        "lineno": 70,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100269628",
+          "name": "EJSON.newBinary",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "len"
+          ]
+        },
+        "vars": {
+          "ret": null,
+          "i": null,
+          "ret.$Uint8ArrayPolyfill": null
+        }
+      },
+      "summary": "Allocate a new buffer of binary data that EJSON can serialize.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>The number of bytes of binary data to allocate.</p>",
+          "name": "size"
+        }
+      ],
+      "name": "newBinary",
+      "longname": "EJSON.newBinary",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R050894",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "addType": {
+      "meta": {
+        "range": [
+          1156,
+          1321
+        ],
+        "filename": "ejson.js",
+        "lineno": 24,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100270478",
+          "name": "EJSON.addType",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "name",
+            "factory"
+          ]
+        },
+        "vars": {
+          "customTypes[undefined]": null
+        }
+      },
+      "summary": "Add a custom datatype to EJSON.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>A tag for your custom type; must be unique among custom data types defined in your project, and must match the result of your type's <code>typeName</code> method.</p>",
+          "name": "name"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>A function that deserializes a JSON-compatible value into an instance of your type.  This should match the serialization performed by your type's <code>toJSONValue</code> method.</p>",
+          "name": "factory"
+        }
+      ],
+      "name": "addType",
+      "longname": "EJSON.addType",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R050975",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "toJSONValue": {
+      "meta": {
+        "range": [
+          5932,
+          6178
+        ],
+        "filename": "ejson.js",
+        "lineno": 193,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271095",
+          "name": "EJSON.toJSONValue",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "item"
+          ]
+        },
+        "vars": {
+          "changed": null,
+          "item": null
+        }
+      },
+      "summary": "Serialize an EJSON-compatible value into its plain JSON representation.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "EJSON"
+            ]
+          },
+          "description": "<p>A value to serialize to plain JSON.</p>",
+          "name": "val"
+        }
+      ],
+      "name": "toJSONValue",
+      "longname": "EJSON.toJSONValue",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051025",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "fromJSONValue": {
+      "meta": {
+        "range": [
+          7902,
+          8158
+        ],
+        "filename": "ejson.js",
+        "lineno": 262,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271293",
+          "name": "EJSON.fromJSONValue",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "item"
+          ]
+        },
+        "vars": {
+          "changed": null,
+          "item": null
+        }
+      },
+      "summary": "Deserialize an EJSON value from its plain JSON representation.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>A value to deserialize into EJSON.</p>",
+          "name": "val"
+        }
+      ],
+      "name": "fromJSONValue",
+      "longname": "EJSON.fromJSONValue",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051036",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "stringify": {
+      "meta": {
+        "range": [
+          8786,
+          9029
+        ],
+        "filename": "ejson.js",
+        "lineno": 283,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271334",
+          "name": "EJSON.stringify",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "item",
+            "options"
+          ]
+        },
+        "vars": {
+          "json": null
+        }
+      },
+      "summary": "Serialize a value to a string.\n\nFor EJSON values, the serialization fully represents the value. For non-EJSON values, serializes the same way as `JSON.stringify`.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "EJSON"
+            ]
+          },
+          "description": "<p>A value to stringify.</p>",
+          "name": "val"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "optional": true,
+          "name": "options"
+        }
+      ],
+      "name": "stringify",
+      "longname": "EJSON.stringify",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051039",
+      "___s": true,
+      "options": [
+        {
+          "type": {
+            "names": [
+              "Boolean",
+              "Integer",
+              "String"
+            ]
+          },
+          "description": "<p>Indents objects and arrays for easy readability.  When <code>true</code>, indents by 2 spaces; when an integer, indents by that number of spaces; and when a string, uses the string as the indentation pattern.</p>",
+          "name": "indent"
+        },
+        {
+          "type": {
+            "names": [
+              "Boolean"
+            ]
+          },
+          "description": "<p>When <code>true</code>, stringifies keys in an object in sorted order.</p>",
+          "name": "canonical"
+        }
+      ],
+      "locus": "Anywhere"
+    },
+    "parse": {
+      "meta": {
+        "range": [
+          9219,
+          9396
+        ],
+        "filename": "ejson.js",
+        "lineno": 297,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271376",
+          "name": "EJSON.parse",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "item"
+          ]
+        }
+      },
+      "summary": "Parse a string into an EJSON value. Throws an error if the string is not valid EJSON.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>A string to parse into an EJSON value.</p>",
+          "name": "str"
+        }
+      ],
+      "name": "parse",
+      "longname": "EJSON.parse",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051041",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "isBinary": {
+      "meta": {
+        "range": [
+          9587,
+          9741
+        ],
+        "filename": "ejson.js",
+        "lineno": 308,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271403",
+          "name": "EJSON.isBinary",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "obj"
+          ]
+        }
+      },
+      "summary": "Returns true if `x` is a buffer of binary data, as returned from [`EJSON.newBinary`](#ejson_new_binary).",
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>The variable to check.</p>",
+          "name": "x"
+        }
+      ],
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "name": "isBinary",
+      "longname": "EJSON.isBinary",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051042",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "equals": {
+      "meta": {
+        "range": [
+          10260,
+          12514
+        ],
+        "filename": "ejson.js",
+        "lineno": 321,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271428",
+          "name": "EJSON.equals",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "a",
+            "b",
+            "options"
+          ]
+        },
+        "vars": {
+          "i": null,
+          "keyOrderSensitive": null,
+          "ret": null,
+          "bKeys": null,
+          "": null
+        }
+      },
+      "summary": "Return true if `a` and `b` are equal to each other.  Return false otherwise.  Uses the `equals` method on `a` if present, otherwise performs a deep comparison.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "EJSON"
+            ]
+          },
+          "name": "a"
+        },
+        {
+          "type": {
+            "names": [
+              "EJSON"
+            ]
+          },
+          "name": "b"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "optional": true,
+          "name": "options"
+        }
+      ],
+      "name": "equals",
+      "longname": "EJSON.equals",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051043",
+      "___s": true,
+      "options": [
+        {
+          "type": {
+            "names": [
+              "Boolean"
+            ]
+          },
+          "description": "<p>Compare in key sensitive order, if supported by the JavaScript implementation.  For example, <code>{a: 1, b: 2}</code> is equal to <code>{b: 2, a: 1}</code> only when <code>keyOrderSensitive</code> is <code>false</code>.  The default is <code>false</code>.</p>",
+          "name": "keyOrderSensitive"
+        }
+      ],
+      "locus": "Anywhere"
+    },
+    "clone": {
+      "meta": {
+        "range": [
+          12624,
+          13890
+        ],
+        "filename": "ejson.js",
+        "lineno": 407,
+        "path": "/Users/sashko/git/meteor/packages/ejson",
+        "code": {
+          "id": "astnode100271815",
+          "name": "EJSON.clone",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "v"
+          ]
+        },
+        "vars": {
+          "ret": null,
+          "i": null,
+          "ret[undefined]": null,
+          "": null
+        }
+      },
+      "summary": "Return a deep copy of `val`.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "EJSON"
+            ]
+          },
+          "description": "<p>A value to copy.</p>",
+          "name": "val"
+        }
+      ],
+      "name": "clone",
+      "longname": "EJSON.clone",
+      "kind": "function",
+      "memberof": "EJSON",
+      "scope": "static",
+      "___id": "T000002R051054",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    }
+  },
+  "HTTP": {
+    "call": {
+      "meta": {
+        "range": [
+          1469,
+          6302
+        ],
+        "filename": "httpcall_client.js",
+        "lineno": 17,
+        "path": "/Users/sashko/git/meteor/packages/http",
+        "code": {
+          "id": "astnode100308171",
+          "name": "HTTP.call",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "method",
+            "url",
+            "options",
+            "callback"
+          ]
+        },
+        "vars": {
+          "callback": null,
+          "options": null,
+          "method": null,
+          "headers": null,
+          "content": null,
+          "headers['Content-Type']": null,
+          "params_for_url": null,
+          "params_for_body": null,
+          "query_match": null,
+          "url": null,
+          "username": null,
+          "password": null,
+          "colonLoc": null,
+          "": null,
+          "xhr": null,
+          "k": null,
+          "timed_out": null,
+          "timer": null,
+          "xhr.onreadystatechange": null
+        }
+      },
+      "summary": "Perform an outbound HTTP request.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The <a href=\"http://en.wikipedia.org/wiki/HTTP_method\">HTTP method</a> to use, such as &quot;<code>GET</code>&quot;, &quot;<code>POST</code>&quot;, or &quot;<code>HEAD</code>&quot;.</p>",
+          "name": "method"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>The URL to retrieve.</p>",
+          "name": "url"
+        },
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required.</p>",
+          "name": "asyncCallback"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "optional": true,
+          "name": "options"
+        }
+      ],
+      "name": "call",
+      "longname": "HTTP.call",
+      "kind": "function",
+      "memberof": "HTTP",
+      "scope": "static",
+      "___id": "T000002R059489",
+      "___s": true,
+      "options": [
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>String to use as the HTTP request body.</p>",
+          "name": "content"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>JSON-able object to stringify and use as the HTTP request body. Overwrites <code>content</code>.</p>",
+          "name": "data"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>Query string to go in the URL. Overwrites any query string in <code>url</code>.</p>",
+          "name": "query"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>Dictionary of request parameters to be encoded and placed in the URL (for GETs) or request body (for POSTs).  If <code>content</code> or <code>data</code> is specified, <code>params</code> will always be placed in the URL.</p>",
+          "name": "params"
+        },
+        {
+          "type": {
+            "names": [
+              "String"
+            ]
+          },
+          "description": "<p>HTTP basic authentication string of the form <code>&quot;username:password&quot;</code></p>",
+          "name": "auth"
+        },
+        {
+          "type": {
+            "names": [
+              "Object"
+            ]
+          },
+          "description": "<p>Dictionary of strings, headers to add to the HTTP request.</p>",
+          "name": "headers"
+        },
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default.</p>",
+          "name": "timeout"
+        },
+        {
+          "type": {
+            "names": [
+              "Boolean"
+            ]
+          },
+          "description": "<p>If <code>true</code>, transparently follow HTTP redirects. Cannot be set to <code>false</code> on the client. Default <code>true</code>.</p>",
+          "name": "followRedirects"
+        }
+      ],
+      "locus": "Anywhere"
+    }
+  },
   "DDP": {
     "connect": {
       "meta": {
