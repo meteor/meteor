@@ -40,6 +40,20 @@
     "onInvalidate": {},
     "afterFlush": {}
   },
+  "EJSON": {
+    "newBinary": {},
+    "addType": {},
+    "toJSONValue": {},
+    "fromJSONValue": {},
+    "stringify": {},
+    "parse": {},
+    "isBinary": {},
+    "equals": {},
+    "clone": {}
+  },
+  "HTTP": {
+    "call": {}
+  },
   "DDP": {
     "connect": {}
   },

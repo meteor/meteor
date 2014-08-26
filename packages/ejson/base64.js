@@ -62,6 +62,11 @@ var getVal = function (ch) {
   return BASE_64_VALS[ch];
 };
 
+/**
+ * @summary Allocate a new buffer of binary data that EJSON can serialize.
+ * @locus Anywhere
+ * @param {Number} size The number of bytes of binary data to allocate.
+ */
 EJSON.newBinary = function (len) {
   if (typeof Uint8Array === 'undefined' || typeof ArrayBuffer === 'undefined') {
     var ret = [];
