@@ -14,12 +14,14 @@ Template.autoApiBox.helpers({
     nameList = _.map(nameList, function (name) {
       if (name === "function") {
         return "Function";
+      } else if (name === "EJSONable") {
+        return "EJSON-able object";
       }
 
       return name;
     });
 
-    return nameList.join(" | ");
+    return nameList.join(" or ");
   },
   paramsSentence: function () {
     var params = this.params;

@@ -54,7 +54,7 @@ followed by your application code.
 These functions control how Meteor servers publish sets of records and
 how clients can subscribe to those sets.
 
-{{> api_box publish}}
+{{> autoApiBox "Meteor.publish"}}
 
 To publish records to clients, call `Meteor.publish` on the server with
 two parameters: the name of the record set, and a *publish function*
@@ -269,7 +269,7 @@ be one of the published values, chosen arbitrarily.
 
 Methods are remote functions that Meteor clients can invoke.
 
-{{> api_box methods}}
+{{> autoApiBox "Meteor.methods"}}
 
 Example:
 
@@ -430,7 +430,7 @@ options about how the client executes the method.
 These functions manage and inspect the network connection between the
 Meteor client and server.
 
-{{> api_box status}}
+{{> autoApiBox "Meteor.status"}}
 
 This method returns the status of the connection between the client and
 the server. The return value is an object with the following fields:
@@ -473,9 +473,9 @@ a [reactive](#reactivity) data source. You can use it in a
 [template](#livehtmltemplates) or [computation](#deps_autorun)
 to get realtime updates.
 
-{{> api_box reconnect}}
+{{> autoApiBox "Meteor.reconnect"}}
 
-{{> api_box disconnect}}
+{{> autoApiBox "Meteor.disconnect"}}
 
 Call this method to disconnect from the server and stop all
 live data updates. While the client is disconnected it will not receive
@@ -489,7 +489,7 @@ This can be used to save battery on mobile devices when real time
 updates are not required.
 
 
-{{> api_box onConnection}}
+{{> autoApiBox "Meteor.onConnection"}}
 
 `onConnection` returns an object with a single method `stop`.  Calling
 `stop` unregisters the callback, so that this callback will no longer
@@ -553,7 +553,7 @@ connection `id`.
 {{/note}}
 
 
-{{> api_box connect}}
+{{> autoApiBox "DDP.connect"}}
 
 To call methods on another Meteor application or subscribe to its data
 sets, call `DDP.connect` with the URL of the application.
@@ -1423,7 +1423,7 @@ you call [`Session.get`](#session_get)`("currentList")`
 from inside a template, the template will automatically be rerendered
 whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
-{{> api_box session_set}}
+{{> autoApiBox "Session.set"}}
 
 Example:
 
@@ -1435,12 +1435,12 @@ Example:
     // that the chat-history subscription is moved to the room "home".
     Session.set("currentRoomId", "home");
 
-{{> api_box setDefault}}
+{{> autoApiBox "Session.setDefault"}}
 
 This is useful in initialization code, to avoid re-initializing a session
 variable every time a new version of your app is loaded.
 
-{{> api_box session_get}}
+{{> autoApiBox "Session.get"}}
 
 Example:
 
@@ -1463,7 +1463,7 @@ Example:
     // Page will change to say "We've always been at war with Eurasia"
 
 
-{{> api_box equals}}
+{{> autoApiBox "Session.equals"}}
 
 If value is a scalar, then these two expressions do the same thing:
 
@@ -1535,7 +1535,7 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-twitter`, or `accounts-weibo`.
 
 
-{{> api_box user}}
+{{> autoApiBox "Meteor.user"}}
 
 Retrieves the user record for the current user from
 the [`Meteor.users`](#meteor_users) collection.
@@ -1546,7 +1546,7 @@ client). By default the server publishes `username`, `emails`, and
 `profile`. See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
-{{> api_box userId}}
+{{> autoApiBox "Meteor.userId"}}
 
 {{> api_box users}}
 
@@ -1636,20 +1636,20 @@ their user document:
     Meteor.users.deny({update: function () { return true; }});
 
 
-{{> api_box loggingIn}}
+{{> autoApiBox "Meteor.loggingIn"}}
 
 For example, [the `accounts-ui` package](#accountsui) uses this to display an
 animation while the login request is being processed.
 
-{{> api_box logout}}
+{{> autoApiBox "Meteor.logout"}}
 
-{{> api_box logoutOtherClients}}
+{{> autoApiBox "Meteor.logoutOtherClients"}}
 
 For example, when called in a user's browser, connections in that browser
 remain logged in, but any other browsers or DDP clients logged in as that user
 will be logged out.
 
-{{> api_box loginWithPassword}}
+{{> autoApiBox "Meteor.loginWithPassword"}}
 
 This function is provided by the `accounts-password` package. See the
 [Passwords](#accounts_passwords) section below.
@@ -1732,7 +1732,7 @@ not make login buttons visible or active until it is true.
 
 {{> api_box currentUser}}
 {{> api_box loggingInTemplate}}
-{{> api_box accounts_config}}
+{{> autoApiBox "Accounts.config"}}
 {{> api_box accounts_ui_config}}
 
 Example:
@@ -1748,7 +1748,7 @@ Example:
       passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
     });
 
-{{> api_box accounts_validateNewUser}}
+{{> autoApiBox "Accounts.validateNewUser"}}
 
 This can be called multiple times. If any of the functions return `false` or
 throw an error, the new user creation is aborted. To set a specific error
@@ -1776,7 +1776,7 @@ the [`Accounts.validateLoginAttempt`](#accounts_validateloginattempt)
 callbacks. If these callbacks succeed but those fail, the user will still be
 created but the connection will not be logged in as that user.
 
-{{> api_box accounts_onCreateUser}}
+{{> autoApiBox "Accounts.onCreateUser"}}
 
 Use this when you need to do more than simply accept or reject new user
 creation. With this function you can programatically control the
@@ -1814,7 +1814,7 @@ Example:
     });
 
 
-{{> api_box accounts_validateLoginAttempt}}
+{{> autoApiBox "Accounts.validateLoginAttempt"}}
 
 Call `validateLoginAttempt` with a callback to be called on login
 attempts.  It returns an object with a single method, `stop`.  Calling
@@ -1912,7 +1912,7 @@ functions below, or use the [`accounts-ui` package](#accountsui) to
 include a turn-key user interface for password-based sign-in.
 
 
-{{> api_box accounts_createUser}}
+{{> autoApiBox "Accounts.createUser"}}
 
 On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
@@ -1937,9 +1937,9 @@ This function is only used for creating users with passwords. The external
 service login flows do not use this function.
 
 
-{{> api_box accounts_changePassword}}
+{{> autoApiBox "Accounts.changePassword"}}
 
-{{> api_box accounts_forgotPassword}}
+{{> autoApiBox "Accounts.forgotPassword"}}
 
 This triggers a call
 to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
@@ -1951,22 +1951,22 @@ If you are using the [`accounts-ui` package](#accountsui), this is handled
 automatically. Otherwise, it is your responsiblity to prompt the user for the
 new password and call `resetPassword`.
 
-{{> api_box accounts_resetPassword}}
+{{> autoApiBox "Accounts.resetPassword"}}
 
 This function accepts tokens generated
 by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
 and
 [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
 
-{{> api_box accounts_setPassword}}
+{{> autoApiBox "Accounts.setPassword"}}
 
-{{> api_box accounts_verifyEmail}}
+{{> autoApiBox "Accounts.verifyEmail"}}
 
 This function accepts tokens generated
 by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
 sets the `emails.verified` field in the user record.
 
-{{> api_box accounts_sendResetPasswordEmail}}
+{{> autoApiBox "Accounts.sendResetPasswordEmail"}}
 
 The token in this email should be passed
 to [`Accounts.resetPassword`](#accounts_resetpassword).
@@ -1974,7 +1974,7 @@ to [`Accounts.resetPassword`](#accounts_resetpassword).
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
-{{> api_box accounts_sendEnrollmentEmail}}
+{{> autoApiBox "Accounts.sendEnrollmentEmail"}}
 
 The token in this email should be passed
 to [`Accounts.resetPassword`](#accounts_resetpassword).
@@ -1982,7 +1982,7 @@ to [`Accounts.resetPassword`](#accounts_resetpassword).
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
-{{> api_box accounts_sendVerificationEmail}}
+{{> autoApiBox "Accounts.sendVerificationEmail"}}
 
 The token in this email should be passed
 to [`Accounts.verifyEmail`](#accounts_verifyemail).
