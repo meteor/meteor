@@ -27,7 +27,7 @@ Package.on_use(function (api) {
 
   // html_scanner.js emits client code that calls Meteor.startup and
   // Blaze, so anybody using templating (eg apps) need to implicitly use
-  // 'meteor' and 'ui'.
+  // 'meteor' and 'blaze'.
   api.use('blaze');
   api.imply(['meteor', 'blaze'], 'client');
 });
