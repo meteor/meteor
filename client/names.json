@@ -14,6 +14,17 @@
     "sendEnrollmentEmail": {},
     "sendVerificationEmail": {}
   },
+  "Deps": {
+    "Dependency": {},
+    "Dependency#depend": {},
+    "Dependency#changed": {},
+    "Dependency#hasDependents": {},
+    "flush": {},
+    "autorun": {},
+    "nonreactive": {},
+    "onInvalidate": {},
+    "afterFlush": {}
+  },
   "Meteor": {
     "userId": {},
     "loggingIn": {},
@@ -32,13 +43,6 @@
     "clearInterval": {},
     "clearTimeout": {},
     "absoluteUrl": {}
-  },
-  "Deps": {
-    "flush": {},
-    "autorun": {},
-    "nonreactive": {},
-    "onInvalidate": {},
-    "afterFlush": {}
   },
   "EJSON": {
     "newBinary": {},

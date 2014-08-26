@@ -31,11 +31,11 @@
 </template>
 
 <template name="autoApiBox">
-{{#with apiData}}
+{{#with apiData this}}
 <div class="api {{bare}}">
   <h3 id="{{link}}">
     <a class="name selflink" href="#{{link}}">
-      {{{longname}}}({{paramsSentence}})
+      {{{name}}}({{paramsSentence}})
     </a>
     {{#if locus}}
       <span class="locus">{{locus}}</span>
