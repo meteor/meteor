@@ -7,6 +7,8 @@
 
   var _ = require("underscore");
 
+  var names = [];
+
   /**
    * Get a tag dictionary from the tags field on the object, for custom fields
    * like package
@@ -43,6 +45,7 @@
     }
 
     _.extend(root, getTagDict(data));
+    names.push(location);
   };
 
   /**
@@ -61,7 +64,6 @@
     _.each(namespaces, function (namespace) {
       if (namespace.summary) {
         addToTree(docTree, namespace.longname, namespace);
-        addToTree(nameTree, namespace.longname, {});
       }
     });
 
@@ -70,7 +72,6 @@
     _.each(properties, function (property) {
       if (property.summary) {
         addToTree(docTree, property.longname, property);
-        addToTree(nameTree, property.longname, {});
       }
     });
 
@@ -110,7 +111,6 @@
       delete func.comment;
 
       addToTree(docTree, func.longname, func);
-      addToTree(nameTree, func.longname, {});
     });
 
     // write full docs JSON
@@ -121,7 +121,7 @@
     fs.writeFileSync(docsDataFilename, jsString);
 
     // write name tree JSON
-    jsonString = JSON.stringify(nameTree, null, 2);
+    jsonString = JSON.stringify(names.sort(), null, 2);
     var nameTreeFilename= "docs/client/names.json";
     fs.writeFileSync(nameTreeFilename, jsonString);
   };
