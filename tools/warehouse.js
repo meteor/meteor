@@ -124,11 +124,18 @@ _.extend(warehouse, {
     return fs.existsSync(warehouse.getToolsDir(version));
   },
 
-  releaseExistsInWarehouse: function (version) {
+  // Returns true if we already have the release file on disk, and it's not a
+  // fake "red pill" release --- we should never springboard to those!
+  realReleaseExistsInWarehouse: function (version) {
     var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
     var releaseManifestPath = path.join(releasesDir,
                                         version + '.release.json');
-    return fs.existsSync(releaseManifestPath);
+    try {
+      var manifest = JSON.parse(fs.readFileSync(releaseManifestPath, 'utf8'));
+      return !manifest.redPill;
+    } catch (e) {
+      return false;
+    }
   },
 
   _calculateNewPiecesForRelease: function (releaseManifest) {
