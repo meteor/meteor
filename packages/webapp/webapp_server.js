@@ -321,14 +321,17 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   if (pathname === "/cordova/manifest.json") {
     var cordovaArch = "web.cordova";
     var program = WebApp.clientPrograms[cordovaArch];
-    res.writeHead(200, {
-      'Content-type': 'application/json; charset=UTF-8',
-      'Access-Control-Allow-Origin': '*'
-    });
-    // Only send the inlineManifest
-    res.write(JSON.stringify(WebApp.clientPrograms[cordovaArch]));
-    res.end();
-    return;
+
+    if (program) {
+      res.writeHead(200, {
+        'Content-type': 'application/json; charset=UTF-8',
+        'Access-Control-Allow-Origin': '*'
+      });
+      // Only send the inlineManifest
+      res.write(JSON.stringify(program));
+      res.end();
+      return;
+    }
   }
 
   var serveStaticJs = function (s) {
