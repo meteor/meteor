@@ -15,7 +15,7 @@ Package.on_use(function (api) {
   api.export('Spacebars');
 
   api.use('htmljs');
-  api.use('ui');
+  api.use('blaze');
   api.use('observe-sequence');
   api.use('templating');
   api.add_files(['spacebars-runtime.js']);

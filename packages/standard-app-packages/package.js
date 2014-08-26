@@ -28,8 +28,8 @@ Package.on_use(function(api) {
     'livedata',
     // You want to keep your data somewhere? How about MongoDB?
     'mongo-livedata',
-    // Meteor UI!
-    'ui',
+    // Blaze: Reactive templates!
+    'blaze',
     // A great template language!
     'spacebars',
     // Turn templates into views!

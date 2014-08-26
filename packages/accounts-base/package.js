@@ -23,9 +23,9 @@ Package.on_use(function (api) {
   // we'd probably want to abstract this away
   api.use('mongo-livedata', ['client', 'server']);
 
-  // If the 'ui' package is loaded, we'll define some helpers like
+  // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('ui', 'client', {weak: true});
+  api.use('blaze', 'client', {weak: true});
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
