@@ -2562,16 +2562,16 @@ If you call the native function, you'll get an error stating that Meteor
 code must always run within a Fiber, and advising to use
 `Meteor.bindEnvironment`.
 
-{{> api_box setTimeout}}
+{{> autoApiBox "Meteor.setTimeout"}}
 
 Returns a handle that can be used by `Meteor.clearTimeout`.
 
-{{> api_box setInterval}}
+{{> autoApiBox "Meteor.setInterval"}}
 
 Returns a handle that can be used by `Meteor.clearInterval`.
 
-{{> api_box clearTimeout}}
-{{> api_box clearInterval}}
+{{> autoApiBox "Meteor.clearTimeout"}}
+{{> autoApiBox "Meteor.clearInterval"}}
 
 <h2 id="deps"><span>Deps</span></h2>
 

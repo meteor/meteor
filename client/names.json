@@ -27,6 +27,10 @@
     "onConnection": {},
     "publish": {},
     "methods": {},
+    "setTimeout": {},
+    "setInterval": {},
+    "clearInterval": {},
+    "clearTimeout": {},
     "absoluteUrl": {}
   },
   "DDP": {

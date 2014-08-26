@@ -1518,6 +1518,212 @@ DocsData = {
       "options": [],
       "locus": "Anywhere"
     },
+    "setTimeout": {
+      "comment": "/**\n   * @memberOf Meteor\n   * @summary Call a function in the future after waiting for a specified delay.\n   * @locus Anywhere\n   * @param {Function} func The function to run\n   * @param {Number} delay Number of milliseconds to wait before calling function\n   */",
+      "meta": {
+        "range": [
+          969,
+          1082
+        ],
+        "filename": "timers.js",
+        "lineno": 28,
+        "path": "/Users/sashko/git/meteor/packages/meteor",
+        "code": {
+          "id": "astnode100386128",
+          "name": "setTimeout",
+          "type": "FunctionExpression",
+          "value": "function"
+        }
+      },
+      "memberof": "Meteor",
+      "summary": "Call a function in the future after waiting for a specified delay.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>The function to run</p>",
+          "name": "func"
+        },
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>Number of milliseconds to wait before calling function</p>",
+          "name": "delay"
+        }
+      ],
+      "name": "setTimeout",
+      "longname": "Meteor.setTimeout",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R066082",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "setInterval": {
+      "comment": "/**\n   * @memberOf Meteor\n   * @summary Call a function repeatedly, with a time delay between calls.\n   * @locus Anywhere\n   * @param {Function} func The function to run\n   * @param {Number} delay Number of milliseconds to wait between each function call.\n   */",
+      "meta": {
+        "range": [
+          1351,
+          1467
+        ],
+        "filename": "timers.js",
+        "lineno": 39,
+        "path": "/Users/sashko/git/meteor/packages/meteor",
+        "code": {
+          "id": "astnode100386141",
+          "name": "setInterval",
+          "type": "FunctionExpression",
+          "value": "function"
+        }
+      },
+      "memberof": "Meteor",
+      "summary": "Call a function repeatedly, with a time delay between calls.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>The function to run</p>",
+          "name": "func"
+        },
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>Number of milliseconds to wait between each function call.</p>",
+          "name": "delay"
+        }
+      ],
+      "name": "setInterval",
+      "longname": "Meteor.setInterval",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R066083",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "clearInterval": {
+      "comment": "/**\n   * @memberOf Meteor\n   * @summary Cancel a repeating function call scheduled by `Meteor.setInterval`.\n   * @locus Anywhere\n   * @param {Number} id The handle returned by `Meteor.setInterval`\n   */",
+      "meta": {
+        "range": [
+          1677,
+          1738
+        ],
+        "filename": "timers.js",
+        "lineno": 49,
+        "path": "/Users/sashko/git/meteor/packages/meteor",
+        "code": {
+          "id": "astnode100386154",
+          "name": "clearInterval",
+          "type": "FunctionExpression",
+          "value": "function"
+        }
+      },
+      "memberof": "Meteor",
+      "summary": "Cancel a repeating function call scheduled by `Meteor.setInterval`.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>The handle returned by <code>Meteor.setInterval</code></p>",
+          "name": "id"
+        }
+      ],
+      "name": "clearInterval",
+      "longname": "Meteor.clearInterval",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R066084",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
+    "clearTimeout": {
+      "comment": "/**\n   * @memberOf Meteor\n   * @summary Cancel a function call scheduled by `Meteor.setTimeout`.\n   * @locus Anywhere\n   * @param {Number} id The handle returned by `Meteor.setTimeout`\n   */",
+      "meta": {
+        "range": [
+          1936,
+          1995
+        ],
+        "filename": "timers.js",
+        "lineno": 59,
+        "path": "/Users/sashko/git/meteor/packages/meteor",
+        "code": {
+          "id": "astnode100386162",
+          "name": "clearTimeout",
+          "type": "FunctionExpression",
+          "value": "function"
+        }
+      },
+      "memberof": "Meteor",
+      "summary": "Cancel a function call scheduled by `Meteor.setTimeout`.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Anywhere",
+          "value": "Anywhere"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "Number"
+            ]
+          },
+          "description": "<p>The handle returned by <code>Meteor.setTimeout</code></p>",
+          "name": "id"
+        }
+      ],
+      "name": "clearTimeout",
+      "longname": "Meteor.clearTimeout",
+      "kind": "function",
+      "scope": "static",
+      "___id": "T000002R066085",
+      "___s": true,
+      "options": [],
+      "locus": "Anywhere"
+    },
     "absoluteUrl": {
       "comment": "/**\n * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor bundle`.\n * @locus Anywhere\n * @param {String} [path] A path to append to the root URL. Do not include a leading \"`/`\".\n * @param {Object} [options]\n * @param {Boolean} options.secure Create an HTTPS URL.\n * @param {Boolean} options.replaceLocalhost Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name.\n * @param {String} options.rootUrl Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\"\n */",
       "meta": {
