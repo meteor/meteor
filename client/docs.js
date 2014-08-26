@@ -265,7 +265,6 @@ var toc = [
         "UI.renderWithData",
         "UI.insert",
         "UI.remove",
-        "UI.destroy",
         "UI.data",
         "UI.templateInstance",
         "UI.parentData",

@@ -2270,7 +2270,7 @@ Removing a View removes the View's top-level DOM nodes from its parent
 element in the DOM and then destroys the View as per
 [`UI.destroy`](#ui_destroy).
 
-{{> api_box ui_destroy}}
+XXX Remove all references to "destroying" a View.
 
 Destroying a View stops all reactive updates to its DOM,
 removes any event listeners, and deletes any other
@@ -2407,7 +2407,7 @@ by Meteor have names like "Template.foo" and "if".
   True if this View has been destroyed, such as by `UI.destroy()` or
   by a reactive update that removes it.  A destroyed View's autoruns
   have been stopped, and its DOM nodes have generally been cleaned
-  of all Meteor reactivity and dismantled.
+  of all Meteor reactivity and possibly dismantled.
 {{/dtdd}}
 
 {{#dtdd name="renderCount" type="Integer" id="view_rendercount"}}

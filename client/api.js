@@ -1969,19 +1969,6 @@ Template.api.ui_remove = {
   ]
 };
 
-Template.api.ui_destroy = {
-  id: "ui_destroy",
-  name: "UI.destroy(viewOrNode)",
-  locus: "Client",
-  descr: ["Destroys a View, stopping all reactive updates, or destroys all Views contained in a DOM node."],
-  args: [
-    {name: "viewOrNode",
-     type: "View or DOM Node",
-     descr: "A View (such as that returned by `UI.render`) or a DOM node."
-    }
-  ]
-};
-
 Template.api.ui_with = {
   id: "ui_with",
   name: "UI.With(data, contentFunc)",
