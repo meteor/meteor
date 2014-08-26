@@ -33,6 +33,13 @@
     "clearTimeout": {},
     "absoluteUrl": {}
   },
+  "Deps": {
+    "flush": {},
+    "autorun": {},
+    "nonreactive": {},
+    "onInvalidate": {},
+    "afterFlush": {}
+  },
   "DDP": {
     "connect": {}
   },

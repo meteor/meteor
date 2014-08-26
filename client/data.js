@@ -19,7 +19,6 @@ DocsData = {
     "___id": "T000002R000046",
     "___s": true,
     "config": {
-      "comment": "/**\n * @summary Set global accounts options.\n * @locus Anywhere\n * @param {Object} [options]\n * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.\n * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the \"Create account\" link will not be available.\n * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.\n * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.\n * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.\n */",
       "meta": {
         "range": [
           3343,
@@ -122,7 +121,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "validateLoginAttempt": {
-      "comment": "/**\n * @summary Validate login attempts.\n * @locus Server\n * @param {Function} func Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception.\n */",
       "meta": {
         "range": [
           1621,
@@ -172,7 +170,6 @@ DocsData = {
       "locus": "Server"
     },
     "onCreateUser": {
-      "comment": "/**\n * @summary Customize new user creation.\n * @locus Server\n * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.\n */",
       "meta": {
         "range": [
           32388,
@@ -225,7 +222,6 @@ DocsData = {
       "locus": "Server"
     },
     "validateNewUser": {
-      "comment": "/**\n * @summary Set restrictions on new user creation.\n * @locus Server\n * @param {Function} func Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort.\n */",
       "meta": {
         "range": [
           35236,
@@ -275,7 +271,6 @@ DocsData = {
       "locus": "Server"
     },
     "createUser": {
-      "comment": "/**\n * @summary Create a new user.\n * @locus Anywhere\n * @param {Function} callback Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n * @param {Object} [options]\n * @param {String} options.username A unique name for this user.\n * @param {String} options.email The user's email address.\n * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.\n * @param {Object} options.profile The user's profile, typically including the `name` field.\n */",
       "meta": {
         "range": [
           3912,
@@ -376,7 +371,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "changePassword": {
-      "comment": "/**\n * @summary Change the current user's password. Must be logged in.\n * @locus Client\n * @param {String} oldPassword The user's current password. This is __not__ sent in plain text over the wire.\n * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
       "meta": {
         "range": [
           5240,
@@ -450,7 +444,6 @@ DocsData = {
       "locus": "Client"
     },
     "forgotPassword": {
-      "comment": "/**\n * @summary Request a forgot password email.\n * @locus Client\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n * @param {Object} [options]\n * @param {String} options.email The email address to send a password reset link.\n */",
       "meta": {
         "range": [
           7286,
@@ -521,7 +514,6 @@ DocsData = {
       "locus": "Client"
     },
     "resetPassword": {
-      "comment": "/**\n * @summary Reset the password for a user using a token received in email. Logs the user in afterwards.\n * @locus Client\n * @param {String} token The token retrieved from the reset password URL.\n * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
       "meta": {
         "range": [
           8170,
@@ -592,7 +584,6 @@ DocsData = {
       "locus": "Client"
     },
     "verifyEmail": {
-      "comment": "/**\n * @summary Marks the user's email address as verified. Logs the user in afterwards.\n * @locus Client\n * @param {String} token The token retrieved from the verification URL.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
       "meta": {
         "range": [
           9060,
@@ -653,7 +644,6 @@ DocsData = {
       "locus": "Client"
     },
     "setPassword": {
-      "comment": "/**\n * @summary Forcibly change the password for a user.\n * @locus Server\n * @param {String} userId The id of the user to update.\n * @param {String} newPassword A new password for the user.\n */",
       "meta": {
         "range": [
           10469,
@@ -716,7 +706,6 @@ DocsData = {
       "locus": "Server"
     },
     "sendResetPasswordEmail": {
-      "comment": "/**\n * @summary Send an email with a link the user can use to reset their password.\n * @locus Server\n * @param {String} userId The id of the user to send email to.\n * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.\n */",
       "meta": {
         "range": [
           11744,
@@ -788,7 +777,6 @@ DocsData = {
       "locus": "Server"
     },
     "sendEnrollmentEmail": {
-      "comment": "/**\n * @summary Send an email with a link the user can use to set their initial password.\n * @locus Server\n * @param {String} userId The id of the user to send email to.\n * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.\n */",
       "meta": {
         "range": [
           13875,
@@ -860,7 +848,6 @@ DocsData = {
       "locus": "Server"
     },
     "sendVerificationEmail": {
-      "comment": "/**\n * @summary Send an email with a link the user can use verify their email address.\n * @locus Server\n * @param {String} userId The id of the user to send email to.\n * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.\n */",
       "meta": {
         "range": [
           18249,
@@ -934,7 +921,6 @@ DocsData = {
   },
   "Meteor": {
     "userId": {
-      "comment": "/**\n * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.\n * @locus Anywhere but publish functions\n */",
       "meta": {
         "range": [
           193,
@@ -972,7 +958,6 @@ DocsData = {
       "locus": "Anywhere but publish functions"
     },
     "loggingIn": {
-      "comment": "/**\n * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.\n * @locus Client\n */",
       "meta": {
         "range": [
           826,
@@ -1010,7 +995,6 @@ DocsData = {
       "locus": "Client"
     },
     "user": {
-      "comment": "/**\n * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.\n * @locus Anywhere but publish functions\n */",
       "meta": {
         "range": [
           1100,
@@ -1051,7 +1035,6 @@ DocsData = {
       "locus": "Anywhere but publish functions"
     },
     "logout": {
-      "comment": "/**\n * @summary Log the user out.\n * @locus Client\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
       "meta": {
         "range": [
           8757,
@@ -1105,7 +1088,6 @@ DocsData = {
       "locus": "Client"
     },
     "logoutOtherClients": {
-      "comment": "/**\n * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.\n * @locus Client\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
       "meta": {
         "range": [
           9299,
@@ -1159,7 +1141,6 @@ DocsData = {
       "locus": "Client"
     },
     "loginWithPassword": {
-      "comment": "/**\n * @summary Log the user in with a password.\n * @locus Client\n * @param {Object | String} user Either a string interpreted as a username or an email; or an object with a single key: `email`, `username` or `id`.\n * @param {String} password The user's password.\n * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.\n */",
       "meta": {
         "range": [
           725,
@@ -1235,7 +1216,6 @@ DocsData = {
       "locus": "Client"
     },
     "status": {
-      "comment": "/**\n   * @summary Get the current connection status. A reactive data source.\n   * @locus Client\n   * @memberOf Meteor\n   */",
       "meta": {
         "range": [
           35995,
@@ -1275,7 +1255,6 @@ DocsData = {
       "locus": "Client"
     },
     "reconnect": {
-      "comment": "/**\n   * @summary Force an immediate reconnection attempt if the client is not connected to the server.\n\n  This method does nothing if the client is already connected.\n   * @locus Client\n   * @memberOf Meteor\n   */",
       "meta": {
         "range": [
           36346,
@@ -1315,7 +1294,6 @@ DocsData = {
       "locus": "Client"
     },
     "disconnect": {
-      "comment": "/**\n   * @summary Disconnect the client from the server.\n   * @locus Client\n   * @memberOf Meteor\n   */",
       "meta": {
         "range": [
           36592,
@@ -1355,7 +1333,6 @@ DocsData = {
       "locus": "Client"
     },
     "onConnection": {
-      "comment": "/**\n   * @summary Register a callback to be called when a new DDP connection is made to the server.\n   * @locus Server\n   * @param {function} callback The function to call when a new DDP connection is established.\n   * @memberOf Meteor\n   */",
       "meta": {
         "range": [
           39287,
@@ -1405,7 +1382,6 @@ DocsData = {
       "locus": "Server"
     },
     "publish": {
-      "comment": "/**\n   * @summary Publish a record set.\n   * @memberOf Meteor\n   * @locus Server\n   * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.\n   * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.\n   */",
       "meta": {
         "range": [
           42219,
@@ -1468,7 +1444,6 @@ DocsData = {
       "locus": "Server"
     },
     "methods": {
-      "comment": "/**\n   * @summary Defines functions that can be invoked over the network by clients.\n   * @locus Anywhere\n   * @param {Object} methods Dictionary whose keys are method names and values are functions.\n   * @memberOf Meteor\n   */",
       "meta": {
         "range": [
           44569,
@@ -1519,7 +1494,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "setTimeout": {
-      "comment": "/**\n   * @memberOf Meteor\n   * @summary Call a function in the future after waiting for a specified delay.\n   * @locus Anywhere\n   * @param {Function} func The function to run\n   * @param {Number} delay Number of milliseconds to wait before calling function\n   */",
       "meta": {
         "range": [
           969,
@@ -1575,7 +1549,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "setInterval": {
-      "comment": "/**\n   * @memberOf Meteor\n   * @summary Call a function repeatedly, with a time delay between calls.\n   * @locus Anywhere\n   * @param {Function} func The function to run\n   * @param {Number} delay Number of milliseconds to wait between each function call.\n   */",
       "meta": {
         "range": [
           1351,
@@ -1631,7 +1604,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "clearInterval": {
-      "comment": "/**\n   * @memberOf Meteor\n   * @summary Cancel a repeating function call scheduled by `Meteor.setInterval`.\n   * @locus Anywhere\n   * @param {Number} id The handle returned by `Meteor.setInterval`\n   */",
       "meta": {
         "range": [
           1677,
@@ -1678,7 +1650,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "clearTimeout": {
-      "comment": "/**\n   * @memberOf Meteor\n   * @summary Cancel a function call scheduled by `Meteor.setTimeout`.\n   * @locus Anywhere\n   * @param {Number} id The handle returned by `Meteor.setTimeout`\n   */",
       "meta": {
         "range": [
           1936,
@@ -1725,7 +1696,6 @@ DocsData = {
       "locus": "Anywhere"
     },
     "absoluteUrl": {
-      "comment": "/**\n * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor bundle`.\n * @locus Anywhere\n * @param {String} [path] A path to append to the root URL. Do not include a leading \"`/`\".\n * @param {Object} [options]\n * @param {Boolean} options.secure Create an HTTPS URL.\n * @param {Boolean} options.replaceLocalhost Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name.\n * @param {String} options.rootUrl Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\"\n */",
       "meta": {
         "range": [
           769,
@@ -1819,9 +1789,261 @@ DocsData = {
       "locus": "Anywhere"
     }
   },
+  "Deps": {
+    "flush": {
+      "meta": {
+        "range": [
+          7754,
+          9401
+        ],
+        "filename": "deps.js",
+        "lineno": 279,
+        "path": "/Users/sashko/git/meteor/packages/deps",
+        "code": {
+          "id": "astnode100267216",
+          "name": "Deps.flush",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "_opts"
+          ]
+        },
+        "vars": {
+          "inFlush": null,
+          "willFlush": null,
+          "throwFirstError": null,
+          "finishedTry": null,
+          "comp": null,
+          "func": null
+        }
+      },
+      "summary": "Process all reactive updates immediately and ensure that all invalidated computations are rerun.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "name": "flush",
+      "longname": "Deps.flush",
+      "kind": "function",
+      "memberof": "Deps",
+      "scope": "static",
+      "___id": "T000002R050783",
+      "___s": true,
+      "options": [],
+      "params": [],
+      "locus": "Client"
+    },
+    "autorun": {
+      "meta": {
+        "range": [
+          10025,
+          10341
+        ],
+        "filename": "deps.js",
+        "lineno": 350,
+        "path": "/Users/sashko/git/meteor/packages/deps",
+        "code": {
+          "id": "astnode100267338",
+          "name": "Deps.autorun",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "f"
+          ]
+        },
+        "vars": {
+          "constructingComputation": null,
+          "c": null,
+          "": null
+        }
+      },
+      "summary": "Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>The function to run. It receives one argument: the Computation object that will be returned.</p>",
+          "name": "runFunc"
+        }
+      ],
+      "name": "autorun",
+      "longname": "Deps.autorun",
+      "kind": "function",
+      "memberof": "Deps",
+      "scope": "static",
+      "___id": "T000002R050795",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "nonreactive": {
+      "meta": {
+        "range": [
+          10772,
+          10959
+        ],
+        "filename": "deps.js",
+        "lineno": 377,
+        "path": "/Users/sashko/git/meteor/packages/deps",
+        "code": {
+          "id": "astnode100267388",
+          "name": "Deps.nonreactive",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "f"
+          ]
+        },
+        "vars": {
+          "previous": null
+        }
+      },
+      "summary": "Run a function without tracking dependencies.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>A function to call immediately.</p>",
+          "name": "func"
+        }
+      ],
+      "name": "nonreactive",
+      "longname": "Deps.nonreactive",
+      "kind": "function",
+      "memberof": "Deps",
+      "scope": "static",
+      "___id": "T000002R050798",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "onInvalidate": {
+      "meta": {
+        "range": [
+          11393,
+          11566
+        ],
+        "filename": "deps.js",
+        "lineno": 394,
+        "path": "/Users/sashko/git/meteor/packages/deps",
+        "code": {
+          "id": "astnode100267416",
+          "name": "Deps.onInvalidate",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "f"
+          ]
+        }
+      },
+      "summary": "Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>A callback function that will be invoked as <code>func(c)</code>, where <code>c</code> is the computation on which the callback is registered.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "onInvalidate",
+      "longname": "Deps.onInvalidate",
+      "kind": "function",
+      "memberof": "Deps",
+      "scope": "static",
+      "___id": "T000002R050800",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    },
+    "afterFlush": {
+      "meta": {
+        "range": [
+          11974,
+          12057
+        ],
+        "filename": "deps.js",
+        "lineno": 408,
+        "path": "/Users/sashko/git/meteor/packages/deps",
+        "code": {
+          "id": "astnode100267441",
+          "name": "Deps.afterFlush",
+          "type": "FunctionExpression",
+          "value": "function",
+          "paramnames": [
+            "f"
+          ]
+        }
+      },
+      "summary": "Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again.",
+      "tags": [
+        {
+          "originalTitle": "locus",
+          "title": "locus",
+          "text": "Client",
+          "value": "Client"
+        }
+      ],
+      "params": [
+        {
+          "type": {
+            "names": [
+              "function"
+            ]
+          },
+          "description": "<p>A function to call at flush time.</p>",
+          "name": "callback"
+        }
+      ],
+      "name": "afterFlush",
+      "longname": "Deps.afterFlush",
+      "kind": "function",
+      "memberof": "Deps",
+      "scope": "static",
+      "___id": "T000002R050801",
+      "___s": true,
+      "options": [],
+      "locus": "Client"
+    }
+  },
   "DDP": {
     "connect": {
-      "comment": "/**\n * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.\n * @locus Anywhere\n * @param {String} url The URL of another Meteor application.\n */",
       "meta": {
         "range": [
           58256,
@@ -1877,7 +2099,6 @@ DocsData = {
   },
   "Session": {
     "set": {
-      "comment": "/**\n * @memberOf Session\n * @method set\n * @summary Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)\n * @locus Client\n * @param {String} key The key to set, eg, `selectedItem`\n * @param {EJSONable | undefined} value The new value for `key`\n */",
       "meta": {
         "range": [
           293,
@@ -1929,7 +2150,6 @@ DocsData = {
       "locus": "Client"
     },
     "setDefault": {
-      "comment": "/**\n * @memberOf Session\n * @method setDefault\n * @summary Set a variable in the session if it is undefined. Otherwise works exactly the same as [`Session.set`](#session_set).\n * @locus Client\n * @param {String} key The key to set, eg, `selectedItem`\n * @param {EJSONable | undefined} value The new value for `key`\n */",
       "meta": {
         "range": [
           709,
@@ -1981,7 +2201,6 @@ DocsData = {
       "locus": "Client"
     },
     "get": {
-      "comment": "/**\n * @memberOf Session\n * @method get\n * @summary Get the value of a session variable. If inside a [reactive computation](#reactivity), invalidate the computation the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session.\n * @locus Client\n * @param {String} key The name of the session variable to return\n */",
       "meta": {
         "range": [
           1029,
@@ -2023,7 +2242,6 @@ DocsData = {
       "locus": "Client"
     },
     "equals": {
-      "comment": "/**\n * @memberOf Session\n * @method equals\n * @summary Test if a session variable is equal to a value. If inside a [reactive computation](#reactivity), invalidate the computation the next time the variable changes to or from the value.\n * @locus Client\n * @param {String} key The name of the session variable to test\n * @param {String | Number | Boolean | null | undefined} value The value to test against\n */",
       "meta": {
         "range": [
           1522,
