@@ -10,7 +10,7 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
 fi
 
 command -v java >/dev/null 2>&1 || {
-  if [ UNAME == "Linux" ] ; then
+  if [ ${UNAME} == "Linux" ] ; then
     echo "Please install Java before running this command.";
     echo "Directions can be found at: http://openjdk.java.net/install/"
   else
@@ -83,7 +83,7 @@ command -v javac >/dev/null 2>&1 || {
 ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
 
 # Put Android build tool-chain into path
-export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH};
+export PATH=${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH}
 
 # add ant
 export ANT_HOME=${ANDROID_BUNDLE}/apache-ant-1.9.4
@@ -92,9 +92,9 @@ export PATH=${ANT_HOME}/bin:${PATH}
 export HOME=${ANDROID_BUNDLE}
 
 # create avd if necessary
-if [[ ! $(${ANDROID_BUNDLE}/android-sdk/tools/android list avd | grep Name) ]] ; then
+if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]] ; then
   echo "
-" | ${ANDROID_BUNDLE}/android-sdk/tools/android create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
+" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
 fi
 
 
