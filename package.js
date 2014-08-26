@@ -1,14 +1,15 @@
 Package.describe({
-  summary: "Meteor UI Components framework",
+  summary: "Meteor Reactive Templating library",
   version: '1.0.3'
 });
 
 Package.on_use(function (api) {
-  api.export(['Blaze']);
+  api.export(['Blaze', 'UI', 'Handlebars']);
   api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('deps');
   api.use('underscore'); // only the subset in microscore.js
   api.use('htmljs');
+  api.imply('htmljs');
   api.use('observe-sequence');
 
   api.add_files([
@@ -31,7 +32,8 @@ Package.on_use(function (api) {
     'view.js',
     'builtins.js',
     'lookup.js',
-    'template.js'
+    'template.js',
+    'backcompat.js'
   ]);
 });
 
@@ -41,6 +43,9 @@ Package.on_test(function (api) {
   api.use('blaze');
   api.use('test-helpers');
   api.use('underscore');
+  api.use('blaze-tools'); // for BlazeTools.toJS
+  api.use('html-tools');
 
   api.add_files('view_tests.js');
+  api.add_files('render_tests.js', 'client');
 });
