@@ -362,6 +362,12 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV,
   var self = this;
   check(candidateUV, ConstraintSolver.UnitVersion);
 
+  // Pre-releases only match precisely; @1.2.3-rc1 doesn't necessarily match
+  // 1.2.4, and @1.2.3 doesn't necessarily match 1.2.4-rc1.
+  if (/-/.test(candidateUV.version) || /-/.test(self.version)) {
+    return self.version === candidateUV.version;
+  }
+
   if (self.type === "exactly")
     return self.version === candidateUV.version;
 

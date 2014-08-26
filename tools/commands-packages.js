@@ -1746,9 +1746,10 @@ main.registerCommand({
     packages[constraint.name] = constraint.constraintString;
 
     // Also, add it to all of our combined dependencies.
-    var constraintForResolver = _.clone(constraint);
-    constraintForResolver.packageName = constraintForResolver.name;
-    delete constraintForResolver.name;
+    // This matches code in project.calculateCombinedConstraints.
+    var constraintForResolver = _.extend(
+      { packageName: constraint.name },
+      utils.parseVersionConstraint(constraint.constraintString));
     allPackages.push(constraintForResolver);
   });
 
