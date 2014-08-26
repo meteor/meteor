@@ -368,16 +368,6 @@ Blaze._destroyNode = function (node) {
     Blaze._DOMBackend.Teardown.tearDownElement(node);
 };
 
-Blaze.destroy = function (nodeOrView) {
-  if (nodeOrView instanceof Blaze.View) {
-    Blaze._destroyView(nodeOrView);
-  } else if (typeof nodeOrView.nodeType === 'number') {
-    Blaze._destroyNode(nodeOrView);
-  } else {
-    throw new Error("Expected View or DOM node");
-  }
-};
-
 // Are the HTMLjs entities `a` and `b` the same?  We could be
 // more elaborate here but the point is to catch the most basic
 // cases.
