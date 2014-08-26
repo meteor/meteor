@@ -754,7 +754,7 @@ _.extend(Project.prototype, {
 
   _finishedUpgradersFile: function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'finished-upgraders');
+    return path.join(self.rootDir, '.meteor', '.finished-upgraders');
   },
 
   getFinishedUpgraders: function () {

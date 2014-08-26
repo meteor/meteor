@@ -9,7 +9,7 @@ var project = require('./project.js');
 // You can test upgraders by running "meteor run-upgrader myupgradername".
 //
 // Upgraders are run automatically by "meteor update". It looks at the
-// .meteor/finished-upgraders file in the app and runs every upgrader listed
+// .meteor/.finished-upgraders file in the app and runs every upgrader listed
 // here that is not in that file; then it appends their names to that file.
 // Upgraders are run in the order they are listed in upgradersByName below.
 
