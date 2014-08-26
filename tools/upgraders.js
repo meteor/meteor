@@ -78,3 +78,7 @@ exports.upgradersToRun = function () {
   });
   return ret;
 };
+
+exports.allUpgraders = function () {
+  return _.keys(upgradersByName);
+};
