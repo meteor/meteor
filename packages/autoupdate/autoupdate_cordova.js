@@ -35,7 +35,7 @@ var writeFile = function (directoryPath, fileName, content, cb) {
 };
 
 var hasCalledReload = false;
-var onNewVersion = function (handle) {
+var onNewVersion = function () {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + 'cordova';
 
@@ -139,16 +139,16 @@ Autoupdate._retrySubscription = function () {
     }
   });
   if (Package.reload) {
-    var checkNewVersionDocument = function (id, fields) {
+    var checkNewVersionDocument = function (doc) {
       var self = this;
-      if (fields.version !== autoupdateVersionCordova && handle) {
-        onNewVersion(handle);
+      if (doc.version !== autoupdateVersionCordova) {
+        onNewVersion();
       }
     };
 
     var handle = ClientVersions.find({
       _id: 'version-cordova'
-    }).observeChanges({
+    }).observe({
       added: checkNewVersionDocument,
       changed: checkNewVersionDocument
     });
