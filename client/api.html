@@ -2759,7 +2759,7 @@ Example:
       });
     }
 
-{{> api_box computation_stop}}
+{{> autoApiBox "Deps.Computation#stop"}}
 
 Stopping a computation is irreversible and guarantees that it will
 never be rerun.  You can stop a computation at any time, including
@@ -2772,7 +2772,7 @@ immediately if it is not currently invalidated.
 Nested computations are stopped automatically when their enclosing
 computation is rerun.
 
-{{> api_box computation_invalidate }}
+{{> autoApiBox "Deps.Computation#invalidate" }}
 
 Invalidating a computation marks it to be rerun at
 [flush time](#deps_flush), at
@@ -2788,7 +2788,7 @@ currently invalidated or is stopped has no effect.  A computation can
 invalidate itself, but if it continues to do so indefinitely, the
 result will be an infinite loop.
 
-{{> api_box computation_oninvalidate }}
+{{> autoApiBox "Deps.Computation#onInvalidate" }}
 
 `onInvalidate` registers a one-time callback that either fires
 immediately or as soon as the computation is next invalidated or
