@@ -130,7 +130,8 @@ Autoupdate._retrySubscription = function () {
               attachStylesheetLink(newLink);
             });
           }
-          else if (doc._id === 'version' && doc.version !== autoupdateVersion && handle) {
+          else if (doc._id === 'version' && autoupdateVersion !== 'unknown' &&
+                   doc.version !== autoupdateVersion) {
             handle && handle.stop();
             Package.reload.Reload._reload();
           }
