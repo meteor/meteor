@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var files = require('./files.js');
 var parseStack = require('./parse-stack.js');
+var fiberHelpers = require('./fiber-helpers.js');
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 
@@ -153,8 +154,9 @@ _.extend(MessageSet.prototype, {
   }
 });
 
-var currentMessageSet = null;
-var currentJob = null;
+var currentMessageSet = new fiberHelpers.EnvironmentVariable;
+var currentJob = new fiberHelpers.EnvironmentVariable;
+var currentNestingLevel = new fiberHelpers.EnvironmentVariable(0);
 
 // Create a new MessageSet, run `f` with that as the current
 // MessageSet for the purpose of accumulating and recovering from
@@ -165,37 +167,29 @@ var currentJob = null;
 // begin capturing errors. Alternately you may pass `options`
 // (otherwise optional) and a job will be created for you based on
 // `options`.
-//
-// ** Not compatible with multifiber environments **
-// Using a single fiber to block on i/o is fine however.
 var capture = function (options, f) {
-  var originalMessageSet = currentMessageSet;
   var messageSet = new MessageSet;
-  currentMessageSet = messageSet;
+  currentMessageSet.withValue(messageSet, function () {
+    var job = null;
+    if (typeof options === "object") {
+      job = new Job(options);
+      messageSet.jobs.push(job);
+    } else {
+      f = options; // options not actually provided
+    }
 
-  var originalJob = currentJob;
-  var job = null;
-  if (typeof options === "object") {
-    job = new Job(options);
-    currentMessageSet.jobs.push(job);
-  } else {
-    f = options; // options not actually provided
-  }
-
-  currentJob = job;
-
-  if (debugBuild)
-    console.log("START CAPTURE: " + options.title);
-
-  try {
-    f();
-  } finally {
-    currentMessageSet = originalMessageSet;
-    currentJob = originalJob;
-    if (debugBuild)
-      console.log("DONE CAPTURE: " + options.title);
-  }
-
+    currentJob.withValue(job, function () {
+      var nestingLevel = currentNestingLevel.get();
+      currentNestingLevel.withValue(nestingLevel + 1, function () {
+        debugBuild && console.log("START CAPTURE", nestingLevel, options.title);
+        try {
+          f();
+        } finally {
+          debugBuild && console.log("END CAPTURE", nestingLevel, options.title);
+        }
+      });
+    });
+  });
   return messageSet;
 };
 
@@ -217,29 +211,26 @@ var enterJob = function (options, f) {
     options = {};
   }
 
-  if (! currentMessageSet) {
+  if (! currentMessageSet.get()) {
     return f();
   }
 
   var job = new Job(options);
-  var originalJob = currentJob;
-  if (originalJob)
-    originalJob.children.push(job);
-  currentMessageSet.jobs.push(job);
-  currentJob = job;
+  var originalJob = currentJob.get();
+  originalJob && originalJob.children.push(job);
+  currentMessageSet.get().jobs.push(job);
 
-  if (debugBuild)
-    console.log("START: " + options.title);
-
-  try {
-    var ret = f();
-  } finally {
-    if (debugBuild)
-      console.log("DONE: " + options.title);
-    currentJob = originalJob;
-  }
-
-  return ret;
+  return currentJob.withValue(job, function () {
+    var nestingLevel = currentNestingLevel.get();
+    return currentNestingLevel.withValue(nestingLevel + 1, function () {
+      debugBuild && console.log("START", nestingLevel, options.title);
+      try {
+        return f();
+      } finally {
+        debugBuild && console.log("DONE", nestingLevel, options.title);
+      }
+    });
+  });
 };
 
 // If not inside a job, return false. Otherwise, return true if any
@@ -252,7 +243,7 @@ var jobHasMessages = function () {
     return !! _.find(job.children, search);
   };
 
-  return currentJob ? search(currentJob) : false;
+  return currentJob.get() ? search(currentJob.get()) : false;
 };
 
 // Given a function f, return a "marked" version of f. The mark
@@ -294,7 +285,7 @@ var error = function (message, options) {
   if (options.downcase)
     message = message.slice(0,1).toLowerCase() + message.slice(1);
 
-  if (! currentJob)
+  if (! currentJob.get())
     throw new Error("Error: " + message);
 
   if (options.secondary && jobHasMessages())
@@ -318,7 +309,7 @@ var error = function (message, options) {
     delete info.useMyCaller;
   }
 
-  currentJob.addMessage(info);
+  currentJob.get().addMessage(info);
 };
 
 // Record an exception. The message as well as any file and line
@@ -330,12 +321,12 @@ var error = function (message, options) {
 // actually occurred, rather than the place where the exception was
 // thrown.
 var exception = function (error) {
-  if (! currentJob) {
+  if (! currentJob.get()) {
     // XXX this may be the wrong place to do this, but it makes syntax errors in
     // files loaded via unipackage.load have context.
     if (error instanceof files.FancySyntaxError) {
-      error.message = "Syntax error: " + error.message + " at " +
-        error.file + ":" + error.line + ":" + error.column;
+      error = new Error("Syntax error: " + error.message + " at " +
+        error.file + ":" + error.line + ":" + error.column);
     }
     throw error;
   }
@@ -345,7 +336,7 @@ var exception = function (error) {
   if (error instanceof files.FancySyntaxError) {
     // No stack, because FancySyntaxError isn't a real Error and has no stack
     // property!
-    currentJob.addMessage({
+    currentJob.get().addMessage({
       message: message,
       file: error.file,
       line: error.line,
@@ -354,7 +345,7 @@ var exception = function (error) {
   } else {
     var stack = parseStack.parse(error);
     var locus = stack[0];
-    currentJob.addMessage({
+    currentJob.get().addMessage({
       message: message,
       stack: stack,
       func: locus.func,
@@ -365,6 +356,16 @@ var exception = function (error) {
   }
 };
 
+var assertInJob = function () {
+  if (! currentJob.get())
+    throw new Error("Expected to be in a buildmessage job");
+};
+
+var assertInCapture = function () {
+  if (! currentMessageSet.get())
+    throw new Error("Expected to be in a buildmessage capture");
+};
+
 var buildmessage = exports;
 _.extend(exports, {
   capture: capture,
@@ -372,5 +373,7 @@ _.extend(exports, {
   markBoundary: markBoundary,
   error: error,
   exception: exception,
-  jobHasMessages: jobHasMessages
+  jobHasMessages: jobHasMessages,
+  assertInJob: assertInJob,
+  assertInCapture: assertInCapture
 });

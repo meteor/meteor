@@ -1267,6 +1267,26 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   }
 ]);
 
+// Regression test for #2413.
+testAsyncMulti('mongo-livedata - upsert without callback, ' + idGeneration, [
+  function (test, expect) {
+    this.collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
+    }
+  }, function (test, expect) {
+    var coll = new Meteor.Collection(this.collectionName, collectionOptions);
+
+    // No callback!  Before fixing #2413, this method never returned and
+    // so no future DDP methods worked either.
+    coll.upsert('foo', {bar: 1});
+    // Do something else on the same method and expect it to actually work.
+    // (If the bug comes back, this will 'async batch timeout'.)
+    coll.insert({}, expect(function(){}));
+  }
+]);
+
 // See https://github.com/meteor/meteor/issues/594.
 testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
   function (test, expect) {

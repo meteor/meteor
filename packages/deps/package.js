@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Dependency mananger to allow reactive callbacks",
-  internal: true
+  version: '1.0.1'
 });
 
 Package.on_use(function (api) {

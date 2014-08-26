@@ -120,6 +120,13 @@ HandlerRec.prototype.unbind = function () {
 
 EventSupport.listen = function (element, events, selector, handler, recipient, getParentRecipient) {
 
+  // Prevent this method from being JITed by Safari.  Due to a
+  // presumed JIT bug in Safari -- observed in Version 7.0.6
+  // (9537.78.2) -- this method may crash the Safari render process if
+  // it is JITed.
+  // Repro: https://github.com/dgreensp/public/tree/master/safari-crash
+  try { element = element; } finally {}
+
   var eventTypes = [];
   events.replace(/[^ /]+/g, function (e) {
     eventTypes.push(e);

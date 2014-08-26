@@ -2764,3 +2764,95 @@ Tinytest.add(
     var div = renderToDiv(tmpl);
     test.equal(canonicalizeHtml(div.innerHTML), 'AAA BBB');
   });
+
+// Test that when Blaze sets an input field to the same value,
+// we don't lose the insertion point position.
+Tinytest.add(
+  "spacebars-tests - template_tests - input field to same value",
+  function (test) {
+    var tmpl = Template.spacebars_template_test_input_field_to_same_value;
+    var R = ReactiveVar("BLAH");
+    tmpl.foo = function () { return R.get(); };
+    var div = renderToDiv(tmpl);
+
+    document.body.appendChild(div);
+
+    var input = div.querySelector('input');
+    test.equal(input.value, "BLAH");
+
+    var setSelection = function (startEnd) {
+      startEnd = startEnd.split(' ');
+      if (typeof input.selectionStart === 'number') {
+        // all but IE < 9
+        input.selectionStart = startEnd[0];
+        input.selectionEnd = startEnd[1];
+      } else {
+        // IE 8
+        input.focus();
+        var r = input.createTextRange();
+        // move the start and end of the range to the beginning
+        // of the input field
+        r.moveStart('textedit', -1);
+        r.moveEnd('textedit', -1);
+        // move the start and end a certain number of characters
+        // (relative to their current position)
+        r.moveEnd('character', startEnd[1]);
+        r.moveStart('character', startEnd[0]);
+        r.select();
+      }
+    };
+    var getSelection = function () {
+      if (typeof input.selectionStart === 'number') {
+        // all but IE < 9
+        return input.selectionStart + " " + input.selectionEnd;
+      } else {
+        // IE 8
+        input.focus();
+        var r = document.selection.createRange();
+        var fullText = input.value;
+        var start, end;
+        if (r.text) {
+          // one or more characters are selected.
+          // this is kind of hacky!  Relies on fullText
+          // not having duplicate letters, for example.
+          start = fullText.indexOf(r.text);
+          end = start + r.text.length;
+        } else {
+          r.moveStart('textedit', -1);
+          start = end = r.text.length;
+        }
+        return start + " " + end;
+      }
+    };
+
+    setSelection("2 3");
+    test.equal(getSelection(), "2 3");
+    // At this point, we COULD confirm that setting input.value to
+    // the same thing as before ("BLAH") loses the insertion
+    // point (per browser behavior).  However, it doesn't on Firefox.
+    // So we set it to something different, which verifies that our
+    // test machinery is correct.
+    input.value = "BLAN";
+    // test that insertion point is lost
+    var selectionAfterSet = getSelection();
+    if (selectionAfterSet !== "0 0") // IE 8
+      test.equal(getSelection(), "4 4");
+
+    // now make the input say "BLAH" but the AttributeHandler
+    // says "OTHER" (so we can make it do the no-op update)
+    R.set("OTHER");
+    Deps.flush();
+    test.equal(input.value, "OTHER");
+    input.value = "BLAH";
+    setSelection("2 2");
+
+    R.set("BLAH");
+    Deps.flush();
+    test.equal(input.value, "BLAH");
+    // test that didn't lose insertion point!
+    test.equal(getSelection(), "2 2");
+
+    // clean up after ourselves
+    document.body.removeChild(div);
+  }
+);

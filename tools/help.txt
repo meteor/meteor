@@ -47,28 +47,62 @@ Create a new project
 Usage: meteor create [--release <release>] <name>
        meteor create [--release <release>] --example <example_name> [<name>]
        meteor create --list
+       meteor create --package [<package_name>]
 
-Make a subdirectory named <name> and create a new Meteor project
-there. You can also pass an absolute or relative path.
+Make a subdirectory named <name> and create a new Meteor app there.  You can
+also pass an absolute or relative path.
 
-The project will use the release of Meteor specified with the --release
-option, or the latest available version if the option is not specified.
+With the --package option, creates a Meteor package instead of an app. If you're
+in an app, the package will go in the app's top-level 'packages' directory;
+otherwise it will be created in the current directory.
+
+The app will use the release of Meteor specified with the --release
+option, or the latest available version if the option is not specified. (A
+package created in an app, will be created using the application's version of
+meteor and a package created outside a meteor app will use the latest release).
 
 You can pass --example to start off with a copy of one of the Meteor
-sample applications. Use --list to see the available examples.
+sample applications. Use --list to see the available examples. There are currently
+no package examples.
 
 Options:
+  --package  Create a new meteor package instead of an app.
   --example  Example template to use.
   --list     Show list of available examples.
 
 
 >>> update
-Upgrade this project to the latest version of Meteor
-Usage: meteor update [--release <release>]
+Upgrade this project's dependencies to their latest versions.
+Usage: meteor update
+       meteor update --patch
+       meteor update --release <release>
+       meteor update --packages-only
+       meteor update [packageName packageName2 ...]
 
-Sets the version of Meteor to use with the current project. If a
-release is specified with --release, set the project to use that
-version. Otherwise download and use the latest release of Meteor.
+Updates the meteor release, and then, if applicable, updates the packages
+used by the app to the latest versions that don't cause dependency
+conflicts with other packages in the app.
+
+Passing the --patch argument will update to the latest patch, if such exists.
+Patch releases contain very minor changes, usually bug fixes. Updating to
+the latest patch is always recommended. This will try to not update non-core
+packages unless strictly nessessary.
+
+Passing the --release argument will force update to a specific release of meteor.
+This will not update non-core packages unless strictly nessessary. It is also
+possible that some packages cannot be updated to be compatible with the new
+release. If that happens, the app will not build until dependencies on those
+packages are removed.
+
+Passing --packages-only will try to update non-core packages to their latest
+versions. It will not update the version of meteor. To update individual packages
+(for example: 'foo:awesome') pass in their names instead, with no options. ('meteor
+update foo:awesome').
+
+Options:
+  --packages-only  Update the package versions only. Do not update the release.
+  --patch  Update the release to a patch release only.
+  --release  Update to a specific release of meteor.
 
 
 >>> run-upgrader
@@ -84,8 +118,8 @@ Add a package to this project
 Usage: meteor add <package> [package] [package..]
 
 Adds packages to your Meteor project. You can add multiple
-packages with one command. For a list of the available packages, see
-'meteor list'.
+packages with one command. To query for available packages, use
+the meteor --search command.
 
 
 >>> remove
@@ -94,18 +128,15 @@ Usage: meteor remove <package> [package] [package..]
 
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
-'meteor list --using'.
+'meteor list'.
 
 
 >>> list
-List available packages
-Usage: meteor list [--using]
+List the packages explicitly used by your project.
+Usage: meteor list
 
-Without arguments, lists all available Meteor packages. To add one
-of these packages to your project, see 'meteor add'.
-
-With --using, list the packages that you have added to your project.
-
+List the packages that you have explicitly added to your project.
+This will not list transitive dependencies.
 
 >>> bundle
 Pack this project up into a tarball
@@ -278,43 +309,11 @@ Options:
   --settings    Set optional data for Meteor.settings on the server
 
 
->>> rebuild-all
-Rebuild all packages
-Usage: meteor rebuild-all
-
-Rebuild all source packages in the library. This includes packages found
-through the PACKAGE_DIRS environment variable, local packages in the
-current application, and packages in the warehouse (but only those in the
-currently effective Meteor release). It doesn't include any packages for
-which we don't have the source.
-
-You should never need to use this command. It is intended for use while
-debugging the Meteor packaging tools themselves.
-
-
->>> run-command
-Build and run a command-line tool
-Usage: meteor run-command <package directory> [arguments..]
-
-Builds the provided directory as a package, then loads the package and
-calls the main() function inside the package. The function will receive
-any remaining arguments. The exit status will be the return value of
-main() (which is called inside a fiber).
-
-The arguments will be parsed by Meteor's option parser, which means that
---release will be effective (but not passed to the command), and that it will be
-an error to pass any unknown options. If you want to pass options to your tool,
-place them after a '--' argument (which turns off option parsing for the rest of
-the arguments).
-
-This command is for temporary, internal use, until we have a more mature
-system for building standalone command-line programs with Meteor.
-
-
 >>> self-test
 Run tests of the 'meteor' tool.
 Usage: meteor self-test [pattern] [--changed] [--slow]
                         [--force-online] [--history n]
+                        [--browserstack]
 
 Runs internal tests. Exits with status 0 on success.
 
@@ -336,6 +335,9 @@ pass --force-online.
 Use --history to change the number of lines of program output that are
 shown on test failure. The default is 10.
 
+Pass --browserstack to enable client side tests using BrowserStack.
+--browserstack requires s3cmd credentials.
+
 
 >>> admin
 Administrative commands
@@ -348,6 +350,12 @@ Commands:
 {{commands}}
 
 See 'meteor help admin <command>' for details on an admin command.
+
+>>> admin make-bootstrap-tarballs
+Makes bootstrap tarballs
+Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
+
+For internal use only.
 
 
 >>> dummy
@@ -362,17 +370,194 @@ Options:
   --changed    A boolean option.
 
 
->>> admin grant
-Grant a permission on an official service
-Usage: meteor admin grant [XXX]
-
-Not yet implemented
-
-
 >>> list-sites
-List sites for which you are authorized.
+List sites for which you are authorized
 Usage: meteor list-sites
 
 List the sites that you have deployed with 'meteor deploy', and sites
 for which other users have authorized you with the 'meteor authorized'
 command.
+
+
+>>> publish-release
+Publish a new meteor release to the package server
+
+Usage: meteor publish-release <path to json config> [--create-track]
+
+Publishes a new release to the package server, as determined by the json
+configuration file, which must have the following keys:
+  track: the release track to which you are publishing (ex: METEOR)
+  version: the version of this release
+  recommended: is this a recommended release? (see below)
+  description: a brief description of the release
+  patchFrom: (Optional) an array of strings specifying releases from which this is a patch
+  tool: <package name>@<version> of the meteor tool that this release specifies
+  packages: object of <package name> to <version> for specified package versions
+
+Set the recommended flag to true for recommended releases (ex: METEOR@0.90)
+and false for release candidates, experimental releases, etc. You must publish
+all package versions to the package server before you can specify them in a
+release.
+
+Use the patchFrom flag to submit a patch release. This will automatically
+unrecommend the releases specified by the patchFrom flag.
+
+Use the --create-track to publish a new release track.
+
+Options:
+  --create-track  publish a new release track.
+
+
+>>> publish
+Publish a new version of a package to the package server
+
+Usage: meteor publish [--create]
+
+Publishes a new version of a local package to the package server. Must be run
+from the directory containing the package. Reads the package.js file for version
+information, builds the package and sends both the package source and the built
+version of the package to the package server.
+
+This will only create one build of the package. If your package has multiple
+builds for different OS architectures, it will create a build for this machine's
+architecture. To publish a different build for the same version, run
+publish-for-arch.
+
+This will mark you as the only maintainer of the package. If you need to change
+maintainers and other metadata about this package & package version, take a look
+at the admin commands.
+
+Pass --create to create a new package.
+
+Options:
+  --create   publish a new package
+
+
+>>> publish-for-arch
+Builds an already-published package for a new platform
+
+Usage: meteor publish-for-arch packageName@version
+
+When you publish a package with 'meteor publish' for a package which has
+platform-specific components (eg, npm modules with native code), the package
+will only be usable on machines of the same architecture that you are currently
+on. To make your package's version usable on other architectures, you can use
+the publish-for-arch command.  (The architectures currently supported by Meteor
+are 32-bit Linux, 64-bit Linux, and 64-bit OS X; the 'meteor deploy' servers use
+64-bit Linux.)
+
+On a machine of the appropriate architecture, install Meteor and run
+  $ meteor publish-for-arch packageName@version
+
+You don't need to have a copy of your package's source to do this: Meteor will
+automatically download your package's source and dependencies from the package
+server.
+
+
+>>> rebuild
+Rebuild local packages
+Usage: meteor rebuild [<package name>]
+
+Rebuild a specified local packages. Deletes the package's build directory
+and rebuilds the package from scratch. Please specify the package by name.
+
+If you pass no arguments, this will rebuild all local packages.
+That includes packages found through the
+PACKAGE_DIRS environment variable, local packages in the current
+application, and, if running Meteor from a checkout, the packages in
+the checkout. It doesn't include any packages for which we don't have
+the source.
+
+You should never need to use this command. It is intended for use while
+debugging the Meteor packaging tools themselves.
+
+
+>>> search
+Search through the package server database.
+Usage: meteor search <regex> [--maintainer <username>] [--show-old]
+
+Search through the meteor package&release database for names containing the
+specified substring.
+
+Use --maintainer to filter by authorized maintainers.
+
+By default, meteor search will not show packages that, due to migration issues,
+are known to not be compatible with Meteor 0.9.0 and later. If you
+want to see those packages anyway, use the --show-old option.
+
+Options:
+  --maintainer    filter by authorized maintainer
+  --show-old      show packages incompatible with Meteor 0.9.0 and later.
+
+
+>>> show
+Show detailed information about a release or package.
+Usage: meteor show <name>
+       meteor show <name@version>
+
+Show detailed information on a specific package or release, including available
+versions. Use <name>@<version> to get more information about a specific
+version of a package or release.
+
+By default, meteor show will not show versions that, due to migration issues,
+are known to not be compatible with Meteor 0.9.0 and later. If you
+want to see those versions anyway, use the --show-old option.
+
+Options:
+  --maintainer    filter by authorized maintainer
+  --show-old      show versions incompatible with Meteor 0.9.0 and later.
+
+
+
+>>> admin maintainers
+View or change authorized maintainers for a package
+Usage: meteor admin maintainers <package name> [--list]
+       meteor admin maintainers <package name> --add <username>
+       meteor admin maintainers <package name> --remove <username>
+
+Without an argument (or with --list), list the users that are
+maintainers for a particular package.
+
+With --add, add an authorized maintainer to a package. Use this to give your
+collaborators the ability to work with your packages.
+
+With --remove, remove an authorized maintainer from a package. You cannot remove
+yourself if you are the last maintainer on a package.
+
+You can only add or remove one maintainer at a time.
+
+Options:
+  --add         add an authorized maintainer
+  --remove      remove an authorized maintainer
+  --list        list authorized maintainers (the default)
+
+
+>>> admin recommend-release
+Recommend a previously published release.
+Usage: meteor admin recommend-release <release track>@<release version> [--unrecomend]
+
+Recommend a version of a meteor release. Users can be upgraded to recommended
+releases automatically when they run meteor update. Users will never be updated
+to unrecommended releases unless they explicitly specify that release with a
+--release argument.
+
+Use unrecommended releases for release candidates, one-of experiments, etc. Use
+recommended releases for official supported releases.
+
+Options:
+  --unrecommend         unrecommend a previously recommended release
+
+
+>>> admin change-homepage
+Change the homepage url of a package.
+Usage: meteor admin change-homepage <package name> <new url>
+
+Change the homepage containing package information.
+
+
+>>> admin set-banners
+Set banners on published releases.
+Usage: meteor admin set-banners <path to banner configuration>
+
+Set the banners on previously published releases. Banners notify the user
+when there is a new release available or a patch release has been published.

@@ -1,6 +1,6 @@
 <html {{htmlAttributes}}>
 <head>
-{{#each css}}  <link rel="stylesheet" href="{{../bundledJsCssPrefix}}{{url}}">{{/each}}
+{{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{../bundledJsCssPrefix}}{{url}}">{{/each}}
 
 {{#if inlineScriptsAllowed}}
 <script type='text/javascript'>__meteor_runtime_config__ = {{meteorRuntimeConfig}};</script>

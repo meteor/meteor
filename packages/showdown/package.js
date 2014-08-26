@@ -3,7 +3,8 @@
 // XXX rename to 'markdown' and credit showdown some other way?
 
 Package.describe({
-  summary: "Markdown-to-HTML processor"
+  summary: "Markdown-to-HTML processor",
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

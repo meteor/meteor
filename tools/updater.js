@@ -1,31 +1,17 @@
-var inFiber = require('./fiber-helpers.js').inFiber;
+var path = require('path');
+var fs = require('fs');
+var _ = require('underscore');
 var files = require('./files.js');
-var warehouse = require('./warehouse.js');
+var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var config = require('./config.js');
 var release = require('./release.js');
 var runLog = require('./run-log.js');
-
-/**
- * Downloads the current manifest file and returns it. Throws
- * files.OfflineError if we are offline, or throws some other
- * exception if the server turned down our request.
- */
-exports.getManifest = function () {
-  // Automated self-test support. You can set an environment variable
-  // to stub out the manifest fetch with a particular value, or to
-  // throw OfflineError.
-  if (process.env.METEOR_TEST_UPDATE_MANIFEST === "offline")
-    throw new files.OfflineError(new Error("scripted failure for tests"));
-  if (process.env.METEOR_TEST_UPDATE_MANIFEST)
-    return JSON.parse(process.env.METEOR_TEST_UPDATE_MANIFEST);
-
-  return httpHelpers.getUrl({
-    url: config.getUpdateManifestUrl(),
-    json: true,
-    useSessionHeader: true
-  });
-};
+var catalog = require('./catalog.js');
+var archinfo = require('./archinfo.js');
+var unipackage = require('./unipackage.js');
+var utils = require('./utils.js');
+var buildmessage = require('./buildmessage.js');
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -42,69 +28,185 @@ exports.tryToDownloadUpdate = function (options) {
   if (checkInProgress)
     return;
   checkInProgress = true;
-  check(!!options.showBanner);
+  checkForUpdate(!!options.showBanner);
   checkInProgress = false;
 };
 
-var check = function (showBanner) {
-  var manifest = null;
-  try {
-    manifest = exports.getManifest();
-  } catch (e) {
-    // Ignore error (eg, offline), but still do the "can we update this app
-    // with a locally available release" check.
-  }
+var checkForUpdate = function (showBanner) {
+  var messages = buildmessage.capture(function () {
+    catalog.official.refresh({silent: true});
 
-  if (!files.usesWarehouse())
+    if (!release.current.isProperRelease())
+      return;
+
+    updateMeteorToolSymlink();
+
+    maybeShowBanners();
+  });
+
+  if (messages.hasMessages()) {
+    // Ignore, since running in the background.
+    // XXX unfortunately the "can't refresh" message still prints :(
+    // XXX But maybe if it's just a "we're offline" message we should keep
+    //     going? In case we want to present the "hey there's a locally
+    //     available recommended release?
     return;
+  }
+};
 
-  // XXX in the future support release channels other than stable
-  var manifestLatestRelease =
-    manifest && manifest.releases && manifest.releases.stable &&
-    manifest.releases.stable.version;
-  var localLatestRelease = warehouse.latestRelease();
-  if (manifestLatestRelease && manifestLatestRelease !== localLatestRelease) {
-    // The manifest is telling us about a release that isn't our latest
-    // release! First, print a banner... but only if we've never printed a
-    // banner for this release before. (Or, well... only if this release isn't
-    // the last release which has had a banner printed.)
-    if (manifest.releases.stable.banner &&
-        warehouse.lastPrintedBannerRelease() !== manifestLatestRelease) {
-      if (showBanner) {
-        runLog.log("");
-        runLog.log(manifest.releases.stable.banner);
-        runLog.log("");
+var maybeShowBanners = function () {
+  var releaseData = release.current.getCatalogReleaseData();
+
+  var banner = releaseData.banner;
+  if (banner) {
+    var bannersShown = {};
+    try {
+      bannersShown = JSON.parse(
+        fs.readFileSync(config.getBannersShownFilename()));
+    } catch (e) {
+      // ... ignore
+    }
+
+    var shouldShowBanner = false;
+    if (_.has(bannersShown, release.current.name)) {
+      // XXX use EJSON so that we can just have Dates
+      var lastShown = new Date(bannersShown[release.current.name]);
+      var bannerUpdated = banner.lastUpdated ?
+            new Date(banner.lastUpdated) : new Date;
+      // XXX should the default really be "once ever" and not eg "once a week"?
+      if (lastShown < bannerUpdated) {
+        shouldShowBanner = true;
       }
-      warehouse.writeLastPrintedBannerRelease(manifestLatestRelease);
     } else {
-      // Already printed this banner, or maybe there is no banner.
-      if (showBanner) {
-        runLog.log("=> Meteor " + manifestLatestRelease +
-                   " is being downloaded in the background.");
-      }
+      shouldShowBanner = true;
     }
-    warehouse.fetchLatestRelease();
-    // We should now have fetched the latest release, which *probably* is
-    // manifestLatestRelease. As long as it's changed from the one it was
-    // before we tried to fetch it, print that out.
-    var newLatestRelease = warehouse.latestRelease();
-    if (showBanner && newLatestRelease !== localLatestRelease) {
-      runLog.log(
-        "=> Meteor " + newLatestRelease +
-        " is available. Update this project with 'meteor update'.");
+
+    if (shouldShowBanner) {
+      // This banner is new; print it!
+      runLog.log("");
+      runLog.log(banner.text);
+      runLog.log("");
+      bannersShown[release.current.name] = new Date;
+      // XXX ick slightly racy
+      fs.writeFileSync(config.getBannersShownFilename(),
+                       JSON.stringify(bannersShown, null, 2));
+      return;
     }
-    return;
   }
 
-  // We didn't do a global update (or we're not online), but do we need to
-  // update this app? Specifically: is our local latest release something
-  // other than this app's release, and the user didn't specify a specific
-  // release at the command line with --release?
-  if (showBanner &&
-      localLatestRelease !== release.current.name &&
-      ! release.forced) {
+  // We now consider printing some simpler banners, if this isn't the latest
+  // release. But if the user specified a release manually with --release, we
+  // don't bother: we only want to tell users about ways to update *their app*.
+  if (release.forced)
+    return;
+
+  // Didn't print a banner? Maybe we have a patch release to recommend.
+  var track = release.current.getReleaseTrack();
+  var patchReleaseVersion = releaseData.patchReleaseVersion;
+  if (patchReleaseVersion) {
+    var patchRelease = catalog.official.getReleaseVersion(
+      track, patchReleaseVersion);
+    if (patchRelease && patchRelease.recommended) {
+      runLog.log("=> A patch (" +
+                 utils.displayRelease(track, patchReleaseVersion) +
+                 ") for your current release is available!");
+      runLog.log("   Update this project now with 'meteor update --patch'.");
+      return;
+    }
+  }
+
+  // There's no patch (so no urgent exclamation!) but there may be something
+  // worth mentioning.
+  // XXX maybe run constraint solver to change the message depending on whether
+  //     or not it will actually work?
+  var currentReleaseOrderKey = releaseData.orderKey || null;
+  var futureReleases = catalog.official.getSortedRecommendedReleaseVersions(
+    track, currentReleaseOrderKey);
+  if (futureReleases.length) {
     runLog.log(
-      "=> Meteor " + localLatestRelease +
-      " is available. Update this project with 'meteor update'.");
+      "=> " + utils.displayRelease(track, futureReleases[0]) +
+        " is available. Update this project with 'meteor update'.");
+    return;
+  }
+};
+
+// Update ~/.meteor/meteor to point to the tool binary from the tools of the
+// latest recommended release on the default release track.
+var updateMeteorToolSymlink = function () {
+  buildmessage.assertInCapture();
+
+  // Get the latest release version of METEOR. (*Always* of the default
+  // track, not of whatever we happen to be running: we always want the tool
+  // symlink to go to the default track.)
+  var latestReleaseVersion = catalog.official.getDefaultReleaseVersion();
+  // Maybe you're on some random track with nothing recommended. That's OK.
+  if (!latestReleaseVersion)
+    return;
+
+  var latestRelease = catalog.official.getReleaseVersion(
+    latestReleaseVersion.track, latestReleaseVersion.version);
+  if (!latestRelease)
+    throw Error("latest release doesn't exist?");
+  if (!latestRelease.tool)
+    throw Error("latest release doesn't have a tool?");
+
+  var latestReleaseToolParts = latestRelease.tool.split('@');
+  var latestReleaseToolPackage = latestReleaseToolParts[0];
+  var latestReleaseToolVersion = latestReleaseToolParts[1];
+  var relativeToolPath = tropohouse.default.packagePath(
+    latestReleaseToolPackage, latestReleaseToolVersion, true);
+
+  var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
+  if (!utils.startsWith(localLatestReleaseLink, relativeToolPath + path.sep)) {
+    // The latest release from the catalog is not where the ~/.meteor/meteor
+    // symlink points to. Let's make sure we have that release on disk,
+    // and then update the symlink.
+    try {
+      var messages = buildmessage.capture(function () {
+        buildmessage.enterJob({
+          title: "downloading tool package " + latestRelease.tool
+        }, function () {
+          tropohouse.default.maybeDownloadPackageForArchitectures({
+            packageName: latestReleaseToolPackage,
+            version: latestReleaseToolVersion,
+            architectures: [archinfo.host()],
+            silent: true
+          });
+        });
+        _.each(latestRelease.packages, function (pkgVersion, pkgName) {
+          buildmessage.enterJob({
+            title: "downloading package " + pkgName + "@" + pkgVersion
+          }, function () {
+            tropohouse.default.maybeDownloadPackageForArchitectures({
+              packageName: pkgName,
+              version: pkgVersion,
+              architectures: [archinfo.host()],
+              silent: true
+            });
+          });
+        });
+      });
+    } catch (err) {
+      return;  // since we are running in the background.
+    }
+    if (messages.hasMessages()) {
+      return;  // since we are running in the background
+    }
+
+    var toolUnipackage = new unipackage.Unipackage;
+    toolUnipackage.initFromPath(
+      latestReleaseToolPackage,
+      tropohouse.default.packagePath(latestReleaseToolPackage,
+                                     latestReleaseToolVersion));
+    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+                                 {arch: archinfo.host()});
+
+    // XXX maybe we shouldn't throw from this background thing
+    // counter: this is super weird and should never ever happen.
+    if (!toolRecord)
+      throw Error("latest release has no tool?");
+
+    tropohouse.default.replaceLatestMeteorSymlink(
+      path.join(relativeToolPath, toolRecord.path, 'meteor'));
   }
 };

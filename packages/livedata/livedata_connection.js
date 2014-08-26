@@ -53,9 +53,13 @@ var Connection = function (url, options) {
       retry: options.retry,
       headers: options.headers,
       _sockjsOptions: options._sockjsOptions,
-      // To keep some tests quiet (because we don't have a real API for handling
-      // client-stream-level errors).
-      _dontPrintErrors: options._dontPrintErrors
+      // Used to keep some tests quiet, or for other cases in which
+      // the right thing to do with connection errors is to silently
+      // fail (e.g. sending package usage stats). At some point we
+      // should have a real API for handling client-stream-level
+      // errors.
+      _dontPrintErrors: options._dontPrintErrors,
+      connectTimeoutMs: options.connectTimeoutMs
     });
   }
 

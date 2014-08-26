@@ -165,7 +165,8 @@ var BooleanHandler = AttributeHandler.extend({
 
 var ValueHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    element.value = value;
+    if (value !== element.value)
+      element.value = value;
   }
 });
 

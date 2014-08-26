@@ -10,9 +10,9 @@ var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
 var SIMPLE_WAREHOUSE = {
-  v1: { tools: 'tools1' },
-  v2: { tools: 'tools1', latest: true },
-  v3: { tools: 'tools1' }
+  v1: { },
+  v2: { recommended: true },
+  v3: { }
 };
 
 selftest.define("run", function () {
@@ -163,7 +163,7 @@ selftest.define("run --once", function () {
   // running a different program
   run = s.run("--once", "--program", "other");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
+  run.waitSecs(8);
   run.match("other program\n");
   run.expectExit(44);
 
@@ -237,41 +237,45 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "standard-app");
+  s.createApp("myapp", "packageless");
   s.cd("myapp");
 
+  // This makes packages not depend on meteor (specifically, makes our empty
+  // control program not depend on meteor).
+  s.set("NO_METEOR_PACKAGE", "t");
+
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'v1');
+  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
-  run.matchErr('to Meteor v2 from Meteor v1');
+  s.write('.meteor/release', 'METEOR@v2');
+  run.matchErr('to Meteor METEOR@v2 from Meteor METEOR@v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
-  s.write('.meteor/release', 'v1');
-  run = s.run("--release", "v3");
+  s.write('.meteor/release', 'METEOR@v1');
+  run = s.run("--release", "METEOR@v3");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");
 
   // But not if the release was forced (case 2)
-  s.write('.meteor/release', 'v1');
-  run = s.run("--release", "v1");
+  s.write('.meteor/release', 'METEOR@v1');
+  run = s.run("--release", "METEOR@v1");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");
@@ -281,14 +285,14 @@ selftest.define("update during run", ["checkout"], function () {
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  s.write('.meteor/release', 'v1');
+  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");

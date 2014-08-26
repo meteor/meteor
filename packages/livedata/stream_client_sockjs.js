@@ -6,7 +6,7 @@ LivedataTest.ClientStream = function (url, options) {
   self.options = _.extend({
     retry: true
   }, options);
-  self._initCommon();
+  self._initCommon(self.options);
 
   //// Constants
 

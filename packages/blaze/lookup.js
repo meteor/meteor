@@ -6,7 +6,9 @@ var bindIfIsFunction = function (x, target) {
   };
 };
 
-var bindToCurrentDataIfIsFunction = function (x) {
+// If `x` is a function, binds the value of `this` for that function
+// to the current data context.
+var bindDataContext = function (x) {
   if (typeof x === 'function') {
     return function () {
       var data = Blaze.getCurrentData();
@@ -22,6 +24,8 @@ var wrapHelper = function (f) {
   return Blaze.wrapCatchingExceptions(f, 'template helper');
 };
 
+// !!! FIX THIS COMMENT !!!
+//
 // Implements {{foo}} where `name` is "foo"
 // and `component` is the component the tag is found in
 // (the lexical "self," on which to look for methods).
@@ -45,11 +49,11 @@ Blaze.View.prototype.lookup = function (name, _options) {
     return Blaze._parentData(name.length - 1, true /*_functionWrapped*/);
 
   } else if (template && (name in template)) {
-    return wrapHelper(bindToCurrentDataIfIsFunction(template[name]));
+    return wrapHelper(bindDataContext(template[name]));
   } else if (lookupTemplate && Template.__lookup__(name)) {
     return Template.__lookup__(name);
   } else if (UI._globalHelpers[name]) {
-    return wrapHelper(bindToCurrentDataIfIsFunction(UI._globalHelpers[name]));
+    return wrapHelper(bindDataContext(UI._globalHelpers[name]));
   } else {
     return function () {
       var isCalledAsFunction = (arguments.length > 0);

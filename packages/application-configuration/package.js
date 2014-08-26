@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Interaction with the configuration sources for your apps",
-  internal: true
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {

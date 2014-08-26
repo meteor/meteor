@@ -85,6 +85,18 @@ files.findAppDir = function (filepath) {
   return findUpwards(isAppDir, filepath);
 };
 
+files.findPackageDir = function (filepath) {
+  var isPackageDir = function (filepath) {
+    try {
+      return fs.statSync(path.join(filepath, 'package.js')).isFile();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  return findUpwards(isPackageDir, filepath);
+};
+
 // create a .gitignore file in dirPath if one doesn't exist. add
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
@@ -132,8 +144,12 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    return fs.readFileSync(
-      path.join(files.getCurrentToolsDir(), '.tools_version.txt'), 'utf8');
+    var unipackageJson = fs.readFileSync(
+      path.join(files.getCurrentToolsDir(),
+                '..',  // get out of tool, back to package
+                'unipackage.json'));
+    var parsed = JSON.parse(unipackageJson);
+    return parsed.name + '@' + parsed.version;
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
@@ -142,15 +158,20 @@ files.getToolsVersion = function () {
 // Return the root of dev_bundle (probably /usr/local/meteor in an
 // install, or (checkout root)/dev_bundle in a checkout.).
 files.getDevBundle = function () {
-  if (files.inCheckout())
-    return path.join(files.getCurrentToolsDir(), 'dev_bundle');
-  else
-    return files.getCurrentToolsDir();
+  return path.join(files.getCurrentToolsDir(), 'dev_bundle');
 };
 
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
+};
+
+// Returns a directory with pre-built unipackages for use by the tool, or 'null'
+// if in a checkout.
+files.getUniloadDir = function () {
+  if (files.inCheckout())
+    return null;
+  return path.join(files.getCurrentToolsDir(), 'unipackages');
 };
 
 // Read a settings file and sanity-check it. Returns a string on
@@ -243,6 +264,83 @@ var makeTreeReadOnly = function (p) {
   }
 };
 
+// Returns the base64 SHA256 of the given file.
+files.fileHash = function (filename) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.setEncoding('base64');
+  var rs = fs.createReadStream(filename);
+  var fut = new Future();
+  rs.on('end', function () {
+    rs.close();
+    fut.return(hash.digest('base64'));
+  });
+  rs.pipe(hash, { end: false });
+  return fut.wait();
+};
+
+
+// Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
+// to modtime, uid/gid, or any permissions bits other than the current-user-exec
+// bit on normal files.
+files.treeHash = function (root, options) {
+  options = _.extend({
+    ignore: function (relativePath) {
+      return false;
+    }
+  }, options);
+
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+
+  var hashLog = process.env.TREE_HASH_DEBUG ?
+        ['\n\nTREE HASH for ' + root + '\n'] : null;
+
+  var updateHash = function (text) {
+    hashLog && hashLog.push(text);
+    hash.update(text);
+  };
+
+  var traverse = function (relativePath) {
+    if (options.ignore(relativePath)) {
+      hashLog && hashLog.push('SKIP ' + JSON.stringify(relativePath) + '\n');
+      return;
+    }
+
+    var absPath = path.join(root, relativePath);
+    var stat = fs.lstatSync(absPath);
+
+    if (stat.isDirectory()) {
+      if (relativePath) {
+        updateHash('dir ' + JSON.stringify(relativePath) + '\n');
+      }
+      _.each(fs.readdirSync(absPath), function (entry) {
+        traverse(path.join(relativePath, entry));
+      });
+    } else if (stat.isFile()) {
+      if (!relativePath) {
+        throw Error("must call files.treeHash on a directory");
+      }
+      updateHash('file ' + JSON.stringify(relativePath) + ' ' +
+                  stat.size + ' ' + files.fileHash(absPath) + '\n');
+      if (stat.mode & 0100) {
+        updateHash('exec\n');
+      }
+    } else if (stat.isSymbolicLink()) {
+      if (!relativePath) {
+        throw Error("must call files.treeHash on a directory");
+      }
+      updateHash('symlink ' + JSON.stringify(relativePath) + ' ' +
+                 JSON.stringify(fs.readlinkSync(absPath)) + '\n');
+    }
+    // ignore anything weirder
+  };
+
+  traverse('');
+  hashLog && fs.appendFileSync(process.env.TREE_HASH_DEBUG, hashLog.join(''));
+  return hash.digest('base64');
+};
+
 // like mkdir -p. if it returns true, the item is a directory (even if
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.
@@ -271,7 +369,12 @@ files.mkdir_p = function (dir, mode) {
 
 // Roughly like cp -R. 'from' should be a directory. 'to' can either
 // be a directory, or it can not exist (in which case it will be
-// created with mkdir_p). Doesn't think about file mode at all.
+// created with mkdir_p).
+//
+// The output files will be readable and writable by everyone that the umask
+// allows, and executable by everyone (modulo umask) if the original file was
+// owner-executable. Symlinks are treated transparently (ie the contents behind
+// them are copied, and it's an error if that points nowhere).
 //
 // If options.transform{Filename, Contents} is present, it should
 // be a function, and the contents (as a buffer) or filename will be
@@ -280,13 +383,12 @@ files.mkdir_p = function (dir, mode) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-//
-// Returns the list of relative file paths copied to the destination,
-// as filtered by ignore and transformed by transformFilename.
 files.cp_r = function (from, to, options) {
   options = options || {};
+
+  var absFrom = path.resolve(from);
   files.mkdir_p(to, 0755);
-  var copied = [];
+
   _.each(fs.readdirSync(from), function (f) {
     if (_.any(options.ignore || [], function (pattern) {
       return f.match(pattern);
@@ -296,25 +398,66 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    if (fs.statSync(fullFrom).isDirectory()) {
-      var subdirPaths = files.cp_r(fullFrom, fullTo, options);
-      copied = copied.concat(_.map(subdirPaths, function (subpath) {
-        return path.join(f, subpath);
-      }));
-    }
-    else {
+    var stats = fs.statSync(fullFrom);
+    if (stats.isDirectory()) {
+      files.cp_r(fullFrom, fullTo, options);
+    } else {
+      var absFullFrom = path.resolve(fullFrom);
+
+      // Create the file as readable and writable by everyone, and executable by
+      // everyone if the original file is executably by owner. (This mode will
+      // be modified by umask.) We don't copy the mode *directly* because this
+      // function is used by 'meteor create' which is copying from the read-only
+      // tools tree into a writable app.
+      var mode = (stats.mode & 0100) ? 0777 : 0666;
       if (!options.transformContents) {
-        // XXX reads full file into memory.. lame.
-        fs.writeFileSync(fullTo, fs.readFileSync(fullFrom));
+        copyFileHelper(fullFrom, fullTo, mode);
       } else {
         var contents = fs.readFileSync(fullFrom);
         contents = options.transformContents(contents, f);
-        fs.writeFileSync(fullTo, contents);
+        fs.writeFileSync(fullTo, contents, { mode: mode });
       }
-      copied.push(f);
     }
   });
-  return copied;
+};
+
+// Copies a file, which is expected to exist. Parent directories of "to" do not
+// have to exist. Treats symbolic links transparently (copies the contents, not
+// the link itself, and it's an error if the link doesn't point to a file).
+files.copyFile = function (from, to) {
+  files.mkdir_p(path.dirname(path.resolve(to)), 0755);
+
+  var stats = fs.statSync(from);
+  if (!stats.isFile()) {
+    throw Error("cannot copy non-files");
+  }
+
+  // Create the file as readable and writable by everyone, and executable by
+  // everyone if the original file is executably by owner. (This mode will be
+  // modified by umask.) We don't copy the mode *directly* because this function
+  // is used by 'meteor create' which is copying from the read-only tools tree
+  // into a writable app.
+  var mode = (stats.mode & 0100) ? 0777 : 0666;
+
+  copyFileHelper(from, to, mode);
+};
+
+var copyFileHelper = function (from, to, mode) {
+  var readStream = fs.createReadStream(from);
+  var writeStream = fs.createWriteStream(to, { mode: mode });
+  var future = new Future;
+  var onError = function (e) {
+    future.isResolved() || future.throw(e);
+  };
+  readStream.on('error', onError);
+  writeStream.on('error', onError);
+  writeStream.on('open', function () {
+    readStream.pipe(writeStream);
+  });
+  writeStream.once('finish', function () {
+    future.isResolved() || future.return();
+  });
+  future.wait();
 };
 
 // Make a temporary directory. Returns the path to the newly created
@@ -351,10 +494,12 @@ files.mkdtemp = function (prefix) {
   return dir;
 };
 
-cleanup.onExit(function (sig) {
-  _.each(tempDirs, files.rm_recursive);
-  tempDirs = [];
-});
+if (!process.env.METEOR_SAVE_TMPDIRS) {
+  cleanup.onExit(function (sig) {
+    _.each(tempDirs, files.rm_recursive);
+    tempDirs = [];
+  });
+}
 
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and
@@ -372,14 +517,14 @@ files.extractTarGz = function (buffer, destPath) {
   var zlib = require("zlib");
   var gunzip = zlib.createGunzip()
     .on('error', function (e) {
-      future.throw(e);
+      future.isResolved() || future.throw(e);
     });
   var extractor = new tar.Extract({ path: tempDir })
     .on('error', function (e) {
-      future.throw(e);
+      future.isResolved() || future.throw(e);
     })
     .on('end', function () {
-      future.return();
+      future.isResolved() || future.return();
     });
 
   // write the buffer to the (gunzip|untar) pipeline; these calls
@@ -404,7 +549,7 @@ files.extractTarGz = function (buffer, destPath) {
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
-files.createTarGzStream = function (dirPath) {
+files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
@@ -414,7 +559,7 @@ files.createTarGzStream = function (dirPath) {
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
-files.createTarball = function (dirPath, tarball) {
+files.createTarball = function (dirPath, tarball, options) {
   var future = new Future;
   var out = fs.createWriteStream(tarball);
   out.on('error', function (err) {
@@ -424,7 +569,7 @@ files.createTarball = function (dirPath, tarball) {
     future.return();
   });
 
-  files.createTarGzStream(dirPath).pipe(out);
+  files.createTarGzStream(dirPath, options).pipe(out);
   future.wait();
 };
 
@@ -456,6 +601,25 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
     files.rm_recursive(garbageDir);
 };
 
+files.writeFileAtomically = function (filename, contents) {
+  var tmpFile = path.join(
+    path.dirname(filename),
+    '.' + path.basename(filename) + '.' + utils.randomToken());
+  fs.writeFileSync(tmpFile, contents);
+  fs.renameSync(tmpFile, filename);
+};
+
+// Like fs.symlinkSync, but creates a temporay link and renames it over the
+// file; this means it works even if the file already exists.
+files.symlinkOverSync = function (linkText, file) {
+  file = path.resolve(file);
+  var tmpSymlink = path.join(
+    path.dirname(file),
+    "." + path.basename(file) + ".tmp" + utils.randomToken());
+  fs.symlinkSync(linkText, tmpSymlink);
+  fs.renameSync(tmpSymlink, file);
+};
+
 // Run a program synchronously and, assuming it returns success (0),
 // return whatever it wrote to stdout, as a string. Otherwise (if it
 // did not exit gracefully and return 0) return null. As node has
@@ -485,6 +649,18 @@ files.run = function (command /*, arguments */) {
       }
     });
   return future.wait();
+};
+
+files.runGitInCheckout = function (/* arguments */) {
+  var args = _.toArray(arguments);
+  args.unshift('git',
+               '--git-dir=' + path.join(files.getCurrentToolsDir(), '.git'));
+  var ret = files.run.apply(files, args);
+  if (ret === null) {
+    // XXX files.run really ought to give us some actual context
+    throw new Error("error running git " + args[2]);
+  }
+  return ret;
 };
 
 // Return the result of evaluating `code` using
@@ -645,4 +821,62 @@ files.FancySyntaxError = function () {};
 
 files.OfflineError = function (error) {
   this.error = error;
+};
+files.OfflineError.prototype.toString = function () {
+  return "[Offline: " + this.error.toString() + "]";
+};
+
+// Like fs.readdirSync, but skips entries whose names begin with dots, and
+// converts ENOENT to [].
+files.readdirNoDots = function (path) {
+  try {
+    var entries = fs.readdirSync(path);
+  } catch (e) {
+    if (e.code === 'ENOENT')
+      return [];
+    throw e;
+  }
+  return _.filter(entries, function (entry) {
+    return entry && entry[0] !== '.';
+  });
+};
+
+// Read a file in line by line. Returns an array of lines to be
+// processed individually. Throws if the file doesn't exist or if
+// anything else goes wrong.
+var getLines = function (file) {
+  var raw = fs.readFileSync(file, 'utf8');
+  var lines = raw.split(/\r*\n\r*/);
+
+  // strip blank lines at the end
+  while (lines.length) {
+    var line = lines[lines.length - 1];
+    if (line.match(/\S/))
+      break;
+    lines.pop();
+  }
+
+  return lines;
+};
+
+exports.getLines = getLines;
+
+// Same as `getLines`, but returns [] if the file doesn't exist.
+exports.getLinesOrEmpty = function (file) {
+  try {
+    return getLines(file);
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return [];
+    throw e;
+  }
+};
+
+// Trims whitespace & other filler characters of a line in a project file.
+exports.trimLine = function (line) {
+  var match = line.match(/^([^#]*)#/);
+  if (match)
+    line = match[1];
+  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
+  return line;
 };

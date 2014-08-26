@@ -209,7 +209,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
       oldNodeVersion = 'v0.8.24';
     }
 
-    if (oldNodeVersion !== process.version)
+    if (oldNodeVersion !== currentNodeCompatibilityVersion())
       files.rm_recursive(nodeModulesDir);
   }
 
@@ -346,7 +346,20 @@ var createReadme = function (newPackageNpmDir) {
 var createNodeVersion = function (newPackageNpmDir) {
   fs.writeFileSync(
     path.join(newPackageNpmDir, 'node_modules', '.node_version'),
-    process.version);
+    currentNodeCompatibilityVersion());
+};
+
+// This value should change whenever we think that the Node C ABI has changed
+// (ie, when we need to be sure to reinstall npm packages because they might
+// have native components that need to be rebuilt). It does not need to change
+// for every patch release of Node! Notably, it needed to change between 0.8.*
+// and 0.10.*.  If Node does make a patch release of 0.10 that breaks
+// compatibility, you can just change this from "0.10.*" to "0.10.35" or
+// whatever.
+var currentNodeCompatibilityVersion = function () {
+  var version = process.version;
+  version = version.replace(/\.(\d+)$/, '.*');
+  return version + '\n';
 };
 
 // Returns object with keys 'stdout', 'stderr', and 'success' (true
@@ -359,7 +372,7 @@ var createNodeVersion = function (newPackageNpmDir) {
 meteorNpm._execFileSync = function (file, args, opts) {
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
     process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' +
-                         args.join(' ') + ' ... ');
+                         args.join(' ') + ' ...\n');
 
   var future = new Future;
 
@@ -381,8 +394,10 @@ meteorNpm._execFileSync = function (file, args, opts) {
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
   var packageJsonContents = JSON.stringify({
-    // name and version are unimportant but required for `npm install`
-    name: 'packages-for-meteor-smartpackage-' + packageName,
+    // name and version are unimportant but required for `npm install`.
+    // we used to put packageName in here, but it doesn't work when that
+    // has colons.
+    name: 'packages-for-meteor-smartpackage-' + utils.randomToken(),
     version: '0.0.0',
     dependencies: npmDependencies
   });

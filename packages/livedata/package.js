@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  internal: true
+  version: '1.0.7'
 });
 
 // We use 'faye-websocket' for connections in server-to-server DDP, mostly
@@ -11,7 +11,13 @@ Package.describe({
 // (By listing faye-websocket first, it's more likely that npm deduplication
 // will prevent a second copy of faye-websocket from being installed inside
 // sockjs.)
-Npm.depends({"faye-websocket": "0.7.2", sockjs: "0.3.9"});
+Npm.depends({
+  // A fork fixing https://github.com/faye/websocket-driver-node/pull/8 (ie
+  // "open from inactive client" errors). Note that sockjs won't use this fork,
+  // but the bug only affects the websocket client, not the server.
+  "faye-websocket": "https://github.com/meteor/faye-websocket-node/tarball/ccc180998b1396093c24d0df7ebc1d199c276552",
+  sockjs: "0.3.9"
+});
 
 Package.on_use(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps',

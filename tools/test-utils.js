@@ -1,7 +1,8 @@
 var _ = require('underscore');
 var release = require('./release.js');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var config = require('./config.js');
+var utils = require('./utils.js');
 
 var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -12,7 +13,7 @@ var randomString = function (charsCount) {
   return str;
 };
 
-exports.accountsCommandTimeoutSecs = 15;
+exports.accountsCommandTimeoutSecs = 15 * utils.timeoutScaleFactor;
 
 exports.randomString = randomString;
 
@@ -133,6 +134,11 @@ exports.logout = function (s) {
   run.expectExit(0);
 };
 
+exports.getUserId = function (s) {
+  var data = JSON.parse(s.readSessionFile());
+  return data.sessions[config.getUniverse()].userId;
+};
+
 var registrationUrlRegexp =
       /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
 exports.registrationUrlRegexp = registrationUrlRegexp;
@@ -161,13 +167,11 @@ exports.deployWithNewEmail = function (s, email, appName) {
   return token;
 };
 
-var getLoadedPackages = _.once(function () {
-  return unipackage.load({
-    library: release.current.library,
-    packages: ['meteor', 'livedata'],
-    release: release.current.name
+var getLoadedPackages = function () {
+  return uniload.load({
+    packages: ['livedata']
   });
-});
+};
 
 var ddpConnect = function (url) {
   var DDP = getLoadedPackages().livedata.DDP;

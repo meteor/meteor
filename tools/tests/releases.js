@@ -1,40 +1,58 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
+var catalog = require('../catalog.js');
+var packageLoader = require("../package-loader.js");
 
-selftest.define("springboard", ['checkout'], function () {
+// XXX: Why is this an internet using test? Because our warehouse is a
+// hackhackhack. If we clean up the hackhackhackhack, then this does not need
+// the internets. (Or, to be more specific: our warehouse code tries to fetch
+// the packages from the internet. If we could fool it into using local packages
+// instead, or think that it alreayd has the packages, it would be ok). (This is
+// because it calls 'create' from a warehouse, to be specific).
+selftest.define("springboard", ['checkout', 'net'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { tools: 'tools1' },
-      v2: { tools: 'tools2', latest: true } }
+      v1: { },
+      v2: { recommended: true }
+    }
   });
   var run;
 
+  var toolsPackage;
+  selftest.doOrThrow(function() {
+      toolsPackage = selftest.getToolsPackage();
+  });
+  var toolsVersion = toolsPackage.name + '@' +
+        toolsPackage.version;
+
   // If run not in an app dir, runs the latest version ...
   run = s.run("--long-version");
-  run.read('v2\ntools2\n');
+  run.read('METEOR@v2\n' + toolsVersion + '\n');
   run.expectEnd();
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--long-version", "--release", "v1");
-  run.read('v1\ntools1\n');
+  run = s.run("--long-version", "--release", "METEOR@v1");
+  run.read('METEOR@v1\n' + toolsVersion + '\n');
   run.expectEnd();
   run.expectExit(0);
 
   // Apps are created with the latest release ...
-  run = s.run("create", "myapp").expectExit(0);
+  run = s.run("create", "myapp");
+  run.waitSecs(5);
+  run.expectExit(0);
   s.cd('myapp', function () {
     run = s.run("--long-version");
-    run.read('v2\ntools2\n');
+    run.read('METEOR@v2\n' + toolsVersion + '\n');
     run.expectExit(0);
   });
 
   // ... unless you asked for a different one.
-  run = s.run("create", "myapp2", "--release", "v1").expectExit(0);
+  run = s.run("create", "myapp2", "--release", "METEOR@v1").expectExit(0);
   s.cd('myapp2', function () {
     run = s.run("--long-version");
-    run.read('v1\ntools1\n');
+    run.read('METEOR@v1\n' + toolsVersion + '\n');
     run.expectExit(0);
   });
 
@@ -74,31 +92,92 @@ selftest.define("springboard", ['checkout'], function () {
     // install without setting a release on it.
     s.unset('METEOR_TEST_FAIL_RELEASE_DOWNLOAD');
     s.write(".meteor/release", "none");
-    run = s.run("list", "--using");
+    run = s.run("--requires-release");
     run.matchErr("must specify");
     run.matchErr("permanently set");
     run.expectExit(1);
 
     // As previous, but you pass --release to manually pick a release.
-    run = s.run("list", "--using", "--release", "v1");
+    run = s.run("--long-version", "--release", "v1");
     run.expectExit(0);
     run.forbidAll("must specify");
     run.forbidAll("permanently set");
 
     // You use modern Meteor with a super old release from the dark ages
-    // before the .meteor/release file. You get the latest version.
+    // before the .meteor/release file. You get an error.
     s.unlink('.meteor/release');
     run = s.run("--long-version");
-    run.read('v2\ntools2\n');
-    run.expectEnd();
-    run.expectExit(0);
+    run.matchErr("does not have a .meteor/release file");
+    run.matchErr("edit the .meteor/release file");
+    run.expectExit(1);
 
     // .meteor/release exists but is empty. You get an error.
     s.write(".meteor/release", "\n");
-    run = s.run("list", "--using");
+    run = s.run("--long-version");
     run.matchErr("release file which is empty");
     run.expectExit(1);
+
+    // XXX Test springboard to pre-0.9.0 release
   });
+});
+
+// XXX: Why is this an internet using test? Because our warehouse is a
+// hackhackhack. If we clean up the hackhackhackhack, then this does not need
+// the internets. (Or, to be more specific: our warehouse code tries to fetch
+// the packages from the internet. If we could fool it into using local packages
+// instead, or think that it already has the packages, it would be ok).
+selftest.define("writing versions file", ['checkout', 'net'], function () {
+  var s = new Sandbox({
+    warehouse: {
+      v1: { recommended: true},
+      v2: { recommended: true }
+    }
+  });
+  var run;
+
+  var toolsPackage;
+  selftest.doOrThrow(function() {
+    toolsPackage = selftest.getToolsPackage();
+  });
+  var toolsVersion = toolsPackage.name + '@' +
+        toolsPackage.version;
+
+  // Create an app with the latest release.
+  run = s.run("create", "myapp");
+  run.waitSecs(15);
+  run.expectExit(0);
+  s.cd('myapp');
+  run = s.run("--long-version");
+  run.read('METEOR@v2\n' + toolsVersion + '\n');
+  run.expectExit(0);
+
+  // Check the contents of the versions file.
+  var versions = s.read('.meteor/versions');
+  if (!versions) {
+    selftest.fail("Versions file NOT written in new app.");
+  }
+
+  // Remove the versions file.
+  s.unlink('.meteor/versions');
+
+  // Run with --release, do not change versions file.
+  run = s.run("list", "--release", "v1");
+  run.expectExit(0);
+  versions = s.read('.meteor/versions');
+  if (versions) {
+    selftest.fail("Versions file written with --release.");
+  }
+
+  // Update with --release.
+  run = s.run("update", "--release", "v1");
+  run.expectExit(0);
+
+  // version file should exist.
+  versions = s.read('.meteor/versions');
+  if (!versions) {
+    selftest.fail("Versions file NOT written after update");
+  }
+
 });
 
 
@@ -108,6 +187,7 @@ selftest.define("checkout", ['checkout'], function () {
 
   // Can't specify a release when running Meteor from a checkout
   run = s.run("--release", "v1");
+  run.waitSecs(5);
   run.matchErr("Can't specify");
   run.expectExit(1);
 
@@ -116,7 +196,7 @@ selftest.define("checkout", ['checkout'], function () {
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     s.write(".meteor/release", "something");
-    run = s.run("list", "--using");
+    run = s.run("list");
     run.readErr("=> Running Meteor from a checkout");
     run.matchErr("project version (something)\n");
     run.expectExit(0);

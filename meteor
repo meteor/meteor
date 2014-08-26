@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.38  # warning! 0.3.39-44 used on packaging branch
+BUNDLE_VERSION=0.3.49 # warning! 0.3.46 used on cordova-hcp branch
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -97,14 +97,10 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
-
-    DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/tools/main.js"
-else
-    # In an install
-    DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/tools/main.js"
 fi
+
+DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
+METEOR="$SCRIPT_DIR/tools/main.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a
@@ -119,5 +115,10 @@ if [ "$(ulimit -n)" != "unlimited" ] ; then
     ulimit -n 512 > /dev/null 2>&1
 fi
 
-export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
+# We used to set $NODE_PATH here to include the node_modules from the dev
+# bundle, but now we just get them from the symlink at tools/node_modules. This
+# is better because node_modules directories found via the ancestor walk from
+# the script take precedence over $NODE_PATH; it used to be that users would
+# screw up their meteor installs by have a ~/node_modules
+
 exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor UI Components framework",
-  internal: true
+  version: '1.0.3'
 });
 
 Package.on_use(function (api) {

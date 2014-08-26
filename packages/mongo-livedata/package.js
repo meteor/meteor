@@ -9,11 +9,11 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  internal: true
+  version: '1.0.3'
 });
 
 Npm.depends({
-  mongodb: "1.4.1"
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1"
 });
 
 Package.on_use(function (api) {

@@ -34,10 +34,10 @@ var expectInvalidToken = function (token) {
 // elapses.
 var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
                              bodyRegExp, timeoutSecs) {
+  var timedOut = false;
   if (timeoutSecs) {
     var timeout = setTimeout(function () {
-      throw new Error('Waiting for email to ' + inbox +
-                      ' timed out.');
+      timedOut = true;
     }, timeoutSecs * 1000);
   }
 
@@ -87,8 +87,12 @@ var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
       }
     });
 
-    if (! match)
+    if (! match) {
       utils.sleepMs(3000);
+      if (timedOut) {
+        selftest.fail('Waiting for email to ' + inbox + ' timed out.');
+      }
+    }
   }
 
   clearTimeout(timeout);

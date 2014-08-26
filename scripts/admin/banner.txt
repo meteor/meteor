@@ -1,5 +1,0 @@
-=> Meteor 0.8.3: Performance improvements and a big refactoring of the
-   Blaze internals.
-
-   This release is being downloaded in the background. Update your
-   project to Meteor 0.8.3 by running 'meteor update'.

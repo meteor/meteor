@@ -181,4 +181,3 @@ Tinytest.add("logging - format", function (test) {
       level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' (app.js:42) message');
   });
 });
-
