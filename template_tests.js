@@ -2349,7 +2349,7 @@ Tinytest.add(
   });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.render/UI.insert/UI.remove",
+  "spacebars-tests - template_tests - UI.render/UI.remove",
   function (test) {
     var div = document.createElement("DIV");
     document.body.appendChild(div);
@@ -2366,21 +2366,25 @@ Tinytest.add(
 
     test.equal([created, rendered, destroyed], [false, false, false]);
 
-    var renderedTmpl = UI.render(tmpl);
+    var renderedTmpl = UI.render(tmpl, div);
     test.equal([created, rendered, destroyed], [true, false, false]);
 
-    UI.insert(renderedTmpl, div);
     // Flush now. We fire the rendered callback in an afterFlush block,
     // to ensure that the DOM is completely updated.
     Deps.flush();
     test.equal([created, rendered, destroyed], [true, true, false]);
 
-    var x = UI.render(tmpl); // can run a second time without throwing
+    var otherDiv = document.createElement("DIV");
+    // can run a second time without throwing
+    var x = UI.render(tmpl, otherDiv);
     // note: we'll have clean up `x` below
 
-    var renderedTmpl2;
-    UI.insert(renderedTmpl2 = UI.renderWithData(tmpl, {greeting: 'Bye'}),
-              div);
+    test.throws(function () {
+      UI.render(tmpl); // no second argument
+    });
+
+    var renderedTmpl2 = UI.renderWithData(
+      tmpl, {greeting: 'Bye'}, div);
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello aaa</span><span>Bye aaa</span>");
     R.set('bbb');
@@ -2398,14 +2402,14 @@ Tinytest.add(
   });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.insert fails on jQuery objects",
+  "spacebars-tests - template_tests - UI.render fails on jQuery objects",
   function (test) {
     var tmpl = Template.spacebars_test_ui_render;
     test.throws(function () {
-      UI.insert(UI.render(tmpl), $('body'));
+      UI.render(tmpl, $('body'));
     }, /'parentElement' must be a DOM node/);
     test.throws(function () {
-      UI.insert(UI.render(tmpl), document.body, $('body'));
+      UI.render(tmpl, document.body, $('body'));
     }, /'nextNode' must be a DOM node/);
   });
 
@@ -2414,7 +2418,7 @@ Tinytest.add(
   function (test) {
     var div = document.createElement("DIV");
     var tmpl = Template.spacebars_test_ui_getElementData;
-    UI.insert(UI.renderWithData(tmpl, {foo: "bar"}), div);
+    UI.renderWithData(tmpl, {foo: "bar"}, div);
 
     var span = div.querySelector('SPAN');
     test.isTrue(span);
