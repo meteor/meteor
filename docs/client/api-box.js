@@ -1,7 +1,19 @@
+var apiData = function (longname) {
+  var root = DocsData;
+
+  _.each(longname.split("."), function (pathSegment) {
+    root = root[pathSegment];
+  });
+
+  if (! root) {
+    console.log("API Data not found: " + longname);
+  }
+
+  return root;
+};
+
 Template.autoApiBox.helpers({
-  apiData: function () {
-    return apiData.apply(null, arguments);
-  },
+  apiData: apiData,
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
@@ -48,7 +60,11 @@ Template.autoApiBox.helpers({
     return signature;
   },
   link: function () {
-    return idForLongname(this.longname);
+    if (this.scope === "instance") {
+      return apiData(this.memberof).instancename + "_" + this.name;
+    }
+
+    return this.longname.replace(".", "_").toLowerCase();
   },
   paramsNoOptions: function () {
     return _.reject(this.params, function (param) {
