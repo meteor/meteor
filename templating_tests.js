@@ -599,7 +599,7 @@ Tinytest.add('spacebars-tests - templating_tests - duplicate template error', fu
 
 Tinytest.add('spacebars-tests - templating_tests - reserved template name error', function (test) {
 
-  _.each('length __proto__ prototype name _body_'.split(' '),
+  _.each('length __proto__ prototype name body'.split(' '),
          function (name) {
            test.throws(function () {
              Template.__checkName(name);
