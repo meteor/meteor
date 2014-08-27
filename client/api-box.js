@@ -16,6 +16,16 @@ var typeLink = function (displayName, id) {
   return "<a href='#" + id + "'>" + displayName + "</a>";
 };
 
+var toOrSentence = function (array) {
+  if (array.length === 1) {
+    return array[0];
+  } else if (array.length === 2) {
+    return array.join(" or ");
+  }
+
+  return _.initial(array).join(", ") + ", or " + _.last(array);
+};
+
 Template.autoApiBox.helpers({
   apiData: apiData,
   typeNames: function (nameList) {
@@ -24,23 +34,31 @@ Template.autoApiBox.helpers({
       if (name === "function") {
         return "Function";
       } else if (name === "EJSONable" || name === "EJSON") {
-        return typeLink("EJSON-able object", "ejson");
+        return typeLink("EJSON-able Object", "ejson");
       } else if (name === "Deps.Computation") {
         return typeLink("Deps.Computation", "deps_computation");
       } else if (name === "MongoSelector") {
-        return typeLink("Mongo Selector", "selectors");
+        return [
+          typeLink("Mongo Selector", "selectors"),
+          typeLink("Object ID", "collection_object_id"),
+          "String"
+        ];
       } else if (name === "MongoModifier") {
         return typeLink("Mongo Modifier", "modifiers");
       } else if (name === "MongoSortSpecifier") {
         return typeLink("Mongo Sort Specifier", "sortspecifiers");
       } else if (name === "MongoFieldSpecifier") {
         return typeLink("Mongo Field Specifier", "fieldspecifiers");
+      } else if (name === "JSONCompatible") {
+        return "JSON-combpatible Object";
       }
 
       return name;
     });
 
-    return nameList.join(" | ");
+    nameList = _.flatten(nameList);
+
+    return toOrSentence(nameList);
   },
   signature: function () {
     var signature;
