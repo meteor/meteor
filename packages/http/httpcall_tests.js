@@ -451,7 +451,7 @@ if (Meteor.isServer) {
       };
 
       // existing static file
-      do_test("/packages/local-test:http/test_static.serveme", 200, /static file serving/);
+      do_test("/packages/local-test_http/test_static.serveme", 200, /static file serving/);
 
       // no such file, so return the default app HTML.
       var getsAppHtml = [
