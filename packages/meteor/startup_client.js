@@ -2,10 +2,15 @@ var queue = [];
 var loaded = document.readyState === "loaded" ||
   document.readyState == "complete";
 
+var fireQueuedCallbacks = function () {
+  while (queue.length) {
+    (queue.shift())();
+  }
+};
+
 var ready = function() {
   loaded = true;
-  while (queue.length)
-    (queue.shift())();
+  fireQueuedCallbacks();
 };
 
 if (document.addEventListener) {
@@ -19,21 +24,25 @@ if (document.addEventListener) {
   window.attachEvent('load', ready);
 }
 
+// Fallback for browsers that docn't support DOMContentLoaded
+var legacyPollReady = function () {
+  try { doScroll('left'); }
+  catch (e) {
+    setTimeout(function () { legacyPollReady(); }, 50);
+    return;
+  }
+  fireQueuedCallbacks();
+};
+
 Meteor.startup = function (cb) {
+  queue.push(cb);
   var doScroll = !document.addEventListener &&
     document.documentElement.doScroll;
-
   if (!doScroll || window !== top) {
     if (loaded)
-      cb();
-    else
-      queue.push(cb);
+      Meteor._setImmediate(fireQueuedCallbacks);
   } else {
-    try { doScroll('left'); }
-    catch (e) {
-      setTimeout(function() { Meteor.startup(cb); }, 50);
-      return;
-    };
-    cb();
+    // XXX: Try to avoid multiple concurrent polls?
+    Meteor._setImmediate(legacyPollReady);
   }
 };
