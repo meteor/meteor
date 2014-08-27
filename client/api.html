@@ -2801,15 +2801,15 @@ break dependencies when a computation is rerun or stopped.
 To get a callback after a computation has been recomputed, you can
 call [`Deps.afterFlush`](#deps_afterflush) from `onInvalidate`.
 
-{{> autoApiBox "Computation#stopped" }}
+{{> autoApiBox "Deps.Computation#stopped" }}
 
-{{> autoApiBox "Computation#invalidated" }}
+{{> autoApiBox "Deps.Computation#invalidated" }}
 
 This property is initially false.  It is set to true by `stop()` and
 `invalidate()`.  It is reset to false when the computation is
 recomputed at flush time.
 
-{{> autoApiBox "Computation#firstRun" }}
+{{> autoApiBox "Deps.Computation#firstRun" }}
 
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.

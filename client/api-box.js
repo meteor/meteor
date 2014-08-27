@@ -60,11 +60,12 @@ Template.autoApiBox.helpers({
     return signature;
   },
   link: function () {
-    if (this.scope === "instance") {
-      return apiData(this.memberof).instancename + "_" + this.name;
+    if (nameToId[this.longname]) {
+      return nameToId[this.longname];
     }
 
-    return this.longname.replace(".", "_").toLowerCase();
+    // fallback
+    return this.longname.replace(".", "-");
   },
   paramsNoOptions: function () {
     return _.reject(this.params, function (param) {
