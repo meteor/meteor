@@ -19,19 +19,15 @@
 // AUTOUPDATE_VERSION.
 //
 // The server publishes a `meteor_autoupdate_clientVersions`
-// collection.  The contract of this collection is that each document
-// in the collection represents an acceptable client version, with the
-// `_id` field of the document set to the client id.
-//
-// An "unacceptable" client version, for example, might be a version
-// of the client code which has a severe UI bug, or is incompatible
-// with the server.  An "acceptable" client version could be one that
-// is older than the latest client code available on the server but
-// still works.
-//
-// One of the published documents in the collection will have its
-// `current` field set to `true`.  This is the version of the client
-// code that the browser will receive from the server if it reloads.
+// collection. There are two documents in this collection, a document
+// with _id 'version' which represnets the non refreshable client assets,
+// and a document with _id 'version-refreshable' which represents the
+// refreshable client assets. Each document has a 'version' field
+// which is equivalent to the hash of the relevant assets. The refreshable
+// document also contains a list of the refreshable assets, so that the client
+// can swap in the new assets without forcing a page refresh. Clients can
+// observe changes on these documents to detect when there is a new
+// version available.
 //
 // In this implementation only two documents are present in the collection
 // the current refreshable client version and the current nonRefreshable client
@@ -49,11 +45,12 @@ ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
 // runtime config before using the client hash as our default auto
 // update version id.
 
+// Note: Tests allow people to override Autoupdate.autoupdateVersion before
+// startup.
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
 
 var syncQueue = new Meteor._SynchronousQueue();
-var startupVersion = null;
 
 // updateVersions can only be called after the server has fully loaded.
 var updateVersions = function (shouldReloadClientProgram) {
@@ -64,13 +61,18 @@ var updateVersions = function (shouldReloadClientProgram) {
       WebAppInternals.reloadClientProgram();
     }
 
-    if (startupVersion === null) {
+    // If we just re-read the client program, or if we don't have an autoupdate
+    // version, calculate it.
+    if (shouldReloadClientProgram || Autoupdate.autoupdateVersion === null) {
       Autoupdate.autoupdateVersion =
-        __meteor_runtime_config__.autoupdateVersion =
-          process.env.AUTOUPDATE_VERSION ||
-          process.env.SERVER_ID || // XXX COMPAT 0.6.6
-          WebApp.calculateClientHashNonRefreshable();
+        process.env.AUTOUPDATE_VERSION ||
+        process.env.SERVER_ID || // XXX COMPAT 0.6.6
+        WebApp.calculateClientHashNonRefreshable();
     }
+    // If we just recalculated it OR if it was set by (eg) test-in-browser,
+    // ensure it ends up in __meteor_runtime_config__.
+    __meteor_runtime_config__.autoupdateVersion =
+      Autoupdate.autoupdateVersion;
 
     Autoupdate.autoupdateVersionRefreshable =
       __meteor_runtime_config__.autoupdateVersionRefreshable =
@@ -82,6 +84,14 @@ var updateVersions = function (shouldReloadClientProgram) {
     // assets and __meteor_runtime_config__.
     if (shouldReloadClientProgram) {
       WebAppInternals.generateBoilerplate();
+    }
+
+    // XXX COMPAT WITH 0.8.3
+    if (! ClientVersions.findOne({current: true})) {
+      // To ensure apps with version of Meteor prior to 0.9.0 (in
+      // which the structure of documents in `ClientVersions` was
+      // different) also reload.
+      ClientVersions.insert({current: true});
     }
 
     if (! ClientVersions.findOne({_id: "version"})) {
@@ -111,9 +121,6 @@ var updateVersions = function (shouldReloadClientProgram) {
 };
 
 Meteor.startup(function () {
-  // Allow people to override Autoupdate.autoupdateVersion before startup.
-  // Tests do this.
-  startupVersion = Autoupdate.autoupdateVersion;
   updateVersions(false);
 });
 

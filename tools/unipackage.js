@@ -307,9 +307,19 @@ _.extend(Unipackage.prototype, {
   // An sorted array of all the architectures included in this package.
   architectures: function () {
     var self = this;
-    var arches = _.uniq(
-      _.pluck(self.unibuilds, 'arch').concat(self._toolArchitectures())
-    ).sort();
+    var archSet = {};
+    _.each(self.unibuilds, function (unibuild) {
+      archSet[unibuild.arch] = true;
+    });
+    _.each(self._toolArchitectures(), function (arch) {
+      archSet[arch] = true;
+    });
+    _.each(self.plugins, function (plugin, name) {
+      _.each(plugin, function (plug, arch) {
+        archSet[arch] = true;
+      });
+    });
+    var arches = _.keys(archSet).sort();
     // Ensure that our buildArchitectures string does not look like
     //    web+os+os.osx.x86_64
     // This would happen if there is an 'os' unibuild but a platform-specific

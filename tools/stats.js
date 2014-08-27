@@ -88,11 +88,13 @@ var recordPackages = function (what, site) {
 
     try {
       var conn = connectToPackagesStatsServer();
+      var accountsConfiguration = auth.getAccountsConfiguration(conn);
 
       if (auth.isLoggedIn()) {
         try {
           auth.loginWithTokenOrOAuth(
             conn,
+            accountsConfiguration,
             config.getPackageStatsServerUrl(),
             config.getPackageStatsServerDomain(),
             "package-stats-server"

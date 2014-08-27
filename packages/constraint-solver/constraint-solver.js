@@ -141,8 +141,10 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
 // dependencies - an array of string names of packages (not slices)
 // constraints - an array of objects:
+//  (almost, but not quite, what PackageVersion.parseConstraint returns)
 //  - packageName - string name
-//  - version - string constraint (ex.: "1.2.3", ">=2.3.4", "=3.3.3")
+//  - version - string constraint
+//  - type - constraint type
 // options:
 //  - upgrade - list of dependencies for which upgrade is prioritized higher
 //  than keeping the old version
@@ -161,7 +163,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   check(dependencies, [String]);
 
   check(constraints, [{
-    packageName: String, version: String, type: String,
+    packageName: String,
+    version: Match.OneOf(String, null),
+    type: String,
     constraintString: Match.Optional(Match.OneOf(String, null))
   }]);
 
@@ -281,15 +285,7 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   });
 
   _.each(inputConstraints, function (constraint) {
-    if (!semver.valid(constraint.version))
-      throw Error("Bad semver: " + constraint.version);
-    var operator = "";
-    if (constraint.type === "exactly")
-      operator = "=";
-    if (constraint.type === "at-least")
-      operator = ">=";
-    var constraintStr = operator + constraint.version;
-
+    var constraintStr = PackageVersion.constraintToVersionString(constraint);
     _.each(self._unibuildsForPackage(constraint.packageName), function (unibuildName) {
       constraints.push(self.resolver.getConstraint(unibuildName, constraintStr));
     });
@@ -414,7 +410,6 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     resolverOptions.estimateCostFunction = function (state, options) {
       options = options || {};
 
-      var constraints = state.constraints;
       var cost = [0, 0, 0, 0];
 
       state.eachDependency(function (dep, alternatives) {
@@ -426,7 +421,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
         if (_.has(prevSolMapping, dep)) {
           var prev = prevSolMapping[dep];
-          var prevVersionMatches = constraints.isSatisfied(prev, self.resolver);
+          var prevVersionMatches = state.isSatisfied(prev);
 
           // if it matches, assume we would pick it and the cost doesn't
           // increase
