@@ -26,7 +26,7 @@ if (Meteor.isClient) {
 
     var div = document.createElement("DIV");
     test.isFalse(v.isRendered);
-    test.isFalse(v.isAttached);
+    test.isFalse(v._isAttached);
     test.equal(canonicalizeHtml(div.innerHTML), "");
     test.throws(function () { v.firstNode(); }, /View must be attached/);
     test.throws(function () { v.lastNode(); }, /View must be attached/);
@@ -35,7 +35,7 @@ if (Meteor.isClient) {
     test.equal(typeof (v.firstNode().nodeType), "number");
     test.equal(typeof (v.lastNode().nodeType), "number");
     test.isTrue(v.isRendered);
-    test.isTrue(v.isAttached);
+    test.isTrue(v._isAttached);
     test.equal(buf, 'c0r1');
     test.equal(canonicalizeHtml(div.innerHTML), "foo");
     Deps.flush();
