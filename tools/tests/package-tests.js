@@ -310,7 +310,7 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
     packages: packages
   };
   s.write("release.json", JSON.stringify(relConf, null, 2));
-  run = s.run("publish-release", "release.json", "--create-track");
+  var run = s.run("publish-release", "release.json", "--create-track");
   run.waitSecs(15);
   run.match("Done");
   run.expectExit(0);
@@ -593,9 +593,14 @@ selftest.define("talk to package server with expired or no accounts token", ['ne
   var session = s.readSessionFile();
   testUtils.logout(s);
 
+  testUtils.login(s, "testtest", "testtest");
+  var packageName = "testtest:" + utils.randomToken();
+  publishMostBasicPackage(s, packageName);
+  testUtils.logout(s);
+
   // When we are not logged in, we should get prompted to log in when we
   // run 'meteor admin maintainers --add'.
-  var run = s.run("admin", "maintainers", "standard-app-packages",
+  var run = s.run("admin", "maintainers", packageName,
                   "--add", "foo");
   run.waitSecs(15);
   run.matchErr("Username:");
@@ -612,7 +617,7 @@ selftest.define("talk to package server with expired or no accounts token", ['ne
   // accounts token.
   s.writeSessionFile(session);
 
-  run = s.run("admin", "maintainers", "standard-app-packages", "--add", "foo");
+  run = s.run("admin", "maintainers", packageName, "--add", "foo");
   run.waitSecs(15);
   run.matchErr("have been logged out");
   run.matchErr("Please log in");
