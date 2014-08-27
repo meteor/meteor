@@ -1,5 +1,5 @@
-/**
- * ## [new] Blaze.ReactiveVar(initialValue, [equalsFunc])
+/*
+ * ## [new] ReactiveVar(initialValue, [equalsFunc])
  *
  * A ReactiveVar holds a single value that can be get and set,
  * such that calling `set` will invalidate any Computations that
@@ -26,17 +26,17 @@
  * it into the ReactiveVar of Geoff's Lickable Forms proposal.
  */
 
-Blaze.ReactiveVar = function (initialValue, equalsFunc) {
-  if (! (this instanceof Blaze.ReactiveVar))
+ReactiveVar = function (initialValue, equalsFunc) {
+  if (! (this instanceof ReactiveVar))
     // called without `new`
-    return new Blaze.ReactiveVar(initialValue, equalsFunc);
+    return new ReactiveVar(initialValue, equalsFunc);
 
   this.curValue = initialValue;
   this.equalsFunc = equalsFunc;
   this.dep = new Deps.Dependency;
 };
 
-Blaze.ReactiveVar._isEqual = function (oldValue, newValue) {
+ReactiveVar._isEqual = function (oldValue, newValue) {
   var a = oldValue, b = newValue;
   // Two values are "equal" here if they are `===` and are
   // number, boolean, string, undefined, or null.
@@ -47,17 +47,17 @@ Blaze.ReactiveVar._isEqual = function (oldValue, newValue) {
             (typeof a === 'string'));
 };
 
-Blaze.ReactiveVar.prototype.get = function () {
+ReactiveVar.prototype.get = function () {
   if (Deps.active)
     this.dep.depend();
 
   return this.curValue;
 };
 
-Blaze.ReactiveVar.prototype.set = function (newValue) {
+ReactiveVar.prototype.set = function (newValue) {
   var oldValue = this.curValue;
 
-  if ((this.equalsFunc || Blaze.ReactiveVar._isEqual)(oldValue, newValue))
+  if ((this.equalsFunc || ReactiveVar._isEqual)(oldValue, newValue))
     // value is same as last time
     return;
 
@@ -65,6 +65,15 @@ Blaze.ReactiveVar.prototype.set = function (newValue) {
   this.dep.changed();
 };
 
-Blaze.ReactiveVar.prototype.toString = function () {
+ReactiveVar.prototype.toString = function () {
   return 'ReactiveVar{' + this.get() + '}';
+};
+
+ReactiveVar.prototype._numListeners = function() {
+  // Tests want to know.
+  // Accesses a private field of Deps.Dependency.
+  var count = 0;
+  for (var id in this.dep._dependentsById)
+    count++;
+  return count;
 };

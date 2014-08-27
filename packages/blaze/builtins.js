@@ -7,7 +7,7 @@ Blaze._calculateCondition = function (cond) {
 Blaze.With = function (data, contentFunc) {
   var view = Blaze.View('with', contentFunc);
 
-  view.dataVar = new Blaze.ReactiveVar;
+  view.dataVar = new ReactiveVar;
 
   view.onViewCreated(function () {
     if (typeof data === 'function') {
@@ -24,7 +24,7 @@ Blaze.With = function (data, contentFunc) {
 };
 
 Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
-  var conditionVar = new Blaze.ReactiveVar;
+  var conditionVar = new ReactiveVar;
 
   var view = Blaze.View(_not ? 'unless' : 'if', function () {
     return conditionVar.get() ? contentFunc() :
@@ -61,7 +61,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.stopHandle = null;
   eachView.contentFunc = contentFunc;
   eachView.elseFunc = elseFunc;
-  eachView.argVar = new Blaze.ReactiveVar;
+  eachView.argVar = new ReactiveVar;
 
   eachView.onViewCreated(function () {
     // We evaluate argFunc in an autorun to make sure

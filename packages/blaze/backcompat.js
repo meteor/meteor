@@ -1,3 +1,7 @@
+UI = Blaze;
+
+Blaze.ReactiveVar = ReactiveVar;
+
 Handlebars = {};
 Handlebars.registerHelper = Blaze.registerHelper;
 
@@ -11,6 +15,3 @@ Handlebars.SafeString = function(string) {
 Handlebars.SafeString.prototype.toString = function() {
   return this.string.toString();
 };
-
-
-UI = Blaze;

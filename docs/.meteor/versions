@@ -31,6 +31,7 @@ observe-sequence@1.0.1
 ordered-dict@1.0.0
 random@1.0.0
 reactive-dict@1.0.0
+reactive-var@1.0.0
 reload-safetybelt@1.0.0
 reload@1.0.0
 retry@1.0.0
@@ -42,6 +43,5 @@ spacebars@1.0.0
 spiderable@1.0.1
 standard-app-packages@1.0.0
 templating@1.0.4
-ui@1.0.0
 underscore@1.0.0
 webapp@1.0.2
