@@ -139,22 +139,56 @@
     loadAssetsFromManifest(__meteor_manifest__, '');
   };
 
-  var cleanCache = function (url, cb) {
+  var listDirectory = function (url, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = {};
+
+    var fail = function (err) { cb(err); };
+    window.resolveLocalFileSystemURL(url, function (entry) {
+      var reader = entry.createReader();
+      reader.readEntries(function (entries) {
+        var names = [];
+        each(entries, function (entry) {
+          if (! options.dirsOnly || entry.isDirectory)
+            names.push(entry.name);
+        });
+        cb(null, names);
+      }, fail);
+    }, fail);
+  };
+
+  var removeDirectory = function (url, cb) {
     var fail = function (err) {
-      console.log("Clearing cache failed: ");
-      console.log(err);
-      cb();
+      cb(err);
     };
-    window.resolveLocalFileSystemURL(url, function(entry) {
-      entry.removeRecursively(function() {
-        console.log("Cleared cache successfully.");
+    window.resolveLocalFileSystemURL(url, function (entry) {
+      entry.removeRecursively(function () {
         cb();
       }, fail);
     }, fail);
   };
 
-  var loadApp = function (localPathPrefix) {
+  var loadVersion = function (version, localPathPrefix) {
+    var versionPrefix = localPathPrefix + version + '/';
+    // We have a version string, now read the new version
+    readFile(versionPrefix + 'manifest.json',
+        function (err, res) {
+      if (err) {
+        fallback(err);
+        return;
+      }
 
+      var program = JSON.parse(res);
+      // update the version we are loading
+      __meteor_runtime_config__.autoupdateVersionCordova = version;
+      // update the public settings
+      __meteor_runtime_config__.PUBLIC_SETTINGS = program.PUBLIC_SETTINGS;
+
+      loadAssetsFromManifest(program.manifest, versionPrefix);
+    });
+  };
+
+  var loadApp = function (localPathPrefix) {
     readFile(localPathPrefix + 'version',
       function (err, version) {
         if (err) {
@@ -162,23 +196,30 @@
           return;
         }
 
-        var versionPrefix = localPathPrefix + version + '/';
+        // Try to clean up our cache directory, make sure to scan the directory
+        // *before* loading the actual app. This ordering will prevent race
+        // conditions when the app code tries to download a new version before
+        // the old-cache removal has scanned the cache folder.
+        listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
+          loadVersion(version, localPathPrefix);
 
-        // We have a version string, now read the new version
-        readFile(versionPrefix + 'manifest.json',
-            function (err, res) {
-          if (err) {
-            fallback(err);
-            return;
-          }
+          if (err) return;
+          each(names, function (name) {
+            // Skip the folder with the latest version
+            if (name === version)
+              return;
 
-          var program = JSON.parse(res);
-          // update the version we are loading
-          __meteor_runtime_config__.autoupdateVersionCordova = version;
-          // update the public settings
-          __meteor_runtime_config__.PUBLIC_SETTINGS = program.PUBLIC_SETTINGS;
-
-          loadAssetsFromManifest(program.manifest, versionPrefix);
+            // remove everything else, as we don't want to keep too much cache
+            // around on disk
+            removeDirectory(localPathPrefix + name + '/', function (err) {
+              if (err) {
+                console.log('Failed to remove an old cache folder '
+                            + name + ':' + err.message);
+              } else {
+                console.log('Successfully removed an old cache folder ' + name);
+              }
+            });
+          });
         });
     });
   };
@@ -188,7 +229,10 @@
                           'Documents/meteor/';
     if (__meteor_runtime_config__.cleanCache) {
       // If cleanCache is enabled, clean the cache and then load the app.
-      cleanCache(localPathPrefix, function () {
+      removeDirectory(localPathPrefix, function (err) {
+        if (err) console.log('Failed to clear cache: ' + err.message);
+        else console.log('Successfully cleared the cache.');
+
         loadApp(localPathPrefix);
       });
     } else {
