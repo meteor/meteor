@@ -1010,8 +1010,9 @@ _.extend(CompleteCatalog.prototype, {
         }
       });
     }
-    // And put a build record for it in the catalog
-    var versionId = self.getLatestVersion(name);
+    // And put a build record for it in the catalog. There is only one version
+    // for this package!
+    var versionId = _.values(self.versions[name])._id;
 
     // XXX why isn't this build just happening through the package cache
     // directly?

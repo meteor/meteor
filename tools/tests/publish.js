@@ -172,7 +172,7 @@ selftest.define("list-with-a-new-version",
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.0");
+    run.match("1.0.0 ");
     run.forbidAll("New versions");
     run.expectExit(0);
   });
@@ -202,7 +202,7 @@ selftest.define("list-with-a-new-version",
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.1");
+    run.match("1.0.1 ");
     run.forbidAll("New versions");
     run.expectExit(0);
 
@@ -217,6 +217,51 @@ selftest.define("list-with-a-new-version",
     run.match("New versions");
     run.match("meteor update");
     run.expectExit(0);
+
+    // ... and back to the second version
+    run = s.run("add", fullPackageName + "@=1.0.1");
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.1 ");
+    run.forbidAll("New versions");
+    run.expectExit(0);
   });
 
+  // Now publish an 1.0.4-rc4.
+  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  s.cd('mapp', function () {
+    // // 
+    // run = s.run("search", "asdf");
+    // run.waitSecs(100);
+    // run.expectExit(0);
+
+    // Because it's an RC, we shouldn't see an update message.
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.1 ");
+    run.forbidAll("New versions");
+    run.expectExit(0);
+
+    // It works if ask for it, though.
+    run = s.run("add", fullPackageName + "@1.0.4-rc3");
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.4-rc3 ");
+    run.forbidAll("New versions");
+    run.expectExit(0);
+  });
 });
