@@ -12,34 +12,35 @@ Template.__checkName = function (name) {
   }
 };
 
-// Define a template `Template._body_` that renders its
+// Define a template `Template.body` that renders its
 // `contentViews`.  `<body>` tags (of which there may be
 // multiple) will have their contents added to it.
-Template._body_ = new Template('_body_', function () {
-  var parts = Template._body_.contentViews;
+Template.body = new Template('body', function () {
+  var parts = Template.body.contentViews;
   // enable lookup by setting `view.template`
   for (var i = 0; i < parts.length; i++)
-    parts[i].template = Template._body_;
+    parts[i].template = Template.body;
   return parts;
 });
-Template._body_.contentViews = []; // array of Blaze.Views
-Template._body_.view = null;
+Template.body.contentViews = []; // array of Blaze.Views
+Template.body.view = null;
 
-Template._body_.addContent = function (renderFunc) {
-  var kind = 'body_content_' + Template._body_.contentViews.length;
+Template.body.addContent = function (renderFunc) {
+  var kind = 'body_content_' + Template.body.contentViews.length;
 
-  Template._body_.contentViews.push(Blaze.View(kind, renderFunc));
+  Template.body.contentViews.push(Blaze.View(kind, renderFunc));
 };
 
 // This function does not use `this` and so it may be called
-// as `Meteor.startup(Template._body_.renderIntoDocument)`.
-Template._body_.renderToDocument = function () {
+// as `Meteor.startup(Template.body.renderIntoDocument)`.
+Template.body.renderToDocument = function () {
   // Only do it once.
-  if (Template._body_.view)
+  if (Template.body.view)
     return;
 
-  var view = UI.render(Template._body_, document.body);
-  Template._body_.view = view;
+  var view = UI.render(Template.body, document.body);
+  Template.body.view = view;
 };
 
-UI.body = Template._body_;
+// back-compat (we no longer document UI.body)
+UI.body = Template.body;

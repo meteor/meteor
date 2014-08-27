@@ -179,7 +179,7 @@ html_scanner = {
           });
 
         // We may be one of many `<body>` tags.
-        results.js += "\nTemplate._body_.addContent(" + renderFuncCode + ");\nMeteor.startup(Template._body_.renderToDocument);\n";
+        results.js += "\nTemplate.body.addContent(" + renderFuncCode + ");\nMeteor.startup(Template.body.renderToDocument);\n";
       }
     } catch (e) {
       if (e.scanner) {
