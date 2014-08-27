@@ -165,7 +165,7 @@ Template.prototype.events = function (eventMap) {
 };
 
 Blaze.templateInstance = function () {
-  var view = Blaze.findView();
+  var view = Blaze.getView();
 
   while (view && ! view.template)
     view = view.parentView;

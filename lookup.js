@@ -92,9 +92,9 @@ Blaze.View.prototype.lookup = function (name, _options) {
 // Implement Spacebars' {{../..}}.
 // @param height {Number} The number of '..'s
 Blaze.parentData = function (height, _functionWrapped) {
-  var theWith = Blaze.findView('with');
+  var theWith = Blaze.getView('with');
   for (var i = 0; (i < height) && theWith; i++) {
-    theWith = Blaze.findView(theWith, 'with');
+    theWith = Blaze.getView(theWith, 'with');
   }
 
   if (! theWith)
