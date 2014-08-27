@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Provides reactive device orientation on desktop and mobile.",
-  version: "1.0.0-cordova2"
+  version: "1.0.0-cordova4"
 });
 
 Cordova.depends({

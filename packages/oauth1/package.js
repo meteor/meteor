@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  version: "1.0.0"
+  version: "1.0.0-cordova4"
 });
 
 Package.on_use(function (api) {

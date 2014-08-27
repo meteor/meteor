@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.4-cordova1'
+  version: '1.0.4-cordova4'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
