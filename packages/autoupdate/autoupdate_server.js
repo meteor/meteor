@@ -84,6 +84,13 @@ var updateVersions = function (shouldReloadClientProgram) {
       WebAppInternals.generateBoilerplate();
     }
 
+    if (! ClientVersions.findOne({current: true})) {
+      // To ensure apps with version of Meteor prior to 0.9.0 (in
+      // which the structure of documents in `ClientVersions` was
+      // different) also reload.
+      ClientVersions.insert({current: true});
+    }
+
     if (! ClientVersions.findOne({_id: "version"})) {
       ClientVersions.insert({
         _id: "version",
