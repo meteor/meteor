@@ -344,6 +344,9 @@ _.extend(File.prototype, {
     if (url.charAt(0) !== '/')
       url = '/' + url;
 
+    // XXX replacing colons with underscores as colon is hard to escape later
+    // on different targets and generally is not a good separator for web.
+    url = url.replace(/:/g, '_');
     self.url = url;
   },
 
@@ -354,6 +357,11 @@ _.extend(File.prototype, {
       self.targetPath = relPath;
     else
       self.targetPath = path.join('app', relPath);
+
+    // XXX same as in setUrlFromRelPath, we replace colons with a different
+    // separator to avoid difficulties further. E.g.: on Windows it is not a
+    // valid char in filename, Cordova also rejects it, etc.
+    self.targetPath = self.targetPath.replace(/:/g, '_');
   },
 
   // Set a source map for this File. sourceMap is given as a string.
