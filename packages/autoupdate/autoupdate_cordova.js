@@ -97,7 +97,6 @@ var onNewVersion = function () {
       // Try to dowload the file a few times.
       var tries = 0;
       var tryDownload = function () {
-        console.log('downloading', uri)
         ft.download(uri, versionPrefix + item.url, function (entry) {
           if (entry) {
             afterAllFilesDownloaded();
