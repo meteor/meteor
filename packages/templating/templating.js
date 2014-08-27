@@ -38,9 +38,8 @@ Template._body_.renderToDocument = function () {
   if (Template._body_.view)
     return;
 
-  var view = UI.render(Template._body_);
+  var view = UI.render(Template._body_, document.body);
   Template._body_.view = view;
-  UI.insert(view, document.body);
 };
 
 UI.body = Template._body_;

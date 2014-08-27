@@ -20,7 +20,7 @@ var materialize = function (content, parent) {
       return content;
     };
   }
-  UI.insert(UI.render(func), parent);
+  UI.render(func, parent);
 };
 
 var toHTML = Blaze.toHTML;
@@ -304,7 +304,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
-    UI.insert(UI.render(spanFunc), div);
+    UI.render(spanFunc, div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david gre\u00ebnspan" id="foo"></span>');
 
     test.equal(R.numListeners(), 1);
@@ -343,7 +343,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(R.numListeners(), 0);
 
     var div = document.createElement("DIV");
-    UI.insert(UI.render(spanFunc), div);
+    UI.render(spanFunc, div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b"></span>');
 
     test.equal(R.numListeners(), 1);
@@ -378,7 +378,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var div = document.createElement("DIV");
     document.body.appendChild(div);
-    UI.insert(UI.render(spanFunc), div);
+    UI.render(spanFunc, div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a"></span>');
 
     var span = div.firstChild;
@@ -434,7 +434,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
                'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
-    UI.insert(UI.render(spanFunc), div);
+    UI.render(spanFunc, div);
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
 
@@ -526,7 +526,7 @@ Tinytest.add("ui - render - templates and views", function (test) {
 
     var div = document.createElement("DIV");
 
-    UI.insert(UI.render(makeView), div);
+    UI.render(makeView, div);
     buf.push('---flush---');
     Deps.flush();
     test.equal(buf, ['created 1',
@@ -583,7 +583,7 @@ Tinytest.add("ui - render - findAll", function (test) {
 
   var div = document.createElement("DIV");
 
-  UI.insert(UI.render(myTemplate), div);
+  UI.render(myTemplate, div);
   Deps.flush();
 
   test.equal(_.isArray(found), true);
@@ -603,7 +603,7 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   };
 
   var div = document.createElement("DIV");
-  UI.insert(UI.render(spanFunc), div);
+  UI.render(spanFunc, div);
   var check = function (expected) {
     test.equal(Blaze.toHTML(spanFunc()), expected);
     test.equal(canonicalizeHtml(div.innerHTML), expected);

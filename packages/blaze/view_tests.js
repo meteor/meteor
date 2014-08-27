@@ -27,14 +27,11 @@ if (Meteor.isClient) {
     var div = document.createElement("DIV");
     test.isFalse(v.isRendered);
     test.isFalse(v.isAttached);
-    Blaze.render(v);
-    test.isTrue(v.isRendered);
-    test.isFalse(v.isAttached);
-    test.equal(buf, 'c0r1');
     test.equal(canonicalizeHtml(div.innerHTML), "");
     test.throws(function () { v.firstNode(); }, /View must be attached/);
     test.throws(function () { v.lastNode(); }, /View must be attached/);
-    Blaze.insert(v, div);
+    Blaze.render(v, div);
+    test.equal(buf, 'c0r1');
     test.equal(typeof (v.firstNode().nodeType), "number");
     test.equal(typeof (v.lastNode().nodeType), "number");
     test.isTrue(v.isRendered);

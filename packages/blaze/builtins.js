@@ -87,7 +87,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
               eachView.inElseMode = false;
             }
 
-            var range = Blaze.render(newItemView, eachView)._domrange;
+            var range = Blaze._materializeView(newItemView, eachView);
             eachView._domrange.addMember(range, index);
           } else {
             eachView.initialSubviews.splice(index, 0, newItemView);
@@ -104,9 +104,9 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             if (eachView.elseFunc && eachView.numItems === 0) {
               eachView.inElseMode = true;
               eachView._domrange.addMember(
-                Blaze.render(
+                Blaze._materializeView(
                   Blaze.View('each_else',eachView.elseFunc),
-                  eachView)._domrange, 0);
+                  eachView), 0);
             }
           } else {
             eachView.initialSubviews.splice(index, 1);
