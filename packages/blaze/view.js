@@ -550,15 +550,15 @@ Blaze.data = function (elementOrView) {
   var theWith;
 
   if (! elementOrView) {
-    theWith = Blaze.findView('with');
+    theWith = Blaze.getView('with');
   } else if (elementOrView instanceof Blaze.View) {
     var view = elementOrView;
     theWith = (view.name === 'with' ? view :
-               Blaze.findView(view, 'with'));
+               Blaze.getView(view, 'with'));
   } else if (typeof elementOrView.nodeType === 'number') {
     if (elementOrView.nodeType !== 1)
       throw new Error("Expected DOM element");
-    theWith = Blaze.findView(elementOrView, 'with');
+    theWith = Blaze.getView(elementOrView, 'with');
   } else {
     throw new Error("Expected DOM element or View");
   }
@@ -578,7 +578,9 @@ Blaze.getElementData = function (element) {
 };
 
 // Both arguments are optional.
-Blaze.findView = function (elementOrView, viewName) {
+Blaze.getView = function (elementOrView, _viewName) {
+  var viewName = _viewName;
+
   if ((typeof elementOrView) === 'string') {
     // omitted elementOrView; viewName present
     viewName = elementOrView;
