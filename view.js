@@ -57,7 +57,7 @@ Blaze.View = function (name, render) {
   this.isCreated = false;
   this._isCreatedForExpansion = false;
   this.isRendered = false;
-  this.isAttached = false;
+  this._isAttached = false;
   this.isDestroyed = false;
   this._isInRender = false;
   this.parentView = null;
@@ -168,14 +168,14 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
 };
 
 Blaze.View.prototype.firstNode = function () {
-  if (! this.isAttached)
+  if (! this._isAttached)
     throw new Error("View must be attached before accessing its DOM");
 
   return this._domrange.firstNode();
 };
 
 Blaze.View.prototype.lastNode = function () {
-  if (! this.isAttached)
+  if (! this._isAttached)
     throw new Error("View must be attached before accessing its DOM");
 
   return this._domrange.lastNode();
@@ -249,7 +249,7 @@ Blaze._materializeView = function (view, parentView) {
     var teardownHook = null;
 
     domrange.onAttached(function attached(range, element) {
-      view.isAttached = true;
+      view._isAttached = true;
 
       teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
         element, function teardown() {
