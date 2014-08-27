@@ -585,7 +585,7 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.stop();
 });
 
-selftest.define("talk to package server with expired or no accounts token", ['test-package-server'], function () {
+selftest.define("talk to package server with expired or no accounts token", ['net', 'test-package-server'], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
