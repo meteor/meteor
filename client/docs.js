@@ -101,39 +101,12 @@ var hideMenu = function () {
   $('#menu-ico').removeClass('hidden');
 };
 
-var t = function (name, id, instance) {
-  if (! id) {
-    id = idForLongname(name);
-  }
-
-  return {
-    name: name,
-    id: id,
-    instance: instance
-  };
-};
-
-var instance = function (longname) {
-  var data = apiData(longname);
-
-  return {
-    name: data.name,
-    id: idForLongname(longname),
-    instance: apiData(data.memberof).instancename
-  };
-};
-
-var spacer = function () {
-  return {type: "spacer"};
-};
-
 var toc = [
   {name: "Meteor " + Template.headline.release(), id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
   ],
-
   "Concepts", [
     "What is Meteor?",
     "Structuring your app",
@@ -148,76 +121,73 @@ var toc = [
 
   "API", [
     "Core", [
-      t("Meteor.isClient"),
-      t("Meteor.isServer"),
-      t("Meteor.startup"),
-      t("Meteor.absoluteUrl"),
-      t("Meteor.settings"),
-      t("Meteor.release")
+      "Meteor.isClient",
+      "Meteor.isServer",
+      "Meteor.startup",
+      "Meteor.absoluteUrl",
+      "Meteor.settings",
+      "Meteor.release"
     ],
 
     "Publish and subscribe", [
-      t("Meteor.publish"),
-      [
-        instance("Subscription#userId"),
-        instance("Subscription#added"),
-        instance("Subscription#changed"),
-        instance("Subscription#removed"),
-        instance("Subscription#ready"),
-        instance("Subscription#onStop"),
-        instance("Subscription#error"),
-        instance("Subscription#stop"),
-        instance("Subscription#connection")
+      "Meteor.publish", [
+        {instance: "this", name: "userId", id: "publish_userId"},
+        {instance: "this", name: "added", id: "publish_added"},
+        {instance: "this", name: "changed", id: "publish_changed"},
+        {instance: "this", name: "removed", id: "publish_removed"},
+        {instance: "this", name: "ready", id: "publish_ready"},
+        {instance: "this", name: "onStop", id: "publish_onstop"},
+        {instance: "this", name: "error", id: "publish_error"},
+        {instance: "this", name: "stop", id: "publish_stop"},
+        {instance: "this", name: "connection", id: "publish_connection"}
       ],
       "Meteor.subscribe"
     ],
 
-    t("Methods", "methods_header"), [
-      t("Meteor.methods"),
-      [
-        instance("MethodInvocation#userId"),
-        instance("MethodInvocation#setUserId"),
-        instance("MethodInvocation#isSimulation"),
-        instance("MethodInvocation#unblock"),
-        instance("MethodInvocation#connection")
+    {name: "Methods", id: "methods_header"}, [
+      "Meteor.methods", [
+        {instance: "this", name: "userId", id: "method_userId"},
+        {instance: "this", name: "setUserId", id: "method_setUserId"},
+        {instance: "this", name: "isSimulation", id: "method_issimulation"},
+        {instance: "this", name: "unblock", id: "method_unblock"},
+        {instance: "this", name: "connection", id: "method_connection"}
       ],
-      t("Meteor.Error"),
+      "Meteor.Error",
       "Meteor.call",
       "Meteor.apply"
     ],
 
-    t("Server connections", "connections"), [
-      t("Meteor.status"),
-      t("Meteor.reconnect"),
-      t("Meteor.disconnect"),
-      t("Meteor.onConnection"),
-      t("DDP.connect")
+    {name: "Server connections", id: "connections"}, [
+      "Meteor.status",
+      "Meteor.reconnect",
+      "Meteor.disconnect",
+      "Meteor.onConnection",
+      "DDP.connect"
     ],
 
-    t("Collections", "collections"), [
-      t("Meteor.Collection"), [
-        instance("Meteor.Collection#find"),
-        instance("Meteor.Collection#findOne"),
-        instance("Meteor.Collection#insert"),
-        instance("Meteor.Collection#update"),
-        instance("Meteor.Collection#upsert"),
-        instance("Meteor.Collection#remove"),
-        instance("Meteor.Collection#allow"),
-        instance("Meteor.Collection#deny")
+    {name: "Collections", id: "collections"}, [
+      "Meteor.Collection", [
+        {instance: "collection", name: "find"},
+        {instance: "collection", name: "findOne"},
+        {instance: "collection", name: "insert"},
+        {instance: "collection", name: "update"},
+        {instance: "collection", name: "upsert"},
+        {instance: "collection", name: "remove"},
+        {instance: "collection", name: "allow"},
+        {instance: "collection", name: "deny"}
       ],
 
       "Meteor.Collection.Cursor", [
-        instance("Meteor.Collection.Cursor#forEach"),
-        instance("Meteor.Collection.Cursor#map"),
-        instance("Meteor.Collection.Cursor#fetch"),
-        instance("Meteor.Collection.Cursor#count"),
-        instance("Meteor.Collection.Cursor#observe"),
-        instance("Meteor.Collection.Cursor#observeChanges")
+        {instance: "cursor", name: "forEach"},
+        {instance: "cursor", name: "map"},
+        {instance: "cursor", name: "fetch"},
+        {instance: "cursor", name: "count"},
+        {instance: "cursor", name: "observe"},
+        {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
-      spacer(),
-      t("Meteor.Collection.ObjectID"),
-      spacer(),
-
+      {type: "spacer"},
+      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
+      {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
       {name: "Sort specifiers", style: "noncode"},
@@ -225,56 +195,55 @@ var toc = [
     ],
 
     "Session", [
-      t("Session.set"),
-      t("Session.setDefault"),
-      t("Session.get"),
-      t("Session.equals")
+      "Session.set",
+      {name: "Session.setDefault", id: "session_set_default"},
+      "Session.get",
+      "Session.equals"
     ],
 
-    t("Accounts", "accounts_api"), [
-      t("Meteor.user"),
-      t("Meteor.userId"),
-      t("Meteor.users"),
-      t("Meteor.loggingIn"),
-      t("Meteor.logout"),
-      t("Meteor.logoutOtherClients"),
-      t("Meteor.loginWithPassword"),
-      t("Meteor.loginWith<Service>", "meteor_loginwithexternalservice"),
-      spacer(),
+    {name: "Accounts", id: "accounts_api"}, [
+      "Meteor.user",
+      "Meteor.userId",
+      "Meteor.users",
+      "Meteor.loggingIn",
+      "Meteor.logout",
+      "Meteor.logoutOtherClients",
+      "Meteor.loginWithPassword",
+      {name: "Meteor.loginWith<Service>", id: "meteor_loginwithexternalservice"},
+      {type: "spacer"},
 
-      t("{{currentUser}}", "template_currentuser"),
-      t("{{loggingIn}}", "template_loggingin"),
-      spacer(),
+      {name: "{{currentUser}}", id: "template_currentuser"},
+      {name: "{{loggingIn}}", id: "template_loggingin"},
+      {type: "spacer"},
 
-      t("Accounts.config"),
-      t("Accounts.ui.config"),
-      t("Accounts.validateNewUser"),
-      t("Accounts.onCreateUser"),
-      t("Accounts.validateLoginAttempt"),
-      t("Accounts.onLogin"),
-      t("Accounts.onLoginFailure", "accounts_onlogin")
+      "Accounts.config",
+      "Accounts.ui.config",
+      "Accounts.validateNewUser",
+      "Accounts.onCreateUser",
+      "Accounts.validateLoginAttempt",
+      "Accounts.onLogin",
+      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"}
     ],
 
-    t("Passwords", "accounts_passwords"), [
-      t("Accounts.createUser"),
-      t("Accounts.changePassword"),
-      t("Accounts.forgotPassword"),
-      t("Accounts.resetPassword"),
-      t("Accounts.setPassword"),
-      t("Accounts.verifyEmail"),
-      spacer(),
+    {name: "Passwords", id: "accounts_passwords"}, [
+      "Accounts.createUser",
+      "Accounts.changePassword",
+      "Accounts.forgotPassword",
+      "Accounts.resetPassword",
+      "Accounts.setPassword",
+      "Accounts.verifyEmail",
+      {type: "spacer"},
 
-      t("Accounts.sendResetPasswordEmail"),
-      t("Accounts.sendEnrollmentEmail"),
-      t("Accounts.sendVerificationEmail"),
-      t("Accounts.emailTemplates")
+      "Accounts.sendResetPasswordEmail",
+      "Accounts.sendEnrollmentEmail",
+      "Accounts.sendVerificationEmail",
+      "Accounts.emailTemplates"
     ],
 
-    // template stuff is not migrated to new docs yet
-    t("Templates", "templates_api"), [
+    {name: "Templates", id: "templates_api"}, [
       {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
-        t("events", "Template-events"),
-        t("helpers", "Template-helpers"),
+        {name: "events", id: "template_events"},
+        {name: "helpers", id: "template_helpers"},
         {name: "rendered", id: "template_rendered"},
         {name: "created", id: "template_created"},
         {name: "destroyed", id: "template_destroyed"}
@@ -302,7 +271,6 @@ var toc = [
       {name: "Event maps", style: "noncode"}
      ],
 
-    // Match is not migrated to new docs yet
     "Match", [
       "check",
       "Match.test",
@@ -310,32 +278,32 @@ var toc = [
     ],
 
     "Timers", [
-      t("Meteor.setTimeout"),
-      t("Meteor.setInterval"),
-      t("Meteor.clearTimeout"),
-      t("Meteor.clearInterval")
+      "Meteor.setTimeout",
+      "Meteor.setInterval",
+      "Meteor.clearTimeout",
+      "Meteor.clearInterval"
     ],
 
     "Deps", [
-      t("Deps.autorun"),
-      t("Deps.flush"),
-      t("Deps.nonreactive"),
-      t("Deps.active"),
-      t("Deps.currentComputation"),
-      t("Deps.onInvalidate"),
-      t("Deps.afterFlush"),
+      "Deps.autorun",
+      "Deps.flush",
+      "Deps.nonreactive",
+      "Deps.active",
+      "Deps.currentComputation",
+      "Deps.onInvalidate",
+      "Deps.afterFlush",
       "Deps.Computation", [
-        instance("Deps.Computation#stop"),
-        instance("Deps.Computation#invalidate"),
-        instance("Deps.Computation#onInvalidate"),
-        instance("Deps.Computation#stopped"),
-        instance("Deps.Computation#invalidated"),
-        instance("Deps.Computation#firstRun")
+        {instance: "computation", name: "stop", id: "computation_stop"},
+        {instance: "computation", name: "invalidate", id: "computation_invalidate"},
+        {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "stopped", id: "computation_stopped"},
+        {instance: "computation", name: "invalidated", id: "computation_invalidated"},
+        {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
       "Deps.Dependency", [
-        instance("Deps.Dependency#changed"),
-        instance("Deps.Dependency#depend"),
-        instance("Deps.Dependency#hasDependents")
+        {instance: "dependency", name: "changed", id: "dependency_changed"},
+        {instance: "dependency", name: "depend", id: "dependency_depend"},
+        {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
     ],
 
@@ -348,17 +316,15 @@ var toc = [
     //],
 
     {name: "EJSON", id: "ejson"}, [
-      t("EJSON.parse"),
-      t("EJSON.stringify"),
-      t("EJSON.fromJSONValue"),
-      t("EJSON.toJSONValue"),
-      t("EJSON.equals"),
-      t("EJSON.clone"),
-      t("EJSON.newBinary"),
-      t("EJSON.isBinary"),
-      t("EJSON.addType"),
-
-      // EJSON instances not yet migrated
+      {name: "EJSON.parse", id: "ejson_parse"},
+      {name: "EJSON.stringify", id: "ejson_stringify"},
+      {name: "EJSON.fromJSONValue", id: "ejson_from_json_value"},
+      {name: "EJSON.toJSONValue", id: "ejson_to_json_value"},
+      {name: "EJSON.equals", id: "ejson_equals"},
+      {name: "EJSON.clone", id: "ejson_clone"},
+      {name: "EJSON.newBinary", id: "ejson_new_binary"},
+      {name: "EJSON.isBinary", id: "ejson_is_binary"},
+      {name: "EJSON.addType", id: "ejson_add_type"},
       [
         {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
         {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"},
@@ -369,7 +335,7 @@ var toc = [
 
 
     "HTTP", [
-      t("HTTP.call"),
+      "HTTP.call",
       {name: "HTTP.get"},
       {name: "HTTP.post"},
       {name: "HTTP.put"},
@@ -546,48 +512,6 @@ check_links = function() {
       console.log(msg);
     }
   });
-
-  return "DONE";
-};
-
-var canonicalize = function (id) {
-  return id.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
-};
-
-// better suggestions
-check_links_migrate = function() {
-  var body = document.body.innerHTML;
-
-  var id_set = {};
-  var suggDict = {};
-
-  body.replace(/id\s*=\s*"(.*?)"/g, function(match, id) {
-    if (! id) return;
-    if (id_set['$'+id]) {
-      console.log("ERROR: Duplicate id: "+id);
-    } else {
-      id_set['$'+id] = canonicalize(id);
-    }
-  });
-
-  body.replace(/"#(.*?)"/g, function(match, frag) {
-    if (! frag) return;
-    if (! id_set['$'+frag]) {
-      var suggestions = [];
-
-      _.each(id_set, function(canonicalized, id) {
-        id = id.slice(1);
-
-        if (canonicalized.indexOf(canonicalize(frag)) !== -1) {
-          suggestions.push(id);
-        }
-      });
-
-      suggDict[frag] = suggestions;
-    }
-  });
-
-  console.log(JSON.stringify(suggDict));
 
   return "DONE";
 };
