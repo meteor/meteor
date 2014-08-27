@@ -411,7 +411,7 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @memberOf Meteor.Collection
  * @instance
  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
- * @param {Function} callback Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+ * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
  */
 
 /**
@@ -422,10 +422,10 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @instance
  * @param {MongoSelector} selector Specifies which documents to modify
  * @param {MongoModifier} modifier Specifies how to modify the documents
- * @param {Function} callback Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
  * @param {Object} [options]
  * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
  * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+ * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
  */
 
 /**
@@ -435,7 +435,7 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @memberOf Meteor.Collection
  * @instance
  * @param {MongoSelector | String} selector A Mongo selector or ID which specifies documents to remove
- * @param {Function} callback Optional.  If present, called with an error object as its argument.
+ * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
  */
 
 _.each(["insert", "update", "remove"], function (name) {
@@ -586,9 +586,9 @@ _.each(["insert", "update", "remove"], function (name) {
  * @locus Anywhere
  * @param {MongoSelector | String} selector Mongo Selector or ID which specifies documents to modify
  * @param {MongoModifier} modifier Specifies how to modify the documents
- * @param {Function} callback Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
  * @param {Object} [options]
  * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+ * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
  */
 Meteor.Collection.prototype.upsert = function (selector, modifier,
                                                options, callback) {

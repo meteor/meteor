@@ -98,12 +98,12 @@ var srpUpgradePath = function (options, callback) {
 /**
  * @summary Create a new user.
  * @locus Anywhere
- * @param {Function} callback Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
- * @param {Object} [options]
+ * @param {Object} options
  * @param {String} options.username A unique name for this user.
  * @param {String} options.email The user's email address.
  * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
  * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @param {Function} [callback] Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
@@ -199,9 +199,9 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 /**
  * @summary Request a forgot password email.
  * @locus Client
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
- * @param {Object} [options]
+ * @param {Object} options
  * @param {String} options.email The email address to send a password reset link.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.forgotPassword = function(options, callback) {
   if (!options.email)

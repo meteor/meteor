@@ -3,7 +3,6 @@
  * @locus Anywhere
  * @param {String} method The [HTTP method](http://en.wikipedia.org/wiki/HTTP_method) to use, such as "`GET`", "`POST`", or "`HEAD`".
  * @param {String} url The URL to retrieve.
- * @param {Function} [asyncCallback] Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required.
  * @param {Object} [options]
  * @param {String} options.content String to use as the HTTP request body.
  * @param {Object} options.data JSON-able object to stringify and use as the HTTP request body. Overwrites `content`.
@@ -13,6 +12,7 @@
  * @param {Object} options.headers Dictionary of strings, headers to add to the HTTP request.
  * @param {Number} options.timeout Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default.
  * @param {Boolean} options.followRedirects If `true`, transparently follow HTTP redirects. Cannot be set to `false` on the client. Default `true`.
+ * @param {Function} [asyncCallback] Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required.
  */
 HTTP.call = function(method, url, options, callback) {
 

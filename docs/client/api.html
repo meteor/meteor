@@ -947,7 +947,7 @@ Server example:
       }
     });
 
-{{> autoApiBox "Meteor.Collection#allow"}}
+{{> api_box allow}}
 
 When a client calls `insert`, `update`, or `remove` on a collection, the
 collection's `allow` and [`deny`](#deny) callbacks are called
@@ -1072,7 +1072,7 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
-{{> autoApiBox "Meteor.Collection#deny"}}
+{{> api_box deny}}
 
 This works just like [`allow`](#allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an
@@ -2052,7 +2052,7 @@ template instance, and you can access its DOM nodes when it is in the
 document.
 
 
-{{> autoApiBox "Template#events"}}
+{{> api_box template_events}}
 
 Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
@@ -2060,7 +2060,7 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{{> autoApiBox "Template#helpers"}}
+{{> api_box template_helpers}}
 
 Each template has a local dictionary of helpers that are made available to it,
 and this call specifies helpers to add to the template's dictionary.
