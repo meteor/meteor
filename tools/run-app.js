@@ -447,7 +447,7 @@ _.extend(AppRunner.prototype, {
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     if (self.recordPackageUsage) {
       var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages();
+        stats.recordPackages("sdk.run");
       });
       if (statsMessages.hasMessages()) {
         process.stdout.write("Error recording package list:\n" +

@@ -13,7 +13,7 @@ var Release = function (options) {
   var self = this;
 
   // If an actual, proper, "released" release, the name of the
-  // release, eg, "METEOR-CORE@1.0". If not a proper release, null.
+  // release, eg, "METEOR@1.0". If not a proper release, null.
   self.name = options.name;
 
   if (self.name === null) {
@@ -148,15 +148,16 @@ _.extend(Release.prototype, {
 // app, running against a particular Meteor release.)
 release.current = null;
 
-// True if we are using release.current because we were forced to do
-// that by the '--release' command line option, else false. (It is
-// true anytime --release was passed, even if it's the same release we
-// would have used anyway. It is false anytime the current release is
+// True if we are using release.current because we were forced to do that by the
+// '--release' command line option or via throwing SpringboardToLatestRelease,
+// else false. (It is true anytime --release was passed, even if it's the same
+// release we would have used anyway. It is false anytime the current release is
 // a checkin.) null if release.current is null.
 release.forced = null;
 
 // True if the release was explicitly specified by the user with the --release
-// flag. Useful for update semantics.
+// flag. Unlike release.forced, this is false when the release is overridden via
+// SpringboardToLatestRelease.
 release.explicit = null;
 
 // True if release.current is the release we'd use if we wanted to run the app

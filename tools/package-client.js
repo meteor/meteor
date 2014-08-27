@@ -205,7 +205,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
         useShortPages: options.useShortPages
       });
     } catch (err) {
-      process.stderr.write("ERROR " + err.message + "\n");
+      exports.handlePackageServerConnectionError(err);
       if (err.errorType === "DDP.ConnectionError") {
         cachedServerData = null;
         done = true;
@@ -288,12 +288,37 @@ exports.loggedInPackagesConnection = function () {
   }
 
   var conn = openPackageServerConnection();
-  auth.loginWithTokenOrOAuth(
-    conn,
-    config.getPackageServerUrl(),
-    config.getPackageServerDomain(),
-    "package-server"
-  );
+
+  var accountsConfiguration = auth.getAccountsConfiguration(conn);
+
+  try {
+    auth.loginWithTokenOrOAuth(
+      conn,
+      accountsConfiguration,
+      config.getPackageServerUrl(),
+      config.getPackageServerDomain(),
+      "package-server"
+    );
+  } catch (err) {
+    if (err.message === "access-denied") {
+      // Maybe we thought we were logged in, but our token had been
+      // revoked.
+      process.stderr.write(
+"It looks like you have been logged out! Please log in with your Meteor\n" +
+"developer account. If you don't have one, you can quickly create one\n" +
+"at www.meteor.com.\n");
+      auth.doUsernamePasswordLogin({ retry: true });
+      auth.loginWithTokenOrOAuth(
+        conn,
+        accountsConfiguration,
+        config.getPackageServerUrl(),
+        config.getPackageServerDomain(),
+        "package-server"
+      );
+    } else {
+      throw err;
+    }
+  }
   return conn;
 };
 
@@ -427,6 +452,13 @@ exports.bundleBuild = bundleBuild;
 var createAndPublishBuiltPackage = function (conn, unipackage) {
   buildmessage.assertInJob();
 
+  // Note: we really want to do this before createPackageBuild, because the URL
+  // we get from createPackageBuild will expire!
+  process.stdout.write('Bundling build...\n');
+  var bundleResult = bundleBuild(unipackage);
+  if (buildmessage.jobHasMessages())
+    return;
+
   process.stdout.write('Creating package build...\n');
   var uploadInfo = conn.call('createPackageBuild', {
     packageName: unipackage.name,
@@ -434,24 +466,15 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
     buildArchitectures: unipackage.buildArchitectures()
   });
 
-  var bundleResult = bundleBuild(unipackage);
-  if (buildmessage.jobHasMessages())
-    return;
-
   process.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,
                 bundleResult.buildTarball);
 
   process.stdout.write('Publishing package build...\n');
-  try {
-    conn.call('publishPackageBuild',
-      uploadInfo.uploadToken,
-      bundleResult.tarballHash,
-      bundleResult.treeHash);
-  } catch (err) {
-    process.stderr.write("ERROR " + err.message + "\n");
-    return;
-  }
+  conn.call('publishPackageBuild',
+            uploadInfo.uploadToken,
+            bundleResult.tarballHash,
+            bundleResult.treeHash);
 
   process.stdout.write('Published ' + unipackage.name +
                        ', version ' + unipackage.version);
@@ -465,7 +488,7 @@ exports.handlePackageServerConnectionError = function (error) {
   if (error instanceof AlreadyPrintedMessageError) {
     // do nothing
   } else if (error.errorType === 'Meteor.Error') {
-    process.stderr.write("Error connecting to package server");
+    process.stderr.write("Error from package server");
     if (error.message) {
       process.stderr.write(": " + error.message);
     }
@@ -505,12 +528,12 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   var version = packageSource.version;
 
   // Check that the package name is valid.
-  if (! utils.validPackageName(name) ) {
-    process.stderr.write(
-      "Package name invalid. Package names can only contain \n" +
-      "lowercase ASCII alphanumerics, dash, and dot, and " +
-      "must contain at least one letter. \n" +
-      "Package names cannot begin with a dot. \n");
+  try {
+    utils.validatePackageName(name);
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    process.stderr.write(e.error + "\n");
     return 1;
   }
 

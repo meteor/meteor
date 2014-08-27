@@ -22,7 +22,7 @@ var Fiber = require('fibers');
 
 var catalog = exports;
 
-catalog.DEFAULT_TRACK = 'METEOR-CORE';
+catalog.DEFAULT_TRACK = 'METEOR';
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -231,14 +231,10 @@ _.extend(OfficialCatalog.prototype, {
 
   // Return information about a particular release version, or null if such
   // release version does not exist.
-  //
-  // XXX: notInitialized : don't require initialization. This is not the right thing
-  // to do long term, but it is the easiest way to deal with versionFrom without
-  // serious refactoring.
-  getReleaseVersion: function (track, version, notInitialized) {
+  getReleaseVersion: function (track, version) {
     var self = this;
     buildmessage.assertInCapture();
-    if (!notInitialized) self._requireInitialized();
+    self._requireInitialized();
     return self._recordOrRefresh(function () {
       return _.findWhere(self.releaseVersions,
                          { track: track,  version: version });
@@ -457,7 +453,8 @@ _.extend(CompleteCatalog.prototype, {
 
         // Constraints for uniload should just be packages with no version
         // constraint and one local version (since they should all be in core).
-        if (!_.has(constraint, 'packageName') || _.size(constraint) !== 1) {
+        if (!_.has(constraint, 'packageName') ||
+            constraint.type !== 'any-reasonable') {
           throw Error("Surprising constraint: " + JSON.stringify(constraint));
         }
         if (!_.has(self.versions, constraint.packageName)) {
@@ -503,9 +500,7 @@ _.extend(CompleteCatalog.prototype, {
         deps.push(constraint.packageName);
       }
       delete constraint.weak;
-      if (constraint.version) {
-        constr.push(constraint);
-      }
+      constr.push(constraint);
     });
 
     // If we are called with 'ignore projectDeps', then we don't even look to
@@ -523,53 +518,17 @@ _.extend(CompleteCatalog.prototype, {
       });
     }
 
+    // Local packages can only be loaded from the version we have the source
+    // for: that's a weak exact constraint.
+    _.each(self.packageSources, function (packageSource, name) {
+      constr.push({packageName: name, version: packageSource.version,
+                   type: 'exactly'});
+    });
+
     var patience = new utils.Patience({
       messageAfterMs: 1000,
       message: "Figuring out the best package versions to use. This may take a moment."
     });
-
-    // XXX:hack Before we run the constraint solver, let's do an 80% check for
-    // invalid packages. Specifically, if I am using a local package that
-    // depends on 'hogwash', I should be told that hogwash doesn't exist
-    // (because constraint solver errors are not there yet, and, also, because
-    // realistically, it is a rather common error, especially when starting
-    // migration. This won't cover weirdly invalid packages on the server, for
-    // example, but it is going to give us 80% for 2% effort, so it is worth it.
-    var depsToCheck = {};
-    // Make a hash map of packages that we are going to have.
-    _.each(deps, function (d) {
-      depsToCheck[d] = false;
-    });
-
-    // Checks the package & its dependencies (if it is local) for existing.
-    // This function is recursive, but it only checks each package once; it marks
-    // that the check is done before recursing and it will stop upon hitting a
-    // nonexistent package dependency.
-    var isValidDep = function (pack) {
-      if (depsToCheck[pack]) return;
-      // Do we even know about this package -- does it exist?
-      if (!self.getPackage(pack)) {
-        throw new Error (
-          "Trying to depend on a nonexistent package : " + pack + "\n");
-      }
-      depsToCheck[pack] = true;
-      // If it does, is it local?
-      if (self.isLocalPackage(pack)) {
-        var vr = self.getLatestVersion(pack);
-        var dirDeps = _.keys(vr.dependencies);
-        _.each(vr.dependencies, function (dep, name) {
-          if (_.where(dep.references, {weak: true}).length !==
-              dep.references.length)
-            isValidDep(name);
-        });
-      }
-    };
-
-    _.each(depsToCheck, function(checked, pack) {
-      if (checked) return;
-      isValidDep(pack);
-    });
-
     try {
       // Then, call the constraint solver, to get the valid transitive subset of
       // those versions to record for our solution. (We don't just return the
@@ -675,7 +634,7 @@ _.extend(CompleteCatalog.prototype, {
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
 
-    self.effectiveLocalPackages = [];
+    self.effectiveLocalPackages = _.clone(self.localPackages);
 
     // XXX If this is the forUniload catalog, we should only consider
     // uniload.ROOT_PACKAGES and their dependencies. Unfortunately, that takes a
@@ -708,11 +667,6 @@ _.extend(CompleteCatalog.prototype, {
         }
       });
     });
-
-    // XXX: There is totally a better way to extend arrays.
-    _.each(self.localPackages, function (x) {
-      self.effectiveLocalPackages.push(x);
-    });
   },
 
   getForgottenECVs: function (packageName) {
@@ -741,7 +695,7 @@ _.extend(CompleteCatalog.prototype, {
     // (note: this is the behavior that we want for overriding things in checkout.
     //  It is not clear that you get good UX if you have two packages with the same
     //  name in your app. We don't check that.)
-    var initSourceFromDir =  function (packageDir, defName) {
+    var initSourceFromDir =  function (packageDir, definiteName) {
       var packageSource = new PackageSource(self);
       var broken = false;
       buildmessage.enterJob({
@@ -759,8 +713,8 @@ _.extend(CompleteCatalog.prototype, {
         // If we specified a name, then we know what we want to get and should
         // pass that into the options. Otherwise, we will use the 'name'
         // attribute from package-source.js.
-        if (defName) {
-          opts["name"] = defName;
+        if (definiteName) {
+          opts["name"] = definiteName;
         }
         packageSource.initFromPackageDir(packageDir, opts);
         if (buildmessage.jobHasMessages()) {
@@ -905,8 +859,7 @@ _.extend(CompleteCatalog.prototype, {
       return ! _.has(self.packageSources, pkg.name);
     });
 
-    // Go through the packageSources and create a catalog record for each. This
-    // is where we are going to check that some packages are duplicate.
+    // Go through the packageSources and create a catalog record for each.
     _.each(self.packageSources, initCatalogRecordsFromSource);
 
     return allOK;
@@ -1057,8 +1010,9 @@ _.extend(CompleteCatalog.prototype, {
         }
       });
     }
-    // And put a build record for it in the catalog
-    var versionId = self.getLatestVersion(name);
+    // And put a build record for it in the catalog. There is only one version
+    // for this package!
+    var versionId = _.values(self.versions[name])._id;
 
     // XXX why isn't this build just happening through the package cache
     // directly?

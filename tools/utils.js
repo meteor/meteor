@@ -4,6 +4,7 @@ var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
+var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
@@ -140,26 +141,9 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-(function () {
-  var PackageVersion = null;
-
-  var maybeLoadPackageVersionParser = function () {
-    if (PackageVersion)
-      return;
-    var uniload = require('./uniload.js');
-    var Package = uniload.load({packages: ['package-version-parser']});
-    PackageVersion = Package['package-version-parser'].PackageVersion;
-  };
-
-  exports.parseVersionConstraint = function () {
-    maybeLoadPackageVersionParser();
-    return PackageVersion.parseVersionConstraint.apply(this, arguments);
-  };
-  exports.parseConstraint = function () {
-    maybeLoadPackageVersionParser();
-    return PackageVersion.parseConstraint.apply(this, arguments);
-  };
-})();
+exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+exports.parseConstraint = packageVersionParser.parseConstraint;
+exports.validatePackageName = packageVersionParser.validatePackageName;
 
 // XXX should unify this with utils.parseConstraint
 exports.splitConstraint = function (constraint) {
@@ -186,16 +170,40 @@ exports.dealConstraint = function (constraint, pkg) {
 // safety reasons, package names may not start with a dot. Package names must be
 // lowercase.
 //
-// This does not check that the package name is valid in terms of our naming
+// These do not check that the package name is valid in terms of our naming
 // scheme: ie, that it is prepended by a user's username. That check should
 // happen at publication time.
-exports.validPackageName = function (packageName) {
- if (/[^a-z0-9:.\-]/.test(packageName) || !/[a-z]/.test(packageName) ) {
-   return false;
- }
- return true;
+//
+// 3 variants: isValidPackageName just returns a bool.  validatePackageName
+// throws an error marked with 'versionParserError'. validatePackageNameOrExit
+// (which should only be used inside the implementation of a command, not
+// eg package-client.js) prints and throws the "exit with code 1" exception
+// on failure.
+
+exports.isValidPackageName = function (packageName) {
+  try {
+    exports.validatePackageName(packageName);
+    return true;
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    return false;
+  }
 };
 
+exports.validatePackageNameOrExit = function (packageName, options) {
+  try {
+    exports.validatePackageName(packageName, options);
+  } catch (e) {
+    if (!e.versionParserError)
+      throw e;
+    process.stderr.write("Error: " + e.message + "\n");
+    // lazy-load main: old bundler tests fail if you add a circular require to
+    // this file
+    var main = require('./main.js');
+    throw new main.ExitWithCode(1);
+  }
+};
 
 // True if this looks like a valid email address. We deliberately
 // don't support

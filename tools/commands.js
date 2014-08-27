@@ -55,22 +55,6 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
-// Get all local packages available. Returns a map from the package name to the
-// version record for that package.
-var getLocalPackages = function () {
-  var ret = {};
-  buildmessage.assertInCapture();
-
-  var names = catalog.complete.getAllPackageNames();
-  _.each(names, function (name) {
-    if (catalog.complete.isLocalPackage(name)) {
-      ret[name] = catalog.complete.getLatestVersion(name);
-    }
-  });
-
-  return ret;
-};
-
 var parseHostPort = function (str) {
   // XXX factor this out into a {type: host/port}?
   var portMatch = str.match(/^(?:(.+):)?([0-9]+)$/);
@@ -323,8 +307,16 @@ main.registerCommand({
       throw new main.ShowUsage;
     }
 
-    if (fs.existsSync(packageName)) {
-      process.stderr.write(packageName + ": Already exists\n");
+    utils.validatePackageNameOrExit(
+      packageName, {detailedColonExplanation: true});
+
+    var packageDir = options.appDir
+          ? path.resolve(options.appDir, 'packages', packageName)
+          : path.resolve(packageName);
+    var inYourApp = options.appDir ? " in your app" : "";
+
+    if (fs.existsSync(packageDir)) {
+      process.stderr.write(packageName + ": Already exists" + inYourApp + "\n");
       return 1;
     }
 
@@ -351,7 +343,7 @@ main.registerCommand({
       return xn.replace(/~release~/g, relString);
     };
     try {
-      files.cp_r(path.join(__dirname, 'skel-pack'), packageName, {
+      files.cp_r(path.join(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
       },
@@ -368,7 +360,7 @@ main.registerCommand({
      return 1;
    }
 
-    process.stdout.write(packageName + ": created\n");
+    process.stdout.write(packageName + ": created" + inYourApp + "\n");
     return 0;
   }
 
@@ -435,11 +427,11 @@ main.registerCommand({
       return 1;
     } else {
       files.cp_r(path.join(exampleDir, options.example), appPath, {
-        // We try not to check the identifier into git, but it might still
+        // We try not to check the project ID into git, but it might still
         // accidentally exist and get added (if running from checkout, for
-        // example). To be on the safe side, explicitly remove the identifier
+        // example). To be on the safe side, explicitly remove the project ID
         // from example apps.
-        ignore: [/^local$/, /^identifier$/]
+        ignore: [/^local$/, /^\.id$/]
       });
     }
   } else {
@@ -453,17 +445,23 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/, /^identifier$/]
+      ignore: [/^local$/, /^\.id$/]
     });
   }
 
   // We are actually working with a new meteor project at this point, so
   // reorient its path. We might do some things to it, but they should be
   // invisible to the user, so mute non-error output.
-  project.setRootDir(appPath);
+  project.setRootDir(path.resolve(appPath));
   project.setMuted(true);
   project.writeMeteorReleaseVersion(
     release.current.isCheckout() ? "none" : release.current.name);
+  // Any upgrader that is in this version of Meteor doesn't need to be run on
+  // this project.
+  var upgraders = require('./upgraders.js');
+  _.each(upgraders.allUpgraders(), function (upgrader) {
+    project.appendFinishedUpgrader(upgrader);
+  });
 
   var messages = buildmessage.capture(function () {
     project._ensureDepsUpToDate();
@@ -684,7 +682,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
   }
 
   var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages();
+    stats.recordPackages("sdk.bundle");
   });
   if (statsMessages.hasMessages()) {
     process.stdout.write("Error recording package list:\n" +
@@ -1206,12 +1204,26 @@ main.registerCommand({
   return runTestAppForPackages(testPackages, testRunnerAppDir, options);
 });
 
+var getLocalPackages = function () {
+  var ret = {};
+  buildmessage.assertInCapture();
+
+  var names = catalog.complete.getAllPackageNames();
+  _.each(names, function (name) {
+    if (catalog.complete.isLocalPackage(name)) {
+      ret[name] = catalog.complete.getLatestMainlineVersion(name);
+    }
+  });
+
+  return ret;
+};
+
 // Ensures that packages are prepared and built for testing
 var getPackagesForTest = function (packages) {
   var testPackages;
   var localPackageNames = [];
   if (packages.length === 0) {
-    // Only test local packages if no package is specified.
+    // Test all local packages if no package is specified.
     // XXX should this use the new getLocalPackageNames?
     var packageList = commandsPackages.doOrDie(function () {
       return getLocalPackages();
@@ -1222,7 +1234,7 @@ var getPackagesForTest = function (packages) {
       // like to find a way to get reloading.
       throw new Error("No packages to test");
     }
-    testPackages = _.keys(packageList);
+    testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
       testPackages = _.map(packages, function (p) {
@@ -1239,16 +1251,15 @@ var getPackagesForTest = function (packages) {
             }
             // Check to see if this is a real package, and if it is a real
             // package, if it has tests.
-            var versionRec = catalog.complete.getLatestVersion(p);
-            if (!versionRec) {
-              buildmessage.error(
-                "Unknown package: " + p );
-            }
             if (!catalog.complete.isLocalPackage(p)) {
               buildmessage.error(
-                "Not a local package, cannot test: " + p );
+                "Not a known local package, cannot test: " + p );
               return p;
             }
+            var versionNames = catalog.complete.getSortedVersions(p);
+            if (versionNames.length !== 1)
+              throw Error("local package should have one version?");
+            var versionRec = catalog.complete.getVersion(p, versionNames[0]);
             if (versionRec && !versionRec.testName) {
               buildmessage.error(
                 "There are no tests for package: " + p );
@@ -1268,12 +1279,17 @@ var getPackagesForTest = function (packages) {
           var packageDir = path.resolve(p);
           catalog.complete.addLocalPackage(packageDir);
 
+          if (buildmessage.jobHasMessages()) {
+            // If we already had a problem, don't get another problem when we
+            // run the hack below.
+            return 'ignored';
+          }
+
           // XXX: Hack.
           var PackageSource = require('./package-source.js');
           var packageSource = new PackageSource(catalog.complete);
           packageSource.initFromPackageDir(packageDir);
 
-          localPackageNames.push(packageSource.name);
           return packageSource.name;
         });
 
@@ -1286,6 +1302,18 @@ var getPackagesForTest = function (packages) {
     }
   }
 
+  // Make a temporary app dir (based on the test runner app). This will be
+  // cleaned up on process exit. Using a temporary app dir means that we can
+  // run multiple "test-packages" commands in parallel without them stomping
+  // on each other.
+  //
+  // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
+  // package search path baked into release.current.catalog: we are
+  // bundling the test runner app, but finding app packages from the
+  // current app (if any).
+  var testRunnerAppDir = files.mkdtemp('meteor-test-run');
+  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+
   return { testPackages: testPackages, localPackages: localPackageNames };
 };
 
@@ -1297,7 +1325,10 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
   var tests = [];
   var messages = buildmessage.capture(function () {
     _.each(testPackages, function(name) {
-      var versionRecord = catalog.complete.getLatestVersion(name);
+      var versionNames = catalog.complete.getSortedVersions(name);
+      if (versionNames.length !== 1)
+        throw Error("local package should have one version?");
+      var versionRecord = catalog.complete.getVersion(name, versionNames[0]);
       if (versionRecord && versionRecord.testName) {
         tests.push(versionRecord.testName);
       }
@@ -1443,6 +1474,140 @@ main.registerCommand({
   name: 'whoami'
 }, function (options) {
   return auth.whoAmICommand(options);
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// organizations
+///////////////////////////////////////////////////////////////////////////////
+
+var loggedInAccountsConnectionOrPrompt = function (action) {
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  token = auth.getSessionToken(config.getAccountsDomain());
+  var conn = auth.loggedInAccountsConnection(token);
+  if (conn === null) {
+    // Server rejected our token.
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+    token = auth.getSessionToken(config.getAccountsDomain());
+    conn = auth.loggedInAccountsConnection(token);
+  }
+
+  return conn;
+};
+
+// List the organizations of which the current user is a member.
+main.registerCommand({
+  name: 'admin list-organizations',
+  minArgs: 0,
+  maxArgs: 0
+}, function (options) {
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  var url = config.getAccountsApiUrl() + "/organizations";
+  try {
+    var result = httpHelpers.request({
+      url: url,
+      method: "GET",
+      useSessionHeader: true,
+      useAuthHeader: true
+    });
+    var body = JSON.parse(result.body);
+  } catch (err) {
+    process.stderr.write("Error listing organizations.\n");
+    return 1;
+  }
+
+  if (result.response.statusCode === 401 &&
+      body && body.error === "invalid_credential") {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    // XXX It would be nice to do a username/password prompt here like
+    // we do for the other orgs commands.
+    return 1;
+  }
+
+  if (result.response.statusCode !== 200 ||
+      ! body || ! body.organizations) {
+    process.stderr.write("Error listing organizations.\n");
+    return 1;
+  }
+
+  if (body.organizations.length === 0) {
+    process.stdout.write("You are not a member of any organizations.\n");
+  } else {
+    process.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
+  }
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin members',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    add: { type: String },
+    remove: { type: String },
+    list: { type: Boolean }
+  }
+}, function (options) {
+
+  if (options.add && options.remove) {
+    process.stderr.write(
+      "Sorry, you can only add or remove one member at a time.\n");
+    throw new main.ShowUsage;
+  }
+
+  config.printUniverseBanner();
+
+  var username = options.add || options.remove;
+
+  var conn = loggedInAccountsConnectionOrPrompt(
+    username ? "edit organizations" : "show an organization's members");
+
+  if (username ) {
+    // Adding or removing members
+    try {
+      conn.call(
+        options.add ? "addOrganizationMember": "removeOrganizationMember",
+        options.args[0], username);
+    } catch (err) {
+      process.stderr.write("Error " +
+                           (options.add ? "adding" : "removing") +
+                           " member: " + err.reason + "\n");
+      return 1;
+    }
+
+    process.stdout.write(username + " " +
+                         (options.add ? "added to" : "removed from") +
+                         " organization " + options.args[0] + ".\n");
+  } else {
+    // Showing the members of an org
+    try {
+      var result = conn.call("showOrganization", options.args[0]);
+    } catch (err) {
+      process.stderr.write("Error showing organization: " +
+                           err.reason + "\n");
+      return 1;
+    }
+
+    var members = _.pluck(result, "username");
+
+    process.stdout.write(members.join("\n") + "\n");
+  }
+
+  return 0;
 });
 
 ///////////////////////////////////////////////////////////////////////////////

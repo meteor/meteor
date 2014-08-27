@@ -51,7 +51,7 @@ _.extend(exports.Tropohouse.prototype, {
   // Returns null if the package name is lexographically invalid.
   packagePath: function (packageName, version, relative) {
     var self = this;
-    if (! utils.validPackageName(packageName)) {
+    if (! utils.isValidPackageName(packageName)) {
       return null;
     }
 
@@ -78,14 +78,26 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     // We want to be careful not to break the 'meteor' symlink inside the
-    // tropohouse. Hopefully nobody deleted that package!
+    // tropohouse. Hopefully nobody deleted/modified that package!
     var latestToolPackage = null;
     var latestToolVersion = null;
     var currentToolPackage = null;
     var currentToolVersion = null;
-    if (release.current.isProperRelease()) {
-      currentToolPackage = release.current.getToolsPackage();
-      currentToolVersion = release.current.getToolsVersion();
+    // Warning: we can't examine release.current here, because we might be
+    // currently processing release.load!
+    if (!files.inCheckout()) {
+      // toolsDir is something like:
+      // /home/user/.meteor/packages/meteor-tool/.1.0.17.ut200e++os.osx.x86_64+web.browser+web.cordova/meteor-tool-os.osx.x86_64
+      var toolsDir = files.getCurrentToolsDir();
+      // eg, 'meteor-tool'
+      currentToolPackage = path.basename(path.dirname(path.dirname(toolsDir)));
+      // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova'
+      var toolVersionDir = path.basename(path.dirname(toolsDir));
+      var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
+      var pieces = toolVersionWithDotAndRandomBit.split('.');
+      pieces.shift();
+      pieces.pop();
+      currentToolVersion = pieces.join('.');
       var latestMeteorSymlink = self.latestMeteorSymlink();
       if (utils.startsWith(latestMeteorSymlink,
                            packagesDirectoryName + path.sep)) {
@@ -98,6 +110,14 @@ _.extend(exports.Tropohouse.prototype, {
 
     _.each(packages, function (package) {
       var packageDir = path.join(packageRootDir, package);
+      try {
+        var versions = fs.readdirSync(packageDir);
+      } catch (e) {
+        // Somebody put a file in here or something? Whatever, ignore.
+        if (e.code === 'ENOENT' || e.code === 'ENOTDIR')
+          return;
+        throw e;
+      }
       _.each(fs.readdirSync(packageDir), function (version) {
         // Is this a pre-0.9.0 "warehouse" version with a hash name?
         if (/^[a-f0-9]{3,}$/.test(version))
@@ -213,8 +233,10 @@ _.extend(exports.Tropohouse.prototype, {
     var buildsToDownload = catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
-      throw new Error(
+      var e = new Error(
         "No compatible build found for " + packageName + "@" + version);
+      e.noCompatibleBuildError = true;
+      throw e;
     }
 
     // XXX replace with a real progress bar in downloadMissingPackages
@@ -273,6 +295,10 @@ _.extend(exports.Tropohouse.prototype, {
   // that will run on this system (or the requested architecture). Return the
   // object with mapping packageName to version for the packages that we have
   // successfully downloaded.
+  //
+  // XXX This function's error handling capabilities are poor. It's supposed to
+  // return a data structure that its callers check, but most of its callers
+  // don't check it. Bleah.  Should rewrite this and all of its callers.
   downloadMissingPackages: function (versionMap, options) {
     var self = this;
     buildmessage.assertInCapture();
@@ -288,11 +314,12 @@ _.extend(exports.Tropohouse.prototype, {
         });
         downloadedPackages[name] = version;
       } catch (err) {
-        // We have failed to download the right things and put them on disk!
-        // This should not happen, and we aren't sure why it happened.
-        // XXX plenty of reasons why this might happen!  eg, no network.
-        //     better error handling here!
-        console.log(err);
+        if (!(err.noCompatibleBuildError))
+          throw err;
+        console.log(err.message);
+        // continue, which is weird, but we want to avoid a stack trace...
+        // the caller is supposed to check the size of the return value,
+        // although many callers do not.
       }
     });
     return downloadedPackages;

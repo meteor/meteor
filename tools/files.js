@@ -871,3 +871,12 @@ exports.getLinesOrEmpty = function (file) {
     throw e;
   }
 };
+
+// Trims whitespace & other filler characters of a line in a project file.
+exports.trimLine = function (line) {
+  var match = line.match(/^([^#]*)#/);
+  if (match)
+    line = match[1];
+  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
+  return line;
+};

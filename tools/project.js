@@ -14,6 +14,9 @@ var PackageSource = require('./package-source.js');
 
 var project = exports;
 
+// Given a set of lines, each of the form "foo@bar", return an object of form
+// {foo: "bar", bar: null}. If there is "bar", value of the corresponding key is
+// null.
 // Trims whitespace & other filler characters of a line in a project file.
 var trimLine = function (line) {
   var match = line.match(/^([^#]*)#/);
@@ -23,15 +26,15 @@ var trimLine = function (line) {
   return line;
 };
 
-// Given a set of lines, each of the form "foo@bar", return an object of form
-// {foo: "bar", bar: null}. If there is "bar", value of the corresponding key is
-// null.
+// Given a set of lines, each of the form "foo@bar", return an array of form
+// [{packageName: foo, versionConstraint: bar}]. If there is bar,
+// versionConstraint is null.
 var processPerConstraintLines = function(lines) {
   var ret = {};
 
   // read from .meteor/packages
   _.each(lines, function (line) {
-    line = trimLine(line);
+    line = files.trimLine(line);
     if (line !== '') {
       var constraint = utils.splitConstraint(line);
       ret[constraint.package] = constraint.constraint;
@@ -81,8 +84,9 @@ var Project = function () {
   // loaders). Derived from self.dependencies.
   self.packageLoader = null;
 
-  // The app identifier is used for stats, read from a file and not invalidated
-  // by any constraint-related operations.
+  // The app identifier is used for stats and to prevent accidental deploys to
+  // the wrong domain. It is read from a file and not invalidated by any
+  // constraint-related operations.
   self.appId = null;
 
   // Should we use this project as a source for dependencies? Certainly not
@@ -208,9 +212,11 @@ _.extend(Project.prototype, {
           { ignoreProjectDeps: true }
         );
       } catch (err) {
+        // XXX This error handling is bogus. Use buildmessage instead, or
+        // something. See also compiler.determineBuildTimeDependencies
         process.stdout.write(
           "Could not resolve the specified constraints for this project:\n"
-           + err +"\n");
+           + (err.constraintSolverError ? err : err.stack) + "\n");
         process.exit(1);
       }
 
@@ -224,7 +230,7 @@ _.extend(Project.prototype, {
 
       if (!setV.success) {
         process.stdout.write(
-          "Could not install all the requested packages. \n");
+          "Could not install all the requested packages.\n");
         process.exit(1);
       }
 
@@ -255,10 +261,12 @@ _.extend(Project.prototype, {
     var allDeps = [];
     // First, we process the contents of the .meteor/packages file. The
     // self.constraints variable is always up to date.
+    // Note that two parts of the "add" command run code that matches this.
     _.each(self.constraints, function (constraint, packageName) {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));
     });
+
 
     // Now we have to go through the programs directory, go through each of the
     // programs, get their dependencies and use them. (We could have memorized
@@ -301,7 +309,7 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", version:  null });
+      allDeps.push({packageName: "ctl", version: null, type: 'any-reasonable'});
     }
 
     return allDeps;
@@ -448,8 +456,11 @@ _.extend(Project.prototype, {
   // versions file.
   //
   // Returns an object mapping package name to its string version.
-  getVersions : function () {
+  getVersions : function (options) {
     var self = this;
+    options = options || {};
+    if (options.dontRunConstraintSolver)
+      return self.dependencies;
     buildmessage.assertInCapture();
     self._ensureDepsUpToDate();
     return self.dependencies;
@@ -533,7 +544,7 @@ _.extend(Project.prototype, {
     // This should really never happen, and the caller will print a special error.
     if (!lines.length)
       return '';
-    return trimLine(lines[0]);
+    return files.trimLine(lines[0]);
   },
 
   // Returns the full filepath of the projects .meteor/release file.
@@ -606,7 +617,7 @@ _.extend(Project.prototype, {
     var packages = self._getConstraintFile();
     var lines = files.getLinesOrEmpty(packages);
     lines = _.reject(lines, function (line) {
-      var cur = trimLine(line).split('@')[0];
+      var cur = files.trimLine(line).split('@')[0];
       return _.indexOf(names, cur) !== -1;
     });
     fs.writeFileSync(packages,
@@ -762,7 +773,7 @@ _.extend(Project.prototype, {
   // The file for the app identifier.
   appIdentifierFile : function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'identifier');
+    return path.join(self.rootDir, '.meteor', '.id');
   },
 
   // Get the app identifier.
@@ -780,26 +791,38 @@ _.extend(Project.prototype, {
   ensureAppIdentifier : function () {
     var self = this;
     var identifierFile = self.appIdentifierFile();
-    if (!fs.existsSync(identifierFile)) {
-      var id =  utils.randomToken() + utils.randomToken() + utils.randomToken();
-      fs.writeFileSync(identifierFile, id + '\n');
+
+    // Find the first non-empty line, ignoring comments.
+    var lines = files.getLinesOrEmpty(identifierFile);
+    var appId = _.find(_.map(lines, files.trimLine), _.identity);
+
+    // If the file doesn't exist or has no non-empty lines, regenerate the
+    // token.
+    if (!appId) {
+      appId = utils.randomToken() + utils.randomToken() + utils.randomToken();
+
+      var comment = (
+"# This file contains a token that is unique to your project.\n" +
+"# Check it into your repository along with the rest of this directory.\n" +
+"# It can be used for purposes such as:\n" +
+"#   - ensuring you don't accidentally deploy one app on top of another\n" +
+"#   - providing package authors with aggregated statistics\n" +
+"\n");
+      fs.writeFileSync(identifierFile, comment + appId + '\n');
     }
-    if (fs.existsSync(identifierFile)) {
-      self.appId = trimLine(fs.readFileSync(identifierFile, 'utf8'));
-    } else {
-      throw new Error("Expected a file at " + identifierFile);
-    }
+
+    self.appId = appId;
   },
 
   _finishedUpgradersFile: function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'finished-upgraders');
+    return path.join(self.rootDir, '.meteor', '.finished-upgraders');
   },
 
   getFinishedUpgraders: function () {
     var self = this;
     var lines = files.getLinesOrEmpty(self._finishedUpgradersFile());
-    return _.filter(_.map(lines, trimLine), _.identity);
+    return _.filter(_.map(lines, files.trimLine), _.identity);
   },
 
   appendFinishedUpgrader: function (upgrader) {

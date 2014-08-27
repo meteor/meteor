@@ -4,7 +4,7 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "0.3.1-cordova1"
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The dynamic stylesheet language",
-  version: "1.0.4"
+  version: "1.0.5"
 });
 
 Package._transitional_registerBuildPlugin({
@@ -9,7 +9,10 @@ Package._transitional_registerBuildPlugin({
   sources: [
     'plugin/compile-less.js'
   ],
-  npmDependencies: {"less": "1.7.4"}
+  npmDependencies: {
+    // Fork of 1.7.4 deleted large unused files in dist directory.
+    "less": "https://github.com/meteor/less.js/tarball/4ccb7fc94321a6a85d592cdf46579425add1570f"
+  }
 });
 
 Package.on_test(function (api) {

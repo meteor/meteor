@@ -366,7 +366,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = username + ":" + packageName + "-a";
   var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
 
   // First test -- pretend that the user has downloaded meteor for the purpose
@@ -383,7 +383,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   publishReleaseInNewTrack(s, releaseTrack, fullPackageName /*tool*/, packages);
 
   // Create a package that has a versionsFrom for the just-published release.
-  var newPack = fullPackageName + "2";
+  var newPack = username + ":" + packageName + "-b";
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
     var packOpen = s.read("package.js");
@@ -424,8 +424,10 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   s.cd("testApp", function () {
     run = s.run("add", newPack);
     run.waitSecs(5);
-    run.match(/  added .*2 at version 1.0.0/);
-    run.match(/  added .* at version 1.0.0/);
+    var match1 = run.match(/  added .*-([ab]) at version 1.0.0/);
+    var match2 = run.match(/  added .*-([ab]) at version 1.0.0/);
+    // the lines should be different:
+    selftest.expectEqual(match1[1] !== match2[1], true);
     run.match("Test package");
     run.expectExit(0);
 
@@ -456,16 +458,14 @@ var createAndPublishPackage = function (s, packageName) {
   var run = s.run("create", "--package", packageName);
   run.waitSecs(10);
   run.expectExit(0);
-  s.cd(packageName);
-
-  run = s.run("publish", "--create");
-  run.waitSecs(25);
-  run.expectExit(0);
-
-  s.cd("..");
+  s.cd(packageName, function (){
+    run = s.run("publish", "--create");
+    run.waitSecs(25);
+    run.expectExit(0);
+  });
 };
 
-selftest.define("release track defaults to METEOR-CORE",
+selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
@@ -477,7 +477,7 @@ selftest.define("release track defaults to METEOR-CORE",
   // Create a package that has a versionsFrom for the just-published
   // release, but without the release track present in the call to
   // `versionsFrom`. This implies that it should be prefixed
-  // by "METEOR-CORE@"
+  // by "METEOR@"
   var newPack = fullPackageName;
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
@@ -489,12 +489,12 @@ selftest.define("release track defaults to METEOR-CORE",
   });
 
   // Try to publish the package. The error message should demonstrate
-  // that we indeed default to the METEOR-CORE release track when not
+  // that we indeed default to the METEOR release track when not
   // specified.
   s.cd(newPack, function() {
     var run = s.run("publish", "--create");
     run.waitSecs(20);
-    run.matchErr("Unknown release METEOR-CORE@" + releaseVersion);
+    run.matchErr("Unknown release METEOR@" + releaseVersion);
     run.expectExit(1);
   });
 });
@@ -624,4 +624,45 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.waitSecs(15);
   run.match("overriding accounts-base!");
   run.stop();
+});
+
+selftest.define("talk to package server with expired or no accounts token", ['net', 'test-package-server'], function () {
+  var s = new Sandbox();
+  testUtils.login(s, "test", "testtest");
+
+  // Revoke our credential by logging out.
+  var session = s.readSessionFile();
+  testUtils.logout(s);
+
+  // When we are not logged in, we should get prompted to log in when we
+  // run 'meteor admin maintainers --add'.
+  var run = s.run("admin", "maintainers", "standard-app-packages",
+                  "--add", "foo");
+  run.waitSecs(15);
+  run.matchErr("Username:");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(15);
+  // The 'test' user should not be a maintainer of
+  // standard-app-packages. So this command should fail.
+  run.matchErr("You are not an authorized maintainer");
+  run.expectExit(1);
+
+  // Now restore our previous session, so that we now have an expired
+  // accounts token.
+  s.writeSessionFile(session);
+
+  run = s.run("admin", "maintainers", "standard-app-packages", "--add", "foo");
+  run.waitSecs(15);
+  run.matchErr("have been logged out");
+  run.matchErr("Please log in");
+  run.matchErr("Username");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(15);
+
+  run.matchErr("You are not an authorized maintainer");
+  run.expectExit(1);
 });

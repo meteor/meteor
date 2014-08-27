@@ -160,7 +160,10 @@ npm install tar@1.0.1
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install browserstack-webdriver@2.41.1
+
+# Clean up a big zip file it leaves behind.
 npm install phantomjs@1.8.1-1
+rm -rf node_modules/phantomjs/tmp
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
 npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0

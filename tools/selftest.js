@@ -713,7 +713,7 @@ _.extend(Sandbox.prototype, {
       ['autopublish', 'standard-app-packages', 'insecure'],
       function (name) {
         var versionRec = doOrThrow(function () {
-          return catalog.official.getLatestVersion(name);
+          return catalog.official.getLatestMainlineVersion(name);
         });
         if (!versionRec) {
           catalog.official.offline = false;
@@ -722,7 +722,7 @@ _.extend(Sandbox.prototype, {
           });
           catalog.official.offline = true;
           versionRec = doOrThrow(function () {
-            return catalog.official.getLatestVersion(name);
+            return catalog.official.getLatestMainlineVersion(name);
           });
           if (!versionRec) {
             throw new Error(" hack fails for " + name);
@@ -1098,17 +1098,20 @@ _.extend(Run.prototype, {
   // there may not be any benefit since the usual way to use this is
   // to call it after expectExit or expectEnd.
   forbid: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');
   }),
 
   // As forbid(), but for stderr instead of stdout.
   forbidErr: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern, 'stderr');
   }),
 
   // Combination of forbid() and forbidErr(). Forbids the pattern on
   // both stdout and stderr.
   forbidAll: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern);
   }),
 

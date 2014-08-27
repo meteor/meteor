@@ -787,7 +787,7 @@ Fiber(function () {
     // presumably doesn't exist on the new server, and this is a slow
     // operation).
     if (releaseName !== null &&
-        warehouse.releaseExistsInWarehouse(releaseName)) {
+        warehouse.realReleaseExistsInWarehouse(releaseName)) {
       var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
         releaseName);
       oldSpringboard(manifest.tools);

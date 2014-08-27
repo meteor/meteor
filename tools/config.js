@@ -152,7 +152,7 @@ _.extend(exports, {
     if (isLocalUniverse()) {
       return localhostOffset(30);
     } else {
-      return getUniverse().replace(/^www\./, 'package-stats.');
+      return getUniverse().replace(/^www\./, 'activity.');
     }
   },
 
@@ -218,6 +218,10 @@ _.extend(exports, {
   // login token.
   getAccountsDomain: function () {
     return getUniverse();
+  },
+
+  getDeployHostname: function () {
+    return process.env.DEPLOY_HOSTNAME || "meteor.com";
   },
 
   // Deploy URL for MDG free hosting, eg 'https://deploy.meteor.com'.

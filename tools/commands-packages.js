@@ -63,8 +63,11 @@ var formatList = function (items) {
   _.each(items, function (item) {
     var name = item.name + pad.substr(item.name.length);
     var description = item.description || 'No description';
-    out += (name + "  " +
-            description.substr(0, width - 2 - pad.length) + "\n");
+    var line = name + "  " + description;
+    if (line.length > width) {
+      line = line.substr(0, width - 3) + '...';
+    }
+    out += line + "\n";
   });
 
   return out;
@@ -177,7 +180,10 @@ main.registerCommand({
     // locally (and other local packages you may have) instead of downloading
     // the source bundle. It does verify that the source is the same, though.
     // Good for bootstrapping things in the core release.
-    'existing-version': { type: Boolean }
+    'existing-version': { type: Boolean },
+    // This is the equivalent of "sudo": make sure that administrators don't
+    // accidentally put their personal packages in the top level namespace.
+    'top-level': { type: Boolean }
   },
   requiresPackage: true
 }, function (options) {
@@ -247,27 +253,45 @@ main.registerCommand({
         "package, do not use the --create flag! \n");
       return 2;
     }
-  };
 
-  if (! utils.validPackageName(packageName)) {
-    buildmessage.error("Invalid package name:", packageName);
-  }
+    if (!options['top-level'] && !packageName.match(/:/)) {
+      process.stderr.write(
+"To confirm that you wish to create a top-level package with no account\n" +
+"prefix, please run this command again with the --top-level option.\n" +
+"(Only administrators can create top-level packages without an account prefix)\n");
+      return 2;
+    }
+  };
 
   // We have initialized everything, so perform the publish oepration.
   var ec;  // XXX maybe combine with messages?
-  messages = buildmessage.capture({
-    title: "publishing the package"
-  }, function () {
-    ec = packageClient.publishPackage(
-      packageSource, compileResult, conn, {
-        new: options.create,
-        existingVersion: options['existing-version']
-      });
-  });
+  try {
+    messages = buildmessage.capture({
+      title: "publishing the package"
+    }, function () {
+      ec = packageClient.publishPackage(
+        packageSource, compileResult, conn, {
+          new: options.create,
+          existingVersion: options['existing-version']
+        });
+    });
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return ec || 1;
   }
+
+  // We are only publishing one package, so we should close the connection, and
+  // then exit with the previous error code.
+  conn.close();
+
+  // If the publishPackage failed, exit now (no need to spend time trying to
+  // refresh).
+  if (ec)
+    return ec;
 
   // Warn the user if their package is not good for all architectures.
   var allArchs = compileResult.unipackage.buildArchitectures().split('+');
@@ -280,10 +304,7 @@ main.registerCommand({
         "Please use publish-for-arch to publish new builds of the package.\n\n");
   }
 
-  // We are only publishing one package, so we should close the connection, and
-  // then exit with the previous error code.
-  conn.close();
-
+  // Refresh, so that we actually learn about the thing we just published.
   refreshOfficialCatalogOrDie();
 
   return ec;
@@ -380,6 +401,10 @@ main.registerCommand({
     // it doesn't we should fail. Hopefully, of course, we have
     // tested our stuff before deciding to publish it to the package
     // server, but we need to be careful.
+    // XXX If you're not using a matching version of the tool, this will give
+    //     an error like "Version lock for FOO should never change"!  Including
+    //     if you've swapped between checkout and released tool.  We really
+    //     should springboard here...
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
@@ -404,11 +429,16 @@ main.registerCommand({
     return 1;
   }
 
-  messages = buildmessage.capture({
-    title: "publishing package " + name
-  }, function () {
-    packageClient.createAndPublishBuiltPackage(conn, unipkg);
-  });
+  try {
+    messages = buildmessage.capture({
+      title: "publishing package " + name
+    }, function () {
+      packageClient.createAndPublishBuiltPackage(conn, unipkg);
+    });
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
 
   if (messages.hasMessages()) {
     process.stderr.write("\n" + messages.formatMessages());
@@ -766,24 +796,31 @@ main.registerCommand({
 
       process.stdout.write("Publishing package: " + name + "\n");
 
-      var pubEC;  // XXX merge with messages?
-      messages = buildmessage.capture({
-        title: "publishing package " + name
-      }, function () {
-        var opts = {
-          new: !catalog.official.getPackage(name)
-        };
+      // XXX merge with messages? having THREE kinds of error handling here is
+      // um something.
+      var pubEC;
+      try {
+        messages = buildmessage.capture({
+          title: "publishing package " + name
+        }, function () {
+          var opts = {
+            new: !catalog.official.getPackage(name)
+          };
 
-        // If we are creating a new package, dsPS will document this for us, so
-        // we don't need to do this here. Though, in the future, once we are
-        // done bootstrapping package servers, we should consider having some
-        // extra checks around this.
-        pubEC = packageClient.publishPackage(
-          prebuilt.source,
-          prebuilt.compileResult,
-          conn,
-          opts);
-      });
+          // If we are creating a new package, dsPS will document this for us,
+          // so we don't need to do this here. Though, in the future, once we
+          // are done bootstrapping package servers, we should consider having
+          // some extra checks around this.
+          pubEC = packageClient.publishPackage(
+            prebuilt.source,
+            prebuilt.compileResult,
+            conn,
+            opts);
+        });
+      } catch (e) {
+          packageClient.handlePackageServerConnectionError(e);
+          return 1;
+      }
       if (messages.hasMessages()) {
         process.stderr.write(messages.formatMessages());
         return pubEC || 1;
@@ -807,8 +844,13 @@ main.registerCommand({
   // Create the new track, if we have been told to.
   if (options['create-track']) {
     process.stdout.write("Creating a new release track...\n");
-    var track = conn.call('createReleaseTrack',
-                          { name: relConf.track } );
+    try {
+      var track = conn.call('createReleaseTrack',
+                            { name: relConf.track } );
+    } catch (e) {
+      packageClient.handlePackageServerConnectionError(e);
+      return 1;
+    }
   }
 
   process.stdout.write("Creating a new release version...\n");
@@ -830,7 +872,7 @@ main.registerCommand({
       uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
     }
   } catch (err) {
-    process.stderr.write("ERROR: " + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
     return 1;
   }
 
@@ -874,7 +916,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    "show-broken": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -883,9 +925,8 @@ main.registerCommand({
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
-    return options['show-broken'] || !(_.isEqual(record.description,
-                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
-   };
+    return options['show-old'] || !record.unmigrated;
+  };
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -926,6 +967,7 @@ main.registerCommand({
       return _.extend({ buildArchitectures: myStringBuilds },
                       versionRecord);
     };
+    // XXX should this skip pre-releases?
     var versions = catalog.official.getSortedVersions(name);
     if (full.length > 1) {
       versions = [full[1]];
@@ -1008,7 +1050,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
-    "show-broken": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false }
   }
 }, function (options) {
 
@@ -1036,15 +1078,14 @@ main.registerCommand({
   var filterBroken = function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
-    if (!match || isRelease || options["show-broken"])
+    if (!match || isRelease || options["show-old"])
       return match;
 
     var vr;
     doOrDie(function () {
-      vr = catalog.official.getLatestVersion(name);
+      vr = catalog.official.getLatestMainlineVersion(name);
     });
-    return vr && !(_.isEqual(vr.description,
-                       "INCOMPATIBLE WITH METEOR 0.9.0 OR LATER"));
+    return vr && !vr.unmigrated;
   };
 
   if (options.maintainer) {
@@ -1079,7 +1120,7 @@ main.registerCommand({
   _.each(allPackages, function (pack) {
     if (selector(pack, false)) {
       var vr = doOrDie(function () {
-        return catalog.official.getLatestVersion(pack);
+        return catalog.official.getLatestMainlineVersion(pack);
       });
       if (vr) {
         matchingPackages.push(
@@ -1161,8 +1202,12 @@ main.registerCommand({
       }
 
       var versionAddendum = "" ;
-      var latest = catalog.complete.getLatestVersion(name, version);
+      var latest = catalog.complete.getLatestMainlineVersion(name, version);
+      var semver = require('semver');
       if (version !== latest.version &&
+          // If we're currently running a prerelease, "latest" may be older than
+          // what we're at, so don't tell us we're outdated!
+          semver.lt(version, latest.version) &&
           !catalog.complete.isLocalPackage(name)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
@@ -1172,8 +1217,7 @@ main.registerCommand({
 
       var description = version + versionAddendum +
             (versionInfo.description ?
-             (": " + versionInfo.description) :
-             "");
+             (" " + versionInfo.description) : "");
       items.push({ name: name, description: description });
 
     });
@@ -1239,15 +1283,13 @@ main.registerCommand({
     return 1;
   }
 
-  if (!options["packages-only"]) {
+  var solutionReleaseRecord = null;
 
-    // refuse to update the release if we're in a git checkout.
-    if (! files.usesWarehouse()) {
-      process.stderr.write(
-        "update: can only be run from official releases, not from checkouts\n");
-      return 1;
-    }
-
+  if (!options["packages-only"] && ! files.usesWarehouse()) {
+    process.stderr.write(
+"You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
+"Checking to see if we can update your packages.\n");
+  } else if (!options["packages-only"]) {
     // This is the release track we'll end up on --- either because it's
     // the explicitly specified (with --release) track; or because we
     // didn't specify a release and it's the app's current release (if we're
@@ -1260,10 +1302,11 @@ main.registerCommand({
     // Unless --release was passed (in which case we ought to already have
     // springboarded to that release), go get the latest release and switch to
     // it. (We already know what the latest release is because we refreshed the
-    // catalog above.)  Note that after springboarding, we will hit this again
-    // (because springboarding to a specific release does NOT set release.forced),
-    // but it should be a no-op next time (unless there actually was a new latest
-    // release in the interim).
+    // catalog above.)  Note that after springboarding, we will hit this again.
+    // However, the override that's done by SpringboardToLatestRelease also sets
+    // release.forced (although it does not set release.explicit), so we won't
+    // double-springboard.  (We might miss an super recently published release,
+    // but that's probably OK.)
     if (! release.forced) {
       var latestRelease = doOrDie(function () {
         return release.latestDownloaded(releaseTrack);
@@ -1272,7 +1315,7 @@ main.registerCommand({
       // and the user ran 'meteor update' without specifying a release? We
       // really can't do much here.
       if (!latestRelease) {
-        // XXX is there a command to get to the latest METEOR-CORE@? Should we
+        // XXX is there a command to get to the latest METEOR@? Should we
         // recommend it here?
         process.stderr.write(
           "There are no recommended releases on release track " +
@@ -1296,7 +1339,7 @@ main.registerCommand({
     // If we're not in an app, then we're done (other than maybe printing some
     // stuff).
     if (! options.appDir) {
-      if (release.forced || process.env.METEOR_SPRINGBOARD_RELEASE) {
+      if (release.forced) {
         // We get here if:
         // 1) the user ran 'meteor update' and we found a new version
         // 2) the user ran 'meteor update --release xyz' (regardless of
@@ -1376,8 +1419,16 @@ main.registerCommand({
           "You are at the latest patch version.\n");
         return 1;
       }
+      var patchRecord = doOrDie(function () {
+        return catalog.official.getReleaseVersion(r[0], updateTo);
+      });
+      if (!patchRecord || !patchRecord.recommended) {
+        process.stderr.write(
+          "You are at the latest patch version.\n");
+        return 1;
+      }
       releaseVersionsToTry = [updateTo];
-    } else if (release.forced) {
+    } else if (release.explicit) {
       doOrDie(function () {
         releaseVersionsToTry = [release.current.getReleaseVersion()];
       });
@@ -1407,7 +1458,7 @@ main.registerCommand({
     var directDependencies = project.getConstraints();
     var previousVersions;
     var messages = buildmessage.capture(function () {
-      previousVersions = project.getVersions();
+      previousVersions = project.getVersions({dontRunConstraintSolver: true});
     });
     if (messages.hasMessages()) {
       process.stderr.write(messages.formatMessages());
@@ -1445,12 +1496,21 @@ main.registerCommand({
         }
         return false;
       }
+      solutionReleaseRecord = releaseRecord;
       return true;
     });
 
     if (!solutionReleaseVersion) {
-      // XXX put an error here when we stop doing an error on every failure above
+      process.stdout.write(
+        "This project is at the latest release which is compatible with your\n" +
+          "current package constraints.\n");
       return 1;
+    }
+
+    if (solutionReleaseVersion !== releaseVersionsToTry[0]) {
+      process.stdout.write(
+        "(Newer releases are available but are not compatible with your\n" +
+          "current package constraints.)\n");
     }
 
     var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
@@ -1508,10 +1568,23 @@ main.registerCommand({
     // We can't update packages when we are not in a release.
     if (!options.appDir) return 0;
 
+    var releasePackages = {};
+    if (release.current.isProperRelease()) {
+      if (solutionReleaseRecord) {
+        // We updated the release (well, possibly a no-op). Use the packages
+        // from the chosen release.
+        releasePackages = solutionReleaseRecord.packages;
+      } else {
+        // This maybe is --packages-only. Use the packages from the current
+        // release.
+        releasePackages = release.current.getPackages();
+      }
+    }
+
     var versions, allPackages;
     messages = buildmessage.capture(function () {
-      versions = project.getVersions();
-      allPackages = project.getCurrentCombinedConstraints();
+      versions = project.getVersions({dontRunConstraintSolver: true});
+      allPackages = project.calculateCombinedConstraints(releasePackages);
     });
     if (messages.hasMessages()) {
       process.stderr.write(messages.formatMessages());
@@ -1534,7 +1607,6 @@ main.registerCommand({
     var messages = buildmessage.capture(function () {
       newVersions = catalog.complete.resolveConstraints(allPackages, {
         previousSolution: versions,
-        breaking: !options.minor,
         upgrade: upgradePackages
       }, {
         ignoreProjectDeps: true
@@ -1584,11 +1656,7 @@ main.registerCommand({
   name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true,
-  options: {
-    // XXX come up with a better option name, like --allow-downgrades
-    force: { type: Boolean, required: false }
-  }
+  requiresApp: true
 }, function (options) {
   // Special case on reserved package namespaces, such as 'cordova'
   var cordovaPlugins;
@@ -1624,6 +1692,27 @@ main.registerCommand({
   if (_.isEmpty(args))
     return 0;
 
+  // For every package name specified, add it to our list of package
+  // constraints. Don't run the constraint solver until you have added all of
+  // them -- add should be an atomic operation regardless of the package
+  // order. Even though the package file should specify versions of its inputs,
+  // we don't specify these constraints until we get them back from the
+  // constraint solver.
+  //
+  // In the interests of failing fast, we do this check before refreshing the
+  // catalog, touching the project, etc, since these parsings are purely
+  // syntactic.
+  var constraints = _.map(options.args, function (packageReq) {
+    try {
+      return utils.parseConstraint(packageReq);
+    } catch (e) {
+      if (!e.versionParserError)
+        throw e;
+      console.log("Error: " + e.message);
+      throw new main.ExitWithCode(1);
+    }
+  });
+
   var failed = false;
 
   // Refresh the catalog, cacheing the remote package data on the server.
@@ -1653,6 +1742,7 @@ main.registerCommand({
   var constraints = _.map(args, function (packageReq) {
     return utils.parseConstraint(packageReq);
   });
+
   _.each(constraints, function (constraint) {
     // Check that the package exists.
     doOrDie(function () {
@@ -1705,6 +1795,24 @@ main.registerCommand({
         } else {
           process.stdout.write("The version constraint will be removed.\n");
         }
+        // Now remove the old constraint from what we're going to calculate
+        // with.
+        // This matches code in calculateCombinedConstraints.
+        var oldConstraint = _.extend(
+          {packageName: constraint.name},
+          utils.parseVersionConstraint(packages[constraint.name]));
+        var removed = false;
+        for (var i = 0; i < allPackages.length; ++i) {
+          if (_.isEqual(oldConstraint, allPackages[i])) {
+            removed = true;
+            allPackages.splice(i, 1);
+            break;
+          }
+        }
+        if (!removed) {
+          throw Error("Couldn't find constraint to remove: " +
+                      JSON.stringify(oldConstraint));
+        }
       }
     }
 
@@ -1713,9 +1821,10 @@ main.registerCommand({
     packages[constraint.name] = constraint.constraintString;
 
     // Also, add it to all of our combined dependencies.
-    var constraintForResolver = _.clone(constraint);
-    constraintForResolver.packageName = constraintForResolver.name;
-    delete constraintForResolver.name;
+    // This matches code in project.calculateCombinedConstraints.
+    var constraintForResolver = _.extend(
+      { packageName: constraint.name },
+      utils.parseVersionConstraint(constraint.constraintString));
     allPackages.push(constraintForResolver);
   });
 
@@ -1727,37 +1836,44 @@ main.registerCommand({
   }
 
   var downloaded, versions, newVersions;
-  var messages = buildmessage.capture(function () {
-    // Get the contents of our versions file. We need to pass them to the
-    // constraint solver, because our contract with the user says that we will
-    // never downgrade a dependency.
-    versions = project.getVersions();
 
-    // Call the constraint solver.
-    var resolverOpts =  {
-      previousSolution: versions,
-      breaking: !!options.force
-    };
-    newVersions = catalog.complete.resolveConstraints(
-      allPackages,
-      resolverOpts,
-      { ignoreProjectDeps: true });
-    if ( ! newVersions) {
-      // XXX: Better error handling.
-      process.stderr.write("Cannot resolve package dependencies.\n");
-      return;
-    }
+  try {
+    var messages = buildmessage.capture(function () {
+      // Get the contents of our versions file. We need to pass them to the
+      // constraint solver, because our contract with the user says that we will
+      // never downgrade a dependency.
+      versions = project.getVersions();
 
-    // Don't tell the user what all the operations were until we finish -- we
-    // don't want to give a false sense of completeness until everything is
-    // written to disk.
-    var messageLog = [];
+      // Call the constraint solver.
+      newVersions = catalog.complete.resolveConstraints(
+        allPackages,
+        { previousSolution: versions },
+        { ignoreProjectDeps: true });
+      if ( ! newVersions) {
+        // XXX: Better error handling.
+        process.stderr.write("Cannot resolve package dependencies.\n");
+        return;
+      }
 
-    // Install the new versions. If all new versions were installed
-    // successfully, then change the .meteor/packages and .meteor/versions to
-    // match expected reality.
-    downloaded = project.addPackages(constraints, newVersions);
-  });
+      // Don't tell the user what all the operations were until we finish -- we
+      // don't want to give a false sense of completeness until everything is
+      // written to disk.
+      var messageLog = [];
+
+      // Install the new versions. If all new versions were installed
+      // successfully, then change the .meteor/packages and .meteor/versions to
+      // match expected reality.
+      downloaded = project.addPackages(constraints, newVersions);
+    });
+  } catch (e) {
+    if (!e.constraintSolverError)
+      throw e;
+    // XXX this is too many forms of error handling!
+    process.stderr.write(
+      "Could not satisfy all the specified constraints:\n"
+        + e + "\n");
+    return 1;
+  }
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;
@@ -1938,10 +2054,18 @@ main.registerCommand({
         process.stdout.write(" Done!\n");
       }
     } catch (err) {
-      process.stderr.write("\n" + err + "\n");
+      packageClient.handlePackageServerConnectionError(err);
+      return 1;
     }
     conn.close();
+
+    // Update the catalog so that we have this information, and find the record
+    // again so that the message below is correct.
     refreshOfficialCatalogOrDie();
+    doOrDie(function () {
+      fullRecord = getReleaseOrPackageRecord(name);
+    });
+    record = fullRecord.record;
   }
 
   process.stdout.write("\n The maintainers for " + name + " are:\n");
@@ -2169,8 +2293,13 @@ main.registerCommand({
     return 1;
   }
 
-  conn.call('setBannersOnReleases', bannersData.track,
-            bannersData.banners);
+  try {
+    conn.call('setBannersOnReleases', bannersData.track,
+              bannersData.banners);
+  } catch (e) {
+    packageClient.handlePackageServerConnectionError(e);
+    return 1;
+  }
 
   // Refresh afterwards.
   refreshOfficialCatalogOrDie();
@@ -2226,7 +2355,8 @@ main.registerCommand({
                            " is now  a recommended release\n");
     }
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
@@ -2277,7 +2407,8 @@ main.registerCommand({
       conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();
@@ -2320,7 +2451,8 @@ main.registerCommand({
       conn.call('_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
   } catch (err) {
-    process.stderr.write("\n" + err + "\n");
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
   }
   conn.close();
   refreshOfficialCatalogOrDie();

@@ -1929,7 +1929,7 @@ exports.bundle = function (options) {
         target = makeServerTarget(pkg, [clientTarget]);
         break;
       case "client":
-        target = makeClientTarget(pkg);
+        target = makeClientTarget(pkg, "web.browser");
         break;
       default:
         buildmessage.error(

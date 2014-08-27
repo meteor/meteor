@@ -457,6 +457,7 @@ _.extend(PackageSource.prototype, {
     var packageJsHash = Builder.sha1(code);
 
     var releaseRecord = null;
+    var hasTests = false;
 
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
@@ -524,9 +525,7 @@ _.extend(PackageSource.prototype, {
         // register the test. This is a medium-length hack until we have new
         // control files.
         if (!self.isTest) {
-          // We are relying on the fact that we have processed Package.Describe
-          // before we process this line.
-          self.testName = genTestName(self.name);
+          hasTests = true;
           return;
         }
 
@@ -733,14 +732,17 @@ _.extend(PackageSource.prototype, {
       // directory of the package. That was what we used to do: in fact, we used
       // to only do that.
       self.name = path.basename(dir);
-      if (self.testName)
-        self.testName = genTestName(self.name);
     }
 
     // Check to see if our name is valid.
-    if (!utils.validPackageName(self.name)) {
-      buildmessage.error("Package name invalid: " + self.name);
-      return;
+
+    try {
+      utils.validatePackageName(self.name);
+    } catch (e) {
+      if (!e.versionParserError)
+        throw e;
+      buildmessage.error(e.message);
+      // recover by ignoring
     }
 
     if (self.version === null && options.requireVersion) {
@@ -923,14 +925,28 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
-          _.each(names, function (name) {
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < names.length; ++i) {
+            var name = names[i];
+            try {
+              var parsed = utils.parseConstraint(name);
+            } catch (e) {
+              if (!e.versionParserError)
+                throw e;
+              buildmessage.error(e.message, {useMyCaller: true});
+              // recover by ignoring
+              continue;
+            }
+
             forAllMatchingWheres(where, function (w) {
-              uses[w].push(_.extend(utils.splitConstraint(name), {
+              uses[w].push({
+                package: parsed.name,
+                constraint: parsed.constraintString,
                 unordered: options.unordered || false,
                 weak: options.weak || false
-              }));
+              });
             });
-          });
+          }
         },
 
         // Called when this package wants packages using it to also use
@@ -940,13 +956,28 @@ _.extend(PackageSource.prototype, {
           names = toArray(names);
           where = toWhereArray(where);
 
-          _.each(names, function (name) {
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < names.length; ++i) {
+            var name = names[i];
+            try {
+              var parsed = utils.parseConstraint(name);
+            } catch (e) {
+              if (!e.versionParserError)
+                throw e;
+              buildmessage.error(e.message, {useMyCaller: true});
+              // recover by ignoring
+              continue;
+            }
+
             forAllMatchingWheres(where, function (w) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
-              implies[w].push(utils.splitConstraint(name));
+              implies[w].push({
+                package: parsed.name,
+                constraint: parsed.constraintString
+              });
             });
-          });
+          }
         },
 
         // Top-level call to add a source file to a package. It will
@@ -977,21 +1008,31 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
+          // Uniloaded packages really ought to be in the core release, by
+          // definition, so saying that they should use versions from another
+          // release doesn't make sense. Moreover, if we're running from a
+          // checkout, we build packages for catalog.uniload before we
+          // initialize catalog.official, so we wouldn't actually be able to
+          // interpret the release name anyway.
+          if (self.catalog === catalog.uniload) {
+            buildmessage.error("uniloaded packages may not use versionsFrom");
+            // recover by ignoring
+            return;
+          }
+
           // If you don't specify a track, use our default.
           if (release.indexOf('@') === -1) {
             release = catalog.DEFAULT_TRACK + "@" + release;
           }
 
           var relInf = release.split('@');
-          // XXX: Error handling
-          if (relInf.length !== 2)
-            throw new Error("Incorrect release spec");
-          // XXX: We pass in true to override the fact that we know that teh
-          // catalog may not be initialized, but we are pretty sure that the
-          // releases are there anyway. This is not the right way to do this
-          // long term.
+          if (relInf.length !== 2) {
+            buildmessage.error("Release names in versionsFrom may not contain '@'.",
+                               { useMyCaller: true });
+            return;
+          }
           releaseRecord = catalog.official.getReleaseVersion(
-            relInf[0], relInf[1], true);
+            relInf[0], relInf[1]);
           if (!releaseRecord) {
             buildmessage.error("Unknown release "+ release);
            }
@@ -1035,7 +1076,7 @@ _.extend(PackageSource.prototype, {
       api.add_files = api.addFiles;
 
       try {
-        fileAndDepLoader(api);
+        buildmessage.markBoundary(fileAndDepLoader)(api);
       } catch (e) {
         console.log(e.stack); // XXX should we keep this here -- or do we want broken
                               // packages to fail silently?
@@ -1191,6 +1232,11 @@ _.extend(PackageSource.prototype, {
 
     // Serve root of the package.
     self.serveRoot = path.join(path.sep, 'packages', self.name);
+
+    // Name of the test.
+    if (hasTests) {
+      self.testName = genTestName(self.name);
+    }
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
