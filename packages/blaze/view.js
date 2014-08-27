@@ -459,10 +459,8 @@ var contentAsFunc = function (content) {
 
 Blaze.render = function (content, parentElement, nextNode, parentView) {
   if (! parentElement) {
-    // This is a deprecation error (UI.render used to take one arg)
-    // XXX make this work for back-compat
-    throw new Error(
-      "render requires a DOM element to insert the rendered content into");
+    Blaze._warn("Blaze.render without a parent element is deprecated. " +
+                "You must specify where to insert the rendered content.");
   }
 
   if (nextNode instanceof Blaze.View) {
@@ -474,7 +472,7 @@ Blaze.render = function (content, parentElement, nextNode, parentView) {
   // parentElement must be a DOM node. in particular, can't be the
   // result of a call to `$`. Can't check if `parentElement instanceof
   // Node` since 'Node' is undefined in IE8.
-  if (typeof parentElement.nodeType !== 'number')
+  if (parentElement && typeof parentElement.nodeType !== 'number')
     throw new Error("'parentElement' must be a DOM node");
   if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
     throw new Error("'nextNode' must be a DOM node");
@@ -484,15 +482,21 @@ Blaze.render = function (content, parentElement, nextNode, parentView) {
   var view = contentAsView(content);
   Blaze._materializeView(view, parentView);
 
-  view._domrange.attach(parentElement, nextNode);
+  if (parentElement) {
+    view._domrange.attach(parentElement, nextNode);
+  }
 
   return view;
 };
 
-Blaze.insert = function () {
-  // Deprecation error
-  throw new Error("Blaze.insert has been deprecated.  Specify where to insert the " +
-                  "rendered content in Blaze.render.");
+Blaze.insert = function (view, parentElement, nextNode) {
+  Blaze._warn("Blaze.insert has been deprecated.  Specify where to insert the " +
+              "rendered content in the call to Blaze.render.");
+
+  if (! (view && (view._domrange instanceof Blaze._DOMRange)))
+    throw new Error("Expected template rendered with UI.render");
+
+  view._domrange.attach(parentElement, nextNode);
 };
 
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
